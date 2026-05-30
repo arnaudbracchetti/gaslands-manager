@@ -2,7 +2,17 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "types": ["vitest/globals"]
+    // vitest/globals fournit describe, it, expect, vi comme globaux (sans import)
+    "types": ["vitest/globals"],
+    // Surcharge les options incompatibles héritées de tsconfig.base.json
+    // (mêmes surcharges que tsconfig.app.json)
+    "composite": false,
+    "emitDeclarationOnly": false,
+    "declarationMap": false,
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    // dom est nécessaire pour HTMLElement, Storage, Document, etc. dans les tests
+    "lib": ["es2022", "dom", "dom.iterable"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"]
 }

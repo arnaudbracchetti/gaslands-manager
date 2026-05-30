@@ -4,7 +4,8 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from './auth/auth.interceptor';
 import { appRoutes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -19,6 +20,8 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
 
     provideRouter(appRoutes),
-    provideHttpClient(),
+    // withInterceptors([...]) enregistre nos intercepteurs HTTP fonctionnels.
+    // authInterceptor ajoute automatiquement le JWT dans chaque requête.
+    provideHttpClient(withInterceptors([authInterceptor])),
   ],
 };

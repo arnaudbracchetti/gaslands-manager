@@ -1,0 +1,21 @@
+{
+  "name": "backend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/backend/src",
+  "tags": ["npm:private"],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "command": "npx vitest run --config vitest.config.ts"
+      },
+      "configurations": {
+        "watch": {
+          "command": "npx vitest --config vitest.config.ts"
+        }
+      }
+    }
+  }
+}

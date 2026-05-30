@@ -1,0 +1,69 @@
+<!-- Page de connexion Gaslands -->
+<div class="auth-container">
+  <div class="auth-card">
+    <h1 class="auth-title">Connexion</h1>
+
+    <!-- @if : syntaxe Angular 17+ (remplace *ngIf) -->
+    <!-- Affiche l'erreur uniquement si errorMessage() n'est pas vide -->
+    @if (errorMessage()) {
+      <div class="auth-error" role="alert">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <!--
+          Liaison two-way signal-compatible en mode zoneless :
+          - [ngModel]="email()"          : lit la valeur du signal
+          - (ngModelChange)="email.set($event)" : met à jour le signal à chaque frappe
+          On ne peut PAS utiliser [(ngModel)]="email" car email est un signal (fonction),
+          pas une propriété ordinaire.
+        -->
+        <input
+          id="email"
+          type="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+          name="email"
+          placeholder="votre@email.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input
+          id="password"
+          type="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <!--
+        [disabled]="isLoading()" : désactive le bouton pendant la requête HTTP
+        pour éviter les doubles soumissions.
+      -->
+      <button type="submit" class="btn-primary" [disabled]="isLoading()">
+        @if (isLoading()) {
+          Connexion en cours…
+        } @else {
+          Se connecter
+        }
+      </button>
+    </form>
+
+    <p class="auth-switch">
+      Pas encore de compte ?
+      <!-- routerLink : navigation Angular SPA (sans rechargement de la page) -->
+      <a routerLink="/register">Créer un compte</a>
+    </p>
+  </div>
+</div>

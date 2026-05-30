@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { User } from './auth/user.entity';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
 import { Team } from './team/team.entity';
@@ -28,7 +30,9 @@ import { Team } from './team/team.entity';
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.get('DATABASE_PASSWORD', 'gaslands_pass'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [Team],
+        // Toutes les entités TypeORM doivent être listées ici
+        // TypeORM crée ou met à jour les tables correspondantes (synchronize: true)
+        entities: [Team, User],
         // synchronize: true = TypeORM crée/modifie les tables automatiquement
         // ⚠️ À désactiver en production ! En prod, on utilise des migrations.
         synchronize: true,
@@ -39,6 +43,7 @@ import { Team } from './team/team.entity';
     // Nos modules métier
     ContentModule, // Lecture des fichiers Markdown
     TeamModule,    // Gestion des équipes Gaslands
+    AuthModule,    // Inscription, connexion, JWT
   ],
   controllers: [AppController],
   providers: [AppService],

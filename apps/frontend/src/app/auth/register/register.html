@@ -1,0 +1,85 @@
+<!-- Page d'inscription Gaslands -->
+<div class="auth-container">
+  <div class="auth-card">
+    <h1 class="auth-title">Créer un compte</h1>
+
+    @if (errorMessage()) {
+      <div class="auth-error" role="alert">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form (ngSubmit)="onSubmit()">
+      <!-- Ligne prénom / nom sur deux colonnes -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label for="firstName">Prénom</label>
+          <input
+            id="firstName"
+            type="text"
+            [ngModel]="firstName()"
+            (ngModelChange)="firstName.set($event)"
+            name="firstName"
+            placeholder="Jean"
+            autocomplete="given-name"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Nom</label>
+          <input
+            id="lastName"
+            type="text"
+            [ngModel]="lastName()"
+            (ngModelChange)="lastName.set($event)"
+            name="lastName"
+            placeholder="Dupont"
+            autocomplete="family-name"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+          name="email"
+          placeholder="votre@email.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe <span style="color: #555; font-weight: 400;">(6 caractères minimum)</span></label>
+        <input
+          id="password"
+          type="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="isLoading()">
+        @if (isLoading()) {
+          Création en cours…
+        } @else {
+          Créer mon compte
+        }
+      </button>
+    </form>
+
+    <p class="auth-switch">
+      Déjà un compte ? <a routerLink="/login">Se connecter</a>
+    </p>
+  </div>
+</div>

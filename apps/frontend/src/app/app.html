@@ -10,6 +10,24 @@
     <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
     <li><a routerLink="/rules" routerLinkActive="active">Règles</a></li>
   </ul>
+
+  <!--
+    Zone utilisateur à droite de la navbar.
+    authService.isLoggedIn() est un computed() Signal : Angular re-rend
+    automatiquement ce bloc dès que l'état de connexion change
+    (login, logout, restauration de session).
+  -->
+  <div class="navbar-user">
+    @if (authService.isLoggedIn()) {
+      <!-- Affiche le prénom de l'utilisateur connecté -->
+      <span class="user-name">{{ authService.currentUser()?.firstName }}</span>
+      <!-- (click) appelle logout() qui efface le token et redirige vers /login -->
+      <button class="btn-logout" (click)="authService.logout()">Déconnexion</button>
+    } @else {
+      <!-- Lien visible uniquement quand personne n'est connecté -->
+      <a routerLink="/login" class="btn-nav-auth">Connexion</a>
+    }
+  </div>
 </nav>
 
 <!-- router-outlet est le "trou" dans lequel Angular injecte le composant de la route active -->

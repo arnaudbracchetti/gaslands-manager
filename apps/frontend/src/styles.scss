@@ -73,3 +73,185 @@ body {
 main {
   min-height: calc(100vh - 64px);
 }
+
+// ─── Zone utilisateur dans la navbar ────────────────────────────────────────
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  color: #7ec8e3;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+// Bouton de déconnexion
+.btn-logout {
+  background: transparent;
+  border: 1px solid #e94560;
+  color: #e94560;
+  padding: 6px 14px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: #e94560;
+    color: #fff;
+  }
+}
+
+// Lien "Connexion" dans la navbar (quand non connecté)
+.btn-nav-auth {
+  color: #e94560;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid #e94560;
+  padding: 6px 14px;
+  border-radius: 3px;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: #e94560;
+    color: #fff;
+  }
+}
+
+// ─── Formulaires d'authentification (Login / Register) ──────────────────────
+
+// Centrage vertical de la carte de formulaire
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  // Hauteur totale moins la navbar (64px)
+  min-height: calc(100vh - 64px);
+  padding: 2rem;
+}
+
+// Carte du formulaire
+.auth-card {
+  background: #0f0f1a;
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  border-radius: 4px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 440px;
+  // Halo rouge subtil autour de la carte
+  box-shadow: 0 0 40px rgba(233, 69, 96, 0.12);
+}
+
+.auth-title {
+  color: #e94560;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+// Groupe label + input
+.form-group {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    color: #888;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    color: #e0e0e0;
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #e94560;
+      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
+    }
+
+    &::placeholder {
+      color: #444;
+    }
+  }
+}
+
+// Message d'erreur en rouge
+.auth-error {
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.5);
+  color: #e94560;
+  padding: 10px 14px;
+  border-radius: 3px;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+// Bouton principal du formulaire
+.btn-primary {
+  width: 100%;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 3px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Lien de bascule entre login et register
+.auth-switch {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #666;
+  font-size: 0.9rem;
+
+  a {
+    color: #e94560;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
