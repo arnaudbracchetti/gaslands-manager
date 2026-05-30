@@ -401,6 +401,65 @@ Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
 | Projet | Outil | Commande |
 |--------|-------|---------|
 | Frontend (unitaires) | Vitest + Angular Testing Library | `npx nx test frontend` |
-| Backend (unitaires) | Jest | `npx nx test backend` |
+| Backend (unitaires) | Vitest | `npx nx test backend` |
 | E2E frontend | Playwright | `npx nx e2e frontend-e2e` |
 | E2E backend | Jest | `npx nx e2e backend-e2e` |
+
+### Règle
+
+> **Tout nouveau module NestJS** doit être livré avec des tests unitaires pour son service ET son controller.
+
+> **Tout nouveau service Angular** doit avoir des tests unitaires.
+
+### 9.1 Backend — Pattern de test NestJS (Vitest)
+
+```typescript
+// Créer un module de test isolé
+const module = await Test.createTestingModule({
+  providers: [
+    TeamService,
+    // Remplacer le vrai Repository<Team> par un objet fictif
+    {
+      provide: getRepositoryToken(Team),
+      useValue: {
+        find: vi.fn(),
+        findOne: vi.fn(),
+        create: vi.fn(),
+        save: vi.fn(),
+        remove: vi.fn(),
+      },
+    },
+  ],
+}).compile();
+```
+
+**Ce qu'on teste :**
+- Cas nominaux : les méthodes retournent la valeur attendue
+- Cas d'erreur : `NotFoundException` levée si l'entité est introuvable
+- Isolation utilisateur : le filtre `userId` est bien appliqué à chaque requête BDD
+- Le controller passe les bons arguments au service (câblage HTTP)
+
+**Ce qu'on ne teste pas** dans les tests unitaires : l'authentification JWT (testée par le guard), le SQL réel (testé en e2e).
+
+### 9.2 Frontend — Pattern de test Angular (Vitest)
+
+```typescript
+// Mocker le service Angular
+await TestBed.configureTestingModule({
+  imports: [Teams],  // Composant standalone → on l'importe directement
+  providers: [
+    provideRouter([]),
+    { provide: TeamsService, useValue: { getAll: vi.fn().mockReturnValue(of([])) } },
+  ],
+}).compileComponents();
+```
+
+**Ce qu'on teste :**
+- États du composant : chargement, liste vide, liste remplie, message d'erreur
+- Logique UI : ouverture/fermeture du formulaire, pré-remplissage en mode édition
+- Appels au service : la bonne méthode est appelée avec les bons arguments
+
+**Outils clés :**
+- `HttpTestingController` : intercepte les requêtes HTTP dans les tests de service
+- `of(data)` / `throwError(() => ...)` : simule les réponses Observable du service
+- `vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))` : mock de `window.confirm`

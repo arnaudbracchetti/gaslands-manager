@@ -1,0 +1,121 @@
+<!-- Écran de gestion des équipes Gaslands -->
+<div class="teams-page">
+
+  <!-- En-tête avec titre et bouton d'ajout -->
+  <div class="teams-header">
+    <h1>👥 Mes Équipes</h1>
+    @if (!showForm()) {
+    <button class="btn-primary btn-add" (click)="openCreate()">
+      + Nouvelle équipe
+    </button>
+    }
+  </div>
+
+  <!-- Message d'erreur global -->
+  @if (error()) {
+  <div class="teams-error">{{ error() }}</div>
+  }
+
+  <!-- ── Formulaire de création / modification ─────────────────────────── -->
+  @if (showForm()) {
+  <div class="team-form-card">
+    <h2>{{ formTitle() }}</h2>
+
+    <div class="form-grid">
+      <!-- Nom de l'équipe -->
+      <div class="form-group">
+        <label for="team-name">Nom de l'équipe *</label>
+        <input id="team-name" type="text" placeholder="Ex : Les Furieux du Désert" [ngModel]="formName()"
+          (ngModelChange)="formName.set($event)" />
+      </div>
+
+      <!-- Sponsor (liste déroulante) -->
+      <div class="form-group">
+        <label for="team-sponsor">Sponsor</label>
+        <!--
+            Le sponsor détermine les armes et capacités disponibles dans Gaslands.
+            [ngModel] lit la valeur du signal, (ngModelChange) la met à jour.
+          -->
+        <select id="team-sponsor" [ngModel]="formSponsor()" (ngModelChange)="formSponsor.set($event)">
+          @for (sponsor of sponsors; track sponsor) {
+          <option [value]="sponsor">{{ sponsor }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Budget en jerricans -->
+      <div class="form-group">
+        <label for="team-cans">Budget (Jerricans)</label>
+        <input id="team-cans" type="number" min="0" [ngModel]="formCans()" (ngModelChange)="formCans.set(+$event)" />
+      </div>
+
+      <!-- Description (pleine largeur) -->
+      <div class="form-group form-group--full">
+        <label for="team-desc">Description</label>
+        <textarea id="team-desc" rows="3" placeholder="Décrivez votre équipe (optionnel)..."
+          [ngModel]="formDescription()" (ngModelChange)="formDescription.set($event)"></textarea>
+      </div>
+    </div>
+
+    <!-- Actions du formulaire -->
+    <div class="form-actions">
+      <button class="btn-secondary" (click)="cancelForm()" [disabled]="saving()">
+        Annuler
+      </button>
+      <button class="btn-primary" (click)="saveForm()" [disabled]="saving()">
+        @if (saving()) { Enregistrement... } @else { Enregistrer }
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- ── Liste des équipes ─────────────────────────────────────────────── -->
+  @if (loading()) {
+  <div class="teams-loading">
+    <p>Chargement de vos équipes...</p>
+  </div>
+  } @else if (teams().length === 0 && !showForm()) {
+  <!-- État vide : invitation à créer une première équipe -->
+  <div class="teams-empty">
+    <p class="teams-empty__icon">🏎️</p>
+    <p class="teams-empty__title">Aucune équipe pour l'instant</p>
+    <p class="teams-empty__subtitle">Créez votre première équipe pour commencer !</p>
+    <button class="btn-primary" (click)="openCreate()">
+      + Créer mon équipe
+    </button>
+  </div>
+  } @else {
+  <div class="teams-grid">
+    @for (team of teams(); track team.id) {
+    <div class="team-card">
+      <!-- En-tête de la carte -->
+      <div class="team-card__header">
+        <h2 class="team-card__name">{{ team.name }}</h2>
+      </div>
+
+      <!-- Informations de l'équipe -->
+      <div class="team-card__info">
+        <span class="team-card__badge">{{ team.sponsor }}</span>
+        <span class="team-card__cans">🥫 {{ team.cans }} jerricans</span>
+      </div>
+
+      <!-- Description (masquée si vide) -->
+      @if (team.description) {
+      <p class="team-card__description">{{ team.description }}</p>
+      }
+
+      <!-- Actions -->
+      <div class="team-card__actions">
+        <button class="btn-action btn-action--edit" (click)="openEdit(team)" title="Modifier cette équipe">
+          ✏️ Modifier
+        </button>
+        <button class="btn-action btn-action--delete" (click)="deleteTeam(team)" title="Supprimer cette équipe">
+          🗑 Supprimer
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+</div>

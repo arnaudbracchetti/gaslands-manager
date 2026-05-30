@@ -238,6 +238,35 @@ main {
   }
 }
 
+// Bouton secondaire (Annuler, actions moins importantes)
+// Fond transparent, bordure blanche — contraste avec .btn-primary
+.btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: #e0e0e0;
+  border: 1px solid #e0e0e0;
+  padding: 12px;
+  border-radius: 3px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    background: rgba(224, 224, 224, 0.1);
+    border-color: #fff;
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
 // Lien de bascule entre login et register
 .auth-switch {
   text-align: center;
