@@ -49,27 +49,29 @@ Le backend convertit le Markdown en HTML (`marked`) et l'expose via `GET /api/co
 
 Pour ajouter du contenu : créer `content/<slug>.md` → disponible immédiatement sans redémarrer le backend.
 
-### 3.3 Navigation
+### 3.3 CRUD Équipes
+
+- **Lister** ses équipes (`GET /api/teams`) — filtrées par utilisateur connecté
+- **Créer** une équipe (`POST /api/teams`) : nom, sponsor (liste prédéfinie), budget en jerricans (défaut : 50), description optionnelle
+- **Modifier** une équipe (`PUT /api/teams/:id`) : tous les champs modifiables
+- **Supprimer** une équipe (`DELETE /api/teams/:id`) — avec confirmation utilisateur
+
+Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
+
+### 3.4 Navigation
 
 - `/home` — Page d'accueil avec présentation et liens vers les sections
 - `/rules` — Affichage des règles du jeu (Markdown → HTML)
 - `/vehicles` — Page véhicules (placeholder)
 - `/weapons` — Page armes (placeholder)
-- `/teams` — Gestion des équipes (protégé, placeholder)
+- `/teams` — Gestion des équipes (protégé, **implémenté**)
 - `/login`, `/register` — Pages d'authentification
 
 ---
 
 ## 4. Fonctionnalités à implémenter (backlog)
 
-### 4.1 CRUD Équipes
-
-- Créer une équipe : nom, sponsor (liste prédéfinie), budget en cans (défaut : 50)
-- Modifier une équipe (nom, sponsor, description)
-- Supprimer une équipe (et ses véhicules/armes associés)
-- Lister ses équipes sur le tableau de bord
-
-### 4.2 CRUD Véhicules
+### 4.1 CRUD Véhicules
 
 - Ajouter un véhicule à une équipe : nom, type (liste prédéfinie), statistiques (handling, weight, hull)
 - Modifier / supprimer un véhicule
@@ -114,16 +116,14 @@ Pour ajouter du contenu : créer `content/<slug>.md` → disponible immédiateme
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
-| `id` | UUID | PK, généré auto |
-| `name` | string | obligatoire |
-| `sponsor` | string | défaut : `"Rutherford"` |
-| `cans` | number | budget en cans, défaut : 50 |
-| `description` | string | nullable |
-| `userId` | UUID | FK → User (à ajouter) |
+| `id` | number | PK, auto-incrémenté |
+| `name` | string(100) | obligatoire |
+| `sponsor` | string(50) | défaut : `"Rutherford"` |
+| `cans` | number | budget en jerricans, défaut : 50 |
+| `description` | text | nullable |
+| `userId` | number | FK → User (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
-
-> ⚠️ La relation `userId` (Team → User) n'est pas encore implémentée dans l'entité TypeORM.
 
 ### `Vehicle` _(à créer)_
 
@@ -170,13 +170,12 @@ Pour ajouter du contenu : créer `content/<slug>.md` → disponible immédiateme
 | GET | `/api/content` | Non | Liste des slugs disponibles |
 | GET | `/api/content/:slug` | Non | Contenu HTML + titre |
 
-### Équipes _(à implémenter)_
+### Équipes
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/teams` | JWT | Liste des équipes de l'utilisateur |
+| GET | `/api/teams` | JWT | Liste des équipes de l'utilisateur connecté |
 | POST | `/api/teams` | JWT | Créer une équipe |
-| GET | `/api/teams/:id` | JWT | Détail d'une équipe |
 | PUT | `/api/teams/:id` | JWT | Modifier une équipe |
 | DELETE | `/api/teams/:id` | JWT | Supprimer une équipe |
 
@@ -212,10 +211,14 @@ Chaque équipe doit choisir un sponsor qui peut donner des avantages spéciaux (
 | Verney | Explosifs |
 | Idris | Équipement spécial |
 | Warden | Forces de l'ordre |
+| Highway Patrol | Police / maintien de l'ordre |
+| Slime Pit | Toxique |
+| Scarlett | Agilité |
+| Locus | Précision |
 
-### Budget (Cans)
+### Budget (Jerricans)
 
-- Budget de départ : **50 cans** par équipe (peut être modifié)
+- Budget de départ : **50 jerricans** par équipe (peut être modifié)
 - Chaque véhicule et chaque arme a un coût en cans
 - Le total (véhicules + armes) ne doit pas dépasser le budget
 
