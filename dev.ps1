@@ -40,13 +40,14 @@ try {
     exit 1
 }
 
-# ── 2. Démarrage de PostgreSQL ────────────────────────────────
-# On démarre UNIQUEMENT le service "postgres" du docker-compose.yml.
+# ── 2. Démarrage de PostgreSQL + pgAdmin ─────────────────────
+# On démarre UNIQUEMENT postgres et pgadmin du docker-compose.yml.
 # Le frontend et le backend tournent en local (hot reload, débogage).
-# L'option -d (detached) lance le container en arrière-plan.
-Write-Step "Démarrage de PostgreSQL..."
-docker compose -f "$projectRoot\docker-compose.yml" up -d postgres
+# L'option -d (detached) lance les containers en arrière-plan.
+Write-Step "Démarrage de PostgreSQL et pgAdmin..."
+docker compose -f "$projectRoot\docker-compose.yml" up -d postgres pgadmin
 Write-Ok "PostgreSQL démarré sur localhost:5432"
+Write-Ok "pgAdmin démarré sur http://localhost:5050"
 
 # ── 3. Fenêtre PowerShell -- Backend NestJS ──────────────────
 # Start-Process ouvre une NOUVELLE fenêtre PowerShell.
@@ -92,6 +93,7 @@ Write-Host ""
 Write-Host "  Frontend  --> http://localhost:4200" -ForegroundColor White
 Write-Host "  Backend   --> http://localhost:3000/api" -ForegroundColor White
 Write-Host "  Base      --> localhost:5432 (gaslands)" -ForegroundColor White
+Write-Host "  pgAdmin   --> http://localhost:5050" -ForegroundColor White
 Write-Host ""
 Write-Host "  Attends ~10s que les serveurs démarrent." -ForegroundColor Gray
 Write-Host "======================================" -ForegroundColor Yellow

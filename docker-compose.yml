@@ -3,13 +3,18 @@ version: '3.8'
 # ============================================================
 # Docker Compose — Gaslands Manager
 #
-# Trois services communiquent sur un réseau Docker privé :
+# Quatre services communiquent sur un réseau Docker privé :
 #
 #   browser → frontend (nginx, port 4200)
 #                ↓ proxy /api/*
 #             backend (NestJS, port 3000)
 #                ↓ TypeORM
 #             postgres (PostgreSQL 16, port 5432)
+#
+#   browser → pgadmin (port 5050) → postgres
+#
+# Les credentials sont chargés depuis le fichier ".env" à la racine
+# (jamais commité — voir .env.example pour le template).
 #
 # Commandes utiles :
 #   docker compose up --build   → (re)build et démarrer tout
@@ -28,9 +33,11 @@ services:
     image: postgres:16-alpine
     container_name: gaslands_db
     environment:
-      POSTGRES_USER: gaslands
-      POSTGRES_PASSWORD: gaslands_pass
-      POSTGRES_DB: gaslands
+      # Les valeurs ${...} sont lues depuis le fichier .env à la racine.
+      # Docker Compose le charge automatiquement — aucune commande spéciale.
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       # Expose le port 5432 sur le host pour accéder à la DB
       # avec un client externe (pgAdmin, DBeaver…) en dev
@@ -64,9 +71,9 @@ services:
       # "localhost" dans un container pointe sur lui-même uniquement.
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
-      DATABASE_USER: gaslands
-      DATABASE_PASSWORD: gaslands_pass
-      DATABASE_NAME: gaslands
+      DATABASE_USER: ${DB_USER}
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      DATABASE_NAME: ${DB_NAME}
 
       # ── Chemin des fichiers Markdown dans le container ─────
       # Le ContentService lit les fichiers .md depuis ce chemin.
@@ -111,6 +118,38 @@ services:
       - gaslands_net
     restart: unless-stopped
 
+  # ────────────────────────────────────────────────────────
+  # SERVICE : pgadmin
+  # Interface web pour administrer PostgreSQL
+  # Accès : http://localhost:5050
+  # Login : PGADMIN_EMAIL / PGADMIN_PASSWORD (voir .env)
+  # ────────────────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gaslands_pgadmin
+    environment:
+      # Compte administrateur de l'interface pgAdmin.
+      # ATTENTION : ce sont les credentials de l'interface web,
+      # PAS le mot de passe PostgreSQL (qui est DB_PASSWORD).
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      # Port 5050 du host → port 80 du container pgAdmin
+      - "5050:80"
+    volumes:
+      # Persiste la config pgAdmin entre les redémarrages
+      # (connexions sauvegardées, préférences de l'interface…)
+      - pgadmin_data:/var/lib/pgadmin
+      # servers.json pré-configure le serveur PostgreSQL au premier
+      # démarrage : plus besoin de saisir l'hôte/port manuellement.
+      # :ro = read-only, le container ne peut pas modifier ce fichier.
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - postgres
+    networks:
+      - gaslands_net
+    restart: unless-stopped
+
 # ════════════════════════════════════════════════════════════
 # RÉSEAU
 # Un réseau bridge privé isole les services du reste du système.
@@ -122,8 +161,9 @@ networks:
 
 # ════════════════════════════════════════════════════════════
 # VOLUMES
-# Volume nommé pour persister les données PostgreSQL entre
-# les redémarrages (géré par le daemon Docker, pas un dossier local).
+# Volumes nommés pour persister les données entre redémarrages
+# (gérés par le daemon Docker, pas des dossiers locaux).
 # ════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
+  pgadmin_data:
