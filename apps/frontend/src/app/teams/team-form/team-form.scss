@@ -1,0 +1,97 @@
+/* ── Carte formulaire ──────────────────────────────────────────────────────── */
+
+.team-form-card {
+  background: #0f0f1a;
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  padding: 28px;
+  margin-bottom: 32px;
+
+  h2 {
+    color: #e94560;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+/* Erreur de validation locale */
+.form-error {
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid #e94560;
+  color: #e94560;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* Grille responsive pour les champs du formulaire */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Champ pleine largeur (description) */
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+/* Styles des champs */
+.team-form-card {
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    background: #0a0a14;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+
+    &::placeholder {
+      color: #555;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  label {
+    display: block;
+    color: #999;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+}
+
+/* Actions du formulaire */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+
+  button {
+    width: auto;
+    padding: 10px 24px;
+  }
+}

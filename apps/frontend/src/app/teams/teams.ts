@@ -1,28 +1,32 @@
 /**
  * Composant Teams — écran de gestion des équipes Gaslands.
  *
- * Fonctionnalités :
- * - Afficher la liste des équipes de l'utilisateur connecté
- * - Créer une nouvelle équipe via un formulaire inline
- * - Modifier une équipe existante (formulaire pré-rempli)
- * - Supprimer une équipe (avec confirmation)
+ * C'est le composant "smart" (ou "container") de cet écran :
+ * il orchestre les données et les actions, mais délègue l'affichage
+ * à des composants "dumb" spécialisés :
  *
- * Architecture Angular 21 zoneless + Signals :
- * - Tous les états réactifs sont des signal() ou computed()
- * - Les templates utilisent @if / @for (nouveau control flow Angular 17+)
- * - Le two-way binding sur les inputs utilise [ngModel] + (ngModelChange)
- *   (car [(ngModel)] n'est pas compatible avec les Signals en mode zoneless)
+ *   - TeamCard  → affiche une carte d'équipe (lecture + boutons Modifier/Supprimer)
+ *   - TeamForm  → gère le formulaire de création / modification
+ *
+ * Responsabilités de ce composant :
+ * - Charger la liste des équipes via TeamsService
+ * - Contrôler la visibilité du formulaire (showForm, editingTeam)
+ * - Recevoir le DTO validé de TeamForm et appeler l'API (create / update)
+ * - Gérer la suppression (confirmation + appel API)
+ * - Afficher les erreurs API globales
  */
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { TeamsService } from './teams.service';
-import { Team, CreateTeamDto, SPONSORS, DEFAULT_CANS } from './team.model';
+import { Team, CreateTeamDto } from './team.model';
+import { TeamCard } from './team-card/team-card';
+import { TeamForm } from './team-form/team-form';
 
 @Component({
   selector: 'app-teams',
   standalone: true,
-  // FormsModule : nécessaire pour [ngModel] dans le formulaire
-  imports: [FormsModule],
+  // On importe les sous-composants ici pour pouvoir les utiliser dans le template.
+  // FormsModule n'est PAS nécessaire ici — il est importé dans TeamForm uniquement.
+  imports: [TeamCard, TeamForm],
   templateUrl: './teams.html',
   styleUrl: './teams.scss',
 })
@@ -38,7 +42,7 @@ export class Teams implements OnInit {
   /** Vrai pendant le chargement initial */
   loading = signal(true);
 
-  /** Message d'erreur affiché à l'utilisateur (vide = pas d'erreur) */
+  /** Message d'erreur API affiché à l'utilisateur (vide = pas d'erreur) */
   error = signal('');
 
   // ── État du formulaire ─────────────────────────────────────────────────────
@@ -47,28 +51,14 @@ export class Teams implements OnInit {
   showForm = signal(false);
 
   /**
-   * Équipe en cours d'édition.
-   * null  = mode création (nouveau formulaire vide)
-   * Team  = mode édition (formulaire pré-rempli)
+   * Équipe en cours d'édition, passée en [input] à TeamForm.
+   * null  = mode création (formulaire vide)
+   * Team  = mode édition  (formulaire pré-rempli via effect dans TeamForm)
    */
   editingTeam = signal<Team | null>(null);
 
-  /** Titre du formulaire, calculé automatiquement selon le mode */
-  formTitle = computed(() =>
-    this.editingTeam() ? '✏️ Modifier l\'équipe' : '➕ Nouvelle équipe'
-  );
-
-  /** Champs du formulaire, initialisés avec les valeurs par défaut */
-  formName = signal('');
-  formSponsor = signal('Rutherford');
-  formCans = signal(DEFAULT_CANS);
-  formDescription = signal('');
-
-  /** Vrai pendant la sauvegarde (désactive le bouton pour éviter les doublons) */
+  /** Vrai pendant l'appel API de sauvegarde (passé à TeamForm pour désactiver les boutons) */
   saving = signal(false);
-
-  /** Liste des sponsors exposée au template */
-  readonly sponsors = SPONSORS;
 
   // ── Cycle de vie ───────────────────────────────────────────────────────────
 
@@ -76,10 +66,10 @@ export class Teams implements OnInit {
     this.loadTeams();
   }
 
-  // ── Méthodes privées ───────────────────────────────────────────────────────
+  // ── Chargement ─────────────────────────────────────────────────────────────
 
   /** Charge toutes les équipes depuis l'API et met à jour le signal */
-  private loadTeams(): void {
+  loadTeams(): void {
     this.loading.set(true);
     this.error.set('');
 
@@ -97,23 +87,21 @@ export class Teams implements OnInit {
 
   // ── Gestion du formulaire ──────────────────────────────────────────────────
 
-  /** Ouvre le formulaire en mode création (champs vides) */
+  /**
+   * Ouvre le formulaire en mode création.
+   * TeamForm détecte automatiquement que team = null et vide les champs.
+   */
   openCreate(): void {
     this.editingTeam.set(null);
-    this.formName.set('');
-    this.formSponsor.set('Rutherford');
-    this.formCans.set(DEFAULT_CANS);
-    this.formDescription.set('');
     this.showForm.set(true);
   }
 
-  /** Ouvre le formulaire en mode édition (champs pré-remplis) */
+  /**
+   * Ouvre le formulaire en mode édition.
+   * TeamForm détecte le changement de l'input `team` et pré-remplit les champs.
+   */
   openEdit(team: Team): void {
     this.editingTeam.set(team);
-    this.formName.set(team.name);
-    this.formSponsor.set(team.sponsor);
-    this.formCans.set(team.cans);
-    this.formDescription.set(team.description ?? '');
     this.showForm.set(true);
   }
 
@@ -124,31 +112,18 @@ export class Teams implements OnInit {
   }
 
   /**
-   * Sauvegarde le formulaire : crée ou met à jour selon le mode.
+   * Reçoit le DTO validé de TeamForm et appelle l'API.
    *
-   * Après la sauvegarde, on recharge la liste depuis l'API pour rester
-   * synchronisé avec la base de données (évite les incohérences).
+   * TeamForm a déjà validé les données (nom obligatoire etc.).
+   * Ce composant décide si c'est un create() ou un update() selon editingTeam.
    */
-  saveForm(): void {
-    const name = this.formName().trim();
-    if (!name) {
-      this.error.set('Le nom de l\'équipe est obligatoire.');
-      return;
-    }
-
-    const dto: CreateTeamDto = {
-      name,
-      sponsor: this.formSponsor(),
-      cans: this.formCans(),
-      description: this.formDescription().trim() || undefined,
-    };
-
+  onSaved(dto: CreateTeamDto): void {
     this.saving.set(true);
     this.error.set('');
 
     const editing = this.editingTeam();
 
-    // Si on est en mode édition, on appelle update() ; sinon create()
+    // Choix de l'opération selon le mode : édition ou création
     const request$ = editing
       ? this.teamsService.update(editing.id, dto)
       : this.teamsService.create(dto);
@@ -158,7 +133,7 @@ export class Teams implements OnInit {
         this.saving.set(false);
         this.showForm.set(false);
         this.editingTeam.set(null);
-        this.loadTeams(); // Rechargement depuis l'API
+        this.loadTeams(); // Rechargement depuis l'API pour rester synchronisé
       },
       error: () => {
         this.error.set('Une erreur est survenue. Veuillez réessayer.');
@@ -170,25 +145,24 @@ export class Teams implements OnInit {
   // ── Suppression ────────────────────────────────────────────────────────────
 
   /**
-   * Supprime une équipe après confirmation de l'utilisateur.
+   * Supprime une équipe après confirmation.
+   * Reçu depuis TeamCard via l'output (deleteClicked).
    *
-   * On retire immédiatement l'équipe du signal local pour une UX réactive
-   * (l'utilisateur voit le changement instantanément), puis on appelle l'API.
-   * Si l'API échoue, on recharge la liste pour restaurer l'état réel.
+   * Suppression optimiste : on retire l'équipe du signal local immédiatement
+   * pour une UX réactive, puis on appelle l'API.
    */
   deleteTeam(team: Team): void {
     if (!window.confirm(`Supprimer l'équipe "${team.name}" ? Cette action est irréversible.`)) {
       return;
     }
 
-    // Suppression optimiste : on retire l'équipe du signal avant la réponse API
+    // Suppression optimiste
     this.teams.update((list) => list.filter((t) => t.id !== team.id));
 
     this.teamsService.remove(team.id).subscribe({
       error: () => {
-        // En cas d'erreur, on recharge pour restaurer l'état réel
         this.error.set('Erreur lors de la suppression. La liste a été actualisée.');
-        this.loadTeams();
+        this.loadTeams(); // Restaure l'état réel depuis l'API
       },
     });
   }

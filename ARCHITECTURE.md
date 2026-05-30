@@ -136,7 +136,51 @@ En développement, le frontend tourne sur le port 4200 et le backend sur le port
 
 ⚠️ **`127.0.0.1` et non `localhost`** : sur Windows, `localhost` peut résoudre en IPv6 (`::1`), incompatible avec le backend qui écoute en IPv4.
 
-### 2.7 Fichiers clés
+### 2.7 Pattern Smart / Dumb Components
+
+Les écrans complexes sont découpés en deux couches de composants :
+
+- **Smart component** (orchestrateur) : connaît le service, gère les appels HTTP, contrôle la visibilité des sous-composants. Ne s'occupe pas de la présentation.
+- **Dumb component** (presentational) : reçoit des données via `input()`, signale les actions via `output()`. Ne connaît pas le service. Facilement testable et réutilisable.
+
+**Exemple — écran Teams :**
+
+```
+teams/             ← Smart : charge la liste, appelle l'API, gère showForm
+├── team-card/     ← Dumb : affiche une carte, émet editClicked / deleteClicked
+└── team-form/     ← Dumb : gère le formulaire, émet saved / cancel
+```
+
+**API Signals pour les inputs/outputs (Angular 17+) :**
+
+```typescript
+// Dumb component — ne décore pas @Input() / @Output()
+export class TeamCard {
+  team         = input.required<Team>();   // obligatoire
+  editClicked  = output<Team>();
+  deleteClicked = output<Team>();
+}
+
+// Smart component — passe les données et écoute les événements
+// <app-team-card [team]="t" (editClicked)="openEdit($event)" />
+```
+
+**`effect()` pour réagir aux changements d'input :**
+
+```typescript
+// Dans TeamForm : pré-remplit les champs quand l'input `team` change
+constructor() {
+  effect(() => {
+    const t = this.team();   // team est un input() Signal
+    if (t) {
+      this.formName.set(t.name);
+      // ...
+    }
+  });
+}
+```
+
+### 2.8 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
@@ -146,6 +190,7 @@ En développement, le frontend tourne sur le port 4200 et le backend sur le port
 | `apps/frontend/src/app/auth/auth.interceptor.ts` | Injection automatique du token JWT |
 | `apps/frontend/src/app/auth/auth.guard.ts` | Protection des routes privées |
 | `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
+| `apps/frontend/src/app/teams/` | Écran Teams : smart (teams) + dumb (team-card, team-form) |
 
 ---
 
@@ -264,12 +309,17 @@ Sans `'0.0.0.0'`, Node.js écoute sur `::` (IPv6 uniquement). Les connexions IPv
 
 ### Configuration
 
-Credentials (définis dans `docker-compose.yml` et `apps/backend/.env`) :
-- Hôte : `localhost` (dev) / `postgres` (Docker réseau interne)
-- Port : `5432`
-- User : `gaslands`
-- Password : `gaslands_pass`
-- Base : `gaslands`
+Les credentials sont définis dans `.env` à la racine (jamais commité — voir `.env.example`) et injectés dans `docker-compose.yml` via `${VAR}`.
+
+En développement local (nx serve), les variables viennent de `apps/backend/.env`.
+
+| Variable | Dev Docker | Dev nx | Valeur par défaut |
+|---|---|---|---|
+| Hôte | `postgres` (DNS Docker) | `localhost` | — |
+| Port | `5432` | `5432` | — |
+| User | `${DB_USER}` | `gaslands` | gaslands |
+| Password | `${DB_PASSWORD}` | gaslands_pass | — |
+| Base | `${DB_NAME}` | `gaslands` | gaslands |
 
 ### TypeORM en développement vs production
 
@@ -291,11 +341,18 @@ services:
   postgres:   # Port 5432 exposé sur l'hôte
   backend:    # Port 3000, dépend de postgres
   frontend:   # Nginx sur le port 4200, proxy /api → backend:3000
+  pgadmin:    # Port 5050, interface web PostgreSQL (http://localhost:5050)
 ```
 
-**Réseau** : `gaslands_net` (réseau Docker privé). Le frontend nginx accède au backend via `http://backend:3000` (DNS Docker interne).
+**Réseau** : `gaslands_net` (réseau Docker privé). Le frontend nginx accède au backend via `http://backend:3000` (DNS Docker interne). pgAdmin accède à postgres via `postgres:5432` (DNS Docker).
 
-**Volume** : `postgres_data` pour la persistance des données PostgreSQL.
+**Volumes** :
+- `postgres_data` — persistance des données PostgreSQL
+- `pgadmin_data` — persistance de la configuration pgAdmin (connexions sauvegardées)
+
+**Credentials externalisés** : toutes les variables sensibles (`DB_USER`, `DB_PASSWORD`, `PGADMIN_EMAIL`, `PGADMIN_PASSWORD`) sont dans `.env` (ignoré par git). Le fichier `.env.example` sert de template pour les nouveaux développeurs.
+
+**Configuration pgAdmin automatique** : `docker/pgadmin/servers.json` pré-configure la connexion à postgres au premier démarrage — pas de saisie manuelle nécessaire.
 
 ### Dockerfiles multi-stage
 
@@ -443,10 +500,11 @@ const module = await Test.createTestingModule({
 
 ### 9.2 Frontend — Pattern de test Angular (Vitest)
 
+**Smart component** — on mocke le service, les sous-composants rendent normalement :
+
 ```typescript
-// Mocker le service Angular
 await TestBed.configureTestingModule({
-  imports: [Teams],  // Composant standalone → on l'importe directement
+  imports: [Teams],  // Composant standalone → importe aussi TeamCard, TeamForm
   providers: [
     provideRouter([]),
     { provide: TeamsService, useValue: { getAll: vi.fn().mockReturnValue(of([])) } },
@@ -454,12 +512,34 @@ await TestBed.configureTestingModule({
 }).compileComponents();
 ```
 
-**Ce qu'on teste :**
-- États du composant : chargement, liste vide, liste remplie, message d'erreur
-- Logique UI : ouverture/fermeture du formulaire, pré-remplissage en mode édition
-- Appels au service : la bonne méthode est appelée avec les bons arguments
+**Dumb component** — on initialise les inputs avec `setInput()` et on observe les outputs avec `outputToObservable()` :
+
+```typescript
+import { outputToObservable } from '@angular/core/rxjs-interop';
+
+// Passer un input() Signal
+fixture.componentRef.setInput('team', mockTeam);
+fixture.detectChanges();   // déclenche l'effect() si présent
+
+// Tester un output() Signal
+const emitted: Team[] = [];
+outputToObservable(component.editClicked).subscribe(t => emitted.push(t));
+fixture.nativeElement.querySelector('.btn-action--edit').click();
+expect(emitted[0]).toEqual(mockTeam);
+```
+
+**Règle de répartition des tests :**
+
+| Que tester ? | Où ? |
+|---|---|
+| Orchestration, appels API, visibilité du formulaire | `teams.spec.ts` |
+| Affichage de la carte, émission des boutons | `team-card.spec.ts` |
+| Titre, pré-remplissage, validation, émission du DTO | `team-form.spec.ts` |
+| Requêtes HTTP (verbe, URL, corps) | `teams.service.spec.ts` |
 
 **Outils clés :**
 - `HttpTestingController` : intercepte les requêtes HTTP dans les tests de service
 - `of(data)` / `throwError(() => ...)` : simule les réponses Observable du service
 - `vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))` : mock de `window.confirm`
+- `fixture.componentRef.setInput()` : initialise un `input()` Signal dans les tests
+- `outputToObservable()` : convertit un `output()` Signal en Observable testable

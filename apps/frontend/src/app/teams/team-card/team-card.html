@@ -1,0 +1,40 @@
+<!-- Carte d'une équipe Gaslands -->
+<!--
+  team() appelle le signal input pour lire sa valeur.
+  Les outputs émettent l'équipe vers le composant parent via (click).
+-->
+<div class="team-card">
+
+  <!-- Nom de l'équipe -->
+  <div class="team-card__header">
+    <h2 class="team-card__name">{{ team().name }}</h2>
+  </div>
+
+  <!-- Sponsor + budget sur la même ligne -->
+  <div class="team-card__info">
+    <span class="team-card__badge">{{ team().sponsor }}</span>
+    <span class="team-card__cans">🥫 {{ team().cans }} jerricans</span>
+  </div>
+
+  <!-- Description : masquée si vide ou absente -->
+  @if (team().description) {
+    <p class="team-card__description">{{ team().description }}</p>
+  }
+
+  <!-- Boutons Modifier / Supprimer -->
+  <div class="team-card__actions">
+    <button
+      class="btn-action btn-action--edit"
+      (click)="editClicked.emit(team())"
+      title="Modifier cette équipe">
+      ✏️ Modifier
+    </button>
+    <button
+      class="btn-action btn-action--delete"
+      (click)="deleteClicked.emit(team())"
+      title="Supprimer cette équipe">
+      🗑 Supprimer
+    </button>
+  </div>
+
+</div>

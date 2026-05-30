@@ -1,0 +1,77 @@
+<!-- Formulaire de création / modification d'une équipe -->
+<div class="team-form-card">
+
+  <!-- Titre dynamique : "Nouvelle équipe" ou "Modifier l'équipe" -->
+  <h2>{{ formTitle() }}</h2>
+
+  <!-- Erreur de validation locale (ex : nom manquant) -->
+  @if (formError()) {
+    <div class="form-error">{{ formError() }}</div>
+  }
+
+  <div class="form-grid">
+
+    <!-- Nom de l'équipe -->
+    <div class="form-group">
+      <label for="team-name">Nom de l'équipe *</label>
+      <input
+        id="team-name"
+        type="text"
+        placeholder="Ex : Les Furieux du Désert"
+        [ngModel]="formName()"
+        (ngModelChange)="formName.set($event)" />
+    </div>
+
+    <!-- Sponsor (liste déroulante) -->
+    <div class="form-group">
+      <label for="team-sponsor">Sponsor</label>
+      <!--
+        Le sponsor détermine les armes et capacités disponibles dans Gaslands.
+        [ngModel] lit la valeur du signal, (ngModelChange) la met à jour.
+      -->
+      <select
+        id="team-sponsor"
+        [ngModel]="formSponsor()"
+        (ngModelChange)="formSponsor.set($event)">
+        @for (sponsor of sponsors; track sponsor) {
+          <option [value]="sponsor">{{ sponsor }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Budget en jerricans -->
+    <div class="form-group">
+      <label for="team-cans">Budget (Jerricans)</label>
+      <input
+        id="team-cans"
+        type="number"
+        min="0"
+        [ngModel]="formCans()"
+        (ngModelChange)="formCans.set(+$event)" />
+    </div>
+
+    <!-- Description (pleine largeur) -->
+    <div class="form-group form-group--full">
+      <label for="team-desc">Description</label>
+      <textarea
+        id="team-desc"
+        rows="3"
+        placeholder="Décrivez votre équipe (optionnel)..."
+        [ngModel]="formDescription()"
+        (ngModelChange)="formDescription.set($event)">
+      </textarea>
+    </div>
+
+  </div>
+
+  <!-- Boutons Annuler / Enregistrer -->
+  <div class="form-actions">
+    <button class="btn-secondary" (click)="cancelForm()" [disabled]="saving()">
+      Annuler
+    </button>
+    <button class="btn-primary" (click)="saveForm()" [disabled]="saving()">
+      @if (saving()) { Enregistrement... } @else { Enregistrer }
+    </button>
+  </div>
+
+</div>

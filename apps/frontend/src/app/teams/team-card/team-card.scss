@@ -1,0 +1,101 @@
+/* ── Carte d'équipe ────────────────────────────────────────────────────────── */
+
+.team-card {
+  background: #0f0f1a;
+  border: 1px solid #1e1e2e;
+  border-radius: 8px;
+  padding: 20px;
+  transition: border-color 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &:hover {
+    border-color: #e94560;
+    transform: translateY(-2px);
+  }
+
+  /* Nom de l'équipe */
+  &__name {
+    color: #e0e0e0;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  /* Badges sponsor + budget sur la même ligne */
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Badge sponsor (accent rouge discret) */
+  &__badge {
+    background: rgba(233, 69, 96, 0.15);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    color: #e94560;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Budget en jerricans */
+  &__cans {
+    color: #888;
+    font-size: 0.85rem;
+  }
+
+  /* Description (grisée, taille réduite) */
+  &__description {
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  /* Boutons d'action en bas de la carte */
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #1e1e2e;
+  }
+}
+
+/* ── Boutons d'action (Modifier / Supprimer) ──────────────────────────────── */
+
+.btn-action {
+  flex: 1;
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s;
+
+  &--edit {
+    background: transparent;
+    border-color: #7ec8e3;
+    color: #7ec8e3;
+
+    &:hover {
+      background: rgba(126, 200, 227, 0.1);
+    }
+  }
+
+  &--delete {
+    background: transparent;
+    border-color: #e94560;
+    color: #e94560;
+
+    &:hover {
+      background: rgba(233, 69, 96, 0.1);
+    }
+  }
+}

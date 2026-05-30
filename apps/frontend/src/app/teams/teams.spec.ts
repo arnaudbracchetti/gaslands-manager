@@ -1,11 +1,17 @@
 /**
- * Tests unitaires pour le composant Teams.
+ * Tests unitaires pour le composant orchestrateur Teams.
  *
- * On mock TeamsService pour ne pas effectuer de vraies requêtes HTTP.
- * On teste uniquement le comportement du composant :
- * - Affichage selon l'état (chargement, vide, liste)
- * - Ouverture/fermeture du formulaire
- * - Appel au service lors de la suppression
+ * Teams est désormais un composant "smart" qui délègue l'affichage
+ * à TeamCard et TeamForm. On teste ici uniquement son rôle d'orchestration :
+ * - Chargement de la liste via TeamsService
+ * - Contrôle de la visibilité du formulaire
+ * - Appel au service lors de onSaved() et deleteTeam()
+ * - Gestion des erreurs API
+ *
+ * Les tests du comportement interne des cartes et du formulaire
+ * sont dans leurs specs respectives :
+ *   - team-card/team-card.spec.ts
+ *   - team-form/team-form.spec.ts
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -13,7 +19,7 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Teams } from './teams';
 import { TeamsService } from './teams.service';
-import { Team } from './team.model';
+import { Team, CreateTeamDto } from './team.model';
 
 // Équipes fictives
 const mockTeams: Team[] = [
@@ -56,7 +62,8 @@ describe('Teams Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      // Le composant est standalone → on l'importe directement
+      // Le composant est standalone → on l'importe directement.
+      // TeamCard et TeamForm seront rendus dans le DOM (test d'intégration légère).
       imports: [Teams],
       providers: [
         provideRouter([]),
@@ -78,9 +85,10 @@ describe('Teams Component', () => {
     expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
   });
 
-  it('affiche la liste des équipes après chargement', () => {
+  it('affiche les cartes des équipes après chargement', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const cards = compiled.querySelectorAll('.team-card');
+    // Les cartes sont rendues par TeamCard — on vérifie les sélecteurs du composant
+    const cards = compiled.querySelectorAll('app-team-card');
     expect(cards.length).toBe(2);
     expect(compiled.textContent).toContain('Les Furieux du Désert');
     expect(compiled.textContent).toContain('Brigade de l\'Asphalte');
@@ -99,11 +107,11 @@ describe('Teams Component', () => {
     expect(compiled.textContent).toContain('Aucune équipe');
   });
 
-  // ── Formulaire ─────────────────────────────────────────────────────────────
+  // ── Contrôle du formulaire ─────────────────────────────────────────────────
 
   it('n\'affiche pas le formulaire au démarrage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.team-form-card')).toBeNull();
+    expect(compiled.querySelector('app-team-form')).toBeNull();
   });
 
   it('affiche le formulaire au clic sur "Nouvelle équipe"', () => {
@@ -111,7 +119,7 @@ describe('Teams Component', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.team-form-card')).toBeTruthy();
+    expect(compiled.querySelector('app-team-form')).toBeTruthy();
   });
 
   it('masque le formulaire au clic sur "Annuler"', () => {
@@ -122,22 +130,72 @@ describe('Teams Component', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.team-form-card')).toBeNull();
+    expect(compiled.querySelector('app-team-form')).toBeNull();
   });
 
-  it('pré-remplit le formulaire lors de l\'édition d\'une équipe', () => {
-    component.openEdit(mockTeams[0]);
+  it('openCreate() positionne editingTeam à null et showForm à true', () => {
+    component.openCreate();
+    expect(component.editingTeam()).toBeNull();
+    expect(component.showForm()).toBe(true);
+  });
 
-    expect(component.formName()).toBe('Les Furieux du Désert');
-    expect(component.formSponsor()).toBe('Rutherford');
-    expect(component.formCans()).toBe(50);
+  it('openEdit(team) positionne editingTeam et showForm à true', () => {
+    component.openEdit(mockTeams[0]);
     expect(component.editingTeam()).toEqual(mockTeams[0]);
+    expect(component.showForm()).toBe(true);
+  });
+
+  // ── Sauvegarde (onSaved) ───────────────────────────────────────────────────
+
+  it('appelle create() quand onSaved() est appelé en mode création', () => {
+    mockTeamsService.create.mockReturnValue(of(mockTeams[0]));
+    mockTeamsService.getAll.mockReturnValue(of(mockTeams));
+
+    component.openCreate(); // editingTeam = null
+    const dto: CreateTeamDto = { name: 'Nouvelle', sponsor: 'Idris', cans: 50 };
+    component.onSaved(dto);
+
+    expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
+    expect(mockTeamsService.update).not.toHaveBeenCalled();
+  });
+
+  it('appelle update() quand onSaved() est appelé en mode édition', () => {
+    mockTeamsService.update.mockReturnValue(of(mockTeams[0]));
+    mockTeamsService.getAll.mockReturnValue(of(mockTeams));
+
+    component.openEdit(mockTeams[0]); // editingTeam = mockTeams[0]
+    const dto: CreateTeamDto = { name: 'Modifiée', sponsor: 'Idris', cans: 50 };
+    component.onSaved(dto);
+
+    expect(mockTeamsService.update).toHaveBeenCalledWith(1, dto);
+    expect(mockTeamsService.create).not.toHaveBeenCalled();
+  });
+
+  it('ferme le formulaire après une sauvegarde réussie', () => {
+    mockTeamsService.create.mockReturnValue(of(mockTeams[0]));
+    mockTeamsService.getAll.mockReturnValue(of(mockTeams));
+
+    component.openCreate();
+    component.onSaved({ name: 'Test', sponsor: 'Rutherford', cans: 50 });
+    fixture.detectChanges();
+
+    expect(component.showForm()).toBe(false);
+    expect(component.editingTeam()).toBeNull();
+  });
+
+  it('affiche une erreur API si la sauvegarde échoue', () => {
+    mockTeamsService.create.mockReturnValue(throwError(() => new Error('API error')));
+
+    component.openCreate();
+    component.onSaved({ name: 'Test', sponsor: 'Rutherford', cans: 50 });
+
+    expect(component.error()).toContain('erreur');
+    expect(component.showForm()).toBe(true); // le formulaire reste ouvert
   });
 
   // ── Suppression ────────────────────────────────────────────────────────────
 
   it('appelle TeamsService.remove() après confirmation et retire l\'équipe de la liste', () => {
-    // Simule window.confirm → true
     vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
     mockTeamsService.remove.mockReturnValue(of(undefined));
 
@@ -172,15 +230,5 @@ describe('Teams Component', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.teams-error')).toBeTruthy();
-  });
-
-  it('affiche une erreur si on tente de sauvegarder un nom vide', () => {
-    component.openCreate();
-    component.formName.set('   '); // seulement des espaces
-
-    component.saveForm();
-
-    expect(component.error()).toContain('obligatoire');
-    expect(mockTeamsService.create).not.toHaveBeenCalled();
   });
 });
