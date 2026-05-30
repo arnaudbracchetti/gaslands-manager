@@ -1,107 +1,185 @@
-# New Nx Repository
+# Gaslands Manager
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Application web de gestion d'équipes pour le jeu de figurines **[Gaslands](https://gaslands.com/)** (course automobile post-apocalyptique).
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+**Stack technique :** Angular 21 · NestJS 11 · PostgreSQL 16 · Docker · Nx Monorepo
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
-## Finish your Nx platform setup
+---
 
-🚀 [Finish setting up your workspace](https://cloud.nx.app/connect/XB6d6TNsmQ) to get faster builds with remote caching, distributed task execution, and self-healing CI. [Learn more about Nx Cloud](https://nx.dev/ci/intro/why-nx-cloud).
-
-## Generate a library
-
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
-```
-
-## Run tasks
-
-To build the library use:
-
-```sh
-npx nx build pkg1
-```
-
-To run any task with Nx use:
-
-```sh
-npx nx <target> <project-name>
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
+## Architecture
 
 ```
-npx nx release
+gaslands/
+├── apps/
+│   ├── frontend/        → Angular 21 (zoneless, signals, lazy routing)
+│   ├── frontend-e2e/    → Tests E2E Playwright
+│   ├── backend/         → NestJS 11 (API REST /api/*)
+│   └── backend-e2e/     → Tests E2E backend
+└── content/             → Fichiers Markdown servis via l'API
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+### Flux de données
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+`content/*.md` → `ContentService` → `GET /api/content/:slug` → composant Angular `[innerHTML]`
 
-## Keep TypeScript project references up to date
+### En production (Docker Compose)
 
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
+Trois services interconnectés sur le réseau interne `gaslands_net` :
 
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
+| Service    | Image          | Port exposé    |
+|------------|----------------|----------------|
+| `postgres`  | postgres:16    | 5432 (interne) |
+| `backend`   | node:alpine    | 3000           |
+| `frontend`  | nginx:alpine   | 4200           |
 
-```sh
+Le frontend (nginx) proxie automatiquement `/api/*` vers `http://backend:3000`.
+
+---
+
+## Prérequis
+
+- [Node.js](https://nodejs.org/) 20+
+- [Docker](https://www.docker.com/) + Docker Compose
+- PowerShell (Windows)
+
+---
+
+## Déploiement — Développement local
+
+### Démarrage rapide
+
+```powershell
+.\dev.ps1
+```
+
+Ce script démarre automatiquement PostgreSQL via Docker, puis ouvre deux fenêtres PowerShell pour le backend et le frontend.
+
+| Service  | URL                       |
+|----------|---------------------------|
+| Frontend | http://localhost:4200      |
+| API      | http://localhost:3000/api |
+
+### Démarrage manuel
+
+```powershell
+# 1. Démarrer PostgreSQL (Docker requis)
+docker compose up -d postgres
+
+# 2. Backend NestJS → http://localhost:3000/api
+$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
+$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
+npx nx serve backend
+
+# 3. Frontend Angular → http://localhost:4200
+$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
+$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
+npx nx serve frontend
+```
+
+### Configuration de l'environnement
+
+Copier le fichier d'exemple et renseigner les valeurs :
+
+```powershell
+Copy-Item apps/backend/.env.example apps/backend/.env
+```
+
+```env
+# apps/backend/.env
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=your_db_user
+DATABASE_PASSWORD=your_db_password
+DATABASE_NAME=gaslands
+CONTENT_DIR=content
+```
+
+> ⚠️ Ne jamais commiter `.env` — il est dans `.gitignore`. Les identifiants Docker Compose sont définis dans `docker-compose.yml`.
+
+---
+
+## Déploiement — Production (Docker)
+
+### Démarrage complet
+
+```bash
+docker compose up --build -d
+```
+
+Construit les images et démarre tous les services en arrière-plan.
+
+| Service  | URL                       |
+|----------|---------------------------|
+| Frontend | http://localhost:4200      |
+| API      | http://localhost:3000/api |
+
+### Commandes utiles
+
+```bash
+# Arrêter les services
+docker compose down
+
+# Suivre les logs en temps réel
+docker compose logs -f
+
+# Rebuild et redémarrer après un changement de code
+docker compose up --build
+
+# Voir l'état des conteneurs
+docker compose ps
+```
+
+### Détail des images Docker
+
+**Frontend** (`apps/frontend/Dockerfile`) — build multi-stage :
+1. `builder` (node:20-alpine) — compile l'app Angular avec `nx build frontend --configuration=production`
+2. `runner` (nginx:alpine) — sert les fichiers statiques, proxie `/api/*` vers le backend
+
+**Backend** (`apps/backend/Dockerfile`) — build multi-stage :
+1. `builder` (node:20-alpine) — compile NestJS avec `nx build backend`
+2. `runner` (node:20-alpine) — exécute `main.js`, sert le dossier `content/`
+
+---
+
+## Commandes Nx courantes
+
+```powershell
+# Installation des dépendances
+npm install
+
+# Builds de production
+npx nx build frontend
+npx nx build backend
+
+# Tests
+npx nx run frontend:test       # tests unitaires Angular
+npx nx run backend-e2e:e2e     # tests E2E backend
+
+# Synchroniser les références TypeScript (si Nx se plaint)
 npx nx sync
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+---
 
-```sh
-npx nx sync:check
+## Ajouter du contenu
+
+Créer un fichier `content/<slug>.md` — il sera automatiquement disponible via :
+
+```
+GET /api/content/<slug>
 ```
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+Aucun redémarrage du backend n'est nécessaire.
 
-## Nx Cloud
+---
 
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+## Notes Windows
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Ce projet est développé sous Windows. Deux variables d'environnement sont nécessaires avant les commandes `npx nx` :
 
-### Set up CI (non-Github Actions CI)
-
-**Note:** This is only required if your CI provider is not GitHub Actions.
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
+```powershell
+$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"        # SSL non vérifié sur ce réseau
+$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"   # Compatibilité TypeScript Angular
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Le script `dev.ps1` les applique automatiquement.
