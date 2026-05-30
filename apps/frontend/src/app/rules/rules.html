@@ -1,0 +1,27 @@
+<!--
+  Nouvelle syntaxe de contrôle Angular 17+ : @if / @else
+  Remplace *ngIf (qui nécessitait CommonModule).
+
+  Les signals se lisent comme des fonctions : loading() retourne la valeur actuelle.
+  Angular surveille ces appels et re-rend le composant quand la valeur change.
+-->
+<div class="rules-page">
+
+  @if (loading()) {
+    <div class="loading">
+      <span>⏳ Chargement des règles...</span>
+    </div>
+  } @else if (error()) {
+    <div class="error">
+      <span>⚠️ {{ error() }}</span>
+    </div>
+  } @else {
+    <!--
+      [innerHTML] injecte le HTML généré depuis le Markdown.
+      html() lit la valeur actuelle du signal.
+    -->
+    <article class="markdown-content" [innerHTML]="html()">
+    </article>
+  }
+
+</div>

@@ -1,0 +1,86 @@
+.rules-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 40px;
+  color: white;
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+.error {
+  color: #e94560;
+  opacity: 1;
+}
+
+// Styles pour le contenu Markdown converti en HTML
+.markdown-content {
+  color: #e0e0e0;
+  line-height: 1.8;
+
+  // Titres
+  h1 {
+    font-size: 2.2rem;
+    color: #e94560;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    color: #7ec8e3;
+    margin: 2rem 0 1rem;
+    border-bottom: 1px solid #0f3460;
+    padding-bottom: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+    color: #aaa;
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  p {
+    margin-bottom: 1rem;
+  }
+
+  // Listes
+  ul, ol {
+    margin: 1rem 0 1rem 1.5rem;
+    li { margin-bottom: 0.4rem; }
+  }
+
+  // Tableaux
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+
+    th {
+      background: #0f3460;
+      color: #e94560;
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    tr:hover td {
+      background: rgba(15, 52, 96, 0.3);
+    }
+  }
+
+  // Texte en gras
+  strong {
+    color: white;
+    font-weight: 700;
+  }
+}

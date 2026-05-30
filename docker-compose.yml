@@ -1,0 +1,129 @@
+version: '3.8'
+
+# ============================================================
+# Docker Compose — Gaslands Manager
+#
+# Trois services communiquent sur un réseau Docker privé :
+#
+#   browser → frontend (nginx, port 4200)
+#                ↓ proxy /api/*
+#             backend (NestJS, port 3000)
+#                ↓ TypeORM
+#             postgres (PostgreSQL 16, port 5432)
+#
+# Commandes utiles :
+#   docker compose up --build   → (re)build et démarrer tout
+#   docker compose up -d        → démarrer en arrière-plan
+#   docker compose logs -f      → suivre les logs en temps réel
+#   docker compose down -v      → arrêter et supprimer les volumes
+# ============================================================
+
+services:
+
+  # ────────────────────────────────────────────────────────
+  # SERVICE : postgres
+  # Base de données PostgreSQL 16
+  # ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: gaslands_db
+    environment:
+      POSTGRES_USER: gaslands
+      POSTGRES_PASSWORD: gaslands_pass
+      POSTGRES_DB: gaslands
+    ports:
+      # Expose le port 5432 sur le host pour accéder à la DB
+      # avec un client externe (pgAdmin, DBeaver…) en dev
+      - "5432:5432"
+    volumes:
+      # Volume nommé : les données survivent aux arrêts/redémarrages
+      # (contrairement à un bind mount anonyme qui serait perdu)
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gaslands_net
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────
+  # SERVICE : backend
+  # API REST NestJS compilée avec webpack
+  # ────────────────────────────────────────────────────────
+  backend:
+    build:
+      # "context: ." = contexte de build = racine du monorepo.
+      # Nx a besoin de tous les fichiers du workspace pour compiler
+      # (nx.json, tsconfig.base.json, node_modules partagés…).
+      # .dockerignore filtre ce qui est inutile (node_modules, dist…).
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: gaslands_backend
+    environment:
+      # ── Variables de connexion PostgreSQL ──────────────────
+      # IMPORTANT : DATABASE_HOST = "postgres" (nom du service Docker)
+      # et NON "localhost". Dans un réseau Docker bridge, chaque
+      # service est accessible par son NOM DE SERVICE.
+      # "localhost" dans un container pointe sur lui-même uniquement.
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: gaslands
+      DATABASE_PASSWORD: gaslands_pass
+      DATABASE_NAME: gaslands
+
+      # ── Chemin des fichiers Markdown dans le container ─────
+      # Le ContentService lit les fichiers .md depuis ce chemin.
+      # On utilise un chemin absolu dans le container (plus fiable
+      # que le chemin relatif utilisé en dev local).
+      CONTENT_DIR: /app/content
+
+      # ── Port d'écoute du serveur NestJS ───────────────────
+      PORT: 3000
+    ports:
+      # Expose le port 3000 sur le host pour tester l'API directement
+      # (ex: curl http://localhost:3000/api/content/regles)
+      - "3000:3000"
+    depends_on:
+      # Docker attend que postgres soit DÉMARRÉ avant de lancer le backend.
+      # Note : "démarré" ≠ "prêt à accepter des connexions".
+      # TypeORM réessaie automatiquement la connexion (comportement par défaut).
+      - postgres
+    networks:
+      - gaslands_net
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────
+  # SERVICE : frontend
+  # Application Angular servie par nginx
+  # nginx joue aussi le rôle de reverse proxy pour /api/*
+  # ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: gaslands_frontend
+    ports:
+      # Port 4200 du host → port 80 du container nginx
+      # Le navigateur accède à l'app sur http://localhost:4200
+      - "4200:80"
+    depends_on:
+      # Le frontend doit démarrer APRÈS le backend
+      # (nginx a besoin que la cible du proxy soit disponible)
+      - backend
+    networks:
+      - gaslands_net
+    restart: unless-stopped
+
+# ════════════════════════════════════════════════════════════
+# RÉSEAU
+# Un réseau bridge privé isole les services du reste du système.
+# Les services se trouvent par leur nom (DNS interne Docker).
+# ════════════════════════════════════════════════════════════
+networks:
+  gaslands_net:
+    driver: bridge
+
+# ════════════════════════════════════════════════════════════
+# VOLUMES
+# Volume nommé pour persister les données PostgreSQL entre
+# les redémarrages (géré par le daemon Docker, pas un dossier local).
+# ════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:

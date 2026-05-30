@@ -1,0 +1,38 @@
+# Dépendances — reconstruites dans le container Docker
+node_modules/
+
+# Dossiers de build — reconstruits pendant le docker build
+dist/
+apps/backend/dist/
+
+# Cache Nx et Angular — inutile dans le container
+.nx/cache
+.nx/workspace-data
+.nx/polygraph
+.nx/self-healing
+.angular/
+
+# Fichiers de configuration sensibles — injectés via docker-compose
+apps/backend/.env
+
+# Fichiers IDE et outils de dev
+.vscode/
+.idea/
+*.launch
+.cursor/
+
+# Fichiers de tests et coverage
+coverage/
+test-output/
+__screenshots__/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Claude Code
+.claude/

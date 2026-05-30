@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "types": [],
+    // Surcharge les options incompatibles héritées de tsconfig.base.json
+    // Angular ne supporte pas composite/emitDeclarationOnly (options pour les librairies TS)
+    "composite": false,
+    "emitDeclarationOnly": false,
+    "declarationMap": false,
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    // dom est nécessaire pour accéder à console, document, window, etc.
+    "lib": ["es2022", "dom", "dom.iterable"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
+}

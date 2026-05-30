@@ -1,0 +1,18 @@
+<!-- Barre de navigation présente sur toutes les pages -->
+<nav class="navbar">
+  <!-- routerLink = lien Angular (pas de rechargement de page, navigation SPA) -->
+  <a class="navbar-brand" routerLink="/">⚙️ Gaslands</a>
+
+  <ul class="navbar-links">
+    <!-- routerLinkActive="active" ajoute la classe CSS "active" sur le lien de la page courante -->
+    <li><a routerLink="/teams" routerLinkActive="active">Équipes</a></li>
+    <li><a routerLink="/vehicles" routerLinkActive="active">Véhicules</a></li>
+    <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
+    <li><a routerLink="/rules" routerLinkActive="active">Règles</a></li>
+  </ul>
+</nav>
+
+<!-- router-outlet est le "trou" dans lequel Angular injecte le composant de la route active -->
+<main>
+  <router-outlet></router-outlet>
+</main>
