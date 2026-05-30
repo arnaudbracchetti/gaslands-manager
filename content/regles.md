@@ -39,4 +39,4 @@ Chaque équipe choisit un **sponsor** qui définit les véhicules et armes dispo
 
 ## Le budget
 
-Les équipes sont construites avec un budget en **canettes** (🥫). Le budget standard est de **50 canettes** pour une partie d'initiation.
+Les équipes sont construites avec un budget en **jerricans** (🥫). Le budget standard est de **50 jerricans** pour une partie d'initiation.
