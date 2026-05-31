@@ -1,0 +1,469 @@
+vehicules:
+  - nom: "Dragster"
+    poids: "Léger"
+    carrosserie: 4
+    manoeuvrabilite: 4
+    vitesse_max: 6
+    equipage: 1
+    emplacements: 2
+    prix: 5
+    description: |
+      Véhicule très rapide et fragile, conçu pour les lignes droites, les accélérations violentes et les prises de risque.
+    regles: |
+      - **Moteur à Réaction** : ce véhicule est considéré comme ayant l’amélioration **Nitro** avec un nombre infini de Jetons Munition.
+      - **Nitro** : ce véhicule effectue alors immédiatement un déplacement forcé avec le gabarit droit Long, après quoi il prend des Jetons Danger jusqu’à en avoir 5
+      - Il explose automatiquement lorsqu’il devient une Épave.
+      - Il doit utiliser sa Nitro à chaque activation.
+    sponsors_autorises:
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Moto"
+    poids: "Léger"
+    carrosserie: 4
+    manoeuvrabilite: 5
+    vitesse_max: 6
+    equipage: 1
+    emplacements: 1
+    prix: 5
+    description: |
+      Véhicule très agile et très rapide, mais peu résistant et disposant de peu d’emplacements.
+    regles: |
+      - **Plein Gaz** : ce véhicule considère le gabarit de déplacement droit Long comme autorisé à n’importe quelle Vitesse.
+      - Le gabarit droit Long n’est jamais considéré comme Dangereux ou Trivial, quelle que soit la Vitesse.
+      - **Pivot** : au début de son activation, si ce véhicule est en Vitesse 1, il peut pivoter dans n’importe quelle direction autour de son centre de rotation.
+      - Ce pivot ne peut pas déclencher de Collision.
+      - Ce pivot ne peut pas laisser le véhicule en contact avec un obstacle.
+    sponsors_autorises:
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Buggy"
+    poids: "Léger"
+    carrosserie: 6
+    manoeuvrabilite: 4
+    vitesse_max: 6
+    equipage: 2
+    emplacements: 2
+    prix: 6
+    description: |
+      Véhicule léger polyvalent, rapide et maniable, avec un peu plus de résistance qu’une moto.
+    regles: |
+      - **Arceaux** : lorsque ce véhicule part en Tonneau, il peut choisir d’ignorer les deux dégâts causés par le Tonneau.
+    sponsors_autorises:
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Moto avec side-car"
+    poids: "Léger"
+    carrosserie: 4
+    manoeuvrabilite: 5
+    vitesse_max: 6
+    equipage: 2
+    emplacements: 2
+    prix: 8
+    description: |
+      Version plus équipée de la moto, conservant une forte mobilité tout en gagnant un membre d’équipage et un emplacement.
+    regles: |
+      - **Plein Gaz** : ce véhicule considère le gabarit de déplacement droit Long comme autorisé à n’importe quelle Vitesse.
+      - Le gabarit droit Long n’est jamais considéré comme Dangereux ou Trivial, quelle que soit la Vitesse.
+      - **Pivot** : au début de son activation, si ce véhicule est en Vitesse 1, il peut pivoter dans n’importe quelle direction autour de son centre de rotation.
+      - Ce pivot ne peut pas déclencher de Collision.
+      - Ce pivot ne peut pas laisser le véhicule en contact avec un obstacle.
+    sponsors_autorises:
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Camion à glaces"
+    poids: "Moyen"
+    carrosserie: 10
+    manoeuvrabilite: 2
+    vitesse_max: 4
+    equipage: 2
+    emplacements: 2
+    prix: 8
+    description: |
+      Véhicule moyen lent et solide, thématique et perturbateur.
+    regles: |
+      - **Ritournelle Insupportable** : les véhicules qui prennent ce véhicule pour cible lors d’un Éperonnage ne prennent aucun Jeton Danger lors du point 6 de la résolution de cet Éperonnage.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Voiture"
+    poids: "Moyen"
+    carrosserie: 10
+    manoeuvrabilite: 3
+    vitesse_max: 5
+    equipage: 2
+    emplacements: 2
+    prix: 12
+    description: |
+      Véhicule moyen standard, équilibré entre résistance, vitesse, équipage et capacité d’équipement.
+    regles: |
+      Aucune règle spéciale.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Voiture de sport"
+    poids: "Moyen"
+    carrosserie: 8
+    manoeuvrabilite: 4
+    vitesse_max: 6
+    equipage: 1
+    emplacements: 2
+    prix: 15
+    description: |
+      Véhicule moyen rapide et maniable, moins robuste qu’une voiture standard mais plus performant à haute vitesse.
+    regles: |
+      - **Dérobade** : si ce véhicule est pris pour cible par un Éperonnage latéral ou arrière et qu’il annonce une Esquive comme réaction, il peut effectuer une activation gratuite immédiatement après la fin de l’activation du véhicule actif.
+      - Cette activation gratuite ne compte pas comme l’activation du véhicule pour cette Phase de Vitesse.
+      - Elle peut survenir lors de sa propre activation.
+      - Cette règle peut permettre au véhicule de s’activer deux fois de suite, deux fois lors d’une même Phase de Vitesse, ou une fois lors d’une Phase de Vitesse pour laquelle il n’est normalement pas éligible.
+      - Les véhicules amis peuvent déclencher cet effet.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Camion"
+    poids: "Moyen"
+    carrosserie: 12
+    manoeuvrabilite: 2
+    vitesse_max: 4
+    equipage: 3
+    emplacements: 3
+    prix: 15
+    description: |
+      Véhicule moyen robuste, lent, avec davantage d’équipage et d’emplacements qu’une voiture.
+    regles: |
+      Aucune règle spéciale.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Gyrocoptère"
+    poids: "Moyen"
+    carrosserie: 4
+    manoeuvrabilite: 4
+    vitesse_max: 6
+    equipage: 1
+    emplacements: 0
+    prix: 10
+    description: |
+      Véhicule aérien léger et fragile, conçu pour ignorer une grande partie du terrain et utiliser efficacement des armes largables.
+    regles: |
+      - **Aérien** : ce véhicule ignore en permanence tous les obstacles qui ne sont pas de Grande Hauteur, les armes larguées et le type de surface du terrain, sauf pour la vérification des mises à Couvert et lorsqu’il attaque d’autres véhicules lors de son Étape d’Attaque.
+      - Les autres véhicules ignorent ce véhicule en permanence, sauf lors de leur Étape d’Attaque.
+      - Ce véhicule ne peut pas être impliqué dans une Collision.
+      - En cas de contact avec un obstacle ou un véhicule, appliquez les règles de Déplacement Interrompu.
+      - **Voltige** : au début de son activation, ce véhicule peut prendre 2 Jetons Danger pour effectuer une unique Rotation d’au maximum 90° autour de son centre de rotation.
+      - **Bombardement** : lorsque vous achetez des armes pour ce véhicule, les armes largables n’occupent aucun Emplacement.
+      - Ce véhicule peut attaquer avec autant d’armes largables que désiré lors d’une même Étape d’Attaque.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Ambulance"
+    poids: "Moyen"
+    carrosserie: 12
+    manoeuvrabilite: 2
+    vitesse_max: 5
+    equipage: 3
+    emplacements: 3
+    prix: 20
+    description: |
+      Véhicule moyen robuste, plus rapide qu’un camion et doté d’un équipage nombreux.
+    regles: |
+      - **Stimulant** : si ce véhicule est impliqué dans une Collision et que les deux véhicules annoncent une Esquive, les deux véhicules doivent monter d’une Vitesse juste après la résolution de la Collision.
+      - Chaque véhicule prend alors 1 Jeton Danger, comme lors d’un changement de Vitesse normal.
+      - Si l’un des véhicules est déjà à sa Vitesse maximale, sa Vitesse actuelle ne change pas, mais il prend quand même 1 Jeton Danger.
+      - **Tranquilisant** : si ce véhicule est impliqué dans une Collision lors de son activation et qu’il annonce un Éperonnage, le véhicule cible ne prend pas de Jeton Danger du fait de la Collision.
+      - À la place, la cible défausse 2 Jetons Danger.
+      - Réduisez ensuite de 1 la Valeur d’Équipage du véhicule ciblé jusqu’à la fin de la Phase de Vitesse.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Monster Truck"
+    poids: "Lourd"
+    carrosserie: 10
+    manoeuvrabilite: 3
+    vitesse_max: 4
+    equipage: 2
+    emplacements: 2
+    prix: 25
+    description: |
+      Véhicule lourd de franchissement, adapté aux terrains difficiles et aux collisions avec des obstacles.
+    regles: |
+      - **Tout-Terrain** : ce véhicule peut ignorer les pénalités lorsqu’il roule sur des terrains Difficiles ou Dangereux.
+      - **Franchissement** : lors de l’Étape de Déplacement de ce véhicule, après avoir résolu une Collision avec un obstacle de Poids inférieur, ce véhicule peut annoncer qu’il le franchit.
+      - S’il le fait, il peut ignorer cet obstacle pour le reste de son Étape de Déplacement.
+      - Ce véhicule ne peut pas utiliser Franchissement pour ignorer un autre véhicule ayant également la règle spéciale Franchissement.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Camion Lourd"
+    poids: "Lourd"
+    carrosserie: 14
+    manoeuvrabilite: 2
+    vitesse_max: 3
+    equipage: 4
+    emplacements: 5
+    prix: 25
+    description: |
+      Véhicule lourd très robuste, lent, avec beaucoup d’équipage et une forte capacité d’équipement.
+    regles: |
+      Aucune règle spéciale.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Bus"
+    poids: "Lourd"
+    carrosserie: 16
+    manoeuvrabilite: 2
+    vitesse_max: 3
+    equipage: 8
+    emplacements: 3
+    prix: 30
+    description: |
+      Véhicule lourd massif, très résistant et doté d’un équipage exceptionnellement nombreux.
+    regles: |
+      Aucune règle spéciale.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Hélicoptère"
+    poids: "Lourd"
+    carrosserie: 8
+    manoeuvrabilite: 3
+    vitesse_max: 4
+    equipage: 3
+    emplacements: 4
+    prix: 30
+    description: |
+      Véhicule aérien lourd, fragile pour son coût mais capable d’ignorer une grande partie du terrain et de bombarder efficacement.
+    regles: |
+      - **Accès Limité** : si les règles de Sponsors sont utilisées, l’Hélicoptère ne peut pas être acheté comme un véhicule standard.
+      - Seules les équipes ayant accès aux avantages des sponsors appropriés peuvent acheter ce type de véhicule.
+      - **Aérien** : ce véhicule ignore en permanence tous les obstacles qui ne sont pas de Grande Hauteur, les armes larguées et le type de surface du terrain, sauf pour la vérification des mises à Couvert et lorsqu’il attaque d’autres véhicules lors de son Étape d’Attaque.
+      - Les autres véhicules ignorent ce véhicule en permanence, sauf lors de leur Étape d’Attaque.
+      - Ce véhicule ne peut pas être impliqué dans une Collision.
+      - En cas de contact avec un obstacle ou un véhicule, appliquez les règles de Déplacement Interrompu.
+      - **Voltige** : au début de son activation, ce véhicule peut prendre 2 Jetons Danger pour effectuer une unique Rotation d’au maximum 90° autour de son centre de rotation.
+      - **Bombardement** : lorsque vous achetez des armes pour ce véhicule, les armes largables n’occupent aucun Emplacement.
+      - Ce véhicule peut attaquer avec autant d’armes largables que désiré lors d’une même Étape d’Attaque.
+    sponsors_autorises:
+      - "Rutherford"
+
+  - nom: "Char d’assaut"
+    poids: "Lourd"
+    carrosserie: 20
+    manoeuvrabilite: 4
+    vitesse_max: 3
+    equipage: 3
+    emplacements: 4
+    prix: 40
+    description: |
+      Véhicule lourd extrêmement résistant, lent, conçu pour encaisser les impacts et porter des armes lourdes.
+    regles: |
+      - **Accès Limité** : si les règles de Sponsors sont utilisées, le Char d’assaut ne peut pas être acheté comme un véhicule standard.
+      - Seules les équipes ayant accès aux avantages des sponsors appropriés peuvent acheter ce type de véhicule.
+      - **Tout-Terrain** : ce véhicule peut ignorer les pénalités lorsqu’il roule sur des terrains Difficiles ou Dangereux.
+      - **Pivot** : au début de son activation, si ce véhicule est en Vitesse 1, il peut pivoter dans n’importe quelle direction autour de son centre de rotation.
+      - Ce pivot ne peut pas déclencher de Collision.
+      - Ce pivot ne peut pas laisser le véhicule en contact avec un obstacle.
+      - **Tourelle** : ce véhicule peut considérer une de ses armes comme étant montée sur Tourelle, sans avoir à payer le coût de l’amélioration.
+      - **Franchissement** : lors de l’Étape de Déplacement de ce véhicule, après avoir résolu une Collision avec un obstacle de Poids inférieur, ce véhicule peut annoncer qu’il le franchit.
+      - S’il le fait, il peut ignorer cet obstacle pour le reste de son Étape de Déplacement.
+      - Ce véhicule ne peut pas utiliser Franchissement pour ignorer un autre véhicule ayant également la règle spéciale Franchissement.
+    sponsors_autorises:
+      - "Rutherford"
+
+  - nom: "Forteresse Mobile"
+    poids: "Lourd"
+    carrosserie: 26
+    manoeuvrabilite: 2
+    vitesse_max: 4
+    equipage: 5
+    emplacements: 5
+    prix: 40
+    description: |
+      Véhicule massif et articulé, constitué d’une cabine et d’une remorque. Il se comporte comme un véhicule à part, avec des règles propres pour le mouvement, les pertes de contrôle et les collisions.
+    regles: |
+      - **Articulé — Cabine et Remorque** : la Forteresse Mobile se compose de deux parties : la cabine à l’avant et la remorque à l’arrière.
+      - La cabine et la remorque sont connectées par un attelage.
+      - **Équipement d’un véhicule articulé** : lorsqu’une arme est achetée, le joueur doit annoncer si elle est montée sur la cabine ou sur la remorque.
+      - Pour mesurer une portée, le gabarit de tir est placé contre la cabine ou contre la remorque selon l’emplacement de l’arme.
+      - **Déplacement articulé** : la cabine se déplace comme un véhicule normal, séparément de la remorque.
+      - Après le déplacement de la cabine, la remorque est replacée en contact avec la cabine.
+      - Si un gabarit autre que Droit est choisi, le véhicule prend 1 Jeton Danger.
+      - Le gabarit de déplacement est placé au centre de la face avant de la cabine.
+      - Les Dés de Manœuvre sont lancés et résolus normalement.
+      - La remorque est ignorée pendant le placement de la cabine en Position Finale.
+      - La remorque est ensuite replacée de manière à être connectée à l’attelage et à recouvrir autant que possible la surface du gabarit de déplacement.
+      - **En arrière toute** : lorsqu’une Forteresse Mobile se déplace en marche arrière, l’arrière de la remorque est considéré comme l’avant de la cabine, et la cabine est considérée comme la remorque.
+      - **Pivoter un véhicule articulé** : lorsqu’un véhicule articulé pivote, la cabine et la remorque pivotent ensemble autour de leur centre de rotation commun, comme s’il s’agissait d’un unique véhicule rigide.
+      - **Mise en Portefeuille** : si un véhicule articulé part en Tonneau, ne résolvez pas le Tonneau ; résolvez une Mise en Portefeuille.
+      - Lors d’une Mise en Portefeuille, le joueur à gauche du propriétaire oriente la remorque dans la position de son choix, sans déconnecter ni chevaucher la cabine. Ceci ouvre une Fenêtre de Collision.
+      - Puis le joueur à gauche du propriétaire pivote le véhicule articulé dans l’orientation de son choix. Ceci ouvre une Fenêtre de Collision.
+      - Enfin, le véhicule articulé effectue une attaque à 4D6 contre lui-même, qu’il ne peut pas Esquiver.
+      - **Mastodonte — Monter en Pression** : au début de son activation, ce véhicule peut prendre 1 Jeton Danger pour ignorer son Étape de Déplacement. Il peut ensuite monter d’une Vitesse.
+      - **Mastodonte — Dérapage** : lorsqu’il résout un résultat Dérapage, il ignore le gabarit de Dérapage et ne le place pas. Chaque résultat Dérapage donne tout de même 1 Jeton Danger normalement.
+      - **Mastodonte — Perte de Contrôle** : lorsqu’il subit une Perte de Contrôle, le joueur à gauche de son propriétaire ne le pivote pas lors du dernier point de la séquence de Perte de Contrôle. Le véhicule reste orienté comme il est.
+      - **Perte de Contrôle de la Forteresse Mobile** : lorsqu’une Forteresse Mobile subit une Perte de Contrôle, un Test de Contrôle raté provoque une Mise en Portefeuille au lieu d’un Tonneau. Elle n’est pas pivotée en fin de Perte de Contrôle.
+      - **Passage en Force** : lors de son Étape de Déplacement, lorsqu’elle entre en Collision avec un autre véhicule de Poids plus faible, elle peut annoncer un Passage en Force comme réaction.
+      - Un Passage en Force est considéré comme un Éperonnage à tout point de vue, avec un effet supplémentaire.
+      - Après résolution de la Collision, le propriétaire de la Forteresse Mobile peut placer le véhicule ciblé n’importe où à Portée Courte maximum de sa position initiale.
+      - Il peut ensuite pivoter ce véhicule dans n’importe quelle direction, de sorte qu’il ne rentre pas en Collision avec la Forteresse Mobile lors de la suite de son Étape de Déplacement.
+      - Si la Forteresse Mobile possède un Bélier sur l’orientation appropriée, le Passage en Force bénéficie des règles spéciales du Bélier.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+

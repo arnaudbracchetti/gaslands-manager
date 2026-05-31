@@ -41,7 +41,8 @@ Ce projet est un **support pédagogique** : l'utilisateur monte en compétences 
 
 ## Documentation de référence
 
-> Lire ces fichiers avant toute modification significative. Les mettre à jour quand le projet évolue.
+> Lire SPECIFICATION.md et ARCHITECTURE.md fichiers avant toute modification. 
+> Les mettre à jour SPECIFICATION.md et ARCHITECTURE.md quand le projet évolue.
 
 - [SPECIFICATION.md](SPECIFICATION.md) — Fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Stack technique, choix d'architecture, points d'attention, patterns à respecter

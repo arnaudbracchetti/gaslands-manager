@@ -1,0 +1,143 @@
+
+sponsors:
+  - nom: "Rutherford"
+    description: "Industriel martien de l’armement et du pétrole, Rutherford sponsorise des équipes lourdes, militarisées et tournées vers la puissance de feu."
+    classes_avantage:
+      - "Dur à Cuire"
+      - "Militaire"
+    avantages_sponsorises: |
+      - **Arsenal Militaire** : l’équipe peut acheter un Char d’Assaut et un Hélicoptère.
+      - **Dépôt de Munitions** : les armes avec 3 munitions de départ en ont 4 à l’achat.
+      - **Loi du Plus Fort** : l’équipe ne peut pas acheter de véhicule de Poids Léger.
+      - **Carnage en Direct** : si un véhicule inflige au moins 6 touches avant Esquive lors d’une Étape d’Attaque, son propriétaire gagne 1 Vote du Public.
+
+  - nom: "Miyazaki"
+    description: "Sponsor d’élite centré sur la maîtrise du pilotage, la précision et les manœuvres spectaculaires."
+    classes_avantage:
+      - "Audace"
+      - "Précision"
+    avantages_sponsorises: |
+      - **Virtuose** : la première tentative de Tenter le Coup d’un véhicule pendant son activation ne donne pas de Jeton Danger.
+      - **Élégant** : l’équipe ne peut pas acheter de véhicules avec une Manœuvrabilité inférieure à 3.
+      - **Frimeur** : un véhicule gagne un Jeton Frime s’il combine Rotation, Dérapage, changement de Vitesse et aucune Perte de Contrôle. Si tous les véhicules ont un Jeton Frime, l’équipe les défausse et gagne 1 Vote du Public par jeton.
+
+  - nom: "Mishkin"
+    description: "Ingénieur et inventeur russe, Mishkin fournit des prototypes, armes électriques et véhicules expérimentaux."
+    classes_avantage:
+      - "Militaire"
+      - "Technologie"
+    avantages_sponsorises: |
+      - **Gros Geek** : l’équipe peut acheter des armes et améliorations Électriques.
+      - **Dynamo** : après une activation en Phase de Vitesse 4, 5 ou 6, un véhicule peut ajouter 1 Jeton Munition à une arme ou amélioration Électrique.
+      - **Prototypes** : si un véhicule utilise une arme encore jamais utilisée dans la partie, son propriétaire gagne 1 Vote du Public.
+
+  - nom: "Idris"
+    description: "Culte mystique de la vitesse, fondé autour de Yandi Idris et de l’obsession de la Nitro."
+    classes_avantage:
+      - "Précision"
+      - "Rapidité"
+    avantages_sponsorises: |
+      - **Accro à la Nitro** : l’équipe achète les améliorations Nitro à moitié prix.
+      - **Démon de la Vitesse** : lorsqu’un véhicule prend des Jetons Danger avec la Nitro, il n’en prend que jusqu’à 3 au lieu de 5.
+      - **Culte de la Vitesse** : en Phase de Vitesse 1, 2 ou 3, choisir le gabarit droit Long rapporte 1 Vote du Public.
+      - **Collé à l’Asphalte** : l’équipe ne peut pas acheter de Gyrocoptère.
+
+  - nom: "Slime"
+    description: "Chef anarchique australien, Slime favorise les collisions latérales, les véhicules hérissés et le jeu dangereux."
+    classes_avantage:
+      - "Optimisation"
+      - "Trompe-la-Mort"
+    avantages_sponsorises: |
+      - **Ricochet** : après une Collision latérale avec Éperonnage, le véhicule peut résoudre une autre Étape de Déplacement.
+      - **Hérissé** : l’amélioration Bélier ne requiert aucun Emplacement.
+      - **Vivre Vite** : si un véhicule commence l’Étape de Perte de Contrôle avec plus de Jetons Danger que de Points de Carrosserie, son propriétaire gagne 1 Vote du Public.
+
+  - nom: "La Geôlière"
+    description: "Sponsor carcéral de Sao Paulo, elle transforme des prisonniers en pilotes enfermés dans des voitures-cercueils."
+    classes_avantage:
+      - "Agression"
+      - "Dur à Cuire"
+    avantages_sponsorises: |
+      - **Voitures-Prison** : les véhicules de Poids Moyen peuvent acheter une amélioration réduisant leur coût de 4 Jerrycans, minimum 5, mais perdent 2 Points de Carrosserie.
+      - **Feux d’Artifice** : lorsqu’un véhicule explose, son propriétaire gagne des Votes du Public supplémentaires selon son Poids, puis défausse les Jetons Munition de l’Épave.
+
+  - nom: "Scarlett"
+    description: "Pirate flamboyante et médiatique, Scarlett exploite l’équipage comme une ressource consommable."
+    classes_avantage:
+      - "Optimisation"
+      - "Agression"
+    avantages_sponsorises: |
+      - **Quartiers de l’Équipage** : l’amélioration Membre d’Équipage Supplémentaire coûte moitié prix.
+      - **Pillards** : un véhicule peut réduire définitivement son Équipage pour retirer des Points de Carrosserie à un véhicule en contact.
+      - **Hisser les Voiles** : un véhicule peut perdre définitivement 1 Équipage pour ajouter un résultat Embrayage.
+      - **Sous Mon Pavillon ou Sous la Quille !** : quand un véhicule en contact devient une Épave, le véhicule peut gagner 1 Équipage ou 2 Votes du Public.
+
+  - nom: "La Patrouille de l’Autoroute"
+    description: "Vestige brutal d’un ordre disparu, la Patrouille traque un Bandit désigné et le punit par la vitesse."
+    classes_avantage:
+      - "Rapidité"
+      - "Poursuite"
+    avantages_sponsorises: |
+      - **Course Poursuite** : après le déploiement, l’équipe désigne un véhicule adverse comme Bandit.
+      - **Bandit à 12h** : si le Bandit est visible dans l’Arc Avant au-delà de Portée Double, le véhicule effectue une autre Étape de Déplacement.
+      - **Sirène** : si le véhicule est dans l’Arc Arrière du Bandit, celui-ci réduit sa Vitesse ou prend 2 Jetons Danger.
+      - **Poing de la Justice** : l’équipe gagne des Votes du Public si le Bandit Perd le Contrôle ou devient une Épave.
+      - **Mégaphone** : amélioration à 2 Jerrycans permettant d’appliquer Sirène à tout véhicule adverse.
+
+  - nom: "Verney"
+    description: "Ancien prisonnier devenu ingénieur, Verney spécialise ses équipes dans les véhicules bricolés, renforcés et bardés d’armes largables."
+    classes_avantage:
+      - "Technologie"
+      - "Mécanique"
+    avantages_sponsorises: |
+      - **Micro-Blindage** : amélioration à 6 Jerrycans, +2 Carrosserie, aucun Emplacement.
+      - **Benne à Ordures** : le véhicule peut effectuer plusieurs attaques d’armes largables lors d’une même activation.
+      - **Pierre Tombale** : bonus d’Esquive contre les attaques venant de l’arrière ; peut prendre 2 Jetons Danger pour considérer ses Collisions comme Frontales.
+      - **Enfin du Spectacle !** : lorsqu’un gabarit d’arme larguée de l’équipe est retiré, l’équipe gagne 1 Vote du Public.
+
+  - nom: "Maxxine"
+    description: "Mécano des Cygnes Noirs, Maxxine transforme la conduite en ballet mécanique fait de rotations et de dérapages."
+    classes_avantage:
+      - "Optimisation"
+      - "Poursuite"
+    avantages_sponsorises: |
+      - **Étourdi** : le véhicule peut résoudre plusieurs Rotations séparément et dépasser 90° de pivot total.
+      - **Dérapage Maxximum** : deux Dérapages permettent d’utiliser le gabarit droit Moyen ; trois Dérapages ou plus permettent d’utiliser le droit Long.
+      - **Meshuggah** : une Rotation ou un Dérapage terminé près d’un véhicule ami sans Collision rapporte 1 Vote du Public.
+
+  - nom: "L’Ordre Infernal"
+    description: "Culte pyromane issu du mythe d’Idris, il valorise le feu, les véhicules enflammés et la terreur."
+    classes_avantage:
+      - "Horreur"
+      - "Rapidité"
+    avantages_sponsorises: |
+      - **Baptisé par le Feu** : le véhicule peut ignorer jusqu’à 3 dégâts Incendiaires, mais subit toujours au moins 1 dégât.
+      - **Torche Humaine** : si le véhicule est Enflammé, il gagne +1 aux dés d’Esquive.
+      - **Culte de la Flamme** : à la fin d’une Phase de Vitesse, si les véhicules adverses Enflammés sont plus nombreux que les véhicules amis Enflammés, l’équipe gagne des Votes du Public pour ses véhicules Enflammés.
+
+  - nom: "Beverly, le Diable de l’Autoroute"
+    description: "Sponsor fantomatique et surnaturel, Beverly repose sur des véhicules spectraux, le retour en piste et la collecte d’âmes."
+    classes_avantage:
+      - "Horreur"
+      - "Mécanique"
+    avantages_sponsorises: |
+      - **Légion d’Outre-Tombe** : après le déploiement, tous les véhicules sauf un gagnent Pilote Fantôme.
+      - **Pilote Fantôme** : ignore les véhicules et est ignoré par eux ; pas de Collisions ni d’armes de tir ; peut utiliser et subir les armes largables ; ne compte pas pour les conditions de victoire.
+      - **Lien Spectral** : si tous les véhicules de l’équipe sont Pilotes Fantômes, ils sont retirés de la partie.
+      - **À la Croisée des Chemins** : l’équipe peut payer 1 Vote du Public pour Revenir en Piste avec Pilote Fantôme.
+      - **Revenant** : un véhicule détruit ou sorti de la partie peut Revenir en Piste.
+      - **Moisson d’âmes** : toucher un véhicule adverse avec le gabarit de déplacement donne un Jeton Âme ; ces jetons peuvent être convertis en Votes du Public ou en réparations pour un véhicule ami non fantôme.
+
+  - nom: "Rusty et ses Trafiquants d’Alcool"
+    description: "Équipe de contrebandiers carburant à l’alcool artisanal, Rusty favorise les remorques, le danger et les véhicules instables."
+    classes_avantage:
+      - "Trompe-la-Mort"
+      - "Mécanique"
+    avantages_sponsorises: |
+      - **Fêtard** : si un véhicule a plus de Jetons Danger que tous les adversaires proches réunis, il gagne des Votes du Public selon les véhicules adverses dangereux à Portée Moyenne.
+      - **Courage Liquide** : les véhicules ne Perdent le Contrôle qu’à partir de 8 Jetons Danger.
+      - **Aussi Droit que J’Peux !** : pas de Jeton Danger Articulé pour choisir un gabarit non Droit.
+      - **Pas d’Limite** : le véhicule ne peut pas utiliser les gabarits Droits ; Déviation est autorisé et Trivial à toutes les vitesses.
+      - **Remorque à Camelote** : l’équipe peut acheter des Remorques et doit inclure un véhicule adapté avec Remorque ou une Forteresse Mobile.
+      - **Transport de Marchandises** : chaque véhicule avec Remorque et chaque Forteresse Mobile peut recevoir gratuitement une amélioration Remorque de Transport.
+

@@ -464,9 +464,9 @@ Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
 
 ### Règle
 
-> **Tout nouveau module NestJS** doit être livré avec des tests unitaires pour son service ET son controller.
+> **Toute modification ou création d'un module NestJS** doit entrainer la création de tests unitaires pour son service ET son controller.
 
-> **Tout nouveau service Angular** doit avoir des tests unitaires.
+> **Toute modification ou création d'un service Angular** doit entrainer la création de tests unitaires.
 
 ### 9.1 Backend — Pattern de test NestJS (Vitest)
 

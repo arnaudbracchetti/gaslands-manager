@@ -1,0 +1,267 @@
+ameliorations_vehicules:
+  - nom: "Arceaux"
+    prix: 4
+    emplacement: 1
+    description: |
+      Protection structurelle renforçant le véhicule lorsqu’il part en tonneau.
+    regles: |
+      - Lorsque ce véhicule part en **Tonneau**, il peut choisir d’ignorer les deux dégâts infligés par le Tonneau.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Bélier"
+    prix: 4
+    emplacement: 1
+    description: |
+      Arme de choc fixée au véhicule : tête de bélier, lame de pelleteuse, pare-buffle, tronçonneuse, pointes, faux ou tout autre dispositif de combat rapproché.
+    regles: |
+      - Lors de l’achat, définissez l’orientation du Bélier comme pour une arme.
+      - Un véhicule ne peut acheter qu’un seul **Bélier** par orientation.
+      - Lorsqu’il est impliqué dans une Collision sur l’orientation définie, ce véhicule peut ajouter **+2 dés d’attaque** à son Éperonnage.
+      - Lors de cette Collision, ce véhicule ne prend pas les Jetons Danger dus à la Collision.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Bélier Explosif"
+    prix: 3
+    emplacement: 0
+    description: |
+      Bélier à usage explosif, conçu pour produire un impact initial extrêmement violent, mais dangereux pour son propre véhicule.
+    regles: |
+      - **1 Munition**.
+      - Lors de l’achat, définissez l’orientation du Bélier Explosif comme pour une arme.
+      - Un véhicule ne peut acheter cette amélioration qu’une seule fois.
+      - Cette amélioration ne peut pas être achetée par les véhicules de **Poids Léger**.
+      - La première fois de la partie que ce véhicule est impliqué dans une Collision sur l’orientation définie, son propriétaire doit annoncer un **Éperonnage**, même en cas de Collision Arrière.
+      - Lors de cet Éperonnage, ce véhicule gagne **+6 dés d’attaque**.
+      - Si des résultats **1** ou **2** sont obtenus sur ces dés d’attaque, ce véhicule perd immédiatement **1 Point de Carrosserie** pour chacun de ces résultats.
+      - Un véhicule peut être équipé à la fois d’un **Bélier** et d’un **Bélier Explosif** sur la même orientation.
+      - Les effets du Bélier et du Bélier Explosif sont cumulatifs.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Blindage"
+    prix: 4
+    emplacement: 1
+    description: |
+      Plaques de blindage supplémentaires augmentant durablement la résistance du véhicule.
+    regles: |
+      - Ce véhicule augmente sa Valeur de **Carrosserie** de **+2** de façon permanente.
+      - Un même véhicule peut acheter plusieurs améliorations **Blindage**.
+      - Chaque achat ajoute à nouveau **+2 Points de Carrosserie**.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Catapulte Improvisée"
+    prix: 2
+    emplacement: 1
+    description: |
+      Dispositif bricolé permettant de projeter les armes largables à distance plutôt que de les déposer directement derrière le véhicule.
+    regles: |
+      - Le propriétaire de ce véhicule peut placer le gabarit de Zone adapté de ses armes largables, **Petite Zone** ou **Grande Zone** selon l’arme, où il le souhaite à **Portée Moyenne** maximum de la position actuelle du véhicule.
+      - Le placement s’effectue dans un **Arc de Tir à 360°**.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Chenilles"
+    prix: 4
+    emplacement: 1
+    description: |
+      Remplacement des roues par des chenilles de char, améliorant la motricité et la manœuvrabilité au prix de la vitesse maximale.
+    regles: |
+      - Ce véhicule gagne **+1 Manœuvrabilité**.
+      - Ce véhicule subit **-1 Vitesse maximale**.
+      - Ce véhicule peut ignorer les **Terrains Difficiles** et les **Terrains Dangereux**.
+      - Un véhicule ne peut acheter cette amélioration qu’une seule fois.
+      - Les **Chars d’Assaut**, les **Hélicoptères** et les **Gyrocoptères** ne peuvent pas acheter cette amélioration.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Membre d’Équipage Supplémentaire"
+    prix: 4
+    emplacement: 0
+    description: |
+      Ajout d’un membre d’équipage, augmentant la capacité du véhicule à effectuer des attaques.
+    regles: |
+      - Chaque **Membre d’Équipage Supplémentaire** augmente de **+1** la Valeur d’Équipage du véhicule.
+      - Cela augmente le nombre d’attaques que le véhicule peut effectuer lors de son Étape d’Attaque.
+      - Le nombre maximum de Membres d’Équipage que peut accueillir un véhicule est égal au **double de sa Valeur d’Équipage de départ**.
+      - Exemple : un Camion avec Équipage 3 peut acheter jusqu’à 3 Membres d’Équipage Supplémentaires, pour atteindre Équipage 6.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Nitro"
+    prix: 6
+    emplacement: 0
+    description: |
+      Injection de puissance permettant une accélération brutale au prix d’une forte accumulation de Jetons Danger.
+    regles: |
+      - **1 Munition**.
+      - Une fois par activation, au début d’une Étape de Déplacement, ce véhicule peut annoncer qu’il utilise sa **Nitro**.
+      - Il effectue immédiatement un déplacement forcé avec le gabarit droit **Long**.
+      - Après ce déplacement forcé, il prend des Jetons Danger jusqu’à en avoir **5**.
+      - Il résout ensuite normalement son Étape de Déplacement.
+      - Lors de cette Étape de Déplacement, il ne peut pas se déplacer en marche arrière.
+      - À la fin de l’Étape de Déplacement où il a utilisé sa Nitro, il prend à nouveau des Jetons Danger jusqu’à en avoir au minimum **5**.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
+
+  - nom: "Réacteur Nucléaire Expérimental"
+    prix: 5
+    emplacement: 0
+    description: |
+      Amélioration électrique expérimentale de Mishkin, augmentant massivement la vitesse potentielle du véhicule, avec un risque catastrophique en cas de perte de contrôle.
+    regles: |
+      - **Électrique**.
+      - Uniquement pour les équipes sponsorisées par **Mishkin**.
+      - Cette amélioration ne peut pas être achetée par les véhicules de **Poids Léger**.
+      - Un véhicule ne peut acheter cette amélioration qu’une seule fois.
+      - Augmentez de **+2** la Vitesse maximale de ce véhicule, jusqu’à un maximum de **6**.
+      - Ce véhicule considère le gabarit de déplacement droit **Long** comme autorisé à n’importe quelle Vitesse.
+      - Le gabarit droit Long n’est considéré comme **Dangereux** ou **Trivial** à aucune Vitesse.
+      - Si ce véhicule échoue à un **Test de Contrôle**, il devient immédiatement une **Épave** et explose automatiquement.
+      - Lorsque ce véhicule explose, il est considéré comme étant de **Poids Lourd**.
+    sponsors_autorises:
+      - "Mishkin"
+
+  - nom: "Téléporteur Expérimental"
+    prix: 7
+    emplacement: 0
+    description: |
+      Amélioration électrique expérimentale de Mishkin permettant de déplacer instantanément un véhicule, avec un risque de téléportation incontrôlée.
+    regles: |
+      - **Électrique**.
+      - Uniquement pour les équipes sponsorisées par **Mishkin**.
+      - Un véhicule ne peut acheter cette amélioration qu’une seule fois.
+      - Au début de l’activation de ce véhicule, il peut activer son **Téléporteur Expérimental** avant, et en plus de, son Étape de Déplacement normale.
+      - Lorsque le Téléporteur est activé, ce véhicule prend **3 Jetons Danger**.
+      - Son propriétaire lance ensuite un **Dé de Manœuvre**.
+      - Si le résultat n’est pas **Danger**, placez ce véhicule n’importe où à **Portée Moyenne** maximum de sa position actuelle.
+      - Il ne peut pas être placé en contact avec un obstacle ou un terrain Difficile ou Dangereux.
+      - Son orientation ne change pas.
+      - Ce déplacement ne provoque pas de Collision.
+      - Le véhicule commence ensuite son Étape de Déplacement depuis cette nouvelle position.
+      - Si le résultat est **Danger**, le joueur à gauche du propriétaire place ce véhicule n’importe où à **Portée Longue** maximum de sa position actuelle.
+      - Dans ce cas également, le véhicule ne peut pas être placé en contact avec un obstacle ou un terrain Difficile ou Dangereux, son orientation ne change pas et cela ne provoque pas de Collision.
+    sponsors_autorises:
+      - "Mishkin"
+
+  - nom: "Tourelle"
+    prix: "x3"
+    emplacement: 0
+    description: |
+      Montage spécial d’une arme de tir permettant de lui donner un Arc de Tir à 360°.
+    regles: |
+      - Lorsque vous achetez une arme de tir pour ce véhicule, vous pouvez payer **trois fois son coût de base** pour la monter sur Tourelle.
+      - Une arme montée sur Tourelle bénéficie d’un **Arc de Tir à 360°**.
+      - Exemple : un Minigun coûtant 5 Jerrycans coûte 15 Jerrycans s’il est monté sur Tourelle.
+    sponsors_autorises:
+      - "Rutherford"
+      - "Miyazaki"
+      - "Mishkin"
+      - "Idris"
+      - "Slime"
+      - "La Geôlière"
+      - "Scarlett"
+      - "La Patrouille de l'Autoroute"
+      - "Verney"
+      - "Maxxine"
+      - "L'Ordre Infernal"
+      - "Beverly, le Diable de l'Autoroute"
+      - "Rusty et ses Trafiquants d'Alcool"
