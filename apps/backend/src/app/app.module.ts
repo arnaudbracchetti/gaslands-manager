@@ -29,7 +29,10 @@ import { Team } from './team/team.entity';
         host: config.get('DATABASE_HOST', 'localhost'),
         port: config.get<number>('DATABASE_PORT', 5432),
         username: config.get('DATABASE_USER', 'gaslands'),
-        password: config.get('DATABASE_PASSWORD', 'gaslands_pass'),
+        // getOrThrow : refuse de démarrer si DATABASE_PASSWORD est absente du .env.
+        // Pas de valeur par défaut pour un secret — mieux vaut un crash explicite
+        // qu'une app qui tourne silencieusement avec un mot de passe connu de tous.
+        password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
         // Toutes les entités TypeORM doivent être listées ici
         // TypeORM crée ou met à jour les tables correspondantes (synchronize: true)
