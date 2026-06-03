@@ -11,14 +11,16 @@ export class ContentController {
   // GET /api/content → liste tous les slugs disponibles
   // Exemple de réponse : ["regles", "vehicules", "armes"]
   @Get()
-  listContent() {
+  // string[] : tableau de noms de fichiers sans l'extension .md
+  listContent(): string[] {
     return this.contentService.listContent();
   }
 
   // GET /api/content/regles → retourne le contenu HTML de regles.md
   // @Param('slug') extrait la partie dynamique de l'URL
   @Get(':slug')
-  getContent(@Param('slug') slug: string) {
+  // Promise<{html, title}> : async car marked() est une promesse.
+  getContent(@Param('slug') slug: string): Promise<{ html: string; title: string }> {
     return this.contentService.getContent(slug);
   }
 }

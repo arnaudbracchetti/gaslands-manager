@@ -29,14 +29,16 @@ import {
 
 @Injectable()
 export class CatalogService implements OnModuleInit {
-  private readonly logger = new Logger(CatalogService.name);
+  // Logger : type explicite pour la propriété membre de classe.
+  private readonly logger: Logger = new Logger(CatalogService.name);
 
   /**
    * Map indexée par nom de sponsor (accès O(1)).
    * Chaque entrée est un Sponsor enrichi avec ses relations pré-résolues.
    * readonly : on ne remplace jamais la Map, seulement son contenu lors de l'init.
    */
-  private readonly sponsorMap = new Map<string, Sponsor>();
+  // Map<string, Sponsor> : type explicite sur le membre de classe (règle memberVariableDeclaration).
+  private readonly sponsorMap: Map<string, Sponsor> = new Map<string, Sponsor>();
 
   /**
    * Listes brutes conservées pour les endpoints "tout lister".
@@ -77,13 +79,14 @@ export class CatalogService implements OnModuleInit {
       for (const raw of rawSponsors) {
         this.sponsorMap.set(raw.nom, {
           ...raw,
-          vehicules: this.allVehicules.filter((v) =>
+          // Les paramètres (v, a) sont annotés explicitement car `parameter: true` est actif.
+          vehicules: this.allVehicules.filter((v: Vehicule) =>
             v.sponsors_autorises.includes(raw.nom),
           ),
-          armes: this.allArmes.filter((a) =>
+          armes: this.allArmes.filter((a: Arme) =>
             a.sponsors_autorises.includes(raw.nom),
           ),
-          ameliorations: this.allAmeliorations.filter((a) =>
+          ameliorations: this.allAmeliorations.filter((a: Amelioration) =>
             a.sponsors_autorises.includes(raw.nom),
           ),
         });
@@ -95,7 +98,8 @@ export class CatalogService implements OnModuleInit {
           `${this.allArmes.length} armes, ` +
           `${this.allAmeliorations.length} améliorations.`,
       );
-    } catch (err) {
+    } catch (err: unknown) {
+      // `unknown` : TypeScript force le narrowing avant usage.
       // On re-throw intentionnellement pour faire crasher le démarrage du serveur.
       // Un catalogue non chargé rend l'application inutilisable — mieux vaut
       // un crash visible qu'un service qui répond silencieusement avec des données vides.

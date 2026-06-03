@@ -25,8 +25,9 @@ export class ContentService {
     }
     return fs
       .readdirSync(this.contentDir)
-      .filter((f) => f.endsWith('.md'))
-      .map((f) => f.replace('.md', ''));
+      // (f: string) : paramètre de callback annoté explicitement (règle `parameter: true`).
+      .filter((f: string) => f.endsWith('.md'))
+      .map((f: string) => f.replace('.md', ''));
   }
 
   // Lit un fichier .md et retourne son contenu converti en HTML

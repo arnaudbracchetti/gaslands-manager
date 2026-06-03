@@ -81,9 +81,12 @@ export class UserService {
     try {
       const saved = await this.userRepo.save(user);
       return this.sanitize(saved);
-    } catch (err: any) {
-      // Code d'erreur PostgreSQL pour violation de contrainte unique
-      if (err?.code === '23505') {
+    } catch (err: unknown) {
+      // `unknown` est plus sûr que `any` : TypeScript force le narrowing avant l'accès.
+      // On cast vers un objet partiel pour accéder au code d'erreur PostgreSQL.
+      // Code 23505 = violation de contrainte UNIQUE (email déjà utilisé).
+      const pgError = err as { code?: string };
+      if (pgError?.code === '23505') {
         throw new ConflictException('Cet email est déjà utilisé');
       }
       throw new InternalServerErrorException('Erreur lors de la création du compte');

@@ -12,7 +12,7 @@
  *
  * Pattern Angular 17+ : input() / output() (API Signals)
  */
-import { Component, input, output } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { Team } from '../team.model';
 
 @Component({
@@ -27,18 +27,20 @@ export class TeamCard {
    * L'équipe à afficher.
    * input.required<T>() garantit que le parent doit toujours fournir
    * cette valeur — Angular lance une erreur si elle est absente.
+   * InputSignal<T> : type retourné par input.required<T>() (lecture seule).
    */
-  team = input.required<Team>();
+  team: InputSignal<Team> = input.required<Team>();
 
   /**
    * Émis quand l'utilisateur clique sur "Modifier".
    * Le parent reçoit l'équipe concernée et ouvre le formulaire d'édition.
+   * OutputEmitterRef<T> : type retourné par output<T>().
    */
-  editClicked = output<Team>();
+  editClicked: OutputEmitterRef<Team> = output<Team>();
 
   /**
    * Émis quand l'utilisateur clique sur "Supprimer".
    * Le parent gère la confirmation et l'appel à l'API.
    */
-  deleteClicked = output<Team>();
+  deleteClicked: OutputEmitterRef<Team> = output<Team>();
 }

@@ -22,7 +22,7 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap, map } from 'rxjs';
 import { AuthResponse, RegisterDto, User } from './auth.model';
@@ -32,10 +32,10 @@ const TOKEN_KEY = 'gaslands_token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // inject() : nouvelle syntaxe Angular (alternative au constructeur)
-  // compatible standalone, fonctionne partout où une injection est possible
-  private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
+  // inject() : nouvelle syntaxe Angular (alternative au constructeur).
+  // Les types membres de classe sont annotés explicitement (règle memberVariableDeclaration).
+  private readonly http: HttpClient = inject(HttpClient);
+  private readonly router: Router = inject(Router);
 
   /**
    * Signal principal : null = non connecté, User = connecté.
@@ -44,7 +44,8 @@ export class AuthService {
    * Lecture dans un template : authService.currentUser()
    * Lecture dans du code TS  : this.currentUser()
    */
-  readonly currentUser = signal<User | null>(null);
+  // WritableSignal<T> : type retourné par signal(). Rend le contrat visible à la lecture du code.
+  readonly currentUser: WritableSignal<User | null> = signal<User | null>(null);
 
   /**
    * Signal calculé : se met à jour automatiquement quand currentUser change.
@@ -52,7 +53,8 @@ export class AuthService {
    *
    * Usage dans le template : @if (authService.isLoggedIn()) { ... }
    */
-  readonly isLoggedIn = computed(() => this.currentUser() !== null);
+  // Signal<boolean> : type retourné par computed() (lecture seule — pas WritableSignal).
+  readonly isLoggedIn: Signal<boolean> = computed(() => this.currentUser() !== null);
 
   constructor() {
     // Au démarrage de l'application (quand ce service est instancié),
@@ -72,7 +74,8 @@ export class AuthService {
     // GET /api/auth/me vérifie que le token est encore valide
     // et retourne le profil utilisateur à jour
     this.http.get<User>('/api/auth/me').subscribe({
-      next: (user) => this.currentUser.set(user),
+      // (user: User) : paramètre annoté car la règle `parameter: true` l'exige.
+      next: (user: User) => this.currentUser.set(user),
       error: () => {
         // Token expiré ou invalide → nettoyage silencieux
         localStorage.removeItem(TOKEN_KEY);
@@ -91,7 +94,8 @@ export class AuthService {
       .post<AuthResponse>('/api/auth/login', { email, password })
       .pipe(
         // tap() exécute un effet de bord sans modifier la valeur
-        tap((res) => {
+        // (res: AuthResponse) : paramètre annoté pour satisfaire la règle `parameter: true`.
+        tap((res: AuthResponse) => {
           localStorage.setItem(TOKEN_KEY, res.access_token);
           this.currentUser.set(res.user);
         }),
@@ -108,7 +112,7 @@ export class AuthService {
     return this.http
       .post<AuthResponse>('/api/auth/register', dto)
       .pipe(
-        tap((res) => {
+        tap((res: AuthResponse) => {
           localStorage.setItem(TOKEN_KEY, res.access_token);
           this.currentUser.set(res.user);
         }),

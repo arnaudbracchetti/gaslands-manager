@@ -39,6 +39,91 @@ Ce projet est un **support pédagogique** : l'utilisateur monte en compétences 
 
 ---
 
+## Conventions TypeScript — Typage explicite obligatoire
+
+Le projet applique une politique de **typage explicite strict**, renforcée par ESLint (`eslint.config.mjs`).
+
+### Règles actives (erreur si violation)
+
+| Règle | Effet |
+|---|---|
+| `explicit-function-return-type` | Type de retour obligatoire sur toutes les fonctions/méthodes |
+| `explicit-module-boundary-types` | Idem sur les exports publics |
+| `no-explicit-any` | `any` interdit — utiliser `unknown` + narrowing |
+| `typedef (parameter)` | Type obligatoire sur les paramètres de fonction |
+| `typedef (memberVariableDeclaration)` | Type obligatoire sur les membres de classe |
+
+### Patterns à respecter dans tout nouveau code
+
+**Membres de classe Angular (inject, signals) :**
+```typescript
+// ✅ Correct
+private readonly http: HttpClient = inject(HttpClient);
+readonly loading: WritableSignal<boolean> = signal(false);
+readonly isLoggedIn: Signal<boolean> = computed(() => ...);
+readonly teams: InputSignal<Team[]> = input<Team[]>([]);
+readonly saved: OutputEmitterRef<Team> = output<Team>();
+
+// ❌ Interdit
+private readonly http = inject(HttpClient);
+readonly loading = signal(false);
+```
+
+**Types de retour sur toutes les fonctions :**
+```typescript
+// ✅ Correct
+async getAll(): Promise<Team[]> { ... }
+ngOnInit(): void { ... }
+getData(): { message: string } { ... }
+
+// ❌ Interdit
+async getAll() { ... }
+ngOnInit() { ... }
+```
+
+**Paramètres de callback :**
+```typescript
+// ✅ Correct
+.filter((f: string) => f.endsWith('.md'))
+subscribe({ next: (teams: Team[]) => { ... }, error: (err: HttpErrorResponse) => { ... } })
+tap((res: AuthResponse) => { ... })
+
+// ❌ Interdit
+.filter((f) => ...)
+subscribe({ next: (teams) => { ... }, error: (err) => { ... } })
+```
+
+**Blocs catch :**
+```typescript
+// ✅ Correct — unknown + narrowing
+catch (err: unknown) {
+  const pgError = err as { code?: string };
+  if (pgError?.code === '23505') { ... }
+}
+
+// ❌ Interdit
+catch (err: any) { ... }
+catch (err) { ... }
+```
+
+**`import type` pour NestJS (emitDecoratorMetadata) :**
+```typescript
+// ✅ Correct — interfaces et type aliases utilisés dans des signatures décorées
+import { type AuthResponse, AuthService } from './auth.service';
+import type { SafeUser } from './user.service';
+
+// Les classes ont une représentation runtime → import normal
+import { RegisterDto } from './dto/register.dto';
+```
+
+### Exemptions intentionnelles
+
+- `variableDeclaration: false` — les variables locales inférées ne sont PAS annotées (`const x = foo()` OK)
+- Les fichiers `*.spec.ts` sont exemptés de `explicit-function-return-type` et `typedef`
+- `no-inferrable-types` est désactivé (contradisait `typedef memberVariableDeclaration`)
+
+---
+
 ## Documentation de référence
 
 > Lire SPECIFICATION.md et ARCHITECTURE.md fichiers avant toute modification. 

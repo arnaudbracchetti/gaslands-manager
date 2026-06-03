@@ -32,6 +32,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TeamService } from './team.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
+import { Team } from './team.entity';
 
 // Type du payload injecté par JwtStrategy dans req.user
 // (correspond à ce que retourne jwt.strategy.ts → validate())
@@ -52,7 +53,8 @@ export class TeamController {
    * req.user.id provient du token JWT décodé par JwtStrategy.
    */
   @Get()
-  getAll(@Request() req: AuthenticatedRequest) {
+  // Promise<Team[]> : retourne toutes les équipes de l'utilisateur (tableau possiblement vide).
+  getAll(@Request() req: AuthenticatedRequest): Promise<Team[]> {
     return this.teamService.findByUserId(req.user.id);
   }
 
@@ -62,7 +64,8 @@ export class TeamController {
    * @Body() dto : NestJS parse automatiquement le corps JSON de la requête.
    */
   @Post()
-  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto) {
+  // Promise<Team> : retourne l'entité persistée avec son id généré par la BDD.
+  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto): Promise<Team> {
     return this.teamService.create(req.user.id, dto);
   }
 
@@ -73,11 +76,12 @@ export class TeamController {
    * Si la conversion échoue (ex: "/teams/abc"), NestJS retourne 400 Bad Request.
    */
   @Put(':id')
+  // Promise<Team> : retourne l'entité mise à jour après sauvegarde.
   update(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateTeamDto,
-  ) {
+  ): Promise<Team> {
     return this.teamService.update(id, req.user.id, dto);
   }
 
@@ -87,10 +91,11 @@ export class TeamController {
    * Le service vérifie que l'équipe appartient bien à req.user.id avant de supprimer.
    */
   @Delete(':id')
+  // Promise<void> : la suppression ne retourne rien — NestJS envoie 200 avec un corps vide.
   remove(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
-  ) {
+  ): Promise<void> {
     return this.teamService.remove(id, req.user.id);
   }
 }

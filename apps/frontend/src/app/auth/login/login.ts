@@ -11,7 +11,8 @@
  * RouterLink  : nécessaire pour les liens routerLink dans le template.
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
@@ -23,14 +24,16 @@ import { AuthService } from '../auth.service';
   templateUrl: './login.html',
 })
 export class Login {
-  private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
+  // Annotations de membre de classe (règle memberVariableDeclaration).
+  private readonly authService: AuthService = inject(AuthService);
+  private readonly router: Router = inject(Router);
 
+  // WritableSignal<T> : type retourné par signal(). Visible à la lecture du code.
   // États du formulaire — chaque signal déclenche un re-rendu quand il change
-  readonly email = signal('');
-  readonly password = signal('');
-  readonly errorMessage = signal('');
-  readonly isLoading = signal(false);
+  readonly email: WritableSignal<string> = signal('');
+  readonly password: WritableSignal<string> = signal('');
+  readonly errorMessage: WritableSignal<string> = signal('');
+  readonly isLoading: WritableSignal<boolean> = signal(false);
 
   onSubmit(): void {
     // Validation côté client minimale
@@ -47,9 +50,10 @@ export class Login {
         // Navigation vers la page d'accueil après connexion réussie
         this.router.navigate(['/home']);
       },
-      error: (err) => {
-        // err.error.message = message envoyé par NestJS (ex: "Identifiants invalides")
-        this.errorMessage.set(err?.error?.message ?? 'Identifiants invalides');
+      // HttpErrorResponse : type Angular pour les erreurs HTTP.
+      // err.error = corps de la réponse d'erreur (JSON parsé par Angular).
+      error: (err: HttpErrorResponse) => {
+        this.errorMessage.set(err.error?.message ?? 'Identifiants invalides');
         this.isLoading.set(false);
       },
     });

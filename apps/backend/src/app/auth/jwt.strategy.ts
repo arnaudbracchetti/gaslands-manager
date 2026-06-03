@@ -19,7 +19,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { UserService } from './user.service';
+import { type SafeUser, UserService } from './user.service';
 
 // Le payload est ce qu'on a mis dans jwtService.sign({ sub: userId, email })
 interface JwtPayload {
@@ -38,8 +38,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // Ne pas ignorer les tokens expirés
       ignoreExpiration: false,
-      // Clé secrète pour vérifier la signature (doit correspondre à celle utilisée pour signer)
-      secretOrKey: config.get<string>('JWT_SECRET'),
+      // config.get<string>() retourne `string | undefined`.
+      // L'assertion `!` garantit à TypeScript que la valeur est présente (définie dans .env).
+      // Si JWT_SECRET est absent, le serveur crashera au démarrage — c'est le comportement voulu.
+      secretOrKey: config.get<string>('JWT_SECRET')!,
     });
   }
 
@@ -50,8 +52,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * On recharge l'utilisateur depuis la base pour avoir des données fraîches
    * (et pour que req.user soit un objet User complet, pas juste le payload JWT).
    */
-  async validate(payload: JwtPayload) {
-    // Retourne SafeUser (sans password) ou null si l'utilisateur a été supprimé
+  // Promise<SafeUser | null> : Passport place cette valeur dans req.user.
+  // null = utilisateur supprimé depuis l'émission du token → 401 automatique.
+  async validate(payload: JwtPayload): Promise<SafeUser | null> {
     return this.userService.findById(payload.sub);
   }
 }

@@ -18,9 +18,13 @@
  *   provideHttpClient(withInterceptors([authInterceptor]))
  */
 
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
+// HttpRequest<unknown> et HttpHandlerFn : types des paramètres de HttpInterceptorFn.
+// Avec `parameter: true`, même les paramètres contextuellement typés doivent être annotés.
+// HttpRequest<unknown> : requête HTTP sortante (générique sur le type du corps).
+// HttpHandlerFn       : fonction qui passe la requête au handler suivant (chaîne d'intercepteurs).
+export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
   const token = localStorage.getItem('gaslands_token');
 
   // Si pas de token → on laisse passer la requête sans modification

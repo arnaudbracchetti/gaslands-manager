@@ -2,7 +2,8 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 
-async function bootstrap() {
+// Promise<void> : bootstrap est async et ne retourne rien (appelée en fire-and-forget).
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   // Préfixe global : toutes les routes seront /api/...
@@ -15,7 +16,9 @@ async function bootstrap() {
     origin: 'http://localhost:4200',
   });
 
-  const port = process.env.PORT || 3000;
+  // parseInt() convertit le string d'env en number.
+  // Le second argument (10) est la base décimale — toujours le préciser pour éviter les surprises.
+  const port: number = parseInt(process.env.PORT ?? '3000', 10);
 
   // '0.0.0.0' force l'écoute sur toutes les interfaces IPv4.
   // Sans cet argument, Node.js écoute sur '::' (IPv6 uniquement) sur Windows,

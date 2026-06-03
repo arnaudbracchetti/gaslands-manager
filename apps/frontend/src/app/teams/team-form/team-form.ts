@@ -19,7 +19,18 @@
  * 4. Le parent appelle l'API et passe saving=true pendant l'attente
  * 5. Le parent ferme le formulaire quand l'API répond
  */
-import { Component, input, output, signal, computed, effect } from '@angular/core';
+import {
+  Component,
+  InputSignal,
+  OutputEmitterRef,
+  Signal,
+  WritableSignal,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Team, CreateTeamDto, SPONSORS, DEFAULT_CANS } from '../team.model';
 
@@ -38,43 +49,52 @@ export class TeamForm {
   /**
    * Équipe à éditer (null = mode création).
    * Un effect() surveille ce signal pour pré-remplir les champs.
+   * InputSignal<T> : type retourné par input<T>() (lecture seule depuis le parent).
    */
-  team = input<Team | null>(null);
+  team: InputSignal<Team | null> = input<Team | null>(null);
 
   /**
    * Vrai pendant que le parent attend la réponse de l'API.
    * Désactive les boutons pour éviter les soumissions multiples.
    */
-  saving = input(false);
+  saving: InputSignal<boolean> = input(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   /**
    * Émis avec le DTO validé quand l'utilisateur clique sur "Enregistrer".
    * Le parent décidera si c'est un create() ou un update() selon editingTeam.
+   * OutputEmitterRef<T> : type retourné par output<T>().
    */
-  saved = output<CreateTeamDto>();
+  saved: OutputEmitterRef<CreateTeamDto> = output<CreateTeamDto>();
 
-  /** Émis quand l'utilisateur clique sur "Annuler". */
-  cancel = output<void>();
+  // Renommé `formCancel` (et non `cancel`) car `cancel` est un événement DOM natif :
+  // Angular ESLint interdit de nommer un output comme un événement HTML standard
+  // pour éviter les ambiguïtés dans les templates.
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne du formulaire ───────────────────────────────────────────────
 
-  formName        = signal('');
-  formSponsor     = signal('Rutherford');
-  formCans        = signal(DEFAULT_CANS);
-  formDescription = signal('');
+  // WritableSignal<T> : type explicite pour les membres de classe (règle memberVariableDeclaration).
+  formName: WritableSignal<string>        = signal('');
+  formSponsor: WritableSignal<string>     = signal('Rutherford');
+  formCans: WritableSignal<number>        = signal(DEFAULT_CANS);
+  formDescription: WritableSignal<string> = signal('');
 
   /** Message d'erreur de validation locale (ex: nom manquant) */
-  formError = signal('');
+  formError: WritableSignal<string> = signal('');
 
-  /** Titre calculé selon le mode : création ou édition */
-  formTitle = computed(() =>
+  /** Titre calculé selon le mode : création ou édition.
+   *  Signal<string> : computed() retourne un Signal en lecture seule (pas WritableSignal).
+   */
+  formTitle: Signal<string> = computed(() =>
     this.team() ? '✏️ Modifier l\'équipe' : '➕ Nouvelle équipe'
   );
 
-  /** Liste des sponsors pour le <select> */
-  readonly sponsors = SPONSORS;
+  /** Liste des sponsors pour le <select>.
+   *  typeof SPONSORS : capture le type littéral exact du tableau `as const`.
+   */
+  readonly sponsors: typeof SPONSORS = SPONSORS;
 
   constructor() {
     /**
@@ -130,6 +150,6 @@ export class TeamForm {
 
   /** Ferme le formulaire sans sauvegarder. */
   cancelForm(): void {
-    this.cancel.emit();
+    this.formCancel.emit();
   }
 }

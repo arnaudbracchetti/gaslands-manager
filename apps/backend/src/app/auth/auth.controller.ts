@@ -15,10 +15,16 @@
  */
 
 import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
-import { AuthService } from './auth.service';
+// import type : AuthResponse et SafeUser sont des constructions purement TypeScript
+// (interface / type alias) — elles n'existent pas à l'exécution.
+// Avec emitDecoratorMetadata + isolatedModules (config NestJS), TypeScript exige
+// `import type` pour les types utilisés dans des signatures décorées,
+// afin d'éviter d'émettre des métadonnées invalides pour des symboles inexistants.
+import { type AuthResponse, AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { SafeUser } from './user.service';
 
 @Controller('auth')
 export class AuthController {
@@ -31,7 +37,9 @@ export class AuthController {
    * Codes HTTP : 201 Created (succès), 409 Conflict (email déjà pris), 401 (données invalides)
    */
   @Post('register')
-  register(@Body() dto: RegisterDto) {
+  // Promise<AuthResponse> : ce handler est async (délégation à authService.register()).
+  // Le type de retour documente le contrat HTTP : { access_token, user } sans password.
+  register(@Body() dto: RegisterDto): Promise<AuthResponse> {
     return this.authService.register(dto);
   }
 
@@ -45,7 +53,7 @@ export class AuthController {
    * Pour changer en 201, on utiliserait @HttpCode(HttpStatus.OK).
    */
   @Post('login')
-  login(@Body() dto: LoginDto) {
+  login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(dto);
   }
 
@@ -60,9 +68,9 @@ export class AuthController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getProfile(@Request() req: { user: unknown }) {
-    // req.user = valeur retournée par JwtStrategy.validate()
-    // = SafeUser (sans password)
+  // req.user est typé SafeUser (et non unknown) car JwtStrategy.validate()
+  // retourne Promise<SafeUser | null> — Passport place cette valeur dans req.user.
+  getProfile(@Request() req: { user: SafeUser }): SafeUser {
     return req.user;
   }
 }

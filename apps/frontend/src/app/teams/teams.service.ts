@@ -19,8 +19,9 @@ import { Team, CreateTeamDto, UpdateTeamDto } from './team.model';
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
-  // inject() : syntaxe Angular moderne (équivalent au paramètre de constructeur)
-  private http = inject(HttpClient);
+  // inject() : syntaxe Angular moderne (équivalent au paramètre de constructeur).
+  // Type explicite requis sur le membre de classe (règle memberVariableDeclaration).
+  private http: HttpClient = inject(HttpClient);
 
   /**
    * GET /api/teams → liste des équipes de l'utilisateur connecté.

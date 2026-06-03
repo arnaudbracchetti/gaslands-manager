@@ -4,7 +4,8 @@
  * Quatre champs : prénom, nom, email, mot de passe.
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
@@ -16,15 +17,15 @@ import { AuthService } from '../auth.service';
   templateUrl: './register.html',
 })
 export class Register {
-  private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly authService: AuthService = inject(AuthService);
+  private readonly router: Router = inject(Router);
 
-  readonly firstName = signal('');
-  readonly lastName = signal('');
-  readonly email = signal('');
-  readonly password = signal('');
-  readonly errorMessage = signal('');
-  readonly isLoading = signal(false);
+  readonly firstName: WritableSignal<string> = signal('');
+  readonly lastName: WritableSignal<string> = signal('');
+  readonly email: WritableSignal<string> = signal('');
+  readonly password: WritableSignal<string> = signal('');
+  readonly errorMessage: WritableSignal<string> = signal('');
+  readonly isLoading: WritableSignal<boolean> = signal(false);
 
   onSubmit(): void {
     if (!this.firstName() || !this.lastName() || !this.email() || !this.password()) {
@@ -46,8 +47,8 @@ export class Register {
         next: () => {
           this.router.navigate(['/home']);
         },
-        error: (err) => {
-          this.errorMessage.set(err?.error?.message ?? 'Erreur lors de la création du compte');
+        error: (err: HttpErrorResponse) => {
+          this.errorMessage.set(err.error?.message ?? 'Erreur lors de la création du compte');
           this.isLoading.set(false);
         },
       });

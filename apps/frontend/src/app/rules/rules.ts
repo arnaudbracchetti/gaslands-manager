@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 
 // ── Qu'est-ce qu'un Signal ? ────────────────────────────────
 // Un signal est un conteneur de valeur réactif : quand sa valeur
@@ -20,25 +20,26 @@ import { HttpClient } from '@angular/common/http';
   styleUrl: './rules.scss',
 })
 export class Rules implements OnInit {
-  private http = inject(HttpClient);
+  private http: HttpClient = inject(HttpClient);
 
-  // signal<T>(valeurInitiale) crée un signal typé.
+  // WritableSignal<T> : type membre de classe explicite (règle memberVariableDeclaration).
   // La valeur initiale est celle affichée avant que l'HTTP réponde.
-  loading = signal(true);
-  html    = signal('');
-  title   = signal('');
-  error   = signal('');
+  loading: WritableSignal<boolean> = signal(true);
+  html: WritableSignal<string>     = signal('');
+  title: WritableSignal<string>    = signal('');
+  error: WritableSignal<string>    = signal('');
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.http.get<{ html: string; title: string }>('/api/content/regles').subscribe({
-      next: (data) => {
+      // (data) annoté avec son type précis pour satisfaire la règle `parameter: true`.
+      next: (data: { html: string; title: string }) => {
         // .set() remplace la valeur du signal et notifie Angular
         // → le template est re-rendu immédiatement
         this.html.set(data.html);
         this.title.set(data.title);
         this.loading.set(false);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.error.set('Impossible de charger les règles. Vérifiez que le backend est démarré.');
         this.loading.set(false);
         console.error(err);

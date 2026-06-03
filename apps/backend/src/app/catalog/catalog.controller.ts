@@ -18,6 +18,8 @@
 
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
+// import type : ces interfaces n'existent qu'à la compilation, pas à l'exécution.
+import type { Amelioration, Arme, Sponsor, Vehicule } from './catalog.interfaces';
 
 @Controller('catalog')
 export class CatalogController {
@@ -30,7 +32,8 @@ export class CatalogController {
    * autorisés (relations pré-calculées par le service).
    */
   @Get('sponsors')
-  getAllSponsors() {
+  // Sponsor[] : tableau avec relations pré-résolues (vehicules, armes, ameliorations).
+  getAllSponsors(): Sponsor[] {
     return this.catalogService.getAllSponsors();
   }
 
@@ -45,7 +48,8 @@ export class CatalogController {
    * @throws NotFoundException si le sponsor n'existe pas dans le catalogue
    */
   @Get('sponsors/:nom')
-  getSponsor(@Param('nom') nom: string) {
+  // Sponsor (non Sponsor | undefined) : le throw garantit qu'on ne retourne jamais undefined.
+  getSponsor(@Param('nom') nom: string): Sponsor {
     const sponsor = this.catalogService.getSponsor(nom);
     if (!sponsor) {
       throw new NotFoundException(`Sponsor "${nom}" introuvable dans le catalogue`);
@@ -60,7 +64,7 @@ export class CatalogController {
    * (Léger, Moyen, Lourd). Le champ sponsors_autorises[] est inclus dans la réponse.
    */
   @Get('vehicules')
-  getAllVehicules() {
+  getAllVehicules(): Vehicule[] {
     return this.catalogService.getAllVehicules();
   }
 
@@ -70,7 +74,7 @@ export class CatalogController {
    * Retourne toutes les armes du catalogue (base, avancée, équipage, largable).
    */
   @Get('armes')
-  getAllArmes() {
+  getAllArmes(): Arme[] {
     return this.catalogService.getAllArmes();
   }
 
@@ -81,7 +85,7 @@ export class CatalogController {
    * Note : le champ `prix` peut être un nombre (Jerricans) ou "x3" (Tourelle).
    */
   @Get('ameliorations')
-  getAllAmeliorations() {
+  getAllAmeliorations(): Amelioration[] {
     return this.catalogService.getAllAmeliorations();
   }
 }

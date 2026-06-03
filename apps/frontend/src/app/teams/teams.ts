@@ -15,7 +15,7 @@
  * - Gérer la suppression (confirmation + appel API)
  * - Afficher les erreurs API globales
  */
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { TeamsService } from './teams.service';
 import { Team, CreateTeamDto } from './team.model';
 import { TeamCard } from './team-card/team-card';
@@ -32,33 +32,33 @@ import { TeamForm } from './team-form/team-form';
 })
 export class Teams implements OnInit {
   // ── Services injectés ──────────────────────────────────────────────────────
-  private teamsService = inject(TeamsService);
+  private teamsService: TeamsService = inject(TeamsService);
 
   // ── État de la liste ───────────────────────────────────────────────────────
 
   /** Liste des équipes chargées depuis l'API */
-  teams = signal<Team[]>([]);
+  teams: WritableSignal<Team[]> = signal<Team[]>([]);
 
   /** Vrai pendant le chargement initial */
-  loading = signal(true);
+  loading: WritableSignal<boolean> = signal(true);
 
   /** Message d'erreur API affiché à l'utilisateur (vide = pas d'erreur) */
-  error = signal('');
+  error: WritableSignal<string> = signal('');
 
   // ── État du formulaire ─────────────────────────────────────────────────────
 
   /** Vrai quand le formulaire de création/modification est visible */
-  showForm = signal(false);
+  showForm: WritableSignal<boolean> = signal(false);
 
   /**
    * Équipe en cours d'édition, passée en [input] à TeamForm.
    * null  = mode création (formulaire vide)
    * Team  = mode édition  (formulaire pré-rempli via effect dans TeamForm)
    */
-  editingTeam = signal<Team | null>(null);
+  editingTeam: WritableSignal<Team | null> = signal<Team | null>(null);
 
   /** Vrai pendant l'appel API de sauvegarde (passé à TeamForm pour désactiver les boutons) */
-  saving = signal(false);
+  saving: WritableSignal<boolean> = signal(false);
 
   // ── Cycle de vie ───────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ export class Teams implements OnInit {
     this.error.set('');
 
     this.teamsService.getAll().subscribe({
-      next: (teams) => {
+      next: (teams: Team[]) => {
         this.teams.set(teams);
         this.loading.set(false);
       },
@@ -156,8 +156,8 @@ export class Teams implements OnInit {
       return;
     }
 
-    // Suppression optimiste
-    this.teams.update((list) => list.filter((t) => t.id !== team.id));
+    // Suppression optimiste — (list: Team[]) et (t: Team) annotés (règle `parameter: true`).
+    this.teams.update((list: Team[]) => list.filter((t: Team) => t.id !== team.id));
 
     this.teamsService.remove(team.id).subscribe({
       error: () => {
