@@ -49,16 +49,30 @@ Le backend convertit le Markdown en HTML (`marked`) et l'expose via `GET /api/co
 
 Pour ajouter du contenu : créer `content/<slug>.md` → disponible immédiatement sans redémarrer le backend.
 
-### 3.3 CRUD Équipes
+### 3.3 Catalogue de jeu (en mémoire)
+
+Au démarrage du serveur, le backend charge un **catalogue complet** depuis des fichiers YAML (`database_init/data/`) et le conserve en mémoire.
+
+Le catalogue contient :
+- **13 sponsors** — chacun avec ses classes d'avantage et ses règles spéciales
+- **16 véhicules** — répartis en Léger / Moyen / Lourd, avec leurs statistiques complètes
+- **41 armes** — de type base, avancée, équipage ou largable
+- **11 améliorations** — modifications de véhicule
+
+**Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané.
+
+Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel client peut consulter les données pour construire ses véhicules.
+
+### 3.4 CRUD Équipes
 
 - **Lister** ses équipes (`GET /api/teams`) — filtrées par utilisateur connecté
-- **Créer** une équipe (`POST /api/teams`) : nom, sponsor (liste prédéfinie), budget en jerricans (défaut : 50), description optionnelle
+- **Créer** une équipe (`POST /api/teams`) : nom, sponsor (validé via le catalogue), budget en jerricans (défaut : 50), description optionnelle
 - **Modifier** une équipe (`PUT /api/teams/:id`) : tous les champs modifiables
 - **Supprimer** une équipe (`DELETE /api/teams/:id`) — avec confirmation utilisateur
 
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
-### 3.4 Navigation
+### 3.5 Navigation
 
 - `/home` — Page d'accueil avec présentation et liens vers les sections
 - `/rules` — Affichage des règles du jeu (Markdown → HTML)
@@ -71,28 +85,32 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 ## 4. Fonctionnalités à implémenter (backlog)
 
-### 4.1 CRUD Véhicules
+### 4.1 Construction de véhicules
 
-- Ajouter un véhicule à une équipe : nom, type (liste prédéfinie), statistiques (handling, weight, hull)
-- Modifier / supprimer un véhicule
-- Calcul du coût d'un véhicule selon son type
+Le catalogue de jeu est disponible (API `/api/catalog/`). La prochaine étape est de permettre la **construction de véhicules** dans une équipe :
 
-### 4.3 CRUD Armes
+- Sélectionner un sponsor lors de la création d'équipe → le catalogue filtré est chargé
+- Ajouter un véhicule à une équipe (choix parmi les véhicules autorisés par le sponsor)
+- Équiper un véhicule avec des armes et améliorations (dans la limite des emplacements disponibles)
+- Modifier / supprimer un véhicule ou une arme
 
-- Équiper un véhicule avec une arme : type (liste prédéfinie), emplacement, coût en cans
-- Retirer une arme d'un véhicule
+### 4.2 Gestion du budget
 
-### 4.4 Gestion du budget
+- Afficher le budget restant d'une équipe (budget total − coût des véhicules − coût des armes − coût des améliorations)
+- Bloquer l'ajout si le budget est dépassé
+- Cas particulier : coût de la **Tourelle** = 3× le prix de l'arme associée
 
-- Afficher le budget restant d'une équipe (budget total − coût des véhicules − coût des armes)
-- Bloquer l'ajout d'armes/véhicules si le budget est dépassé
+### 4.3 Frontend — Consultation du catalogue
 
-### 4.5 Tableau de bord
+- Remplacer les pages `/vehicles` et `/weapons` (actuellement placeholders Markdown) par une vue dynamique depuis l'API `/api/catalog/`
+- Permettre de filtrer par sponsor pour voir uniquement les items autorisés
+
+### 4.4 Tableau de bord
 
 - Vue d'ensemble de toutes les équipes de l'utilisateur
 - Accès rapide à chaque équipe et ses véhicules
 
-### 4.6 Export (futur)
+### 4.5 Export (futur)
 
 - Fiche récapitulative d'une équipe au format imprimable (HTML/PDF)
 
@@ -125,31 +143,36 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
 
-### `Vehicle` _(à créer)_
+### Catalogue de jeu (en mémoire, pas en base de données)
+
+Les données du catalogue ne sont **pas stockées en base de données**. Elles sont chargées depuis les fichiers YAML au démarrage et conservées dans le `CatalogService` (singleton NestJS).
+
+**`Sponsor`** (en mémoire) — champs : `nom`, `description`, `classes_avantage[]`, `avantages_sponsorises`, `vehicules[]`, `armes[]`, `ameliorations[]`
+
+**`Vehicule`** (en mémoire) — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`
+
+**`Arme`** (en mémoire) — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`
+
+**`Amelioration`** (en mémoire) — champs : `nom`, `prix` (number ou `"x3"` pour la Tourelle), `emplacement`, `description`, `regles`, `sponsors_autorises[]`
+
+### `Vehicle` _(entité DB à créer)_
+
+L'entité `Vehicle` représentera un véhicule **appartenant à une équipe** (instance de jeu), distinct du catalogue. Elle référencera le type de véhicule par son `nom` (clé étrangère logique vers le catalogue en mémoire).
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
-| `id` | UUID | PK |
-| `name` | string | obligatoire |
-| `type` | enum | `Buggy`, `PerformanceCar`, `Van`, `Truck` |
-| `handling` | number | selon le type |
-| `maxGear` | number | selon le type |
-| `hull` | number | points de coque |
-| `crew` | number | nombre d'équipiers |
-| `cost` | number | coût en cans |
-| `teamId` | UUID | FK → Team |
+| `id` | number | PK, auto-incrémenté |
+| `nom` | string | référence vers `Vehicule.nom` du catalogue |
+| `teamId` | number | FK → Team |
+| `createdAt` | Date | auto |
 
-### `Weapon` _(à créer)_
+### `Weapon` _(entité DB à créer)_
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
-| `id` | UUID | PK |
-| `type` | enum | voir liste §7 |
-| `attack` | number | dés d'attaque |
-| `range` | string | courte / longue |
-| `slots` | number | emplacements requis |
-| `cost` | number | coût en cans |
-| `vehicleId` | UUID | FK → Vehicle |
+| `id` | number | PK, auto-incrémenté |
+| `nom` | string | référence vers `Arme.nom` du catalogue |
+| `vehicleId` | number | FK → Vehicle |
 
 ---
 
@@ -169,6 +192,18 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 |---------|-------|------|-------------|
 | GET | `/api/content` | Non | Liste des slugs disponibles |
 | GET | `/api/content/:slug` | Non | Contenu HTML + titre |
+
+### Catalogue de jeu
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| GET | `/api/catalog/sponsors` | Non | Liste tous les sponsors avec leurs véhicules/armes/améliorations autorisés |
+| GET | `/api/catalog/sponsors/:nom` | Non | Un sponsor par son nom + son catalogue complet (404 si inconnu) |
+| GET | `/api/catalog/vehicules` | Non | Tous les véhicules du catalogue |
+| GET | `/api/catalog/armes` | Non | Toutes les armes du catalogue |
+| GET | `/api/catalog/ameliorations` | Non | Toutes les améliorations du catalogue |
+
+Note : les noms de sponsor avec espaces/accents doivent être URL-encodés par le client (`La%20Ge%C3%B4li%C3%A8re`).
 
 ### Équipes
 
@@ -199,45 +234,70 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 ## 7. Règles métier Gaslands
 
-### Sponsors
+> Les données complètes sont définies dans les fichiers YAML `database_init/data/` et exposées via l'API `/api/catalog/`. Cette section est un résumé de référence.
 
-Chaque équipe doit choisir un sponsor qui peut donner des avantages spéciaux (non encore implémentés dans l'app) :
+### Sponsors (13 au total)
 
-| Sponsor | Thème |
-|---------|-------|
-| Rutherford | Armes classiques |
-| Miyazaki | Vitesse |
-| Mishkin | Défense |
-| Verney | Explosifs |
-| Idris | Équipement spécial |
-| Warden | Forces de l'ordre |
-| Highway Patrol | Police / maintien de l'ordre |
-| Slime Pit | Toxique |
-| Scarlett | Agilité |
-| Locus | Précision |
+Chaque équipe doit choisir un sponsor. Les véhicules, armes et améliorations disponibles dépendent du sponsor choisi.
+
+| Sponsor | Thème principal | Particularité |
+|---------|----------------|---------------|
+| Rutherford | Militaire | Seul accès à l'Hélicoptère et au Char d'assaut |
+| Miyazaki | Pilotage / Précision | — |
+| Mishkin | Technologie électronique | Armes et améliorations électriques exclusives (6 armes, 2 améliorations) |
+| Idris | Vitesse / Nitro | Pas d'accès au Gyrocoptère |
+| Slime | Éperonnage | — |
+| La Geôlière | Prison / Reconversion | — |
+| Scarlett | Piraterie | — |
+| La Patrouille de l'Autoroute | Poursuite | — |
+| Verney | Récupération / Génie | — |
+| Maxxine | Drifts / Ballet | — |
+| L'Ordre Infernal | Feu / Horreur | — |
+| Beverly, le Diable de l'Autoroute | Spectral / Âmes | — |
+| Rusty et ses Trafiquants d'Alcool | Remorques / Instabilité | — |
 
 ### Budget (Jerricans)
 
-- Budget de départ : **50 jerricans** par équipe (peut être modifié)
-- Chaque véhicule et chaque arme a un coût en cans
-- Le total (véhicules + armes) ne doit pas dépasser le budget
+- Budget de départ : **50 jerricans** par équipe (modifiable)
+- Chaque véhicule, arme et amélioration a un coût en jerricans
+- Exception : l'amélioration **Tourelle** coûte **3× le prix de l'arme** concernée (coût variable)
+- Le total ne doit pas dépasser le budget
 
-### Types de véhicules
+### Véhicules (16 au total)
 
-| Type | Handling | Max Gear | Hull | Crew | Coût |
-|------|----------|----------|------|------|------|
-| Buggy | 5 | 6 | 6 | 2 | 6 cans |
-| Performance Car | 4 | 6 | 8 | 2 | 12 cans |
-| Van | 3 | 5 | 10 | 3 | 10 cans |
-| Truck | 2 | 4 | 14 | 3 | 20 cans |
+Répartis en trois catégories de poids :
 
-### Armes disponibles
+| Catégorie | Exemples | Coût |
+|-----------|---------|------|
+| **Léger** | Dragster, Moto, Buggy, Moto avec side-car | 5–8 jerricans |
+| **Moyen** | Voiture, Voiture de sport, Camion, Ambulance, Gyrocoptère, Camion à glaces | 8–20 jerricans |
+| **Lourd** | Monster Truck, Camion Lourd, Bus, Hélicoptère*, Char d'assaut*, Forteresse Mobile | 25–40 jerricans |
 
-| Arme | Attaque | Portée | Coût |
-|------|---------|--------|------|
-| Machine Gun | 3 dés | Longue | 3 cans |
-| Pistol | 1 dé | Courte | 1 can |
-| Rocket Launcher | 6 dés | Longue | 6 cans |
-| Flamethrower | 4 dés | Courte | 5 cans |
-| Mines | 4 dés | Arrière | 4 cans |
-| Oil Slick | — | Arrière | 2 cans |
+*Hélicoptère et Char d'assaut : **Rutherford uniquement**.
+
+### Armes (41 au total)
+
+| Type | Nombre | Exemples |
+|------|--------|---------|
+| `base` | 4 | Pistolet, Mitrailleuse, Mitrailleuse Lourde, Minigun |
+| `avancée` | 18 | BFG, Lance-Flammes, Canon de 125mm, Canon à Arc Électrique* |
+| `équipage` | 11 | Grenades, Cocktails Molotov, Fusil à Pompe, Pistolet Mitrailleur |
+| `largable` | 8 | Largueur de Mines, Largueur d'Huile, Auto-Tourelle, Bombes Téléguidées |
+
+*Canon à Arc Électrique et 5 autres armes électroniques : **Mishkin uniquement**.
+
+### Améliorations de véhicule (11 au total)
+
+| Amélioration | Coût | Emplacement | Note |
+|---|---|---|---|
+| Arceaux | 4 | 1 | Ignore les dégâts de tonneau |
+| Bélier | 4 | 1 | +2 dés en éperonnage |
+| Bélier Explosif | 3 | 0 | Premier éperonnage +6 dés, risque retour |
+| Blindage | 4 | 1 | +2 carrosserie, cumulable |
+| Catapulte Improvisée | 2 | 1 | Portée étendue pour armes largables |
+| Chenilles | 4 | 1 | +1 manoeuvrabilité, tout-terrain |
+| Membre d'Équipage Supplémentaire | 4 | 0 | +1 équipier |
+| Nitro | 6 | 0 | Accélération forcée |
+| Réacteur Nucléaire Expérimental | 5 | 0 | **Mishkin uniquement** |
+| Téléporteur Expérimental | 7 | 0 | **Mishkin uniquement** |
+| Tourelle | **×3** | 0 | Arc 360° pour une arme (coût = 3× le prix de l'arme) |

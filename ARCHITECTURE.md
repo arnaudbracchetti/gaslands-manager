@@ -204,8 +204,9 @@ NestJS organise le code en **modules** qui regroupent contrôleurs, services et 
 apps/backend/src/app/
 ├── app.module.ts        ← Module racine (importe tous les autres)
 ├── auth/                ← Authentification (User, JWT, bcrypt)
+├── catalog/             ← Catalogue de jeu chargé au démarrage (YAML → mémoire)
 ├── content/             ← Lecture et service des fichiers Markdown
-└── team/                ← Entité Team (CRUD à venir)
+└── team/                ← Entité Team (CRUD)
 ```
 
 **Injection de dépendance** : NestJS gère automatiquement l'instanciation des services. On déclare ses dépendances dans le constructeur, NestJS les injecte :
@@ -275,7 +276,50 @@ export class User {
 
 ⚠️ **Dev uniquement !** En production, utiliser des migrations TypeORM explicites. `synchronize: true` peut provoquer une perte de données si une entité est mal modifiée.
 
-### 3.5 Service de contenu Markdown
+### 3.5 Catalogue de jeu — Singleton en mémoire
+
+`CatalogService` (`apps/backend/src/app/catalog/catalog.service.ts`) charge les données du catalogue de jeu (sponsors, véhicules, armes, améliorations) depuis des fichiers YAML **une seule fois au démarrage**, puis les conserve en mémoire pour toute la durée de vie du serveur.
+
+**Données source** : `database_init/data/*.yml` à la racine du workspace.
+
+**Mécanisme — `OnModuleInit`** : NestJS appelle automatiquement `onModuleInit()` après l'initialisation du module, avant la première requête HTTP. C'est là que les fichiers YAML sont lus et parsés.
+
+**Structure en mémoire — `Map<string, Sponsor>` avec relations pré-résolues :**
+
+```typescript
+// Au démarrage, onModuleInit() construit cette Map :
+sponsorMap = {
+  "Rutherford" → { nom, description, vehicules: [...], armes: [...], ameliorations: [...] },
+  "Mishkin"    → { nom, description, vehicules: [...], armes: [...], ameliorations: [...] },
+  // ...13 sponsors au total
+}
+```
+
+Les relations (`sponsor.vehicules`, `sponsor.armes`, `sponsor.ameliorations`) sont calculées **une seule fois** à l'initialisation en filtrant les items dont `sponsors_autorises[]` contient le nom du sponsor. Ensuite, chaque `getSponsor(nom)` est un accès O(1) à la Map, sans aucun filtrage.
+
+**Pourquoi pas une base de données ?** Les données du catalogue sont statiques (définies par les règles du jeu Gaslands). Les lire depuis le disque à chaque requête serait inutile. La Map en mémoire est la solution la plus simple et la plus performante.
+
+**Fail-fast** : si un fichier YAML est manquant ou corrompu au démarrage, le service re-throw l'erreur, ce qui fait crasher le serveur NestJS avec un message explicite. Un catalogue vide serait pire car il passerait inaperçu.
+
+**Pattern Template Method pour les tests** : `CatalogService` expose une méthode `protected readFileContent(filename)` qui lit le fichier sur le disque. Dans les tests, `TestCatalogService` étend `CatalogService` et surcharge cette méthode pour retourner des YAML fictifs sans toucher au système de fichiers. Cette approche évite les problèmes de mock de modules Node built-ins avec SWC/Vitest.
+
+```typescript
+// Production
+class CatalogService {
+  protected readFileContent(filename: string): string {
+    return fs.readFileSync(path.join(process.cwd(), 'database_init', 'data', filename), 'utf-8');
+  }
+}
+
+// Test (sous-classe locale dans le spec)
+class TestCatalogService extends CatalogService {
+  protected override readFileContent(filename: string): string {
+    return MOCK_YAML[filename]; // données en mémoire
+  }
+}
+```
+
+### 3.6 Service de contenu Markdown
 
 `ContentService` (`apps/backend/src/app/content/content.service.ts`) :
 - Lit les fichiers `.md` depuis `process.cwd() + CONTENT_DIR`
@@ -283,7 +327,7 @@ export class User {
 - Convertit le Markdown en HTML avec la bibliothèque `marked`
 - Extrait le titre (premier `# `) pour l'envoyer séparément
 
-### 3.6 Point d'attention Windows — `listen('0.0.0.0')`
+### 3.7 Point d'attention Windows — `listen('0.0.0.0')`
 
 ```typescript
 // apps/backend/src/main.ts
@@ -292,16 +336,18 @@ await app.listen(3000, '0.0.0.0');  // ← obligatoire sur Windows
 
 Sans `'0.0.0.0'`, Node.js écoute sur `::` (IPv6 uniquement). Les connexions IPv4 depuis le proxy Vite (`127.0.0.1`) sont alors refusées.
 
-### 3.7 Fichiers clés
+### 3.8 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
 | `apps/backend/src/main.ts` | Bootstrap NestJS, CORS, préfixe `/api`, écoute `0.0.0.0:3000` |
 | `apps/backend/src/app/app.module.ts` | Module racine : imports TypeORM, ConfigModule, tous les modules |
 | `apps/backend/src/app/auth/` | Auth complète : entities, services, controller, strategy, guard |
+| `apps/backend/src/app/catalog/` | Catalogue de jeu : YAML → Map en mémoire au démarrage |
 | `apps/backend/src/app/content/` | Service Markdown → HTML |
-| `apps/backend/src/app/team/` | Entité Team (CRUD à implémenter) |
+| `apps/backend/src/app/team/` | Entité Team (CRUD) |
 | `apps/backend/.env` | Variables d'environnement (ne pas committer) |
+| `database_init/data/*.yml` | Données statiques du catalogue (sponsors, véhicules, armes, améliorations) |
 
 ---
 
@@ -470,6 +516,8 @@ Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
 
 ### 9.1 Backend — Pattern de test NestJS (Vitest)
 
+**Services avec dépendances TypeORM** (ex: `TeamService`) : on mock le `Repository` via `getRepositoryToken`.
+
 ```typescript
 // Créer un module de test isolé
 const module = await Test.createTestingModule({
@@ -490,11 +538,29 @@ const module = await Test.createTestingModule({
 }).compile();
 ```
 
+**Services sans dépendances injectées** (ex: `CatalogService`) : on instancie directement la classe, sans passer par `Test.createTestingModule`. On utilise le **Pattern Template Method** pour substituer la lecture de fichiers :
+
+```typescript
+// Sous-classe locale dans le spec — surcharge readFileContent()
+class TestCatalogService extends CatalogService {
+  protected override readFileContent(filename: string): string {
+    return MOCK_YAML[filename]; // données fictives en mémoire
+  }
+}
+
+// Dans beforeEach : instanciation directe + appel manuel de onModuleInit()
+service = new TestCatalogService();
+service.onModuleInit(); // normalement appelé par NestJS au démarrage
+```
+
+⚠️ `vi.mock('fs')` pour les modules Node built-ins est problématique avec SWC/Vitest : préférer le Pattern Template Method quand le service expose une méthode `protected` pour l'I/O.
+
 **Ce qu'on teste :**
 - Cas nominaux : les méthodes retournent la valeur attendue
 - Cas d'erreur : `NotFoundException` levée si l'entité est introuvable
 - Isolation utilisateur : le filtre `userId` est bien appliqué à chaque requête BDD
 - Le controller passe les bons arguments au service (câblage HTTP)
+- Relations pré-résolues : un sponsor expose directement ses items autorisés
 
 **Ce qu'on ne teste pas** dans les tests unitaires : l'authentification JWT (testée par le guard), le SQL réel (testé en e2e).
 

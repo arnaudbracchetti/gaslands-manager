@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
+import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
 import { Team } from './team/team.entity';
@@ -44,6 +45,7 @@ import { Team } from './team/team.entity';
     ContentModule, // Lecture des fichiers Markdown
     TeamModule,    // Gestion des équipes Gaslands
     AuthModule,    // Inscription, connexion, JWT
+    CatalogModule, // Catalogue de jeu chargé au démarrage (sponsors, véhicules, armes, améliorations)
   ],
   controllers: [AppController],
   providers: [AppService],
