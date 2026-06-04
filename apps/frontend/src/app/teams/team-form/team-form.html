@@ -22,23 +22,6 @@
         (ngModelChange)="formName.set($event)" />
     </div>
 
-    <!-- Sponsor (liste déroulante) -->
-    <div class="form-group">
-      <label for="team-sponsor">Sponsor</label>
-      <!--
-        Le sponsor détermine les armes et capacités disponibles dans Gaslands.
-        [ngModel] lit la valeur du signal, (ngModelChange) la met à jour.
-      -->
-      <select
-        id="team-sponsor"
-        [ngModel]="formSponsor()"
-        (ngModelChange)="formSponsor.set($event)">
-        @for (sponsor of sponsors; track sponsor) {
-          <option [value]="sponsor">{{ sponsor }}</option>
-        }
-      </select>
-    </div>
-
     <!-- Budget en jerricans -->
     <div class="form-group">
       <label for="team-cans">Budget (Jerricans)</label>
@@ -62,14 +45,40 @@
       </textarea>
     </div>
 
+    <!-- Carousel de sélection du sponsor (pleine largeur) -->
+    <div class="form-group form-group--full">
+      @if (loadingSponsors()) {
+        <!--
+          Spinner pendant le chargement du catalogue.
+          Le formulaire reste utilisable (les autres champs ne dépendent pas des sponsors).
+        -->
+        <div class="sponsors-loading">
+          <span class="sponsors-loading__dot"></span>
+          <span class="sponsors-loading__dot"></span>
+          <span class="sponsors-loading__dot"></span>
+          <span class="sponsors-loading__text">Chargement des sponsors…</span>
+        </div>
+      } @else {
+        <!--
+          SponsorCarousel : passe le sponsor sélectionné, la liste et l'état de verrouillage.
+          (sponsorChange) met à jour formSponsor à chaque changement de page.
+        -->
+        <app-sponsor-carousel
+          [selectedSponsor]="formSponsor()"
+          [locked]="hasVehicles()"
+          [sponsors]="sponsors()"
+          (sponsorChange)="formSponsor.set($event)" />
+      }
+    </div>
+
   </div>
 
   <!-- Boutons Annuler / Enregistrer -->
   <div class="form-actions">
-    <button class="btn-secondary" (click)="cancelForm()" [disabled]="saving()">
+    <button class="btn-secondary" type="button" (click)="cancelForm()" [disabled]="saving()">
       Annuler
     </button>
-    <button class="btn-primary" (click)="saveForm()" [disabled]="saving()">
+    <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
       @if (saving()) { Enregistrement... } @else { Enregistrer }
     </button>
   </div>

@@ -6,12 +6,17 @@
  * - le pré-remplissage des champs via l'input `team`
  * - l'émission du bon DTO lors de la sauvegarde
  * - la validation locale (nom obligatoire)
- * - l'émission de cancel au clic sur Annuler
+ * - l'émission de formCancel au clic sur Annuler
+ *
+ * CatalogService est mocké pour éviter les appels HTTP réels :
+ * on renvoie un tableau vide qui représente l'état "chargé mais sans données".
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
 import { TeamForm } from './team-form';
 import { Team, CreateTeamDto } from '../team.model';
+import { CatalogService } from '../../catalog/catalog.service';
 
 const mockTeam: Team = {
   id: 1,
@@ -24,6 +29,12 @@ const mockTeam: Team = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
+// CatalogService mocké : retourne un tableau vide immédiatement.
+// Résultat : loadingSponsors passe à false, sponsors = [], formSponsor reste 'Rutherford'.
+const mockCatalogService = {
+  getSponsors: () => of([]),
+};
+
 describe('TeamForm', () => {
   let component: TeamForm;
   let fixture: ComponentFixture<TeamForm>;
@@ -31,6 +42,10 @@ describe('TeamForm', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TeamForm],
+      providers: [
+        // On remplace CatalogService par le mock pour éviter d'injecter HttpClient
+        { provide: CatalogService, useValue: mockCatalogService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TeamForm);
@@ -128,9 +143,11 @@ describe('TeamForm', () => {
 
   // ── Annulation ─────────────────────────────────────────────────────────────
 
-  it('émet cancel au clic sur "Annuler"', () => {
+  it('émet formCancel au clic sur "Annuler"', () => {
+    // L'output s'appelle `formCancel` (pas `cancel`) car `cancel` est un événement DOM natif.
+    // Angular ESLint interdit de nommer un output identique à un événement HTML standard.
     let cancelled = false;
-    outputToObservable(component.cancel).subscribe(() => (cancelled = true));
+    outputToObservable(component.formCancel).subscribe((): void => { cancelled = true; });
 
     const btn = fixture.nativeElement.querySelector('.btn-secondary') as HTMLButtonElement;
     btn.click();

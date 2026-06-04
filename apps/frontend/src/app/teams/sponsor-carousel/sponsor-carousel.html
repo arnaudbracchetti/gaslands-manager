@@ -1,0 +1,92 @@
+<!-- Carousel de sélection du sponsor -->
+<div class="sponsor-carousel">
+
+  <!-- En-tête : label + badge de verrouillage -->
+  <div class="carousel-header">
+    <span class="carousel-label">Sponsor *</span>
+    @if (locked()) {
+      <span class="lock-badge">
+        🔒 Sponsor verrouillé — retirez tous les véhicules pour le modifier
+      </span>
+    }
+  </div>
+
+  <!-- Corps : flèche gauche + carte + flèche droite -->
+  <div class="carousel-wrapper">
+
+    <!-- Flèche précédent -->
+    <button
+      class="carousel-nav carousel-nav--prev"
+      type="button"
+      [disabled]="locked() || !sponsors().length"
+      (click)="prev()"
+      [attr.aria-label]="'Sponsor précédent'">
+      ‹
+    </button>
+
+    <!-- Carte du sponsor courant -->
+    @if (currentSponsor(); as sponsor) {
+      <div class="sponsor-card" [ngClass]="{ locked: locked() }">
+
+        <!-- Compteur de position -->
+        <div class="sponsor-position">{{ positionLabel() }}</div>
+
+        <!-- Nom du sponsor -->
+        <h3 class="sponsor-name">{{ sponsor.nom }}</h3>
+
+        <!-- Description courte -->
+        <p class="sponsor-description">{{ sponsor.description }}</p>
+
+        <!-- Badges des classes d'avantage -->
+        <div class="sponsor-classes">
+          @for (classe of sponsor.classes_avantage; track classe) {
+            <span class="class-badge">{{ classe }}</span>
+          }
+        </div>
+
+        <!-- Séparateur et zone des avantages sponsorisés -->
+        <div class="advantages-section">
+          <div class="advantages-title">Avantages sponsorisés</div>
+          <!-- [innerHTML] affiche le markdown converti en HTML (sanitisé via DomSanitizer) -->
+          <div class="advantages-html" [innerHTML]="currentHtml()"></div>
+        </div>
+
+      </div>
+    } @else {
+      <!-- État vide si la liste de sponsors n'est pas encore chargée -->
+      <div class="sponsor-card sponsor-card--empty">
+        <p>Aucun sponsor disponible</p>
+      </div>
+    }
+
+    <!-- Flèche suivant -->
+    <button
+      class="carousel-nav carousel-nav--next"
+      type="button"
+      [disabled]="locked() || !sponsors().length"
+      (click)="next()"
+      [attr.aria-label]="'Sponsor suivant'">
+      ›
+    </button>
+
+  </div>
+
+  <!-- Dots de navigation (indicateurs de position) -->
+  @if (sponsors().length > 1) {
+    <div class="carousel-dots" role="tablist">
+      @for (sponsor of sponsors(); track sponsor.nom; let i = $index) {
+        <button
+          class="dot"
+          role="tab"
+          type="button"
+          [ngClass]="{ active: i === currentIndex() }"
+          [disabled]="locked()"
+          [attr.aria-label]="sponsor.nom"
+          [attr.aria-selected]="i === currentIndex()"
+          (click)="goTo(i)">
+        </button>
+      }
+    </div>
+  }
+
+</div>

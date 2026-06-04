@@ -68,14 +68,15 @@ describe('TeamService', () => {
   // ── findByUserId ────────────────────────────────────────────────────────────
 
   describe('findByUserId()', () => {
-    it('retourne les équipes de l\'utilisateur', async () => {
+    it('retourne les équipes de l\'utilisateur enrichies avec vehicleCount', async () => {
       mockRepo.find.mockResolvedValue([mockTeam]);
 
       const result = await service.findByUserId(42);
 
       // Vérifie que le Repository est appelé avec le bon filtre userId
       expect(mockRepo.find).toHaveBeenCalledWith({ where: { userId: 42 } });
-      expect(result).toEqual([mockTeam]);
+      // vehicleCount: 0 est ajouté par le service (les véhicules ne sont pas encore implémentés)
+      expect(result).toEqual([{ ...mockTeam, vehicleCount: 0 }]);
     });
 
     it('retourne un tableau vide si l\'utilisateur n\'a aucune équipe', async () => {

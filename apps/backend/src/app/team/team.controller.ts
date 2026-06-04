@@ -30,9 +30,9 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TeamService } from './team.service';
+import { TeamResponseDto } from './dto/team-response.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { Team } from './team.entity';
 
 // Type du payload injecté par JwtStrategy dans req.user
 // (correspond à ce que retourne jwt.strategy.ts → validate())
@@ -53,8 +53,8 @@ export class TeamController {
    * req.user.id provient du token JWT décodé par JwtStrategy.
    */
   @Get()
-  // Promise<Team[]> : retourne toutes les équipes de l'utilisateur (tableau possiblement vide).
-  getAll(@Request() req: AuthenticatedRequest): Promise<Team[]> {
+  // Promise<TeamResponseDto[]> : retourne toutes les équipes avec vehicleCount (0 pour l'instant).
+  getAll(@Request() req: AuthenticatedRequest): Promise<TeamResponseDto[]> {
     return this.teamService.findByUserId(req.user.id);
   }
 
@@ -64,8 +64,8 @@ export class TeamController {
    * @Body() dto : NestJS parse automatiquement le corps JSON de la requête.
    */
   @Post()
-  // Promise<Team> : retourne l'entité persistée avec son id généré par la BDD.
-  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto): Promise<Team> {
+  // Promise<TeamResponseDto> : retourne l'entité persistée avec vehicleCount: 0 (nouvelle équipe).
+  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto): Promise<TeamResponseDto> {
     return this.teamService.create(req.user.id, dto);
   }
 
@@ -76,12 +76,12 @@ export class TeamController {
    * Si la conversion échoue (ex: "/teams/abc"), NestJS retourne 400 Bad Request.
    */
   @Put(':id')
-  // Promise<Team> : retourne l'entité mise à jour après sauvegarde.
+  // Promise<TeamResponseDto> : retourne l'entité mise à jour avec vehicleCount.
   update(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateTeamDto,
-  ): Promise<Team> {
+  ): Promise<TeamResponseDto> {
     return this.teamService.update(id, req.user.id, dto);
   }
 

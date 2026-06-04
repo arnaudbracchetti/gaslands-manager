@@ -70,6 +70,12 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 - **Modifier** une équipe (`PUT /api/teams/:id`) : tous les champs modifiables
 - **Supprimer** une équipe (`DELETE /api/teams/:id`) — avec confirmation utilisateur
 
+**Réponse enrichie** : toutes les réponses de l'API Teams incluent `vehicleCount: number` — le nombre de véhicules appartenant à l'équipe (actuellement toujours `0` en attendant l'implémentation du module Véhicules).
+
+**Carousel de sélection du sponsor** : le formulaire de création/modification charge les 13 sponsors enrichis depuis `/api/catalog/sponsors` et les présente via un carousel interactif (navigation ←/→, indicateurs de position, description + classes + avantages de chaque sponsor).
+
+**Règle de verrouillage du sponsor** : dès qu'un premier véhicule est ajouté à une équipe, le sponsor ne peut plus être modifié. Le carousel affiche un badge 🔒 et bloque la navigation. Cette règle est appliquée côté frontend via le champ `vehicleCount` retourné par l'API.
+
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
 ### 3.5 Navigation
@@ -136,12 +142,18 @@ Le catalogue de jeu est disponible (API `/api/catalog/`). La prochaine étape es
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `name` | string(100) | obligatoire |
-| `sponsor` | string(50) | défaut : `"Rutherford"` |
+| `sponsor` | string(50) | défaut : `"Rutherford"` — immutable dès le 1er véhicule |
 | `cans` | number | budget en jerricans, défaut : 50 |
 | `description` | text | nullable |
 | `userId` | number | FK → User (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
+
+**Champ calculé dans la réponse API** (non stocké en base) :
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `vehicleCount` | number | Nombre de véhicules de l'équipe. Toujours `0` jusqu'à l'implémentation du module Véhicules. Utilisé par le frontend pour verrouiller le choix du sponsor. |
 
 ### Catalogue de jeu (en mémoire, pas en base de données)
 
@@ -255,6 +267,14 @@ Chaque équipe doit choisir un sponsor. Les véhicules, armes et améliorations 
 | L'Ordre Infernal | Feu / Horreur | — |
 | Beverly, le Diable de l'Autoroute | Spectral / Âmes | — |
 | Rusty et ses Trafiquants d'Alcool | Remorques / Instabilité | — |
+
+### Sponsor et véhicules
+
+Le sponsor est choisi **une seule fois à la création de l'équipe** et détermine :
+- Les types de véhicules disponibles (certains véhicules sont exclusifs à un sponsor)
+- Les armes et améliorations achetables pour les véhicules de l'équipe
+
+**Règle d'immutabilité** : dès qu'un premier véhicule est ajouté à l'équipe, le sponsor ne peut plus être modifié. Changer de sponsor après avoir acheté des véhicules changerait rétroactivement leur légalité.
 
 ### Budget (Jerricans)
 

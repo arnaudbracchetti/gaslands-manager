@@ -26,9 +26,16 @@
       (cancel)  : utilisateur annule → on ferme le formulaire
   -->
   @if (showForm()) {
+    <!--
+      [hasVehicles] : vrai si l'équipe en cours d'édition a déjà au moins un véhicule.
+      Dans ce cas, le carousel de sponsors sera verrouillé (règle Gaslands : sponsor
+      immutable dès le 1er véhicule). vehicleCount est toujours 0 pour l'instant
+      (module Véhicules non encore implémenté).
+    -->
     <app-team-form
       [team]="editingTeam()"
       [saving]="saving()"
+      [hasVehicles]="(editingTeam()?.vehicleCount ?? 0) > 0"
       (saved)="onSaved($event)"
       (formCancel)="cancelForm()" />
   }

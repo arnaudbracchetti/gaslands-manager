@@ -126,8 +126,8 @@ import { RegisterDto } from './dto/register.dto';
 
 ## Documentation de référence
 
-> Lire SPECIFICATION.md et ARCHITECTURE.md fichiers avant toute modification. 
-> Les mettre à jour SPECIFICATION.md et ARCHITECTURE.md quand le projet évolue.
+Lire SPECIFICATION.md et ARCHITECTURE.md fichiers avant toute modification. 
+Les mettre à jour SPECIFICATION.md et ARCHITECTURE.md a chaque modification.
 
 - [SPECIFICATION.md](SPECIFICATION.md) — Fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Stack technique, choix d'architecture, points d'attention, patterns à respecter

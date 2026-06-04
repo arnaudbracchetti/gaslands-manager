@@ -1,0 +1,270 @@
+/* ── Carousel de sponsors ─────────────────────────────────────────────────── */
+
+.sponsor-carousel {
+  width: 100%;
+}
+
+/* En-tête : label + badge de verrouillage */
+.carousel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.carousel-label {
+  color: #999;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(80, 80, 80, 0.3);
+  border: 1px solid #555;
+  color: #888;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+/* Corps du carousel : flèches + carte */
+.carousel-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* ── Boutons de navigation (flèches) ─────────────────────────────────────── */
+
+.carousel-nav {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  /* Alignement vertical centré sur le nom du sponsor (haut de carte) */
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  &:hover:not(:disabled) {
+    border-color: #e94560;
+    color: #e94560;
+    background: rgba(233, 69, 96, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+/* ── Carte sponsor ───────────────────────────────────────────────────────── */
+
+.sponsor-card {
+  flex: 1;
+  background: #0a0a14;
+  border: 2px solid #e94560;
+  border-radius: 8px;
+  padding: 20px 22px;
+  min-height: 300px;
+  max-height: 440px;
+  overflow-y: auto;
+  position: relative;
+  transition: border-color 0.2s, opacity 0.2s;
+
+  /* Scrollbar discrète */
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  /* État verrouillé */
+  &.locked {
+    border-color: #444;
+    opacity: 0.8;
+  }
+
+  /* Carte vide (état de chargement) */
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-style: italic;
+    border-style: dashed;
+  }
+}
+
+/* Compteur de position (ex: "3 / 13") */
+.sponsor-position {
+  color: #555;
+  font-size: 0.75rem;
+  text-align: right;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+/* Nom du sponsor */
+.sponsor-name {
+  color: #e94560;
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+/* Description courte */
+.sponsor-description {
+  color: #aaa;
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+/* Badges des classes d'avantage */
+.sponsor-classes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.class-badge {
+  background: rgba(233, 69, 96, 0.12);
+  border: 1px solid rgba(233, 69, 96, 0.35);
+  color: #e94560;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* Zone des avantages */
+.advantages-section {
+  border-top: 1px solid #1e1e2e;
+  padding-top: 14px;
+}
+
+.advantages-title {
+  color: #555;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+/*
+ * Styles pour le HTML généré par marked (via [innerHTML]).
+ *
+ * ::ng-deep est nécessaire car Angular n'injecte pas les styles scoped
+ * à l'intérieur du contenu rendu par [innerHTML].
+ * Portée limitée à .advantages-html pour éviter les fuites de style.
+ */
+/* stylelint-disable selector-combinator-space-before */
+.advantages-html {
+  ::ng-deep ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  ::ng-deep li {
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    padding-left: 16px;
+    position: relative;
+
+    &::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: #e94560;
+      font-weight: 700;
+    }
+  }
+
+  ::ng-deep strong {
+    color: #e0e0e0;
+    font-weight: 700;
+  }
+
+  ::ng-deep p {
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin: 0;
+  }
+}
+
+/* ── Dots de navigation ──────────────────────────────────────────────────── */
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  padding: 0 50px; /* aligne avec la largeur de la carte */
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2a2a3e;
+  border: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+
+  &.active {
+    background: #e94560;
+    border-color: #e94560;
+    transform: scale(1.2);
+  }
+
+  &:hover:not(.active):not(:disabled) {
+    background: #444;
+    border-color: #555;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}

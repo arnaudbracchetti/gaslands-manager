@@ -20,6 +20,27 @@ export interface Team {
   userId: number;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Nombre de véhicules créés dans cette équipe.
+   * Utilisé pour verrouiller le choix du sponsor (immutable dès le 1er véhicule).
+   * Toujours 0 tant que le module Véhicules n'est pas implémenté.
+   */
+  vehicleCount?: number;
+}
+
+/**
+ * Informations enrichies d'un sponsor chargées depuis l'API /api/catalog/sponsors.
+ * Miroir du type Sponsor côté backend (champs utiles pour le carousel).
+ */
+export interface SponsorInfo {
+  /** Nom du sponsor (ex: "Rutherford", "Miyazaki") */
+  nom: string;
+  /** Description courte du style de jeu du sponsor */
+  description: string;
+  /** Classes d'avantage (2-3 badges, ex: ["Militaire", "Dur à Cuire"]) */
+  classes_avantage: string[];
+  /** Avantages spéciaux en texte markdown (sera converti en HTML pour l'affichage) */
+  avantages_sponsorises: string;
 }
 
 /** Corps de la requête POST /api/teams */

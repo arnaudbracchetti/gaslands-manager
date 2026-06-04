@@ -13,7 +13,7 @@ gaslands/                    ← Monorepo Nx 22.7
 │   ├── frontend/            ← Angular 21 (port 4200)
 │   ├── frontend-e2e/        ← Tests Playwright
 │   ├── backend/             ← NestJS 11 (port 3000)
-│   └── backend-e2e/         ← Tests Jest E2E
+│   └── backend-e2e/         ← Tests Vitest E2E (axios)
 ├── content/                 ← Fichiers Markdown (contenu du jeu)
 ├── docker-compose.yml       ← Infrastructure locale et production
 ├── dev.ps1                  ← Script de démarrage dev (Windows)
@@ -146,9 +146,29 @@ Les écrans complexes sont découpés en deux couches de composants :
 **Exemple — écran Teams :**
 
 ```
-teams/             ← Smart : charge la liste, appelle l'API, gère showForm
-├── team-card/     ← Dumb : affiche une carte, émet editClicked / deleteClicked
-└── team-form/     ← Dumb : gère le formulaire, émet saved / cancel
+teams/                  ← Smart : charge la liste, appelle l'API, gère showForm
+├── team-card/          ← Dumb : affiche une carte, émet editClicked / deleteClicked
+├── team-form/          ← Dumb : gère le formulaire, charge les sponsors, émet saved / formCancel
+│   └── (utilise)
+└── sponsor-carousel/   ← Dumb : carousel de sélection du sponsor (navigation ←/→, markdown)
+```
+
+**Pattern `locked` — logique métier via input booléen :**
+
+Un composant dumb peut implémenter des contraintes métier à travers un input `locked` sans en connaître la raison. Le parent seul décide quand et pourquoi verrouiller :
+
+```typescript
+// Dumb component — ignore pourquoi il est verrouillé
+export class SponsorCarousel {
+  locked: InputSignal<boolean> = input<boolean>(false);
+  prev(): void {
+    if (this.locked()) return;  // la règle est appliquée sans en connaître la source
+    // ...
+  }
+}
+
+// Smart/parent — connaît la règle métier : sponsor immutable dès 1 véhicule
+// <app-team-form [hasVehicles]="(editingTeam()?.vehicleCount ?? 0) > 0" />
 ```
 
 **API Signals pour les inputs/outputs (Angular 17+) :**
@@ -180,7 +200,41 @@ constructor() {
 }
 ```
 
-### 2.8 Fichiers clés
+### 2.8 Rendu markdown dans les composants Angular
+
+Quand un composant doit afficher du contenu markdown provenant de l'API (ex : avantages sponsorisés dans `SponsorCarousel`), le pattern suivant est utilisé :
+
+```typescript
+import { marked } from 'marked';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+
+// Dans un computed() ou une méthode
+const html = marked.parse(markdownText) as string;
+// cast `as string` nécessaire car l'API TypeScript de marked v18 retourne
+// `string | Promise<string>` — le mode synchrone est le défaut.
+
+// bypassSecurityTrustHtml() est sécurisé ICI car la source est le catalogue
+// interne du jeu (non modifiable par l'utilisateur → pas de risque XSS).
+// Ne jamais l'utiliser sur du contenu saisi par l'utilisateur.
+return this.sanitizer.bypassSecurityTrustHtml(html);
+```
+
+```html
+<!-- [innerHTML] accepte SafeHtml sans avertissement Angular -->
+<div class="advantages-html" [innerHTML]="currentHtml()"></div>
+```
+
+```scss
+// Les styles dans [innerHTML] ne sont pas scopés par Angular ViewEncapsulation.
+// ::ng-deep est nécessaire pour cibler les tags HTML générés par marked.
+.advantages-html {
+  ::ng-deep ul { list-style: none; }
+  ::ng-deep li { color: #ccc; }
+  ::ng-deep strong { color: #e0e0e0; }
+}
+```
+
+### 2.9 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
@@ -190,7 +244,9 @@ constructor() {
 | `apps/frontend/src/app/auth/auth.interceptor.ts` | Injection automatique du token JWT |
 | `apps/frontend/src/app/auth/auth.guard.ts` | Protection des routes privées |
 | `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
-| `apps/frontend/src/app/teams/` | Écran Teams : smart (teams) + dumb (team-card, team-form) |
+| `apps/frontend/src/app/catalog/catalog.service.ts` | Service pour charger les données publiques du catalogue (`/api/catalog/sponsors`) |
+| `apps/frontend/src/app/teams/` | Écran Teams : smart (teams) + dumb (team-card, team-form, sponsor-carousel) |
+| `apps/frontend/src/app/teams/sponsor-carousel/` | Composant carousel dumb : navigation ←/→, dots, rendu markdown des avantages |
 
 ---
 
@@ -336,7 +392,19 @@ await app.listen(3000, '0.0.0.0');  // ← obligatoire sur Windows
 
 Sans `'0.0.0.0'`, Node.js écoute sur `::` (IPv6 uniquement). Les connexions IPv4 depuis le proxy Vite (`127.0.0.1`) sont alors refusées.
 
-### 3.8 Fichiers clés
+### 3.8 Type `TeamWithCount` — enrichissement de la réponse API
+
+`TeamWithCount` (`apps/backend/src/app/team/team.service.ts`) est un type local qui étend l'entité `Team` avec un champ calculé :
+
+```typescript
+export type TeamWithCount = Team & { vehicleCount: number };
+```
+
+Les méthodes `findByUserId()`, `create()` et `update()` du service retournent ce type enrichi au lieu de l'entité brute. Pour l'instant, `vehicleCount` vaut toujours `0` car le module Véhicules n'est pas encore implémenté.
+
+**Pourquoi ne pas ajouter `vehicleCount` à l'entité TypeORM ?** Une colonne en base serait redondante et pourrait désynchroniser. La bonne approche à terme est une requête SQL avec `COUNT` joint sur la table `vehicles`. Le type `TeamWithCount` préserve cette flexibilité.
+
+### 3.9 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
@@ -345,7 +413,7 @@ Sans `'0.0.0.0'`, Node.js écoute sur `::` (IPv6 uniquement). Les connexions IPv
 | `apps/backend/src/app/auth/` | Auth complète : entities, services, controller, strategy, guard |
 | `apps/backend/src/app/catalog/` | Catalogue de jeu : YAML → Map en mémoire au démarrage |
 | `apps/backend/src/app/content/` | Service Markdown → HTML |
-| `apps/backend/src/app/team/` | Entité Team (CRUD) |
+| `apps/backend/src/app/team/` | Entité Team (CRUD), type `TeamWithCount` |
 | `apps/backend/.env` | Variables d'environnement (ne pas committer) |
 | `database_init/data/*.yml` | Données statiques du catalogue (sponsors, véhicules, armes, améliorations) |
 
@@ -506,7 +574,24 @@ Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
 | Frontend (unitaires) | Vitest + Angular Testing Library | `npx nx test frontend` |
 | Backend (unitaires) | Vitest | `npx nx test backend` |
 | E2E frontend | Playwright | `npx nx e2e frontend-e2e` |
-| E2E backend | Jest | `npx nx e2e backend-e2e` |
+| E2E backend | Vitest + axios | `npx nx e2e backend-e2e` |
+
+> ⚠️ Les **navigateurs Playwright** doivent être installés avant le premier lancement des e2e frontend :
+> ```powershell
+> npx playwright install
+> ```
+
+**Tests e2e backend implémentés** (`apps/backend-e2e/src/backend/backend.spec.ts`) :
+- `GET /api/catalog/sponsors` : liste complète avec les champs attendus
+- `GET /api/catalog/vehicules` : liste non vide
+- `GET /api/catalog/sponsors/:nom` : sponsor par nom (+ 404 si inconnu)
+- `POST /api/auth/register` : route accessible (non 404)
+- `GET /api/teams` sans JWT : retourne 401
+
+**Tests e2e frontend implémentés** (`apps/frontend-e2e/src/example.spec.ts`) :
+- Page d'accueil : titre `GASLANDS MANAGER` + 4 feature cards
+- `/teams` sans connexion : redirection vers `/login`
+- Page `/login` : formulaire email + mot de passe visible
 
 ### Règle
 
@@ -602,6 +687,24 @@ expect(emitted[0]).toEqual(mockTeam);
 | Affichage de la carte, émission des boutons | `team-card.spec.ts` |
 | Titre, pré-remplissage, validation, émission du DTO | `team-form.spec.ts` |
 | Requêtes HTTP (verbe, URL, corps) | `teams.service.spec.ts` |
+
+**Mock d'un service avec dépendance HTTP dans un composant dumb** (`TeamForm` → `CatalogService`) :
+
+```typescript
+// CatalogService retourne un Observable — on le simule avec of()
+const mockCatalogService = {
+  getSponsors: () => of([]),  // tableau vide : sponsors chargés, pas de données
+};
+
+await TestBed.configureTestingModule({
+  imports: [TeamForm],
+  providers: [
+    { provide: CatalogService, useValue: mockCatalogService },
+  ],
+}).compileComponents();
+```
+
+Avec `of([])` : `loadingSponsors` passe immédiatement à `false`, `sponsors` reste vide, `formSponsor` garde sa valeur par défaut `'Rutherford'`. Les tests de validation et d'émission de DTO fonctionnent sans dépendre du réseau.
 
 **Outils clés :**
 - `HttpTestingController` : intercepte les requêtes HTTP dans les tests de service
