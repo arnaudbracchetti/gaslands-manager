@@ -29,174 +29,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## Type de projet — Apprentissage
+## Gaslands Manager
 
-Ce projet est un **support pédagogique** : l'utilisateur monte en compétences sur la stack technique.
+Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet pédagogique** — toujours expliquer le raisonnement avant d'écrire du code, commenter l'usage des frameworks, privilégier la clarté à la concision.
 
-- **Toujours expliquer le raisonnement** avant d'écrire du code
-- **Commenter le code** pour expliquer l'usage des frameworks (Angular Signals, NestJS DI, TypeORM, JWT…)
-- Privilégier la clarté à la concision quand les deux s'opposent
+**Stack** : Monorepo Nx 22.7 · Angular 21 zoneless + Signals (frontend) · NestJS 11 (backend) · PostgreSQL 16 via TypeORM · JWT + bcrypt
 
----
-
-## Conventions TypeScript — Typage explicite obligatoire
-
-Le projet applique une politique de **typage explicite strict**, renforcée par ESLint (`eslint.config.mjs`).
-
-### Règles actives (erreur si violation)
-
-| Règle | Effet |
-|---|---|
-| `explicit-function-return-type` | Type de retour obligatoire sur toutes les fonctions/méthodes |
-| `explicit-module-boundary-types` | Idem sur les exports publics |
-| `no-explicit-any` | `any` interdit — utiliser `unknown` + narrowing |
-| `typedef (parameter)` | Type obligatoire sur les paramètres de fonction |
-| `typedef (memberVariableDeclaration)` | Type obligatoire sur les membres de classe |
-
-### Patterns à respecter dans tout nouveau code
-
-**Membres de classe Angular (inject, signals) :**
-```typescript
-// ✅ Correct
-private readonly http: HttpClient = inject(HttpClient);
-readonly loading: WritableSignal<boolean> = signal(false);
-readonly isLoggedIn: Signal<boolean> = computed(() => ...);
-readonly teams: InputSignal<Team[]> = input<Team[]>([]);
-readonly saved: OutputEmitterRef<Team> = output<Team>();
-
-// ❌ Interdit
-private readonly http = inject(HttpClient);
-readonly loading = signal(false);
-```
-
-**Types de retour sur toutes les fonctions :**
-```typescript
-// ✅ Correct
-async getAll(): Promise<Team[]> { ... }
-ngOnInit(): void { ... }
-getData(): { message: string } { ... }
-
-// ❌ Interdit
-async getAll() { ... }
-ngOnInit() { ... }
-```
-
-**Paramètres de callback :**
-```typescript
-// ✅ Correct
-.filter((f: string) => f.endsWith('.md'))
-subscribe({ next: (teams: Team[]) => { ... }, error: (err: HttpErrorResponse) => { ... } })
-tap((res: AuthResponse) => { ... })
-
-// ❌ Interdit
-.filter((f) => ...)
-subscribe({ next: (teams) => { ... }, error: (err) => { ... } })
-```
-
-**Blocs catch :**
-```typescript
-// ✅ Correct — unknown + narrowing
-catch (err: unknown) {
-  const pgError = err as { code?: string };
-  if (pgError?.code === '23505') { ... }
-}
-
-// ❌ Interdit
-catch (err: any) { ... }
-catch (err) { ... }
-```
-
-**`import type` pour NestJS (emitDecoratorMetadata) :**
-```typescript
-// ✅ Correct — interfaces et type aliases utilisés dans des signatures décorées
-import { type AuthResponse, AuthService } from './auth.service';
-import type { SafeUser } from './user.service';
-
-// Les classes ont une représentation runtime → import normal
-import { RegisterDto } from './dto/register.dto';
-```
-
-### Exemptions intentionnelles
-
-- `variableDeclaration: false` — les variables locales inférées ne sont PAS annotées (`const x = foo()` OK)
-- Les fichiers `*.spec.ts` sont exemptés de `explicit-function-return-type` et `typedef`
-- `no-inferrable-types` est désactivé (contradisait `typedef memberVariableDeclaration`)
+**Structure** : `apps/frontend/` (port 4200) · `apps/backend/` (port 3000) · `content/` (Markdown) · `database_init/data/` (YAML catalogue jeu)
 
 ---
 
 ## Documentation de référence
 
-Lire SPECIFICATION.md et ARCHITECTURE.md fichiers avant toute modification. 
-Les mettre à jour SPECIFICATION.md et ARCHITECTURE.md a chaque modification.
+Lire avant toute modification — mettre à jour après chaque changement :
 
-- [SPECIFICATION.md](SPECIFICATION.md) — Fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Stack technique, choix d'architecture, points d'attention, patterns à respecter
+- @SPECIFICATION.md — fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
+- @ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
 
 ---
 
 ## Environnement Windows — Contraintes critiques
 
-**SSL non vérifié** — préfixer toutes les commandes `npm`/`npx` :
-```powershell
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
-```
+**SSL** : préfixer `npm`/`npx` avec `$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"`. git SSL désactivé globalement.
 
-**git SSL** : désactivé globalement (`git config --global http.sslVerify false`).
+**Nx + TypeScript** : définir `$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"` avant toute commande Nx (déjà dans `dev.ps1`).
 
-**TypeScript incompatibilité** — définir avant chaque commande Nx :
-```powershell
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-```
-
-**IPv4 obligatoire** : utiliser `127.0.0.1` (pas `localhost`) dans toutes les configs réseau.
+**Réseau** : utiliser `127.0.0.1` (pas `localhost`) dans toutes les configs.
 
 ---
 
 ## Commandes de développement
 
 ```powershell
-# Démarrer tout l'environnement de dev (recommandé)
-.\dev.ps1
-
-# Manuellement :
-docker compose up -d postgres                                          # PostgreSQL uniquement
-
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"; $env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-npx nx serve backend    # → http://localhost:3000/api
-npx nx serve frontend   # → http://localhost:4200
-
-# Build de production
-npx nx run frontend:build
-npx nx run backend:build
-
-# Synchroniser TypeScript (si Nx se plaint de "workspace out of sync")
-npx nx sync
+.\dev.ps1                        # démarrer tout l'environnement (recommandé)
+npx nx serve backend             # backend seul → http://127.0.0.1:3000/api
+npx nx serve frontend            # frontend seul → http://localhost:4200
+npx nx test backend              # tests unitaires backend (Vitest)
+npx nx test frontend             # tests unitaires frontend (Vitest)
+npx nx e2e backend-e2e           # tests E2E backend (axios)
+npx nx run frontend:build        # build production
+npx nx sync                      # si Nx se plaint de "workspace out of sync"
 ```
+
+⚠️ Préfixer avec les deux variables d'env Windows ci-dessus.
 
 ---
 
-## Scaffolding
+## Conventions non-évidentes
 
-### Nouveau module NestJS
+**Angular zoneless** : zone.js absent — toute mise à jour de template doit passer par un Signal (`signal()`, `computed()`). Une mutation directe ne déclenchera pas de re-rendu.
 
-```powershell
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-npx nx g @nx/nest:module --name=<nom> --project=backend
-npx nx g @nx/nest:controller --name=<nom> --project=backend
-npx nx g @nx/nest:service --name=<nom> --project=backend
-```
+**TypeScript** : typage explicite strict imposé par ESLint (`explicit-function-return-type`, `no-explicit-any`). Exception : variables locales et `*.spec.ts`. ESLint rejettera le code non conforme.
 
-Puis : importer dans `app.module.ts` et ajouter l'entité dans la liste `entities` de TypeORM.
+**NestJS** : `import type` pour les interfaces/types dans les signatures décorées (`emitDecoratorMetadata`).
 
-### Nouveau composant Angular
+---
 
-```powershell
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-npx nx g @nx/angular:component --name=<nom> --project=frontend --standalone
-```
+## Scaffolding — étapes post-génération
 
-Puis : ajouter la route lazy-loaded dans [apps/frontend/src/app/app.routes.ts](apps/frontend/src/app/app.routes.ts).
+Utiliser le skill `nx-generate` pour les générateurs. Points non-évidents :
 
-### Nouveau contenu Markdown
-
-Créer `content/<slug>.md` → disponible immédiatement via `GET /api/content/<slug>` sans redémarrage.
+- **Module NestJS** : importer dans `app.module.ts`, ajouter l'entité dans la liste `entities` de TypeORM.
+- **Composant Angular** : ajouter la route lazy dans [apps/frontend/src/app/app.routes.ts](apps/frontend/src/app/app.routes.ts).
+- **Contenu Markdown** : créer `content/<slug>.md` → disponible sans redémarrage via `GET /api/content/<slug>`.
