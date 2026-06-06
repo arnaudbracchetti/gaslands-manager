@@ -23,6 +23,10 @@ export interface RawSponsor {
 /** Véhicule tel que défini dans vehicules.yml */
 export interface Vehicule {
   nom: string;
+  /** Identifiant technique stable (snake_case, sans accents).
+   *  Format variante : "<vehicule>_<modificateur>" (ex: "voiture_prison").
+   *  Permet de distinguer les variantes sponsor du véhicule de base. */
+  nom_interne: string;
   poids: 'Léger' | 'Moyen' | 'Lourd';
   /** Points de carrosserie (résistance aux dégâts) */
   carrosserie: number;
@@ -43,6 +47,9 @@ export interface Vehicule {
 /** Arme telle que définie dans armes.yml */
 export interface Arme {
   nom: string;
+  /** Identifiant technique stable (snake_case, sans accents).
+   *  Ex: "mitrailleuse", "canon_arc_electrique", "lance_flammes". */
+  nom_interne: string;
   /** Catégorie d'arme : montée sur chassis, équipage, ou largable */
   type: 'base' | 'avancée' | 'équipage' | 'largable';
   /** Coût en Jerricans */
@@ -59,6 +66,10 @@ export interface Arme {
 /** Amélioration de véhicule telle que définie dans amelioration.yml */
 export interface Amelioration {
   nom: string;
+  /** Identifiant technique stable (snake_case, sans accents).
+   *  Format variante sponsor : "<amelioration>_<sponsor>" (ex: "nitro_idris", "belier_slime").
+   *  Items exclusifs d'un sponsor : nom descriptif simple (ex: "megaphone", "micro_blindage"). */
+  nom_interne: string;
   /**
    * Coût en Jerricans.
    * Cas particulier : la Tourelle utilise "x3" (multiplicateur du coût de l'arme),

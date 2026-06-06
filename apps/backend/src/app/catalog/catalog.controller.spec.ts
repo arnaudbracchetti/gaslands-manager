@@ -37,6 +37,7 @@ const mockSponsor: Sponsor = {
 
 const mockVehicule: Vehicule = {
   nom: 'Voiture',
+  nom_interne: 'voiture',         // Identifiant technique stable (snake_case, sans accents)
   poids: 'Moyen',
   carrosserie: 10,
   manoeuvrabilite: 3,
@@ -51,6 +52,7 @@ const mockVehicule: Vehicule = {
 
 const mockArme: Arme = {
   nom: 'Mitrailleuse',
+  nom_interne: 'mitrailleuse',    // Identifiant technique stable (snake_case, sans accents)
   type: 'base',
   prix: 2,
   emplacement: 1,
@@ -61,6 +63,7 @@ const mockArme: Arme = {
 
 const mockAmelioration: Amelioration = {
   nom: 'Blindage',
+  nom_interne: 'blindage',        // Identifiant technique stable (snake_case, sans accents)
   prix: 4,
   emplacement: 1,
   description: '+2 carrosserie',

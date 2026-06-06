@@ -20,474 +20,159 @@ gaslands/                    ← Monorepo Nx 22.7
 └── nx.json                  ← Configuration Nx
 ```
 
-**Principe de séparation** : le frontend et le backend sont deux applications indépendantes dans le même dépôt (monorepo). Ils ne partagent pas de code pour l'instant. Le frontend consomme l'API REST du backend via HTTP.
+**Principe** : frontend et backend sont deux applications indépendantes dans le même dépôt. Ils ne partagent pas de code. Le frontend consomme l'API REST du backend via HTTP.
 
 ---
 
 ## 2. Frontend — Angular 21
 
-### 2.1 Standalone Components (sans NgModules)
+### 2.1 Zoneless + Signals (⚠️ Point critique)
 
-Depuis Angular 17, les modules Angular (`@NgModule`) sont optionnels. Ce projet utilise exclusivement les **standalone components** : chaque composant déclare ses propres imports.
-
-**Pourquoi ?** Moins de boilerplate, meilleur tree-shaking (le bundler n'inclut que ce qui est réellement utilisé), et c'est la direction prise par Angular pour l'avenir.
+Ce projet utilise le mode **zoneless** : `zone.js` n'est pas installé. Angular ne détecte plus automatiquement les changements après une opération asynchrone. **Il faut obligatoirement utiliser des Signals pour mettre à jour le template.**
 
 ```typescript
-// Chaque composant importe ce dont il a besoin directement
-@Component({
-  standalone: true,
-  imports: [RouterLink, FormsModule],  // pas de NgModule intermédiaire
-  ...
-})
-```
-
-### 2.2 Zoneless + Signals (⚠️ Point critique)
-
-Ce projet utilise le mode **zoneless** d'Angular 21 : `zone.js` n'est pas installé. Cela signifie qu'Angular ne détecte plus automatiquement les changements après une opération asynchrone (requête HTTP, setTimeout…).
-
-**Pour déclencher la mise à jour du template, il faut obligatoirement utiliser des Signals :**
-
-```typescript
-// ❌ Ne fonctionne PAS en mode zoneless — le template ne se mettra pas à jour
+// ❌ Ne fonctionne PAS en mode zoneless — le template ne se met pas à jour
 loading = true;
-this.http.get('/api/data').subscribe(data => {
-  this.loading = false;  // ignoré par le détecteur de changement
-});
+this.http.get('/api/data').subscribe(data => { this.loading = false; });
 
-// ✅ Correct avec Signals
+// ✅ Correct — Signal notifie Angular → re-rendu
 loading = signal(true);
-this.http.get('/api/data').subscribe(data => {
-  this.loading.set(false);  // notifie Angular → re-rendu du template
-});
+this.http.get('/api/data').subscribe(data => { this.loading.set(false); });
 ```
 
-**Types de signals utilisés :**
-- `signal(valeurInitiale)` — état mutable
-- `computed(() => ...)` — valeur dérivée (recalculée automatiquement)
-- Dans le template, les signals se lisent comme des fonctions : `loading()`
+Types utilisés : `signal()` (état mutable), `computed()` (valeur dérivée), `input()` / `output()` (communication composants).
+Déclaré dans `app.config.ts` via `provideZonelessChangeDetection()`.
 
-**Déclaré dans `app.config.ts`** :
-```typescript
-provideZonelessChangeDetection()  // Angular 21 (était "Experimental" en Angular 19)
-```
+### 2.2 Lazy Routing
 
-### 2.3 Nouveau Control Flow (Angular 17+)
+Tous les composants sont chargés à la demande via `loadComponent`. Routes définies dans `apps/frontend/src/app/app.routes.ts`.
 
-Angular 17 a introduit une nouvelle syntaxe de contrôle de flux directement dans les templates, remplaçant `*ngIf` et `*ngFor` :
+### 2.3 Sécurité Frontend
 
-```html
-<!-- ❌ Ancienne syntaxe (toujours valide mais déconseillée) -->
-<div *ngIf="loading">Chargement...</div>
+- **`authInterceptor`** — injecte `Authorization: Bearer <token>` sur toutes les requêtes HTTP sortantes.
+- **`authGuard`** — protège les routes privées, redirige vers `/login` si non connecté.
 
-<!-- ✅ Nouvelle syntaxe (utilisée dans ce projet) -->
-@if (loading()) {
-  <div>Chargement...</div>
-} @else {
-  <div [innerHTML]="html()"></div>
-}
-
-@for (item of items(); track item.id) {
-  <li>{{ item.name }}</li>
-}
-```
-
-**Pourquoi ?** Meilleure lisibilité, vérifications de type plus strictes par le compilateur, et performances améliorées.
-
-### 2.4 Lazy Routing
-
-Tous les composants sont chargés à la demande :
-
-```typescript
-// apps/frontend/src/app/app.routes.ts
-{
-  path: 'teams',
-  loadComponent: () => import('./teams/teams').then(m => m.TeamsComponent),
-  canActivate: [authGuard]
-}
-```
-
-**Pourquoi ?** Le code de chaque page n'est téléchargé que lorsque l'utilisateur y navigue. Améliore le temps de premier chargement.
-
-### 2.5 Sécurité Frontend
-
-**`authInterceptor`** (`apps/frontend/src/app/auth/auth.interceptor.ts`) :
-- Intercepte automatiquement toutes les requêtes HTTP sortantes
-- Ajoute `Authorization: Bearer <token>` si un token JWT existe dans `localStorage`
-- Déclaré dans `app.config.ts` via `withInterceptors([authInterceptor])`
-
-**`authGuard`** (`apps/frontend/src/app/auth/auth.guard.ts`) :
-- Protège les routes privées (ex : `/teams`)
-- Redirige vers `/login` si l'utilisateur n'est pas connecté
-- Vérifie le signal `isLoggedIn` de `AuthService`
-
-### 2.6 Proxy de développement
-
-En développement, le frontend tourne sur le port 4200 et le backend sur le port 3000. Pour éviter les problèmes CORS, un proxy est configuré :
+### 2.4 Proxy de développement
 
 ```json
 // apps/frontend/proxy.conf.json
-{
-  "/api": {
-    "target": "http://127.0.0.1:3000",
-    "secure": false
-  }
-}
+{ "/api": { "target": "http://127.0.0.1:3000", "secure": false } }
 ```
 
 ⚠️ **`127.0.0.1` et non `localhost`** : sur Windows, `localhost` peut résoudre en IPv6 (`::1`), incompatible avec le backend qui écoute en IPv4.
 
-### 2.7 Pattern Smart / Dumb Components
+### 2.5 Pattern Smart / Dumb Components
 
-Les écrans complexes sont découpés en deux couches de composants :
+- **Smart** (ex : `teams/`) : connaît les services, gère les appels HTTP et l'état d'affichage.
+- **Dumb** (ex : `team-card/`, `team-form/`, `sponsor-carousel/`) : reçoit des données via `input()`, émet des événements via `output()`. Ne connaît pas les services.
 
-- **Smart component** (orchestrateur) : connaît le service, gère les appels HTTP, contrôle la visibilité des sous-composants. Ne s'occupe pas de la présentation.
-- **Dumb component** (presentational) : reçoit des données via `input()`, signale les actions via `output()`. Ne connaît pas le service. Facilement testable et réutilisable.
+**Pattern `locked`** : un composant dumb peut recevoir un input booléen `locked` pour appliquer une contrainte métier sans en connaître la raison. Le parent seul décide quand et pourquoi verrouiller (ex : sponsor immutable dès qu'un véhicule existe).
 
-**Exemple — écran Teams :**
+Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `input()` Signal (ex : pré-remplissage du formulaire quand l'entité à éditer change).
 
-```
-teams/                  ← Smart : charge la liste, appelle l'API, gère showForm
-├── team-card/          ← Dumb : affiche une carte, émet editClicked / deleteClicked
-├── team-form/          ← Dumb : gère le formulaire, charge les sponsors, émet saved / formCancel
-│   └── (utilise)
-└── sponsor-carousel/   ← Dumb : carousel de sélection du sponsor (navigation ←/→, markdown)
-```
-
-**Pattern `locked` — logique métier via input booléen :**
-
-Un composant dumb peut implémenter des contraintes métier à travers un input `locked` sans en connaître la raison. Le parent seul décide quand et pourquoi verrouiller :
-
-```typescript
-// Dumb component — ignore pourquoi il est verrouillé
-export class SponsorCarousel {
-  locked: InputSignal<boolean> = input<boolean>(false);
-  prev(): void {
-    if (this.locked()) return;  // la règle est appliquée sans en connaître la source
-    // ...
-  }
-}
-
-// Smart/parent — connaît la règle métier : sponsor immutable dès 1 véhicule
-// <app-team-form [hasVehicles]="(editingTeam()?.vehicleCount ?? 0) > 0" />
-```
-
-**API Signals pour les inputs/outputs (Angular 17+) :**
-
-```typescript
-// Dumb component — ne décore pas @Input() / @Output()
-export class TeamCard {
-  team         = input.required<Team>();   // obligatoire
-  editClicked  = output<Team>();
-  deleteClicked = output<Team>();
-}
-
-// Smart component — passe les données et écoute les événements
-// <app-team-card [team]="t" (editClicked)="openEdit($event)" />
-```
-
-**`effect()` pour réagir aux changements d'input :**
-
-```typescript
-// Dans TeamForm : pré-remplit les champs quand l'input `team` change
-constructor() {
-  effect(() => {
-    const t = this.team();   // team est un input() Signal
-    if (t) {
-      this.formName.set(t.name);
-      // ...
-    }
-  });
-}
-```
-
-### 2.8 Rendu markdown dans les composants Angular
-
-Quand un composant doit afficher du contenu markdown provenant de l'API (ex : avantages sponsorisés dans `SponsorCarousel`), le pattern suivant est utilisé :
-
-```typescript
-import { marked } from 'marked';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-
-// Dans un computed() ou une méthode
-const html = marked.parse(markdownText) as string;
-// cast `as string` nécessaire car l'API TypeScript de marked v18 retourne
-// `string | Promise<string>` — le mode synchrone est le défaut.
-
-// bypassSecurityTrustHtml() est sécurisé ICI car la source est le catalogue
-// interne du jeu (non modifiable par l'utilisateur → pas de risque XSS).
-// Ne jamais l'utiliser sur du contenu saisi par l'utilisateur.
-return this.sanitizer.bypassSecurityTrustHtml(html);
-```
-
-```html
-<!-- [innerHTML] accepte SafeHtml sans avertissement Angular -->
-<div class="advantages-html" [innerHTML]="currentHtml()"></div>
-```
-
-```scss
-// Les styles dans [innerHTML] ne sont pas scopés par Angular ViewEncapsulation.
-// ::ng-deep est nécessaire pour cibler les tags HTML générés par marked.
-.advantages-html {
-  ::ng-deep ul { list-style: none; }
-  ::ng-deep li { color: #ccc; }
-  ::ng-deep strong { color: #e0e0e0; }
-}
-```
-
-### 2.9 Fichiers clés
+### 2.6 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
 | `apps/frontend/src/app/app.config.ts` | Configuration Angular (zoneless, router, HttpClient, intercepteur) |
-| `apps/frontend/src/app/app.routes.ts` | Définition de toutes les routes lazy |
-| `apps/frontend/src/app/auth/auth.service.ts` | Service singleton : state utilisateur (signals), login/logout |
+| `apps/frontend/src/app/app.routes.ts` | Routes lazy |
+| `apps/frontend/src/app/auth/auth.service.ts` | State utilisateur (signals), login/logout |
 | `apps/frontend/src/app/auth/auth.interceptor.ts` | Injection automatique du token JWT |
 | `apps/frontend/src/app/auth/auth.guard.ts` | Protection des routes privées |
 | `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
-| `apps/frontend/src/app/catalog/catalog.service.ts` | Service pour charger les données publiques du catalogue (`/api/catalog/sponsors`) |
-| `apps/frontend/src/app/teams/` | Écran Teams : smart (teams) + dumb (team-card, team-form, sponsor-carousel) |
-| `apps/frontend/src/app/teams/sponsor-carousel/` | Composant carousel dumb : navigation ←/→, dots, rendu markdown des avantages |
+| `apps/frontend/src/app/catalog/catalog.service.ts` | Données publiques du catalogue (`/api/catalog/sponsors`) |
+| `apps/frontend/src/app/teams/` | Smart + dumb (team-card, team-form, sponsor-carousel) |
 
 ---
 
 ## 3. Backend — NestJS 11
 
-### 3.1 Architecture modulaire
-
-NestJS organise le code en **modules** qui regroupent contrôleurs, services et entités par domaine fonctionnel. Chaque module est indépendant et déclare ce qu'il exporte.
+### 3.1 Structure des modules
 
 ```
 apps/backend/src/app/
-├── app.module.ts        ← Module racine (importe tous les autres)
+├── app.module.ts        ← Module racine
 ├── auth/                ← Authentification (User, JWT, bcrypt)
-├── catalog/             ← Catalogue de jeu chargé au démarrage (YAML → mémoire)
-├── content/             ← Lecture et service des fichiers Markdown
+├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
+├── content/             ← Lecture des fichiers Markdown → HTML
 └── team/                ← Entité Team (CRUD)
 ```
 
-**Injection de dépendance** : NestJS gère automatiquement l'instanciation des services. On déclare ses dépendances dans le constructeur, NestJS les injecte :
+Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`.
 
-```typescript
-@Injectable()
-export class AuthService {
-  constructor(
-    private userService: UserService,  // injecté automatiquement
-    private jwtService: JwtService,    // injecté automatiquement
-  ) {}
-}
-```
+### 3.2 Flux d'authentification JWT
 
-### 3.2 Authentification JWT + Passport
-
-**Flux d'authentification :**
-
-1. Client envoie `POST /api/auth/login` avec `{ email, password }`
-2. `AuthService.login()` vérifie le mot de passe avec `bcrypt.compare()`
-3. Si valide, signe un token JWT (`JwtService.sign({ sub: userId, email })`)
+1. Client : `POST /api/auth/login` avec `{ email, password }`
+2. `AuthService.login()` vérifie avec `bcrypt.compare()`
+3. Si valide : signe un token JWT (`sub: userId, email`)
 4. Client stocke le token dans `localStorage`
-5. À chaque requête suivante, l'`authInterceptor` ajoute le token dans le header
-6. `JwtStrategy` (Passport) valide le token et charge l'utilisateur depuis la base
+5. `authInterceptor` l'injecte dans le header de chaque requête
+6. `JwtStrategy` (Passport) valide le token et charge l'utilisateur
 
-**`JwtStrategy`** (`apps/backend/src/app/auth/jwt.strategy.ts`) :
-- Extends `PassportStrategy(Strategy, 'jwt')`
-- Extrait le token depuis le header `Authorization: Bearer <token>`
-- Valide la signature avec `JWT_SECRET`
-- Retourne l'utilisateur (appelé à chaque requête protégée)
+Protéger un endpoint : `@UseGuards(JwtAuthGuard)`.
 
-**`@UseGuards(JwtAuthGuard)`** : décorateur NestJS pour protéger un endpoint.
+### 3.3 Catalogue de jeu — Singleton en mémoire
 
-### 3.3 Sécurité des mots de passe
+`CatalogService` lit les YAML depuis `database_init/data/*.yml` **une seule fois au démarrage** via `OnModuleInit`, puis conserve une `Map<string, Sponsor>` avec relations pré-résolues (véhicules, armes, améliorations autorisés par sponsor).
 
-```typescript
-// Hash lors de l'inscription (coût 10 = bon équilibre sécurité/performance)
-const hash = await bcrypt.hash(password, 10);
+**Pourquoi ?** Les données du catalogue sont statiques. La Map en mémoire donne un accès O(1). Fail-fast : une erreur YAML au démarrage fait crasher le serveur — un catalogue vide silencieux serait pire.
 
-// Vérification lors de la connexion
-const valid = await bcrypt.compare(plainPassword, hash);
-```
-
-- Le mot de passe hashé n'est **jamais retourné** dans les réponses (méthode `sanitize()` dans `UserService`)
-- En cas d'échec de connexion, le message d'erreur est générique pour éviter l'énumération des emails
-
-### 3.4 TypeORM + PostgreSQL
-
-**ORM (Object-Relational Mapping)** : TypeORM traduit les classes TypeScript en tables SQL.
+**Pattern Template Method pour les tests** : `CatalogService` expose `protected readFileContent(filename)`. Les specs étendent la classe et surchargent cette méthode avec des YAML fictifs — évite les problèmes de `vi.mock('fs')` avec SWC/Vitest.
 
 ```typescript
-// Déclaration d'une entité = une table en base
-@Entity()
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ unique: true })
-  email: string;
-
-  @CreateDateColumn()
-  createdAt: Date;
-}
-```
-
-**`synchronize: true`** (dans `app.module.ts`) : TypeORM crée/modifie automatiquement les tables selon les entités TypeScript.
-
-⚠️ **Dev uniquement !** En production, utiliser des migrations TypeORM explicites. `synchronize: true` peut provoquer une perte de données si une entité est mal modifiée.
-
-### 3.5 Catalogue de jeu — Singleton en mémoire
-
-`CatalogService` (`apps/backend/src/app/catalog/catalog.service.ts`) charge les données du catalogue de jeu (sponsors, véhicules, armes, améliorations) depuis des fichiers YAML **une seule fois au démarrage**, puis les conserve en mémoire pour toute la durée de vie du serveur.
-
-**Données source** : `database_init/data/*.yml` à la racine du workspace.
-
-**Mécanisme — `OnModuleInit`** : NestJS appelle automatiquement `onModuleInit()` après l'initialisation du module, avant la première requête HTTP. C'est là que les fichiers YAML sont lus et parsés.
-
-**Structure en mémoire — `Map<string, Sponsor>` avec relations pré-résolues :**
-
-```typescript
-// Au démarrage, onModuleInit() construit cette Map :
-sponsorMap = {
-  "Rutherford" → { nom, description, vehicules: [...], armes: [...], ameliorations: [...] },
-  "Mishkin"    → { nom, description, vehicules: [...], armes: [...], ameliorations: [...] },
-  // ...13 sponsors au total
-}
-```
-
-Les relations (`sponsor.vehicules`, `sponsor.armes`, `sponsor.ameliorations`) sont calculées **une seule fois** à l'initialisation en filtrant les items dont `sponsors_autorises[]` contient le nom du sponsor. Ensuite, chaque `getSponsor(nom)` est un accès O(1) à la Map, sans aucun filtrage.
-
-**Pourquoi pas une base de données ?** Les données du catalogue sont statiques (définies par les règles du jeu Gaslands). Les lire depuis le disque à chaque requête serait inutile. La Map en mémoire est la solution la plus simple et la plus performante.
-
-**Fail-fast** : si un fichier YAML est manquant ou corrompu au démarrage, le service re-throw l'erreur, ce qui fait crasher le serveur NestJS avec un message explicite. Un catalogue vide serait pire car il passerait inaperçu.
-
-**Pattern Template Method pour les tests** : `CatalogService` expose une méthode `protected readFileContent(filename)` qui lit le fichier sur le disque. Dans les tests, `TestCatalogService` étend `CatalogService` et surcharge cette méthode pour retourner des YAML fictifs sans toucher au système de fichiers. Cette approche évite les problèmes de mock de modules Node built-ins avec SWC/Vitest.
-
-```typescript
-// Production
-class CatalogService {
-  protected readFileContent(filename: string): string {
-    return fs.readFileSync(path.join(process.cwd(), 'database_init', 'data', filename), 'utf-8');
-  }
-}
-
-// Test (sous-classe locale dans le spec)
 class TestCatalogService extends CatalogService {
   protected override readFileContent(filename: string): string {
-    return MOCK_YAML[filename]; // données en mémoire
+    return MOCK_YAML[filename];
   }
 }
+// beforeEach : service = new TestCatalogService(); service.onModuleInit();
 ```
 
-### 3.6 Service de contenu Markdown
-
-`ContentService` (`apps/backend/src/app/content/content.service.ts`) :
-- Lit les fichiers `.md` depuis `process.cwd() + CONTENT_DIR`
-- `CONTENT_DIR=content` dans `.env` (relatif à la **racine du workspace**, pas à `apps/backend/`)
-- Convertit le Markdown en HTML avec la bibliothèque `marked`
-- Extrait le titre (premier `# `) pour l'envoyer séparément
-
-### 3.7 Point d'attention Windows — `listen('0.0.0.0')`
-
-```typescript
-// apps/backend/src/main.ts
-await app.listen(3000, '0.0.0.0');  // ← obligatoire sur Windows
-```
-
-Sans `'0.0.0.0'`, Node.js écoute sur `::` (IPv6 uniquement). Les connexions IPv4 depuis le proxy Vite (`127.0.0.1`) sont alors refusées.
-
-### 3.8 Type `TeamWithCount` — enrichissement de la réponse API
-
-`TeamWithCount` (`apps/backend/src/app/team/team.service.ts`) est un type local qui étend l'entité `Team` avec un champ calculé :
+### 3.4 `TeamWithCount` — type enrichi
 
 ```typescript
 export type TeamWithCount = Team & { vehicleCount: number };
 ```
 
-Les méthodes `findByUserId()`, `create()` et `update()` du service retournent ce type enrichi au lieu de l'entité brute. Pour l'instant, `vehicleCount` vaut toujours `0` car le module Véhicules n'est pas encore implémenté.
+`vehicleCount` est calculé (futur : `COUNT` SQL sur `vehicles`) — jamais stocké en colonne pour éviter la désynchronisation.
 
-**Pourquoi ne pas ajouter `vehicleCount` à l'entité TypeORM ?** Une colonne en base serait redondante et pourrait désynchroniser. La bonne approche à terme est une requête SQL avec `COUNT` joint sur la table `vehicles`. Le type `TeamWithCount` préserve cette flexibilité.
-
-### 3.9 Fichiers clés
+### 3.5 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|
-| `apps/backend/src/main.ts` | Bootstrap NestJS, CORS, préfixe `/api`, écoute `0.0.0.0:3000` |
-| `apps/backend/src/app/app.module.ts` | Module racine : imports TypeORM, ConfigModule, tous les modules |
-| `apps/backend/src/app/auth/` | Auth complète : entities, services, controller, strategy, guard |
-| `apps/backend/src/app/catalog/` | Catalogue de jeu : YAML → Map en mémoire au démarrage |
-| `apps/backend/src/app/content/` | Service Markdown → HTML |
-| `apps/backend/src/app/team/` | Entité Team (CRUD), type `TeamWithCount` |
-| `apps/backend/.env` | Variables d'environnement (ne pas committer) |
-| `database_init/data/*.yml` | Données statiques du catalogue (sponsors, véhicules, armes, améliorations) |
+| `apps/backend/src/main.ts` | Bootstrap, CORS, préfixe `/api`, écoute `0.0.0.0:3000` |
+| `apps/backend/src/app/app.module.ts` | Module racine : TypeORM, ConfigModule, modules domaine |
+| `apps/backend/src/app/auth/` | Auth complète (entity, service, controller, strategy, guard) |
+| `apps/backend/src/app/catalog/` | Catalogue YAML → Map en mémoire |
+| `apps/backend/src/app/content/` | Markdown → HTML via `marked` |
+| `apps/backend/src/app/team/` | Team CRUD, `TeamWithCount` |
+| `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations) |
 
 ---
 
 ## 4. Base de données — PostgreSQL 16
 
-### Configuration
-
-Les credentials sont définis dans `.env` à la racine (jamais commité — voir `.env.example`) et injectés dans `docker-compose.yml` via `${VAR}`.
-
-En développement local (nx serve), les variables viennent de `apps/backend/.env`.
-
-| Variable | Dev Docker | Dev nx | Valeur par défaut |
-|---|---|---|---|
-| Hôte | `postgres` (DNS Docker) | `localhost` | — |
-| Port | `5432` | `5432` | — |
-| User | `${DB_USER}` | `gaslands` | gaslands |
-| Password | `${DB_PASSWORD}` | gaslands_pass | — |
-| Base | `${DB_NAME}` | `gaslands` | gaslands |
-
-### TypeORM en développement vs production
+Credentials dans `.env` à la racine (jamais commité, template dans `.env.example`).
+Dev local (`nx serve`) : variables depuis `apps/backend/.env` (hôte `localhost`).
+Dev Docker : hôte `postgres` (DNS interne Docker).
 
 | Mode | `synchronize` | Tables |
 |------|--------------|--------|
 | **Dev** | `true` | Créées/modifiées automatiquement au démarrage |
-| **Prod** | `false` | Gérées via migrations TypeORM |
-
-Pour générer des migrations : `npx typeorm migration:generate`, puis `migration:run`.
+| **Prod** | `false` ⚠️ | Migrations TypeORM explicites (`migration:generate` + `migration:run`) |
 
 ---
 
 ## 5. Infrastructure Docker
 
-### Services `docker-compose.yml`
-
-```yaml
-services:
-  postgres:   # Port 5432 exposé sur l'hôte
-  backend:    # Port 3000, dépend de postgres
-  frontend:   # Nginx sur le port 4200, proxy /api → backend:3000
-  pgadmin:    # Port 5050, interface web PostgreSQL (http://localhost:5050)
+```
+postgres   → port 5432 (hôte)
+backend    → port 3000, dépend de postgres
+frontend   → nginx port 4200, proxy /api → backend:3000
+pgadmin    → port 5050 (http://localhost:5050)
 ```
 
-**Réseau** : `gaslands_net` (réseau Docker privé). Le frontend nginx accède au backend via `http://backend:3000` (DNS Docker interne). pgAdmin accède à postgres via `postgres:5432` (DNS Docker).
-
-**Volumes** :
-- `postgres_data` — persistance des données PostgreSQL
-- `pgadmin_data` — persistance de la configuration pgAdmin (connexions sauvegardées)
-
-**Credentials externalisés** : toutes les variables sensibles (`DB_USER`, `DB_PASSWORD`, `PGADMIN_EMAIL`, `PGADMIN_PASSWORD`) sont dans `.env` (ignoré par git). Le fichier `.env.example` sert de template pour les nouveaux développeurs.
-
-**Configuration pgAdmin automatique** : `docker/pgadmin/servers.json` pré-configure la connexion à postgres au premier démarrage — pas de saisie manuelle nécessaire.
-
-### Dockerfiles multi-stage
-
-Les images sont construites en deux étapes pour réduire leur taille finale :
-
-1. **Stage builder** : installe toutes les dépendances et compile TypeScript
-2. **Stage runner** : copie uniquement le code compilé + `node_modules` de production
-
-### nginx (frontend production)
-
-```nginx
-# Proxy /api/* → backend NestJS (DNS Docker)
-location /api/ {
-  proxy_pass http://backend:3000;
-}
-
-# SPA fallback : toutes les URLs inconnues → index.html (Angular Router gère)
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
+Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pgadmin/servers.json` pré-configure la connexion pgAdmin au premier démarrage.
 
 ---
 
@@ -495,79 +180,24 @@ location / {
 
 | Aspect | Implémentation |
 |--------|----------------|
-| Mots de passe | bcrypt, coût 10 — jamais stockés en clair |
+| Mots de passe | bcrypt coût 10, jamais stockés en clair |
 | Tokens JWT | Signés avec `JWT_SECRET` (.env), durée 7 jours |
-| Réponses API | `sanitize()` exclut le champ `password` de toutes les réponses |
+| Réponses API | `sanitize()` exclut `password` de toutes les réponses |
 | CORS | Limité à `http://localhost:4200` en dev |
 | Erreurs login | Message générique (évite l'énumération d'emails) |
-| `.env` | Non committé (`.gitignore`), exemple fourni dans `.env.example` |
+| `.env` | Non committé (`.gitignore`), exemple dans `.env.example` |
 
 ---
 
-## 7. Monorepo Nx 22.7
+## 7. Monorepo Nx + contraintes Windows
 
-### Avantages
+**Contrainte TypeScript Nx** : `tsconfig.base.json` contient des options (`composite`, `emitDeclarationOnly`) incompatibles avec Angular → toujours définir `$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"` avant les commandes Nx (déjà dans `dev.ps1`).
 
-- **Cache de build** : si le code n'a pas changé, Nx réutilise le résultat du build précédent
-- **`nx affected`** : lance uniquement les tests/builds des projets affectés par un changement
-- **Générateurs** : scaffolding cohérent pour les modules NestJS et composants Angular
-- **Configuration unifiée** : ESLint, TypeScript, formatage partagés
-
-### Commandes Nx utiles
-
-```powershell
-# Voir tous les projets
-npx nx show projects
-
-# Voir le graphe de dépendances
-npx nx graph
-
-# Builder uniquement les projets affectés par les changements git
-npx nx affected -t build
-
-# Synchroniser les références TypeScript (si Nx se plaint)
-npx nx sync
-```
-
-### Contrainte TypeScript (Windows)
-
-`tsconfig.base.json` contient des options (`composite`, `emitDeclarationOnly`) incompatibles avec Angular. Contourner avec :
-
-```powershell
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-```
-
-Les options problématiques sont surchargées dans `apps/frontend/tsconfig.app.json`.
+Pour les autres contraintes Windows (SSL non vérifié, IPv4), voir [CLAUDE.md](CLAUDE.md).
 
 ---
 
-## 8. Environnement Windows — Points critiques
-
-Ces contraintes s'appliquent à cet environnement de développement spécifique.
-
-### SSL non vérifié
-
-Le réseau intercepte les connexions HTTPS (proxy d'entreprise avec certificat auto-signé). Préfixer toutes les commandes `npm`/`npx` avec :
-
-```powershell
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
-```
-
-### IPv4 vs IPv6
-
-Sur Windows, `localhost` peut résoudre en IPv6 (`::1`). Utiliser `127.0.0.1` partout où une adresse IP explicite est nécessaire (proxy Angular, config CORS du backend).
-
-### Variable TypeScript Nx
-
-```powershell
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-```
-
-Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
-
----
-
-## 9. Tests
+## 8. Tests
 
 | Projet | Outil | Commande |
 |--------|-------|---------|
@@ -576,139 +206,43 @@ Obligatoire pour que Nx fonctionne sans erreur de configuration TypeScript.
 | E2E frontend | Playwright | `npx nx e2e frontend-e2e` |
 | E2E backend | Vitest + axios | `npx nx e2e backend-e2e` |
 
-> ⚠️ Les **navigateurs Playwright** doivent être installés avant le premier lancement des e2e frontend :
-> ```powershell
-> npx playwright install
-> ```
-
-**Tests e2e backend implémentés** (`apps/backend-e2e/src/backend/backend.spec.ts`) :
-- `GET /api/catalog/sponsors` : liste complète avec les champs attendus
-- `GET /api/catalog/vehicules` : liste non vide
-- `GET /api/catalog/sponsors/:nom` : sponsor par nom (+ 404 si inconnu)
-- `POST /api/auth/register` : route accessible (non 404)
-- `GET /api/teams` sans JWT : retourne 401
-
-**Tests e2e frontend implémentés** (`apps/frontend-e2e/src/example.spec.ts`) :
-- Page d'accueil : titre `GASLANDS MANAGER` + 4 feature cards
-- `/teams` sans connexion : redirection vers `/login`
-- Page `/login` : formulaire email + mot de passe visible
+> ⚠️ Installer les navigateurs Playwright avant le premier lancement : `npx playwright install`
 
 ### Règle
 
-> **Toute modification ou création d'un module NestJS** doit entrainer la création de tests unitaires pour son service ET son controller.
+> **Tout nouveau module NestJS** → tests unitaires service + controller.
+> **Tout nouveau service Angular** → tests unitaires.
 
-> **Toute modification ou création d'un service Angular** doit entrainer la création de tests unitaires.
+### 8.1 Backend — Patterns de test
 
-### 9.1 Backend — Pattern de test NestJS (Vitest)
+**Service avec TypeORM** : mock du `Repository` via `getRepositoryToken` dans `Test.createTestingModule`.
 
-**Services avec dépendances TypeORM** (ex: `TeamService`) : on mock le `Repository` via `getRepositoryToken`.
+**Service sans DI** (ex : `CatalogService`) : instanciation directe + Pattern Template Method (voir §3.3). Appeler `service.onModuleInit()` manuellement dans `beforeEach`.
 
-```typescript
-// Créer un module de test isolé
-const module = await Test.createTestingModule({
-  providers: [
-    TeamService,
-    // Remplacer le vrai Repository<Team> par un objet fictif
-    {
-      provide: getRepositoryToken(Team),
-      useValue: {
-        find: vi.fn(),
-        findOne: vi.fn(),
-        create: vi.fn(),
-        save: vi.fn(),
-        remove: vi.fn(),
-      },
-    },
-  ],
-}).compile();
-```
+Ce qu'on teste : cas nominaux, `NotFoundException`, isolation par `userId`, câblage controller → service, relations pré-résolues.
+Ce qu'on ne teste pas en unitaire : auth JWT (testé via le guard), SQL réel (→ e2e).
 
-**Services sans dépendances injectées** (ex: `CatalogService`) : on instancie directement la classe, sans passer par `Test.createTestingModule`. On utilise le **Pattern Template Method** pour substituer la lecture de fichiers :
+### 8.2 Frontend — Patterns de test
+
+**Smart component** : mock du service dans `providers`, sous-composants rendent normalement.
+
+**Dumb component** :
 
 ```typescript
-// Sous-classe locale dans le spec — surcharge readFileContent()
-class TestCatalogService extends CatalogService {
-  protected override readFileContent(filename: string): string {
-    return MOCK_YAML[filename]; // données fictives en mémoire
-  }
-}
-
-// Dans beforeEach : instanciation directe + appel manuel de onModuleInit()
-service = new TestCatalogService();
-service.onModuleInit(); // normalement appelé par NestJS au démarrage
-```
-
-⚠️ `vi.mock('fs')` pour les modules Node built-ins est problématique avec SWC/Vitest : préférer le Pattern Template Method quand le service expose une méthode `protected` pour l'I/O.
-
-**Ce qu'on teste :**
-- Cas nominaux : les méthodes retournent la valeur attendue
-- Cas d'erreur : `NotFoundException` levée si l'entité est introuvable
-- Isolation utilisateur : le filtre `userId` est bien appliqué à chaque requête BDD
-- Le controller passe les bons arguments au service (câblage HTTP)
-- Relations pré-résolues : un sponsor expose directement ses items autorisés
-
-**Ce qu'on ne teste pas** dans les tests unitaires : l'authentification JWT (testée par le guard), le SQL réel (testé en e2e).
-
-### 9.2 Frontend — Pattern de test Angular (Vitest)
-
-**Smart component** — on mocke le service, les sous-composants rendent normalement :
-
-```typescript
-await TestBed.configureTestingModule({
-  imports: [Teams],  // Composant standalone → importe aussi TeamCard, TeamForm
-  providers: [
-    provideRouter([]),
-    { provide: TeamsService, useValue: { getAll: vi.fn().mockReturnValue(of([])) } },
-  ],
-}).compileComponents();
-```
-
-**Dumb component** — on initialise les inputs avec `setInput()` et on observe les outputs avec `outputToObservable()` :
-
-```typescript
-import { outputToObservable } from '@angular/core/rxjs-interop';
-
-// Passer un input() Signal
+// Initialiser un input() Signal
 fixture.componentRef.setInput('team', mockTeam);
-fixture.detectChanges();   // déclenche l'effect() si présent
+fixture.detectChanges();  // déclenche effect() si présent
 
-// Tester un output() Signal
-const emitted: Team[] = [];
+// Observer un output() Signal
+import { outputToObservable } from '@angular/core/rxjs-interop';
 outputToObservable(component.editClicked).subscribe(t => emitted.push(t));
-fixture.nativeElement.querySelector('.btn-action--edit').click();
-expect(emitted[0]).toEqual(mockTeam);
 ```
 
-**Règle de répartition des tests :**
+**Outils clés** : `HttpTestingController`, `of(data)` / `throwError(() => ...)`, `vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))`.
 
-| Que tester ? | Où ? |
+| Que tester ? | Fichier spec |
 |---|---|
-| Orchestration, appels API, visibilité du formulaire | `teams.spec.ts` |
-| Affichage de la carte, émission des boutons | `team-card.spec.ts` |
-| Titre, pré-remplissage, validation, émission du DTO | `team-form.spec.ts` |
+| Orchestration, appels API, visibilité formulaire | `teams.spec.ts` |
+| Affichage carte, émission boutons | `team-card.spec.ts` |
+| Pré-remplissage, validation, émission DTO | `team-form.spec.ts` |
 | Requêtes HTTP (verbe, URL, corps) | `teams.service.spec.ts` |
-
-**Mock d'un service avec dépendance HTTP dans un composant dumb** (`TeamForm` → `CatalogService`) :
-
-```typescript
-// CatalogService retourne un Observable — on le simule avec of()
-const mockCatalogService = {
-  getSponsors: () => of([]),  // tableau vide : sponsors chargés, pas de données
-};
-
-await TestBed.configureTestingModule({
-  imports: [TeamForm],
-  providers: [
-    { provide: CatalogService, useValue: mockCatalogService },
-  ],
-}).compileComponents();
-```
-
-Avec `of([])` : `loadingSponsors` passe immédiatement à `false`, `sponsors` reste vide, `formSponsor` garde sa valeur par défaut `'Rutherford'`. Les tests de validation et d'émission de DTO fonctionnent sans dépendre du réseau.
-
-**Outils clés :**
-- `HttpTestingController` : intercepte les requêtes HTTP dans les tests de service
-- `of(data)` / `throwError(() => ...)` : simule les réponses Observable du service
-- `vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))` : mock de `window.confirm`
-- `fixture.componentRef.setInput()` : initialise un `input()` Signal dans les tests
-- `outputToObservable()` : convertit un `output()` Signal en Observable testable
