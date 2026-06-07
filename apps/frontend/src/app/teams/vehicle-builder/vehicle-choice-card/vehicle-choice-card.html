@@ -1,0 +1,30 @@
+<!-- Carte de présentation d'un véhicule du catalogue — cf. en-tête de vehicle-choice-card.ts -->
+<div class="choice-card">
+
+  <div class="choice-card__header">
+    <h3 class="choice-card__name">{{ vehicule().nom }}</h3>
+    <span class="choice-card__weight">{{ vehicule().poids }}</span>
+  </div>
+
+  <p class="choice-card__description">{{ vehicule().description }}</p>
+
+  <!-- Statistiques essentielles — cf. SPECIFICATION.md §5, modèle Vehicule -->
+  <div class="choice-card__stats">
+    <span class="stat" title="Carrosserie">🛡️ {{ vehicule().carrosserie }}</span>
+    <span class="stat" title="Manœuvrabilité">🎮 {{ vehicule().manoeuvrabilite }}</span>
+    <span class="stat" title="Vitesse maximale">💨 {{ vehicule().vitesse_max }}</span>
+    <span class="stat" title="Équipage">👥 {{ vehicule().equipage }}</span>
+    <span class="stat" title="Emplacements (armes + améliorations)">🔧 {{ vehicule().emplacements }}</span>
+  </div>
+
+  <div class="choice-card__footer">
+    <span class="choice-card__price">{{ vehicule().prix }} 🛢️</span>
+    <button
+      class="choice-card__choose"
+      type="button"
+      (click)="chosen.emit(vehicule())">
+      Choisir ce véhicule
+    </button>
+  </div>
+
+</div>

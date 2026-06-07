@@ -8,6 +8,8 @@
  * - Isolation utilisateur : chaque méthode filtre par userId
  * - Gestion d'erreur : NotFoundException si équipe introuvable ou appartenant à un autre user
  * - Délégation : le service appelle bien les bonnes méthodes du Repository
+ * - vehicleCount : calculé via un vrai COUNT SQL sur Repository<Vehicle> (cf. countVehicles),
+ *   jamais une valeur en dur — on mocke donc AUSSI ce second Repository.
  */
 
 import { NotFoundException } from '@nestjs/common';
@@ -15,6 +17,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Team } from './team.entity';
+import { Vehicle } from '../vehicle/vehicle.entity';
 import { TeamService } from './team.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
@@ -45,9 +48,15 @@ describe('TeamService', () => {
     remove: vi.fn(),
   };
 
+  // Mock du Repository<Vehicle> — UNIQUEMENT pour `count` (cf. `countVehicles` :
+  // TeamService ne lit/écrit jamais de véhicule, il se contente de les compter).
+  const mockVehicleRepo = {
+    count: vi.fn(),
+  };
+
   beforeEach(async () => {
     // Test.createTestingModule() crée un module NestJS minimal pour les tests
-    // On injecte le mockRepo à la place du vrai Repository<Team>
+    // On injecte les mocks à la place des vrais Repository<Team>/Repository<Vehicle>
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TeamService,
@@ -56,6 +65,10 @@ describe('TeamService', () => {
           // C'est ce que @InjectRepository(Team) utilise dans le constructeur
           provide: getRepositoryToken(Team),
           useValue: mockRepo,
+        },
+        {
+          provide: getRepositoryToken(Vehicle),
+          useValue: mockVehicleRepo,
         },
       ],
     }).compile();
@@ -68,15 +81,19 @@ describe('TeamService', () => {
   // ── findByUserId ────────────────────────────────────────────────────────────
 
   describe('findByUserId()', () => {
-    it('retourne les équipes de l\'utilisateur enrichies avec vehicleCount', async () => {
+    it('retourne les équipes de l\'utilisateur enrichies avec vehicleCount calculé via COUNT SQL', async () => {
       mockRepo.find.mockResolvedValue([mockTeam]);
+      // Le COUNT renvoie 3 — on vérifie que le service le RESTITUE fidèlement,
+      // pas une valeur en dur (cf. ancienne version, qui retournait toujours 0).
+      mockVehicleRepo.count.mockResolvedValue(3);
 
       const result = await service.findByUserId(42);
 
       // Vérifie que le Repository est appelé avec le bon filtre userId
       expect(mockRepo.find).toHaveBeenCalledWith({ where: { userId: 42 } });
-      // vehicleCount: 0 est ajouté par le service (les véhicules ne sont pas encore implémentés)
-      expect(result).toEqual([{ ...mockTeam, vehicleCount: 0 }]);
+      // Le comptage doit cibler LA bonne équipe (filtre teamId = id de mockTeam)
+      expect(mockVehicleRepo.count).toHaveBeenCalledWith({ where: { teamId: mockTeam.id } });
+      expect(result).toEqual([{ ...mockTeam, vehicleCount: 3 }]);
     });
 
     it('retourne un tableau vide si l\'utilisateur n\'a aucune équipe', async () => {
@@ -85,6 +102,8 @@ describe('TeamService', () => {
       const result = await service.findByUserId(99);
 
       expect(result).toEqual([]);
+      // Aucune équipe ⇒ aucun comptage à effectuer (rien à itérer)
+      expect(mockVehicleRepo.count).not.toHaveBeenCalled();
     });
   });
 
@@ -142,18 +161,22 @@ describe('TeamService', () => {
   // ── update ──────────────────────────────────────────────────────────────────
 
   describe('update()', () => {
-    it('met à jour une équipe existante', async () => {
+    it('met à jour une équipe existante et recalcule vehicleCount via COUNT SQL', async () => {
       const dto: UpdateTeamDto = { name: 'Nouveau nom', cans: 75 };
       const updatedTeam = { ...mockTeam, ...dto };
 
       mockRepo.findOne.mockResolvedValue(mockTeam);
       mockRepo.save.mockResolvedValue(updatedTeam);
+      mockVehicleRepo.count.mockResolvedValue(2);
 
       const result = await service.update(1, 42, dto);
 
       expect(mockRepo.save).toHaveBeenCalled();
       expect(result.name).toBe('Nouveau nom');
       expect(result.cans).toBe(75);
+      // vehicleCount n'est plus une constante : il reflète le COUNT recalculé
+      expect(mockVehicleRepo.count).toHaveBeenCalledWith({ where: { teamId: updatedTeam.id } });
+      expect(result.vehicleCount).toBe(2);
     });
 
     it('lève NotFoundException si l\'équipe n\'appartient pas à l\'utilisateur', async () => {

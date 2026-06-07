@@ -15,9 +15,11 @@
  * C'est aussi la convention cohérente avec la sécurité RÉELLE : `VehicleService.findOneForUser`
  * vérifie l'appartenance via la chaîne `Vehicle → Team → User` (sur `userId`), jamais via
  * un `teamId` de route — qui resterait un paramètre mort, jamais consulté ni vérifié. Seules
- * les routes de LISTE/CRÉATION (`GET/POST /api/teams/:id/vehicles`, hors périmètre de cette
- * étape — cf. backlog SPECIFICATION.md §4.1) ont réellement besoin du contexte d'équipe
- * dans l'URL, puisqu'il n'existe alors encore aucun véhicule à identifier par son propre id.
+ * les routes de LISTE/CRÉATION (`GET/POST /api/teams/:teamId/vehicles`) ont réellement
+ * besoin du contexte d'équipe dans l'URL, puisqu'il n'existe alors encore aucun véhicule
+ * à identifier par son propre id — elles vivent dans `vehicle-team.controller.ts`, un
+ * second controller dédié (Nest n'autorise qu'un seul préfixe `@Controller` par classe),
+ * qui délègue au même `VehicleService` que celui-ci.
  *
  * Comme `TeamController`, chaque endpoint est protégé par `@UseGuards(JwtAuthGuard)` —
  * `req.user.id` (injecté par `JwtStrategy`) est transmis au service, qui l'utilise pour

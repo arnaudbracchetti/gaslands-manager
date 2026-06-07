@@ -57,6 +57,37 @@
     flex: 1;
   }
 
+  /* Liste des véhicules de l'équipe (nom + coût total) */
+  &__vehicles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid #1e1e2e;
+    border-bottom: 1px solid #1e1e2e;
+    padding: 8px 0;
+  }
+
+  &__vehicle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+
+  &__vehicle-name {
+    color: #e0e0e0;
+  }
+
+  /* Coût en jerricans — même teinte que __cans (cohérence "budget") */
+  &__vehicle-cost {
+    color: #888;
+    white-space: nowrap;
+  }
+
   /* Boutons d'action en bas de la carte */
   &__actions {
     display: flex;
@@ -64,6 +95,27 @@
     margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid #1e1e2e;
+  }
+}
+
+/* ── Bouton "Ajouter un véhicule" ──────────────────────────────────────────── */
+/* Action principale de la carte (mène à la construction de véhicule) : on la
+   distingue visuellement de Modifier/Supprimer (accent plein plutôt que contour,
+   pleine largeur) — cf. palette du projet, même rouge que .team-card__badge. */
+
+.btn-add-vehicle {
+  background: rgba(233, 69, 96, 0.12);
+  border: 1px solid #e94560;
+  color: #e94560;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(233, 69, 96, 0.22);
   }
 }
 

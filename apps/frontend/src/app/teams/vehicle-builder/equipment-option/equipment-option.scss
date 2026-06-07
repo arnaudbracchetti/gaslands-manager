@@ -1,0 +1,109 @@
+/* ── Ligne d'équipement (arme ou amélioration) ─────────────────────────────── */
+
+.option {
+  background: #0a0a14;
+  border: 1px solid #1e1e2e;
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  /* Option indisponible : grisée, pas de transformation au survol */
+  &--unavailable {
+    opacity: 0.55;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  &__name {
+    color: #e0e0e0;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+
+  &__stat {
+    color: #888;
+    font-size: 0.8rem;
+  }
+
+  /* Raison d'indisponibilité — message du backend (RuleResult.reason) */
+  &__reason {
+    color: #e94560;
+    font-size: 0.78rem;
+    font-style: italic;
+    margin: 0;
+    flex-basis: 100%;
+  }
+
+  &__add {
+    background: transparent;
+    border: 1px solid #7ec8e3;
+    color: #7ec8e3;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: rgba(126, 200, 227, 0.1);
+    }
+  }
+}
+
+/* ── Sélecteur d'orientation (4 directions + annuler) ──────────────────────── */
+
+.option__orientations {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-basis: 100%;
+}
+
+.option__orientations-label {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.orientation-btn {
+  background: rgba(233, 69, 96, 0.1);
+  border: 1px solid #e94560;
+  color: #e94560;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(233, 69, 96, 0.25);
+  }
+}
+
+.orientation-cancel {
+  background: transparent;
+  border: 1px solid #555;
+  color: #888;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: #888;
+    color: #e0e0e0;
+  }
+}

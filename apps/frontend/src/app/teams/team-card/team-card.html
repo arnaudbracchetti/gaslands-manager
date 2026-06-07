@@ -21,6 +21,31 @@
     <p class="team-card__description">{{ team().description }}</p>
   }
 
+  <!--
+    Liste des véhicules de l'équipe — masquée si vide (équipe sans véhicule,
+    ou résumé pas encore chargé : les deux cas se traduisent par un tableau
+    vide côté `Teams`, cf. doc de `vehicles`).
+    Le "≈" signale un coût MINORÉ (Tourelle ignorée — cf. `VehicleSummary.coutApproximatif`).
+  -->
+  @if (vehicles().length > 0) {
+    <ul class="team-card__vehicles">
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <li class="team-card__vehicle">
+          <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
+          <span class="team-card__vehicle-cost">{{ vehicle.coutApproximatif ? '≈ ' : '' }}{{ vehicle.cout }} 🥫</span>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- Bouton "Ajouter un véhicule" — toujours visible (cf. doc de addVehicleClicked) -->
+  <button
+    class="btn-add-vehicle"
+    (click)="addVehicleClicked.emit(team())"
+    title="Ajouter un véhicule à cette équipe">
+    🚗 Ajouter un véhicule
+  </button>
+
   <!-- Boutons Modifier / Supprimer -->
   <div class="team-card__actions">
     <button

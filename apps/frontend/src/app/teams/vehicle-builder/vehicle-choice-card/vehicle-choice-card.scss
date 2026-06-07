@@ -1,0 +1,92 @@
+/* ── Carte de choix de véhicule ────────────────────────────────────────────── */
+
+.choice-card {
+  background: #0a0a14;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s, transform 0.15s;
+
+  &:hover {
+    border-color: #e94560;
+    transform: translateY(-2px);
+  }
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__name {
+    color: #e0e0e0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  &__weight {
+    color: #888;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  &__description {
+    color: #888;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    .stat {
+      background: rgba(126, 200, 227, 0.1);
+      border: 1px solid rgba(126, 200, 227, 0.25);
+      color: #7ec8e3;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #1e1e2e;
+  }
+
+  &__price {
+    color: #e0e0e0;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  &__choose {
+    background: transparent;
+    border: 1px solid #e94560;
+    color: #e94560;
+    padding: 7px 14px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(233, 69, 96, 0.1);
+    }
+  }
+}

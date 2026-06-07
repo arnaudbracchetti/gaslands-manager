@@ -9,6 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { TeamCard } from './team-card';
 import { Team } from '../team.model';
+import { VehicleSummary } from '../vehicle-summary';
 
 // Équipe fictive utilisée dans tous les tests
 const mockTeam: Team = {
@@ -21,6 +22,14 @@ const mockTeam: Team = {
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
+
+// Résumés de véhicules fictifs — la forme déjà réduite que `Teams` calcule via
+// `buildVehicleSummary` et transmet telle quelle (TeamCard ne fait AUCUN calcul,
+// cf. doc de l'input `vehicles` : "affiche ce qu'on lui donne").
+const mockVehicleSummaries: VehicleSummary[] = [
+  { id: 1, nom: 'Camion', cout: 21, coutApproximatif: false },
+  { id: 2, nom: 'Monster Truck', cout: 28, coutApproximatif: true },
+];
 
 describe('TeamCard', () => {
   let component: TeamCard;
@@ -69,6 +78,40 @@ describe('TeamCard', () => {
     expect(el.querySelector('.team-card__description')).toBeNull();
   });
 
+  // ── Liste des véhicules ────────────────────────────────────────────────────
+  // `vehicles` a une valeur par défaut `[]` (cf. son input() — pas de
+  // `setInput` nécessaire pour le cas "vide").
+
+  it('n\'affiche pas la liste des véhicules par défaut (input vide)', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.team-card__vehicles')).toBeNull();
+  });
+
+  it('affiche le nom et le coût de chaque véhicule reçu', () => {
+    fixture.componentRef.setInput('vehicles', mockVehicleSummaries);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.team-card__vehicle');
+    expect(items).toHaveLength(2);
+    expect(items[0].textContent).toContain('Camion');
+    expect(items[0].textContent).toContain('21');
+    expect(items[1].textContent).toContain('Monster Truck');
+    expect(items[1].textContent).toContain('28');
+  });
+
+  it('préfixe le coût d\'un "≈" quand coutApproximatif est vrai (Tourelle ignorée — cf. VehicleSummary)', () => {
+    fixture.componentRef.setInput('vehicles', mockVehicleSummaries);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.team-card__vehicle-cost');
+    // Camion (coutApproximatif: false) → pas de préfixe
+    expect(items[0].textContent?.trim().startsWith('≈')).toBe(false);
+    // Monster Truck (coutApproximatif: true) → préfixé
+    expect(items[1].textContent?.trim().startsWith('≈')).toBe(true);
+  });
+
   // ── Outputs ────────────────────────────────────────────────────────────────
 
   it('émet editClicked avec l\'équipe au clic sur "Modifier"', () => {
@@ -88,6 +131,17 @@ describe('TeamCard', () => {
     outputToObservable(component.deleteClicked).subscribe((t) => emitted.push(t));
 
     const btn = fixture.nativeElement.querySelector('.btn-action--delete') as HTMLButtonElement;
+    btn.click();
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual(mockTeam);
+  });
+
+  it('émet addVehicleClicked avec l\'équipe au clic sur "Ajouter un véhicule"', () => {
+    const emitted: Team[] = [];
+    outputToObservable(component.addVehicleClicked).subscribe((t) => emitted.push(t));
+
+    const btn = fixture.nativeElement.querySelector('.btn-add-vehicle') as HTMLButtonElement;
     btn.click();
 
     expect(emitted).toHaveLength(1);

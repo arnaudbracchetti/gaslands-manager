@@ -29,8 +29,8 @@
     <!--
       [hasVehicles] : vrai si l'équipe en cours d'édition a déjà au moins un véhicule.
       Dans ce cas, le carousel de sponsors sera verrouillé (règle Gaslands : sponsor
-      immutable dès le 1er véhicule). vehicleCount est toujours 0 pour l'instant
-      (module Véhicules non encore implémenté).
+      immutable dès le 1er véhicule). vehicleCount reflète désormais le nombre RÉEL
+      de véhicules de l'équipe (cf. TeamService — module Véhicules implémenté).
     -->
     <app-team-form
       [team]="editingTeam()"
@@ -57,18 +57,44 @@
     </div>
   } @else {
     <!--
-      app-team-card reçoit l'équipe et émet les actions :
-        (editClicked)   → openEdit() ouvre le formulaire pré-rempli
-        (deleteClicked) → deleteTeam() demande confirmation puis supprime
+      app-team-card reçoit l'équipe (+ le résumé de ses véhicules) et émet les actions :
+        (editClicked)       → openEdit() ouvre le formulaire pré-rempli
+        (deleteClicked)     → deleteTeam() demande confirmation puis supprime
+        (addVehicleClicked) → openVehicleBuilder() ouvre la modale de construction
+
+      [vehicles] : `vehicleSummaries().get(team.id) ?? []` — `Map.get` renvoie
+      `undefined` pour une équipe pas encore chargée OU sans véhicule ; `?? []`
+      ramène les deux cas à "rien à afficher" (cf. doc de `vehicleSummaries`).
     -->
     <div class="teams-grid">
       @for (team of teams(); track team.id) {
         <app-team-card
           [team]="team"
+          [vehicles]="vehicleSummaries().get(team.id) ?? []"
           (editClicked)="openEdit($event)"
-          (deleteClicked)="deleteTeam($event)" />
+          (deleteClicked)="deleteTeam($event)"
+          (addVehicleClicked)="openVehicleBuilder($event)" />
       }
     </div>
+  }
+
+  <!-- ── Modale de construction de véhicule ────────────────────────────── -->
+  <!--
+    `buildingTeam(); as team` capture l'équipe non-nulle pour tout le bloc —
+    `VehicleBuilder` exige `team` en `input.required<Team>()` (cf. son en-tête).
+
+    Fermeture via DEUX chemins, qui appellent volontairement la MÊME méthode
+    (`closeVehicleBuilder`) — cf. sa doc, "fermeture à mi-parcours acceptée" :
+      - (closeRequested) : overlay / croix / Échap (abandon possible à tout moment)
+      - (finished)       : bouton "Terminer" du builder (fin normale du flux)
+  -->
+  @if (buildingTeam(); as team) {
+    <app-modal
+      [visible]="true"
+      title="Ajouter un véhicule"
+      (closeRequested)="closeVehicleBuilder()">
+      <app-vehicle-builder [team]="team" (finished)="closeVehicleBuilder()" />
+    </app-modal>
   }
 
 </div>

@@ -14,6 +14,7 @@
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { Team } from '../team.model';
+import { VehicleSummary } from '../vehicle-summary';
 
 @Component({
   selector: 'app-team-card',
@@ -32,6 +33,20 @@ export class TeamCard {
   team: InputSignal<Team> = input.required<Team>();
 
   /**
+   * Résumés des véhicules de l'équipe — chacun avec son nom (résolu depuis le
+   * catalogue) et son coût total en jerricans (cf. `VehicleSummary`, doc complète
+   * dans `vehicle-summary.ts`).
+   *
+   * `input()` simple (PAS `input.required`) avec une valeur par défaut `[]` :
+   * contrairement à `team`, cette donnée est secondaire et son absence est un
+   * état parfaitement normal — équipe sans véhicule, ou résumé pas encore chargé
+   * par `Teams` (cf. doc de `Teams.vehicleSummaries`, "chargement asynchrone").
+   * `TeamCard` reste un composant "dumb" : il affiche ce qu'on lui donne, sans
+   * savoir POURQUOI la liste est vide ni QUAND elle se peuplera.
+   */
+  vehicles: InputSignal<VehicleSummary[]> = input<VehicleSummary[]>([]);
+
+  /**
    * Émis quand l'utilisateur clique sur "Modifier".
    * Le parent reçoit l'équipe concernée et ouvre le formulaire d'édition.
    * OutputEmitterRef<T> : type retourné par output<T>().
@@ -43,4 +58,18 @@ export class TeamCard {
    * Le parent gère la confirmation et l'appel à l'API.
    */
   deleteClicked: OutputEmitterRef<Team> = output<Team>();
+
+  /**
+   * Émis quand l'utilisateur clique sur "Ajouter un véhicule".
+   * Le parent (`Teams`) ouvre la modale de construction (`VehicleBuilder`)
+   * pour cette équipe — cf. `Teams.openVehicleBuilder`.
+   *
+   * Toujours visible, sans condition : toute équipe a un sponsor dès sa
+   * création (`sponsor` a une valeur par défaut, cf. `Team`/SPECIFICATION.md
+   * §5), donc l'ajout de véhicules est toujours possible. `TeamCard` ignore
+   * délibérément la mécanique de verrouillage du sponsor (`vehicleCount`,
+   * cf. `SponsorCarousel`/`TeamForm`) — ce n'est pas son rôle de "dumb"
+   * component d'en connaître la raison, juste de signaler l'intention.
+   */
+  addVehicleClicked: OutputEmitterRef<Team> = output<Team>();
 }

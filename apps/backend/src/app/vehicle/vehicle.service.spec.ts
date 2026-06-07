@@ -17,8 +17,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import type { Amelioration, Sponsor, Vehicule } from '../catalog/catalog.interfaces';
+import type { Amelioration, Arme, Sponsor, Vehicule } from '../catalog/catalog.interfaces';
 import { CatalogService } from '../catalog/catalog.service';
+import { TeamService } from '../team/team.service';
+import { Weapon } from '../weapon/weapon.entity';
 import { Vehicle, VehicleImprovement } from './vehicle.entity';
 import { VehicleService } from './vehicle.service';
 import { VehicleBuildFactory } from './vehicle-build.factory';
@@ -64,6 +66,20 @@ const ameliorationBlindage: Amelioration = {
   sponsors_autorises: ['Rutherford'],
 };
 
+// Fixture d'arme — utilisée par les tests des helpers d'emplacements partagés
+// (`improvementSlotsOf`/`weaponSlotsOf`) et l'intégration dans `checkCandidate`
+// (cf. plan, "Décision de conception tranchée — calcul des emplacements partagés").
+const armeMitrailleuse: Arme = {
+  nom: 'Mitrailleuse',
+  nom_interne: 'mitrailleuse',
+  type: 'base',
+  prix: 4,
+  emplacement: 1,
+  description: '',
+  regles: '',
+  sponsors_autorises: ['Rutherford'],
+};
+
 const ameliorationTourelle: Amelioration = {
   nom: 'Tourelle',
   nom_interne: 'tourelle',
@@ -98,6 +114,32 @@ const mockVehicle: Vehicle = {
   team: mockTeam,
   teamId: 3,
   improvements: [],
+  // `weapons: []` — désormais chargée systématiquement par `findOneForUser`
+  // (cf. son commentaire) : `checkCandidate` en a besoin pour `weaponSlotsOf`
+  // (pool d'emplacements partagé, cf. plan). Vide ici : ces tests d'orchestration
+  // ne portent pas sur les armes — `weaponSlotsOf` retournera simplement 0.
+  weapons: [],
+  createdAt: new Date('2025-01-01'),
+};
+
+// Fixtures d'instances persistées — une amélioration et une arme installées,
+// utilisées par les tests de `improvementSlotsOf`/`weaponSlotsOf` et de
+// l'intégration du pool d'emplacements partagé dans `checkCandidate`.
+const installedChenilles: VehicleImprovement = {
+  id: 1,
+  nomInterne: 'chenilles',
+  orientation: null,
+  vehicle: mockVehicle,
+  vehicleId: 7,
+  createdAt: new Date('2025-01-01'),
+};
+
+const installedMitrailleuse: Weapon = {
+  id: 1,
+  nomInterne: 'mitrailleuse',
+  orientation: 'avant',
+  vehicle: mockVehicle,
+  vehicleId: 7,
   createdAt: new Date('2025-01-01'),
 };
 
@@ -145,7 +187,18 @@ describe('VehicleService', () => {
   const mockCatalogService = {
     getVehiculeByNomInterne: vi.fn(),
     getAmeliorationByNomInterne: vi.fn(),
+    // Nécessaire à `weaponSlotsOf` (résout `Weapon.nomInterne → Arme.emplacement`,
+    // miroir exact de `getAmeliorationByNomInterne` côté `improvementSlotsOf`).
+    getArmeByNomInterne: vi.fn(),
     getSponsor: vi.fn(),
+  };
+  // Nécessaire depuis que VehicleService injecte TeamService (cf. findAllForTeam/create
+  // — vérifier l'appartenance de l'équipe AVANT de lister/créer ses véhicules). Les
+  // tests ci-dessous ne couvrent QUE les méthodes préexistantes : ce mock leur est
+  // invisible, il sert uniquement à satisfaire le constructeur (cf. vehicle-team
+  // .controller.spec.ts / futurs tests dédiés pour la couverture de ces deux méthodes).
+  const mockTeamService = {
+    findOneForUser: vi.fn(),
   };
   const mockBuildFactory = {
     create: vi.fn(),
@@ -161,6 +214,7 @@ describe('VehicleService', () => {
         { provide: getRepositoryToken(Vehicle), useValue: mockVehicleRepo },
         { provide: getRepositoryToken(VehicleImprovement), useValue: mockImprovementRepo },
         { provide: CatalogService, useValue: mockCatalogService },
+        { provide: TeamService, useValue: mockTeamService },
         { provide: VehicleBuildFactory, useValue: mockBuildFactory },
         { provide: ImprovementDecoratorFactory, useValue: mockDecoratorFactory },
       ],
@@ -183,7 +237,7 @@ describe('VehicleService', () => {
       // jointure SQL (cf. commentaire de la méthode).
       expect(mockVehicleRepo.findOne).toHaveBeenCalledWith({
         where: { id: 7, team: { userId: 42 } },
-        relations: { team: true, improvements: true },
+        relations: { team: true, improvements: true, weapons: true },
       });
       expect(result).toEqual(mockVehicle);
     });
@@ -232,6 +286,51 @@ describe('VehicleService', () => {
       // catalogue a changé depuis, c'est un problème d'intégrité, pas une faute du client.
       expect(() => service.getBuild(mockVehicle)).toThrow(/camion/);
       expect(mockBuildFactory.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── improvementSlotsOf / weaponSlotsOf ──────────────────────────────────────
+  //
+  // Ces deux helpers PUBLICS répondent à un besoin transversal : `Vehicule
+  // .emplacements` est un pool PARTAGÉ entre améliorations et armes (cf. plan,
+  // "Décision de conception tranchée — calcul des emplacements partagés"), or
+  // `VehicleBuild.totalEmplacements()` ne connaît QUE les améliorations — par
+  // conception, pour ne pas mélanger deux préoccupations dans le Décorateur.
+  // Une simple somme sur les lignes PERSISTÉES, résolues via le catalogue —
+  // rien d'autre : pas de chaîne, pas d'état, triviale à isoler et à tester.
+
+  describe('improvementSlotsOf() / weaponSlotsOf() — emplacements consommés par le pool partagé', () => {
+    it('additionne les emplacements des améliorations RÉELLEMENT posées, résolues via le catalogue', () => {
+      const vehicule = { ...mockVehicle, improvements: [installedChenilles, installedChenilles] };
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+
+      expect(service.improvementSlotsOf(vehicule)).toBe(2 * ameliorationChenilles.emplacement);
+      expect(mockCatalogService.getAmeliorationByNomInterne).toHaveBeenCalledWith('chenilles');
+    });
+
+    it('additionne les emplacements des armes RÉELLEMENT montées, résolues via le catalogue', () => {
+      const vehicule = { ...mockVehicle, weapons: [installedMitrailleuse] };
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+
+      expect(service.weaponSlotsOf(vehicule)).toBe(armeMitrailleuse.emplacement);
+      expect(mockCatalogService.getArmeByNomInterne).toHaveBeenCalledWith('mitrailleuse');
+    });
+
+    it('retourne 0 pour un véhicule sans amélioration ni arme — sans consulter le catalogue', () => {
+      expect(service.improvementSlotsOf(mockVehicle)).toBe(0);
+      expect(service.weaponSlotsOf(mockVehicle)).toBe(0);
+      expect(mockCatalogService.getAmeliorationByNomInterne).not.toHaveBeenCalled();
+      expect(mockCatalogService.getArmeByNomInterne).not.toHaveBeenCalled();
+    });
+
+    it('lève une Error — incohérence de DONNÉES — si une amélioration/arme installée est absente du catalogue', () => {
+      const avecAmelioration = { ...mockVehicle, improvements: [installedChenilles] };
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(undefined);
+      expect(() => service.improvementSlotsOf(avecAmelioration)).toThrow(/chenilles/);
+
+      const avecArme = { ...mockVehicle, weapons: [installedMitrailleuse] };
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(undefined);
+      expect(() => service.weaponSlotsOf(avecArme)).toThrow(/mitrailleuse/);
     });
   });
 
@@ -294,6 +393,52 @@ describe('VehicleService', () => {
       const result = await service.canAddImprovement(7, 42, 'belier');
 
       expect(result).toEqual(fail('Une orientation est requise pour le Bélier'));
+    });
+
+    it('refuse — POOL D\'EMPLACEMENTS PARTAGÉ — si chaîne + armes déjà montées dépassent la capacité, MÊME quand la chaîne d\'améliorations est par ailleurs cohérente', async () => {
+      // `baseStats.emplacements` = 5 (cf. `statsParDefaut`). La chaîne candidate
+      // déclare occuper 4 emplacements (`totalEmplacements`), et le véhicule porte
+      // déjà une arme qui en consomme 2 (`installedMitrailleuse` → `armeMitrailleuse
+      // .emplacement` = 1... ici doublée pour dépasser nettement) : 4 + 2 = 6 > 5.
+      // `validate()` de la chaîne d'améliorations dit pourtant "ok" — exactement le
+      // cas que `VehicleBuild.totalEmplacements()` NE PEUT PAS, structurellement,
+      // détecter seul (il ignore tout des armes, cf. son en-tête).
+      const vehiculeAvecArmes = {
+        ...mockVehicle,
+        weapons: [installedMitrailleuse, installedMitrailleuse],
+      };
+      mockVehicleRepo.findOne.mockResolvedValue(vehiculeAvecArmes);
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+      mockDecoratorFactory.wrap.mockReturnValue(
+        fakeBuild({ validate: () => ok(), totalEmplacements: () => 4 }),
+      );
+
+      const result = await service.canAddImprovement(7, 42, 'chenilles');
+
+      expect(result).toEqual({
+        ok: false,
+        reason: expect.stringContaining('Emplacements insuffisants'),
+      });
+      // La vérification du pool partagé se fonde sur `weaponSlotsOf` — donc sur
+      // les armes RÉELLEMENT chargées par `findOneForUser` (cf. son commentaire :
+      // c'est précisément pourquoi `weapons: true` y est désormais systématique).
+      expect(mockCatalogService.getArmeByNomInterne).toHaveBeenCalledWith('mitrailleuse');
+    });
+
+    it('accepte — POOL D\'EMPLACEMENTS PARTAGÉ — si chaîne + armes tiennent dans la capacité totale du véhicule', async () => {
+      // Même mise en scène que ci-dessus, mais cette fois 4 + 1 = 5 ≤ 5 : pile à la limite.
+      const vehiculeAvecArme = { ...mockVehicle, weapons: [installedMitrailleuse] };
+      mockVehicleRepo.findOne.mockResolvedValue(vehiculeAvecArme);
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+      mockDecoratorFactory.wrap.mockReturnValue(
+        fakeBuild({ validate: () => ok(), totalEmplacements: () => 4 }),
+      );
+
+      const result = await service.canAddImprovement(7, 42, 'chenilles');
+
+      expect(result).toEqual(ok());
     });
 
     it('ne touche JAMAIS au repository — succès ou échec : "retirer dans la foulée" = ne rien persister', async () => {

@@ -25,6 +25,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Team } from '../team/team.entity';
+import { Weapon } from '../weapon/weapon.entity';
 import type { Orientation } from './vehicle-build';
 
 // @Entity('vehicles') crée une table "vehicles" dans PostgreSQL
@@ -60,6 +61,16 @@ export class Vehicle {
     cascade: true,
   })
   improvements: VehicleImprovement[];
+
+  // Relation One-to-Many vers les armes montées sur ce véhicule — miroir EXACT
+  // de `improvements` ci-dessus (même cascade, même raisonnement sur l'ordre :
+  // cf. son commentaire). `Weapon` et `VehicleImprovement` sont volontairement
+  // deux entités distinctes plutôt qu'une seule "équipement" générique : leurs
+  // règles de pose divergent profondément (les armes ne MODIFIENT pas les stats
+  // du véhicule — pas de Pattern Decorator nécessaire — mais portent une
+  // contrainte d'orientation différente, cf. `weapon.entity.ts`).
+  @OneToMany(() => Weapon, (weapon) => weapon.vehicle, { cascade: true })
+  weapons: Weapon[];
 
   @CreateDateColumn()
   createdAt: Date;

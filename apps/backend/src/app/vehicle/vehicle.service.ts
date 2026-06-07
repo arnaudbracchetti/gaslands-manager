@@ -22,12 +22,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle, VehicleImprovement } from './vehicle.entity';
 import { CatalogService } from '../catalog/catalog.service';
+import { TeamService } from '../team/team.service';
 import { VehicleBuildFactory } from './vehicle-build.factory';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
 import type { Amelioration } from '../catalog/catalog.interfaces';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
 import {
   fail,
+  ok,
   type BuildOptions,
   type InstalledImprovement,
   type RuleResult,
@@ -42,11 +44,82 @@ export class VehicleService {
     @InjectRepository(VehicleImprovement)
     private readonly improvementRepo: Repository<VehicleImprovement>,
     private readonly catalogService: CatalogService,
+    // Nécessaire pour vérifier l'appartenance de l'équipe AVANT de créer/lister
+    // ses véhicules (cf. `findAllForTeam`/`create` ci-dessous) — `Vehicle` ne
+    // porte pas `userId` directement, mais `Team` si. Pour éviter tout cycle
+    // d'imports `TeamModule ↔ VehicleModule`, `TeamModule` exporte `TeamService`
+    // sans importer `VehicleModule` (cf. son en-tête).
+    private readonly teamService: TeamService,
     private readonly buildFactory: VehicleBuildFactory,
     private readonly decoratorFactory: ImprovementDecoratorFactory,
   ) {}
 
   // ── Accès aux données ───────────────────────────────────────────────────────
+
+  /**
+   * Liste les véhicules d'une équipe — réservé au propriétaire de l'équipe.
+   *
+   * `teamService.findOneForUser` fait tout le travail de vérification : si
+   * l'équipe n'existe pas OU n'appartient pas à `userId`, elle lève déjà
+   * `NotFoundException` — on n'a rien à dupliquer ici, juste à laisser
+   * l'exception remonter telle quelle (même équipe introuvable pour le
+   * controller équipe que pour celui-ci : c'est voulu, cf. `findOneForUser`).
+   *
+   * `relations: { improvements: true, weapons: true }` : la liste sert au
+   * frontend à rafraîchir son état (recompter les emplacements utilisés,
+   * afficher un récapitulatif...) — autant éviter le coût d'un second aller-
+   * retour par véhicule (même raisonnement que `findOneForUser`).
+   */
+  async findAllForTeam(teamId: number, userId: number): Promise<Vehicle[]> {
+    await this.teamService.findOneForUser(teamId, userId);
+    return this.vehicleRepo.find({
+      where: { teamId },
+      relations: { improvements: true, weapons: true },
+    });
+  }
+
+  /**
+   * Crée un véhicule "nu" (sans arme ni amélioration) dans une équipe — première
+   * étape du flux de configuration : on choisit d'abord le TYPE de véhicule,
+   * on l'équipe ensuite (cf. plan, "Décisions actées" — persistance immédiate).
+   *
+   * Trois vérifications avant la moindre écriture :
+   *  1. l'équipe appartient à l'utilisateur (`teamService.findOneForUser` —
+   *     lève déjà `NotFoundException` sinon, comportement hérité tel quel) ;
+   *  2. `nomInterne` correspond à un véhicule du CATALOGUE (sinon le sponsor
+   *     ne pourrait de toute façon pas l'autoriser — message dédié, plus
+   *     clair que "non autorisé pour ce sponsor") ;
+   *  3. ce véhicule fait partie de ceux AUTORISÉS PAR LE SPONSOR de l'équipe
+   *     — la même règle que celle qui filtre `sponsor.vehicules` côté
+   *     catalogue (cf. `CatalogService`, relations pré-résolues au démarrage).
+   *
+   * Erreurs utilisateur (entrée invalide) ⇒ `BadRequestException` — à
+   * distinguer de `NotFoundException` (ressource absente/non possédée).
+   */
+  async create(teamId: number, userId: number, nomInterne: string): Promise<Vehicle> {
+    const team = await this.teamService.findOneForUser(teamId, userId);
+
+    const catalogVehicule = this.catalogService.getVehiculeByNomInterne(nomInterne);
+    if (!catalogVehicule) {
+      throw new BadRequestException(`Véhicule inconnu du catalogue : "${nomInterne}"`);
+    }
+
+    const sponsor = this.catalogService.getSponsor(team.sponsor);
+    if (!sponsor) {
+      // Incohérence de données (sponsor enregistré inconnu du catalogue) — pas
+      // une erreur utilisateur, même raisonnement que `getAvailableImprovements`.
+      throw new Error(`Sponsor catalogue inconnu : "${team.sponsor}" (équipe #${teamId})`);
+    }
+    const autorise = sponsor.vehicules.some((v) => v.nom_interne === nomInterne);
+    if (!autorise) {
+      throw new BadRequestException(
+        `Le véhicule "${catalogVehicule.nom}" n'est pas autorisé pour le sponsor "${sponsor.nom}"`,
+      );
+    }
+
+    const vehicle = this.vehicleRepo.create({ teamId, nomInterne });
+    return this.vehicleRepo.save(vehicle);
+  }
 
   /**
    * Charge un véhicule par son id, uniquement s'il appartient (via son équipe)
@@ -55,12 +128,15 @@ export class VehicleService {
    * `where: { id, team: { userId } }` : TypeORM traduit la condition imbriquée
    * sur la relation en jointure SQL — comme `TeamService.findOneForUser` filtre
    * directement sur `userId`, sauf que `Vehicle` ne porte pas cette colonne : il
-   * faut remonter par `team`. `relations: { team: true, improvements: true }`
-   * charge à la fois l'équipe (le filtre ci-dessus la JOINT de toute façon — autant
-   * peupler `vehicle.team.sponsor`, nécessaire à `getAvailableImprovements` pour
-   * filtrer le catalogue) et les améliorations installées (nécessaires à `getBuild`
-   * pour reconstituer la chaîne) — la quasi-totalité des usages de cette méthode a
-   * besoin de l'un et/ou l'autre, autant éviter des requêtes supplémentaires.
+   * faut remonter par `team`. `relations: { team: true, improvements: true,
+   * weapons: true }` charge l'équipe (le filtre ci-dessus la JOINT de toute façon
+   * — autant peupler `vehicle.team.sponsor`, nécessaire à `getAvailableImprovements`/
+   * `getAvailableWeapons` pour filtrer le catalogue), les améliorations installées
+   * (nécessaires à `getBuild` pour reconstituer la chaîne) ET les armes montées
+   * (nécessaires à `weaponSlotsOf` ci-dessous, et à `WeaponService` — toutes deux
+   * lisent `vehicle.weapons`, qui serait sinon `undefined`) — la quasi-totalité des
+   * usages de cette méthode a besoin d'au moins une de ces relations, autant
+   * éviter des requêtes supplémentaires.
    *
    * Lève `NotFoundException` (HTTP 404) si introuvable OU si l'appartenance
    * échoue — les deux cas sont indiscernables pour l'appelant, par conception.
@@ -68,12 +144,65 @@ export class VehicleService {
   async findOneForUser(id: number, userId: number): Promise<Vehicle> {
     const vehicle = await this.vehicleRepo.findOne({
       where: { id, team: { userId } },
-      relations: { team: true, improvements: true },
+      relations: { team: true, improvements: true, weapons: true },
     });
     if (!vehicle) {
       throw new NotFoundException(`Véhicule #${id} introuvable`);
     }
     return vehicle;
+  }
+
+  // ── Emplacements partagés (armes ET améliorations) ──────────────────────────
+
+  /**
+   * Combien d'emplacements consomment les améliorations RÉELLEMENT posées
+   * (persistées) sur ce véhicule.
+   *
+   * Pourquoi ce helper existe-t-il à côté de `VehicleBuild.totalEmplacements()` ?
+   * Ce dernier répond à EXACTEMENT la même question (cf. `vehicle-build.ts`) —
+   * mais reconstruire toute la chaîne `VehicleBuild` juste pour lire un total
+   * d'emplacements serait un détour coûteux et conceptuellement déplacé : ce
+   * helper sert `checkCandidate` (qui, lui, construit DÉJÀ une chaîne — donc
+   * pourrait l'utiliser directement) ET `WeaponService` (qui n'a STRUCTURELLEMENT
+   * aucune chaîne à disposition — les armes ne sont pas des décorateurs, cf.
+   * note de conception du plan). Plutôt que de dupliquer ce calcul ou d'exposer
+   * la machinerie `VehicleBuild` à `WeaponService` (qui n'en a pas besoin pour le
+   * reste), un seul helper PUBLIC et SANS ÉTAT — une simple somme sur les lignes
+   * persistées — sert les deux appelants de façon identique et triviale à tester.
+   *
+   * `vehicle.improvements` doit avoir été chargé au préalable (cf. `findOneForUser`).
+   */
+  improvementSlotsOf(vehicle: Vehicle): number {
+    return vehicle.improvements.reduce((total, improvement) => {
+      const amelioration = this.catalogService.getAmeliorationByNomInterne(improvement.nomInterne);
+      // Incohérence de données (catalogue modifié après coup...) — même posture
+      // que `getBuild` : on ne masque pas le problème, on le signale clairement.
+      if (!amelioration) {
+        throw new Error(
+          `Amélioration catalogue inconnue : "${improvement.nomInterne}" (véhicule #${vehicle.id})`,
+        );
+      }
+      return total + amelioration.emplacement;
+    }, 0);
+  }
+
+  /**
+   * Combien d'emplacements consomment les armes RÉELLEMENT montées (persistées)
+   * sur ce véhicule — miroir exact de `improvementSlotsOf` ci-dessus, même
+   * raisonnement (cf. son commentaire), pour le pool partagé `Vehicule.emplacements`.
+   *
+   * `vehicle.weapons` doit avoir été chargé au préalable (cf. `findOneForUser`).
+   */
+  weaponSlotsOf(vehicle: Vehicle): number {
+    return vehicle.weapons.reduce((total, weapon) => {
+      const arme = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+      if (!arme) {
+        throw new Error(
+          `Arme catalogue inconnue : "${weapon.nomInterne}" (véhicule #${vehicle.id})`,
+        );
+      }
+      return total + arme.emplacement;
+    }, 0);
   }
 
   // ── Assemblage ──────────────────────────────────────────────────────────────
@@ -139,7 +268,7 @@ export class VehicleService {
       return fail(`Amélioration inconnue du catalogue : "${nomInterne}"`);
     }
 
-    return this.checkCandidate(this.getBuild(vehicle), amelioration, opts);
+    return this.checkCandidate(vehicle, this.getBuild(vehicle), amelioration, opts);
   }
 
   /**
@@ -156,8 +285,21 @@ export class VehicleService {
    * pas entre deux vérifications consécutives). En séparant "construire la chaîne
    * actuelle" (coûteux, fait UNE fois) de "tester un candidat dessus" (pur, en
    * mémoire, répétable à volonté), chaque appelant ne paie que ce dont il a besoin.
+   *
+   * ⚠️ `vehicle` est requis EN PLUS de `currentBuild` : la chaîne `VehicleBuild`
+   * ne connaît QUE les améliorations (`totalEmplacements()`, cf. son en-tête —
+   * périmètre volontairement restreint, pour ne pas mélanger deux préoccupations
+   * dans le Décorateur). Or `Vehicule.emplacements` est un pool PARTAGÉ entre
+   * améliorations ET armes (cf. plan, "Décision de conception tranchée") : valider
+   * "cette chaîne d'améliorations est cohérente" ne suffit pas — il faut AUSSI
+   * vérifier que la chaîne, une fois étendue avec le candidat, tient encore dans
+   * ce pool COMMUN aux armes déjà montées. D'où la vérification complémentaire
+   * ci-dessous, délibérément placée APRÈS `validate()` — elle ne s'exécute que si
+   * la chaîne est par ailleurs cohérente, évitant de masquer une vraie erreur de
+   * règle métier derrière un message générique de dépassement d'emplacements.
    */
   private checkCandidate(
+    vehicle: Vehicle,
     currentBuild: VehicleBuild,
     amelioration: Amelioration,
     opts?: BuildOptions,
@@ -171,8 +313,26 @@ export class VehicleService {
     };
     const candidateBuild = this.decoratorFactory.wrap(currentBuild, amelioration, candidateInstance);
 
-    // "Valider" : et c'est tout — `candidateBuild` est abandonné au retour, sans trace.
-    return candidateBuild.validate();
+    // "Valider" : la chaîne d'améliorations est-elle cohérente avec ELLE-MÊME ?
+    const chainResult = candidateBuild.validate();
+    if (!chainResult.ok) {
+      return chainResult;
+    }
+
+    // Et MAINTENANT, le pool d'emplacements PARTAGÉ : la chaîne candidate
+    // (améliorations, candidat inclus) PLUS les armes déjà montées tiennent-elles
+    // dans la capacité totale du véhicule ? `baseStats.emplacements` — pas
+    // `stats.emplacements` — car ce total est une caractéristique D'ORIGINE du
+    // véhicule (rien dans Gaslands ne l'augmente ; cf. la distinction baseStats/
+    // stats documentée dans `VehicleBuild`).
+    const totalDemande = candidateBuild.totalEmplacements() + this.weaponSlotsOf(vehicle);
+    if (totalDemande > candidateBuild.baseStats.emplacements) {
+      return fail(
+        `Emplacements insuffisants : ${totalDemande}/${candidateBuild.baseStats.emplacements} requis avec "${amelioration.nom}"`,
+      );
+    }
+
+    return ok();
   }
 
   /**
@@ -210,7 +370,7 @@ export class VehicleService {
     const currentBuild = this.getBuild(vehicle);
 
     return sponsor.ameliorations.map((amelioration): AvailableImprovementDto => {
-      const result = this.checkCandidate(currentBuild, amelioration);
+      const result = this.checkCandidate(vehicle, currentBuild, amelioration);
       return {
         nom: amelioration.nom,
         nomInterne: amelioration.nom_interne,

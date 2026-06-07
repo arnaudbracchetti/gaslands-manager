@@ -1,0 +1,50 @@
+<!--
+  Ligne de catalogue d'équipement (arme ou amélioration) — cf. en-tête de equipment-option.ts.
+
+  Logique d'affichage — DEUX nuances de "raison" se distinguent désormais
+  (cf. doc de `requiresOrientation` et le commentaire de conception du backend,
+  `VehicleService.getAvailableImprovements`/`WeaponService.getAvailableWeapons`) :
+
+   - "il manque une information" (orientation requise)  → on affiche QUAND MÊME
+     "Ajouter" (qui ouvre le sélecteur) : ce n'est pas un refus, juste une étape
+     supplémentaire avant l'ajout. La raison brute n'est pas affichée — le
+     sélecteur qui apparaît au clic EST la réponse à ce message.
+   - "c'est interdit" (sponsor/emplacements/règle de pose...) → on affiche LA
+     raison telle quelle, et aucun bouton : rien à faire pour cette option ici.
+-->
+<div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()">
+
+  <div class="option__info">
+    <span class="option__name">{{ option().nom }}</span>
+    <span class="option__stat" title="Coût en jerricans">{{ option().prix }} 🛢️</span>
+    <span class="option__stat" title="Emplacements requis">🔧 {{ option().emplacement }}</span>
+  </div>
+
+  @if (!option().disponible && !requiresOrientation()) {
+    <!-- Refus définitif — la raison vient du backend (RuleResult.reason),
+         cf. WeaponService.checkCandidate / ImprovementDecorator.validate -->
+    <p class="option__reason">{{ option().raison }}</p>
+  } @else if (choosingOrientation()) {
+    <!-- Sélecteur d'orientation — affiché après clic sur "Ajouter" pour un
+         équipement orientable (cf. EquipmentOption.onAddClicked) -->
+    <div class="option__orientations">
+      <span class="option__orientations-label">Orientation :</span>
+      @for (orientation of orientations; track orientation) {
+        <button
+          class="orientation-btn"
+          type="button"
+          (click)="onOrientationChosen(orientation)">
+          {{ orientation }}
+        </button>
+      }
+      <button class="orientation-cancel" type="button" (click)="cancelOrientation()">
+        Annuler
+      </button>
+    </div>
+  } @else {
+    <button class="option__add" type="button" (click)="onAddClicked()">
+      Ajouter
+    </button>
+  }
+
+</div>

@@ -10,15 +10,18 @@
  * en paramètre et vérifient que l'équipe appartient bien à cet utilisateur.
  * Cela empêche un utilisateur A de voir ou modifier les équipes d'un utilisateur B.
  *
- * vehicleCount : chaque équipe retournée inclut un compteur de véhicules.
- * Pour l'instant il vaut toujours 0 (les véhicules ne sont pas encore implémentés).
- * Ce champ est utilisé par le frontend pour verrouiller le choix du sponsor
- * dès qu'un premier véhicule est ajouté à l'équipe.
+ * vehicleCount : chaque équipe retournée inclut un compteur de véhicules,
+ * calculé via un `COUNT` SQL sur la table `vehicles` (cf. `countVehicles`
+ * ci-dessous) — jamais stocké en colonne, pour ne jamais désynchroniser ce
+ * compteur de la réalité (cf. `TeamWithCount`, ARCHITECTURE.md §3.4). Ce champ
+ * est utilisé par le frontend pour verrouiller le choix du sponsor dès qu'un
+ * premier véhicule est ajouté à l'équipe.
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from './team.entity';
+import { Vehicle } from '../vehicle/vehicle.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
@@ -30,18 +33,47 @@ export class TeamService {
     // Le Repository est le DAO (Data Access Object) : il expose find(), save(), etc.
     @InjectRepository(Team)
     private teamRepo: Repository<Team>,
+    // Repository<Vehicle> — uniquement pour COMPTER (cf. `countVehicles`), jamais
+    // pour lire/écrire des véhicules (ce serait le rôle de `VehicleService`).
+    // Enregistré directement via `forFeature([Team, Vehicle])` dans `TeamModule`
+    // plutôt qu'en important `VehicleModule` — voir son en-tête pour la raison
+    // (éviter tout cycle `TeamModule ↔ VehicleModule`).
+    @InjectRepository(Vehicle)
+    private vehicleRepo: Repository<Vehicle>,
   ) {}
 
   /**
-   * Retourne toutes les équipes appartenant à l'utilisateur,
-   * enrichies avec vehicleCount (0 tant que les véhicules ne sont pas implémentés).
+   * Compte les véhicules d'une équipe — un simple `SELECT COUNT(*) WHERE teamId = …`.
+   * Extrait en méthode privée car utilisé à deux endroits (`findByUserId`/`update`)
+   * avec exactement la même logique : éviter de la dupliquer, et donner un nom
+   * qui documente l'intention au lieu d'un `count(...)` anonyme répété.
+   */
+  private countVehicles(teamId: number): Promise<number> {
+    return this.vehicleRepo.count({ where: { teamId } });
+  }
+
+  /**
+   * Retourne toutes les équipes appartenant à l'utilisateur, enrichies avec
+   * vehicleCount — un vrai comptage SQL, un par équipe.
+   *
+   * N équipes ⇒ N requêtes `COUNT` — un schéma "N+1" assumé et documenté :
+   * le nombre d'équipes par utilisateur reste typiquement faible (quelques
+   * unités), et chaque requête est triviale (index sur `teamId`). Une
+   * optimisation grouperait les comptages en une seule requête (`GROUP BY
+   * teamId`) si ce nombre devenait significatif — pas nécessaire ici.
+   *
    * La clause `where: { userId }` est traduite en SQL : WHERE "userId" = $1
    */
   async findByUserId(userId: number): Promise<TeamResponseDto[]> {
     const teams = await this.teamRepo.find({ where: { userId } });
-    // TODO: remplacer vehicleCount: 0 par un vrai comptage SQL quand
-    // la table Vehicle sera créée (relation OneToMany Team → Vehicle)
-    return teams.map((team: Team): TeamResponseDto => ({ ...team, vehicleCount: 0 }));
+    return Promise.all(
+      teams.map(
+        async (team: Team): Promise<TeamResponseDto> => ({
+          ...team,
+          vehicleCount: await this.countVehicles(team.id),
+        }),
+      ),
+    );
   }
 
   /**
@@ -68,7 +100,10 @@ export class TeamService {
    *
    * teamRepo.create() instancie l'objet Team en mémoire (sans toucher la BDD).
    * teamRepo.save() exécute l'INSERT et retourne l'entité avec son id généré.
-   * Retourne l'équipe enrichie avec vehicleCount: 0 (nouvelle équipe sans véhicule).
+   * `vehicleCount: 0` ici n'est PAS un placeholder (contrairement à l'ancienne
+   * version de ce service) : une équipe tout juste créée n'a, par construction,
+   * encore aucun véhicule — la valeur est exacte sans qu'il soit besoin de
+   * `countVehicles` (qui interrogerait la BDD pour redécouvrir un fait déjà connu).
    */
   async create(userId: number, dto: CreateTeamDto): Promise<TeamResponseDto> {
     const team = this.teamRepo.create({
@@ -91,8 +126,7 @@ export class TeamService {
     const team = await this.findOneForUser(id, userId);
     Object.assign(team, dto);
     const saved = await this.teamRepo.save(team);
-    // TODO: recalculer vehicleCount depuis la BDD quand les véhicules seront ajoutés
-    return { ...saved, vehicleCount: 0 };
+    return { ...saved, vehicleCount: await this.countVehicles(saved.id) };
   }
 
   /**

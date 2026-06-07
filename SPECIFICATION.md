@@ -76,6 +76,8 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 
 **Règle de verrouillage du sponsor** : dès qu'un premier véhicule est ajouté à une équipe, le sponsor ne peut plus être modifié. Le carousel affiche un badge 🔒 et bloque la navigation. Cette règle est appliquée côté frontend via le champ `vehicleCount` retourné par l'API.
 
+**Résumé des véhicules sur la carte** : chaque carte d'équipe affiche la liste de ses véhicules — nom (résolu depuis le catalogue via `nomInterne`) et coût total (prix de base du véhicule + somme des prix de ses armes et améliorations montées). Le frontend charge cette liste via `GET /api/teams/:id/vehicles` et résout les prix via le catalogue du sponsor (`GET /api/catalog/sponsors/:nom`, déjà chargé pour le carousel/builder). **Cas particulier de la Tourelle** : son coût réel (3× le prix de l'arme associée) ne peut pas être déterminé — `VehicleImprovement` ne mémorise pas quelle arme une Tourelle équipe. Le frontend l'exclut donc du total et préfixe l'affichage d'un « ≈ » pour signaler un montant minoré (cf. `VehicleSummary.coutApproximatif`, `apps/frontend/src/app/teams/vehicle-summary.ts`).
+
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
 ### 3.5 Navigation
@@ -191,13 +193,24 @@ Une amélioration installée sur un véhicule (instance de jeu). Référence l'a
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 
-### `Weapon` _(entité DB à créer)_
+### `Weapon` _(implémentée — module Weapon)_
+
+Une arme montée sur un véhicule (instance de jeu). Référence l'arme du catalogue
+par `nom_interne`, pour les mêmes raisons que `Vehicle.nomInterne`/`VehicleImprovement.nomInterne`
+ci-dessus (clé stable, sans accents ni espaces, distingue les variantes).
+
+Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de
+`comportement` : les armes ne modifient jamais les statistiques du véhicule —
+pas de Pattern Decorator nécessaire (cf. `weapon.entity.ts`/`weapon.service.ts`,
+en-têtes). Seules les règles de pose (sponsor, orientation, emplacements) s'appliquent.
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `nomInterne` | string | référence vers `Arme.nom_interne` du catalogue (même convention que `Vehicle.nomInterne`) |
-| `vehicleId` | number | FK → Vehicle |
+| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | nullable — **obligatoire** pour toute arme dont `type !== 'équipage'` (montée sur un arc de tir précis), **interdite** pour les armes de type `équipage` (portées par un équipier, tir à 360° automatique) |
+| `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
+| `createdAt` | Date | auto |
 
 ---
 
@@ -239,20 +252,24 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés par l
 | PUT | `/api/teams/:id` | JWT | Modifier une équipe |
 | DELETE | `/api/teams/:id` | JWT | Supprimer une équipe |
 
-### Véhicules _(à implémenter)_
+### Véhicules
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/teams/:id/vehicles` | JWT | Véhicules d'une équipe |
-| POST | `/api/teams/:id/vehicles` | JWT | Ajouter un véhicule |
-| PUT | `/api/vehicles/:id` | JWT | Modifier un véhicule |
-| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule |
+| GET | `/api/teams/:id/vehicles` | JWT | Véhicules d'une équipe _(implémentée)_ |
+| POST | `/api/teams/:id/vehicles` | JWT | Ajouter un véhicule — crée le véhicule "nu", validé contre le catalogue du sponsor _(implémentée)_ |
+| GET | `/api/vehicles/:id` | JWT | Détail "monté" d'un véhicule (stats + récapitulatif, cf. `VehicleBuild`) _(implémentée)_ |
+| GET | `/api/vehicles/:id/available-improvements` | JWT | Améliorations du sponsor avec verdict de disponibilité _(implémentée)_ |
+| POST | `/api/vehicles/:id/improvements` | JWT | Ajouter une amélioration (validation puis persistance) _(implémentée)_ |
+| PUT | `/api/vehicles/:id` | JWT | Modifier un véhicule _(à implémenter)_ |
+| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule _(à implémenter)_ |
 
-### Armes _(à implémenter)_
+### Armes _(implémentée — module Weapon)_
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule |
+| GET | `/api/vehicles/:id/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité (sponsor + orientation + emplacements) |
+| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (validation puis persistance) |
 | DELETE | `/api/weapons/:id` | JWT | Retirer une arme |
 
 ---
