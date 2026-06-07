@@ -23,6 +23,16 @@
  * co-localisation par USAGE RÉEL que pour les cinq autres (cf. paragraphe
  * précédent) : c'est `VehicleService` qui encapsule tous les appels HTTP relatifs
  * aux véhicules d'équipe, peu importe quel composant les déclenche.
+ *
+ * Trois dernières méthodes, `remove`/`removeWeapon`/`removeImprovement`, servent
+ * la fonctionnalité "modifier/supprimer un véhicule depuis la carte d'équipe" :
+ * la première à `Teams` (suppression d'un véhicule entier), les deux autres à
+ * `VehicleEditor` (retrait d'équipement — mirroir symétrique d'`addWeapon`/
+ * `addImprovement`, sauf qu'un retrait est TOUJOURS permis : pas de "vérification
+ * à blanc" côté backend, cf. `WeaponService.removeWeapon`/`VehicleService.
+ * removeImprovement`). Toutes trois suivent la convention REST `204 No Content`
+ * — d'où `Observable<void>`, rien à transmettre dans le corps de la requête NI
+ * à attendre en retour.
  */
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -103,5 +113,37 @@ export class VehicleService {
    */
   getAllForTeam(teamId: number): Observable<Vehicle[]> {
     return this.http.get<Vehicle[]>(`/api/teams/${teamId}/vehicles`);
+  }
+
+  /**
+   * DELETE /api/vehicles/:id → supprime le véhicule (et, par cascade côté
+   * backend, tout son équipement). Utilisé par `Teams.deleteVehicle`, après
+   * confirmation de l'utilisateur (cf. `window.confirm`, mirroir de `deleteTeam`).
+   */
+  remove(vehicleId: number): Observable<void> {
+    return this.http.delete<void>(`/api/vehicles/${vehicleId}`);
+  }
+
+  /**
+   * DELETE /api/weapons/:id → retire une arme montée sur un véhicule.
+   *
+   * Route "à plat" sous `/weapons` (pas `/vehicles/:id/weapons/:weaponId`) —
+   * reflet exact de la route backend (cf. `WeaponController`, en-tête) : `Weapon`
+   * porte son propre id, inutile de faire transiter `vehicleId` dans l'URL.
+   */
+  removeWeapon(weaponId: number): Observable<void> {
+    return this.http.delete<void>(`/api/weapons/${weaponId}`);
+  }
+
+  /**
+   * DELETE /api/vehicles/:id/improvements/:improvementId → retire une amélioration
+   * posée sur un véhicule (mirroir d'`addImprovement`, mais en sens inverse).
+   *
+   * Route nichée sous `/vehicles/:id` — reflet exact de la route backend
+   * (cf. `VehicleController.removeImprovement`, en-tête : symétrique de
+   * `POST :id/improvements`, contrairement à `Weapon` qui a sa propre route "à plat").
+   */
+  removeImprovement(vehicleId: number, improvementId: number): Observable<void> {
+    return this.http.delete<void>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
   }
 }

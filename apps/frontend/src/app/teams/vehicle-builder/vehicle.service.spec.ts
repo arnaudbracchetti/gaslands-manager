@@ -191,4 +191,54 @@ describe('VehicleService', () => {
       expect(result).toEqual([equipped]);
     });
   });
+
+  // ── remove() ────────────────────────────────────────────────────────────────
+  // Trois méthodes de retrait/suppression — convention REST `204 No Content`,
+  // d'où `req.flush(null)` (rien dans le corps de la réponse, cf. en-tête du service).
+
+  describe('remove()', () => {
+    it('effectue DELETE /api/vehicles/:id', () => {
+      let completed = false;
+
+      service.remove(7).subscribe(() => { completed = true; });
+
+      const req = httpMock.expectOne('/api/vehicles/7');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      expect(completed).toBe(true);
+    });
+  });
+
+  // ── removeWeapon() ──────────────────────────────────────────────────────────
+
+  describe('removeWeapon()', () => {
+    it('effectue DELETE /api/weapons/:id — route "à plat", reflet exact du backend', () => {
+      let completed = false;
+
+      service.removeWeapon(9).subscribe(() => { completed = true; });
+
+      const req = httpMock.expectOne('/api/weapons/9');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      expect(completed).toBe(true);
+    });
+  });
+
+  // ── removeImprovement() ─────────────────────────────────────────────────────
+
+  describe('removeImprovement()', () => {
+    it('effectue DELETE /api/vehicles/:id/improvements/:improvementId — route nichée, mirroir d\'addImprovement', () => {
+      let completed = false;
+
+      service.removeImprovement(7, 3).subscribe(() => { completed = true; });
+
+      const req = httpMock.expectOne('/api/vehicles/7/improvements/3');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      expect(completed).toBe(true);
+    });
+  });
 });

@@ -411,4 +411,49 @@ export class VehicleService {
 
     return this.findOneForUser(vehicleId, userId);
   }
+
+  // ── Retrait d'équipement et suppression ─────────────────────────────────────
+
+  /**
+   * Retire une amélioration posée sur ce véhicule.
+   *
+   * Aucune vérification de règle métier au préalable — comme `WeaponService.
+   * removeWeapon` (cf. son en-tête) : retirer un équipement est TOUJOURS permis,
+   * seul l'AJOUT est soumis à validation (`canAddImprovement`/`checkCandidate`).
+   * Retirer ne peut JAMAIS rendre une chaîne déjà valide invalide — au contraire,
+   * cela ne fait que libérer des emplacements et retirer des effets.
+   *
+   * `findOneForUser` vérifie déjà l'appartenance ET charge `vehicle.improvements`
+   * — la relation est directement réutilisée pour localiser l'amélioration visée
+   * (pas de second aller-retour SQL ciblé sur `VehicleImprovement`).
+   *
+   * Lève `NotFoundException` si l'amélioration n'existe pas SUR CE véhicule —
+   * qu'elle n'existe pas du tout, ou qu'elle appartienne à un autre véhicule
+   * (même de l'utilisateur courant) : les deux cas sont indiscernables pour
+   * l'appelant, par conception (même principe de non-divulgation que `findOneForUser`).
+   */
+  async removeImprovement(vehicleId: number, improvementId: number, userId: number): Promise<void> {
+    const vehicle = await this.findOneForUser(vehicleId, userId);
+
+    const improvement = vehicle.improvements.find((i) => i.id === improvementId);
+    if (!improvement) {
+      throw new NotFoundException(`Amélioration #${improvementId} introuvable sur le véhicule #${vehicleId}`);
+    }
+
+    await this.improvementRepo.remove(improvement);
+  }
+
+  /**
+   * Supprime le véhicule — et, par cascade TypeORM (`onDelete: 'CASCADE'`, cf.
+   * `vehicle.entity.ts`), tout son équipement (`improvements`/`weapons`) en une
+   * seule opération SQL : aucun retrait manuel préalable n'est nécessaire.
+   *
+   * `findOneForUser` vérifie déjà l'appartenance et lève `NotFoundException`
+   * sinon — on n'a rien à dupliquer ici, juste à laisser l'exception remonter
+   * (même principe que `findAllForTeam`/`create`, qui délèguent de même).
+   */
+  async remove(id: number, userId: number): Promise<void> {
+    const vehicle = await this.findOneForUser(id, userId);
+    await this.vehicleRepo.remove(vehicle);
+  }
 }

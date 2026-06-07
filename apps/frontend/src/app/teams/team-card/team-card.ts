@@ -14,7 +14,7 @@
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { Team } from '../team.model';
-import { VehicleSummary } from '../vehicle-summary';
+import { TeamVehiclePair, VehicleSummary } from '../vehicle-summary';
 
 @Component({
   selector: 'app-team-card',
@@ -72,4 +72,23 @@ export class TeamCard {
    * component d'en connaître la raison, juste de signaler l'intention.
    */
   addVehicleClicked: OutputEmitterRef<Team> = output<Team>();
+
+  /**
+   * Émis quand l'utilisateur clique sur "Modifier" pour UN véhicule de la liste.
+   * Le parent (`Teams`) ouvre `VehicleEditor` pour cette paire (équipe, véhicule)
+   * — cf. `Teams.openVehicleEditor`.
+   *
+   * Porte une `TeamVehiclePair` plutôt que le seul `VehicleSummary` : `TeamCard`
+   * est la SEULE à connaître les deux moitiés à cet instant (elle reçoit `team`
+   * en input ET itère sur `vehicles()`) — cf. doc de `TeamVehiclePair` pour le
+   * raisonnement complet sur ce choix d'assemblage.
+   */
+  editVehicleClicked: OutputEmitterRef<TeamVehiclePair> = output<TeamVehiclePair>();
+
+  /**
+   * Émis quand l'utilisateur clique sur "Supprimer" pour UN véhicule de la liste.
+   * Le parent gère la confirmation (`window.confirm`, mirroir de `deleteClicked`
+   * sur l'équipe entière) et l'appel à l'API — cf. `Teams.deleteVehicle`.
+   */
+  deleteVehicleClicked: OutputEmitterRef<TeamVehiclePair> = output<TeamVehiclePair>();
 }

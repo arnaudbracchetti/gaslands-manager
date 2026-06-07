@@ -1,0 +1,159 @@
+/* ── VehicleEditor — gestion de l'équipement d'un véhicule existant ─────────── */
+/* Mirroir délibéré de vehicle-builder.scss (préfixe `.ve-` au lieu de `.vb-` —
+   cf. en-tête de vehicle-editor.ts) : mêmes teintes, mêmes espacements, pour
+   une cohérence visuelle entre les deux modales d'équipement. La section
+   `.ve-current` est la seule véritable nouveauté (absente du builder). */
+
+.ve {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: min(640px, 80vw);
+  max-width: 720px;
+}
+
+/* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
+
+.ve-status {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #999;
+
+  &--loading {
+    color: #7ec8e3;
+  }
+
+  &--error {
+    color: #e94560;
+  }
+}
+
+/* ── Introduction ───────────────────────────────────────────────────────────── */
+
+.ve-intro {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #e0e0e0;
+
+  strong {
+    color: #7ec8e3;
+  }
+}
+
+/* ── Équipement actuel — liste retirable (nouveau, absent du builder) ──────── */
+
+.ve-current {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.ve-current__title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+.ve-current__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ve-current__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #1a1a28;
+  border: 1px solid #2a2a3a;
+  border-radius: 4px;
+}
+
+.ve-current__name {
+  font-size: 0.86rem;
+  color: #e0e0e0;
+}
+
+.ve-current__orientation {
+  margin-left: 6px;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.ve-current__remove {
+  background: transparent;
+  border: 1px solid #e94560;
+  color: #e94560;
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #e94560;
+    color: #0a0a14;
+  }
+}
+
+/* ── Équipement disponible — sections (mirroir exact de .vb-equipment*) ────── */
+
+.ve-equipment {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ve-equipment__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ve-equipment__title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+.ve-equipment__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Pied de modale : bouton de fermeture ───────────────────────────────────── */
+
+.ve-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.ve-close {
+  background: #e94560;
+  border: none;
+  color: #0a0a14;
+  padding: 9px 22px;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}

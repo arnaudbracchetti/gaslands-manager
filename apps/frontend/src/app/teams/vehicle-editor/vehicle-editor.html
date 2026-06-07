@@ -1,0 +1,122 @@
+<!--
+  VehicleEditor — gabarit mirroir de l'ÉTAPE 2 de VehicleBuilder (cf. son en-tête
+  et `vehicle-builder.html`), enrichi d'une section "Équipement actuel" permettant
+  le retrait (absente du builder — un véhicule fraîchement créé n'a rien à retirer).
+
+  Structure générale identique : on attend véhicule ET catalogue avant d'afficher
+  quoi que ce soit (`@if (loading())` / `@else if (error())` / `@else if (vehicle(); as v) {…}`),
+  même raisonnement que le `@if (sponsorCatalog(); as catalog)` du builder.
+-->
+<div class="ve">
+
+  @if (loading()) {
+    <p class="ve-status ve-status--loading">Chargement du véhicule…</p>
+  } @else if (error()) {
+    <p class="ve-status ve-status--error">{{ error() }}</p>
+  } @else if (vehicle(); as v) {
+
+    <p class="ve-intro">
+      Équipement de
+      <strong>{{ chosenVehicule()?.nom ?? v.nomInterne }}</strong>
+      — emplacements utilisés :
+      <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
+      🔧
+    </p>
+
+    @if (equipmentError()) {
+      <p class="ve-status ve-status--error">{{ equipmentError() }}</p>
+    }
+
+    <!-- ═══ Équipement actuel — armes et améliorations montées, retirables ═══ -->
+    <section class="ve-current">
+      <h3 class="ve-current__title">Équipement actuel</h3>
+
+      @if (v.weapons.length === 0 && v.improvements.length === 0) {
+        <p class="ve-status">Ce véhicule n'a encore aucun équipement.</p>
+      } @else {
+        <ul class="ve-current__list">
+          @for (weapon of v.weapons; track weapon.id) {
+            <li class="ve-current__item">
+              <span class="ve-current__name">
+                {{ resolveWeaponName(weapon.nomInterne) }}
+                @if (weapon.orientation) {
+                  <span class="ve-current__orientation">({{ weapon.orientation }})</span>
+                }
+              </span>
+              <button
+                class="ve-current__remove"
+                type="button"
+                title="Retirer cette arme"
+                (click)="removeWeapon(weapon)">
+                Retirer
+              </button>
+            </li>
+          }
+          @for (improvement of v.improvements; track improvement.id) {
+            <li class="ve-current__item">
+              <span class="ve-current__name">
+                {{ resolveImprovementName(improvement.nomInterne) }}
+                @if (improvement.orientation) {
+                  <span class="ve-current__orientation">({{ improvement.orientation }})</span>
+                }
+              </span>
+              <button
+                class="ve-current__remove"
+                type="button"
+                title="Retirer cette amélioration"
+                (click)="removeImprovement(improvement)">
+                Retirer
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- ═══ Équipement disponible — mirroir EXACT de l'étape 2 du builder ═══ -->
+    @if (loadingEquipment()) {
+      <p class="ve-status ve-status--loading">Chargement des équipements disponibles…</p>
+    } @else {
+      <div class="ve-equipment">
+        <section class="ve-equipment__group">
+          <h3 class="ve-equipment__title">Armes</h3>
+          @if (availableWeapons().length === 0) {
+            <p class="ve-status">Aucune arme disponible pour ce sponsor.</p>
+          } @else {
+            <div class="ve-equipment__list">
+              @for (weapon of availableWeapons(); track weapon.nomInterne) {
+                <app-equipment-option
+                  [option]="weapon"
+                  [requiresOrientation]="weaponNeedsOrientation(weapon)"
+                  (chosen)="addWeapon($event)" />
+              }
+            </div>
+          }
+        </section>
+
+        <section class="ve-equipment__group">
+          <h3 class="ve-equipment__title">Améliorations</h3>
+          @if (availableImprovements().length === 0) {
+            <p class="ve-status">Aucune amélioration disponible pour ce sponsor.</p>
+          } @else {
+            <div class="ve-equipment__list">
+              @for (improvement of availableImprovements(); track improvement.nomInterne) {
+                <app-equipment-option
+                  [option]="improvement"
+                  [requiresOrientation]="improvementNeedsOrientation(improvement)"
+                  (chosen)="addImprovement($event)" />
+              }
+            </div>
+          }
+        </section>
+      </div>
+    }
+
+    <div class="ve-footer">
+      <!-- "Fermer" ferme la modale — `Teams` recharge la liste dans tous les cas
+           (cf. doc `closed` : coûts/équipement modifiés doivent être resynchronisés). -->
+      <button class="ve-close" type="button" (click)="close()">Fermer</button>
+    </div>
+  }
+
+</div>

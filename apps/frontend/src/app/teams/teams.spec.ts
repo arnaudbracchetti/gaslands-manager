@@ -29,8 +29,10 @@ import { Team, CreateTeamDto } from './team.model';
 import { CatalogService } from '../catalog/catalog.service';
 import { VehicleService } from './vehicle-builder/vehicle.service';
 import { VehicleBuilder } from './vehicle-builder/vehicle-builder';
+import { VehicleEditor } from './vehicle-editor/vehicle-editor';
 import { Vehicle } from './vehicle-builder/vehicle-builder.model';
 import { Sponsor } from '../catalog/catalog.model';
+import { TeamVehiclePair, VehicleSummary } from './vehicle-summary';
 
 // Équipes fictives
 const mockTeams: Team[] = [
@@ -123,6 +125,9 @@ describe('Teams Component', () => {
     addWeapon: ReturnType<typeof vi.fn>;
     addImprovement: ReturnType<typeof vi.fn>;
     getAllForTeam: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+    removeWeapon: ReturnType<typeof vi.fn>;
+    removeImprovement: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -146,8 +151,11 @@ describe('Teams Component', () => {
     };
 
     // VehicleService : injecté par VehicleBuilder (5 premières méthodes, cf.
-    // teams.spec.ts plus haut) ET par `loadVehicleSummaries` via `getAllForTeam`
-    // (cf. en-tête de `vehicle.service.ts` — "sixième méthode, hors flux").
+    // teams.spec.ts plus haut), par `loadVehicleSummaries` via `getAllForTeam`
+    // (cf. en-tête de `vehicle.service.ts` — "sixième méthode, hors flux"), ET
+    // désormais par `VehicleEditor` (rendu dans sa modale dès que `editingVehicle`
+    // est non-nul — mêmes méthodes que le builder + les trois de retrait/suppression,
+    // cf. `Teams.deleteVehicle`/`VehicleEditor.removeWeapon`/`removeImprovement`).
     // Valeur par défaut `of([])` : suffisante pour les tests qui ne portent PAS
     // sur les résumés (équipes sans véhicule par défaut, cf. `mockTeams`).
     mockVehicleService = {
@@ -157,6 +165,9 @@ describe('Teams Component', () => {
       addWeapon: vi.fn(),
       addImprovement: vi.fn(),
       getAllForTeam: vi.fn().mockReturnValue(of([])),
+      remove: vi.fn(),
+      removeWeapon: vi.fn(),
+      removeImprovement: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -399,6 +410,127 @@ describe('Teams Component', () => {
 
     expect(component.buildingTeam()).toBeNull();
     expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Modale de gestion d'équipement d'un véhicule ───────────────────────────
+  // Mirroir de la section "Modale de construction de véhicule" ci-dessus —
+  // mêmes assertions, méthodes et chemins de fermeture, adaptés au couple
+  // {team, vehicleId} (cf. doc de `editingVehicle`/`openVehicleEditor`).
+
+  describe('Modale de gestion d\'équipement', () => {
+    // `VehicleSummary` minimal — seul `id`/`nom` comptent ici (assemblage de la
+    // paire, message de confirmation), cf. doc de `TeamVehiclePair`.
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
+
+    it('n\'affiche pas la modale d\'édition d\'équipement au démarrage', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(component.editingVehicle()).toBeNull();
+      expect(compiled.querySelector('app-vehicle-editor')).toBeNull();
+    });
+
+    it('openVehicleEditor(pair) positionne editingVehicle (équipe + id du véhicule) et affiche la modale avec l\'éditeur', () => {
+      component.openVehicleEditor(mockPair);
+      fixture.detectChanges();
+
+      expect(component.editingVehicle()).toEqual({ team: mockTeams[0], vehicleId: 100 });
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-modal')).toBeTruthy();
+      expect(compiled.querySelector('app-vehicle-editor')).toBeTruthy();
+    });
+
+    it('closeVehicleEditor() ferme la modale et recharge la liste des équipes', () => {
+      component.openVehicleEditor(mockPair);
+      fixture.detectChanges();
+      vi.clearAllMocks(); // ne compter que les appels déclenchés par la fermeture elle-même
+
+      component.closeVehicleEditor();
+      fixture.detectChanges();
+
+      expect(component.editingVehicle()).toBeNull();
+      // cf. doc de closeVehicleEditor : rechargement SYSTÉMATIQUE — l'équipement
+      // (et donc le coût affiché) a pu changer, ajouts ET retraits confondus.
+      expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-modal')).toBeNull();
+    });
+
+    it('ferme la modale et recharge la liste au (closeRequested) de la modale — abandon en cours de route', () => {
+      component.openVehicleEditor(mockPair);
+      fixture.detectChanges();
+      vi.clearAllMocks();
+
+      const closeBtn = fixture.nativeElement.querySelector('.modal-close') as HTMLButtonElement;
+      closeBtn.click();
+      fixture.detectChanges();
+
+      expect(component.editingVehicle()).toBeNull();
+      expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('ferme la modale et recharge la liste au (closed) de l\'éditeur — fin normale du flux', () => {
+      component.openVehicleEditor(mockPair);
+      fixture.detectChanges();
+      vi.clearAllMocks();
+
+      // Mirroir de `builder.finish()` ailleurs : on appelle directement la
+      // méthode du composant projeté (couvert par vehicle-editor.spec.ts),
+      // ce test vérifie l'orchestration de `Teams`, pas l'éditeur lui-même.
+      const editor = fixture.debugElement.query(By.directive(VehicleEditor)).componentInstance as VehicleEditor;
+      editor.close();
+      fixture.detectChanges();
+
+      expect(component.editingVehicle()).toBeNull();
+      expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── Suppression d'un véhicule ──────────────────────────────────────────────
+  // Mirroir de la section "Suppression" (équipe) ci-dessus — même pattern
+  // `window.confirm`, mais SANS suppression optimiste (cf. doc de `deleteVehicle`,
+  // "vehicleCount doit être resynchronisé").
+
+  describe('Suppression d\'un véhicule', () => {
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
+
+    it('appelle VehicleService.remove() après confirmation et recharge la liste (resynchronisation de vehicleCount)', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockVehicleService.remove.mockReturnValue(of(undefined));
+      mockTeamsService.getAll.mockClear(); // ne compter que les appels déclenchés par deleteVehicle lui-même
+
+      component.deleteVehicle(mockPair);
+
+      expect(mockVehicleService.remove).toHaveBeenCalledExactlyOnceWith(100);
+      // PAS de suppression optimiste — `loadTeams()` recharge `teams` ET
+      // `vehicleSummaries` en un aller-retour (cf. doc de `deleteVehicle`).
+      expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('n\'appelle pas remove() si l\'utilisateur annule la confirmation', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
+
+      component.deleteVehicle(mockPair);
+
+      expect(mockVehicleService.remove).not.toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('affiche une erreur si la suppression échoue, sans recharger la liste', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockVehicleService.remove.mockReturnValue(throwError(() => new Error('API error')));
+      mockTeamsService.getAll.mockClear();
+
+      component.deleteVehicle(mockPair);
+
+      expect(component.error()).toContain('suppression');
+      expect(mockTeamsService.getAll).not.toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
   });
 
   // ── Résumés des véhicules sur les cartes (vehicleSummaries) ────────────────

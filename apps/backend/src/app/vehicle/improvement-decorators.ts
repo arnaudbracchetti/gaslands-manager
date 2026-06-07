@@ -62,7 +62,7 @@ export class ChenillesDecorator extends ImprovementDecorator {
  * la Factory ⇒ même règle ; seul le prix catalogue diffère, ce qui ne regarde pas le build).
  */
 export class MembreEquipageDecorator extends ImprovementDecorator {
-  private static readonly MULTIPLICATEUR_MAX = 2;
+  private static readonly MULTIPLICATEUR_MAX: number = 2;
 
   override get stats(): VehicleStats {
     return { ...this.inner.stats, equipage: this.inner.stats.equipage + 1 };

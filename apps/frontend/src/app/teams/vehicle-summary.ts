@@ -18,6 +18,7 @@
  */
 import { Vehicle } from './vehicle-builder/vehicle-builder.model';
 import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
+import { Team } from './team.model';
 
 /**
  * Vue affichable d'un véhicule d'équipe — tout ce dont `TeamCard` a besoin
@@ -44,6 +45,27 @@ export interface VehicleSummary {
    * l'absence de lien Tourelle ↔ Arme dans `VehicleImprovement`).
    */
   coutApproximatif: boolean;
+}
+
+/**
+ * Paire (équipe, résumé de véhicule) — portée par les outputs `editVehicleClicked`/
+ * `deleteVehicleClicked` de `TeamCard` (cf. leur doc).
+ *
+ * Pourquoi ce détour plutôt qu'émettre directement le `VehicleSummary` ou son
+ * `id` ? Parce que `Teams` a besoin des DEUX informations pour agir : le
+ * véhicule visé (id pour l'appel API, nom pour le message de confirmation) ET
+ * l'équipe propriétaire (`VehicleEditor` exige `team` en input — cf. son en-tête,
+ * elle y résout le sponsor/catalogue ; `loadTeams` après suppression a aussi
+ * besoin de savoir quelle liste resynchroniser). Or `VehicleSummary` ne porte
+ * délibérément PAS `teamId` (cf. sa doc, "tout ce dont `TeamCard` a besoin" —
+ * une carte n'affiche qu'une seule équipe, inutile de la lui répéter par véhicule).
+ * `TeamCard` connaît les deux (elle reçoit `team` en input) : c'est donc elle qui
+ * doit les assembler au moment d'émettre, pas `Teams` qui devrait sinon les
+ * retrouver après coup par une recherche fragile.
+ */
+export interface TeamVehiclePair {
+  team: Team;
+  vehicle: VehicleSummary;
 }
 
 /**

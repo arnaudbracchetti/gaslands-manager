@@ -2,9 +2,20 @@
  * VehicleController — points d'entrée HTTP du module Vehicle.
  *
  * API REST sur `/api/vehicles` :
- *   GET  /api/vehicles/:id                       → détail "monté" (stats + récapitulatif)
- *   GET  /api/vehicles/:id/available-improvements → catalogue filtré par sponsor, avec verdict
- *   POST /api/vehicles/:id/improvements           → ajouter une amélioration
+ *   GET    /api/vehicles/:id                                  → détail "monté" (stats + récapitulatif)
+ *   GET    /api/vehicles/:id/available-improvements           → catalogue filtré par sponsor, avec verdict
+ *   POST   /api/vehicles/:id/improvements                     → ajouter une amélioration
+ *   DELETE /api/vehicles/:id/improvements/:improvementId      → retirer une amélioration
+ *   DELETE /api/vehicles/:id                                  → supprimer le véhicule
+ *
+ * Note de conception — `PUT /api/vehicles/:id` n'existe PAS (et n'est plus prévue) :
+ * `Vehicle` n'a aucun champ modifiable une fois créé. `nomInterne` est la clé catalogue
+ * du véhicule — l'UTILISER comme identifiant stable EST son rôle (cf. SPECIFICATION.md §5,
+ * "Vehicle") ; la changer reviendrait à transformer le véhicule en un autre, invalidant
+ * au passage tout son équipement déjà posé (vérifié contre LE CATALOGUE DE CE TYPE
+ * PRÉCIS, cf. `canAddImprovement`/`canAddWeapon`). Le seul "modifier" qui ait un sens
+ * pour `Vehicle` est donc de gérer son ÉQUIPEMENT — déjà couvert par les routes
+ * `POST`/`DELETE …/improvements` et `POST`/`DELETE …/weapons` (ce contrôleur + `WeaponController`).
  *
  * Note de conception — routes "à plat" `/api/vehicles/:id`, jamais nichées sous
  * `/teams/:id` : le plan d'architecture esquissait `GET /api/teams/:id/vehicles/:vehicleId`
@@ -25,7 +36,7 @@
  * `req.user.id` (injecté par `JwtStrategy`) est transmis au service, qui l'utilise pour
  * vérifier l'appartenance et lever `NotFoundException` (jamais `403`) en cas de refus.
  */
-import { Controller, Get, Post, Param, Body, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehicleService } from './vehicle.service';
 import { Vehicle } from './vehicle.entity';
@@ -104,5 +115,51 @@ export class VehicleController {
     return this.vehicleService.addImprovement(id, req.user.id, dto.nomInterne, {
       orientation: dto.orientation,
     });
+  }
+
+  /**
+   * DELETE /api/vehicles/:id/improvements/:improvementId
+   *
+   * Retire une amélioration posée sur ce véhicule — nichée ICI (et non dans un
+   * contrôleur dédié à `VehicleImprovement`) car elle réutilise directement la
+   * relation `improvements` déjà chargée par `findOneForUser` (cf. `VehicleService.
+   * removeImprovement`) : contrairement à `Weapon`, `VehicleImprovement` n'a pas
+   * de service propre — lui en créer un, pour cette unique opération, serait
+   * disproportionné. Symétrique de `POST :id/improvements` ci-dessus, qui vit
+   * déjà dans ce même contrôleur.
+   *
+   * Aucune vérification de règle métier avant retrait — comme `WeaponController.
+   * removeWeapon` : retirer un équipement est toujours permis, seul l'AJOUT est
+   * soumis à validation (cf. `VehicleService.removeImprovement`).
+   *
+   * `@HttpCode(204)` : suppression réussie sans contenu — convention REST standard.
+   */
+  @Delete(':id/improvements/:improvementId')
+  @HttpCode(204)
+  removeImprovement(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('improvementId', ParseIntPipe) improvementId: number,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<void> {
+    return this.vehicleService.removeImprovement(id, improvementId, req.user.id);
+  }
+
+  /**
+   * DELETE /api/vehicles/:id
+   *
+   * Supprime le véhicule et — par cascade TypeORM (`onDelete: 'CASCADE'`, cf.
+   * `vehicle.entity.ts`) — tout son équipement (`improvements`/`weapons`) en
+   * une seule opération. Mirroir exact de `WeaponController.removeWeapon` :
+   * même garde, même extraction de `req.user.id`, même `@HttpCode(204)`.
+   *
+   * Déclarée APRÈS les routes `:id/...` pour la même raison de lisibilité que
+   * `:id/available-improvements` après `:id` (cf. plus haut) — Nest les distingue
+   * sans ambiguïté grâce à leurs segments littéraux, peu importe l'ordre, mais
+   * autant grouper les routes spécifiques avant la plus générale qu'elles affinent.
+   */
+  @Delete(':id')
+  @HttpCode(204)
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest): Promise<void> {
+    return this.vehicleService.remove(id, req.user.id);
   }
 }

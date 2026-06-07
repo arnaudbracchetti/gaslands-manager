@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { TeamCard } from './team-card';
 import { Team } from '../team.model';
-import { VehicleSummary } from '../vehicle-summary';
+import { TeamVehiclePair, VehicleSummary } from '../vehicle-summary';
 
 // Équipe fictive utilisée dans tous les tests
 const mockTeam: Team = {
@@ -146,5 +146,40 @@ describe('TeamCard', () => {
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0]).toEqual(mockTeam);
+  });
+
+  // ── Outputs par véhicule ───────────────────────────────────────────────────
+  // Émettent une `TeamVehiclePair` (équipe courante + véhicule visé) — cf. doc
+  // de `editVehicleClicked`/`deleteVehicleClicked` : `TeamCard` est seule à
+  // connaître les deux moitiés de la paire au moment du clic.
+
+  it('émet editVehicleClicked avec la paire {équipe, véhicule} au clic sur "Modifier" un véhicule', () => {
+    fixture.componentRef.setInput('vehicles', mockVehicleSummaries);
+    fixture.detectChanges();
+
+    const emitted: TeamVehiclePair[] = [];
+    outputToObservable(component.editVehicleClicked).subscribe((p) => emitted.push(p));
+
+    const btn = fixture.nativeElement.querySelectorAll('.btn-vehicle-action--edit')[0] as HTMLButtonElement;
+    btn.click();
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual({ team: mockTeam, vehicle: mockVehicleSummaries[0] });
+  });
+
+  it('émet deleteVehicleClicked avec la paire {équipe, véhicule} au clic sur "Supprimer" un véhicule', () => {
+    fixture.componentRef.setInput('vehicles', mockVehicleSummaries);
+    fixture.detectChanges();
+
+    const emitted: TeamVehiclePair[] = [];
+    outputToObservable(component.deleteVehicleClicked).subscribe((p) => emitted.push(p));
+
+    // Deuxième véhicule de la liste — vérifie qu'on émet bien CELUI cliqué, pas
+    // systématiquement le premier (cf. assemblage par ligne dans le `@for`).
+    const btn = fixture.nativeElement.querySelectorAll('.btn-vehicle-action--delete')[1] as HTMLButtonElement;
+    btn.click();
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual({ team: mockTeam, vehicle: mockVehicleSummaries[1] });
   });
 });

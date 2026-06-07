@@ -78,6 +78,8 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 
 **Résumé des véhicules sur la carte** : chaque carte d'équipe affiche la liste de ses véhicules — nom (résolu depuis le catalogue via `nomInterne`) et coût total (prix de base du véhicule + somme des prix de ses armes et améliorations montées). Le frontend charge cette liste via `GET /api/teams/:id/vehicles` et résout les prix via le catalogue du sponsor (`GET /api/catalog/sponsors/:nom`, déjà chargé pour le carousel/builder). **Cas particulier de la Tourelle** : son coût réel (3× le prix de l'arme associée) ne peut pas être déterminé — `VehicleImprovement` ne mémorise pas quelle arme une Tourelle équipe. Le frontend l'exclut donc du total et préfixe l'affichage d'un « ≈ » pour signaler un montant minoré (cf. `VehicleSummary.coutApproximatif`, `apps/frontend/src/app/teams/vehicle-summary.ts`).
 
+**Modifier / supprimer un véhicule depuis la liste** : chaque ligne de la liste porte deux actions — ✏️ *Gérer l'équipement* et 🗑 *Supprimer*. "Modifier un véhicule" ne porte PAS sur ses caractéristiques de base (`nomInterne` immutable, cf. note sous le tableau d'API "Véhicules", §6) mais sur son équipement : le bouton ouvre `VehicleEditor` (mirroir de l'étape 2 de `VehicleBuilder`, enrichi du RETRAIT — `apps/frontend/src/app/teams/vehicle-editor/`), qui permet d'ajouter ET de retirer armes/améliorations sur un véhicule existant. La suppression d'un véhicule entier (`DELETE /api/vehicles/:id`, cascade sur son équipement) demande confirmation (`window.confirm`, mirroir de la suppression d'équipe) et **ne procède pas par suppression optimiste** : `vehicleCount` doit être resynchronisé après coup — il peut retomber à 0 et déverrouiller le choix du sponsor (cf. règle de verrouillage ci-dessus) — d'où un rechargement complet (`Teams.loadTeams`) après chaque action destructrice.
+
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
 ### 3.5 Navigation
@@ -93,32 +95,30 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 ## 4. Fonctionnalités à implémenter (backlog)
 
-### 4.1 Construction de véhicules
+> **Construction et gestion de véhicules : implémentées.** La sélection du sponsor,
+> l'ajout d'un véhicule, son équipement (armes/améliorations dans la limite des
+> emplacements), la modification de cet équipement et la suppression d'un véhicule
+> sont désormais opérationnels — cf. §3.4 et les composants `vehicle-builder`/
+> `vehicle-editor` côté frontend. Cette section du backlog ne porte donc plus que
+> sur les fonctionnalités encore à construire.
 
-Le catalogue de jeu est disponible (API `/api/catalog/`). La prochaine étape est de permettre la **construction de véhicules** dans une équipe :
-
-- Sélectionner un sponsor lors de la création d'équipe → le catalogue filtré est chargé
-- Ajouter un véhicule à une équipe (choix parmi les véhicules autorisés par le sponsor)
-- Équiper un véhicule avec des armes et améliorations (dans la limite des emplacements disponibles)
-- Modifier / supprimer un véhicule ou une arme
-
-### 4.2 Gestion du budget
+### 4.1 Gestion du budget
 
 - Afficher le budget restant d'une équipe (budget total − coût des véhicules − coût des armes − coût des améliorations)
 - Bloquer l'ajout si le budget est dépassé
 - Cas particulier : coût de la **Tourelle** = 3× le prix de l'arme associée
 
-### 4.3 Frontend — Consultation du catalogue
+### 4.2 Frontend — Consultation du catalogue
 
 - Remplacer les pages `/vehicles` et `/weapons` (actuellement placeholders Markdown) par une vue dynamique depuis l'API `/api/catalog/`
 - Permettre de filtrer par sponsor pour voir uniquement les items autorisés
 
-### 4.4 Tableau de bord
+### 4.3 Tableau de bord
 
 - Vue d'ensemble de toutes les équipes de l'utilisateur
 - Accès rapide à chaque équipe et ses véhicules
 
-### 4.5 Export (futur)
+### 4.4 Export (futur)
 
 - Fiche récapitulative d'une équipe au format imprimable (HTML/PDF)
 
@@ -261,8 +261,10 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés par l
 | GET | `/api/vehicles/:id` | JWT | Détail "monté" d'un véhicule (stats + récapitulatif, cf. `VehicleBuild`) _(implémentée)_ |
 | GET | `/api/vehicles/:id/available-improvements` | JWT | Améliorations du sponsor avec verdict de disponibilité _(implémentée)_ |
 | POST | `/api/vehicles/:id/improvements` | JWT | Ajouter une amélioration (validation puis persistance) _(implémentée)_ |
-| PUT | `/api/vehicles/:id` | JWT | Modifier un véhicule _(à implémenter)_ |
-| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule _(à implémenter)_ |
+| DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration d'un véhicule — toujours permis, sans vérification de règle (mirroir de `DELETE /api/weapons/:id`) _(implémentée)_ |
+| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule (cascade sur ses armes/améliorations) _(implémentée)_ |
+
+> **`PUT /api/vehicles/:id` — non prévue.** Aucun champ de `Vehicle` n'est modifiable une fois le véhicule créé : `nomInterne` est la clé catalogue immutable (la changer invaliderait l'équipement déjà posé, validé contre le catalogue DE CE TYPE PRÉCIS), et l'équipement se gère exclusivement via les routes dédiées ci-dessus et celles du module Armes. "Modifier un véhicule" (cf. §3.4, "Résumé des véhicules sur la carte") signifie donc *gérer son équipement*, pas réécrire ses caractéristiques de base.
 
 ### Armes _(implémentée — module Weapon)_
 

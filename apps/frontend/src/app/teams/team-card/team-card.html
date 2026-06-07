@@ -33,6 +33,26 @@
         <li class="team-card__vehicle">
           <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
           <span class="team-card__vehicle-cost">{{ vehicle.coutApproximatif ? '≈ ' : '' }}{{ vehicle.cout }} 🥫</span>
+          <!--
+            Actions par véhicule — émettent une `TeamVehiclePair` (équipe courante
+            + véhicule visé), cf. doc de `editVehicleClicked`/`deleteVehicleClicked`.
+            Mirroir visuel des boutons d'action sur l'équipe (`.btn-action--*`),
+            déclinés en plus petit (`.btn-vehicle-action--*`) pour tenir sur une ligne.
+          -->
+          <span class="team-card__vehicle-actions">
+            <button
+              class="btn-vehicle-action btn-vehicle-action--edit"
+              (click)="editVehicleClicked.emit({ team: team(), vehicle })"
+              title="Gérer l'équipement de ce véhicule">
+              ✏️
+            </button>
+            <button
+              class="btn-vehicle-action btn-vehicle-action--delete"
+              (click)="deleteVehicleClicked.emit({ team: team(), vehicle })"
+              title="Supprimer ce véhicule">
+              🗑
+            </button>
+          </span>
         </li>
       }
     </ul>

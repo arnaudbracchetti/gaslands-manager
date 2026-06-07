@@ -179,10 +179,12 @@ describe('VehicleService', () => {
   // Un mock par dépendance injectée — chacun isolé, remis à zéro entre les tests.
   const mockVehicleRepo = {
     findOne: vi.fn(),
+    remove: vi.fn(),
   };
   const mockImprovementRepo = {
     create: vi.fn(),
     save: vi.fn(),
+    remove: vi.fn(),
   };
   const mockCatalogService = {
     getVehiculeByNomInterne: vi.fn(),
@@ -609,6 +611,74 @@ describe('VehicleService', () => {
 
       await expect(service.getAvailableImprovements(7, 99)).rejects.toThrow(NotFoundException);
       expect(mockCatalogService.getSponsor).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── removeImprovement ───────────────────────────────────────────────────────
+
+  describe('removeImprovement() — retrait toujours permis, sans vérification de règle', () => {
+    const vehicleAvecChenilles: Vehicle = { ...mockVehicle, improvements: [installedChenilles] };
+
+    it('retire l\'amélioration si elle existe SUR ce véhicule (appartenant à l\'utilisateur)', async () => {
+      mockVehicleRepo.findOne.mockResolvedValue(vehicleAvecChenilles);
+      mockImprovementRepo.remove.mockResolvedValue(undefined);
+
+      await service.removeImprovement(7, 1, 42);
+
+      // `findOneForUser` vérifie déjà l'appartenance ET charge `improvements` —
+      // on localise la cible directement dans la relation, sans second aller-
+      // retour SQL ciblé sur `VehicleImprovement` (cf. en-tête de la méthode).
+      expect(mockVehicleRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 7, team: { userId: 42 } },
+        relations: { team: true, improvements: true, weapons: true },
+      });
+      expect(mockImprovementRepo.remove).toHaveBeenCalledWith(installedChenilles);
+    });
+
+    it('lève NotFoundException si l\'amélioration n\'existe pas SUR ce véhicule, sans toucher au repository', async () => {
+      // Le véhicule existe et appartient à l'utilisateur, mais ne porte PAS
+      // l'amélioration #999 — qu'elle soit totalement inexistante ou posée sur
+      // un AUTRE véhicule (même de cet utilisateur), le verdict est identique
+      // par conception (cf. en-tête : non-divulgation, même principe que `findOneForUser`).
+      mockVehicleRepo.findOne.mockResolvedValue(vehicleAvecChenilles);
+
+      await expect(service.removeImprovement(7, 999, 42)).rejects.toThrow(NotFoundException);
+      expect(mockImprovementRepo.remove).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si le véhicule n\'appartient pas à l\'utilisateur — avant toute recherche d\'amélioration', async () => {
+      mockVehicleRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.removeImprovement(7, 1, 99)).rejects.toThrow(NotFoundException);
+      expect(mockImprovementRepo.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── remove ──────────────────────────────────────────────────────────────────
+
+  describe('remove() — suppression du véhicule (cascade sur improvements/weapons)', () => {
+    it('supprime le véhicule s\'il appartient à l\'utilisateur', async () => {
+      mockVehicleRepo.findOne.mockResolvedValue(mockVehicle);
+      mockVehicleRepo.remove.mockResolvedValue(undefined);
+
+      await service.remove(7, 42);
+
+      // Mirroir de `findOneForUser` : même filtre `Vehicle → Team → User`.
+      // La cascade TypeORM (`onDelete: 'CASCADE'`, cf. vehicle.entity.ts)
+      // gère seule la suppression d'`improvements`/`weapons` — rien à
+      // orchestrer manuellement ici.
+      expect(mockVehicleRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 7, team: { userId: 42 } },
+        relations: { team: true, improvements: true, weapons: true },
+      });
+      expect(mockVehicleRepo.remove).toHaveBeenCalledWith(mockVehicle);
+    });
+
+    it('lève NotFoundException si le véhicule est introuvable ou appartient à un autre utilisateur, sans rien supprimer', async () => {
+      mockVehicleRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.remove(999, 42)).rejects.toThrow(NotFoundException);
+      expect(mockVehicleRepo.remove).not.toHaveBeenCalled();
     });
   });
 });

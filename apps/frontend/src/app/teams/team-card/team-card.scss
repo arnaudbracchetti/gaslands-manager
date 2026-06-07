@@ -88,6 +88,14 @@
     white-space: nowrap;
   }
 
+  /* Actions par véhicule (Modifier l'équipement / Supprimer) — petits boutons
+     icône, mirroir réduit de __actions (cf. .btn-vehicle-action ci-dessous). */
+  &__vehicle-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
   /* Boutons d'action en bas de la carte */
   &__actions {
     display: flex;
@@ -145,6 +153,37 @@
     background: transparent;
     border-color: #e94560;
     color: #e94560;
+
+    &:hover {
+      background: rgba(233, 69, 96, 0.1);
+    }
+  }
+}
+
+/* ── Boutons d'action par véhicule (icône seule, mirroir réduit de .btn-action) ── */
+/* Même logique de couleurs (bleu = "modifier", rouge = "supprimer"), en plus
+   compact : une icône suffit sur une ligne de liste déjà dense en informations. */
+
+.btn-vehicle-action {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s;
+
+  &--edit {
+    border-color: #7ec8e3;
+
+    &:hover {
+      background: rgba(126, 200, 227, 0.1);
+    }
+  }
+
+  &--delete {
+    border-color: #e94560;
 
     &:hover {
       background: rgba(233, 69, 96, 0.1);
