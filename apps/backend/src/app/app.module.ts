@@ -9,6 +9,8 @@ import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
 import { Team } from './team/team.entity';
+import { VehicleModule } from './vehicle/vehicle.module';
+import { Vehicle, VehicleImprovement } from './vehicle/vehicle.entity';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { Team } from './team/team.entity';
         database: config.get('DATABASE_NAME', 'gaslands'),
         // Toutes les entités TypeORM doivent être listées ici
         // TypeORM crée ou met à jour les tables correspondantes (synchronize: true)
-        entities: [Team, User],
+        entities: [Team, User, Vehicle, VehicleImprovement],
         // synchronize: true = TypeORM crée/modifie les tables automatiquement
         // ⚠️ À désactiver en production ! En prod, on utilise des migrations.
         synchronize: true,
@@ -47,6 +49,7 @@ import { Team } from './team/team.entity';
     // Nos modules métier
     ContentModule, // Lecture des fichiers Markdown
     TeamModule,    // Gestion des équipes Gaslands
+    VehicleModule, // Véhicules d'équipe + améliorations (Pattern Decorator)
     AuthModule,    // Inscription, connexion, JWT
     CatalogModule, // Catalogue de jeu chargé au démarrage (sponsors, véhicules, armes, améliorations)
   ],

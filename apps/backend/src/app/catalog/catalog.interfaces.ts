@@ -83,6 +83,16 @@ export interface Amelioration {
   regles: string;
   /** Noms des sponsors autorisés à sélectionner cette amélioration */
   sponsors_autorises: string[];
+  /**
+   * Clé du décorateur métier à instancier pour cette amélioration (Pattern Decorator,
+   * voir vehicle/improvement-decorator.factory.ts). Plusieurs entrées peuvent partager
+   * la même valeur — c'est le cas des variantes sponsor qui n'altèrent que prix/emplacement
+   * (ex: "Bélier" et "Bélier (Slime)" partagent `comportement: "belier"` : même règle de
+   * pose, seul le coût change). Absente ⇒ amélioration neutre (aucun effet sur les stats,
+   * aucune règle de pose particulière — juste un emplacement consommé et une ligne dans le
+   * récapitulatif).
+   */
+  comportement?: string;
 }
 
 // ── Type enrichi : sponsor avec relations pré-résolues ───────────────────────

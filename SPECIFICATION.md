@@ -167,15 +167,28 @@ Les données du catalogue ne sont **pas stockées en base de données**. Elles s
 
 **`Amelioration`** (en mémoire) — champs : `nom`, `prix` (number ou `"x3"` pour la Tourelle), `emplacement`, `description`, `regles`, `sponsors_autorises[]`
 
-### `Vehicle` _(entité DB à créer)_
+### `Vehicle` _(implémentée — module Vehicle)_
 
-L'entité `Vehicle` représentera un véhicule **appartenant à une équipe** (instance de jeu), distinct du catalogue. Elle référencera le type de véhicule par son `nom` (clé étrangère logique vers le catalogue en mémoire).
+L'entité `Vehicle` représente un véhicule **appartenant à une équipe** (instance de jeu), distinct du catalogue. Elle référence le type de véhicule par son `nom_interne` — et non son `nom` affiché : c'est précisément le rôle de cet identifiant catalogue (stable, sans accents ni espaces) que de servir de clé étrangère logique, et lui seul distingue de façon fiable une variante sponsor de l'original (ex. `"voiture"` vs `"voiture_prison"`, `"belier"` vs `"belier_slime"`). *Champ renommé `nomInterne` par rapport à la version initiale de cette fiche, qui mentionnait `nom` — voir `vehicle.entity.ts` pour le détail du raisonnement.*
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
-| `nom` | string | référence vers `Vehicule.nom` du catalogue |
-| `teamId` | number | FK → Team |
+| `nomInterne` | string | référence vers `Vehicule.nom_interne` du catalogue |
+| `teamId` | number | FK → Team (`CASCADE` on delete) |
+| `improvements` | `VehicleImprovement[]` | relation `OneToMany`, `cascade: true` |
+| `createdAt` | Date | auto |
+
+### `VehicleImprovement` _(implémentée — module Vehicle)_
+
+Une amélioration installée sur un véhicule (instance de jeu). Référence l'amélioration du catalogue par `nom_interne`, pour les mêmes raisons que `Vehicle.nomInterne` ci-dessus — c'est notamment ce qui permet de regrouper "Bélier" et "Bélier (Slime)" sous la même règle métier (même `comportement`, cf. §7) bien qu'ils aient des `nom_interne` distincts.
+
+| Champ | Type | Contraintes |
+|-------|------|-------------|
+| `id` | number | PK, auto-incrémenté |
+| `nomInterne` | string | référence vers `Amelioration.nom_interne` du catalogue |
+| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | nullable — uniquement pour les améliorations orientées (Bélier...) |
+| `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 
 ### `Weapon` _(entité DB à créer)_
@@ -183,7 +196,7 @@ L'entité `Vehicle` représentera un véhicule **appartenant à une équipe** (i
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
-| `nom` | string | référence vers `Arme.nom` du catalogue |
+| `nomInterne` | string | référence vers `Arme.nom_interne` du catalogue (même convention que `Vehicle.nomInterne`) |
 | `vehicleId` | number | FK → Vehicle |
 
 ---

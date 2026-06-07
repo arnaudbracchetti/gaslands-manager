@@ -29,6 +29,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CatalogService } from './catalog.service';
+import { ImprovementDecoratorFactory } from '../vehicle/improvement-decorator.factory';
 import type { Sponsor, Vehicule, Arme, Amelioration } from './catalog.interfaces';
 
 // ── Sous-classe avec chemin absolu vers les vrais fichiers ─────────────────────
@@ -330,5 +331,40 @@ describe('Relations sponsor — cohérence des données résolues', () => {
     const amelNoms = rutherford!.ameliorations.map((a) => a.nom);
     expect(amelNoms).toContain('Nitro');
     expect(amelNoms).not.toContain('Nitro (Idris)');
+  });
+});
+
+// ── 6. Cohérence comportement ↔ registre de décorateurs ───────────────────────
+//
+// Le module Vehicle (Pattern Decorator, cf. apps/backend/src/app/vehicle/) relie
+// chaque amélioration à sa règle métier via une seule clé déclarée en YAML :
+// `comportement: "<clé>"`. ImprovementDecoratorFactory.REGISTRE traduit cette clé
+// en classe à instancier. Le risque, structurellement invisible à l'exécution :
+// si quelqu'un ajoute ou renomme un `comportement` dans amelioration.yml SANS
+// l'enregistrer côté code, `wrap()` retombe silencieusement sur `NeutralDecorator`
+// — l'amélioration s'achète normalement, mais SA RÈGLE ne s'applique jamais. Ce
+// test transforme cette dégradation silencieuse en échec explicite, dès le chargement.
+
+describe('comportement — cohérence YAML ↔ ImprovementDecoratorFactory.REGISTRE', () => {
+  it('tout `comportement` déclaré dans amelioration.yml correspond à une entrée du REGISTRE', () => {
+    const comportementsDeclares = ameliorations
+      .map((a) => a.comportement)
+      .filter((c): c is string => c !== undefined);
+
+    for (const comportement of comportementsDeclares) {
+      expect(
+        ImprovementDecoratorFactory.REGISTRE[comportement],
+        `Le comportement "${comportement}" est déclaré dans amelioration.yml mais absent du REGISTRE`,
+      ).toBeDefined();
+    }
+  });
+
+  it('au moins une amélioration déclare un `comportement` (sinon le test ci-dessus serait vide de sens)', () => {
+    // Garde-fou inverse : sur un YAML où plus personne ne déclarerait `comportement`
+    // (suppression accidentelle...), le test précédent passerait trivialement — il
+    // parcourrait un tableau vide sans rien vérifier. Celui-ci s'assure qu'il y a
+    // réellement quelque chose à couvrir, et donne donc un sens au précédent.
+    const comportementsDeclares = ameliorations.filter((a) => a.comportement !== undefined);
+    expect(comportementsDeclares.length).toBeGreaterThan(0);
   });
 });

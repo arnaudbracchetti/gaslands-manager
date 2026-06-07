@@ -57,6 +57,9 @@ ameliorations_vehicules:
   # Slime utilise "Bélier (Slime)" ci-dessous, qui ne requiert aucun emplacement.
   - nom: "Bélier"
     nom_interne: "belier"
+    comportement: "belier"       # Clé du décorateur métier — partagée avec "Bélier (Slime)" :
+                                 # même règle de pose (orientation, unicité par position),
+                                 # seuls prix/emplacement diffèrent (cf. CatalogService)
     prix: 4
     emplacement: 1               # Occupe 1 slot — Slime a une variante à 0 slot
     description: |
@@ -84,6 +87,8 @@ ameliorations_vehicules:
   # Règle Slime "Hérissé" : le Bélier ne requiert aucun Emplacement.
   - nom: "Bélier (Slime)"
     nom_interne: "belier_slime"  # Suffixe _slime identifie la variante sponsor
+    comportement: "belier"       # Même comportement que "Bélier" : même classe instanciée,
+                                 # même règle de pose — seul l'emplacement change (0 ici)
     prix: 4                      # Même prix que l'original
     emplacement: 0               # 0 slot au lieu de 1 (avantage Slime)
     description: |
@@ -98,6 +103,9 @@ ameliorations_vehicules:
 
   - nom: "Bélier Explosif"
     nom_interne: "belier_explosif"
+    comportement: "belier_explosif"   # Décorateur indépendant — pas de lien avec "Bélier"
+                                      # malgré la proximité de nom (cf. règles ci-dessous :
+                                      # explicitement compatibles et cumulatifs)
     prix: 3
     emplacement: 0
     description: |
@@ -129,6 +137,9 @@ ameliorations_vehicules:
 
   - nom: "Blindage"
     nom_interne: "blindage"
+    comportement: "blindage"     # +2 carrosserie, cumulable sans limite — règle partagée
+                                 # avec "Micro-Blindage" (même effet, seuls prix/emplacement
+                                 # diffèrent), cf. plus bas
     prix: 4
     emplacement: 1
     description: |
@@ -178,6 +189,8 @@ ameliorations_vehicules:
 
   - nom: "Chenilles"
     nom_interne: "chenilles"
+    comportement: "chenilles"    # -1 vitesse_max / +1 manœuvrabilité, unique, incompatible
+                                 # avec Char d'Assaut / Hélicoptère / Gyrocoptère
     prix: 4
     emplacement: 1
     description: |
@@ -207,6 +220,8 @@ ameliorations_vehicules:
   # Scarlett utilise "Membre d'Équipage Supplémentaire (Scarlett)" à moitié prix.
   - nom: "Membre d'Équipage Supplémentaire"
     nom_interne: "membre_equipage_sup"
+    comportement: "membre_equipage"   # +1 équipage, max = 2× l'équipage de départ — règle
+                                      # partagée avec la variante Scarlett ci-dessous
     prix: 4                      # Prix standard — Scarlett a une variante à 2 Jerricans
     emplacement: 0
     description: |
@@ -234,6 +249,8 @@ ameliorations_vehicules:
   # Règle Scarlett "Quartiers de l'Équipage" : coûte moitié prix.
   - nom: "Membre d'Équipage Supplémentaire (Scarlett)"
     nom_interne: "membre_equipage_sup_scarlett"
+    comportement: "membre_equipage"   # Même comportement que l'original : même classe,
+                                      # même règle — seul le prix change
     prix: 2                      # 4 / 2 = 2 (demi-prix Scarlett)
     emplacement: 0
     description: |
@@ -300,6 +317,8 @@ ameliorations_vehicules:
 
   - nom: "Réacteur Nucléaire Expérimental"
     nom_interne: "reacteur_nucleaire"            # Amélioration électrique exclusive Mishkin
+    comportement: "mishkin_exclusif"   # Règle partagée avec "Téléporteur Expérimental" :
+                                       # un seul exemplaire par véhicule (rien d'autre)
     prix: 5
     emplacement: 0
     description: |
@@ -319,6 +338,8 @@ ameliorations_vehicules:
 
   - nom: "Téléporteur Expérimental"
     nom_interne: "teleporteur"                   # Amélioration électrique exclusive Mishkin
+    comportement: "mishkin_exclusif"   # Même règle que le Réacteur Nucléaire : un seul
+                                       # exemplaire par véhicule
     prix: 7
     emplacement: 0
     description: |
@@ -385,6 +406,9 @@ ameliorations_vehicules:
   # Différent du Blindage standard (4j, 1 emplacement).
   - nom: "Micro-Blindage"
     nom_interne: "micro_blindage"               # Amélioration exclusive Verney
+    comportement: "blindage"     # Même règle que "Blindage" (+2 carrosserie permanent,
+                                 # cumulable sans limite) — seuls prix/emplacement diffèrent ;
+                                 # même classe instanciée, aucune duplication de logique
     prix: 6
     emplacement: 0               # Aucun slot requis (avantage vs Blindage standard à 1 slot)
     description: |

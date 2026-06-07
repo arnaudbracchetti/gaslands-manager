@@ -170,4 +170,28 @@ export class CatalogService implements OnModuleInit {
   getAllAmeliorations(): Amelioration[] {
     return this.allAmeliorations;
   }
+
+  // ── Recherches par nom_interne (clés étrangères logiques vers le catalogue) ──
+  //
+  // Le module Vehicle référence ses items catalogue par `nom_interne` (cf.
+  // SPECIFICATION.md, §5 — `Vehicle.nom`/`Weapon.nom` comme "FK logiques").
+  // Ces accesseurs lui évitent de connaître les listes brutes (`getAllVehicules`...)
+  // et de réimplémenter sa propre recherche — même contrat `| undefined` que
+  // `getSponsor` : à charge de l'appelant de décider s'il s'agit d'une erreur
+  // (typiquement `NotFoundException`/`BadRequestException` côté service).
+
+  /** Retourne un véhicule du catalogue par son nom_interne, ou undefined si inconnu. */
+  getVehiculeByNomInterne(nomInterne: string): Vehicule | undefined {
+    return this.allVehicules.find((v: Vehicule) => v.nom_interne === nomInterne);
+  }
+
+  /** Retourne une arme du catalogue par son nom_interne, ou undefined si inconnue. */
+  getArmeByNomInterne(nomInterne: string): Arme | undefined {
+    return this.allArmes.find((a: Arme) => a.nom_interne === nomInterne);
+  }
+
+  /** Retourne une amélioration du catalogue par son nom_interne, ou undefined si inconnue. */
+  getAmeliorationByNomInterne(nomInterne: string): Amelioration | undefined {
+    return this.allAmeliorations.find((a: Amelioration) => a.nom_interne === nomInterne);
+  }
 }
