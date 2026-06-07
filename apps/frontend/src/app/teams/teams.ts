@@ -7,19 +7,21 @@
  *
  *   - TeamCard      → affiche une carte d'équipe (lecture + boutons Modifier/Supprimer/Ajouter un véhicule)
  *   - TeamForm      → gère le formulaire de création / modification
- *   - Modal + VehicleBuilder → fenêtre de construction de véhicule en 2 étapes
- *   - Modal + VehicleEditor  → fenêtre de gestion de l'équipement d'un véhicule existant
+ *   - Modal + VehicleConfigurator → fenêtre UNIQUE de configuration de véhicule
+ *     (création OU gestion d'équipement d'un véhicule existant — cf. son en-tête :
+ *     fusion de deux anciens composants `VehicleBuilder`/`VehicleEditor` qui
+ *     n'étaient distingués que par "comment obtient-on le véhicule de départ ?"
+ *     et le libellé d'un bouton — un paramètre `vehicleId` optionnel suffit
+ *     désormais à exprimer cette seule différence)
  *
  * Responsabilités de ce composant :
  * - Charger la liste des équipes via TeamsService
  * - Contrôler la visibilité du formulaire (showForm, editingTeam)
  * - Recevoir le DTO validé de TeamForm et appeler l'API (create / update)
  * - Gérer la suppression (confirmation + appel API)
- * - Contrôler l'ouverture/fermeture de la modale de construction de véhicule
- *   (buildingTeam) — cf. doc de `openVehicleBuilder`/`closeVehicleBuilder`
- * - Contrôler l'ouverture/fermeture de la modale d'édition d'équipement
- *   (editingVehicle) et la suppression d'un véhicule — cf. doc de
- *   `openVehicleEditor`/`closeVehicleEditor`/`deleteVehicle`
+ * - Contrôler l'ouverture/fermeture de la modale de configuration de véhicule
+ *   (vehicleModal) — cf. doc de `openVehicleBuilder`/`openVehicleEditor`/`closeVehicleModal`
+ * - Gérer la suppression d'un véhicule — cf. doc de `deleteVehicle`
  * - Charger et résumer les véhicules de chaque équipe pour l'affichage sur sa
  *   carte (vehicleSummaries) — cf. doc de `loadVehicleSummaries`
  * - Afficher les erreurs API globales
@@ -31,10 +33,9 @@ import { Team, CreateTeamDto } from './team.model';
 import { TeamCard } from './team-card/team-card';
 import { TeamForm } from './team-form/team-form';
 import { Modal } from './modal/modal';
-import { VehicleBuilder } from './vehicle-builder/vehicle-builder';
-import { VehicleEditor } from './vehicle-editor/vehicle-editor';
-import { VehicleService } from './vehicle-builder/vehicle.service';
-import { Vehicle } from './vehicle-builder/vehicle-builder.model';
+import { VehicleConfigurator } from './vehicle-configurator/vehicle-configurator';
+import { VehicleService } from './vehicle-configurator/vehicle.service';
+import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
 import { CatalogService } from '../catalog/catalog.service';
 import { Sponsor } from '../catalog/catalog.model';
 import { buildVehicleSummary, TeamVehiclePair, VehicleSummary } from './vehicle-summary';
@@ -44,7 +45,7 @@ import { buildVehicleSummary, TeamVehiclePair, VehicleSummary } from './vehicle-
   standalone: true,
   // On importe les sous-composants ici pour pouvoir les utiliser dans le template.
   // FormsModule n'est PAS nécessaire ici — il est importé dans TeamForm uniquement.
-  imports: [TeamCard, TeamForm, Modal, VehicleBuilder, VehicleEditor],
+  imports: [TeamCard, TeamForm, Modal, VehicleConfigurator],
   templateUrl: './teams.html',
   styleUrl: './teams.scss',
 })
@@ -54,8 +55,8 @@ export class Teams implements OnInit {
 
   // VehicleService/CatalogService : nécessaires UNIQUEMENT pour construire le
   // résumé des véhicules de chaque équipe (cf. `loadVehicleSummaries`) — Teams
-  // ne participe à AUCUNE étape du flux de construction lui-même (c'est le rôle
-  // de VehicleBuilder, projeté dans la modale). Deux besoins distincts, déjà
+  // ne participe à AUCUNE étape du flux de configuration lui-même (c'est le rôle
+  // de VehicleConfigurator, projeté dans la modale). Deux besoins distincts, déjà
   // servis par les mêmes services — inutile d'en créer de nouveaux.
   private vehicleService: VehicleService = inject(VehicleService);
   private catalogService: CatalogService = inject(CatalogService);
@@ -86,35 +87,33 @@ export class Teams implements OnInit {
   /** Vrai pendant l'appel API de sauvegarde (passé à TeamForm pour désactiver les boutons) */
   saving: WritableSignal<boolean> = signal(false);
 
-  // ── État de la modale de construction de véhicule ──────────────────────────
+  // ── État de la modale de configuration de véhicule ─────────────────────────
 
   /**
-   * Équipe pour laquelle la modale de construction de véhicule est ouverte.
-   * `null` = modale fermée ; sinon, son sponsor pilote le filtrage du
-   * catalogue dans `VehicleBuilder` (cf. son en-tête).
+   * Couple `{ team, vehicleId }` pour lequel la modale de configuration de
+   * véhicule (`VehicleConfigurator`) est ouverte. `null` = modale fermée.
    *
-   * Un seul signal — pas de paire `showX`/`xTeam` comme pour le formulaire
-   * (`showForm`/`editingTeam`) — car ici la présence de l'équipe SUFFIT à
-   * déterminer la visibilité (`@if (buildingTeam(); as team)` dans le template) :
+   * UN SEUL signal pour les DEUX usages (création ET édition d'équipement) —
+   * fusion de deux anciens signaux `buildingTeam: Team | null` et
+   * `editingVehicle: { team, vehicleId } | null`, miroir direct de la fusion de
+   * `VehicleBuilder`/`VehicleEditor` en `VehicleConfigurator` (cf. son en-tête) :
+   * avoir deux signaux pour piloter un seul composant — qui n'a besoin que d'un
+   * `vehicleId` optionnel pour distinguer ses deux modes — aurait été la même
+   * duplication injustifiée, simplement déplacée ici.
+   *
+   * `vehicleId: null` ⇒ mode création (`VehicleConfigurator` choisit ET crée le
+   * véhicule) ; `vehicleId: number` ⇒ mode édition (charge directement celui-ci).
+   * `team` est TOUJOURS nécessaire (sponsor pour le catalogue, id pour la
+   * création/le rechargement — cf. `VehicleConfigurator.team`, `input.required`).
+   *
+   * Un seul signal — pas de paire `showX`/`xModal` comme pour le formulaire
+   * (`showForm`/`editingTeam`) — car ici la présence du couple SUFFIT à
+   * déterminer la visibilité (`@if (vehicleModal(); as modal)` dans le template) :
    * il n'existe pas de "mode sans équipe" pour cette modale, contrairement au
    * formulaire qui a un mode création (`editingTeam = null` ≠ "fermé").
    */
-  buildingTeam: WritableSignal<Team | null> = signal<Team | null>(null);
-
-  // ── État de la modale d'édition d'équipement ────────────────────────────────
-
-  /**
-   * Véhicule (et équipe propriétaire) pour lequel la modale de gestion
-   * d'équipement est ouverte. `null` = modale fermée.
-   *
-   * Couple `{ team, vehicleId }` plutôt qu'un simple `Team` (cf. `buildingTeam`,
-   * qui lui suffit) : `VehicleEditor` a besoin des DEUX (cf. son en-tête —
-   * `team` pour résoudre le sponsor/catalogue, `vehicleId` pour isoler l'entité
-   * brute via `getAllForTeam`). Même raisonnement à un signal que `buildingTeam` :
-   * la présence du couple suffit à déterminer la visibilité
-   * (`@if (editingVehicle(); as editing)` dans le template).
-   */
-  editingVehicle: WritableSignal<{ team: Team; vehicleId: number } | null> = signal<{ team: Team; vehicleId: number } | null>(null);
+  vehicleModal: WritableSignal<{ team: Team; vehicleId: number | null } | null> =
+    signal<{ team: Team; vehicleId: number | null } | null>(null);
 
   // ── Résumés des véhicules (affichage sur les cartes) ────────────────────────
 
@@ -127,7 +126,7 @@ export class Teams implements OnInit {
    * côté frontend brouillerait la frontière entre "ce que le serveur affirme"
    * et "ce que le client a déduit localement". Un signal séparé, recalculé à
    * chaque `loadTeams()`, garde cette frontière nette (même choix que
-   * `editingTeam`/`buildingTeam` : un signal dédié par responsabilité).
+   * `editingTeam`/`vehicleModal` : un signal dédié par responsabilité).
    *
    * Équipe absente de la Map = pas encore chargée OU sans véhicule — `teams.html`
    * traite les deux cas de la même façon via `?? []` (liste vide, rien à afficher).
@@ -155,9 +154,9 @@ export class Teams implements OnInit {
         this.teams.set(teams);
         this.loading.set(false);
         // Toujours déclenché après un chargement réussi — y compris après un
-        // simple rafraîchissement (ex: fermeture de la modale de construction,
-        // cf. `closeVehicleBuilder`) : `vehicleCount` a pu changer, la liste
-        // de véhicules affichée doit suivre.
+        // simple rafraîchissement (ex: fermeture de la modale de configuration
+        // de véhicule, cf. `closeVehicleModal`) : `vehicleCount` a pu changer,
+        // la liste de véhicules affichée doit suivre.
         this.loadVehicleSummaries(teams);
       },
       error: () => {
@@ -295,56 +294,58 @@ export class Teams implements OnInit {
     });
   }
 
-  // ── Modale de construction de véhicule ─────────────────────────────────────
+  // ── Modale de configuration de véhicule (création OU édition) ──────────────
 
   /**
-   * Ouvre la modale pour l'équipe choisie.
+   * Ouvre la modale en mode CRÉATION pour l'équipe choisie (`vehicleId: null`
+   * ⇒ `VehicleConfigurator` affichera le choix du véhicule, cf. son en-tête).
    * Reçu depuis TeamCard via l'output (addVehicleClicked).
+   *
+   * Nom conservé tel quel malgré la fusion des modales (cf. doc de
+   * `vehicleModal`) : c'est une intention UTILISATEUR distincte et bien
+   * nommée — "je veux ajouter un véhicule" — seule sa CONSÉQUENCE interne
+   * (peupler `vehicleModal` plutôt qu'un signal `buildingTeam` dédié) change.
    */
   openVehicleBuilder(team: Team): void {
-    this.buildingTeam.set(team);
+    this.vehicleModal.set({ team, vehicleId: null });
   }
 
   /**
-   * Ferme la modale et recharge la liste des équipes — DANS TOUS LES CAS,
-   * que l'utilisateur ait terminé («Terminer», `finished`) ou abandonné en
-   * cours de route (croix/overlay/Échap, `closeRequested` de la `Modal`).
-   *
-   * Pourquoi recharger systématiquement : la persistance est IMMÉDIATE dès
-   * l'étape 1 (cf. `VehicleBuilder`, en-tête — "Décisions actées" du plan) —
-   * un véhicule "nu" reste un véhicule valide en Gaslands. Donc même une
-   * fermeture précoce a pu modifier `vehicleCount`, qu'il faut refléter sur
-   * la carte (et qui pilote le verrouillage du sponsor dans `TeamForm`).
-   * Pas de distinction de cas : un seul chemin de fermeture, simple et fiable.
-   */
-  closeVehicleBuilder(): void {
-    this.buildingTeam.set(null);
-    this.loadTeams();
-  }
-
-  // ── Modale d'édition d'équipement ───────────────────────────────────────────
-
-  /**
-   * Ouvre la modale de gestion d'équipement pour le véhicule choisi.
-   * Reçu depuis TeamCard via l'output (editVehicleClicked) — porte une
-   * `TeamVehiclePair` (cf. sa doc) dont on extrait les deux informations utiles
-   * à `VehicleEditor` : l'équipe (résolution du sponsor) et l'id du véhicule
+   * Ouvre la modale en mode ÉDITION pour le véhicule choisi (`vehicleId`
+   * renseigné ⇒ `VehicleConfigurator` charge directement ce véhicule,
+   * cf. son en-tête). Reçu depuis TeamCard via l'output (editVehicleClicked) —
+   * porte une `TeamVehiclePair` (cf. sa doc) dont on extrait les deux
+   * informations utiles : l'équipe (résolution du sponsor) et l'id du véhicule
    * (isolement de l'entité brute). `VehicleSummary` ne porte pas l'objet `Team`
    * complet — seul `TeamCard` peut assembler la paire au moment du clic.
+   *
+   * Nom conservé tel quel — même raisonnement que `openVehicleBuilder` ci-dessus.
    */
   openVehicleEditor(pair: TeamVehiclePair): void {
-    this.editingVehicle.set({ team: pair.team, vehicleId: pair.vehicle.id });
+    this.vehicleModal.set({ team: pair.team, vehicleId: pair.vehicle.id });
   }
 
   /**
-   * Ferme la modale et recharge la liste — même raisonnement que
-   * `closeVehicleBuilder` (cf. sa doc) : l'équipement a pu changer (ajouts ET
-   * retraits, contrairement au builder qui ne fait qu'ajouter), donc le coût
-   * affiché sur la carte (`vehicleSummaries`) doit être resynchronisé. Un seul
-   * chemin de fermeture, qu'on ait terminé ou abandonné en cours de route.
+   * Ferme la modale et recharge la liste des équipes — DANS TOUS LES CAS, que
+   * l'utilisateur ait terminé («Terminer»/«Fermer», `done`) ou abandonné en
+   * cours de route (croix/overlay/Échap, `closeRequested` de la `Modal`), et
+   * QUEL QUE SOIT LE MODE (création OU édition).
+   *
+   * Un seul chemin de fermeture pour les deux modes — fusion de
+   * `closeVehicleBuilder`/`closeVehicleEditor`, dont le corps était déjà
+   * rigoureusement identique :
+   *   - en CRÉATION, la persistance est IMMÉDIATE dès le choix du véhicule
+   *     (cf. `VehicleConfigurator.selectVehicle` — un véhicule "nu" reste un
+   *     véhicule valide en Gaslands) : même une fermeture précoce a pu
+   *     modifier `vehicleCount`, qu'il faut refléter sur la carte (et qui
+   *     pilote le verrouillage du sponsor dans `TeamForm`) ;
+   *   - en ÉDITION, l'équipement a pu changer (ajouts ET retraits), donc le
+   *     coût affiché sur la carte (`vehicleSummaries`) doit être resynchronisé.
+   * Dans les deux cas : recharger systématiquement est le seul moyen simple et
+   * fiable de rester cohérent — pas de distinction de cas.
    */
-  closeVehicleEditor(): void {
-    this.editingVehicle.set(null);
+  closeVehicleModal(): void {
+    this.vehicleModal.set(null);
     this.loadTeams();
   }
 

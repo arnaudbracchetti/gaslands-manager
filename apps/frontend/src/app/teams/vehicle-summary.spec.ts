@@ -6,7 +6,7 @@
  * d'une fonction pure (cf. son en-tête, "trivialement testable en isolation").
  */
 import { buildVehicleSummary, VehicleSummary } from './vehicle-summary';
-import { Vehicle, Weapon, VehicleImprovement } from './vehicle-builder/vehicle-builder.model';
+import { Vehicle, Weapon, VehicleImprovement } from './vehicle-configurator/vehicle-builder.model';
 import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
 
 // ── Fixtures catalogue ───────────────────────────────────────────────────────

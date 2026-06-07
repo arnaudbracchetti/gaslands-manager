@@ -1,0 +1,107 @@
+<!--
+  EquipmentManager — gabarit FUSIONNÉ des deux mirroirs d'origine (étape 2 de
+  l'ex-VehicleBuilder + ex-VehicleEditor, qui était déjà le sur-ensemble des deux
+  avec sa section "Équipement actuel"). Affiche systématiquement : intro
+  (nom + emplacements), erreur, équipement actuel RETIRABLE (toujours visible —
+  y compris vide), puis les deux listes Armes/Améliorations disponibles.
+-->
+<div class="em">
+
+  <p class="em-intro">
+    Équipement de
+    <strong>{{ chosenVehicule()?.nom ?? vehicle().nomInterne }}</strong>
+    — emplacements utilisés :
+    <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
+    🔧
+  </p>
+
+  @if (equipmentError()) {
+    <p class="em-status em-status--error">{{ equipmentError() }}</p>
+  }
+
+  <!-- ═══ Équipement actuel — armes et améliorations montées, retirables ═══ -->
+  <section class="em-current">
+    <h3 class="em-current__title">Équipement actuel</h3>
+
+    @if (vehicle().weapons.length === 0 && vehicle().improvements.length === 0) {
+      <p class="em-status">Ce véhicule n'a encore aucun équipement.</p>
+    } @else {
+      <ul class="em-current__list">
+        @for (weapon of vehicle().weapons; track weapon.id) {
+          <li class="em-current__item">
+            <span class="em-current__name">
+              {{ resolveWeaponName(weapon.nomInterne) }}
+              @if (weapon.orientation) {
+                <span class="em-current__orientation">({{ weapon.orientation }})</span>
+              }
+            </span>
+            <button
+              class="em-current__remove"
+              type="button"
+              title="Retirer cette arme"
+              (click)="removeWeapon(weapon)">
+              Retirer
+            </button>
+          </li>
+        }
+        @for (improvement of vehicle().improvements; track improvement.id) {
+          <li class="em-current__item">
+            <span class="em-current__name">
+              {{ resolveImprovementName(improvement.nomInterne) }}
+              @if (improvement.orientation) {
+                <span class="em-current__orientation">({{ improvement.orientation }})</span>
+              }
+            </span>
+            <button
+              class="em-current__remove"
+              type="button"
+              title="Retirer cette amélioration"
+              (click)="removeImprovement(improvement)">
+              Retirer
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <!-- ═══ Équipement disponible — listes Armes/Améliorations avec verdict ═══ -->
+  @if (loadingEquipment()) {
+    <p class="em-status em-status--loading">Chargement des équipements disponibles…</p>
+  } @else {
+    <div class="em-equipment">
+      <section class="em-equipment__group">
+        <h3 class="em-equipment__title">Armes</h3>
+        @if (availableWeapons().length === 0) {
+          <p class="em-status">Aucune arme disponible pour ce sponsor.</p>
+        } @else {
+          <div class="em-equipment__list">
+            @for (weapon of availableWeapons(); track weapon.nomInterne) {
+              <app-equipment-option
+                [option]="weapon"
+                [requiresOrientation]="weaponNeedsOrientation(weapon)"
+                (chosen)="addWeapon($event)" />
+            }
+          </div>
+        }
+      </section>
+
+      <section class="em-equipment__group">
+        <h3 class="em-equipment__title">Améliorations</h3>
+        @if (availableImprovements().length === 0) {
+          <p class="em-status">Aucune amélioration disponible pour ce sponsor.</p>
+        } @else {
+          <div class="em-equipment__list">
+            @for (improvement of availableImprovements(); track improvement.nomInterne) {
+              <app-equipment-option
+                [option]="improvement"
+                [requiresOrientation]="improvementNeedsOrientation(improvement)"
+                (chosen)="addImprovement($event)" />
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+
+</div>

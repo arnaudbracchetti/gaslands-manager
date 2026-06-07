@@ -1,0 +1,80 @@
+<!--
+  VehicleConfigurator — gabarit UNIQUE (cf. en-tête de vehicle-configurator.ts) :
+  fusion des gabarits de l'ex-VehicleBuilder (étape 1 : choix) et de l'ex-VehicleEditor
+  (chargement direct). C'est la présence/absence de `vehicle()` qui pilote l'affichage
+  — pas un `step`/stepper séparé : "choix" et "équipement" ne sont jamais simultanés,
+  et en mode édition le choix n'existe simplement pas.
+
+  Structure générale : on attend le catalogue du sponsor (commun aux deux modes)
+  avant d'afficher quoi que ce soit — `@if (sponsorCatalog(); as catalog)` capture
+  la valeur non-nulle UNE fois pour tout le bloc, comme dans team-form.html.
+-->
+<div class="vc">
+
+  @if (loadingCatalog()) {
+    <p class="vc-status vc-status--loading">Chargement du catalogue du sponsor…</p>
+  } @else if (catalogError()) {
+    <p class="vc-status vc-status--error">{{ catalogError() }}</p>
+  } @else if (sponsorCatalog(); as catalog) {
+
+    @if (error()) {
+      <p class="vc-status vc-status--error">{{ error() }}</p>
+    }
+
+    @if (vehicle(); as v) {
+      <!-- ═══ Équipement — IDENTIQUE dans les deux modes, via EquipmentManager ═══
+           `vehicle()` est non-nul ici : soit on vient de le créer (mode création,
+           juste après `selectVehicle`), soit on l'a chargé (mode édition). Le
+           composant qui suit ignore totalement laquelle de ces deux origines
+           a produit cette entité — c'est précisément le but de la fusion. -->
+
+      <p class="vc-intro">
+        Équipement de
+        <strong>{{ chosenVehicule()?.nom ?? v.nomInterne }}</strong>
+      </p>
+
+      <app-equipment-manager
+        [vehicle]="v"
+        [sponsorCatalog]="catalog"
+        [team]="team()"
+        (vehicleChanged)="vehicle.set($event)" />
+
+      <div class="vc-footer">
+        <!-- "Terminer"/"Fermer" selon le mode (cf. `doneButtonLabel`) — `Teams`
+             recharge la liste dans tous les cas (fermeture à mi-parcours acceptée). -->
+        <button class="vc-finish" type="button" (click)="finish()">{{ doneButtonLabel() }}</button>
+      </div>
+
+    } @else if (loadingVehicle()) {
+      <!-- ═══ Mode édition — chargement du véhicule visé ═══ -->
+      <p class="vc-status vc-status--loading">Chargement du véhicule…</p>
+
+    } @else if (vehicleId() === null) {
+      <!-- ═══ Mode création — choix du véhicule ═══
+           `vehicleId() === null` ⇒ on est en mode création et `vehicle` est
+           encore `null` : l'utilisateur n'a pas encore choisi. -->
+
+      <p class="vc-intro">
+        Véhicules autorisés par <strong>{{ team().sponsor }}</strong> :
+      </p>
+
+      @if (creatingVehicle()) {
+        <p class="vc-status vc-status--loading">Création du véhicule…</p>
+      } @else if (catalog.vehicules.length === 0) {
+        <!-- Cas limite théorique (tout sponsor a accès à au moins un véhicule
+             d'après le catalogue YAML), mais on ne suppose jamais un tableau non-vide. -->
+        <p class="vc-status">Aucun véhicule disponible pour ce sponsor.</p>
+      } @else {
+        <div class="vc-vehicle-grid">
+          @for (vehicule of catalog.vehicules; track vehicule.nom_interne) {
+            <app-vehicle-choice-card [vehicule]="vehicule" (chosen)="selectVehicle($event)" />
+          }
+        </div>
+      }
+    }
+    <!-- Sinon (mode édition, `vehicle()` toujours `null` après chargement) :
+         `error()` ci-dessus porte déjà le message d'incohérence — rien d'autre à afficher. -->
+
+  }
+
+</div>

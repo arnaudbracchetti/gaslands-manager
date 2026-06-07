@@ -1,0 +1,73 @@
+/* ── VehicleConfigurator — orchestration unique (cf. vehicle-configurator.html) ── */
+/* Fusion des feuilles de styles d'origine (`.vb-*`/`.ve-*`, préfixe `.vc-` ici) :
+   le "stepper" de l'ex-builder a disparu (cf. en-tête du composant — la
+   présence/absence de `vehicle()` suffit à piloter l'affichage). */
+
+.vc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: min(640px, 80vw);
+  max-width: 720px;
+}
+
+/* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
+
+.vc-status {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #999;
+
+  &--loading {
+    color: #7ec8e3;
+  }
+
+  &--error {
+    color: #e94560;
+  }
+}
+
+/* ── Introduction ───────────────────────────────────────────────────────────── */
+
+.vc-intro {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #e0e0e0;
+
+  strong {
+    color: #7ec8e3;
+  }
+}
+
+/* ── Mode création : grille de véhicules ────────────────────────────────────── */
+
+.vc-vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+/* ── Pied de modale : bouton de fin ("Terminer"/"Fermer" selon le mode) ─────── */
+
+.vc-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.vc-finish {
+  background: #e94560;
+  border: none;
+  color: #0a0a14;
+  padding: 9px 22px;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}

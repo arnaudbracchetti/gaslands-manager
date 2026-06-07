@@ -82,46 +82,31 @@
     </div>
   }
 
-  <!-- ── Modale de construction de véhicule ────────────────────────────── -->
+  <!-- ── Modale UNIQUE de configuration de véhicule (création OU édition) ── -->
   <!--
-    `buildingTeam(); as team` capture l'équipe non-nulle pour tout le bloc —
-    `VehicleBuilder` exige `team` en `input.required<Team>()` (cf. son en-tête).
+    `vehicleModal(); as modal` capture le couple non-nul {team, vehicleId} pour
+    tout le bloc — `VehicleConfigurator` exige `team` en `input.required<Team>()`
+    et reçoit `vehicleId` (optionnel, `null` ⇒ création) — cf. son en-tête :
+    fusion de `VehicleBuilder`/`VehicleEditor`, qui ne se distinguaient que par
+    "comment obtient-on le véhicule de départ ?" et le libellé d'un bouton.
+
+    Le titre de la modale dépend du mode (`vehicleId === null` ⇒ création) —
+    seule trace visible ici de la distinction, le composant projeté est UNIQUE.
 
     Fermeture via DEUX chemins, qui appellent volontairement la MÊME méthode
-    (`closeVehicleBuilder`) — cf. sa doc, "fermeture à mi-parcours acceptée" :
+    (`closeVehicleModal`) — cf. sa doc, "fermeture à mi-parcours acceptée" :
       - (closeRequested) : overlay / croix / Échap (abandon possible à tout moment)
-      - (finished)       : bouton "Terminer" du builder (fin normale du flux)
+      - (done)           : bouton "Terminer"/"Fermer" du configurateur (fin normale)
   -->
-  @if (buildingTeam(); as team) {
+  @if (vehicleModal(); as modal) {
     <app-modal
       [visible]="true"
-      title="Ajouter un véhicule"
-      (closeRequested)="closeVehicleBuilder()">
-      <app-vehicle-builder [team]="team" (finished)="closeVehicleBuilder()" />
-    </app-modal>
-  }
-
-  <!-- ── Modale de gestion d'équipement d'un véhicule existant ─────────── -->
-  <!--
-    `editingVehicle(); as editing` capture le couple non-nul {team, vehicleId}
-    pour tout le bloc — `VehicleEditor` exige les deux en `input.required`
-    (cf. son en-tête).
-
-    Fermeture via DEUX chemins, qui appellent volontairement la MÊME méthode
-    (`closeVehicleEditor`) — même pattern que la modale de construction
-    ci-dessus (cf. `closeVehicleBuilder`, "fermeture à mi-parcours acceptée") :
-      - (closeRequested) : overlay / croix / Échap
-      - (closed)         : bouton "Fermer" de l'éditeur
-  -->
-  @if (editingVehicle(); as editing) {
-    <app-modal
-      [visible]="true"
-      title="Gérer l'équipement du véhicule"
-      (closeRequested)="closeVehicleEditor()">
-      <app-vehicle-editor
-        [team]="editing.team"
-        [vehicleId]="editing.vehicleId"
-        (closed)="closeVehicleEditor()" />
+      [title]="modal.vehicleId === null ? 'Ajouter un véhicule' : 'Gérer l\'équipement du véhicule'"
+      (closeRequested)="closeVehicleModal()">
+      <app-vehicle-configurator
+        [team]="modal.team"
+        [vehicleId]="modal.vehicleId"
+        (done)="closeVehicleModal()" />
     </app-modal>
   }
 

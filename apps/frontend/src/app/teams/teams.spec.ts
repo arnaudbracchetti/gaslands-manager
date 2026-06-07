@@ -21,16 +21,15 @@ import { of, throwError } from 'rxjs';
 import { Teams } from './teams';
 import { TeamsService } from './teams.service';
 import { Team, CreateTeamDto } from './team.model';
-// CatalogService et VehicleService : injectés par VehicleBuilder, lui-même rendu
-// dans la modale dès que `buildingTeam` est non-nul (cf. teams.html). On les mocke
-// ici pour la même raison que `team-form.spec.ts` mocke CatalogService — éviter
-// d'injecter HttpClient (aucun provideHttpClient dans ce module de test : Teams
-// n'en a normalement pas besoin, c'est VehicleBuilder qui l'entraîne avec lui).
+// CatalogService et VehicleService : injectés par VehicleConfigurator, lui-même
+// rendu dans la modale unique dès que `vehicleModal` est non-nul (cf. teams.html).
+// On les mocke ici pour la même raison que `team-form.spec.ts` mocke CatalogService
+// — éviter d'injecter HttpClient (aucun provideHttpClient dans ce module de test :
+// Teams n'en a normalement pas besoin, c'est VehicleConfigurator qui l'entraîne avec lui).
 import { CatalogService } from '../catalog/catalog.service';
-import { VehicleService } from './vehicle-builder/vehicle.service';
-import { VehicleBuilder } from './vehicle-builder/vehicle-builder';
-import { VehicleEditor } from './vehicle-editor/vehicle-editor';
-import { Vehicle } from './vehicle-builder/vehicle-builder.model';
+import { VehicleService } from './vehicle-configurator/vehicle.service';
+import { VehicleConfigurator } from './vehicle-configurator/vehicle-configurator';
+import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
 import { Sponsor } from '../catalog/catalog.model';
 import { TeamVehiclePair, VehicleSummary } from './vehicle-summary';
 
@@ -56,14 +55,14 @@ const mockTeams: Team[] = [
   },
 ];
 
-// Catalogue renvoyé au VehicleBuilder lors de son chargement initial
+// Catalogue renvoyé au VehicleConfigurator lors de son chargement initial
 // (ngOnInit → getSponsorByName) — MAIS aussi à `loadVehicleSummaries` (cf.
 // "Résumés des véhicules" plus bas), qui en a besoin pour résoudre `nomInterne →
 // {nom, prix}` (cf. `buildVehicleSummary`). D'où la présence d'un véhicule
 // catalogue ("camion") : sans lui, ces deux familles de tests ne pourraient
 // pas partager le même mock — `getSponsorByName` est mocké UNE SEULE FOIS pour
 // tout le module (cf. `mockCatalogService` ci-dessous, même raisonnement que
-// `mockSponsorCatalog` pour `VehicleBuilder`).
+// `mockSponsorCatalog` pour `VehicleConfigurator`).
 const mockSponsorCatalog: Sponsor = {
   nom: 'Rutherford',
   description: '',
@@ -150,14 +149,13 @@ describe('Teams Component', () => {
       getSponsorByName: vi.fn().mockReturnValue(of(mockSponsorCatalog)),
     };
 
-    // VehicleService : injecté par VehicleBuilder (5 premières méthodes, cf.
-    // teams.spec.ts plus haut), par `loadVehicleSummaries` via `getAllForTeam`
-    // (cf. en-tête de `vehicle.service.ts` — "sixième méthode, hors flux"), ET
-    // désormais par `VehicleEditor` (rendu dans sa modale dès que `editingVehicle`
-    // est non-nul — mêmes méthodes que le builder + les trois de retrait/suppression,
-    // cf. `Teams.deleteVehicle`/`VehicleEditor.removeWeapon`/`removeImprovement`).
-    // Valeur par défaut `of([])` : suffisante pour les tests qui ne portent PAS
-    // sur les résumés (équipes sans véhicule par défaut, cf. `mockTeams`).
+    // VehicleService : injecté par VehicleConfigurator (toutes ses méthodes —
+    // création ET équipement, dans les DEUX modes désormais, cf. son en-tête),
+    // par `loadVehicleSummaries` via `getAllForTeam` (cf. en-tête de
+    // `vehicle.service.ts` — "sixième méthode, hors flux"), et par
+    // `Teams.deleteVehicle` via `remove`. Valeur par défaut `of([])` : suffisante
+    // pour les tests qui ne portent PAS sur les résumés (équipes sans véhicule
+    // par défaut, cf. `mockTeams`).
     mockVehicleService = {
       create: vi.fn(),
       getAvailableWeapons: vi.fn().mockReturnValue(of([])),
@@ -172,14 +170,15 @@ describe('Teams Component', () => {
 
     await TestBed.configureTestingModule({
       // Le composant est standalone → on l'importe directement.
-      // TeamCard, TeamForm, Modal et VehicleBuilder seront rendus dans le DOM
-      // (test d'intégration légère, cf. les deux mocks ci-dessous pour VehicleBuilder).
+      // TeamCard, TeamForm, Modal et VehicleConfigurator seront rendus dans le DOM
+      // (test d'intégration légère, cf. les deux mocks ci-dessous pour VehicleConfigurator).
       imports: [Teams],
       providers: [
         provideRouter([]),
         { provide: TeamsService, useValue: mockTeamsService },
-        // VehicleBuilder (rendu dans la modale dès que `buildingTeam` est non-nul)
-        // ET `Teams` lui-même (via `loadVehicleSummaries`) injectent CatalogService/
+        // VehicleConfigurator (rendu dans la modale unique dès que `vehicleModal`
+        // est non-nul, dans les DEUX modes — création ET édition) ET `Teams`
+        // lui-même (via `loadVehicleSummaries`) injectent CatalogService/
         // VehicleService — mockés pour éviter HttpClient (cf. déclarations ci-dessus
         // pour le détail de chaque mock, partagé entre les deux usages).
         { provide: CatalogService, useValue: mockCatalogService },
@@ -334,153 +333,129 @@ describe('Teams Component', () => {
     vi.unstubAllGlobals();
   });
 
-  // ── Modale de construction de véhicule ─────────────────────────────────────
+  // ── Modale UNIQUE de configuration de véhicule (création ET édition) ───────
+  // `VehicleConfigurator` couvre désormais les DEUX flux (cf. son en-tête —
+  // fusion de `VehicleBuilder`/`VehicleEditor`) : un seul signal `vehicleModal`,
+  // un seul chemin de fermeture (`closeVehicleModal`). On vérifie ici que les
+  // DEUX points d'entrée (`openVehicleBuilder`/`openVehicleEditor`) peuplent ce
+  // signal correctement (avec le bon `vehicleId` — `null` vs. id réel), et
+  // qu'un seul mécanisme de fermeture suffit pour les deux modes.
 
-  it('n\'affiche pas la modale de construction de véhicule au démarrage', () => {
+  it('n\'affiche pas la modale de configuration de véhicule au démarrage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(component.buildingTeam()).toBeNull();
+    expect(component.vehicleModal()).toBeNull();
     expect(compiled.querySelector('app-modal')).toBeNull();
-    expect(compiled.querySelector('app-vehicle-builder')).toBeNull();
+    expect(compiled.querySelector('app-vehicle-configurator')).toBeNull();
   });
 
-  it('openVehicleBuilder(team) positionne buildingTeam et affiche la modale avec le builder', () => {
-    component.openVehicleBuilder(mockTeams[0]);
-    fixture.detectChanges();
+  describe('Ouverture en mode création (openVehicleBuilder)', () => {
+    it('positionne vehicleModal avec vehicleId à null et affiche la modale avec le configurateur', () => {
+      component.openVehicleBuilder(mockTeams[0]);
+      fixture.detectChanges();
 
-    expect(component.buildingTeam()).toEqual(mockTeams[0]);
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-modal')).toBeTruthy();
-    expect(compiled.querySelector('app-vehicle-builder')).toBeTruthy();
+      expect(component.vehicleModal()).toEqual({ team: mockTeams[0], vehicleId: null });
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-modal')).toBeTruthy();
+      expect(compiled.querySelector('app-vehicle-configurator')).toBeTruthy();
+    });
+
+    it('le clic sur "Ajouter un véhicule" d\'une carte ouvre la modale en mode création pour l\'équipe correspondante', () => {
+      // (addVehicleClicked) de la PREMIÈRE carte → openVehicleBuilder(mockTeams[0])
+      // (cf. câblage dans teams.html, mirroir de editClicked/deleteClicked).
+      const card = fixture.nativeElement.querySelector('app-team-card') as HTMLElement;
+      const btn = card.querySelector('.btn-add-vehicle') as HTMLButtonElement;
+      btn.click();
+      fixture.detectChanges();
+
+      expect(component.vehicleModal()).toEqual({ team: mockTeams[0], vehicleId: null });
+    });
   });
 
-  it('le clic sur "Ajouter un véhicule" d\'une carte ouvre la modale pour l\'équipe correspondante', () => {
-    // (addVehicleClicked) de la PREMIÈRE carte → openVehicleBuilder(mockTeams[0])
-    // (cf. câblage dans teams.html, mirroir de editClicked/deleteClicked).
-    const card = fixture.nativeElement.querySelector('app-team-card') as HTMLElement;
-    const btn = card.querySelector('.btn-add-vehicle') as HTMLButtonElement;
-    btn.click();
-    fixture.detectChanges();
-
-    expect(component.buildingTeam()).toEqual(mockTeams[0]);
-  });
-
-  it('closeVehicleBuilder() ferme la modale et recharge la liste des équipes', () => {
-    component.openVehicleBuilder(mockTeams[0]);
-    fixture.detectChanges();
-    vi.clearAllMocks(); // ne compter que les appels déclenchés par la fermeture elle-même
-
-    component.closeVehicleBuilder();
-    fixture.detectChanges();
-
-    expect(component.buildingTeam()).toBeNull();
-    // cf. doc de closeVehicleBuilder : rechargement SYSTÉMATIQUE — `vehicleCount`
-    // a pu changer dès l'étape 1 (persistance immédiate du véhicule "nu").
-    expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-modal')).toBeNull();
-  });
-
-  it('ferme la modale et recharge la liste au (closeRequested) de la modale — abandon en cours de route', () => {
-    component.openVehicleBuilder(mockTeams[0]);
-    fixture.detectChanges();
-    vi.clearAllMocks();
-
-    // Croix de fermeture de la Modal (cf. modal.html, .modal-close) → closeRequested
-    const closeBtn = fixture.nativeElement.querySelector('.modal-close') as HTMLButtonElement;
-    closeBtn.click();
-    fixture.detectChanges();
-
-    expect(component.buildingTeam()).toBeNull();
-    expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
-  });
-
-  it('ferme la modale et recharge la liste au (finished) du builder — fin normale du flux', () => {
-    component.openVehicleBuilder(mockTeams[0]);
-    fixture.detectChanges();
-    vi.clearAllMocks();
-
-    // `VehicleBuilder.finish()` est indépendant de l'étape courante (cf. son
-    // code : seule l'INTENTION de fermer compte) — on appelle directement la
-    // méthode du builder projeté plutôt que de naviguer le flux complet
-    // (étape 1 → 2 → "Terminer", déjà couvert par vehicle-builder.spec.ts) :
-    // ce test vérifie l'orchestration de `Teams`, pas le builder lui-même.
-    const builder = fixture.debugElement.query(By.directive(VehicleBuilder)).componentInstance as VehicleBuilder;
-    builder.finish();
-    fixture.detectChanges();
-
-    expect(component.buildingTeam()).toBeNull();
-    expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
-  });
-
-  // ── Modale de gestion d'équipement d'un véhicule ───────────────────────────
-  // Mirroir de la section "Modale de construction de véhicule" ci-dessus —
-  // mêmes assertions, méthodes et chemins de fermeture, adaptés au couple
-  // {team, vehicleId} (cf. doc de `editingVehicle`/`openVehicleEditor`).
-
-  describe('Modale de gestion d\'équipement', () => {
+  describe('Ouverture en mode édition (openVehicleEditor)', () => {
     // `VehicleSummary` minimal — seul `id`/`nom` comptent ici (assemblage de la
     // paire, message de confirmation), cf. doc de `TeamVehiclePair`.
     const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
     const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
 
-    it('n\'affiche pas la modale d\'édition d\'équipement au démarrage', () => {
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(component.editingVehicle()).toBeNull();
-      expect(compiled.querySelector('app-vehicle-editor')).toBeNull();
-    });
-
-    it('openVehicleEditor(pair) positionne editingVehicle (équipe + id du véhicule) et affiche la modale avec l\'éditeur', () => {
+    it('positionne vehicleModal avec le couple {team, vehicleId réel} et affiche la modale avec le configurateur', () => {
       component.openVehicleEditor(mockPair);
       fixture.detectChanges();
 
-      expect(component.editingVehicle()).toEqual({ team: mockTeams[0], vehicleId: 100 });
+      expect(component.vehicleModal()).toEqual({ team: mockTeams[0], vehicleId: 100 });
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.querySelector('app-modal')).toBeTruthy();
-      expect(compiled.querySelector('app-vehicle-editor')).toBeTruthy();
+      expect(compiled.querySelector('app-vehicle-configurator')).toBeTruthy();
     });
+  });
 
-    it('closeVehicleEditor() ferme la modale et recharge la liste des équipes', () => {
-      component.openVehicleEditor(mockPair);
+  describe('Fermeture (closeVehicleModal) — chemin UNIQUE pour les deux modes', () => {
+    // `VehicleSummary` minimal — cf. `mockPair` ci-dessus.
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
+
+    it('closeVehicleModal() ferme la modale et recharge la liste des équipes — depuis le mode création', () => {
+      component.openVehicleBuilder(mockTeams[0]);
       fixture.detectChanges();
       vi.clearAllMocks(); // ne compter que les appels déclenchés par la fermeture elle-même
 
-      component.closeVehicleEditor();
+      component.closeVehicleModal();
       fixture.detectChanges();
 
-      expect(component.editingVehicle()).toBeNull();
-      // cf. doc de closeVehicleEditor : rechargement SYSTÉMATIQUE — l'équipement
-      // (et donc le coût affiché) a pu changer, ajouts ET retraits confondus.
+      expect(component.vehicleModal()).toBeNull();
+      // cf. doc de closeVehicleModal : rechargement SYSTÉMATIQUE — `vehicleCount`
+      // a pu changer dès le choix du véhicule (persistance immédiate du véhicule "nu").
+      expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-modal')).toBeNull();
+    });
+
+    it('closeVehicleModal() ferme la modale et recharge la liste des équipes — depuis le mode édition', () => {
+      component.openVehicleEditor(mockPair);
+      fixture.detectChanges();
+      vi.clearAllMocks();
+
+      component.closeVehicleModal();
+      fixture.detectChanges();
+
+      expect(component.vehicleModal()).toBeNull();
+      // cf. doc de closeVehicleModal : l'équipement (et donc le coût affiché) a
+      // pu changer, ajouts ET retraits confondus — rechargement SYSTÉMATIQUE.
       expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.querySelector('app-modal')).toBeNull();
     });
 
     it('ferme la modale et recharge la liste au (closeRequested) de la modale — abandon en cours de route', () => {
-      component.openVehicleEditor(mockPair);
+      component.openVehicleBuilder(mockTeams[0]);
       fixture.detectChanges();
       vi.clearAllMocks();
 
+      // Croix de fermeture de la Modal (cf. modal.html, .modal-close) → closeRequested
       const closeBtn = fixture.nativeElement.querySelector('.modal-close') as HTMLButtonElement;
       closeBtn.click();
       fixture.detectChanges();
 
-      expect(component.editingVehicle()).toBeNull();
+      expect(component.vehicleModal()).toBeNull();
       expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
     });
 
-    it('ferme la modale et recharge la liste au (closed) de l\'éditeur — fin normale du flux', () => {
-      component.openVehicleEditor(mockPair);
+    it('ferme la modale et recharge la liste au (done) du configurateur — fin normale du flux, quel que soit le mode', () => {
+      component.openVehicleBuilder(mockTeams[0]);
       fixture.detectChanges();
       vi.clearAllMocks();
 
-      // Mirroir de `builder.finish()` ailleurs : on appelle directement la
-      // méthode du composant projeté (couvert par vehicle-editor.spec.ts),
-      // ce test vérifie l'orchestration de `Teams`, pas l'éditeur lui-même.
-      const editor = fixture.debugElement.query(By.directive(VehicleEditor)).componentInstance as VehicleEditor;
-      editor.close();
+      // `VehicleConfigurator.finish()` émet `done` indépendamment du mode (cf.
+      // son code : seule l'INTENTION de fermer compte, "Terminer" et "Fermer"
+      // sont un seul et même `output<void>()`) — on appelle directement la
+      // méthode du composant projeté plutôt que de naviguer le flux complet
+      // (déjà couvert par vehicle-configurator.spec.ts) : ce test vérifie
+      // l'orchestration de `Teams`, pas le configurateur lui-même.
+      const configurator = fixture.debugElement.query(By.directive(VehicleConfigurator))
+        .componentInstance as VehicleConfigurator;
+      configurator.finish();
       fixture.detectChanges();
 
-      expect(component.editingVehicle()).toBeNull();
+      expect(component.vehicleModal()).toBeNull();
       expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
     });
   });

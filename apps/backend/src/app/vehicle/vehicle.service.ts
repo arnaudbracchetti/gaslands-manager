@@ -118,7 +118,14 @@ export class VehicleService {
     }
 
     const vehicle = this.vehicleRepo.create({ teamId, nomInterne });
-    return this.vehicleRepo.save(vehicle);
+    await this.vehicleRepo.save(vehicle);
+    // Recharge l'entité avec ses relations : `save()` retourne le véhicule
+    // "nu", avec `improvements`/`weapons` à `undefined` (TypeORM ne matérialise
+    // pas de tableaux vides pour des relations OneToMany non chargées). Le
+    // frontend suppose toujours des tableaux (cf. `Vehicle` dans
+    // vehicle-builder.model.ts) — même contrat que `addImprovement`/`addWeapon`,
+    // qui rechargent systématiquement via `findOneForUser` après persistance.
+    return this.findOneForUser(vehicle.id, userId);
   }
 
   /**

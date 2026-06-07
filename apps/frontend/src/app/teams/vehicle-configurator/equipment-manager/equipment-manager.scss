@@ -1,20 +1,18 @@
-/* ── VehicleEditor — gestion de l'équipement d'un véhicule existant ─────────── */
-/* Mirroir délibéré de vehicle-builder.scss (préfixe `.ve-` au lieu de `.vb-` —
-   cf. en-tête de vehicle-editor.ts) : mêmes teintes, mêmes espacements, pour
-   une cohérence visuelle entre les deux modales d'équipement. La section
-   `.ve-current` est la seule véritable nouveauté (absente du builder). */
+/* ── EquipmentManager — gestion d'équipement (ajout + retrait), partagée ────── */
+/* Fusion des deux feuilles de styles d'origine (`.vb-*`/`.ve-*`, préfixe `.em-`
+   ici) — mêmes teintes, mêmes espacements. La section `.em-current` (équipement
+   actuel retirable) provient de l'ex-VehicleEditor, désormais TOUJOURS affichée
+   (cf. en-tête du composant : "Retrait toujours proposé"). */
 
-.ve {
+.em {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-width: min(640px, 80vw);
-  max-width: 720px;
 }
 
 /* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
 
-.ve-status {
+.em-status {
   margin: 0;
   font-size: 0.88rem;
   color: #999;
@@ -30,7 +28,7 @@
 
 /* ── Introduction ───────────────────────────────────────────────────────────── */
 
-.ve-intro {
+.em-intro {
   margin: 0;
   font-size: 0.92rem;
   color: #e0e0e0;
@@ -40,9 +38,9 @@
   }
 }
 
-/* ── Équipement actuel — liste retirable (nouveau, absent du builder) ──────── */
+/* ── Équipement actuel — liste retirable ────────────────────────────────────── */
 
-.ve-current {
+.em-current {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -50,14 +48,14 @@
   border-bottom: 1px solid #2a2a3a;
 }
 
-.ve-current__title {
+.em-current__title {
   margin: 0;
   font-size: 0.95rem;
   color: #e0e0e0;
   font-weight: 600;
 }
 
-.ve-current__list {
+.em-current__list {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -66,7 +64,7 @@
   list-style: none;
 }
 
-.ve-current__item {
+.em-current__item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -77,18 +75,18 @@
   border-radius: 4px;
 }
 
-.ve-current__name {
+.em-current__name {
   font-size: 0.86rem;
   color: #e0e0e0;
 }
 
-.ve-current__orientation {
+.em-current__orientation {
   margin-left: 6px;
   font-size: 0.8rem;
   color: #999;
 }
 
-.ve-current__remove {
+.em-current__remove {
   background: transparent;
   border: 1px solid #e94560;
   color: #e94560;
@@ -106,54 +104,29 @@
   }
 }
 
-/* ── Équipement disponible — sections (mirroir exact de .vb-equipment*) ────── */
+/* ── Équipement disponible — sections (mirroir exact de l'ex-`.vb-equipment*`) ── */
 
-.ve-equipment {
+.em-equipment {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.ve-equipment__group {
+.em-equipment__group {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.ve-equipment__title {
+.em-equipment__title {
   margin: 0;
   font-size: 0.95rem;
   color: #e0e0e0;
   font-weight: 600;
 }
 
-.ve-equipment__list {
+.em-equipment__list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-/* ── Pied de modale : bouton de fermeture ───────────────────────────────────── */
-
-.ve-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 12px;
-  border-top: 1px solid #2a2a3a;
-}
-
-.ve-close {
-  background: #e94560;
-  border: none;
-  color: #0a0a14;
-  padding: 9px 22px;
-  border-radius: 4px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:hover {
-    opacity: 0.85;
-  }
 }

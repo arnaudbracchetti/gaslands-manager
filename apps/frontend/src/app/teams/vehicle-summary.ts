@@ -16,7 +16,7 @@
  * mirroir de la philosophie qui sous-tend `vehicle-build.ts`/`ok`/`fail` côté backend :
  * séparer le calcul pur de son orchestration).
  */
-import { Vehicle } from './vehicle-builder/vehicle-builder.model';
+import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
 import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
 import { Team } from './team.model';
 

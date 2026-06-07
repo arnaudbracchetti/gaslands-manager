@@ -179,6 +179,11 @@ describe('VehicleService', () => {
   // Un mock par dépendance injectée — chacun isolé, remis à zéro entre les tests.
   const mockVehicleRepo = {
     findOne: vi.fn(),
+    // Nécessaires à `create()` (cf. son describe ci-dessous) — `create` construit
+    // l'entité en mémoire, `save` la persiste ; le résultat brut de `save` n'est
+    // PAS celui retourné par le service (cf. contrat "persister PUIS recharger").
+    create: vi.fn(),
+    save: vi.fn(),
     remove: vi.fn(),
   };
   const mockImprovementRepo = {
@@ -250,6 +255,71 @@ describe('VehicleService', () => {
       mockVehicleRepo.findOne.mockResolvedValue(null);
 
       await expect(service.findOneForUser(999, 42)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── create ──────────────────────────────────────────────────────────────────
+
+  describe('create() — création "nue", validée contre le catalogue du sponsor', () => {
+    it('persiste le véhicule et retourne le véhicule RECHARGÉ (improvements/weapons en tableaux, jamais undefined)', async () => {
+      // `save()` retourne un véhicule "nu" — sans relations chargées (TypeORM ne
+      // matérialise pas de tableaux vides pour des OneToMany non chargées). Le
+      // contrat du service ("persister PUIS recharger via findOneForUser", même
+      // raisonnement qu'`addImprovement`/`addWeapon`) garantit que l'APPELANT ne
+      // voit jamais cette entité brute, mais toujours la version rechargée.
+      mockTeamService.findOneForUser.mockResolvedValue(mockTeam);
+      mockCatalogService.getVehiculeByNomInterne.mockReturnValue(catalogVehicule);
+      mockCatalogService.getSponsor.mockReturnValue({
+        ...sponsorRutherford,
+        vehicules: [catalogVehicule],
+      });
+      // `save()` mute et retourne LA MÊME entité que `create()` (TypeORM lui
+      // assigne son `id` généré) — d'où la lecture de `vehicle.id` après l'attente,
+      // dans le service. Le mock reflète cette continuité de référence.
+      const vehiculeBrut = { id: 7, teamId: 3, nomInterne: 'camion' };
+      mockVehicleRepo.create.mockReturnValue(vehiculeBrut);
+      mockVehicleRepo.save.mockResolvedValue(vehiculeBrut);
+      mockVehicleRepo.findOne.mockResolvedValue(mockVehicle);
+
+      const result = await service.create(3, 42, 'camion');
+
+      expect(mockVehicleRepo.create).toHaveBeenCalledWith({ teamId: 3, nomInterne: 'camion' });
+      expect(mockVehicleRepo.save).toHaveBeenCalled();
+      // RECHARGÉ : le résultat de `findOneForUser`, avec `improvements`/`weapons`
+      // en tableaux — jamais l'entité brute renvoyée par `save`.
+      expect(mockVehicleRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 7, team: { userId: 42 } },
+        relations: { team: true, improvements: true, weapons: true },
+      });
+      expect(result).toEqual(mockVehicle);
+      expect(result.improvements).toEqual([]);
+      expect(result.weapons).toEqual([]);
+    });
+
+    it('lève BadRequestException si le nomInterne est inconnu du catalogue, et ne persiste rien', async () => {
+      mockTeamService.findOneForUser.mockResolvedValue(mockTeam);
+      mockCatalogService.getVehiculeByNomInterne.mockReturnValue(undefined);
+
+      const promesse = service.create(3, 42, 'vehicule-fantome');
+
+      await expect(promesse).rejects.toThrow(BadRequestException);
+      await expect(promesse).rejects.toThrow(/vehicule-fantome/);
+      expect(mockVehicleRepo.create).not.toHaveBeenCalled();
+      expect(mockVehicleRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si le véhicule n\'est pas autorisé pour le sponsor de l\'équipe, et ne persiste rien', async () => {
+      mockTeamService.findOneForUser.mockResolvedValue(mockTeam);
+      mockCatalogService.getVehiculeByNomInterne.mockReturnValue(catalogVehicule);
+      // Sponsor dont le catalogue NE CONTIENT PAS `catalogVehicule` — non autorisé.
+      mockCatalogService.getSponsor.mockReturnValue({ ...sponsorRutherford, vehicules: [] });
+
+      const promesse = service.create(3, 42, 'camion');
+
+      await expect(promesse).rejects.toThrow(BadRequestException);
+      await expect(promesse).rejects.toThrow(/n'est pas autorisé pour le sponsor/);
+      expect(mockVehicleRepo.create).not.toHaveBeenCalled();
+      expect(mockVehicleRepo.save).not.toHaveBeenCalled();
     });
   });
 
