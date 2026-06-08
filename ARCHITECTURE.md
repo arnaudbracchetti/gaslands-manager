@@ -100,6 +100,11 @@ apps/backend/src/app/
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`.
 
+> 📄 **Lecture recommandée** : [`docs/VEHICLE_SYSTEM.md`](docs/VEHICLE_SYSTEM.md) —
+> document de conception détaillant le cycle de vie des véhicules (création, équipement,
+> Pattern Décorateur, pool d'emplacements partagé, sécurité). À lire si le contexte des
+> modules `vehicle` / `weapon` n'est pas immédiatement clair.
+
 ### 3.2 Flux d'authentification JWT
 
 1. Client : `POST /api/auth/login` avec `{ email, password }`
