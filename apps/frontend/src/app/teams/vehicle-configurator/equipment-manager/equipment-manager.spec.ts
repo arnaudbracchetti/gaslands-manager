@@ -372,9 +372,23 @@ describe('EquipmentManager', () => {
 
   // ── Détection "orientation requise" ─────────────────────────────────────────
 
-  it('signale qu\'une orientation est requise pour une arme qui n\'est pas d\'équipage', () => {
-    expect(component.weaponNeedsOrientation({ ...mockAvailableWeapon, type: 'base' })).toBe(true);
-    expect(component.weaponNeedsOrientation({ ...mockAvailableWeapon, type: 'équipage' })).toBe(false);
+  it('signale qu\'une orientation est requise pour une arme via le contrat textuel `raison` — mirroir exact d\'improvementNeedsOrientation', () => {
+    // Correctif : la détection ne se base PLUS sur `option.type` mais sur `option.raison`,
+    // mirroir de `improvementNeedsOrientation`. L'ancienne approche (type !== 'équipage')
+    // traitait toujours les armes non-équipage comme "besoin d'orientation", même quand
+    // le vrai refus était "emplacements insuffisants" — l'UI n'affichait jamais le grisage.
+    expect(component.weaponNeedsOrientation({
+      ...mockAvailableWeapon,
+      disponible: false,
+      raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
+    })).toBe(true);
+    expect(component.weaponNeedsOrientation({
+      ...mockAvailableWeapon,
+      disponible: false,
+      raison: 'Emplacements insuffisants : 5/4 requis avec "Mitrailleuse"',
+    })).toBe(false);
+    // Arme disponible (raison undefined) → pas "besoin d'orientation" à signaler.
+    expect(component.weaponNeedsOrientation(mockAvailableWeapon)).toBe(false);
   });
 
   it('signale qu\'une orientation est requise pour une amélioration via le contrat textuel `raison`', () => {

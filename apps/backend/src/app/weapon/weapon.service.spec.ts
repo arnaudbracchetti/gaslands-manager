@@ -190,12 +190,6 @@ describe('WeaponService', () => {
       );
     });
 
-    it('refuse — orientation manquante pour une arme qui en a besoin (hors équipage)', async () => {
-      const result = await service.canAddWeapon(7, 42, 'mitrailleuse');
-
-      expect(result).toEqual(fail('Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir'));
-    });
-
     it('refuse — orientation fournie pour une arme d\'équipage (interdite, 360° automatique)', async () => {
       const result = await service.canAddWeapon(7, 42, 'grenades', 'avant');
 
@@ -212,6 +206,27 @@ describe('WeaponService', () => {
       const result = await service.canAddWeapon(7, 42, 'mitrailleuse', 'avant');
 
       expect(result).toEqual(fail('Emplacements insuffisants : 6/5 requis avec "Mitrailleuse"'));
+    });
+
+    it('refuse — emplacements avant orientation manquante — une arme non-équipage SANS orientation ET sans place retourne "emplacements insuffisants", pas "orientation requise"', async () => {
+      // Correctif de l'ordre des règles dans `checkCandidate` : la règle 3 (emplacements)
+      // doit primer sur la règle 4 (orientation manquante), sinon l'UI reçoit le mauvais
+      // message et ne grise pas l'arme — cf. en-tête de `checkCandidate`.
+      // 4 (améliorations) + 2 (armes) + 1 (mitrailleuse) = 7 > 5 → refus emplacements
+      mockVehicleService.improvementSlotsOf.mockReturnValue(4);
+      mockVehicleService.weaponSlotsOf.mockReturnValue(2);
+
+      const result = await service.canAddWeapon(7, 42, 'mitrailleuse'); // sans orientation
+
+      expect(result).toEqual(fail('Emplacements insuffisants : 7/5 requis avec "Mitrailleuse"'));
+    });
+
+    it('refuse — orientation manquante pour une arme qui en a besoin (hors équipage), quand les emplacements sont OK', async () => {
+      // Orientation vérifiée EN DERNIER — seulement si les emplacements sont disponibles.
+      // (0 + 0 + 1 mitrailleuse = 1 ≤ 5 : de la place, mais orientation absente)
+      const result = await service.canAddWeapon(7, 42, 'mitrailleuse');
+
+      expect(result).toEqual(fail('Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir'));
     });
 
     it('accepte — sponsor autorise, orientation cohérente, emplacements suffisants (arme orientable)', async () => {
@@ -277,6 +292,26 @@ describe('WeaponService', () => {
           raison: undefined,
         },
       ]);
+    });
+
+    it('retourne "emplacements insuffisants" (et non "orientation requise") quand le pool est saturé — correctif de l\'ordre des règles', async () => {
+      // 5 emplacements déjà pris par des améliorations. Résultat par arme :
+      //   Mitrailleuse (1) : 5+0+1 = 6 > 5 → "emplacements insuffisants"
+      //   BFG (2)          : 5+0+2 = 7 > 5 → "emplacements insuffisants"
+      //   Grenades (0)     : 5+0+0 = 5 ≤ 5 → ok (0 emplacement, pool non dépassé)
+      // Avant le correctif, `checkCandidate` vérifiait l'orientation AVANT les emplacements :
+      // l'absence d'orientation déclenchait "orientation requise" en premier pour
+      // Mitrailleuse/BFG, masquant le vrai blocage et empêchant le frontend de griser.
+      mockVehicleService.improvementSlotsOf.mockReturnValue(5);
+      mockVehicleService.weaponSlotsOf.mockReturnValue(0);
+
+      const result = await service.getAvailableWeapons(7, 42);
+
+      expect(result[0]).toMatchObject({ nomInterne: 'mitrailleuse', disponible: false, raison: 'Emplacements insuffisants : 6/5 requis avec "Mitrailleuse"' });
+      expect(result[1]).toMatchObject({ nomInterne: 'bfg', disponible: false, raison: 'Emplacements insuffisants : 7/5 requis avec "BFG"' });
+      // Grenades (0 emplacement) : le pool reste à 5 = 5, condition strictement supérieure
+      // non déclenchée → disponible (puis orientation non requise pour une arme d'équipage).
+      expect(result[2]).toMatchObject({ nomInterne: 'grenades', disponible: true });
     });
 
     it('lève une Error si le sponsor de l\'équipe est inconnu du catalogue', async () => {

@@ -309,12 +309,20 @@ export class EquipmentManager {
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──
 
   /**
-   * Une arme requiert une orientation ⟺ elle n'est pas de type `équipage`
-   * (signal TYPÉ et fiable, directement lu sur `AvailableWeaponDto.type` —
-   * cf. SPECIFICATION.md §5/§7, "360° automatique pour les armes d'équipage").
+   * Une arme "requiert une orientation" ⟺ le backend l'indique via `raison` —
+   * MÊME contrat textuel que `improvementNeedsOrientation` ci-dessous.
+   *
+   * ⚠️ On NE teste PAS `option.type !== 'équipage'` (ancienne approche). Cette
+   * détection par type était TROMPEUSE : une arme non-équipage refusée pour manque
+   * d'emplacements recevait `disponible: false` + `raison: "Emplacements insuffisants…"`,
+   * mais `type !== 'équipage'` renvoyait quand même `true` → le template la traitait
+   * comme "juste besoin d'une orientation" et affichait le bouton "Ajouter" au lieu
+   * de la griser. Le contrat textuel est la seule source fiable : `raison` reflète
+   * ce que `checkCandidate` a RÉELLEMENT retourné (cf. correctif `weapon.service.ts`,
+   * ordre des règles : emplacements vérifiés AVANT l'orientation manquante).
    */
   weaponNeedsOrientation(option: AvailableWeaponDto): boolean {
-    return option.type !== 'équipage';
+    return option.raison?.startsWith('Une orientation est requise') ?? false;
   }
 
   /**

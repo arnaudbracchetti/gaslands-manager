@@ -10,8 +10,22 @@
 # pour que tu puisses voir les logs séparément.
 #
 # Usage :
-#   .\dev.ps1
+#   .\dev.ps1           # démarrage normal
+#   .\dev.ps1 -Reset    # vide le cache Nx avant de démarrer
+#
+# Quand utiliser -Reset ?
+#   Quand tes modifications du backend ou du frontend ne semblent
+#   pas prises en compte au redémarrage des serveurs. Nx met en
+#   cache les binaires compilés : si le cache est obsolète, il sert
+#   l'ancienne version sans recompiler. `npx nx reset` le vide.
 # ============================================================
+
+param(
+    # -Reset : exécute `npx nx reset` avant de lancer les serveurs.
+    # Vide le cache de compilation Nx pour forcer une recompilation
+    # complète des sources. Voir la note d'usage ci-dessus.
+    [switch]$Reset
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -49,7 +63,21 @@ docker compose -f "$projectRoot\docker-compose.yml" up -d postgres pgadmin
 Write-Ok "PostgreSQL démarré sur localhost:5432"
 Write-Ok "pgAdmin démarré sur http://localhost:5050"
 
-# ── 3. Fenêtre PowerShell -- Backend NestJS ──────────────────
+# ── 3. (optionnel) Remise à zéro du cache Nx ─────────────────
+# Déclenchée uniquement si -Reset est passé en argument.
+# `npx nx reset` supprime le dossier .nx/cache et les sorties
+# compilées mises en cache — Nx recompilera depuis les sources au
+# prochain `nx serve`. À utiliser quand tes modifications ne sont
+# pas prises en compte malgré un redémarrage des serveurs.
+if ($Reset) {
+    Write-Step "Remise à zéro du cache Nx (-Reset détecté)..."
+    $env:NODE_TLS_REJECT_UNAUTHORIZED = '0'
+    $env:NX_IGNORE_UNSUPPORTED_TS_SETUP = 'true'
+    npx nx reset
+    Write-Ok "Cache Nx vidé — les serveurs recompileront depuis les sources"
+}
+
+# ── 5. Fenêtre PowerShell -- Backend NestJS ──────────────────
 # Start-Process ouvre une NOUVELLE fenêtre PowerShell.
 # -ArgumentList passe les commandes à exécuter dans cette fenêtre.
 #
@@ -70,7 +98,7 @@ npx nx serve backend
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd
 Write-Ok "Fenêtre backend ouverte"
 
-# ── 4. Fenêtre PowerShell -- Frontend Angular ────────────────
+# ── 6. Fenêtre PowerShell -- Frontend Angular ────────────────
 Write-Step "Démarrage du frontend Angular..."
 
 $frontendCmd = @"

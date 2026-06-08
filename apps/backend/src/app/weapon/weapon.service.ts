@@ -49,23 +49,29 @@ export class WeaponService {
 
   /**
    * Vérification à blanc — "puis-je monter CETTE arme précise sur CE véhicule,
-   * dans son état ACTUEL ?" Trois règles, dans l'ordre où elles se découvrent
-   * naturellement (la plus simple/la moins coûteuse d'abord — pas de raison de
-   * construire une chaîne ou de sommer des emplacements pour une arme que le
-   * sponsor n'autorise de toute façon pas) :
+   * dans son état ACTUEL ?" Trois règles, dans un ordre DÉLIBÉRÉ qui garantit
+   * que la raison renvoyée reflète le VRAI blocage et non un artefact du flux
+   * de contrôle :
    *
-   *  1. l'arme appartient au catalogue DU SPONSOR de l'équipe (même principe
-   *     que `VehicleService.create` pour le véhicule lui-même) ;
-   *  2. l'orientation fournie est COHÉRENTE avec le `type` de l'arme — cf.
-   *     `weapon.entity.ts`, note d'en-tête : OBLIGATOIRE hors `équipage`
-   *     (montée sur un arc précis), INTERDITE pour `équipage` (portée par un
-   *     équipier, 360° automatique — fournir une orientation ici serait une
-   *     INCOHÉRENCE de la requête, pas un détail à ignorer silencieusement :
-   *     un rejet explicite vaut mieux qu'une donnée acceptée puis tue) ;
-   *  3. le pool d'emplacements PARTAGÉ (améliorations + armes déjà montées,
-   *     plus cette nouvelle arme) tient dans la capacité du véhicule catalogue
-   *     — `improvementSlotsOf`/`weaponSlotsOf`, cf. leur en-tête sur `VehicleService`
-   *     pour le raisonnement complet du pool commun.
+   *  1. l'arme appartient au catalogue DU SPONSOR de l'équipe (vérification la
+   *     plus légère — pas de raison de calculer des emplacements pour une arme
+   *     que le sponsor n'autorise de toute façon pas) ;
+   *  2. l'orientation est INCOHÉRENTE pour une arme d'équipage — INTERDITE par
+   *     définition (portée par un équipier, 360° automatique ; cf. `weapon.entity.ts`,
+   *     note d'en-tête). Ce cas ne peut pas se produire lors du listing
+   *     (`getAvailableWeapons` n'a pas d'orientation), mais au moment de l'ajout
+   *     c'est une incohérence de la requête elle-même, pas un état du véhicule :
+   *     un rejet explicite vaut mieux qu'une donnée acceptée puis perdue ;
+   *  3. le pool d'emplacements PARTAGÉ (améliorations + armes déjà montées, plus
+   *     cette nouvelle arme) tient dans la capacité du véhicule catalogue —
+   *     `improvementSlotsOf`/`weaponSlotsOf`, cf. leur en-tête sur `VehicleService` ;
+   *  4. l'orientation est MANQUANTE pour une arme hors-équipage — vérifiée EN
+   *     DERNIER car c'est une "information encore à fournir", pas un refus : lors
+   *     du listing, cette règle signale "choisissez une orientation avant d'ajouter",
+   *     et seulement si les emplacements sont disponibles. Placer cette vérification
+   *     AVANT les emplacements (ancienne position) masquait le vrai blocage : une
+   *     arme refusée pour manque de place recevait le message "orientation requise"
+   *     au lieu de "emplacements insuffisants", trompant l'UI (cf. correctif).
    *
    * Retourne un `RuleResult` (jamais un booléen) — `reason` alimente aussi bien
    * `BadRequestException` que l'UI (`getAvailableWeapons` ci-dessous), exactement
@@ -114,12 +120,11 @@ export class WeaponService {
       return fail(`L'arme "${arme.nom}" n'est pas autorisée pour le sponsor "${sponsor.nom}"`);
     }
 
-    // Règle 2 — cohérence de l'orientation avec le TYPE d'arme (cf. en-tête de
-    // `canAddWeapon` : la nuance est SYMÉTRIQUE — manquante ici, superflue là).
+    // Règle 2 — orientation INTERDITE pour une arme d'équipage (portée par un
+    // équipier, 360° automatique ; cf. `weapon.entity.ts`, note d'en-tête et
+    // en-tête de `canAddWeapon`). Vérifiée AVANT les emplacements : c'est une
+    // incohérence de la requête elle-même, indépendante de l'état du véhicule.
     const estEquipage = arme.type === 'équipage';
-    if (!estEquipage && orientation === undefined) {
-      return fail(`Une orientation est requise pour monter "${arme.nom}" sur un arc de tir`);
-    }
     if (estEquipage && orientation !== undefined) {
       return fail(`"${arme.nom}" est une arme d'équipage : elle ne se monte pas sur un arc de tir précis`);
     }
@@ -128,6 +133,9 @@ export class WeaponService {
     // helpers sur `VehicleService`) : améliorations + armes déjà montées, PLUS
     // cette nouvelle arme, doivent tenir dans la capacité d'ORIGINE du véhicule
     // (le catalogue, jamais `stats` — rien dans Gaslands n'augmente cette capacité).
+    // Vérifiée AVANT l'orientation manquante : si le véhicule est plein, c'est
+    // le vrai blocage — l'UI doit griser l'arme avec "emplacements insuffisants",
+    // pas masquer ce refus derrière "orientation requise" (cf. correctif en-tête).
     const catalogVehicule = this.catalogService.getVehiculeByNomInterne(vehicle.nomInterne);
     if (!catalogVehicule) {
       throw new Error(`Véhicule catalogue inconnu : "${vehicle.nomInterne}" (véhicule #${vehicle.id})`);
@@ -136,6 +144,16 @@ export class WeaponService {
       this.vehicleService.improvementSlotsOf(vehicle) + this.vehicleService.weaponSlotsOf(vehicle) + arme.emplacement;
     if (totalDemande > catalogVehicule.emplacements) {
       return fail(`Emplacements insuffisants : ${totalDemande}/${catalogVehicule.emplacements} requis avec "${arme.nom}"`);
+    }
+
+    // Règle 4 — orientation MANQUANTE pour une arme hors-équipage (cf. en-tête de
+    // `canAddWeapon`). Vérifiée EN DERNIER : c'est une "information encore à fournir",
+    // pas un refus définitif. Lors du listing (`getAvailableWeapons`), cette raison
+    // indique "choisissez une orientation avant d'ajouter" — le frontend affiche alors
+    // le sélecteur d'orientation plutôt que de griser l'arme. Elle ne doit apparaître
+    // QUE si l'arme est par ailleurs disponible (emplacements suffisants, sponsor ok).
+    if (!estEquipage && orientation === undefined) {
+      return fail(`Une orientation est requise pour monter "${arme.nom}" sur un arc de tir`);
     }
 
     return ok();
@@ -149,11 +167,13 @@ export class WeaponService {
    *
    * ⚠️ Même nuance que son modèle : l'orientation n'est PAS fournie ici — cette
    * liste répond à "cette arme est-elle accessible à ce véhicule, par principe ?",
-   * pas "puis-je la monter avec TEL réglage ?". Conséquence assumée : toute arme
-   * non-équipage apparaîtra avec `disponible: false` et la raison "Une orientation
-   * est requise pour…" tant qu'elle n'a pas été choisie — un message qui dit "il
-   * vous manque une information", pas "c'est interdit" (cf. note de son modèle
-   * pour la discussion complète sur les limites de `RuleResult` à cet égard).
+   * pas "puis-je la monter avec TEL réglage ?". Conséquence : une arme non-équipage
+   * dont les emplacements sont disponibles apparaîtra avec `disponible: false` et la
+   * raison "Une orientation est requise pour…" — un message qui dit "il vous manque
+   * une information", pas "c'est interdit". En revanche, si les emplacements sont
+   * insuffisants, la raison sera "Emplacements insuffisants…" — le vrai blocage est
+   * signalé, et l'UI peut griser l'arme en conséquence (cf. correctif dans l'en-tête
+   * de `checkCandidate` : l'ordre des règles garantit ce comportement).
    */
   async getAvailableWeapons(vehicleId: number, userId: number): Promise<AvailableWeaponDto[]> {
     const vehicle = await this.vehicleService.findOneForUser(vehicleId, userId);
