@@ -1,8 +1,8 @@
 /* ── Carte d'équipe ────────────────────────────────────────────────────────── */
 
 .team-card {
-  background: #0f0f1a;
-  border: 1px solid #1e1e2e;
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border-subtle);
   border-radius: 8px;
   padding: 20px;
   transition: border-color 0.2s, transform 0.15s;
@@ -11,13 +11,13 @@
   gap: 12px;
 
   &:hover {
-    border-color: #e94560;
+    border-color: var(--clr-accent);
     transform: translateY(-2px);
   }
 
   /* Nom de l'équipe */
   &__name {
-    color: #e0e0e0;
+    color: var(--clr-text);
     font-size: 1.15rem;
     font-weight: 700;
   }
@@ -32,9 +32,9 @@
 
   /* Badge sponsor (accent rouge discret) */
   &__badge {
-    background: rgba(233, 69, 96, 0.15);
-    border: 1px solid rgba(233, 69, 96, 0.3);
-    color: #e94560;
+    background: rgba(var(--clr-accent-rgb), 0.15);
+    border: 1px solid rgba(var(--clr-accent-rgb), 0.3);
+    color: var(--clr-accent);
     padding: 3px 10px;
     border-radius: 12px;
     font-size: 0.8rem;
@@ -45,7 +45,7 @@
 
   /* Budget en jerricans */
   &__cans {
-    color: #888;
+    color: var(--clr-text-muted);
     font-size: 0.85rem;
   }
 
@@ -65,8 +65,8 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-top: 1px solid #1e1e2e;
-    border-bottom: 1px solid #1e1e2e;
+    border-top: 1px solid var(--clr-border-subtle);
+    border-bottom: 1px solid var(--clr-border-subtle);
     padding: 8px 0;
   }
 
@@ -79,12 +79,12 @@
   }
 
   &__vehicle-name {
-    color: #e0e0e0;
+    color: var(--clr-text);
   }
 
   /* Coût en jerricans — même teinte que __cans (cohérence "budget") */
   &__vehicle-cost {
-    color: #888;
+    color: var(--clr-text-muted);
     white-space: nowrap;
   }
 
@@ -102,7 +102,7 @@
     gap: 8px;
     margin-top: auto;
     padding-top: 8px;
-    border-top: 1px solid #1e1e2e;
+    border-top: 1px solid var(--clr-border-subtle);
   }
 }
 
@@ -112,9 +112,9 @@
    pleine largeur) — cf. palette du projet, même rouge que .team-card__badge. */
 
 .btn-add-vehicle {
-  background: rgba(233, 69, 96, 0.12);
-  border: 1px solid #e94560;
-  color: #e94560;
+  background: rgba(var(--clr-accent-rgb), 0.12);
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -123,7 +123,7 @@
   transition: background 0.2s;
 
   &:hover {
-    background: rgba(233, 69, 96, 0.22);
+    background: rgba(var(--clr-accent-rgb), 0.22);
   }
 }
 
@@ -141,21 +141,21 @@
 
   &--edit {
     background: transparent;
-    border-color: #7ec8e3;
-    color: #7ec8e3;
+    border-color: var(--clr-accent-cyan);
+    color: var(--clr-accent-cyan);
 
     &:hover {
-      background: rgba(126, 200, 227, 0.1);
+      background: rgba(var(--clr-accent-cyan-rgb), 0.1);
     }
   }
 
   &--delete {
     background: transparent;
-    border-color: #e94560;
-    color: #e94560;
+    border-color: var(--clr-accent);
+    color: var(--clr-accent);
 
     &:hover {
-      background: rgba(233, 69, 96, 0.1);
+      background: rgba(var(--clr-accent-rgb), 0.1);
     }
   }
 }
@@ -175,18 +175,18 @@
   transition: background 0.2s, border-color 0.2s;
 
   &--edit {
-    border-color: #7ec8e3;
+    border-color: var(--clr-accent-cyan);
 
     &:hover {
-      background: rgba(126, 200, 227, 0.1);
+      background: rgba(var(--clr-accent-cyan-rgb), 0.1);
     }
   }
 
   &--delete {
-    border-color: #e94560;
+    border-color: var(--clr-accent);
 
     &:hover {
-      background: rgba(233, 69, 96, 0.1);
+      background: rgba(var(--clr-accent-rgb), 0.1);
     }
   }
 }

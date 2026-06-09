@@ -15,14 +15,14 @@
 .em-status {
   margin: 0;
   font-size: 0.88rem;
-  color: #999;
+  color: var(--clr-text-hint);
 
   &--loading {
-    color: #7ec8e3;
+    color: var(--clr-accent-cyan);
   }
 
   &--error {
-    color: #e94560;
+    color: var(--clr-accent);
   }
 }
 
@@ -31,10 +31,10 @@
 .em-intro {
   margin: 0;
   font-size: 0.92rem;
-  color: #e0e0e0;
+  color: var(--clr-text);
 
   strong {
-    color: #7ec8e3;
+    color: var(--clr-accent-cyan);
   }
 }
 
@@ -45,13 +45,13 @@
   flex-direction: column;
   gap: 10px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #2a2a3a;
+  border-bottom: 1px solid var(--clr-border);
 }
 
 .em-current__title {
   margin: 0;
   font-size: 0.95rem;
-  color: #e0e0e0;
+  color: var(--clr-text);
   font-weight: 600;
 }
 
@@ -70,26 +70,26 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
-  background: #1a1a28;
-  border: 1px solid #2a2a3a;
+  background: var(--clr-bg-item);
+  border: 1px solid var(--clr-border);
   border-radius: 4px;
 }
 
 .em-current__name {
   font-size: 0.86rem;
-  color: #e0e0e0;
+  color: var(--clr-text);
 }
 
 .em-current__orientation {
   margin-left: 6px;
   font-size: 0.8rem;
-  color: #999;
+  color: var(--clr-text-hint);
 }
 
 .em-current__remove {
   background: transparent;
-  border: 1px solid #e94560;
-  color: #e94560;
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
   padding: 5px 14px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -99,8 +99,8 @@
   white-space: nowrap;
 
   &:hover {
-    background: #e94560;
-    color: #0a0a14;
+    background: var(--clr-accent);
+    color: var(--clr-bg-base);
   }
 }
 
@@ -121,7 +121,7 @@
 .em-equipment__title {
   margin: 0;
   font-size: 0.95rem;
-  color: #e0e0e0;
+  color: var(--clr-text);
   font-weight: 600;
 }
 
@@ -136,7 +136,7 @@
 /* Badge "🔒 Intégré" / "🔒 Tourelle intégrée" — indicateur visuel non interactif */
 .em-current__badge-defaut {
   font-size: 0.8rem;
-  color: #7ec8e3;
+  color: var(--clr-accent-cyan);
   white-space: nowrap;
   opacity: 0.85;
 }
@@ -145,7 +145,7 @@
 .em-current__tourelle-badge {
   margin-left: 4px;
   font-size: 0.78rem;
-  color: #999;
+  color: var(--clr-text-hint);
   font-style: italic;
 }
 
@@ -153,14 +153,14 @@
 .em-current__warning {
   margin-left: 8px;
   font-size: 0.8rem;
-  color: #f0a500;
+  color: var(--clr-warning);
 }
 
 /* Bouton "Assigner une arme" — ton neutre (action secondaire, pas destructrice) */
 .em-current__add-weapon {
   background: transparent;
-  border: 1px solid #7ec8e3;
-  color: #7ec8e3;
+  border: 1px solid var(--clr-accent-cyan);
+  color: var(--clr-accent-cyan);
   padding: 5px 14px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -170,122 +170,11 @@
   white-space: nowrap;
 
   &:hover {
-    background: #7ec8e3;
-    color: #0a0a14;
+    background: var(--clr-accent-cyan);
+    color: var(--clr-bg-base);
   }
 }
 
 /* ── Modale d'assignation d'arme sur Tourelle ──────────────────────────────── */
-
-/* Fond semi-transparent qui couvre le panneau — positionné sur `.em` qui a
-   déjà `position: relative` implicite ; `z-index` suffit pour passer devant
-   la liste des équipements disponibles en dessous. */
-.em-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-/* Boîte de dialogue centrale */
-.em-modal {
-  background: #12121e;
-  border: 1px solid #2a2a3a;
-  border-radius: 8px;
-  padding: 24px;
-  width: min(480px, 92vw);
-  max-height: 80vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.em-modal__title {
-  margin: 0;
-  font-size: 1rem;
-  color: #e0e0e0;
-  font-weight: 600;
-}
-
-.em-modal__hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #999;
-}
-
-/* Liste des armes disponibles — sans puces */
-.em-modal__list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Bouton arme — calqué sur .option de EquipmentOption :
-   fond sombre, nom en gras à gauche, stats grises à droite */
-.em-modal__option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  background: #0a0a14;
-  border: 1px solid #1e1e2e;
-  border-radius: 6px;
-  padding: 10px 14px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.2s, background 0.2s;
-
-  &:hover {
-    border-color: #7ec8e3;
-    background: rgba(126, 200, 227, 0.05);
-  }
-}
-
-/* Nom de l'arme — même style que .option__name */
-.em-modal__option-name {
-  color: #e0e0e0;
-  font-weight: 600;
-  font-size: 0.92rem;
-  flex: 1;
-}
-
-/* Groupe de stats (coût + emplacements) — même disposition que .option__info */
-.em-modal__option-stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-/* Chaque stat individuelle — même style que .option__stat */
-.em-modal__option-stat {
-  color: #888;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-/* Bouton "Annuler" — aligné à droite, ton neutre */
-.em-modal__cancel {
-  align-self: flex-end;
-  background: transparent;
-  border: 1px solid #555;
-  color: #aaa;
-  padding: 6px 18px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-
-  &:hover {
-    border-color: #e0e0e0;
-    color: #e0e0e0;
-  }
-}
+/* Styles migrés dans tourelle-assignment-modal/tourelle-assignment-modal.scss
+   (préfixe .tam-*). Ce composant n'utilise plus aucune classe .em-modal*. */

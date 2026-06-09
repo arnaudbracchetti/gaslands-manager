@@ -57,11 +57,12 @@ import {
 } from '../vehicle-builder.model';
 import type { Arme } from '../../../catalog/catalog.model';
 import { EquipmentOption } from '../equipment-option/equipment-option';
+import { TourelleAssignmentModal } from './tourelle-assignment-modal/tourelle-assignment-modal';
 
 @Component({
   selector: 'app-equipment-manager',
   standalone: true,
-  imports: [EquipmentOption],
+  imports: [EquipmentOption, TourelleAssignmentModal],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',
 })

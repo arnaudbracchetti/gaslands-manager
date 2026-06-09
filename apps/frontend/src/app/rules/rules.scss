@@ -13,28 +13,28 @@
 }
 
 .error {
-  color: #e94560;
+  color: var(--clr-accent);
   opacity: 1;
 }
 
 // Styles pour le contenu Markdown converti en HTML
 .markdown-content {
-  color: #e0e0e0;
+  color: var(--clr-text);
   line-height: 1.8;
 
   // Titres
   h1 {
     font-size: 2.2rem;
-    color: #e94560;
+    color: var(--clr-accent);
     margin-bottom: 1.5rem;
-    text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+    text-shadow: 0 0 10px rgba(var(--clr-accent-rgb), 0.3);
   }
 
   h2 {
     font-size: 1.5rem;
-    color: #7ec8e3;
+    color: var(--clr-accent-cyan);
     margin: 2rem 0 1rem;
-    border-bottom: 1px solid #0f3460;
+    border-bottom: 1px solid #0f3460; // couleur propre à la section règles
     padding-bottom: 0.5rem;
   }
 
@@ -61,8 +61,8 @@
     margin: 1.5rem 0;
 
     th {
-      background: #0f3460;
-      color: #e94560;
+      background: #0f3460; // couleur propre à la section règles
+      color: var(--clr-accent);
       padding: 10px 16px;
       text-align: left;
       font-weight: 700;

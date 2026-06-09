@@ -1,8 +1,8 @@
 /* ── Carte de choix de véhicule ────────────────────────────────────────────── */
 
 .choice-card {
-  background: #0a0a14;
-  border: 1px solid #2a2a3a;
+  background: var(--clr-bg-base);
+  border: 1px solid var(--clr-border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -11,7 +11,7 @@
   transition: border-color 0.2s, transform 0.15s;
 
   &:hover {
-    border-color: #e94560;
+    border-color: var(--clr-accent);
     transform: translateY(-2px);
   }
 
@@ -23,14 +23,14 @@
   }
 
   &__name {
-    color: #e0e0e0;
+    color: var(--clr-text);
     font-size: 1.05rem;
     font-weight: 700;
     margin: 0;
   }
 
   &__weight {
-    color: #888;
+    color: var(--clr-text-muted);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -38,7 +38,7 @@
   }
 
   &__description {
-    color: #888;
+    color: var(--clr-text-muted);
     font-size: 0.85rem;
     line-height: 1.4;
     margin: 0;
@@ -50,9 +50,9 @@
     gap: 10px;
 
     .stat {
-      background: rgba(126, 200, 227, 0.1);
-      border: 1px solid rgba(126, 200, 227, 0.25);
-      color: #7ec8e3;
+      background: rgba(var(--clr-accent-cyan-rgb), 0.1);
+      border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
+      color: var(--clr-accent-cyan);
       padding: 2px 8px;
       border-radius: 10px;
       font-size: 0.78rem;
@@ -65,19 +65,19 @@
     justify-content: space-between;
     margin-top: auto;
     padding-top: 8px;
-    border-top: 1px solid #1e1e2e;
+    border-top: 1px solid var(--clr-border-subtle);
   }
 
   &__price {
-    color: #e0e0e0;
+    color: var(--clr-text);
     font-weight: 600;
     font-size: 0.9rem;
   }
 
   &__choose {
     background: transparent;
-    border: 1px solid #e94560;
-    color: #e94560;
+    border: 1px solid var(--clr-accent);
+    color: var(--clr-accent);
     padding: 7px 14px;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -86,7 +86,7 @@
     transition: background 0.2s;
 
     &:hover {
-      background: rgba(233, 69, 96, 0.1);
+      background: rgba(var(--clr-accent-rgb), 0.1);
     }
   }
 }

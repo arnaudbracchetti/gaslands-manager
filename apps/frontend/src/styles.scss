@@ -1,5 +1,45 @@
 /* Styles globaux de l'application Gaslands Manager */
 
+// ─── Design tokens — propriétés CSS natives ─────────────────────────────────
+// Définies dans :root : disponibles partout dans l'application sans import,
+// y compris à l'intérieur des styles Angular encapsulés (pas de ::ng-deep
+// nécessaire). Visibles dans les DevTools (onglet Styles → :root).
+//
+// Convention : --clr-* pour les couleurs.
+// - Couleurs pleines   → var(--clr-accent)
+// - Variantes rgba()   → rgba(var(--clr-accent-rgb), 0.15)
+//   Les valeurs RGB séparées (*-rgb) compensent l'impossibilité d'extraire
+//   les canaux d'une valeur hex dans une fonction rgba().
+// Ne jamais coder une couleur en dur dans un fichier .scss de composant.
+:root {
+  /* ── Couleurs d'accent ──────────────────────────────────────────────────── */
+  --clr-accent:      #e94560;   /* rouge principal : boutons, bordures actives, titres */
+  --clr-accent-cyan: #7ec8e3;   /* cyan secondaire : boutons alternatifs, stats, badges */
+  --clr-warning:     #f0a500;   /* orange : avertissements (Tourelle orpheline…) */
+
+  --clr-accent-rgb:      233, 69, 96;    /* canaux de --clr-accent pour rgba() */
+  --clr-accent-cyan-rgb: 126, 200, 227;  /* canaux de --clr-accent-cyan pour rgba() */
+
+  /* ── Fonds (du plus sombre au moins sombre) ─────────────────────────────── */
+  --clr-bg-base:    #0a0a14;   /* fond app, cartes catalogue */
+  --clr-bg-surface: #0f0f1a;   /* navbar, cartes d'équipe, fond formulaire */
+  --clr-bg-modal:   #12121e;   /* boîte des modales */
+  --clr-bg-item:    #1a1a28;   /* items de liste (équipement actuel) */
+
+  /* ── Bordures ───────────────────────────────────────────────────────────── */
+  --clr-border:        #2a2a3a;   /* bordure standard */
+  --clr-border-subtle: #1e1e2e;   /* bordure secondaire (cards catalogue, footers) */
+
+  /* ── Texte ──────────────────────────────────────────────────────────────── */
+  --clr-text:          #e0e0e0;   /* texte principal */
+  --clr-text-muted:    #888;      /* texte secondaire (stats, labels) */
+  --clr-text-hint:     #999;      /* texte atténué (hints, descriptions) */
+  --clr-text-disabled: #555;      /* états désactivés, boutons neutres */
+
+  /* ── Overlay ────────────────────────────────────────────────────────────── */
+  --clr-overlay: rgba(0, 0, 0, 0.7);   /* fond semi-transparent des modales */
+}
+
 // Reset CSS : supprime les marges et paddings par défaut des navigateurs
 * {
   box-sizing: border-box;
@@ -10,15 +50,15 @@
 // Fond sombre sur toute l'application, police système
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #0a0a14;
-  color: #e0e0e0;
+  background: var(--clr-bg-base);
+  color: var(--clr-text);
   min-height: 100vh;
 }
 
 // Styles de la barre de navigation (définis ici car app.ts utilise le sélecteur global)
 .navbar {
-  background: #0f0f1a;
-  border-bottom: 2px solid #e94560;
+  background: var(--clr-bg-surface);
+  border-bottom: 2px solid var(--clr-accent);
   padding: 0 24px;
   height: 64px;
   display: flex;
@@ -28,13 +68,13 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 20px rgba(233, 69, 96, 0.2);
+  box-shadow: 0 2px 20px rgba(var(--clr-accent-rgb), 0.2);
 }
 
 .navbar-brand {
   font-size: 1.5rem;
   font-weight: 900;
-  color: #e94560;
+  color: var(--clr-accent);
   text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 3px;
@@ -51,7 +91,7 @@ body {
   list-style: none;
 
   a {
-    color: #888;
+    color: var(--clr-text-muted);
     text-decoration: none;
     font-weight: 600;
     text-transform: uppercase;
@@ -64,8 +104,8 @@ body {
     // routerLinkActive ajoute la classe "active" sur le lien courant
     &:hover,
     &.active {
-      color: #e94560;
-      border-bottom-color: #e94560;
+      color: var(--clr-accent);
+      border-bottom-color: var(--clr-accent);
     }
   }
 }
@@ -83,7 +123,7 @@ main {
 }
 
 .user-name {
-  color: #7ec8e3;
+  color: var(--clr-accent-cyan);
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -93,8 +133,8 @@ main {
 // Bouton de déconnexion
 .btn-logout {
   background: transparent;
-  border: 1px solid #e94560;
-  color: #e94560;
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
   padding: 6px 14px;
   border-radius: 3px;
   font-size: 0.8rem;
@@ -105,26 +145,26 @@ main {
   transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: #e94560;
+    background: var(--clr-accent);
     color: #fff;
   }
 }
 
 // Lien "Connexion" dans la navbar (quand non connecté)
 .btn-nav-auth {
-  color: #e94560;
+  color: var(--clr-accent);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  border: 1px solid #e94560;
+  border: 1px solid var(--clr-accent);
   padding: 6px 14px;
   border-radius: 3px;
   transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: #e94560;
+    background: var(--clr-accent);
     color: #fff;
   }
 }
@@ -143,18 +183,18 @@ main {
 
 // Carte du formulaire
 .auth-card {
-  background: #0f0f1a;
-  border: 1px solid rgba(233, 69, 96, 0.4);
+  background: var(--clr-bg-surface);
+  border: 1px solid rgba(var(--clr-accent-rgb), 0.4);
   border-radius: 4px;
   padding: 2.5rem;
   width: 100%;
   max-width: 440px;
   // Halo rouge subtil autour de la carte
-  box-shadow: 0 0 40px rgba(233, 69, 96, 0.12);
+  box-shadow: 0 0 40px rgba(var(--clr-accent-rgb), 0.12);
 }
 
 .auth-title {
-  color: #e94560;
+  color: var(--clr-accent);
   font-size: 1.8rem;
   font-weight: 900;
   letter-spacing: 4px;
@@ -169,7 +209,7 @@ main {
 
   label {
     display: block;
-    color: #888;
+    color: var(--clr-text-muted);
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -180,8 +220,8 @@ main {
   input {
     width: 100%;
     background: #16161f;
-    border: 1px solid #2a2a3a;
-    color: #e0e0e0;
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
     padding: 10px 14px;
     border-radius: 3px;
     font-size: 1rem;
@@ -189,8 +229,8 @@ main {
 
     &:focus {
       outline: none;
-      border-color: #e94560;
-      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
+      border-color: var(--clr-accent);
+      box-shadow: 0 0 0 2px rgba(var(--clr-accent-rgb), 0.15);
     }
 
     &::placeholder {
@@ -201,9 +241,9 @@ main {
 
 // Message d'erreur en rouge
 .auth-error {
-  background: rgba(233, 69, 96, 0.08);
-  border: 1px solid rgba(233, 69, 96, 0.5);
-  color: #e94560;
+  background: rgba(var(--clr-accent-rgb), 0.08);
+  border: 1px solid rgba(var(--clr-accent-rgb), 0.5);
+  color: var(--clr-accent);
   padding: 10px 14px;
   border-radius: 3px;
   margin-bottom: 1.25rem;
@@ -214,7 +254,7 @@ main {
 // Bouton principal du formulaire
 .btn-primary {
   width: 100%;
-  background: #e94560;
+  background: var(--clr-accent);
   color: #fff;
   border: none;
   padding: 12px;
@@ -243,8 +283,8 @@ main {
 .btn-secondary {
   width: 100%;
   background: transparent;
-  color: #e0e0e0;
-  border: 1px solid #e0e0e0;
+  color: var(--clr-text);
+  border: 1px solid var(--clr-text);
   padding: 12px;
   border-radius: 3px;
   font-size: 0.9rem;
@@ -275,7 +315,7 @@ main {
   font-size: 0.9rem;
 
   a {
-    color: #e94560;
+    color: var(--clr-accent);
     text-decoration: none;
     font-weight: 600;
 

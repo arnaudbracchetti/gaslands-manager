@@ -1,5 +1,7 @@
 // Section hero : grande bannière plein écran
 .hero {
+  // Dégradé propre à cette page — pas de token global (couleurs bleues marines
+  // distinctes du thème sombre général de l'app).
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: white;
   padding: 80px 20px;
@@ -19,11 +21,11 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 6px;
-  color: #e94560;
+  color: var(--clr-accent);
   // Effet néon : ombre lumineuse autour du texte
   text-shadow:
-    0 0 20px rgba(233, 69, 96, 0.6),
-    0 0 40px rgba(233, 69, 96, 0.3);
+    0 0 20px rgba(var(--clr-accent-rgb), 0.6),
+    0 0 40px rgba(var(--clr-accent-rgb), 0.3);
   margin-bottom: 1.5rem;
 }
 
@@ -54,14 +56,14 @@
   display: inline-block;
 
   &-primary {
-    background: #e94560;
+    background: var(--clr-accent);
     color: white;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+    box-shadow: 0 4px 15px rgba(var(--clr-accent-rgb), 0.4);
 
     &:hover {
-      background: #c73652;
+      background: #c73652; // assombri manuel — pas de token pour le survol du hero
       transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+      box-shadow: 0 6px 20px rgba(var(--clr-accent-rgb), 0.5);
     }
   }
 
@@ -89,7 +91,7 @@
 }
 
 .feature-card {
-  background: #16213e;
+  background: #16213e;   // couleur propre à la section hero
   border: 1px solid #0f3460;
   border-radius: 10px;
   padding: 32px 24px;
@@ -102,8 +104,8 @@
 
   &:hover {
     transform: translateY(-6px);
-    border-color: #e94560;
-    box-shadow: 0 8px 30px rgba(233, 69, 96, 0.2);
+    border-color: var(--clr-accent);
+    box-shadow: 0 8px 30px rgba(var(--clr-accent-rgb), 0.2);
   }
 
   .feature-icon {
@@ -112,7 +114,7 @@
 
   h2 {
     font-size: 1.4rem;
-    color: #e94560;
+    color: var(--clr-accent);
     font-weight: 700;
   }
 
@@ -123,7 +125,7 @@
   }
 
   .feature-link {
-    color: #e94560;
+    color: var(--clr-accent);
     font-weight: 600;
     font-size: 0.9rem;
     margin-top: 0.5rem;

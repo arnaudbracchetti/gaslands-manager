@@ -1,14 +1,14 @@
 /* ── Carte formulaire ──────────────────────────────────────────────────────── */
 
 .team-form-card {
-  background: #0f0f1a;
-  border: 1px solid #e94560;
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-accent);
   border-radius: 8px;
   padding: 28px;
   margin-bottom: 32px;
 
   h2 {
-    color: #e94560;
+    color: var(--clr-accent);
     font-size: 1.2rem;
     margin-bottom: 20px;
     text-transform: uppercase;
@@ -18,9 +18,9 @@
 
 /* Erreur de validation locale */
 .form-error {
-  background: rgba(233, 69, 96, 0.15);
-  border: 1px solid #e94560;
-  color: #e94560;
+  background: rgba(var(--clr-accent-rgb), 0.15);
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
   padding: 10px 14px;
   border-radius: 4px;
   margin-bottom: 16px;
@@ -50,9 +50,9 @@
   input,
   textarea {
     width: 100%;
-    background: #0a0a14;
-    border: 1px solid #333;
-    color: #e0e0e0;
+    background: var(--clr-bg-base);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
     padding: 10px 12px;
     border-radius: 4px;
     font-size: 0.95rem;
@@ -61,11 +61,11 @@
 
     &:focus {
       outline: none;
-      border-color: #e94560;
+      border-color: var(--clr-accent);
     }
 
     &::placeholder {
-      color: #555;
+      color: var(--clr-text-disabled);
     }
   }
 
@@ -75,7 +75,7 @@
 
   label {
     display: block;
-    color: #999;
+    color: var(--clr-text-hint);
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -91,13 +91,13 @@
   justify-content: center;
   gap: 6px;
   padding: 32px;
-  border: 1px dashed #333;
+  border: 1px dashed var(--clr-border);
   border-radius: 8px;
-  background: #0a0a14;
+  background: var(--clr-bg-base);
 }
 
 .sponsors-loading__text {
-  color: #555;
+  color: var(--clr-text-disabled);
   font-size: 0.85rem;
   font-style: italic;
   margin-left: 4px;
@@ -108,7 +108,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #e94560;
+  background: var(--clr-accent);
   animation: dot-pulse 1.2s ease-in-out infinite;
 
   &:nth-child(2) {

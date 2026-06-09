@@ -83,6 +83,8 @@ npx nx sync                      # si Nx se plaint de "workspace out of sync"
 
 **NestJS** : `import type` pour les interfaces/types dans les signatures décorées (`emitDecoratorMetadata`).
 
+**CSS — Design tokens** : couleurs, fonds et opacités d'overlay sont centralisés comme propriétés CSS natives (`--clr-*`) dans le bloc `:root` de `apps/frontend/src/styles.scss`. Ne jamais coder une couleur en dur dans un fichier `.scss` de composant — utiliser `var(--clr-nom)`.
+
 ---
 
 ## Scaffolding — étapes post-génération

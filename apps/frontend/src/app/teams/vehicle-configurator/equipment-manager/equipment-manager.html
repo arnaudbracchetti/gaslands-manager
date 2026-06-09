@@ -167,47 +167,15 @@
     }
   </section>
 
-  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══ -->
+  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
+       Composant dumb : reçoit la liste filtrée des armes posables et émet
+       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
+       gérée ici par `@if` — le composant s'affiche toujours quand instancié. -->
   @if (selectedOrphanTourelle()) {
-    <div class="em-modal-overlay" role="dialog" aria-modal="true"
-         aria-label="Choisir l'arme de la Tourelle">
-      <div class="em-modal">
-        <h4 class="em-modal__title">Choisir l'arme de la Tourelle</h4>
-        <p class="em-modal__hint">
-          Prix affiché = 3 × le prix de l'arme (tout compris — l'arme est incluse dans la Tourelle).
-        </p>
-        <ul class="em-modal__list">
-          @for (arme of armesPourTourelle(); track arme.nom_interne) {
-            <li>
-              <!--
-                Même structure visuelle qu'EquipmentOption (.option__info + .option__stat) :
-                nom en gras à gauche, stats grises à droite (coût en jerricans + emplacements).
-                Le prix affiché = 3× le prix de l'arme (coût total Tourelle incluse).
-              -->
-              <button
-                class="em-modal__option"
-                type="button"
-                (click)="assignWeaponToTourelle(arme.nom_interne)">
-                <span class="em-modal__option-name">{{ arme.nom }}</span>
-                <span class="em-modal__option-stats">
-                  <span class="em-modal__option-stat" title="Coût total en jerricans (Tourelle incluse)">{{ arme.prix * 3 }} 🛢️</span>
-                  <span class="em-modal__option-stat" title="Emplacements requis par cette arme">🔧 {{ arme.emplacement }}</span>
-                </span>
-              </button>
-            </li>
-          }
-          @if (armesPourTourelle().length === 0) {
-            <li><p class="em-status">Aucune arme disponible pour ce sponsor.</p></li>
-          }
-        </ul>
-        <button
-          class="em-modal__cancel"
-          type="button"
-          (click)="selectedOrphanTourelle.set(null)">
-          Annuler
-        </button>
-      </div>
-    </div>
+    <app-tourelle-assignment-modal
+      [armes]="armesPourTourelle()"
+      (weaponChosen)="assignWeaponToTourelle($event)"
+      (cancelled)="selectedOrphanTourelle.set(null)" />
   }
 
   <!-- ═══ Équipement disponible — listes Armes/Améliorations avec verdict ═══ -->

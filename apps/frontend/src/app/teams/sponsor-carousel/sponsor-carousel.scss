@@ -14,7 +14,7 @@
 }
 
 .carousel-label {
-  color: #999;
+  color: var(--clr-text-hint);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -25,8 +25,8 @@
   align-items: center;
   gap: 6px;
   background: rgba(80, 80, 80, 0.3);
-  border: 1px solid #555;
-  color: #888;
+  border: 1px solid var(--clr-text-disabled);
+  color: var(--clr-text-muted);
   padding: 3px 10px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -43,8 +43,8 @@
 
 .carousel-nav {
   background: transparent;
-  border: 1px solid #333;
-  color: #888;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-muted);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -61,9 +61,9 @@
   padding: 0;
 
   &:hover:not(:disabled) {
-    border-color: #e94560;
-    color: #e94560;
-    background: rgba(233, 69, 96, 0.08);
+    border-color: var(--clr-accent);
+    color: var(--clr-accent);
+    background: rgba(var(--clr-accent-rgb), 0.08);
   }
 
   &:disabled {
@@ -76,8 +76,8 @@
 
 .sponsor-card {
   flex: 1;
-  background: #0a0a14;
-  border: 2px solid #e94560;
+  background: var(--clr-bg-base);
+  border: 2px solid var(--clr-accent);
   border-radius: 8px;
   padding: 20px 22px;
   min-height: 300px;
@@ -88,7 +88,7 @@
 
   /* Scrollbar discrète */
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: var(--clr-border) transparent;
 
   &::-webkit-scrollbar {
     width: 5px;
@@ -99,13 +99,13 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #333;
+    background: var(--clr-border);
     border-radius: 3px;
   }
 
   /* État verrouillé */
   &.locked {
-    border-color: #444;
+    border-color: var(--clr-text-disabled);
     opacity: 0.8;
   }
 
@@ -114,7 +114,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--clr-text-disabled);
     font-style: italic;
     border-style: dashed;
   }
@@ -122,7 +122,7 @@
 
 /* Compteur de position (ex: "3 / 13") */
 .sponsor-position {
-  color: #555;
+  color: var(--clr-text-disabled);
   font-size: 0.75rem;
   text-align: right;
   margin-bottom: 8px;
@@ -131,7 +131,7 @@
 
 /* Nom du sponsor */
 .sponsor-name {
-  color: #e94560;
+  color: var(--clr-accent);
   font-size: 1.25rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -158,9 +158,9 @@
 }
 
 .class-badge {
-  background: rgba(233, 69, 96, 0.12);
-  border: 1px solid rgba(233, 69, 96, 0.35);
-  color: #e94560;
+  background: rgba(var(--clr-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--clr-accent-rgb), 0.35);
+  color: var(--clr-accent);
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 0.72rem;
@@ -172,12 +172,12 @@
 
 /* Zone des avantages */
 .advantages-section {
-  border-top: 1px solid #1e1e2e;
+  border-top: 1px solid var(--clr-border-subtle);
   padding-top: 14px;
 }
 
 .advantages-title {
-  color: #555;
+  color: var(--clr-text-disabled);
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -213,13 +213,13 @@
       content: '›';
       position: absolute;
       left: 0;
-      color: #e94560;
+      color: var(--clr-accent);
       font-weight: 700;
     }
   }
 
   ::ng-deep strong {
-    color: #e0e0e0;
+    color: var(--clr-text);
     font-weight: 700;
   }
 
@@ -246,22 +246,22 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #2a2a3e;
-  border: 1px solid #333;
+  background: var(--clr-border);
+  border: 1px solid var(--clr-border);
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, transform 0.15s;
   padding: 0;
   flex-shrink: 0;
 
   &.active {
-    background: #e94560;
-    border-color: #e94560;
+    background: var(--clr-accent);
+    border-color: var(--clr-accent);
     transform: scale(1.2);
   }
 
   &:hover:not(.active):not(:disabled) {
-    background: #444;
-    border-color: #555;
+    background: var(--clr-text-disabled);
+    border-color: var(--clr-text-disabled);
   }
 
   &:disabled {

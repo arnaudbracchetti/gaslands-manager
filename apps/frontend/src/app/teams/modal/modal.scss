@@ -3,7 +3,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 10, 20, 0.75);
+  background: var(--clr-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,8 +14,8 @@
 /* ── Contenu de la modale ──────────────────────────────────────────────────── */
 
 .modal-content {
-  background: #0f0f1a;
-  border: 1px solid #2a2a3a;
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border);
   border-radius: 8px;
   max-width: 720px;
   width: 100%;
@@ -34,11 +34,11 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 24px;
-  border-bottom: 1px solid #2a2a3a;
+  border-bottom: 1px solid var(--clr-border);
 }
 
 .modal-title {
-  color: #e94560;
+  color: var(--clr-accent);
   font-size: 1.15rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -48,8 +48,8 @@
 
 .modal-close {
   background: transparent;
-  border: 1px solid #2a2a3a;
-  color: #888;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-muted);
   width: 32px;
   height: 32px;
   border-radius: 4px;
@@ -60,8 +60,8 @@
   flex-shrink: 0;
 
   &:hover {
-    border-color: #e94560;
-    color: #e94560;
+    border-color: var(--clr-accent);
+    color: var(--clr-accent);
   }
 }
 

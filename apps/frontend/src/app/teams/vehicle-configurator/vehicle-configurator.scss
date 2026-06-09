@@ -16,14 +16,14 @@
 .vc-status {
   margin: 0;
   font-size: 0.88rem;
-  color: #999;
+  color: var(--clr-text-hint);
 
   &--loading {
-    color: #7ec8e3;
+    color: var(--clr-accent-cyan);
   }
 
   &--error {
-    color: #e94560;
+    color: var(--clr-accent);
   }
 }
 
@@ -32,10 +32,10 @@
 .vc-intro {
   margin: 0;
   font-size: 0.92rem;
-  color: #e0e0e0;
+  color: var(--clr-text);
 
   strong {
-    color: #7ec8e3;
+    color: var(--clr-accent-cyan);
   }
 }
 
@@ -53,13 +53,13 @@
   display: flex;
   justify-content: flex-end;
   padding-top: 12px;
-  border-top: 1px solid #2a2a3a;
+  border-top: 1px solid var(--clr-border);
 }
 
 .vc-finish {
-  background: #e94560;
+  background: var(--clr-accent);
   border: none;
-  color: #0a0a14;
+  color: var(--clr-bg-base);
   padding: 9px 22px;
   border-radius: 4px;
   font-size: 0.88rem;
