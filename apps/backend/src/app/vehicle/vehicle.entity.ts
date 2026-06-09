@@ -103,7 +103,11 @@ export class VehicleImprovement {
   // le coût TOTAL (3× le prix de l'arme). Une entité Weapon séparée aurait son propre
   // `prix` qui s'additionnerait, donnant 4× au lieu de 3× — sémantique incorrecte.
   // Conséquence : pas de FK, pas de cascade, pas de modification de `weapon.entity.ts`.
-  @Column({ length: 100, nullable: true, default: null })
+  //
+  // ⚠️ `type: 'varchar'` obligatoire : `emitDecoratorMetadata` émet `Object` pour les
+  // types union TypeScript (`string | null`), ce qui fait planter TypeORM au démarrage
+  // ("Data type Object not supported"). Même contrainte que `orientation` (cf. ligne 88).
+  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
   weaponNomInterne: string | null;
 
   @ManyToOne(() => Vehicle, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
