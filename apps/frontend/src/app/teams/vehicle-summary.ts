@@ -17,7 +17,7 @@
  * séparer le calcul pur de son orchestration).
  */
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
-import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
+import { Sponsor, Vehicule } from '../catalog/catalog.model';
 import { Team } from './team.model';
 
 /**
@@ -74,48 +74,43 @@ export interface TeamVehiclePair {
  * Recoupement par `nom_interne` — même technique que `VehicleBuilder.chosenVehicule`
  * (cf. son en-tête) : c'est la clé stable qui distingue les variantes sponsor
  * (ex. "voiture" vs "voiture_prison") et relie une instance d'équipe à sa fiche
- * catalogue. Trois recherches de ce type ici (véhicule, puis une par arme/amélioration) —
- * le catalogue d'un sponsor est petit (quelques dizaines d'entrées), `find()` suffit
- * largement sans structure d'index dédiée.
+ * catalogue. Le catalogue est encore utilisé pour le nom et le prix de base du
+ * véhicule ; les prix des armes et améliorations sont désormais fournis directement
+ * par le backend dans `weapon.prix` et `improvement.prix` (cf. `VehicleService.
+ * toVehicleDto` — règle de gestion résolue côté serveur, 0 pour les défauts).
  *
- * Items introuvables dans le catalogue (`nom_interne` orphelin) : repli sur
- * `nomInterne` brut pour le nom, et contribution de coût nulle. Ce cas ne devrait
- * JAMAIS se produire — le backend valide chaque ajout contre le catalogue du
- * sponsor au moment de la persistance (cf. `VehicleService.checkCandidate`/
- * `WeaponService.canAddWeapon`) — mais une incohérence de données ne doit pas
- * faire planter l'affichage : on dégrade proprement plutôt que de lancer une erreur.
+ * Cas Tourelle : `Amelioration.prix` vaut `"x3"` dans le catalogue, mais le backend
+ * retourne `improvement.prix = 0` pour la Tourelle intégrée du Char d'assaut
+ * (amélioration par défaut). Pour les Tourelles ACHETÉES par le joueur, `prix`
+ * vaut également `0` dans le DTO (le coût réel ×3 reste non calculable sans lien
+ * Tourelle ↔ arme — décision inchangée). On lève `coutApproximatif` si une Tourelle
+ * achetée (`!estDefaut`) est présente, pour signaler le « ≈ ».
  */
 export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): VehicleSummary {
   const vehiculeCatalogue: Vehicule | undefined = catalog.vehicules.find(
     (v: Vehicule): boolean => v.nom_interne === vehicle.nomInterne,
   );
 
+  // Prix de base du véhicule — toujours depuis le catalogue (non fourni par le DTO).
   let cout: number = vehiculeCatalogue?.prix ?? 0;
   let coutApproximatif = false;
 
-  // Armes : `Arme.prix` est TOUJOURS un nombre (cf. `catalog.model.ts`, doc de `Arme.prix`)
-  // — pas de cas particulier à gérer ici, contrairement aux améliorations ci-dessous.
+  // Armes : `weapon.prix` est résolu côté backend (catalogue en mémoire → getter).
+  // Le frontend additionne directement sans consulter le catalogue.
   for (const weapon of vehicle.weapons) {
-    const arme: Arme | undefined = catalog.armes.find(
-      (a: Arme): boolean => a.nom_interne === weapon.nomInterne,
-    );
-    cout += arme?.prix ?? 0;
+    cout += weapon.prix;
   }
 
-  // Améliorations : `Amelioration.prix` est `number | string` — la Tourelle vaut
-  // `"x3"` (cf. doc de `Amelioration.prix`). On l'EXCLUT de la somme et on lève
-  // le drapeau `coutApproximatif` plutôt que de tenter une approximation hasardeuse
-  // (décision actée avec l'utilisateur — cf. en-tête de `coutApproximatif`).
+  // Améliorations : `improvement.prix` est résolu côté backend.
+  // - Défauts (`estDefaut: true`) : `prix` = 0 — pas de contribution au coût.
+  // - Tourelle achetée (`estDefaut: false`, `nomInterne: "tourelle"`) : `prix` = 0
+  //   aussi (coût réel ×3 non calculable, cf. en-tête). On lève `coutApproximatif`.
   for (const improvement of vehicle.improvements) {
-    const amelioration: Amelioration | undefined = catalog.ameliorations.find(
-      (a: Amelioration): boolean => a.nom_interne === improvement.nomInterne,
-    );
-    if (amelioration === undefined) continue;
-
-    if (typeof amelioration.prix === 'number') {
-      cout += amelioration.prix;
-    } else {
+    if (!improvement.estDefaut && improvement.nomInterne === 'tourelle') {
       coutApproximatif = true;
+      // On n'ajoute pas `improvement.prix` (= 0 de toute façon) — le ≈ signale la minoration.
+    } else {
+      cout += improvement.prix;
     }
   }
 

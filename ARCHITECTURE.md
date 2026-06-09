@@ -133,7 +133,29 @@ class TestCatalogService extends CatalogService {
 // beforeEach : service = new TestCatalogService(); service.onModuleInit();
 ```
 
-### 3.4 `TeamWithCount` — type enrichi
+### 3.4 Hydratation transiente + DTOs — prix des entités
+
+Le catalogue est en mémoire, pas en base : TypeORM ne peut pas résoudre les prix
+automatiquement. `VehicleService.hydrateVehicle()` attache les objets catalogue comme
+**propriétés transientes** (non mappées, non persistées) après chaque chargement DB.
+
+Les **getters TypeScript** (`get prix()`) sur les entités encapsulent la règle métier —
+l'objet sait combien il coûte :
+
+```typescript
+// VehicleImprovement : 0 si amélioration de profil de base (estDefaut), prix catalogue sinon
+get prix(): number { return this.estDefaut ? 0 : (this.ameliorationCatalogue?.prix as number) ?? 0; }
+
+// Weapon : prix catalogue direct (pas de notion de défaut sur les armes)
+get prix(): number { return (this.armeCatalogue?.prix as number) ?? 0; }
+```
+
+⚠️ **Les getters ne sont pas sérialisés** par `JSON.stringify` (prototype, pas instance).
+Les contrôleurs appellent `VehicleService.toVehicleDto(vehicle)` qui lit les getters
+explicitement et retourne un objet plain sérialisable — **jamais retourner l'entité brute
+dans une réponse HTTP**.
+
+### 3.6 `TeamWithCount` — type enrichi
 
 ```typescript
 export type TeamWithCount = Team & { vehicleCount: number };
@@ -141,7 +163,7 @@ export type TeamWithCount = Team & { vehicleCount: number };
 
 `vehicleCount` est calculé (futur : `COUNT` SQL sur `vehicles`) — jamais stocké en colonne pour éviter la désynchronisation.
 
-### 3.5 Fichiers clés
+### 3.7 Fichiers clés
 
 | Fichier | Rôle |
 |---------|------|

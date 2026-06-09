@@ -21,10 +21,14 @@
 export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
 
 /**
- * Une amélioration installée — miroir de `VehicleImprovement` (backend `vehicle.entity.ts`).
+ * Une amélioration installée — miroir de `VehicleImprovementDto` (backend).
  * `orientation` est `null` pour les améliorations non-orientées (convention API
  * identique au backend — pas de conversion `null ↔ undefined` côté frontend :
  * cette nuance de vocabulaire reste interne au backend, cf. `VehicleService.getBuild`).
+ *
+ * `estDefaut`, `prix` et `emplacement` sont des champs ajoutés par le backend
+ * (`VehicleService.toVehicleDto`) et portent les règles de gestion déjà résolues —
+ * le frontend les consomme sans logique propre.
  */
 export interface VehicleImprovement {
   id: number;
@@ -32,13 +36,18 @@ export interface VehicleImprovement {
   orientation: Orientation | null;
   vehicleId: number;
   createdAt: string;
+  /** `true` si l'amélioration fait partie du profil de base du véhicule (non supprimable). */
+  estDefaut: boolean;
+  /** Prix effectif en Jerricans — `0` pour les défauts, prix catalogue sinon. */
+  prix: number;
+  /** Emplacements consommés — `0` pour les défauts, valeur catalogue sinon. */
+  emplacement: number;
 }
 
 /**
- * Une arme montée — miroir de `Weapon` (backend `weapon.entity.ts`). Structure
- * RIGOUREUSEMENT identique à `VehicleImprovement` ci-dessus (même nuance
- * `orientation`/`null`) — reflet fidèle du mirroir voulu côté backend entre les
- * deux entités (cf. son en-tête : "deux entités distinctes... règles divergentes").
+ * Une arme montée — miroir de `WeaponDto` (backend). Structure quasi identique
+ * à `VehicleImprovement` ci-dessus (même nuance `orientation`/`null`), avec `prix`
+ * calculé côté backend — symétrie intentionnelle avec les améliorations.
  */
 export interface Weapon {
   id: number;
@@ -46,6 +55,8 @@ export interface Weapon {
   orientation: Orientation | null;
   vehicleId: number;
   createdAt: string;
+  /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend. */
+  prix: number;
 }
 
 /**

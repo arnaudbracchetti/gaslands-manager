@@ -23,8 +23,8 @@
 import { Controller, Get, Post, Param, Body, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehicleService } from './vehicle.service';
-import { Vehicle } from './vehicle.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import type { VehicleDto } from './dto/vehicle.dto';
 
 // Type du payload injecté par JwtStrategy dans req.user (cf. VehicleController — même contrat).
 interface AuthenticatedRequest {
@@ -41,29 +41,32 @@ export class VehicleTeamController {
    *
    * Liste les véhicules de l'équipe — utilisé par le frontend pour rafraîchir
    * son état après une création (cf. `VehicleService.findAllForTeam`).
+   * Retourne des `VehicleDto` (avec `prix` et `estDefaut` sur chaque
+   * amélioration/arme) plutôt que des entités brutes.
    */
   @Get()
-  getAll(
+  async getAll(
     @Param('teamId', ParseIntPipe) teamId: number,
     @Request() req: AuthenticatedRequest,
-  ): Promise<Vehicle[]> {
-    return this.vehicleService.findAllForTeam(teamId, req.user.id);
+  ): Promise<VehicleDto[]> {
+    const vehicles = await this.vehicleService.findAllForTeam(teamId, req.user.id);
+    return vehicles.map((v) => this.vehicleService.toVehicleDto(v));
   }
 
   /**
    * POST /api/teams/:teamId/vehicles
    *
-   * Crée un véhicule "nu" (sans arme ni amélioration) dans l'équipe — première
-   * étape du flux de configuration ("choisir le véhicule" avant de l'équiper).
-   * `VehicleService.create` vérifie que `nomInterne` fait bien partie des
-   * véhicules autorisés par le sponsor de l'équipe avant de persister.
+   * Crée un véhicule "nu" (sans arme ni amélioration achetée, mais avec les
+   * améliorations par défaut du type s'il en a) dans l'équipe. Retourne le
+   * véhicule créé sous forme de `VehicleDto` enrichi.
    */
   @Post()
-  create(
+  async create(
     @Param('teamId', ParseIntPipe) teamId: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: CreateVehicleDto,
-  ): Promise<Vehicle> {
-    return this.vehicleService.create(teamId, req.user.id, dto.nomInterne);
+  ): Promise<VehicleDto> {
+    const vehicle = await this.vehicleService.create(teamId, req.user.id, dto.nomInterne);
+    return this.vehicleService.toVehicleDto(vehicle);
   }
 }

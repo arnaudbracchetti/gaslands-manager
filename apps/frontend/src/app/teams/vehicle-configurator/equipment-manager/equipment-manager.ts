@@ -124,9 +124,14 @@ export class EquipmentManager {
       return sum + (arme?.emplacement ?? 0);
     }, 0);
 
+    // `improvement.emplacement` est résolu côté backend (getter de l'entité hydratée) :
+    // 0 pour les améliorations par défaut, valeur catalogue pour les autres. Le frontend
+    // additionne directement, sans consulter le catalogue ni filtrer les défauts —
+    // cohérence garantie avec VehicleService.improvementSlotsOf() (cf. VEHICLE_SYSTEM.md §6).
+    // `?? 0` : garde-fou si le champ est absent de la réponse (backend non redémarré
+    // après une mise à jour du DTO — évite NaN dans l'affichage).
     const improvementSlots = vehicle.improvements.reduce((sum: number, imp): number => {
-      const amelioration = catalog.ameliorations.find((a): boolean => a.nom_interne === imp.nomInterne);
-      return sum + (amelioration?.emplacement ?? 0);
+      return sum + (imp.emplacement ?? 0);
     }, 0);
 
     return weaponSlots + improvementSlots;

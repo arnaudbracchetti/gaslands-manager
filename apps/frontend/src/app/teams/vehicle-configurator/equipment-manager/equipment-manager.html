@@ -52,13 +52,22 @@
                 <span class="em-current__orientation">({{ improvement.orientation }})</span>
               }
             </span>
-            <button
-              class="em-current__remove"
-              type="button"
-              title="Retirer cette amélioration"
-              (click)="removeImprovement(improvement)">
-              Retirer
-            </button>
+            @if (improvement.estDefaut) {
+              <!-- Amélioration intégrée au profil de base — non supprimable -->
+              <span
+                class="em-current__badge-defaut"
+                title="Fait partie du profil de base de ce véhicule">
+                🔒 Intégré
+              </span>
+            } @else {
+              <button
+                class="em-current__remove"
+                type="button"
+                title="Retirer cette amélioration"
+                (click)="removeImprovement(improvement)">
+                Retirer
+              </button>
+            }
           </li>
         }
       </ul>

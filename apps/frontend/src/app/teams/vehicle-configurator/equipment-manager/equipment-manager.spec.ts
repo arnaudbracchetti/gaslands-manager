@@ -100,13 +100,13 @@ const mockVehicle: Vehicle = {
 // le recalcul des emplacements consommés.
 const mockVehicleWithWeapon: Vehicle = {
   ...mockVehicle,
-  weapons: [{ id: 200, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z' }],
+  weapons: [{ id: 200, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z', prix: 4 }],
 };
 
 // Véhicule équipé d'une amélioration — sert au mirroir `removeImprovement`/`addImprovement`.
 const mockVehicleWithImprovement: Vehicle = {
   ...mockVehicle,
-  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z' }],
+  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
 };
 
 const mockAvailableWeapon: AvailableWeaponDto = {

@@ -39,6 +39,7 @@ import {
 } from 'typeorm';
 import { Vehicle } from '../vehicle/vehicle.entity';
 import type { Orientation } from '../vehicle/vehicle-build';
+import type { Arme } from '../catalog/catalog.interfaces';
 
 // @Entity('weapons') crée une table "weapons" dans PostgreSQL
 @Entity('weapons')
@@ -58,6 +59,7 @@ export class Weapon {
   orientation: Orientation | null;
 
   // () => Vehicle : résolveur paresseux — cf. note d'en-tête sur le cycle de fichiers.
+  // () => Vehicle : résolveur paresseux — cf. note d'en-tête sur le cycle de fichiers.
   @ManyToOne(() => Vehicle, (vehicle) => vehicle.weapons, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
   vehicle: Vehicle;
@@ -67,4 +69,22 @@ export class Weapon {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  // ── Propriétés transientes — non persistées par TypeORM ────────────────────
+  // Même pattern que VehicleImprovement (cf. son en-tête sur l'hydratation).
+
+  /** Entrée catalogue résolue — hydratée par le service, jamais persistée. */
+  armeCatalogue?: Arme;
+
+  /**
+   * Prix de cette arme, lu depuis le catalogue via le graphe d'objet.
+   *
+   * Symétrie avec `VehicleImprovement.prix` (cf. son commentaire) — sans notion
+   * de "défaut" pour les armes : le getter est donc plus simple. Même remarque
+   * sur la sérialisation : c'est `VehicleService.toVehicleDto()` qui expose la
+   * valeur dans la réponse HTTP.
+   */
+  get prix(): number {
+    return (this.armeCatalogue?.prix as number) ?? 0;
+  }
 }

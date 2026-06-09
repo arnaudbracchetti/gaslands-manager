@@ -21,16 +21,27 @@ import { VehicleService } from './vehicle.service';
 import type { Vehicle } from './vehicle.entity';
 import { ok } from './vehicle-build';
 import type { VehicleBuild, VehicleStats } from './vehicle-build';
+import type { VehicleDto } from './dto/vehicle.dto';
 
 // Simulacre d'utilisateur connecté (ce que JwtStrategy injecte dans req.user —
 // même contrat que `team.controller.spec.ts`/`WeaponController`).
 const mockUser = { id: 42, email: 'test@test.com' };
 const mockRequest = { user: mockUser };
 
-// Véhicule fictif retourné par le service mocké — seul `id`/`nomInterne` nous
-// intéressent ici (le controller ne fait que relayer le résultat, il n'inspecte
-// pas son contenu — cf. `mockVehicle` de `weapon.controller.spec.ts`).
+// Véhicule fictif retourné par VehicleService.addImprovement (entité brute,
+// avant passage dans toVehicleDto — cf. `mockVehicle` de `weapon.controller.spec.ts`).
 const mockVehicle: Partial<Vehicle> = { id: 7, nomInterne: 'camion' };
+
+// DTO fictif retourné par VehicleService.toVehicleDto — c'est ce que le
+// contrôleur finit par retourner au client HTTP après l'ajout d'une amélioration.
+const mockVehicleDto: VehicleDto = {
+  id: 7,
+  nomInterne: 'camion',
+  teamId: 1,
+  createdAt: new Date('2024-01-01'),
+  improvements: [],
+  weapons: [],
+};
 
 const statsParDefaut: VehicleStats = {
   nom_interne: 'camion',
@@ -62,6 +73,9 @@ describe('VehicleController', () => {
     getBuild: vi.fn(),
     getAvailableImprovements: vi.fn(),
     addImprovement: vi.fn(),
+    // toVehicleDto est appelé par addImprovement() pour transformer l'entité brute
+    // en DTO sérialisable avec `prix` calculé (cf. VehicleController.addImprovement).
+    toVehicleDto: vi.fn(),
     removeImprovement: vi.fn(),
     remove: vi.fn(),
   };
@@ -118,18 +132,26 @@ describe('VehicleController', () => {
   // ── POST /vehicles/:id/improvements ──────────────────────────────────────────
 
   describe('addImprovement()', () => {
-    it('appelle VehicleService.addImprovement avec id, userId, nomInterne et orientation enveloppée dans BuildOptions', async () => {
+    it('appelle VehicleService.addImprovement puis toVehicleDto, et retourne le DTO enrichi', async () => {
+      // addImprovement retourne l'entité brute ; toVehicleDto la transforme en DTO
+      // sérialisable avec `prix` calculé (getters). On vérifie la chaîne complète —
+      // même pattern que `weapon.controller.spec.ts > addWeapon()`.
       mockVehicleService.addImprovement.mockResolvedValue(mockVehicle);
+      mockVehicleService.toVehicleDto.mockReturnValue(mockVehicleDto);
       const dto = { nomInterne: 'belier', orientation: 'avant' as const };
 
       const result = await controller.addImprovement(7, mockRequest as never, dto);
 
       expect(mockVehicleService.addImprovement).toHaveBeenCalledWith(7, 42, 'belier', { orientation: 'avant' });
-      expect(result).toEqual(mockVehicle);
+      // toVehicleDto est appelé avec le résultat brut de addImprovement
+      expect(mockVehicleService.toVehicleDto).toHaveBeenCalledWith(mockVehicle);
+      // Le controller retourne le DTO, pas l'entité brute
+      expect(result).toEqual(mockVehicleDto);
     });
 
     it('transmet `orientation: undefined` telle quelle pour une amélioration non orientée', async () => {
       mockVehicleService.addImprovement.mockResolvedValue(mockVehicle);
+      mockVehicleService.toVehicleDto.mockReturnValue(mockVehicleDto);
       const dto = { nomInterne: 'chenilles' };
 
       await controller.addImprovement(7, mockRequest as never, dto);

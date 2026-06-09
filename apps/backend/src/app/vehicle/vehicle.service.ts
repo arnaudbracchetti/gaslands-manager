@@ -17,7 +17,7 @@
  * jamais 403 — ne pas révéler l'EXISTENCE d'une ressource qu'on ne possède pas.
  */
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle, VehicleImprovement } from './vehicle.entity';
@@ -27,6 +27,9 @@ import { VehicleBuildFactory } from './vehicle-build.factory';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
 import type { Amelioration } from '../catalog/catalog.interfaces';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
+import type { VehicleDto } from './dto/vehicle.dto';
+import type { VehicleImprovementDto } from './dto/vehicle-improvement.dto';
+import type { WeaponDto } from '../weapon/dto/weapon.dto';
 import {
   fail,
   ok,
@@ -69,13 +72,18 @@ export class VehicleService {
    * frontend à rafraîchir son état (recompter les emplacements utilisés,
    * afficher un récapitulatif...) — autant éviter le coût d'un second aller-
    * retour par véhicule (même raisonnement que `findOneForUser`).
+   *
+   * Les entités retournées sont hydratées (cf. `hydrateVehicle`) : leurs
+   * améliorations et armes exposent `prix` via leur getter.
    */
   async findAllForTeam(teamId: number, userId: number): Promise<Vehicle[]> {
     await this.teamService.findOneForUser(teamId, userId);
-    return this.vehicleRepo.find({
+    const vehicles = await this.vehicleRepo.find({
       where: { teamId },
       relations: { improvements: true, weapons: true },
     });
+    vehicles.forEach((v) => this.hydrateVehicle(v));
+    return vehicles;
   }
 
   /**
@@ -119,6 +127,20 @@ export class VehicleService {
 
     const vehicle = this.vehicleRepo.create({ teamId, nomInterne });
     await this.vehicleRepo.save(vehicle);
+
+    // Améliorations par défaut — intégrées au profil de base du véhicule :
+    // coût zéro, non supprimables, ne consomment pas de slot achetable.
+    // Insérées immédiatement après la création, avant le rechargement final.
+    for (const defautNomInterne of catalogVehicule.ameliorations_defaut ?? []) {
+      const defaultImp = this.improvementRepo.create({
+        vehicleId: vehicle.id,
+        nomInterne: defautNomInterne,
+        orientation: null,
+        estDefaut: true,
+      });
+      await this.improvementRepo.save(defaultImp);
+    }
+
     // Recharge l'entité avec ses relations : `save()` retourne le véhicule
     // "nu", avec `improvements`/`weapons` à `undefined` (TypeORM ne matérialise
     // pas de tableaux vides pour des relations OneToMany non chargées). Le
@@ -147,6 +169,9 @@ export class VehicleService {
    *
    * Lève `NotFoundException` (HTTP 404) si introuvable OU si l'appartenance
    * échoue — les deux cas sont indiscernables pour l'appelant, par conception.
+   *
+   * Le véhicule retourné est hydraté (cf. `hydrateVehicle`) : améliorations et
+   * armes exposent leur `prix` via le getter de l'entité.
    */
   async findOneForUser(id: number, userId: number): Promise<Vehicle> {
     const vehicle = await this.vehicleRepo.findOne({
@@ -156,7 +181,74 @@ export class VehicleService {
     if (!vehicle) {
       throw new NotFoundException(`Véhicule #${id} introuvable`);
     }
+    this.hydrateVehicle(vehicle);
     return vehicle;
+  }
+
+  // ── Hydratation et sérialisation ────────────────────────────────────────────
+
+  /**
+   * Hydrate les propriétés transientes d'un véhicule après chargement depuis la base.
+   *
+   * `ameliorationCatalogue` et `armeCatalogue` sont des propriétés NON persistées
+   * (aucun `@Column` — cf. les entités). TypeORM ne les renseigne jamais ; c'est
+   * cette méthode qui les résout depuis le catalogue en mémoire, permettant ensuite
+   * aux getters `prix` des entités de traverser le graphe d'objet.
+   *
+   * Appelée systématiquement après tout chargement depuis la base : `findOneForUser`
+   * (usage individuel) et `findAllForTeam` (usage liste).
+   */
+  private hydrateVehicle(vehicle: Vehicle): void {
+    for (const imp of vehicle.improvements) {
+      imp.ameliorationCatalogue = this.catalogService.getAmeliorationByNomInterne(imp.nomInterne);
+    }
+    for (const weapon of vehicle.weapons) {
+      weapon.armeCatalogue = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+    }
+  }
+
+  /**
+   * Mappe un véhicule hydraté vers un DTO sérialisable pour les réponses HTTP.
+   *
+   * Les getters TypeScript (`prix`, `emplacement` sur `VehicleImprovement` et `prix`
+   * sur `Weapon`) ne sont PAS sérialisés par `JSON.stringify` : ils vivent sur le
+   * PROTOTYPE de la classe, pas comme propriétés propres de l'instance. Ce mapper
+   * les appelle explicitement et produit des objets plain que NestJS sérialise
+   * fidèlement. Aucune règle de gestion ici : juste lecture des getters.
+   *
+   * Requiert que `vehicle` ait été hydraté au préalable (cf. `hydrateVehicle`) :
+   * les getters de `VehicleImprovement` lisent `ameliorationCatalogue`, et
+   * celui de `Weapon` lit `armeCatalogue` — non hydraté, ils retournent `0`.
+   */
+  toVehicleDto(vehicle: Vehicle): VehicleDto {
+    const improvements: VehicleImprovementDto[] = vehicle.improvements.map((imp) => ({
+      id: imp.id,
+      nomInterne: imp.nomInterne,
+      orientation: imp.orientation,
+      vehicleId: imp.vehicleId,
+      createdAt: imp.createdAt,
+      estDefaut: imp.estDefaut,
+      prix: imp.prix,             // ← getter : 0 si défaut, prix catalogue sinon
+      emplacement: imp.emplacement, // ← getter : 0 si défaut, valeur catalogue sinon
+    }));
+
+    const weapons: WeaponDto[] = vehicle.weapons.map((w) => ({
+      id: w.id,
+      nomInterne: w.nomInterne,
+      orientation: w.orientation,
+      vehicleId: w.vehicleId,
+      createdAt: w.createdAt,
+      prix: w.prix, // ← getter de l'entité hydratée
+    }));
+
+    return {
+      id: vehicle.id,
+      nomInterne: vehicle.nomInterne,
+      teamId: vehicle.teamId,
+      createdAt: vehicle.createdAt,
+      improvements,
+      weapons,
+    };
   }
 
   // ── Emplacements partagés (armes ET améliorations) ──────────────────────────
@@ -180,17 +272,22 @@ export class VehicleService {
    * `vehicle.improvements` doit avoir été chargé au préalable (cf. `findOneForUser`).
    */
   improvementSlotsOf(vehicle: Vehicle): number {
-    return vehicle.improvements.reduce((total, improvement) => {
-      const amelioration = this.catalogService.getAmeliorationByNomInterne(improvement.nomInterne);
-      // Incohérence de données (catalogue modifié après coup...) — même posture
-      // que `getBuild` : on ne masque pas le problème, on le signale clairement.
-      if (!amelioration) {
-        throw new Error(
-          `Amélioration catalogue inconnue : "${improvement.nomInterne}" (véhicule #${vehicle.id})`,
-        );
-      }
-      return total + amelioration.emplacement;
-    }, 0);
+    // Les améliorations par défaut (`estDefaut: true`) font partie du profil de
+    // base du véhicule — elles ne consomment PAS de slot achetable. On les filtre
+    // pour ne compter que les emplacements des améliorations achetées par le joueur.
+    return vehicle.improvements
+      .filter((i) => !i.estDefaut)
+      .reduce((total, improvement) => {
+        const amelioration = this.catalogService.getAmeliorationByNomInterne(improvement.nomInterne);
+        // Incohérence de données (catalogue modifié après coup...) — même posture
+        // que `getBuild` : on ne masque pas le problème, on le signale clairement.
+        if (!amelioration) {
+          throw new Error(
+            `Amélioration catalogue inconnue : "${improvement.nomInterne}" (véhicule #${vehicle.id})`,
+          );
+        }
+        return total + amelioration.emplacement;
+      }, 0);
   }
 
   /**
@@ -235,12 +332,20 @@ export class VehicleService {
       );
     }
 
-    const installed: InstalledImprovement[] = vehicle.improvements.map(
-      (vi: VehicleImprovement): InstalledImprovement => ({
-        nom_interne: vi.nomInterne,
-        orientation: vi.orientation ?? undefined,
-      }),
-    );
+    // Les améliorations par défaut sont exclues de la chaîne VehicleBuild :
+    // elles n'ont pas de comportement métier (pas de `comportement` dans le catalogue
+    // pour "arceaux" ou "tourelle" — améliorations neutres). Les inclure ferait
+    // compter leurs emplacements dans `totalEmplacements()`, faussant la vérification
+    // du pool partagé. Leur règle de jeu est décrite dans `regles` du catalogue
+    // (texte informatif), pas dans un décorateur — aucun effet mécanique à empiler.
+    const installed: InstalledImprovement[] = vehicle.improvements
+      .filter((vi) => !vi.estDefaut)
+      .map(
+        (vi: VehicleImprovement): InstalledImprovement => ({
+          nom_interne: vi.nomInterne,
+          orientation: vi.orientation ?? undefined,
+        }),
+      );
 
     return this.buildFactory.create(catalogVehicule, installed);
   }
@@ -445,6 +550,16 @@ export class VehicleService {
     const improvement = vehicle.improvements.find((i) => i.id === improvementId);
     if (!improvement) {
       throw new NotFoundException(`Amélioration #${improvementId} introuvable sur le véhicule #${vehicleId}`);
+    }
+
+    // Les améliorations intégrées au profil de base ne peuvent pas être retirées :
+    // elles font partie du véhicule lui-même, pas de son équipement achetable.
+    // On lève une 403 (et non 404) : l'amélioration EXISTE, elle est simplement
+    // protégée — le masquage 404 ne s'applique qu'aux ressources qu'on ne POSSÈDE pas.
+    if (improvement.estDefaut) {
+      throw new ForbiddenException(
+        `"${improvement.nomInterne}" fait partie du profil de base de ce véhicule et ne peut pas être retirée.`,
+      );
     }
 
     await this.improvementRepo.remove(improvement);

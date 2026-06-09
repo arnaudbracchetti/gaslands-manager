@@ -59,6 +59,7 @@ erDiagram
         number id PK
         string nomInterne
         string orientation "avant|arrière|gauche|droite|null"
+        boolean estDefaut "false = achetée, true = profil de base"
         number vehicleId FK
     }
 
@@ -76,6 +77,7 @@ erDiagram
         number emplacements
         number equipage
         number prix
+        string[] ameliorations_defaut "optionnel"
     }
 
     CATALOGUE_Amelioration {
@@ -151,9 +153,17 @@ sequenceDiagram
     end
 
     BVSS->>DB: save(Vehicle { teamId, nomInterne })
-    DB-->>BVSS: Vehicle { id: 42, improvements: [], weapons: [] }
-    BVSS-->>API: Vehicle rechargé (avec relations)
-    API-->>VS: HTTP 201 + Vehicle
+    DB-->>BVSS: Vehicle { id: 42 }
+
+    Note over BVSS: Si vehicule.ameliorations_defaut non vide :
+    loop Pour chaque amélioration par défaut
+        BVSS->>DB: save(VehicleImprovement { nomInterne, estDefaut: true, vehicleId: 42 })
+    end
+
+    BVSS->>DB: findOneForUser (recharge complète avec relations)
+    DB-->>BVSS: Vehicle { id: 42, improvements: [Arceaux (défaut)], weapons: [] }
+    BVSS-->>API: VehicleDto (avec prix=0 sur les défauts)
+    API-->>VS: HTTP 201 + VehicleDto
     VS-->>VC: Vehicle créé
 
     VC->>VC: vehicle.set(created)<br/>→ affiche EquipmentManager
@@ -423,11 +433,16 @@ armes **et** améliorations. Ce n'est pas deux pools séparés.
 ### Calcul backend (dans `checkCandidate` pour les améliorations)
 
 ```
-totalDemande = candidateBuild.totalEmplacements()   ← amélio existantes + candidat
+totalDemande = candidateBuild.totalEmplacements()   ← amélio ACHETÉES + candidat
              + weaponSlotsOf(vehicle)               ← armes déjà montées
 
 si totalDemande > candidateBuild.baseStats.emplacements → BLOQUÉ
 ```
+
+**Les améliorations par défaut (`estDefaut: true`) sont exclues du calcul** — elles
+font partie du profil du véhicule, pas de ses achats. `VehicleService.improvementSlotsOf()`
+les filtre avant de traverser la chaîne, et `getBuild()` ne les enfile pas dans les
+décorateurs (elles n'ont aucun `comportement` à appliquer).
 
 `candidateBuild.totalEmplacements()` traverse la chaîne complète via délégation :
 chaque décorateur retourne `this.amelioration.emplacement + this.inner.totalEmplacements()`.
@@ -446,10 +461,14 @@ emplacementsUtilises = computed(() => {
     return sum + (arme?.emplacement ?? 0);
   }, 0);
 
-  const improvementSlots = vehicle.improvements.reduce((sum, imp) => {
-    const amelioration = catalog.ameliorations.find(a => a.nom_interne === imp.nomInterne);
-    return sum + (amelioration?.emplacement ?? 0);
-  }, 0);
+  // Les améliorations par défaut (estDefaut: true) sont filtrées —
+  // cohérence avec le backend qui les exclut de improvementSlotsOf().
+  const improvementSlots = vehicle.improvements
+    .filter(imp => !imp.estDefaut)
+    .reduce((sum, imp) => {
+      const amelioration = catalog.ameliorations.find(a => a.nom_interne === imp.nomInterne);
+      return sum + (amelioration?.emplacement ?? 0);
+    }, 0);
 
   return weaponSlots + improvementSlots;
 });
@@ -462,8 +481,12 @@ de vérité reste le backend, mais le frontend donne un retour visuel immédiat.
 
 ## 7. Flux de retrait
 
-Le retrait est **toujours permis** — aucune règle métier n'est vérifiée. Retirer
-un équipement ne peut jamais rendre une configuration valide invalide.
+Le retrait est **permis pour les améliorations achetées** — aucune règle métier
+n'est vérifiée (retirer un équipement ne peut jamais rendre une configuration valide
+invalide). **Exception : les améliorations par défaut (`estDefaut: true`)** — elles
+font partie du profil du véhicule et ne peuvent pas être retirées ; toute tentative
+retourne HTTP **403 ForbiddenException** (la ressource existe mais est protégée —
+pas un 404 d'appartenance).
 
 ```mermaid
 sequenceDiagram
@@ -483,7 +506,7 @@ sequenceDiagram
     EM->>VS: removeWeapon(id) / removeImprovement(vehicleId, impId)
     VS->>API: DELETE
     API->>BVSS: remove*(id, userId)
-    Note right of BVSS: Seule vérification :<br/>appartient à cet utilisateur ?<br/>(via JOIN Team.userId)
+    Note right of BVSS: Vérifications :<br/>1. appartient à cet utilisateur ? (404 sinon)<br/>2. estDefaut === true ? (403 ForbiddenException)
     BVSS->>DB: DELETE
     DB-->>BVSS: ok
     BVSS-->>API: 204 No Content
@@ -502,7 +525,74 @@ sequenceDiagram
 
 ---
 
-## 8. Règles métier par comportement
+## 8. Pattern hydratation + DTO — calcul du prix
+
+### 8.1 Pourquoi une hydratation manuelle ?
+
+Le catalogue (véhicules, armes, améliorations avec leurs prix) est en **mémoire dans
+`CatalogService`**, pas en base. TypeORM ne peut pas résoudre cette relation automatiquement.
+C'est le service qui **hydrate** les entités après chaque chargement depuis la DB — il
+attache les objets catalogue comme propriétés transientes (non mappées) :
+
+```typescript
+// VehicleService.hydrateVehicle() — appelé après chaque findOne / findAll
+private hydrateVehicle(vehicle: Vehicle): void {
+  for (const imp of vehicle.improvements) {
+    // Propriété transiente — pas de @Column, pas persistée
+    imp.ameliorationCatalogue = this.catalogService.getAmeliorationByNomInterne(imp.nomInterne);
+  }
+  for (const weapon of vehicle.weapons) {
+    weapon.armeCatalogue = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+  }
+}
+```
+
+### 8.2 Getters sur les entités — règle de gestion portée par l'objet
+
+Une fois hydratées, les entités exposent un getter `prix` qui **encapsule la règle
+de gestion** : l'objet sait lui-même combien il coûte.
+
+```typescript
+// VehicleImprovement.prix — règle : 0 si défaut, prix catalogue sinon
+get prix(): number {
+  if (this.estDefaut) return 0;
+  return (this.ameliorationCatalogue?.prix as number) ?? 0;
+}
+
+// Weapon.prix — règle simple : prix catalogue
+get prix(): number {
+  return (this.armeCatalogue?.prix as number) ?? 0;
+}
+```
+
+### 8.3 DTOs — sérialisation explicite via `toVehicleDto`
+
+Les getters TypeScript **ne sont pas sérialisés** par `JSON.stringify` (ils vivent sur
+le prototype, pas sur l'instance). Le contrôleur HTTP ne doit donc jamais retourner
+une entité brute — il appelle `VehicleService.toVehicleDto(vehicle)` qui lit les
+getters explicitement et construit un objet plain sérialisable :
+
+```typescript
+toVehicleDto(vehicle: Vehicle): VehicleDto {
+  const improvements = vehicle.improvements.map((imp) => ({
+    ...fields,
+    estDefaut: imp.estDefaut,
+    prix: imp.prix,  // ← appel du getter
+  }));
+  const weapons = vehicle.weapons.map((w) => ({
+    ...fields,
+    prix: w.prix,  // ← appel du getter
+  }));
+  return { id, nomInterne, teamId, createdAt, improvements, weapons };
+}
+```
+
+Ce DTO est ce que tous les endpoints d'écriture (`POST /improvements`, `POST /weapons`,
+`POST /vehicles`) retournent — le frontend reçoit directement `prix` sans calcul propre.
+
+---
+
+## 9. Règles métier par comportement
 
 | Comportement YAML | Décorateur | Modificateur de stats | Règles de validation |
 |---|---|---|---|
@@ -523,7 +613,7 @@ sequenceDiagram
 
 ---
 
-## 9. Sécurité et vérification de propriété
+## 10. Sécurité et vérification de propriété
 
 **Principe** : tout accès à une ressource inexistante **ou** appartenant à un autre
 utilisateur retourne HTTP 404 — jamais 403. Cela évite de divulguer l'existence
@@ -554,7 +644,7 @@ que si l'ensemble de la chaîne correspond — une seule requête suffit.
 
 ---
 
-## 10. Cycle complet illustré (vue macro)
+## 11. Cycle complet illustré (vue macro)
 
 ```mermaid
 sequenceDiagram
@@ -595,7 +685,7 @@ sequenceDiagram
 
 ---
 
-## 11. Fichiers clés de référence
+## 12. Fichiers clés de référence
 
 ### Backend
 

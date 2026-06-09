@@ -163,7 +163,7 @@ Les données du catalogue ne sont **pas stockées en base de données**. Elles s
 
 **`Sponsor`** (en mémoire) — champs : `nom`, `description`, `classes_avantage[]`, `avantages_sponsorises`, `vehicules[]`, `armes[]`, `ameliorations[]`
 
-**`Vehicule`** (en mémoire) — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`
+**`Vehicule`** (en mémoire) — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]` (optionnel — liste des `nom_interne` d'améliorations intégrées au profil de base du véhicule, cf. §7 "Améliorations par défaut")
 
 **`Arme`** (en mémoire) — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`
 
@@ -190,8 +190,21 @@ Une amélioration installée sur un véhicule (instance de jeu). Référence l'a
 | `id` | number | PK, auto-incrémenté |
 | `nomInterne` | string | référence vers `Amelioration.nom_interne` du catalogue |
 | `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | nullable — uniquement pour les améliorations orientées (Bélier...) |
+| `estDefaut` | boolean | `false` pour les améliorations achetées par le joueur ; `true` pour les améliorations intégrées au profil de base du véhicule (Arceaux du Buggy, Tourelle du Char d'assaut…) — insérées automatiquement à la création du véhicule |
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
+
+**Comportement des améliorations par défaut (`estDefaut: true`)** :
+- **Coût zéro** — `prix = 0` dans le DTO ; elles ne comptent pas dans le budget de l'équipe.
+- **Non supprimables** — `DELETE /api/vehicles/:id/improvements/:id` retourne HTTP **403** si `estDefaut: true`.
+- **Hors pool d'emplacements** — elles ne consomment pas de slot achetable (ni côté backend dans `improvementSlotsOf`, ni dans la chaîne `VehicleBuild`).
+- **Affichage UI** — le badge 🔒 *Intégré* remplace le bouton *Retirer* dans `EquipmentManager`.
+
+**Champs calculés dans la réponse API** (non stockés en base) — voir `VehicleService.toVehicleDto` :
+
+| Champ (DTO) | Type | Description |
+|-------------|------|-------------|
+| `prix` | number | Prix effectif en jerricans. `0` si `estDefaut`, prix catalogue sinon. Calculé via getter sur l'entité hydratée. |
 
 ### `Weapon` _(implémentée — module Weapon)_
 
@@ -211,6 +224,12 @@ en-têtes). Seules les règles de pose (sponsor, orientation, emplacements) s'ap
 | `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | nullable — **obligatoire** pour toute arme dont `type !== 'équipage'` (montée sur un arc de tir précis), **interdite** pour les armes de type `équipage` (portées par un équipier, tir à 360° automatique) |
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
+
+**Champ calculé dans la réponse API** (non stocké en base) — voir `VehicleService.toVehicleDto` :
+
+| Champ (DTO) | Type | Description |
+|-------------|------|-------------|
+| `prix` | number | Prix de l'arme en jerricans, résolu depuis le catalogue via getter sur l'entité hydratée. |
 
 ---
 
@@ -261,7 +280,7 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés par l
 | GET | `/api/vehicles/:id` | JWT | Détail "monté" d'un véhicule (stats + récapitulatif, cf. `VehicleBuild`) _(implémentée)_ |
 | GET | `/api/vehicles/:id/available-improvements` | JWT | Améliorations du sponsor avec verdict de disponibilité _(implémentée)_ |
 | POST | `/api/vehicles/:id/improvements` | JWT | Ajouter une amélioration (validation puis persistance) _(implémentée)_ |
-| DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration d'un véhicule — toujours permis, sans vérification de règle (mirroir de `DELETE /api/weapons/:id`) _(implémentée)_ |
+| DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration — **HTTP 403** si `estDefaut: true` (amélioration intégrée au profil de base), **HTTP 204** sinon _(implémentée)_ |
 | DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule (cascade sur ses armes/améliorations) _(implémentée)_ |
 
 > **`PUT /api/vehicles/:id` — non prévue.** Aucun champ de `Vehicle` n'est modifiable une fois le véhicule créé : `nomInterne` est la clé catalogue immutable (la changer invaliderait l'équipement déjà posé, validé contre le catalogue DE CE TYPE PRÉCIS), et l'équipement se gère exclusivement via les routes dédiées ci-dessus et celles du module Armes. "Modifier un véhicule" (cf. §3.4, "Résumé des véhicules sur la carte") signifie donc *gérer son équipement*, pas réécrire ses caractéristiques de base.
@@ -353,3 +372,18 @@ Répartis en trois catégories de poids :
 | Réacteur Nucléaire Expérimental | 5 | 0 | **Mishkin uniquement** |
 | Téléporteur Expérimental | 7 | 0 | **Mishkin uniquement** |
 | Tourelle | **×3** | 0 | Arc 360° pour une arme (coût = 3× le prix de l'arme) |
+
+### Améliorations par défaut
+
+Certains véhicules ont des améliorations **intégrées à leur profil de base** : elles sont
+présentes dès la création du véhicule, sans coût, et **ne peuvent pas être retirées**.
+
+| Véhicule | Amélioration intégrée | Raison |
+|----------|-----------------------|--------|
+| Buggy | Arceaux | Fait partie du profil standard du Buggy |
+| Char d'assaut | Tourelle | Canon principal — non détachable |
+
+Ces améliorations sont modélisées par `VehicleImprovement.estDefaut = true` et insérées
+automatiquement par `VehicleService.create()` à partir du champ `ameliorations_defaut`
+du catalogue YAML. Elles n'apparaissent pas dans le calcul du budget ni dans le pool
+d'emplacements — seul le badge 🔒 *Intégré* les identifie dans l'UI.

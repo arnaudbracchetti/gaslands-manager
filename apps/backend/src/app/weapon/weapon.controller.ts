@@ -27,9 +27,10 @@
 import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WeaponService } from './weapon.service';
-import { Vehicle } from '../vehicle/vehicle.entity';
+import { VehicleService } from '../vehicle/vehicle.service';
 import { AddWeaponDto } from './dto/add-weapon.dto';
 import type { AvailableWeaponDto } from './dto/available-weapon.dto';
+import type { VehicleDto } from '../vehicle/dto/vehicle.dto';
 
 // Type du payload injecté par JwtStrategy dans req.user (cf. VehicleController — même contrat).
 interface AuthenticatedRequest {
@@ -39,7 +40,13 @@ interface AuthenticatedRequest {
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class WeaponController {
-  constructor(private readonly weaponService: WeaponService) {}
+  constructor(
+    private readonly weaponService: WeaponService,
+    // Injecté pour appeler `toVehicleDto` après ajout d'une arme — `addWeapon`
+    // retourne un `Vehicle` brut (entité hydratée) ; la transformation en DTO
+    // enrichi (avec `prix`) appartient au contrôleur HTTP, pas au service métier.
+    private readonly vehicleService: VehicleService,
+  ) {}
 
   /**
    * GET /api/vehicles/:id/available-weapons
@@ -63,15 +70,17 @@ export class WeaponController {
    * Monte une arme — persistée SEULEMENT si la vérification à blanc (sponsor +
    * orientation + emplacements) est positive (cf. `WeaponService.addWeapon` :
    * "envelopper PUIS valider PUIS, et seulement alors, persister"). Retourne
-   * le véhicule rechargé, nouvelle arme incluse.
+   * le véhicule rechargé sous forme de `VehicleDto` enrichi (avec `prix` sur
+   * chaque arme et amélioration).
    */
   @Post('vehicles/:id/weapons')
-  addWeapon(
+  async addWeapon(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: AddWeaponDto,
-  ): Promise<Vehicle> {
-    return this.weaponService.addWeapon(id, req.user.id, dto.nomInterne, dto.orientation);
+  ): Promise<VehicleDto> {
+    const vehicle = await this.weaponService.addWeapon(id, req.user.id, dto.nomInterne, dto.orientation);
+    return this.vehicleService.toVehicleDto(vehicle);
   }
 
   /**

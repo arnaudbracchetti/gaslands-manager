@@ -39,10 +39,10 @@
 import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehicleService } from './vehicle.service';
-import { Vehicle } from './vehicle.entity';
 import { AddImprovementDto } from './dto/add-improvement.dto';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
 import type { VehicleDetailDto } from './dto/vehicle-detail.dto';
+import type { VehicleDto } from './dto/vehicle.dto';
 
 // Type du payload injecté par JwtStrategy dans req.user (cf. TeamController — même contrat).
 interface AuthenticatedRequest {
@@ -104,17 +104,18 @@ export class VehicleController {
    * Ajoute une amélioration — persistée SEULEMENT si la chaîne hypothétique
    * (véhicule + candidat) est valide (cf. `VehicleService.addImprovement` :
    * "envelopper PUIS valider PUIS, et seulement alors, persister").
-   * Retourne le véhicule rechargé, amélioration nouvellement incluse.
+   * Retourne le véhicule rechargé sous forme de `VehicleDto` enrichi.
    */
   @Post(':id/improvements')
-  addImprovement(
+  async addImprovement(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: AddImprovementDto,
-  ): Promise<Vehicle> {
-    return this.vehicleService.addImprovement(id, req.user.id, dto.nomInterne, {
+  ): Promise<VehicleDto> {
+    const vehicle = await this.vehicleService.addImprovement(id, req.user.id, dto.nomInterne, {
       orientation: dto.orientation,
     });
+    return this.vehicleService.toVehicleDto(vehicle);
   }
 
   /**

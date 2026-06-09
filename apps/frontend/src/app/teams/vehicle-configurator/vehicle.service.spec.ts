@@ -146,7 +146,7 @@ describe('VehicleService', () => {
     it('effectue POST /api/vehicles/:id/weapons avec le DTO et retourne le véhicule rechargé', () => {
       let result: Vehicle | undefined;
       const dto = { nomInterne: 'mitrailleuse', orientation: 'avant' as const };
-      const reloaded = { ...mockVehicle, weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant' as const, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z' }] };
+      const reloaded = { ...mockVehicle, weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant' as const, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2 }] };
 
       service.addWeapon(7, dto).subscribe((vehicle) => { result = vehicle; });
 
@@ -178,8 +178,8 @@ describe('VehicleService', () => {
       let result: Vehicle[] | undefined;
       const equipped: Vehicle = {
         ...mockVehicle,
-        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z' }],
-        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z' }],
+        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
+        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2 }],
       };
 
       service.getAllForTeam(3).subscribe((vehicles) => { result = vehicles; });

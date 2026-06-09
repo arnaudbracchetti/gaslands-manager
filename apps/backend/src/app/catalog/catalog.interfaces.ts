@@ -42,6 +42,12 @@ export interface Vehicule {
   regles: string;
   /** Noms des sponsors autorisés à sélectionner ce véhicule */
   sponsors_autorises: string[];
+  /**
+   * Améliorations intégrées au profil de base du véhicule (coût zéro, non supprimables).
+   * Liste de `nom_interne` d'améliorations du catalogue.
+   * Optionnel : absent ou vide pour la majorité des véhicules.
+   */
+  ameliorations_defaut?: string[];
 }
 
 /** Arme telle que définie dans armes.yml */

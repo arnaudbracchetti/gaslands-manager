@@ -27,6 +27,7 @@ import {
 import { Team } from '../team/team.entity';
 import { Weapon } from '../weapon/weapon.entity';
 import type { Orientation } from './vehicle-build';
+import type { Amelioration } from '../catalog/catalog.interfaces';
 
 // @Entity('vehicles') crée une table "vehicles" dans PostgreSQL
 @Entity('vehicles')
@@ -96,6 +97,14 @@ export class VehicleImprovement {
   @Column({ type: 'varchar', length: 10, nullable: true })
   orientation: Orientation | null;
 
+  // `true` pour les améliorations intégrées au profil de base du véhicule (ex : Arceaux
+  // sur le Buggy). Ces améliorations ont un coût zéro et ne peuvent pas être retirées.
+  // Valeur par défaut `false` : garantit que les lignes existantes conservent le
+  // comportement actuel sans migration manuelle (TypeORM ajoute la colonne automatiquement
+  // en mode synchronize:true).
+  @Column({ default: false })
+  estDefaut: boolean;
+
   @ManyToOne(() => Vehicle, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
   vehicle: Vehicle;
@@ -105,4 +114,45 @@ export class VehicleImprovement {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  // ── Propriétés transientes — non persistées par TypeORM ────────────────────
+  // Hydratées par VehicleService.hydrateImprovements() après chargement depuis la
+  // base. TypeORM ignore toute propriété sans décorateur ; elles n'existent sur
+  // l'instance que si le service les a explicitement initialisées.
+
+  /** Entrée catalogue résolue — hydratée par le service, jamais persistée. */
+  ameliorationCatalogue?: Amelioration;
+
+  /**
+   * Prix effectif de cette amélioration pour ce véhicule.
+   *
+   * Règle de gestion portée par l'entité elle-même : parcourt le graphe d'objet
+   * (`ameliorationCatalogue`) pour lire le prix catalogue, et retourne 0 si
+   * l'amélioration est intégrée au profil de base (`estDefaut`).
+   *
+   * ⚠️ Les getters TypeScript vivent sur le PROTOTYPE de la classe et ne sont PAS
+   * sérialisés par `JSON.stringify` (qui n'énumère que les propriétés PROPRES d'un
+   * objet). Ce getter sert à la logique métier interne ; c'est `VehicleService.
+   * toVehicleDto()` qui l'appelle et expose la valeur dans la réponse HTTP.
+   */
+  get prix(): number {
+    if (this.estDefaut) return 0;
+    return (this.ameliorationCatalogue?.prix as number) ?? 0;
+  }
+
+  /**
+   * Nombre d'emplacements consommés par cette amélioration.
+   *
+   * Même règle que `prix` : une amélioration intégrée au profil de base (`estDefaut`)
+   * ne consomme pas d'emplacement achetable — elle fait partie du véhicule, pas de
+   * son équipement. Retourne 0 dans ce cas ; valeur catalogue sinon.
+   *
+   * Cohérence garantie entre backend (`improvementSlotsOf`, chaîne `VehicleBuild`)
+   * et frontend (`emplacementsUtilises`) : les deux consomment ce getter via le DTO,
+   * sans consulter le catalogue indépendamment.
+   */
+  get emplacement(): number {
+    if (this.estDefaut) return 0;
+    return this.ameliorationCatalogue?.emplacement ?? 0;
+  }
 }
