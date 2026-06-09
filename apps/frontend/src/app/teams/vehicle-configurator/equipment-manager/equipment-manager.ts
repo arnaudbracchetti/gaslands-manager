@@ -110,15 +110,36 @@ export class EquipmentManager {
   /**
    * Armes du catalogue disponibles pour montage sur une Tourelle.
    *
-   * Filtre le catalogue du sponsor pour ne retenir que les armes compatibles :
-   * - Exclut les armes de type `équipage` : leur arc 360° est natif — une Tourelle
+   * Deux filtres appliqués :
+   * - Exclut les armes de type `équipage` : leur arc 360° est natif — la Tourelle
    *   ne leur apporte rien et le backend les refuserait (cf. `assignWeaponToTourelle`).
-   * Pas de filtre sur `disponible` des `AvailableWeaponDto` : les armes sur Tourelle
-   * ne consomment pas d'emplacement, elles sont toujours posables (si autorisées
-   * par le sponsor).
+   * - Exclut les armes dont l'emplacement dépasse les slots restants : une arme sur
+   *   Tourelle consomme les mêmes emplacements qu'une arme normale (cf. `weaponSlotsOf`
+   *   backend et `emplacementsUtilises` ici). La modale ne propose que les armes
+   *   effectivement posables — cohérence avec les verdicts de `getAvailableWeapons`.
+   *
+   * Note : `emplacementsUtilises()` tient déjà compte des armes sur Tourelles déjà
+   * assignées. On soustrait l'arme actuellement assignée à la Tourelle sélectionnée
+   * (si elle est en re-assignation) pour ne pas la compter deux fois.
    */
   armesPourTourelle: Signal<Arme[]> = computed((): Arme[] => {
-    return this.sponsorCatalog().armes.filter((a): boolean => a.type !== 'équipage');
+    const slotsRestants = this.emplacementsTotal() - this.emplacementsUtilises();
+    // Si la Tourelle sélectionnée a déjà une arme assignée (re-assignation),
+    // son slot était déjà compté dans emplacementsUtilises — on le libère
+    // temporairement pour évaluer le remplacement correctement.
+    const tourelleSelectionnee = this.selectedOrphanTourelle();
+    const slotOccupeTourelleCourante = (() => {
+      if (!tourelleSelectionnee?.weaponNomInterne) return 0;
+      const arme = this.sponsorCatalog().armes.find(
+        (a): boolean => a.nom_interne === tourelleSelectionnee.weaponNomInterne,
+      );
+      return arme?.emplacement ?? 0;
+    })();
+    const slotsDisponibles = slotsRestants + slotOccupeTourelleCourante;
+
+    return this.sponsorCatalog().armes.filter(
+      (a): boolean => a.type !== 'équipage' && a.emplacement <= slotsDisponibles,
+    );
   });
 
   // ── Emplacements (computed) — fusion à l'identique des deux mirroirs ─────────
@@ -142,6 +163,7 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     const catalog = this.sponsorCatalog();
 
+    // Armes classiques (entités Weapon).
     const weaponSlots = vehicle.weapons.reduce((sum: number, w): number => {
       const arme = catalog.armes.find((a): boolean => a.nom_interne === w.nomInterne);
       return sum + (arme?.emplacement ?? 0);
@@ -157,7 +179,21 @@ export class EquipmentManager {
       return sum + (imp.emplacement ?? 0);
     }, 0);
 
-    return weaponSlots + improvementSlots;
+    // Armes sur Tourelles achetées (`estDefaut: false`) — stockées dans
+    // `improvement.weaponNomInterne`, pas dans `vehicle.weapons`, mais elles
+    // consomment les mêmes emplacements qu'une arme normale.
+    // Miroir de `VehicleService.weaponSlotsOf` côté backend (même règle d'exemption :
+    // Tourelles intégrées `estDefaut: true` exclues).
+    const tourelleWeaponSlots = vehicle.improvements
+      .filter((imp): boolean =>
+        imp.nomInterne === 'tourelle' && imp.weaponNomInterne !== null && !imp.estDefaut,
+      )
+      .reduce((sum: number, imp): number => {
+        const arme = catalog.armes.find((a): boolean => a.nom_interne === imp.weaponNomInterne);
+        return sum + (arme?.emplacement ?? 0);
+      }, 0);
+
+    return weaponSlots + improvementSlots + tourelleWeaponSlots;
   });
 
   // ── Réaction aux changements de véhicule ────────────────────────────────────
