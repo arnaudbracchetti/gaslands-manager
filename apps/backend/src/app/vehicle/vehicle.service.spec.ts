@@ -122,13 +122,41 @@ const mockVehicle: Vehicle = {
   createdAt: new Date('2025-01-01'),
 };
 
-// Fixtures d'instances persistées — une amélioration et une arme installées,
+// Fixtures d'instances persistées — améliorations et arme installées,
 // utilisées par les tests de `improvementSlotsOf`/`weaponSlotsOf` et de
 // l'intégration du pool d'emplacements partagé dans `checkCandidate`.
 const installedChenilles: VehicleImprovement = {
   id: 1,
   nomInterne: 'chenilles',
   orientation: null,
+  estDefaut: false,
+  weaponNomInterne: null,
+  vehicle: mockVehicle,
+  vehicleId: 7,
+  createdAt: new Date('2025-01-01'),
+};
+
+// Tourelle achetée par le joueur (estDefaut: false) avec arme assignée —
+// son arme DOIT consommer des slots comme n'importe quelle arme normale.
+const installedTourelleAssignee: VehicleImprovement = {
+  id: 3,
+  nomInterne: 'tourelle',
+  orientation: null,
+  estDefaut: false,
+  weaponNomInterne: 'mitrailleuse',
+  vehicle: mockVehicle,
+  vehicleId: 7,
+  createdAt: new Date('2025-01-01'),
+};
+
+// Tourelle intégrée au profil de base (estDefaut: true) avec arme assignée —
+// son arme NE doit PAS consommer de slots (profile de base → exempt).
+const installedTourelleDefaut: VehicleImprovement = {
+  id: 4,
+  nomInterne: 'tourelle',
+  orientation: null,
+  estDefaut: true,
+  weaponNomInterne: 'mitrailleuse',
   vehicle: mockVehicle,
   vehicleId: 7,
   createdAt: new Date('2025-01-01'),
@@ -403,6 +431,36 @@ describe('VehicleService', () => {
       const avecArme = { ...mockVehicle, weapons: [installedMitrailleuse] };
       mockCatalogService.getArmeByNomInterne.mockReturnValue(undefined);
       expect(() => service.weaponSlotsOf(avecArme)).toThrow(/mitrailleuse/);
+    });
+
+    it('weaponSlotsOf : compte les emplacements d\'une arme sur Tourelle achetée (estDefaut: false)', () => {
+      // L'arme sur Tourelle n'est pas une entité Weapon — elle est dans
+      // `improvement.weaponNomInterne` — mais elle consomme les mêmes slots.
+      const vehicule = { ...mockVehicle, improvements: [installedTourelleAssignee], weapons: [] };
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+
+      expect(service.weaponSlotsOf(vehicule)).toBe(armeMitrailleuse.emplacement);
+      expect(mockCatalogService.getArmeByNomInterne).toHaveBeenCalledWith('mitrailleuse');
+    });
+
+    it('weaponSlotsOf : n\'additionne PAS les slots d\'une arme sur Tourelle intégrée (estDefaut: true)', () => {
+      // La Tourelle du Char d'assaut est part du profil de base → son arme est exempte.
+      const vehicule = { ...mockVehicle, improvements: [installedTourelleDefaut], weapons: [] };
+
+      expect(service.weaponSlotsOf(vehicule)).toBe(0);
+      expect(mockCatalogService.getArmeByNomInterne).not.toHaveBeenCalled();
+    });
+
+    it('weaponSlotsOf : additionne arme classique ET arme sur Tourelle achetée', () => {
+      const vehicule = {
+        ...mockVehicle,
+        improvements: [installedTourelleAssignee],
+        weapons: [installedMitrailleuse],
+      };
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+
+      // 2 armes × emplacement=1 chacune
+      expect(service.weaponSlotsOf(vehicule)).toBe(2 * armeMitrailleuse.emplacement);
     });
   });
 

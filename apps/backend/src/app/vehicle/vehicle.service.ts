@@ -275,10 +275,21 @@ export class VehicleService {
    * Emplacements consommés par les armes montées sur ce véhicule — même logique
    * que `improvementSlotsOf`, pour le pool partagé avec les améliorations.
    *
-   * `vehicle.weapons` doit avoir été chargé au préalable (cf. `findOneForUser`).
+   * Deux sources d'armes sont comptabilisées :
+   *  1. Les entités `Weapon` classiques (`vehicle.weapons`).
+   *  2. Les armes assignées à une Tourelle achetée (`VehicleImprovement.weaponNomInterne`
+   *     quand `nomInterne === 'tourelle'` et `!estDefaut`). Ces armes ne sont pas des
+   *     entités `Weapon` — elles n'ont pas leur propre ligne en base — mais elles
+   *     consomment quand même des emplacements comme n'importe quelle arme normale.
+   *     Les Tourelles intégrées au profil de base (`estDefaut: true`) sont exclues :
+   *     leur arme fait partie du profil catalogue et ne compte pas dans le pool achetable.
+   *
+   * `vehicle.weapons` et `vehicle.improvements` doivent avoir été chargés au préalable
+   * (cf. `findOneForUser`).
    */
   weaponSlotsOf(vehicle: Vehicle): number {
-    return vehicle.weapons.reduce((total, weapon) => {
+    // 1. Armes classiques — entités Weapon persistées.
+    const fromWeapons = vehicle.weapons.reduce((total, weapon) => {
       const arme = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
       if (!arme) {
         throw new Error(
@@ -287,6 +298,22 @@ export class VehicleService {
       }
       return total + arme.emplacement;
     }, 0);
+
+    // 2. Armes sur Tourelles achetées — référencées par `weaponNomInterne` sur l'amélioration.
+    //    Même règle qu'une arme classique : son `emplacement` catalogue compte dans le pool.
+    const fromTourelles = vehicle.improvements
+      .filter((imp) => imp.nomInterne === 'tourelle' && imp.weaponNomInterne !== null && !imp.estDefaut)
+      .reduce((total, imp) => {
+        const arme = this.catalogService.getArmeByNomInterne(imp.weaponNomInterne!);
+        if (!arme) {
+          throw new Error(
+            `Arme catalogue inconnue sur Tourelle : "${imp.weaponNomInterne}" (véhicule #${vehicle.id})`,
+          );
+        }
+        return total + arme.emplacement;
+      }, 0);
+
+    return fromWeapons + fromTourelles;
   }
 
   // ── Assemblage ──────────────────────────────────────────────────────────────
@@ -546,9 +573,10 @@ export class VehicleService {
    *  3. L'arme existe dans le catalogue.
    *  4. L'arme est autorisée par le sponsor de l'équipe.
    *  5. L'arme n'est pas de type `équipage` (arc 360° natif — Tourelle sans objet).
-   *
-   * Pas de vérification d'emplacements : la Tourelle consomme 0 slot, l'arme sur
-   * Tourelle aussi (elle n'existe pas comme entité Weapon dans `weaponSlotsOf`).
+   *  6. Le pool d'emplacements partagé n'est pas dépassé avec cette arme supplémentaire.
+   *     L'arme sur Tourelle consomme les mêmes slots qu'une arme normale (cf. `weaponSlotsOf`).
+   *     Seules les Tourelles intégrées (`estDefaut: true`) sont exemptées — leur arme
+   *     fait partie du profil de base du véhicule.
    */
   async assignWeaponToTourelle(
     vehicleId: number,
@@ -591,6 +619,26 @@ export class VehicleService {
       throw new BadRequestException(
         `Les armes d'équipage ont déjà un arc de tir 360° — la Tourelle ne s'applique pas`,
       );
+    }
+
+    // Vérification du pool d'emplacements partagé — l'arme sur Tourelle consomme
+    // ses slots catalogue, exactement comme une arme classique. On simule l'état
+    // "après assignation" en affectant temporairement `weaponNomInterne` avant de
+    // recalculer `weaponSlotsOf`, puis on restaure si le contrôle échoue.
+    // Les Tourelles `estDefaut` sont exclues par `weaponSlotsOf` — pas besoin de
+    // distinguer ici.
+    if (!improvement.estDefaut) {
+      const previousWeapon = improvement.weaponNomInterne;
+      improvement.weaponNomInterne = weaponNomInterne; // simulation
+      const build = this.getBuild(vehicle);
+      const totalDemande = build.totalEmplacements() + this.weaponSlotsOf(vehicle);
+      improvement.weaponNomInterne = previousWeapon; // restauration
+
+      if (totalDemande > build.baseStats.emplacements) {
+        throw new BadRequestException(
+          `Emplacements insuffisants : ${totalDemande}/${build.baseStats.emplacements} requis avec "${arme.nom}" sur Tourelle`,
+        );
+      }
     }
 
     improvement.weaponNomInterne = weaponNomInterne;
