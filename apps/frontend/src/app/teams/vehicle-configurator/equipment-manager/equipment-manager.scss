@@ -130,3 +130,150 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* ── Tourelle — badges et variantes inline ──────────────────────────────────── */
+
+/* Badge "🔒 Intégré" / "🔒 Tourelle intégrée" — indicateur visuel non interactif */
+.em-current__badge-defaut {
+  font-size: 0.8rem;
+  color: #7ec8e3;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* Badge "(Tourelle)" affiché après le nom de l'arme sur une ligne fusionnée */
+.em-current__tourelle-badge {
+  margin-left: 4px;
+  font-size: 0.78rem;
+  color: #999;
+  font-style: italic;
+}
+
+/* "⚠ Aucune arme assignée" sur une Tourelle orpheline */
+.em-current__warning {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  color: #f0a500;
+}
+
+/* Bouton "Assigner une arme" — ton neutre (action secondaire, pas destructrice) */
+.em-current__add-weapon {
+  background: transparent;
+  border: 1px solid #7ec8e3;
+  color: #7ec8e3;
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #7ec8e3;
+    color: #0a0a14;
+  }
+}
+
+/* ── Modale d'assignation d'arme sur Tourelle ──────────────────────────────── */
+
+/* Fond semi-transparent qui couvre le panneau — positionné sur `.em` qui a
+   déjà `position: relative` implicite ; `z-index` suffit pour passer devant
+   la liste des équipements disponibles en dessous. */
+.em-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+/* Boîte de dialogue centrale */
+.em-modal {
+  background: #12121e;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 24px;
+  width: min(480px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.em-modal__title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+.em-modal__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #999;
+}
+
+/* Liste des armes disponibles — sans puces */
+.em-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Bouton arme — ligne complète cliquable, nom à gauche, prix à droite */
+.em-modal__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: #1a1a28;
+  border: 1px solid #2a2a3a;
+  border-radius: 4px;
+  padding: 8px 14px;
+  color: #e0e0e0;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #7ec8e3;
+    background: #1e2035;
+  }
+}
+
+.em-modal__option-name {
+  flex: 1;
+}
+
+.em-modal__option-prix {
+  color: #7ec8e3;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Bouton "Annuler" — aligné à droite, ton neutre */
+.em-modal__cancel {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid #555;
+  color: #aaa;
+  padding: 6px 18px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: #e0e0e0;
+    color: #e0e0e0;
+  }
+}
