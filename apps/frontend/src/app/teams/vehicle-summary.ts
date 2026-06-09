@@ -30,21 +30,15 @@ export interface VehicleSummary {
   /** Nom affiché, résolu depuis le catalogue (ex. "Camion") — PAS `nomInterne`. */
   nom: string;
   /**
-   * Coût total en jerricans : prix de base du véhicule + somme des prix de ses
-   * armes et améliorations montées. Les Tourelles sont EXCLUES de cette somme
-   * (cf. `coutApproximatif` ci-dessous) — leur coût réel ("3× le prix de l'arme
-   * associée") ne peut pas être déterminé avec le modèle de données actuel.
+   * Coût total EXACT en jerricans : prix de base du véhicule + somme des prix de ses
+   * armes et améliorations montées.
+   *
+   * Désormais toujours précis : le backend résout le prix de chaque Tourelle
+   * (`improvement.prix` = 3× le prix catalogue de l'arme assignée, ou 0 si orpheline).
+   * `VehicleService.toVehicleDto` garantit que `prix` est toujours un `number` réel —
+   * plus de cas `"x3"` string ni d'approximation côté frontend.
    */
   cout: number;
-  /**
-   * `true` si au moins une Tourelle équipe ce véhicule — signale que `cout` est
-   * un MINORANT, pas le coût réel. `TeamCard` doit alors préfixer l'affichage
-   * d'un "≈" (décision actée avec l'utilisateur : ignorer la Tourelle plutôt que
-   * deviner — cf. la note "Tourelle, à reprendre plus tard" dans
-   * `VehicleService.getAvailableImprovements`, backend, qui documente déjà
-   * l'absence de lien Tourelle ↔ Arme dans `VehicleImprovement`).
-   */
-  coutApproximatif: boolean;
 }
 
 /**
@@ -75,16 +69,16 @@ export interface TeamVehiclePair {
  * (cf. son en-tête) : c'est la clé stable qui distingue les variantes sponsor
  * (ex. "voiture" vs "voiture_prison") et relie une instance d'équipe à sa fiche
  * catalogue. Le catalogue est encore utilisé pour le nom et le prix de base du
- * véhicule ; les prix des armes et améliorations sont désormais fournis directement
- * par le backend dans `weapon.prix` et `improvement.prix` (cf. `VehicleService.
- * toVehicleDto` — règle de gestion résolue côté serveur, 0 pour les défauts).
+ * véhicule ; les prix des armes et améliorations sont fournis directement par le
+ * backend dans `weapon.prix` et `improvement.prix` (cf. `VehicleService.toVehicleDto` —
+ * règle de gestion résolue côté serveur, 0 pour les défauts).
  *
- * Cas Tourelle : `Amelioration.prix` vaut `"x3"` dans le catalogue, mais le backend
- * retourne `improvement.prix = 0` pour la Tourelle intégrée du Char d'assaut
- * (amélioration par défaut). Pour les Tourelles ACHETÉES par le joueur, `prix`
- * vaut également `0` dans le DTO (le coût réel ×3 reste non calculable sans lien
- * Tourelle ↔ arme — décision inchangée). On lève `coutApproximatif` si une Tourelle
- * achetée (`!estDefaut`) est présente, pour signaler le « ≈ ».
+ * Le calcul est TOUJOURS exact :
+ * - Armes : `weapon.prix` = prix catalogue direct (jamais 0 sauf bug de données).
+ * - Améliorations par défaut (`estDefaut: true`) : `prix` = 0 — pas de contribution.
+ * - Tourelle orpheline : `prix` = 0 (aucune arme assignée — coût en attente).
+ * - Tourelle assignée : `prix` = 3× le prix catalogue de l'arme choisie — coût total,
+ *   arme incluse (l'arme n'existe pas comme entité Weapon séparée, cf. architecture).
  */
 export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): VehicleSummary {
   const vehiculeCatalogue: Vehicule | undefined = catalog.vehicules.find(
@@ -93,31 +87,22 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
 
   // Prix de base du véhicule — toujours depuis le catalogue (non fourni par le DTO).
   let cout: number = vehiculeCatalogue?.prix ?? 0;
-  let coutApproximatif = false;
 
   // Armes : `weapon.prix` est résolu côté backend (catalogue en mémoire → getter).
-  // Le frontend additionne directement sans consulter le catalogue.
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
   }
 
-  // Améliorations : `improvement.prix` est résolu côté backend.
-  // - Défauts (`estDefaut: true`) : `prix` = 0 — pas de contribution au coût.
-  // - Tourelle achetée (`estDefaut: false`, `nomInterne: "tourelle"`) : `prix` = 0
-  //   aussi (coût réel ×3 non calculable, cf. en-tête). On lève `coutApproximatif`.
+  // Améliorations : `improvement.prix` est résolu côté backend — toujours un number réel.
+  // La Tourelle y est incluse avec son prix exact (3× arme ou 0 si orpheline/défaut).
+  // Aucune logique spéciale ici — on additionne sans distinction.
   for (const improvement of vehicle.improvements) {
-    if (!improvement.estDefaut && improvement.nomInterne === 'tourelle') {
-      coutApproximatif = true;
-      // On n'ajoute pas `improvement.prix` (= 0 de toute façon) — le ≈ signale la minoration.
-    } else {
-      cout += improvement.prix;
-    }
+    cout += improvement.prix;
   }
 
   return {
     id: vehicle.id,
     nom: vehiculeCatalogue?.nom ?? vehicle.nomInterne,
     cout,
-    coutApproximatif,
   };
 }

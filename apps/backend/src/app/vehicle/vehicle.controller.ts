@@ -2,11 +2,13 @@
  * VehicleController — points d'entrée HTTP du module Vehicle.
  *
  * API REST sur `/api/vehicles` :
- *   GET    /api/vehicles/:id                              → détail "monté" (stats + récapitulatif)
- *   GET    /api/vehicles/:id/available-improvements       → catalogue filtré par sponsor, avec verdict
- *   POST   /api/vehicles/:id/improvements                 → ajouter une amélioration
- *   DELETE /api/vehicles/:id/improvements/:improvementId  → retirer une amélioration
- *   DELETE /api/vehicles/:id                              → supprimer le véhicule
+ *   GET    /api/vehicles/:id                                     → détail "monté" (stats + récapitulatif)
+ *   GET    /api/vehicles/:id/available-improvements              → catalogue filtré par sponsor, avec verdict
+ *   POST   /api/vehicles/:id/improvements                        → ajouter une amélioration
+ *   PATCH  /api/vehicles/:vehicleId/improvements/:improvId/weapon → assigner une arme à une Tourelle
+ *   DELETE /api/vehicles/:vehicleId/improvements/:improvId/weapon → désassigner l'arme d'une Tourelle
+ *   DELETE /api/vehicles/:id/improvements/:improvementId         → retirer une amélioration
+ *   DELETE /api/vehicles/:id                                     → supprimer le véhicule
  *
  * `PUT /api/vehicles/:id` n'existe pas : `Vehicle` n'a aucun champ modifiable une fois créé.
  * `nomInterne` est la clé catalogue immuable — la changer invaliderait tout l'équipement déjà
@@ -22,10 +24,11 @@
  * Chaque endpoint est protégé par `@UseGuards(JwtAuthGuard)` ; `req.user.id` est transmis au
  * service, qui lève `NotFoundException` (jamais `403`) si l'appartenance échoue.
  */
-import { Controller, Get, Post, Delete, Param, Body, Request, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Request, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehicleService } from './vehicle.service';
 import { AddImprovementDto } from './dto/add-improvement.dto';
+import { AssignWeaponToTourelleDto } from './dto/assign-weapon-to-tourelle.dto';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
 import type { VehicleDetailDto } from './dto/vehicle-detail.dto';
 import type { VehicleDto } from './dto/vehicle.dto';
@@ -101,6 +104,58 @@ export class VehicleController {
     const vehicle = await this.vehicleService.addImprovement(id, req.user.id, dto.nomInterne, {
       orientation: dto.orientation,
     });
+    return this.vehicleService.toVehicleDto(vehicle);
+  }
+
+  /**
+   * PATCH /api/vehicles/:vehicleId/improvements/:improvId/weapon
+   *
+   * Assigne une arme de catalogue à une Tourelle (état orphelin → assigné).
+   * L'arme est stockée comme référence `nom_interne` string — pas comme entité Weapon
+   * séparée (cf. note architecturale dans `vehicle.entity.ts`).
+   * Retourne le véhicule rechargé sous forme de `VehicleDto`.
+   *
+   * ⚠️ Route déclarée AVANT `DELETE :id/improvements/:improvementId` pour éviter
+   * toute ambiguïté de routage Nest : `/improvements/:improvId/weapon` est plus
+   * spécifique que `/improvements/:improvementId`, mais l'ordre explicite garantit
+   * une correspondance correcte quelle que soit l'implémentation du routeur.
+   */
+  @Patch(':vehicleId/improvements/:improvId/weapon')
+  async assignWeapon(
+    @Param('vehicleId', ParseIntPipe) vehicleId: number,
+    @Param('improvId', ParseIntPipe) improvId: number,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: AssignWeaponToTourelleDto,
+  ): Promise<VehicleDto> {
+    const vehicle = await this.vehicleService.assignWeaponToTourelle(
+      vehicleId,
+      improvId,
+      dto.weaponNomInterne,
+      req.user.id,
+    );
+    return this.vehicleService.toVehicleDto(vehicle);
+  }
+
+  /**
+   * DELETE /api/vehicles/:vehicleId/improvements/:improvId/weapon
+   *
+   * Désassigne l'arme d'une Tourelle (état assigné → orphelin) sans supprimer
+   * la Tourelle elle-même. Autorisé même sur une Tourelle `estDefaut`.
+   * Retourne le véhicule rechargé (HTTP 200) plutôt que 204, car l'état du
+   * véhicule change et le frontend en a besoin.
+   */
+  @Delete(':vehicleId/improvements/:improvId/weapon')
+  @HttpCode(200)
+  async unassignWeapon(
+    @Param('vehicleId', ParseIntPipe) vehicleId: number,
+    @Param('improvId', ParseIntPipe) improvId: number,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<VehicleDto> {
+    const vehicle = await this.vehicleService.unassignWeaponFromTourelle(
+      vehicleId,
+      improvId,
+      req.user.id,
+    );
     return this.vehicleService.toVehicleDto(vehicle);
   }
 

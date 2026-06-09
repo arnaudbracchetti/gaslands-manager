@@ -25,14 +25,16 @@
     Liste des véhicules de l'équipe — masquée si vide (équipe sans véhicule,
     ou résumé pas encore chargé : les deux cas se traduisent par un tableau
     vide côté `Teams`, cf. doc de `vehicles`).
-    Le "≈" signale un coût MINORÉ (Tourelle ignorée — cf. `VehicleSummary.coutApproximatif`).
+    Le coût est désormais TOUJOURS exact : le backend résout le prix de la Tourelle
+    (3× le prix de l'arme assignée) dans `improvement.prix` — plus besoin du "≈"
+    ni de `coutApproximatif` (cf. `VehicleSummary`, `VehicleService.toVehicleDto`).
   -->
   @if (vehicles().length > 0) {
     <ul class="team-card__vehicles">
       @for (vehicle of vehicles(); track vehicle.id) {
         <li class="team-card__vehicle">
           <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
-          <span class="team-card__vehicle-cost">{{ vehicle.coutApproximatif ? '≈ ' : '' }}{{ vehicle.cout }} 🥫</span>
+          <span class="team-card__vehicle-cost">{{ vehicle.cout }} 🥫</span>
           <!--
             Actions par véhicule — émettent une `TeamVehiclePair` (équipe courante
             + véhicule visé), cf. doc de `editVehicleClicked`/`deleteVehicleClicked`.

@@ -55,6 +55,7 @@ import {
   VehicleImprovement,
   Weapon,
 } from '../vehicle-builder.model';
+import type { Arme } from '../../../catalog/catalog.model';
 import { EquipmentOption } from '../equipment-option/equipment-option';
 
 @Component({
@@ -97,6 +98,28 @@ export class EquipmentManager {
   availableImprovements: WritableSignal<AvailableImprovementDto[]> = signal<AvailableImprovementDto[]>([]);
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
+
+  // ── Gestion de la Tourelle — modale d'assignation ───────────────────────────
+
+  /**
+   * Tourelle orpheline en cours d'assignation — `null` quand la modale est fermée.
+   * Piloté par `openAssignModal` / fermeture via [Annuler] ou confirmation.
+   */
+  selectedOrphanTourelle: WritableSignal<VehicleImprovement | null> = signal(null);
+
+  /**
+   * Armes du catalogue disponibles pour montage sur une Tourelle.
+   *
+   * Filtre le catalogue du sponsor pour ne retenir que les armes compatibles :
+   * - Exclut les armes de type `équipage` : leur arc 360° est natif — une Tourelle
+   *   ne leur apporte rien et le backend les refuserait (cf. `assignWeaponToTourelle`).
+   * Pas de filtre sur `disponible` des `AvailableWeaponDto` : les armes sur Tourelle
+   * ne consomment pas d'emplacement, elles sont toujours posables (si autorisées
+   * par le sponsor).
+   */
+  armesPourTourelle: Signal<Arme[]> = computed((): Arme[] => {
+    return this.sponsorCatalog().armes.filter((a): boolean => a.type !== 'équipage');
+  });
 
   // ── Emplacements (computed) — fusion à l'identique des deux mirroirs ─────────
   // (cf. en-têtes d'origine pour le raisonnement complet : pool PARTAGÉ entre
@@ -288,6 +311,58 @@ export class EquipmentManager {
       next: (): void => this.reloadVehicle(),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cette amélioration. Réessayez.');
+      },
+    });
+  }
+
+  // ── Gestion de la Tourelle — assignation / désassignation ───────────────────
+
+  /** Ouvre la modale d'assignation pour une Tourelle orpheline. */
+  openAssignModal(improvement: VehicleImprovement): void {
+    this.selectedOrphanTourelle.set(improvement);
+  }
+
+  /**
+   * Assigne une arme de catalogue à la Tourelle sélectionnée (`selectedOrphanTourelle`).
+   *
+   * Appelle `PATCH .../improvements/:id/weapon` et met à jour le véhicule en émettant
+   * l'entité fraîche vers le parent. La modale se ferme après confirmation.
+   * L'`effect()` du constructeur recharge automatiquement les verdicts de disponibilité.
+   */
+  assignWeaponToTourelle(weaponNomInterne: string): void {
+    const tourelle = this.selectedOrphanTourelle();
+    if (!tourelle) return;
+
+    const vehicle = this.vehicle();
+    this.equipmentError.set('');
+
+    this.vehicleService.assignWeaponToTourelle(vehicle.id, tourelle.id, weaponNomInterne).subscribe({
+      next: (updated: Vehicle): void => {
+        this.selectedOrphanTourelle.set(null);
+        this.vehicleChanged.emit(updated);
+      },
+      error: (err: HttpErrorResponse): void => {
+        this.selectedOrphanTourelle.set(null);
+        this.equipmentError.set(err.error?.message ?? 'Impossible d\'assigner cette arme à la Tourelle. Réessayez.');
+      },
+    });
+  }
+
+  /**
+   * Désassigne l'arme d'une Tourelle (assigné → orphelin) sans supprimer la Tourelle.
+   *
+   * Contrairement au retrait d'arme ordinaire (`removeWeapon`), aucune confirmation
+   * n'est demandée : l'utilisateur revient simplement à l'état "Tourelle orpheline"
+   * avec son bouton [Assigner] — l'action est réversible immédiatement.
+   */
+  unassignWeaponFromTourelle(improvement: VehicleImprovement): void {
+    const vehicle = this.vehicle();
+    this.equipmentError.set('');
+
+    this.vehicleService.unassignWeaponFromTourelle(vehicle.id, improvement.id).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
+      error: (err: HttpErrorResponse): void => {
+        this.equipmentError.set(err.error?.message ?? 'Impossible de désassigner cette arme. Réessayez.');
       },
     });
   }

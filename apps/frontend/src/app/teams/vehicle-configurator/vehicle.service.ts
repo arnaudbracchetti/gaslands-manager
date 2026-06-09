@@ -16,23 +16,17 @@
  *  2/4. `getAvailableImprovements`/`getAvailableWeapons` → étape 2 : charger les options
  *  3/5. `addImprovement`/`addWeapon`                     → étape 2 : équiper (un par un)
  *
- * Une sixième, `getAllForTeam`, est ÉTRANGÈRE à ce flux : elle ne sert pas au
- * builder mais à `Teams`, qui en a besoin pour afficher la liste des véhicules
- * de chaque équipe sur sa carte (cf. `vehicle-summary.ts`, "résumé affichable").
- * Elle reste ici plutôt que dans un service dédié — même raisonnement de
- * co-localisation par USAGE RÉEL que pour les cinq autres (cf. paragraphe
- * précédent) : c'est `VehicleService` qui encapsule tous les appels HTTP relatifs
- * aux véhicules d'équipe, peu importe quel composant les déclenche.
+ * Deux méthodes supplémentaires gèrent l'arme d'une Tourelle :
+ *  `assignWeaponToTourelle`   → PATCH, assigne une arme (orphelin → assigné)
+ *  `unassignWeaponFromTourelle` → DELETE, retire l'arme (assigné → orphelin)
  *
- * Trois dernières méthodes, `remove`/`removeWeapon`/`removeImprovement`, servent
- * la fonctionnalité "modifier/supprimer un véhicule depuis la carte d'équipe" :
- * la première à `Teams` (suppression d'un véhicule entier), les deux autres à
- * `VehicleEditor` (retrait d'équipement — mirroir symétrique d'`addWeapon`/
- * `addImprovement`, sauf qu'un retrait est TOUJOURS permis : pas de "vérification
- * à blanc" côté backend, cf. `WeaponService.removeWeapon`/`VehicleService.
- * removeImprovement`). Toutes trois suivent la convention REST `204 No Content`
- * — d'où `Observable<void>`, rien à transmettre dans le corps de la requête NI
- * à attendre en retour.
+ * Une sixième, `getAllForTeam`, est ÉTRANGÈRE au flux de construction : elle sert
+ * à `Teams` pour afficher la liste des véhicules sur chaque carte (cf. `vehicle-summary.ts`).
+ *
+ * `remove`/`removeWeapon`/`removeImprovement` servent la fonctionnalité "modifier/
+ * supprimer un véhicule depuis la carte d'équipe". Les retraits simples suivent la
+ * convention REST `204 No Content` — d'où `Observable<void>`. Les deux méthodes
+ * Tourelle retournent le véhicule rechargé (`200 OK`) — le frontend en a besoin.
  */
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -145,5 +139,34 @@ export class VehicleService {
    */
   removeImprovement(vehicleId: number, improvementId: number): Observable<void> {
     return this.http.delete<void>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
+  }
+
+  /**
+   * PATCH /api/vehicles/:vehicleId/improvements/:improvId/weapon
+   * Assigne une arme de catalogue à une Tourelle (état orphelin → assigné).
+   *
+   * L'arme est référencée par `nom_interne` — pas d'entité Weapon créée.
+   * Retourne le véhicule rechargé (200 OK) avec le prix de la Tourelle mis à jour
+   * (3× le prix de l'arme choisie).
+   */
+  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponNomInterne: string): Observable<Vehicle> {
+    return this.http.patch<Vehicle>(
+      `/api/vehicles/${vehicleId}/improvements/${improvementId}/weapon`,
+      { weaponNomInterne },
+    );
+  }
+
+  /**
+   * DELETE /api/vehicles/:vehicleId/improvements/:improvId/weapon
+   * Désassigne l'arme d'une Tourelle (état assigné → orphelin), sans supprimer
+   * la Tourelle elle-même.
+   *
+   * Retourne le véhicule rechargé (200 OK) — différent des retraits simples
+   * (`204 No Content`) car l'état du véhicule change et le frontend en a besoin.
+   */
+  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): Observable<Vehicle> {
+    return this.http.delete<Vehicle>(
+      `/api/vehicles/${vehicleId}/improvements/${improvementId}/weapon`,
+    );
   }
 }

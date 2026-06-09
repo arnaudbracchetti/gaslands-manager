@@ -17,8 +17,11 @@ export interface VehicleImprovementDto {
   /** `true` si l'amélioration fait partie du profil de base du véhicule (coût zéro, non supprimable). */
   estDefaut: boolean;
   /**
-   * Prix effectif en Jerricans — `0` pour les améliorations par défaut,
-   * prix catalogue pour les autres (cf. `VehicleImprovement.prix`).
+   * Prix effectif en Jerricans — toujours un `number` réel :
+   * - `0` pour les améliorations par défaut (`estDefaut`).
+   * - Pour la Tourelle : 3× le prix catalogue de l'arme assignée, ou `0` si orpheline.
+   * - Autres améliorations : prix catalogue direct.
+   * (cf. `VehicleImprovement.prix` — corrige l'ancien retour `"x3"` string)
    */
   prix: number;
   /**
@@ -27,4 +30,11 @@ export interface VehicleImprovementDto {
    * Le frontend consomme ce champ directement, sans consulter le catalogue.
    */
   emplacement: number;
+  /**
+   * Nom interne de l'arme montée sur cette Tourelle (`nomInterne === 'tourelle'`),
+   * ou `null` si aucune arme n'est assignée (état orphelin) ou pour toute autre
+   * amélioration. Le frontend utilise ce champ pour fusionner l'affichage
+   * "Arme (Tourelle)" en une seule ligne dans l'équipement actuel.
+   */
+  weaponNomInterne: string | null;
 }

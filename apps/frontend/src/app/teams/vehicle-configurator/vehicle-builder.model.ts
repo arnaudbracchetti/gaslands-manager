@@ -26,9 +26,9 @@ export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
  * identique au backend — pas de conversion `null ↔ undefined` côté frontend :
  * cette nuance de vocabulaire reste interne au backend, cf. `VehicleService.getBuild`).
  *
- * `estDefaut`, `prix` et `emplacement` sont des champs ajoutés par le backend
- * (`VehicleService.toVehicleDto`) et portent les règles de gestion déjà résolues —
- * le frontend les consomme sans logique propre.
+ * `estDefaut`, `prix`, `emplacement` et `weaponNomInterne` sont des champs ajoutés
+ * par le backend (`VehicleService.toVehicleDto`) et portent les règles de gestion
+ * déjà résolues — le frontend les consomme sans logique propre.
  */
 export interface VehicleImprovement {
   id: number;
@@ -38,10 +38,21 @@ export interface VehicleImprovement {
   createdAt: string;
   /** `true` si l'amélioration fait partie du profil de base du véhicule (non supprimable). */
   estDefaut: boolean;
-  /** Prix effectif en Jerricans — `0` pour les défauts, prix catalogue sinon. */
+  /**
+   * Prix effectif en Jerricans — toujours un `number` réel :
+   * - `0` pour les défauts (`estDefaut`) ou la Tourelle orpheline.
+   * - Pour la Tourelle assignée : 3× le prix catalogue de l'arme (coût TOTAL, arme incluse).
+   * - Autres améliorations : prix catalogue direct.
+   */
   prix: number;
   /** Emplacements consommés — `0` pour les défauts, valeur catalogue sinon. */
   emplacement: number;
+  /**
+   * Nom interne de l'arme montée sur cette Tourelle (`nomInterne === 'tourelle'`),
+   * ou `null` si aucune arme n'est assignée (état orphelin) ou pour toute autre amélioration.
+   * Le frontend l'utilise pour fusionner l'affichage en une seule ligne "Arme (Tourelle)".
+   */
+  weaponNomInterne: string | null;
 }
 
 /**
@@ -93,9 +104,12 @@ export interface AddImprovementDto {
 }
 
 /**
- * Ligne de `GET /api/vehicles/:id/available-improvements` — miroir de
- * `AvailableImprovementDto`. `prix: number | string` : la Tourelle vaut `"x3"`
- * (cf. `Amelioration.prix`, `catalog.model.ts`).
+ * Ligne de `GET /api/vehicles/:id/available-improvements` — miroir de `AvailableImprovementDto`.
+ *
+ * `prix: number | string` : `Amelioration.prix` vaut `"x3"` pour la Tourelle dans le
+ * catalogue — le backend n'a pas encore de prix résolu pour cet item de liste (le prix
+ * réel dépend de l'arme choisie, qui n'est connue qu'au moment de l'assignation).
+ * Cf. `VehicleImprovement.prix` pour le prix effectif une fois la Tourelle persistée.
  */
 export interface AvailableImprovementDto {
   nom: string;

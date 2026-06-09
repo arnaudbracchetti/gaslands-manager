@@ -27,8 +27,8 @@ const mockTeam: Team = {
 // `buildVehicleSummary` et transmet telle quelle (TeamCard ne fait AUCUN calcul,
 // cf. doc de l'input `vehicles` : "affiche ce qu'on lui donne").
 const mockVehicleSummaries: VehicleSummary[] = [
-  { id: 1, nom: 'Camion', cout: 21, coutApproximatif: false },
-  { id: 2, nom: 'Monster Truck', cout: 28, coutApproximatif: true },
+  { id: 1, nom: 'Camion', cout: 21 },
+  { id: 2, nom: 'Monster Truck', cout: 28 },
 ];
 
 describe('TeamCard', () => {
@@ -100,16 +100,17 @@ describe('TeamCard', () => {
     expect(items[1].textContent).toContain('28');
   });
 
-  it('préfixe le coût d\'un "≈" quand coutApproximatif est vrai (Tourelle ignorée — cf. VehicleSummary)', () => {
+  it('affiche le coût exact (toujours number, jamais de préfixe "≈" — Tourelle résolue côté backend)', () => {
     fixture.componentRef.setInput('vehicles', mockVehicleSummaries);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.team-card__vehicle-cost');
-    // Camion (coutApproximatif: false) → pas de préfixe
+    // Les deux coûts sont exacts — aucun "≈" attendu
     expect(items[0].textContent?.trim().startsWith('≈')).toBe(false);
-    // Monster Truck (coutApproximatif: true) → préfixé
-    expect(items[1].textContent?.trim().startsWith('≈')).toBe(true);
+    expect(items[1].textContent?.trim().startsWith('≈')).toBe(false);
+    expect(items[0].textContent).toContain('21');
+    expect(items[1].textContent).toContain('28');
   });
 
   // ── Outputs ────────────────────────────────────────────────────────────────

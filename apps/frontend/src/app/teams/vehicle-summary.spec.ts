@@ -10,9 +10,6 @@ import { Vehicle, Weapon, VehicleImprovement } from './vehicle-configurator/vehi
 import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
 
 // ── Fixtures catalogue ───────────────────────────────────────────────────────
-// Un sous-ensemble minimal mais réaliste : un véhicule, deux armes (prix nombre),
-// une amélioration "normale" (prix nombre) et la Tourelle (prix "x3" — le cas
-// particulier que `coutApproximatif` doit signaler).
 
 const mockVehiculeCatalogue: Vehicule = {
   nom: 'Camion',
@@ -33,7 +30,7 @@ const mockMitrailleuse: Arme = {
   nom: 'Mitrailleuse',
   nom_interne: 'mitrailleuse',
   type: 'base',
-  prix: 2,
+  prix: 3,
   emplacement: 1,
   description: '',
   regles: '',
@@ -44,7 +41,7 @@ const mockMinigun: Arme = {
   nom: 'Minigun',
   nom_interne: 'minigun',
   type: 'base',
-  prix: 5,
+  prix: 6,
   emplacement: 1,
   description: '',
   regles: '',
@@ -82,21 +79,22 @@ const mockCatalog: Sponsor = {
 };
 
 // ── Fixtures véhicules d'équipe ──────────────────────────────────────────────
-// Constructeurs locaux : on ne fait varier que les champs qui comptent pour le
-// test (improvements/weapons), le reste est un squelette `Vehicle` minimal.
-//
-// IMPORTANT — depuis l'implémentation des améliorations par défaut, les prix
-// des armes et améliorations sont résolus côté BACKEND et fournis dans le DTO
-// (`weapon.prix`, `improvement.prix`). `buildVehicleSummary` les consomme
-// directement — elle ne consulte plus le catalogue pour les prix des items.
-// Les fixtures doivent donc inclure `prix` (et `estDefaut` pour les améliorations).
+// Les prix des armes et améliorations sont résolus côté BACKEND et fournis dans
+// le DTO (`weapon.prix`, `improvement.prix`). `buildVehicleSummary` les consomme
+// directement — les fixtures doivent donc inclure les champs du DTO complet.
 
 function buildWeapon(nomInterne: string, prix: number): Weapon {
   return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix };
 }
 
-function buildImprovement(nomInterne: string, prix: number, estDefaut = false, emplacement = 0): VehicleImprovement {
-  return { id: 1, nomInterne, orientation: null, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', estDefaut, prix, emplacement };
+function buildImprovement(
+  nomInterne: string,
+  prix: number,
+  estDefaut = false,
+  weaponNomInterne: string | null = null,
+  emplacement = 0,
+): VehicleImprovement {
+  return { id: 1, nomInterne, orientation: null, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', estDefaut, prix, emplacement, weaponNomInterne };
 }
 
 function buildVehicle(weapons: Weapon[], improvements: VehicleImprovement[]): Vehicle {
@@ -123,80 +121,86 @@ describe('buildVehicleSummary', () => {
     const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
 
     expect(summary.cout).toBe(15);
-    expect(summary.coutApproximatif).toBe(false);
   });
 
   // ── Armes ──────────────────────────────────────────────────────────────────
 
   it('additionne le prix de chaque arme montée au prix de base', () => {
-    // Les prix sont fournis par le backend dans weapon.prix — pas de lookup catalogue.
-    const vehicle = buildVehicle([buildWeapon('mitrailleuse', 2), buildWeapon('minigun', 5)], []);
+    const vehicle = buildVehicle([buildWeapon('mitrailleuse', 3), buildWeapon('minigun', 6)], []);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) + 2 (mitrailleuse) + 5 (minigun)
-    expect(summary.cout).toBe(22);
-    expect(summary.coutApproximatif).toBe(false);
+    // 15 (camion) + 3 (mitrailleuse) + 6 (minigun)
+    expect(summary.cout).toBe(24);
   });
 
-  // ── Améliorations "normales" (prix nombre) ────────────────────────────────
+  // ── Améliorations "normales" ───────────────────────────────────────────────
 
-  it('additionne le prix d\'une amélioration au prix nombre', () => {
-    // prix fourni par le backend dans improvement.prix (estDefaut: false par défaut)
+  it('additionne le prix d\'une amélioration normale', () => {
     const vehicle = buildVehicle([], [buildImprovement('blindage', 4)]);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
     // 15 (camion) + 4 (blindage)
     expect(summary.cout).toBe(19);
-    expect(summary.coutApproximatif).toBe(false);
   });
 
-  // ── Cas Tourelle (prix "x3") — le cœur de la décision actée ────────────────
+  // ── Cas Tourelle — prix désormais EXACT ────────────────────────────────────
 
-  it('exclut la Tourelle ACHETÉE de la somme ET signale coutApproximatif (décision actée : ignorer plutôt que deviner)', () => {
-    // Tourelle achetée : estDefaut = false, prix = 0 (backend retourne 0 car coût ×3 non calculable).
-    // La détection repose sur `!estDefaut && nomInterne === 'tourelle'` — pas sur le prix catalogue.
+  it('Tourelle ASSIGNÉE : ajoute 3× le prix de l\'arme (prix résolu côté backend)', () => {
+    // Le backend stocke `improvement.prix = 9` (3 × 3j de la Mitrailleuse).
+    // `buildVehicleSummary` additionne simplement ce prix, comme toute amélioration.
+    const vehicle = buildVehicle(
+      [],
+      [buildImprovement('tourelle', 9, false, 'mitrailleuse')],
+    );
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    // 15 (camion) + 9 (Tourelle + Mitrailleuse, coût total résolu)
+    expect(summary.cout).toBe(24);
+  });
+
+  it('Tourelle ORPHELINE (aucune arme assignée) : prix = 0 en attendant l\'assignation', () => {
+    // La Tourelle orpheline a prix = 0 dans le DTO (backend : weaponNomInterne null → 0).
     const vehicle = buildVehicle([], [buildImprovement('tourelle', 0)]);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) — la Tourelle achetée ne contribue PAS au total (coût réel inconnu)
+    // 15 (camion) — Tourelle orpheline contribue 0
     expect(summary.cout).toBe(15);
-    expect(summary.coutApproximatif).toBe(true);
   });
 
-  it('la Tourelle intégrée (estDefaut: true) coûte 0 et ne lève PAS coutApproximatif', () => {
-    // Char d'assaut : Tourelle par défaut — coût zéro, pas d'approximation.
-    // `estDefaut: true` court-circuite la détection de la Tourelle achetée.
-    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0, /* estDefaut */ true)]);
+  it('Tourelle INTÉGRÉE au profil de base (estDefaut: true) : prix = 0', () => {
+    // Char d'assaut : Tourelle intégrée — coût zéro par définition (estDefaut).
+    // Le backend retourne prix = 0 même si une arme est assignée dessus.
+    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0, /* estDefaut */ true, 'canon_125mm')]);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    expect(summary.cout).toBe(15); // prix.base seulement — Tourelle intégrée coûte 0
-    expect(summary.coutApproximatif).toBe(false);
+    expect(summary.cout).toBe(15); // prix de base seulement — Tourelle intégrée coûte 0
   });
 
-  it('combine Tourelle achetée ET amélioration normale : seule la seconde contribue au total, le drapeau reste levé', () => {
-    const vehicle = buildVehicle([], [buildImprovement('blindage', 4), buildImprovement('tourelle', 0)]);
+  it('combine Tourelle assignée ET amélioration normale dans un total exact', () => {
+    const vehicle = buildVehicle(
+      [],
+      [buildImprovement('blindage', 4), buildImprovement('tourelle', 18, false, 'minigun')],
+    );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) + 4 (blindage) — Tourelle achetée exclue
-    expect(summary.cout).toBe(19);
-    expect(summary.coutApproximatif).toBe(true);
+    // 15 (camion) + 4 (blindage) + 18 (Tourelle + Minigun = 3 × 6j)
+    expect(summary.cout).toBe(37);
   });
 
   // ── Cas combiné réaliste ───────────────────────────────────────────────────
 
   it('combine véhicule de base + armes + améliorations dans un seul total', () => {
     const vehicle = buildVehicle(
-      [buildWeapon('mitrailleuse', 2)],
+      [buildWeapon('mitrailleuse', 3)],
       [buildImprovement('blindage', 4)],
     );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) + 2 (mitrailleuse) + 4 (blindage)
-    expect(summary.cout).toBe(21);
-    expect(summary.coutApproximatif).toBe(false);
+    // 15 (camion) + 3 (mitrailleuse) + 4 (blindage)
+    expect(summary.cout).toBe(22);
   });
 
-  // ── Robustesse — incohérence de données (ne devrait jamais arriver, cf. doc) ─
+  // ── Robustesse ─────────────────────────────────────────────────────────────
 
   it('se rabat sur nomInterne si le véhicule est introuvable dans le catalogue', () => {
     const vehicle: Vehicle = { ...buildVehicle([], []), nomInterne: 'inconnu_du_catalogue' };
@@ -206,15 +210,11 @@ describe('buildVehicleSummary', () => {
     expect(summary.cout).toBe(0); // pas de prix de base résolu
   });
 
-  it('ignore silencieusement une arme/amélioration avec prix = 0 (items fantômes ou inconnus côté backend)', () => {
-    // Le backend retourne prix = 0 pour tout item dont il ne trouve pas la fiche catalogue.
-    // La fonction additionne simplement — 0 n'a aucun impact.
+  it('ignore silencieusement les items avec prix = 0 (défauts, orphelins, inconnus)', () => {
     const vehicle = buildVehicle([buildWeapon('arme_fantome', 0)], [buildImprovement('amelioration_fantome', 0)]);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // Seul le prix de base du véhicule compte — les items à prix 0 ne contribuent pas
-    expect(summary.cout).toBe(15);
-    expect(summary.coutApproximatif).toBe(false);
+    expect(summary.cout).toBe(15); // seul le prix de base compte
   });
 
   // ── Identité ───────────────────────────────────────────────────────────────

@@ -374,7 +374,7 @@ describe('Teams Component', () => {
   describe('Ouverture en mode édition (openVehicleEditor)', () => {
     // `VehicleSummary` minimal — seul `id`/`nom` comptent ici (assemblage de la
     // paire, message de confirmation), cf. doc de `TeamVehiclePair`.
-    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21 };
     const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
 
     it('positionne vehicleModal avec le couple {team, vehicleId réel} et affiche la modale avec le configurateur', () => {
@@ -390,7 +390,7 @@ describe('Teams Component', () => {
 
   describe('Fermeture (closeVehicleModal) — chemin UNIQUE pour les deux modes', () => {
     // `VehicleSummary` minimal — cf. `mockPair` ci-dessus.
-    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21 };
     const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
 
     it('closeVehicleModal() ferme la modale et recharge la liste des équipes — depuis le mode création', () => {
@@ -466,7 +466,7 @@ describe('Teams Component', () => {
   // "vehicleCount doit être resynchronisé").
 
   describe('Suppression d\'un véhicule', () => {
-    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21, coutApproximatif: false };
+    const mockSummary: VehicleSummary = { id: 100, nom: 'Camion', cout: 21 };
     const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
 
     it('appelle VehicleService.remove() après confirmation et recharge la liste (resynchronisation de vehicleCount)', () => {
@@ -545,7 +545,7 @@ describe('Teams Component', () => {
       const summaries = component.vehicleSummaries().get(10);
       expect(summaries).toHaveLength(1);
       // 'camion' → 'Camion' (nom) / 15 (prix de base, cf. mockSponsorCatalog.vehicules)
-      expect(summaries?.[0]).toEqual({ id: 1, nom: 'Camion', cout: 15, coutApproximatif: false });
+      expect(summaries?.[0]).toEqual({ id: 1, nom: 'Camion', cout: 15 });
     });
 
     it('ne fait AUCUN appel et laisse vehicleSummaries vide si aucune équipe n\'a de véhicule', () => {

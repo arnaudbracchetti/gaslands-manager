@@ -21,7 +21,7 @@ import {
 import { Team } from '../team/team.entity';
 import { Weapon } from '../weapon/weapon.entity';
 import type { Orientation } from './vehicle-build';
-import type { Amelioration } from '../catalog/catalog.interfaces';
+import type { Amelioration, Arme } from '../catalog/catalog.interfaces';
 
 // @Entity('vehicles') crée une table "vehicles" dans PostgreSQL
 @Entity('vehicles')
@@ -96,6 +96,16 @@ export class VehicleImprovement {
   @Column({ default: false })
   estDefaut: boolean;
 
+  // Nom interne de l'arme choisie pour cette Tourelle — référence catalogue (string stable,
+  // sans accents). `null` quand aucune arme n'est assignée (état "orphelin").
+  //
+  // L'arme sur Tourelle n'existe PAS comme entité `Weapon` séparée : la Tourelle porte
+  // le coût TOTAL (3× le prix de l'arme). Une entité Weapon séparée aurait son propre
+  // `prix` qui s'additionnerait, donnant 4× au lieu de 3× — sémantique incorrecte.
+  // Conséquence : pas de FK, pas de cascade, pas de modification de `weapon.entity.ts`.
+  @Column({ length: 100, nullable: true, default: null })
+  weaponNomInterne: string | null;
+
   @ManyToOne(() => Vehicle, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
   vehicle: Vehicle;
@@ -115,13 +125,38 @@ export class VehicleImprovement {
   ameliorationCatalogue?: Amelioration;
 
   /**
-   * Prix effectif : 0 si l'amélioration est intégrée au profil de base (`estDefaut`),
-   * prix catalogue sinon.
+   * Entrée catalogue de l'arme montée sur cette Tourelle — hydratée par le service
+   * via `catalogService.getArmeByNomInterne(weaponNomInterne)`, jamais persistée.
+   * Undefined si aucune arme n'est assignée (`weaponNomInterne === null`).
+   */
+  weaponCatalogueMonte?: Arme;
+
+  /**
+   * Prix effectif en Jerricans :
+   * - `0` pour les améliorations intégrées au profil de base (`estDefaut`).
+   * - Pour la Tourelle (`nomInterne === 'tourelle'`) : 3× le prix catalogue de l'arme
+   *   assignée, ou `0` si aucune arme n'est encore assignée (état orphelin).
+   *   ⚠️ Corrige l'ancien bug "x3" : `("x3" as number)` retournait la chaîne "x3"
+   *   à l'exécution (TypeScript cast inopérant au runtime) — désormais toujours number.
+   * - Pour les autres améliorations : prix catalogue direct.
+   *
    * ⚠️ Getter non sérialisé par JSON.stringify — appelé explicitement par
    * `VehicleService.toVehicleDto()` (mécanique détaillée là-bas).
    */
   get prix(): number {
+    // Les améliorations par défaut (Tourelle du Char d'assaut, Arceaux du Buggy…)
+    // sont gratuites — coût zéro sans calcul supplémentaire.
     if (this.estDefaut) return 0;
+
+    if (this.nomInterne === 'tourelle') {
+      // Tourelle orpheline (aucune arme assignée) : coût 0 en attendant l'assignation.
+      // Tourelle assignée : 3 × prix catalogue de l'arme choisie — COÛT TOTAL inclus
+      // (pas "arme séparée + Tourelle"), l'arme n'existe pas comme entité Weapon.
+      if (!this.weaponNomInterne || !this.weaponCatalogueMonte) return 0;
+      return (this.weaponCatalogueMonte.prix as number) * 3;
+    }
+
+    // Toutes les autres améliorations : prix catalogue direct.
     return (this.ameliorationCatalogue?.prix as number) ?? 0;
   }
 

@@ -178,7 +178,7 @@ describe('VehicleService', () => {
       let result: Vehicle[] | undefined;
       const equipped: Vehicle = {
         ...mockVehicle,
-        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
+        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1, weaponNomInterne: null }],
         weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2 }],
       };
 

@@ -168,20 +168,33 @@ export class VehicleService {
   /**
    * Hydrate les propriétés transientes d'un véhicule après chargement depuis la base.
    *
-   * `ameliorationCatalogue` et `armeCatalogue` sont des propriétés NON persistées
-   * (aucun `@Column` — cf. les entités). TypeORM ne les renseigne jamais ; c'est
-   * cette méthode qui les résout depuis le catalogue en mémoire, permettant ensuite
+   * `ameliorationCatalogue`, `weaponCatalogueMonte` et `armeCatalogue` sont des propriétés
+   * NON persistées (aucun `@Column` — cf. les entités). TypeORM ne les renseigne jamais ;
+   * c'est cette méthode qui les résout depuis le catalogue en mémoire, permettant ensuite
    * aux getters `prix` des entités de traverser le graphe d'objet.
+   *
+   * Ordre critique : les armes sont hydratées EN PREMIER car `weaponCatalogueMonte` du
+   * getter `prix` de la Tourelle lit `armeCatalogue` de l'arme — si les améliorations
+   * étaient traitées en premier, ce champ serait encore `undefined` au moment du calcul.
    *
    * Appelée systématiquement après tout chargement depuis la base : `findOneForUser`
    * (usage individuel) et `findAllForTeam` (usage liste).
    */
   private hydrateVehicle(vehicle: Vehicle): void {
-    for (const imp of vehicle.improvements) {
-      imp.ameliorationCatalogue = this.catalogService.getAmeliorationByNomInterne(imp.nomInterne);
-    }
+    // 1. Armes en premier — leur `armeCatalogue` est consulté par le getter `prix`
+    //    de la Tourelle (via `weaponCatalogueMonte`) dans la passe suivante.
     for (const weapon of vehicle.weapons) {
       weapon.armeCatalogue = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+    }
+    // 2. Améliorations ensuite — hydratation catalogue + résolution de l'arme Tourelle.
+    for (const imp of vehicle.improvements) {
+      imp.ameliorationCatalogue = this.catalogService.getAmeliorationByNomInterne(imp.nomInterne);
+      // Pour une Tourelle avec arme assignée : résoudre l'entrée catalogue de l'arme
+      // afin que le getter `prix` puisse calculer 3 × arme.prix.
+      if (imp.nomInterne === 'tourelle' && imp.weaponNomInterne) {
+        imp.weaponCatalogueMonte =
+          this.catalogService.getArmeByNomInterne(imp.weaponNomInterne) ?? undefined;
+      }
     }
   }
 
@@ -206,8 +219,9 @@ export class VehicleService {
       vehicleId: imp.vehicleId,
       createdAt: imp.createdAt,
       estDefaut: imp.estDefaut,
-      prix: imp.prix,             // ← getter : 0 si défaut, prix catalogue sinon
-      emplacement: imp.emplacement, // ← getter : 0 si défaut, valeur catalogue sinon
+      prix: imp.prix,               // ← getter : 0 si défaut/orpheline, 3×arme si Tourelle assignée, prix catalogue sinon
+      emplacement: imp.emplacement,  // ← getter : 0 si défaut, valeur catalogue sinon
+      weaponNomInterne: imp.weaponNomInterne ?? null, // ← null pour tout sauf Tourelle assignée
     }));
 
     const weapons: WeaponDto[] = vehicle.weapons.map((w) => ({
@@ -515,6 +529,106 @@ export class VehicleService {
     }
 
     await this.improvementRepo.remove(improvement);
+  }
+
+  // ── Gestion de la Tourelle — assignation / désassignation d'arme ─────────────
+
+  /**
+   * Assigne une arme de catalogue à une Tourelle (état orphelin → assigné).
+   *
+   * L'arme est stockée comme référence `nom_interne` string sur `VehicleImprovement`,
+   * pas comme entité `Weapon` séparée : la Tourelle porte le coût total (3×) — cf.
+   * note architecturale dans `vehicle.entity.ts` (VehicleImprovement.weaponNomInterne).
+   *
+   * Validations dans l'ordre :
+   *  1. L'amélioration existe sur ce véhicule (appartient à l'utilisateur).
+   *  2. C'est bien une Tourelle (`nomInterne === 'tourelle'`).
+   *  3. L'arme existe dans le catalogue.
+   *  4. L'arme est autorisée par le sponsor de l'équipe.
+   *  5. L'arme n'est pas de type `équipage` (arc 360° natif — Tourelle sans objet).
+   *
+   * Pas de vérification d'emplacements : la Tourelle consomme 0 slot, l'arme sur
+   * Tourelle aussi (elle n'existe pas comme entité Weapon dans `weaponSlotsOf`).
+   */
+  async assignWeaponToTourelle(
+    vehicleId: number,
+    improvementId: number,
+    weaponNomInterne: string,
+    userId: number,
+  ): Promise<Vehicle> {
+    const vehicle = await this.findOneForUser(vehicleId, userId);
+
+    const improvement = vehicle.improvements.find((i) => i.id === improvementId);
+    if (!improvement) {
+      throw new NotFoundException(
+        `Amélioration #${improvementId} introuvable sur le véhicule #${vehicleId}`,
+      );
+    }
+    if (improvement.nomInterne !== 'tourelle') {
+      throw new BadRequestException("Cette amélioration n'est pas une Tourelle");
+    }
+
+    const arme = this.catalogService.getArmeByNomInterne(weaponNomInterne);
+    if (!arme) {
+      throw new BadRequestException(`Arme inconnue du catalogue : "${weaponNomInterne}"`);
+    }
+
+    // Vérification du sponsor — même logique que `WeaponService.canAddWeapon`
+    const sponsor = this.catalogService.getSponsor(vehicle.team.sponsor);
+    if (!sponsor) {
+      throw new Error(`Sponsor catalogue inconnu : "${vehicle.team.sponsor}" (équipe #${vehicle.teamId})`);
+    }
+    const autorisee = sponsor.armes.some((a) => a.nom_interne === weaponNomInterne);
+    if (!autorisee) {
+      throw new BadRequestException(
+        `L'arme "${arme.nom}" n'est pas autorisée pour le sponsor "${sponsor.nom}"`,
+      );
+    }
+
+    // Les armes d'équipage tirent déjà à 360° — la Tourelle ne leur apporte rien.
+    // Bloquer explicitement plutôt que d'accepter silencieusement une règle incorrecte.
+    if (arme.type === 'équipage') {
+      throw new BadRequestException(
+        `Les armes d'équipage ont déjà un arc de tir 360° — la Tourelle ne s'applique pas`,
+      );
+    }
+
+    improvement.weaponNomInterne = weaponNomInterne;
+    await this.improvementRepo.save(improvement);
+    return this.findOneForUser(vehicleId, userId);
+  }
+
+  /**
+   * Désassigne l'arme d'une Tourelle (état assigné → orphelin).
+   *
+   * Met `weaponNomInterne` à `null` sans supprimer la Tourelle elle-même. Autorisé
+   * même sur une Tourelle `estDefaut` (la Tourelle intégrée ne peut pas être RETIRÉE,
+   * mais l'arme qu'elle couvre peut toujours être changée ou retirée par le joueur).
+   *
+   * Contrairement à `removeImprovement`, aucune vérification `estDefaut` ici : seul
+   * le RETRAIT de la Tourelle est interdit pour les améliorations par défaut — pas
+   * la modification de son arme.
+   */
+  async unassignWeaponFromTourelle(
+    vehicleId: number,
+    improvementId: number,
+    userId: number,
+  ): Promise<Vehicle> {
+    const vehicle = await this.findOneForUser(vehicleId, userId);
+
+    const improvement = vehicle.improvements.find((i) => i.id === improvementId);
+    if (!improvement) {
+      throw new NotFoundException(
+        `Amélioration #${improvementId} introuvable sur le véhicule #${vehicleId}`,
+      );
+    }
+    if (improvement.nomInterne !== 'tourelle') {
+      throw new BadRequestException("Cette amélioration n'est pas une Tourelle");
+    }
+
+    improvement.weaponNomInterne = null;
+    await this.improvementRepo.save(improvement);
+    return this.findOneForUser(vehicleId, userId);
   }
 
   /**

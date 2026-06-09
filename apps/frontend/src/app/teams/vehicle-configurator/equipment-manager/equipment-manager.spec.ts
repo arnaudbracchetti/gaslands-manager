@@ -106,7 +106,7 @@ const mockVehicleWithWeapon: Vehicle = {
 // Véhicule équipé d'une amélioration — sert au mirroir `removeImprovement`/`addImprovement`.
 const mockVehicleWithImprovement: Vehicle = {
   ...mockVehicle,
-  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
+  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1, weaponNomInterne: null }],
 };
 
 const mockAvailableWeapon: AvailableWeaponDto = {
