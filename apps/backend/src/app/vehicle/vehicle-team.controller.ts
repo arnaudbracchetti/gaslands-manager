@@ -7,18 +7,9 @@
  *
  * Pourquoi un second controller plutôt qu'ajouter ces routes à `VehicleController` ?
  * NestJS n'autorise qu'UN SEUL préfixe `@Controller(...)` par classe — `vehicles`
- * pour l'un, `teams/:teamId/vehicles` pour l'autre, ce sont deux arborescences
- * d'URL distinctes. Les deux délèguent malgré tout au MÊME `VehicleService` :
- * la séparation est purement une question de FORME des routes HTTP, pas de
- * logique métier (cf. l'en-tête de `VehicleController`, qui détaille pourquoi
- * CES DEUX routes — et seulement elles — ont besoin du contexte d'équipe dans
- * l'URL : il n'existe encore aucun véhicule à identifier par son propre id).
- *
- * Comme `VehicleController`/`TeamController`, chaque route est protégée par
- * `@UseGuards(JwtAuthGuard)` ; `req.user.id` est transmis au service, qui
- * l'utilise pour vérifier — via `TeamService.findOneForUser` — que l'équipe
- * `:teamId` appartient bien à l'utilisateur connecté (sinon `NotFoundException`,
- * jamais `403` : même logique de non-divulgation que partout ailleurs).
+ * pour l'un, `teams/:teamId/vehicles` pour l'autre. Les deux délèguent au MÊME
+ * `VehicleService` : la séparation est purement une question de forme des routes HTTP,
+ * pas de logique métier (cf. `VehicleController` pour le détail).
  */
 import { Controller, Get, Post, Param, Body, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';

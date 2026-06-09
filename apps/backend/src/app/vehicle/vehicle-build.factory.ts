@@ -2,18 +2,9 @@
  * VehicleBuildFactory — assemble la chaîne `VehicleBuild` représentant un véhicule
  * "monté" : le profil catalogue, enveloppé d'une couche par amélioration installée.
  *
- * Cette factory est le SEUL endroit qui sache comment reconstituer une chaîne à
- * partir de données persistées (`Vehicle` + ses `VehicleImprovement`). Le reste du
- * système (service, contrôleur) manipule uniquement le résultat — un `VehicleBuild`
- * — sans jamais avoir à savoir comment il a été construit ni combien de couches il
- * contient (cf. Pattern Decorator, `vehicle-build.ts`).
- *
- * Pourquoi un objet séparé de `ImprovementDecoratorFactory` ? Deux responsabilités
- * distinctes : celle-ci sait QUEL DÉCORATEUR choisir pour UNE amélioration ; celle-là
- * sait COMMENT EMPILER plusieurs améliorations dans le bon ordre, en résolvant
- * chacune depuis le catalogue. Les séparer évite à chacune de porter une
- * responsabilité qui n'est pas la sienne — exactement l'esprit Single Responsibility
- * qui sous-tend déjà la séparation `CatalogService` / reste de l'application.
+ * Seul endroit qui sache reconstituer une chaîne à partir des données persistées.
+ * Le reste du système manipule uniquement le résultat — un `VehicleBuild` — sans
+ * jamais connaître le nombre de couches (cf. Pattern Decorator, `vehicle-build.ts`).
  */
 
 import { Injectable } from '@nestjs/common';

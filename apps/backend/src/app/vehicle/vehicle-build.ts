@@ -298,12 +298,9 @@ export abstract class ImprovementDecorator implements VehicleBuild {
   }
 
   /**
-   * Règle commune à TOUTE amélioration, quelle que soit sa nature : la capacité du
-   * véhicule en emplacements ne peut pas être dépassée. Vit dans la classe ABSTRAITE
-   * (et non dans une sous-classe) précisément pour s'appliquer à chaque maillon sans
-   * exception — un contrôle vraiment universel ne doit dépendre d'aucune sous-classe
-   * particulière, sous peine de recréer le même trou que le bug structurel mentionné
-   * ci-dessus pour une règle qui, elle, concerne TOUTES les améliorations.
+   * Règle commune à TOUTE amélioration : la capacité du véhicule en emplacements ne
+   * peut pas être dépassée. Vit dans la classe abstraite pour s'appliquer à chaque
+   * maillon sans exception — un contrôle universel ne doit pas dépendre d'une sous-classe.
    */
   private validateGenerique(): RuleResult {
     if (this.totalEmplacements() > this.baseStats.emplacements) {

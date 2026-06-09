@@ -2,17 +2,11 @@
  * Entités TypeORM du module Vehicle — un véhicule appartenant à une équipe (instance
  * de jeu), distinct du catalogue en mémoire (cf. SPECIFICATION.md §5, ARCHITECTURE.md §3.3).
  *
- * Comme `Team.sponsor` référence un sponsor du catalogue par son nom (chaîne, pas de
- * FK SQL — le catalogue n'est pas en base), `Vehicle`/`VehicleImprovement` référencent
- * leurs items catalogue par `nom_interne` plutôt que par `nom` affiché : c'est
- * précisément le rôle de cet identifiant — stable, sans accents ni espaces, et SEUL
- * capable de distinguer une variante sponsor de l'original (ex: "Voiture" vs
- * "Voiture (Prison)" partagent un `nom` proche mais ont des `nom_interne` distincts ;
- * inversement "Bélier" et "Bélier (Slime)" doivent rester ASSOCIABLES à la même règle
- * malgré des noms différents — cf. `catalog.interfaces.ts`, doc de `nom_interne`).
- * Note : SPECIFICATION.md nommait initialement ce champ `nom` ; corrigé ici en
- * `nomInterne` pour refléter fidèlement la clé catalogue qu'il référence réellement —
- * documentation mise à jour en conséquence.
+ * `Vehicle`/`VehicleImprovement` référencent leurs items catalogue par `nom_interne`
+ * plutôt que par `nom` affiché : identifiant stable, sans accents ni espaces, capable
+ * de distinguer une variante sponsor de l'original (ex: "Voiture" vs "Voiture (Prison)")
+ * tout en permettant de relier deux noms différents à la même règle métier
+ * (ex: "Bélier" / "Bélier (Slime)" — cf. `catalog.interfaces.ts`, doc de `nom_interne`).
  */
 
 import {
@@ -63,13 +57,10 @@ export class Vehicle {
   })
   improvements: VehicleImprovement[];
 
-  // Relation One-to-Many vers les armes montées sur ce véhicule — miroir EXACT
-  // de `improvements` ci-dessus (même cascade, même raisonnement sur l'ordre :
-  // cf. son commentaire). `Weapon` et `VehicleImprovement` sont volontairement
-  // deux entités distinctes plutôt qu'une seule "équipement" générique : leurs
-  // règles de pose divergent profondément (les armes ne MODIFIENT pas les stats
-  // du véhicule — pas de Pattern Decorator nécessaire — mais portent une
-  // contrainte d'orientation différente, cf. `weapon.entity.ts`).
+  // `Weapon` et `VehicleImprovement` sont deux entités distinctes plutôt qu'une seule
+  // "équipement" générique : leurs règles de pose divergent (les armes ne modifient pas
+  // les stats du véhicule — pas de Pattern Decorator — mais portent une contrainte
+  // d'orientation différente, cf. `weapon.entity.ts`).
   @OneToMany(() => Weapon, (weapon) => weapon.vehicle, { cascade: true })
   weapons: Weapon[];
 
@@ -124,16 +115,10 @@ export class VehicleImprovement {
   ameliorationCatalogue?: Amelioration;
 
   /**
-   * Prix effectif de cette amélioration pour ce véhicule.
-   *
-   * Règle de gestion portée par l'entité elle-même : parcourt le graphe d'objet
-   * (`ameliorationCatalogue`) pour lire le prix catalogue, et retourne 0 si
-   * l'amélioration est intégrée au profil de base (`estDefaut`).
-   *
-   * ⚠️ Les getters TypeScript vivent sur le PROTOTYPE de la classe et ne sont PAS
-   * sérialisés par `JSON.stringify` (qui n'énumère que les propriétés PROPRES d'un
-   * objet). Ce getter sert à la logique métier interne ; c'est `VehicleService.
-   * toVehicleDto()` qui l'appelle et expose la valeur dans la réponse HTTP.
+   * Prix effectif : 0 si l'amélioration est intégrée au profil de base (`estDefaut`),
+   * prix catalogue sinon.
+   * ⚠️ Getter non sérialisé par JSON.stringify — appelé explicitement par
+   * `VehicleService.toVehicleDto()` (mécanique détaillée là-bas).
    */
   get prix(): number {
     if (this.estDefaut) return 0;
@@ -141,15 +126,8 @@ export class VehicleImprovement {
   }
 
   /**
-   * Nombre d'emplacements consommés par cette amélioration.
-   *
-   * Même règle que `prix` : une amélioration intégrée au profil de base (`estDefaut`)
-   * ne consomme pas d'emplacement achetable — elle fait partie du véhicule, pas de
-   * son équipement. Retourne 0 dans ce cas ; valeur catalogue sinon.
-   *
-   * Cohérence garantie entre backend (`improvementSlotsOf`, chaîne `VehicleBuild`)
-   * et frontend (`emplacementsUtilises`) : les deux consomment ce getter via le DTO,
-   * sans consulter le catalogue indépendamment.
+   * Emplacements consommés : 0 si amélioration intégrée au profil de base (`estDefaut`)
+   * — elle fait partie du véhicule, pas de son équipement achetable — valeur catalogue sinon.
    */
   get emplacement(): number {
     if (this.estDefaut) return 0;

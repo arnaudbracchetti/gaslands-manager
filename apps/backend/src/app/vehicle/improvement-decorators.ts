@@ -89,15 +89,11 @@ export class MembreEquipageDecorator extends ImprovementDecorator {
 /**
  * Règle (cf. `amelioration.yml`) :
  *  - une orientation doit être définie à l'achat (comme pour une arme) ;
- *  - un seul Bélier par orientation (mais plusieurs Béliers sur des orientations différentes
- *    sont autorisés — d'où une vérification PAR POSITION, pas un simple comptage global).
+ *  - un seul Bélier par orientation (mais plusieurs sur des orientations différentes
+ *    sont autorisés — d'où une vérification PAR POSITION, pas un comptage global).
  *
  * Couvre AUSSI la variante Slime (même `comportement` ⇒ même classe ⇒ même règle).
- *
- * ⚠️ PAS de lien avec Bélier Explosif malgré la proximité de noms : sa propre fiche
- * confirme qu'ils sont explicitement compatibles et cumulatifs sur la même orientation —
- * chacun valide SA règle, en toute indépendance (cf. `BelierExplosifDecorator` ci-dessous,
- * et le plan d'architecture pour la correction d'une fausse hypothèse de conception initiale).
+ * Compatible et cumulatif avec Bélier Explosif — chacun valide sa règle en toute indépendance.
  */
 export class BelierDecorator extends ImprovementDecorator {
   protected override validateSelf(): RuleResult {
@@ -119,12 +115,11 @@ export class BelierDecorator extends ImprovementDecorator {
 /**
  * Règle (cf. `amelioration.yml`) :
  *  - interdit sur les véhicules de Poids Léger ;
- *  - un seul exemplaire par véhicule (contrairement au Bélier, pas "par orientation" :
- *    le plafond global rend une vérification par position superflue) ;
+ *  - un seul exemplaire par véhicule (pas "par orientation" : le plafond global
+ *    rend une vérification par position superflue) ;
  *  - une orientation doit néanmoins être définie à l'achat (comme pour une arme).
  *
- * Totalement indépendant du Bélier — voir `BelierDecorator` pour le détail du
- * raisonnement (les deux sont confirmés compatibles et cumulatifs par leurs règles).
+ * Totalement indépendant du Bélier — compatibles et cumulatifs sur la même orientation.
  */
 export class BelierExplosifDecorator extends ImprovementDecorator {
   protected override validateSelf(): RuleResult {

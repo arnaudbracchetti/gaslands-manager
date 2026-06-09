@@ -62,19 +62,11 @@ export class VehicleService {
   /**
    * Liste les véhicules d'une équipe — réservé au propriétaire de l'équipe.
    *
-   * `teamService.findOneForUser` fait tout le travail de vérification : si
-   * l'équipe n'existe pas OU n'appartient pas à `userId`, elle lève déjà
-   * `NotFoundException` — on n'a rien à dupliquer ici, juste à laisser
-   * l'exception remonter telle quelle (même équipe introuvable pour le
-   * controller équipe que pour celui-ci : c'est voulu, cf. `findOneForUser`).
-   *
-   * `relations: { improvements: true, weapons: true }` : la liste sert au
-   * frontend à rafraîchir son état (recompter les emplacements utilisés,
-   * afficher un récapitulatif...) — autant éviter le coût d'un second aller-
-   * retour par véhicule (même raisonnement que `findOneForUser`).
-   *
-   * Les entités retournées sont hydratées (cf. `hydrateVehicle`) : leurs
-   * améliorations et armes exposent `prix` via leur getter.
+   * `teamService.findOneForUser` vérifie l'appartenance et lève `NotFoundException`
+   * si l'équipe n'existe pas ou n'appartient pas à `userId`.
+   * `relations: { improvements: true, weapons: true }` : charge les deux relations
+   * pour éviter un second aller-retour par véhicule (nécessaire à `toVehicleDto`).
+   * Les entités retournées sont hydratées (cf. `hydrateVehicle`).
    */
   async findAllForTeam(teamId: number, userId: number): Promise<Vehicle[]> {
     await this.teamService.findOneForUser(teamId, userId);
@@ -152,26 +144,12 @@ export class VehicleService {
 
   /**
    * Charge un véhicule par son id, uniquement s'il appartient (via son équipe)
-   * à l'utilisateur connecté.
+   * à l'utilisateur connecté. Filtre via `team: { userId }` — `Vehicle` ne porte
+   * pas `userId` directement. Charge `team`, `improvements` et `weapons` car
+   * nécessaires à `getBuild`, aux calculs d'emplacements et à `WeaponService`.
    *
-   * `where: { id, team: { userId } }` : TypeORM traduit la condition imbriquée
-   * sur la relation en jointure SQL — comme `TeamService.findOneForUser` filtre
-   * directement sur `userId`, sauf que `Vehicle` ne porte pas cette colonne : il
-   * faut remonter par `team`. `relations: { team: true, improvements: true,
-   * weapons: true }` charge l'équipe (le filtre ci-dessus la JOINT de toute façon
-   * — autant peupler `vehicle.team.sponsor`, nécessaire à `getAvailableImprovements`/
-   * `getAvailableWeapons` pour filtrer le catalogue), les améliorations installées
-   * (nécessaires à `getBuild` pour reconstituer la chaîne) ET les armes montées
-   * (nécessaires à `weaponSlotsOf` ci-dessous, et à `WeaponService` — toutes deux
-   * lisent `vehicle.weapons`, qui serait sinon `undefined`) — la quasi-totalité des
-   * usages de cette méthode a besoin d'au moins une de ces relations, autant
-   * éviter des requêtes supplémentaires.
-   *
-   * Lève `NotFoundException` (HTTP 404) si introuvable OU si l'appartenance
+   * Lève `NotFoundException` (HTTP 404) si introuvable ou si l'appartenance
    * échoue — les deux cas sont indiscernables pour l'appelant, par conception.
-   *
-   * Le véhicule retourné est hydraté (cf. `hydrateVehicle`) : améliorations et
-   * armes exposent leur `prix` via le getter de l'entité.
    */
   async findOneForUser(id: number, userId: number): Promise<Vehicle> {
     const vehicle = await this.vehicleRepo.findOne({
@@ -254,20 +232,9 @@ export class VehicleService {
   // ── Emplacements partagés (armes ET améliorations) ──────────────────────────
 
   /**
-   * Combien d'emplacements consomment les améliorations RÉELLEMENT posées
-   * (persistées) sur ce véhicule.
-   *
-   * Pourquoi ce helper existe-t-il à côté de `VehicleBuild.totalEmplacements()` ?
-   * Ce dernier répond à EXACTEMENT la même question (cf. `vehicle-build.ts`) —
-   * mais reconstruire toute la chaîne `VehicleBuild` juste pour lire un total
-   * d'emplacements serait un détour coûteux et conceptuellement déplacé : ce
-   * helper sert `checkCandidate` (qui, lui, construit DÉJÀ une chaîne — donc
-   * pourrait l'utiliser directement) ET `WeaponService` (qui n'a STRUCTURELLEMENT
-   * aucune chaîne à disposition — les armes ne sont pas des décorateurs, cf.
-   * note de conception du plan). Plutôt que de dupliquer ce calcul ou d'exposer
-   * la machinerie `VehicleBuild` à `WeaponService` (qui n'en a pas besoin pour le
-   * reste), un seul helper PUBLIC et SANS ÉTAT — une simple somme sur les lignes
-   * persistées — sert les deux appelants de façon identique et triviale à tester.
+   * Emplacements consommés par les améliorations RÉELLEMENT posées sur ce véhicule.
+   * Helper partagé entre `checkCandidate` et `WeaponService`, qui n'a pas accès à
+   * la chaîne `VehicleBuild` (les armes ne sont pas des décorateurs).
    *
    * `vehicle.improvements` doit avoir été chargé au préalable (cf. `findOneForUser`).
    */
@@ -291,9 +258,8 @@ export class VehicleService {
   }
 
   /**
-   * Combien d'emplacements consomment les armes RÉELLEMENT montées (persistées)
-   * sur ce véhicule — miroir exact de `improvementSlotsOf` ci-dessus, même
-   * raisonnement (cf. son commentaire), pour le pool partagé `Vehicule.emplacements`.
+   * Emplacements consommés par les armes montées sur ce véhicule — même logique
+   * que `improvementSlotsOf`, pour le pool partagé avec les améliorations.
    *
    * `vehicle.weapons` doit avoir été chargé au préalable (cf. `findOneForUser`).
    */
@@ -384,31 +350,17 @@ export class VehicleService {
   }
 
   /**
-   * Le cœur de la vérification à blanc — "envelopper PUIS valider" — extrait en
-   * méthode synchrone et privée pour pouvoir être appelée PLUSIEURS FOIS sur LA
-   * MÊME chaîne déjà chargée, sans recharger le véhicule à chaque fois.
-   *
-   * Pourquoi ce découpage ? `canAddImprovement` ci-dessus répond à "puis-je ajouter
-   * CETTE amélioration précise ?" (1 vérification ⇒ 1 chargement, le coût est
-   * négligeable). Mais `getAvailableImprovements` ci-dessous pose la MÊME question
-   * pour CHAQUE amélioration du catalogue filtré par sponsor — recharger le véhicule
-   * à chaque itération multiplierait les allers-retours SQL par la taille du
-   * catalogue, pour un résultat strictement identique (la chaîne réelle ne bouge
-   * pas entre deux vérifications consécutives). En séparant "construire la chaîne
-   * actuelle" (coûteux, fait UNE fois) de "tester un candidat dessus" (pur, en
-   * mémoire, répétable à volonté), chaque appelant ne paie que ce dont il a besoin.
+   * Vérification à blanc en mémoire : enveloppe `currentBuild` avec le décorateur
+   * du candidat, valide la chaîne hypothétique, SANS PERSISTER. Appelée une fois
+   * depuis `canAddImprovement`, ou N fois depuis `getAvailableImprovements` sur la
+   * même chaîne déjà construite — évite de recharger le véhicule à chaque itération.
    *
    * ⚠️ `vehicle` est requis EN PLUS de `currentBuild` : la chaîne `VehicleBuild`
-   * ne connaît QUE les améliorations (`totalEmplacements()`, cf. son en-tête —
-   * périmètre volontairement restreint, pour ne pas mélanger deux préoccupations
-   * dans le Décorateur). Or `Vehicule.emplacements` est un pool PARTAGÉ entre
-   * améliorations ET armes (cf. plan, "Décision de conception tranchée") : valider
-   * "cette chaîne d'améliorations est cohérente" ne suffit pas — il faut AUSSI
-   * vérifier que la chaîne, une fois étendue avec le candidat, tient encore dans
-   * ce pool COMMUN aux armes déjà montées. D'où la vérification complémentaire
-   * ci-dessous, délibérément placée APRÈS `validate()` — elle ne s'exécute que si
-   * la chaîne est par ailleurs cohérente, évitant de masquer une vraie erreur de
-   * règle métier derrière un message générique de dépassement d'emplacements.
+   * ne connaît QUE les améliorations. Or `Vehicule.emplacements` est un pool PARTAGÉ
+   * entre améliorations ET armes : valider la chaîne seule ne suffit pas — il faut
+   * vérifier que la chaîne étendue tient encore dans ce pool COMMUN aux armes déjà
+   * montées. Cette vérification est placée APRÈS `validate()` pour ne pas masquer
+   * une vraie erreur de règle derrière un message générique de dépassement d'emplacements.
    */
   private checkCandidate(
     vehicle: Vehicle,
