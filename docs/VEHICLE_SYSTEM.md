@@ -60,6 +60,7 @@ erDiagram
         string nomInterne
         string orientation "avant|arrière|gauche|droite|null"
         boolean estDefaut "false = achetée, true = profil de base"
+        string weaponNomInterne "null sauf si Tourelle avec arme assignée"
         number vehicleId FK
     }
 
@@ -103,8 +104,15 @@ erDiagram
 
     Vehicle }o..|| CATALOGUE_Vehicule : "nomInterne (logique)"
     VehicleImprovement }o..|| CATALOGUE_Amelioration : "nomInterne (logique)"
+    VehicleImprovement }o..o| CATALOGUE_Arme : "weaponNomInterne (Tourelle, logique)"
     Weapon }o..|| CATALOGUE_Arme : "nomInterne (logique)"
 ```
+
+> **`weaponNomInterne`** : champ spécifique aux Tourelles — `null` pour toute amélioration
+> non-Tourelle, et pour une Tourelle orpheline (sans arme assignée). Lorsqu'une arme est
+> assignée à la Tourelle, ce champ contient le `nom_interne` de l'arme catalogue. L'arme sur
+> Tourelle **n'est pas une entité `Weapon`** : stocker une FK vers `Weapon` donnerait un coût
+> total de 4× au lieu du 3× réglementaire (prix arme + prix Tourelle cumulés).
 
 > **Cascade** : supprimer un `Team` supprime ses `Vehicle`, qui suppriment leurs `VehicleImprovement`
 > et `Weapon` — via `onDelete: 'CASCADE'` TypeORM à chaque niveau.
@@ -435,6 +443,7 @@ armes **et** améliorations. Ce n'est pas deux pools séparés.
 ```
 totalDemande = candidateBuild.totalEmplacements()   ← amélio ACHETÉES + candidat
              + weaponSlotsOf(vehicle)               ← armes déjà montées
+                                                      (entités Weapon + armes sur Tourelles achetées)
 
 si totalDemande > candidateBuild.baseStats.emplacements → BLOQUÉ
 ```
@@ -442,10 +451,39 @@ si totalDemande > candidateBuild.baseStats.emplacements → BLOQUÉ
 **Les améliorations par défaut (`estDefaut: true`) sont exclues du calcul** — elles
 font partie du profil du véhicule, pas de ses achats. `VehicleService.improvementSlotsOf()`
 les filtre avant de traverser la chaîne, et `getBuild()` ne les enfile pas dans les
-décorateurs (elles n'ont aucun `comportement` à appliquer).
+décorateurs (elles n'ont aucun `comportement` à appliquer). De même, une arme assignée à
+une Tourelle `estDefaut: true` (Char d'assaut) **ne consomme pas d'emplacements** — seules
+les armes sur des Tourelles achetées (`estDefaut: false`) sont comptées.
 
 `candidateBuild.totalEmplacements()` traverse la chaîne complète via délégation :
 chaque décorateur retourne `this.amelioration.emplacement + this.inner.totalEmplacements()`.
+
+**`weaponSlotsOf(vehicle)`** cumule deux sources :
+
+```typescript
+// Dans VehicleService
+weaponSlotsOf(vehicle: Vehicle): number {
+  // 1. Armes normales (entités Weapon)
+  const fromWeapons = vehicle.weapons.reduce((total, weapon) => {
+    const arme = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+    return total + arme.emplacement;
+  }, 0);
+
+  // 2. Armes référencées par des Tourelles ACHETÉES (weaponNomInterne non null, !estDefaut)
+  //    La Tourelle intégrée du Char d'assaut (estDefaut: true) est exclue —
+  //    son arme fait partie du profil de base et ne consomme pas d'emplacements.
+  const fromTourelles = vehicle.improvements
+    .filter((imp) => imp.nomInterne === 'tourelle'
+                  && imp.weaponNomInterne !== null
+                  && !imp.estDefaut)
+    .reduce((total, imp) => {
+      const arme = this.catalogService.getArmeByNomInterne(imp.weaponNomInterne!);
+      return total + arme.emplacement;
+    }, 0);
+
+  return fromWeapons + fromTourelles;
+}
+```
 
 ### Reflet côté frontend
 
@@ -456,21 +494,33 @@ emplacementsUtilises = computed(() => {
   const vehicle = this.vehicle();
   const catalog = this.sponsorCatalog();
 
+  // 1. Armes normales (entités Weapon)
   const weaponSlots = vehicle.weapons.reduce((sum, w) => {
-    const arme = catalog.armes.find(a => a.nom_interne === w.nomInterne);
+    const arme = catalog.armes.find((a) => a.nom_interne === w.nomInterne);
     return sum + (arme?.emplacement ?? 0);
   }, 0);
 
-  // Les améliorations par défaut (estDefaut: true) sont filtrées —
-  // cohérence avec le backend qui les exclut de improvementSlotsOf().
+  // 2. Améliorations achetées — les défauts (estDefaut: true) sont filtrés,
+  //    cohérence avec le backend (improvementSlotsOf exclut les défauts).
   const improvementSlots = vehicle.improvements
-    .filter(imp => !imp.estDefaut)
+    .filter((imp) => !imp.estDefaut)
     .reduce((sum, imp) => {
-      const amelioration = catalog.ameliorations.find(a => a.nom_interne === imp.nomInterne);
+      const amelioration = catalog.ameliorations.find((a) => a.nom_interne === imp.nomInterne);
       return sum + (amelioration?.emplacement ?? 0);
     }, 0);
 
-  return weaponSlots + improvementSlots;
+  // 3. Armes référencées par des Tourelles achetées (weaponNomInterne non null, !estDefaut)
+  //    Miroir exact de weaponSlotsOf() côté backend.
+  const tourelleWeaponSlots = vehicle.improvements
+    .filter((imp) => imp.nomInterne === 'tourelle'
+                  && imp.weaponNomInterne !== null
+                  && !imp.estDefaut)
+    .reduce((sum, imp) => {
+      const arme = catalog.armes.find((a) => a.nom_interne === imp.weaponNomInterne);
+      return sum + (arme?.emplacement ?? 0);
+    }, 0);
+
+  return weaponSlots + improvementSlots + tourelleWeaponSlots;
 });
 ```
 
@@ -525,6 +575,117 @@ sequenceDiagram
 
 ---
 
+## 7.bis. Tourelle — assignation et désassignation d'arme
+
+La Tourelle est une amélioration spéciale dont le coût dépend de l'arme qu'elle porte :
+**3 × le prix catalogue de l'arme choisie** (coût tout compris — l'arme n'existe pas comme
+entité `Weapon` séparée ; une FK vers `Weapon` donnerait 4× au lieu de 3×).
+
+### États d'une Tourelle
+
+```
+État 1 — Orpheline (weaponNomInterne = null, prix = 0)
+┌────────────────────────────────────────────────────────────────────┐
+│  ⚙ Tourelle  ⚠ Aucune arme assignée  [Assigner une arme]  [Retirer]│
+└────────────────────────────────────────────────────────────────────┘
+
+État 2 — Assignée (weaponNomInterne = "mitrailleuse", prix = 9)
+┌────────────────────────────────────────────────────────────────────┐
+│  🔫 Mitrailleuse (Tourelle)  [Désassigner]  [Retirer la Tourelle]  │
+└────────────────────────────────────────────────────────────────────┘
+
+État 3 — Intégrée (estDefaut = true, prix = 0 quelle que soit l'arme)
+┌────────────────────────────────────────────────────────────────────┐
+│  ⚙ Tourelle  ⚠ Aucune arme assignée  [Assigner une arme]  🔒Intégré│
+│  — ou —                                                            │
+│  🔫 Canon de 125mm (Tourelle)  [Désassigner]  🔒 Tourelle intégrée │
+└────────────────────────────────────────────────────────────────────┘
+  La Tourelle du Char d'assaut est toujours gratuite (estDefaut: true
+  court-circuite le calcul de prix avant même la branche Tourelle).
+  Le [Retirer] est absent — seule l'arme peut être désassignée.
+```
+
+### Flux d'assignation (modale inline)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant EM as EquipmentManager<br/>(Angular Smart)
+    participant VS as VehicleService<br/>(Angular)
+    participant API as PATCH /vehicles/:vId/improvements/:impId/weapon
+    participant BVSS as VehicleService<br/>(NestJS)
+
+    User->>EM: clique [Assigner une arme] sur Tourelle orpheline
+    EM->>EM: selectedOrphanTourelle.set(improvement)<br/>→ modale s'ouvre
+
+    Note over EM: armesPourTourelle() = armes sponsor<br/>exclues : type équipage (arc 360° natif)<br/>filtrées : emplacement ≤ slotsDisponibles
+
+    User->>EM: clique sur une arme dans la modale
+    EM->>VS: assignWeaponToTourelle(vehicleId, improvId, weaponNomInterne)
+    VS->>API: PATCH { weaponNomInterne: "mitrailleuse" }
+
+    API->>BVSS: assignWeaponToTourelle(vId, impId, weaponNomInterne, userId)
+    Note over BVSS: Validations :<br/>1. Vehicle appartient à userId ?<br/>2. Amélioration nomInterne === "tourelle" ?<br/>3. Arme connue du catalogue ?<br/>4. Arme autorisée par le sponsor ?<br/>5. Type arme !== "équipage" ?<br/>6. Emplacements suffisants (simulation temporaire) ?
+
+    BVSS->>BVSS: imp.weaponNomInterne = weaponNomInterne → save()
+    BVSS-->>API: VehicleDto rechargé
+    API-->>VS: HTTP 200 + VehicleDto
+    VS-->>EM: Vehicle mis à jour
+    EM->>EM: selectedOrphanTourelle.set(null)<br/>vehicleChanged.emit(updated)
+```
+
+### Flux de désassignation
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant EM as EquipmentManager<br/>(Angular Smart)
+    participant VS as VehicleService<br/>(Angular)
+    participant API as DELETE /vehicles/:vId/improvements/:impId/weapon
+    participant BVSS as VehicleService<br/>(NestJS)
+
+    User->>EM: clique [Désassigner] sur ligne fusionnée (Tourelle assignée)
+    EM->>VS: unassignWeaponFromTourelle(vehicleId, improvId)
+    VS->>API: DELETE (pas de corps)
+
+    API->>BVSS: unassignWeaponFromTourelle(vId, impId, userId)
+    Note over BVSS: Pas de ForbiddenException si estDefaut —<br/>l'arme peut toujours être désassignée d'une<br/>Tourelle intégrée (seul le RETRAIT est interdit).
+    BVSS->>BVSS: imp.weaponNomInterne = null → save()
+    BVSS-->>API: VehicleDto rechargé
+    API-->>VS: HTTP 200 + VehicleDto
+    VS-->>EM: Vehicle mis à jour (Tourelle redevient orpheline)
+```
+
+### Calcul des emplacements disponibles dans `armesPourTourelle()`
+
+Lors du choix d'une arme pour la Tourelle, le signal `armesPourTourelle()` tient compte
+des emplacements actuellement libres **plus** les emplacements que l'arme en cours
+d'assignation occupe déjà (pour permettre la ré-assignation sans bloquer sur les slots
+de l'arme précédente) :
+
+```typescript
+armesPourTourelle = computed(() => {
+  const slotsRestants = this.emplacementsTotal() - this.emplacementsUtilises();
+
+  // Si la Tourelle a déjà une arme, ses slots sont déjà comptés dans emplacementsUtilises.
+  // On les « libère » temporairement pour ne pas bloquer la ré-assignation.
+  const tourelleSelectionnee = this.selectedOrphanTourelle();
+  const slotOccupeTourelleCourante = tourelleSelectionnee?.weaponNomInterne
+    ? (this.sponsorCatalog().armes.find(
+        (a) => a.nom_interne === tourelleSelectionnee.weaponNomInterne
+      )?.emplacement ?? 0)
+    : 0;
+
+  const slotsDisponibles = slotsRestants + slotOccupeTourelleCourante;
+
+  return this.sponsorCatalog().armes.filter(
+    (a) => a.type !== 'équipage' && a.emplacement <= slotsDisponibles,
+  );
+});
+```
+
+---
+
 ## 8. Pattern hydratation + DTO — calcul du prix
 
 ### 8.1 Pourquoi une hydratation manuelle ?
@@ -537,12 +698,19 @@ attache les objets catalogue comme propriétés transientes (non mappées) :
 ```typescript
 // VehicleService.hydrateVehicle() — appelé après chaque findOne / findAll
 private hydrateVehicle(vehicle: Vehicle): void {
+  // Les armes sont hydratées EN PREMIER — le getter prix des Tourelles résout
+  // ensuite weaponCatalogueMonte, qui doit déjà exister dans le catalogue.
+  for (const weapon of vehicle.weapons) {
+    weapon.armeCatalogue = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+  }
   for (const imp of vehicle.improvements) {
     // Propriété transiente — pas de @Column, pas persistée
     imp.ameliorationCatalogue = this.catalogService.getAmeliorationByNomInterne(imp.nomInterne);
-  }
-  for (const weapon of vehicle.weapons) {
-    weapon.armeCatalogue = this.catalogService.getArmeByNomInterne(weapon.nomInterne);
+    // Tourelle : si une arme est assignée, résoudre son objet catalogue pour le getter prix
+    if (imp.nomInterne === 'tourelle' && imp.weaponNomInterne) {
+      imp.weaponCatalogueMonte =
+        this.catalogService.getArmeByNomInterne(imp.weaponNomInterne) ?? undefined;
+    }
   }
 }
 ```
@@ -553,9 +721,21 @@ Une fois hydratées, les entités exposent un getter `prix` qui **encapsule la r
 de gestion** : l'objet sait lui-même combien il coûte.
 
 ```typescript
-// VehicleImprovement.prix — règle : 0 si défaut, prix catalogue sinon
+// VehicleImprovement.prix — règle de gestion en trois branches
 get prix(): number {
+  // 1. Améliorations de profil (Tourelle du Char, Arceaux du Buggy…) : toujours gratuites
   if (this.estDefaut) return 0;
+
+  // 2. Tourelle achetée :
+  //    - orpheline (weaponNomInterne = null) → 0j en attendant l'assignation
+  //    - assignée → coût TOTAL = 3 × prix arme catalogue (l'arme n'existe pas comme
+  //      entité Weapon séparée ; sinon le coût serait 4× au lieu de 3×)
+  if (this.nomInterne === 'tourelle') {
+    if (!this.weaponNomInterne || !this.weaponCatalogueMonte) return 0;
+    return (this.weaponCatalogueMonte.prix as number) * 3;
+  }
+
+  // 3. Toutes les autres améliorations : prix catalogue direct
   return (this.ameliorationCatalogue?.prix as number) ?? 0;
 }
 
@@ -577,7 +757,8 @@ toVehicleDto(vehicle: Vehicle): VehicleDto {
   const improvements = vehicle.improvements.map((imp) => ({
     ...fields,
     estDefaut: imp.estDefaut,
-    prix: imp.prix,  // ← appel du getter
+    weaponNomInterne: imp.weaponNomInterne ?? null,  // ← null pour toute non-Tourelle
+    prix: imp.prix,  // ← appel du getter (Tourelle : 3×arme ou 0; défaut : 0; autre : catalogue)
   }));
   const weapons = vehicle.weapons.map((w) => ({
     ...fields,
@@ -588,7 +769,9 @@ toVehicleDto(vehicle: Vehicle): VehicleDto {
 ```
 
 Ce DTO est ce que tous les endpoints d'écriture (`POST /improvements`, `POST /weapons`,
-`POST /vehicles`) retournent — le frontend reçoit directement `prix` sans calcul propre.
+`POST /vehicles`, `PATCH .../weapon`, `DELETE .../weapon`) retournent — le frontend
+reçoit directement `prix` (toujours un `number` réel, jamais la chaîne `"x3"`) et
+`weaponNomInterne` sans calcul propre.
 
 ---
 
@@ -691,23 +874,33 @@ sequenceDiagram
 
 | Fichier | Rôle |
 |---------|------|
-| `apps/backend/src/app/vehicle/vehicle.entity.ts` | Entité `Vehicle` + relation vers `Team`, `VehicleImprovement`, `Weapon` |
-| `apps/backend/src/app/vehicle/vehicle-improvement.entity.ts` | Entité `VehicleImprovement` |
+| `apps/backend/src/app/vehicle/vehicle.entity.ts` | Entité `Vehicle` + `VehicleImprovement` (dont `weaponNomInterne`, `weaponCatalogueMonte`, getter `prix`) |
 | `apps/backend/src/app/vehicle/vehicle-build.ts` | Interface `VehicleBuild` + `CatalogVehicleBuild` |
 | `apps/backend/src/app/vehicle/improvement-decorators/` | Tous les décorateurs concrets + Factory |
-| `apps/backend/src/app/vehicle/vehicle.service.ts` | CRUD + `canAddImprovement` + `getAvailableImprovements` |
-| `apps/backend/src/app/vehicle/vehicle.controller.ts` | Routes véhicule et améliorations |
+| `apps/backend/src/app/vehicle/vehicle.service.ts` | CRUD + validation + `hydrateVehicle` + `weaponSlotsOf` + `assignWeaponToTourelle` + `unassignWeaponFromTourelle` |
+| `apps/backend/src/app/vehicle/vehicle.controller.ts` | Routes véhicule / améliorations — dont `PATCH :vId/improvements/:impId/weapon` et `DELETE :vId/improvements/:impId/weapon` |
+| `apps/backend/src/app/vehicle/dto/assign-weapon-to-tourelle.dto.ts` | DTO `{ weaponNomInterne: string }` pour l'assignation |
 | `apps/backend/src/app/weapon/weapon.entity.ts` | Entité `Weapon` |
 | `apps/backend/src/app/weapon/weapon.service.ts` | `canAddWeapon` + `getAvailableWeapons` + `addWeapon` |
 | `apps/backend/src/app/weapon/weapon.controller.ts` | Routes armes |
-| `apps/backend/src/app/catalog/catalog.service.ts` | Catalogue en mémoire — `getVehiculeByNomInterne`, `getSponsorByName`, etc. |
+| `apps/backend/src/app/catalog/catalog.service.ts` | Catalogue en mémoire — `getVehiculeByNomInterne`, `getSponsorByName`, `getArmeByNomInterne`, etc. |
+
+### Endpoints Tourelle (résumé)
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `PATCH` | `/api/vehicles/:vId/improvements/:impId/weapon` | Assigner une arme à une Tourelle (orpheline → assignée) |
+| `DELETE` | `/api/vehicles/:vId/improvements/:impId/weapon` | Désassigner l'arme d'une Tourelle (assignée → orpheline) |
+
+Ces deux endpoints retournent le `VehicleDto` complet rechargé (HTTP 200) — le frontend
+met à jour son signal `vehicle` et relance le calcul des emplacements et du budget.
 
 ### Frontend
 
 | Fichier | Rôle |
 |---------|------|
-| `apps/frontend/src/app/teams/vehicle-builder/` | `VehicleConfigurator` (Smart) — orchestrateur création + édition |
-| `apps/frontend/src/app/teams/vehicle-builder/equipment-manager/` | `EquipmentManager` (Smart) — ajout/retrait équipement |
-| `apps/frontend/src/app/teams/vehicle-builder/equipment-option/` | `EquipmentOption` (Dumb) — UX sélection + orientation |
-| `apps/frontend/src/app/teams/vehicle-summary.ts` | Type `VehicleSummary` — résumé pour la carte équipe |
-| `apps/frontend/src/app/vehicles/vehicle.service.ts` | Tous les appels HTTP véhicule/arme/amélioration |
+| `apps/frontend/src/app/teams/vehicle-configurator/` | `VehicleConfigurator` (Smart) — orchestrateur création + édition |
+| `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/` | `EquipmentManager` (Smart) — ajout/retrait + modale Tourelle + `armesPourTourelle()` |
+| `apps/frontend/src/app/teams/vehicle-configurator/equipment-option/` | `EquipmentOption` (Dumb) — UX sélection + orientation |
+| `apps/frontend/src/app/teams/vehicle-summary.ts` | Type `VehicleSummary` — résumé pour la carte équipe (prix exact, sans `coutApproximatif`) |
+| `apps/frontend/src/app/teams/vehicle.service.ts` | Tous les appels HTTP véhicule/arme/amélioration — dont `assignWeaponToTourelle` et `unassignWeaponFromTourelle` |
