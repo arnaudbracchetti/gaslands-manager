@@ -179,12 +179,20 @@
         <ul class="em-modal__list">
           @for (arme of armesPourTourelle(); track arme.nom_interne) {
             <li>
+              <!--
+                Même structure visuelle qu'EquipmentOption (.option__info + .option__stat) :
+                nom en gras à gauche, stats grises à droite (coût en jerricans + emplacements).
+                Le prix affiché = 3× le prix de l'arme (coût total Tourelle incluse).
+              -->
               <button
                 class="em-modal__option"
                 type="button"
                 (click)="assignWeaponToTourelle(arme.nom_interne)">
                 <span class="em-modal__option-name">{{ arme.nom }}</span>
-                <span class="em-modal__option-prix">{{ arme.prix * 3 }}j</span>
+                <span class="em-modal__option-stats">
+                  <span class="em-modal__option-stat" title="Coût total en jerricans (Tourelle incluse)">{{ arme.prix * 3 }} 🛢️</span>
+                  <span class="em-modal__option-stat" title="Emplacements requis par la Tourelle">🔧 0</span>
+                </span>
               </button>
             </li>
           }

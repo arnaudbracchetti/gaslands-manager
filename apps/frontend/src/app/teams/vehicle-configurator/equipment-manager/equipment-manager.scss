@@ -227,36 +227,48 @@
   list-style: none;
 }
 
-/* Bouton arme — ligne complète cliquable, nom à gauche, prix à droite */
+/* Bouton arme — calqué sur .option de EquipmentOption :
+   fond sombre, nom en gras à gauche, stats grises à droite */
 .em-modal__option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  background: #1a1a28;
-  border: 1px solid #2a2a3a;
-  border-radius: 4px;
-  padding: 8px 14px;
-  color: #e0e0e0;
-  font-size: 0.88rem;
+  background: #0a0a14;
+  border: 1px solid #1e1e2e;
+  border-radius: 6px;
+  padding: 10px 14px;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s, background 0.2s;
 
   &:hover {
     border-color: #7ec8e3;
-    background: #1e2035;
+    background: rgba(126, 200, 227, 0.05);
   }
 }
 
+/* Nom de l'arme — même style que .option__name */
 .em-modal__option-name {
+  color: #e0e0e0;
+  font-weight: 600;
+  font-size: 0.92rem;
   flex: 1;
 }
 
-.em-modal__option-prix {
-  color: #7ec8e3;
-  font-weight: 600;
+/* Groupe de stats (coût + emplacements) — même disposition que .option__info */
+.em-modal__option-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Chaque stat individuelle — même style que .option__stat */
+.em-modal__option-stat {
+  color: #888;
+  font-size: 0.8rem;
   white-space: nowrap;
 }
 
