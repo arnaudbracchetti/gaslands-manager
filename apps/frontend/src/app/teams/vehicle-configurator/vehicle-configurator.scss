@@ -34,9 +34,24 @@
   margin: 0;
   font-size: 0.92rem;
   color: var(--clr-text);
+  // Reste visible sous .vcp-header (sticky) — cf. le commentaire détaillé
+  // dans vehicle-configurator-page.scss pour le calcul des `top` empilés.
+  position: sticky;
+  top: 156px;
+  z-index: 30;
+  background: var(--clr-bg-base);
+  padding: 10px 0;
 
   strong {
     color: var(--clr-accent-cyan);
+  }
+}
+
+@media (max-width: 760px) {
+  .vc-intro {
+    position: static;
+    background: none;
+    padding: 0;
   }
 }
 

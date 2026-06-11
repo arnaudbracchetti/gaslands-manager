@@ -11,11 +11,32 @@
   padding: 40px 24px;
 }
 
+// ── Pile d'éléments sticky ────────────────────────────────────────────────
+// .vcp-header, .vc-intro (vehicle-configurator.scss) et .em-intro +
+// .em-current (equipment-manager.scss) restent tous visibles pendant le
+// défilement, empilés sous la navbar globale (.navbar, sticky top:0,
+// height:64px — cf. styles.scss). Chaque élément déclare son propre `top` =
+// somme des hauteurs (+ marges/gaps) des éléments sticky qui le précèdent,
+// et un `background` opaque pour masquer le contenu qui défile dessous.
+//
+//   navbar (64px) → .vcp-header (top:64,  hauteur ~80px + margin 12px)
+//                 → .vc-intro   (top:156, hauteur ~40px)
+//                 → .em-intro   (top:212, hauteur ~40px + gap 16px)
+//                 → .em-current (top:268, cf. equipment-manager.scss)
+//
+// ⚠ Si l'un de ces éléments change de taille (police, padding…), recalculer
+// les `top` suivants en conséquence — valeurs à ajuster visuellement.
+
 .vcp-header {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 32px;
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: var(--clr-bg-base);
+  padding: 20px 0;
+  margin-bottom: 12px;
 
   h1 {
     color: var(--clr-accent);
@@ -23,6 +44,17 @@
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 2px;
+  }
+}
+
+// Sous ~760px, l'équipement repasse en une colonne (cf. .em-layout dans
+// equipment-manager.scss) — la pile sticky n'a plus de sens, retour au flux.
+@media (max-width: 760px) {
+  .vcp-header {
+    position: static;
+    background: none;
+    padding: 0;
+    margin-bottom: 32px;
   }
 }
 
