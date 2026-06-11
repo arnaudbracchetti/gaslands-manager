@@ -11,6 +11,13 @@
      sélecteur qui apparaît au clic EST la réponse à ce message.
    - "c'est interdit" (sponsor/emplacements/règle de pose...) → on affiche LA
      raison telle quelle, et aucun bouton : rien à faire pour cette option ici.
+
+  Pendant le choix d'orientation (`choosingOrientation()`), la description est
+  masquée : le sélecteur 4 directions prend visuellement sa place, SANS changer
+  la taille de la carte (`flex-wrap` répartit le label + les 4 boutons +
+  "Annuler" sur plusieurs lignes si besoin). Elle réapparaît après "Annuler"
+  (retour à l'état de repos) ou une fois l'orientation choisie (l'item est
+  ajouté).
 -->
 <div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()">
 
@@ -28,7 +35,7 @@
     </div>
   </div>
 
-  @if (option().description) {
+  @if (option().description && !choosingOrientation()) {
     <p class="option__description">{{ option().description }}</p>
   }
 

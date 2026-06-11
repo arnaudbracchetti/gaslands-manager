@@ -176,6 +176,31 @@ describe('EquipmentOption', () => {
     expect(el.querySelectorAll('.orientation-btn')).toHaveLength(4);
   });
 
+  it('masque la description pendant le choix d\'orientation, et la réaffiche après "Annuler"', () => {
+    setUp(availableOption, true);
+    const el = fixture.nativeElement as HTMLElement;
+
+    // État de repos : la description du catalogue est visible.
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
+
+    // Choix d'orientation en cours : le sélecteur prend la place de la description.
+    el.querySelector('.option__add')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.option__description')).toBeNull();
+    expect(el.querySelector('.option__orientations')).not.toBeNull();
+
+    // "Annuler" : retour à l'état de repos, la description réapparaît.
+    el.querySelector('.orientation-cancel')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
+  });
+
   it('émet chosen({ nomInterne, orientation }) au clic sur une direction', () => {
     setUp(availableOption, true);
 
@@ -190,37 +215,6 @@ describe('EquipmentOption', () => {
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0]).toEqual({ nomInterne: 'mitrailleuse', orientation: 'avant' });
-  });
-
-  // ── Extension de la carte pendant le choix d'orientation (cf. host binding) ──
-  // Item de grille `.em-equipment__list` (cf. equipment-manager.scss) : pendant
-  // le choix d'orientation, l'hôte reçoit `option-host--expanded` pour s'étendre
-  // sur toute la largeur (`grid-column: 1 / -1`).
-
-  it('ajoute la classe `option-host--expanded` sur l\'hôte pendant le choix d\'orientation', () => {
-    setUp(availableOption, true);
-    const host = fixture.nativeElement as HTMLElement;
-
-    expect(host.classList.contains('option-host--expanded')).toBe(false);
-
-    (host.querySelector('.option__add') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    expect(host.classList.contains('option-host--expanded')).toBe(true);
-  });
-
-  it('retire la classe `option-host--expanded` après "Annuler"', () => {
-    setUp(availableOption, true);
-    const host = fixture.nativeElement as HTMLElement;
-
-    (host.querySelector('.option__add') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(host.classList.contains('option-host--expanded')).toBe(true);
-
-    (host.querySelector('.orientation-cancel') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    expect(host.classList.contains('option-host--expanded')).toBe(false);
   });
 
   it('referme le sélecteur sans émettre au clic sur "Annuler"', () => {

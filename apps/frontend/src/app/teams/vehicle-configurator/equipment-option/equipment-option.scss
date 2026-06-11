@@ -12,13 +12,6 @@
   min-width: 0;
 }
 
-/* Pendant le choix d'orientation : la carte s'étend sur toute la largeur de la
-   grille (cf. `host` binding `option-host--expanded` dans equipment-option.ts)
-   pour afficher confortablement les 4 boutons + Annuler. */
-:host(.option-host--expanded) {
-  grid-column: 1 / -1;
-}
-
 /* ── Carte d'équipement (arme ou amélioration) ─────────────────────────────── */
 
 .option {
