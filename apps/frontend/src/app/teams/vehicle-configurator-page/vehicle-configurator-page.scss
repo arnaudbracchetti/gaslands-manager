@@ -1,0 +1,55 @@
+/* ── Page de configuration de véhicule — layout ────────────────────────────── */
+/*
+  Mirroir de `.teams-page`/`.teams-header` (cf. teams.scss), mais avec un
+  max-width plus généreux : c'est précisément le but de cette page que de
+  libérer plus d'espace que l'ancienne modale (`min(1300px, 95vw)`).
+*/
+
+.vcp-page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.vcp-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+
+  h1 {
+    color: var(--clr-accent);
+    font-size: 2rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+}
+
+.vcp-back {
+  color: var(--clr-text-muted);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--clr-accent);
+  }
+}
+
+/* ── États de chargement / erreur ──────────────────────────────────────────── */
+
+.vcp-status {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 1rem;
+
+  &--loading {
+    color: var(--clr-text-muted);
+  }
+
+  &--error {
+    color: var(--clr-accent);
+  }
+}

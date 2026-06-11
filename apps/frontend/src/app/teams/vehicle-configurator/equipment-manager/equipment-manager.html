@@ -19,6 +19,14 @@
     <p class="em-status em-status--error">{{ equipmentError() }}</p>
   }
 
+  <!--
+    ═══ Disposition 2 colonnes ═══
+    Gauche : équipement actuel (sidebar, retirable). Droite : catalogue
+    disponible (Armes/Améliorations) en grille de cartes. Sur petit écran,
+    `.em-layout` repasse en 1 colonne (cf. equipment-manager.scss).
+  -->
+  <div class="em-layout">
+
   <!-- ═══ Équipement actuel — armes et améliorations montées, retirables ═══ -->
   <section class="em-current">
     <h3 class="em-current__title">Équipement actuel</h3>
@@ -167,29 +175,44 @@
     }
   </section>
 
-  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
-       Composant dumb : reçoit la liste filtrée des armes posables et émet
-       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
-       gérée ici par `@if` — le composant s'affiche toujours quand instancié. -->
-  @if (selectedOrphanTourelle()) {
-    <app-tourelle-assignment-modal
-      [armes]="armesPourTourelle()"
-      (weaponChosen)="assignWeaponToTourelle($event)"
-      (cancelled)="selectedOrphanTourelle.set(null)" />
-  }
-
-  <!-- ═══ Équipement disponible — listes Armes/Améliorations avec verdict ═══ -->
+  <!-- ═══ Équipement disponible — catalogue en grille avec filtre ═══ -->
   @if (loadingEquipment()) {
     <p class="em-status em-status--loading">Chargement des équipements disponibles…</p>
   } @else {
     <div class="em-equipment">
+
+      <!--
+        Barre de filtre — masque par défaut les options DÉFINITIVEMENT
+        indisponibles (cf. doc de `showUnavailable`/`visibleWeapons`). Les
+        options nécessitant juste une orientation restent toujours visibles.
+      -->
+      <div class="em-equipment__toolbar">
+        <span class="em-equipment__toolbar-label">Catalogue disponible</span>
+        <button
+          class="em-toggle"
+          type="button"
+          (click)="showUnavailable.set(!showUnavailable())">
+          @if (showUnavailable()) {
+            Masquer les indisponibles
+          } @else {
+            Afficher les indisponibles ({{ hiddenCount() }})
+          }
+        </button>
+      </div>
+
       <section class="em-equipment__group">
         <h3 class="em-equipment__title">Armes</h3>
-        @if (availableWeapons().length === 0) {
-          <p class="em-status">Aucune arme disponible pour ce sponsor.</p>
+        @if (visibleWeapons().length === 0) {
+          <p class="em-status">
+            @if (availableWeapons().length === 0) {
+              Aucune arme disponible pour ce sponsor.
+            } @else {
+              Toutes les armes sont indisponibles — affichez-les pour voir pourquoi.
+            }
+          </p>
         } @else {
           <div class="em-equipment__list">
-            @for (weapon of availableWeapons(); track weapon.nomInterne) {
+            @for (weapon of visibleWeapons(); track weapon.nomInterne) {
               <app-equipment-option
                 [option]="weapon"
                 [requiresOrientation]="weaponNeedsOrientation(weapon)"
@@ -201,11 +224,17 @@
 
       <section class="em-equipment__group">
         <h3 class="em-equipment__title">Améliorations</h3>
-        @if (availableImprovements().length === 0) {
-          <p class="em-status">Aucune amélioration disponible pour ce sponsor.</p>
+        @if (visibleImprovements().length === 0) {
+          <p class="em-status">
+            @if (availableImprovements().length === 0) {
+              Aucune amélioration disponible pour ce sponsor.
+            } @else {
+              Toutes les améliorations sont indisponibles — affichez-les pour voir pourquoi.
+            }
+          </p>
         } @else {
           <div class="em-equipment__list">
-            @for (improvement of availableImprovements(); track improvement.nomInterne) {
+            @for (improvement of visibleImprovements(); track improvement.nomInterne) {
               <app-equipment-option
                 [option]="improvement"
                 [requiresOrientation]="improvementNeedsOrientation(improvement)"
@@ -215,6 +244,22 @@
         }
       </section>
     </div>
+  }
+
+  </div>
+  <!-- /.em-layout -->
+
+  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
+       Composant dumb : reçoit la liste filtrée des armes posables et émet
+       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
+       gérée ici par `@if` — le composant s'affiche toujours quand instancié.
+       Placée hors de `.em-layout` (overlay `position: fixed`, indépendant
+       de la grille). -->
+  @if (selectedOrphanTourelle()) {
+    <app-tourelle-assignment-modal
+      [armes]="armesPourTourelle()"
+      (weaponChosen)="assignWeaponToTourelle($event)"
+      (cancelled)="selectedOrphanTourelle.set(null)" />
   }
 
 </div>

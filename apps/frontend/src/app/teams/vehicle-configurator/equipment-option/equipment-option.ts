@@ -28,6 +28,14 @@ import { EquipmentChoice, EquipmentOption as EquipmentOptionDto, Orientation } f
   imports: [],
   templateUrl: './equipment-option.html',
   styleUrl: './equipment-option.scss',
+  host: {
+    // Cet élément est un item direct de la grille `.em-equipment__list`
+    // (cf. equipment-manager.html). Pendant le choix d'orientation, on
+    // l'étend sur toute la largeur de la grille (cf. equipment-option.scss,
+    // `:host(.option-host--expanded)`) pour que les 4 boutons + Annuler
+    // tiennent confortablement, plutôt que d'ouvrir un popover.
+    '[class.option-host--expanded]': 'choosingOrientation()',
+  },
 })
 export class EquipmentOption {
   /**

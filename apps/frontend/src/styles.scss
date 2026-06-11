@@ -16,9 +16,11 @@
   --clr-accent:      #e94560;   /* rouge principal : boutons, bordures actives, titres */
   --clr-accent-cyan: #7ec8e3;   /* cyan secondaire : boutons alternatifs, stats, badges */
   --clr-warning:     #f0a500;   /* orange : avertissements (Tourelle orpheline…) */
+  --clr-success:     #2ecc71;   /* vert succès : action d'ajout positive (bouton "+") */
 
   --clr-accent-rgb:      233, 69, 96;    /* canaux de --clr-accent pour rgba() */
   --clr-accent-cyan-rgb: 126, 200, 227;  /* canaux de --clr-accent-cyan pour rgba() */
+  --clr-success-rgb:     46, 204, 113;   /* canaux de --clr-success pour rgba() */
 
   /* ── Fonds (du plus sombre au moins sombre) ─────────────────────────────── */
   --clr-bg-base:    #0a0a14;   /* fond app, cartes catalogue */

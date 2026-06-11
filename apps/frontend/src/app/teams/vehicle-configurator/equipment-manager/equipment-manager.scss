@@ -38,14 +38,38 @@
   }
 }
 
-/* ── Équipement actuel — liste retirable ────────────────────────────────────── */
+/* ── Disposition 2 colonnes : équipement actuel (sidebar) | catalogue ───────── */
+/* `align-items: start` : la colonne la plus courte ne s'étire pas à la hauteur
+   de l'autre — chaque colonne garde sa hauteur naturelle. */
+
+.em-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Sous ~760px : sidebar au-dessus du catalogue, plus de colonnes côte à côte. */
+@media (max-width: 760px) {
+  .em-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .em-current {
+    border-right: none;
+    border-bottom: 1px solid var(--clr-border);
+    padding: 0 0 16px;
+  }
+}
+
+/* ── Équipement actuel — liste retirable (colonne gauche) ───────────────────── */
 
 .em-current {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--clr-border);
+  border-right: 1px solid var(--clr-border);
+  padding-right: 16px;
 }
 
 .em-current__title {
@@ -68,7 +92,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap; /* boutons sous le nom si la colonne est étroite */
+  gap: 8px 12px;
   padding: 8px 12px;
   background: var(--clr-bg-item);
   border: 1px solid var(--clr-border);
@@ -125,10 +150,44 @@
   font-weight: 600;
 }
 
+/* Grille de cartes — remplace l'ancienne liste verticale pleine largeur,
+   exploite la largeur disponible dans la colonne droite. */
 .em-equipment__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* ── Barre de filtre — masquer/afficher les options indisponibles ───────────── */
+
+.em-equipment__toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.em-equipment__toolbar-label {
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+}
+
+.em-toggle {
+  background: transparent;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--clr-accent-cyan);
+    color: var(--clr-accent-cyan);
+  }
 }
 
 /* ── Tourelle — badges et variantes inline ──────────────────────────────────── */

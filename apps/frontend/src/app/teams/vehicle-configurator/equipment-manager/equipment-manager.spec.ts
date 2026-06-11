@@ -115,6 +115,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   prix: 4,
   emplacement: 1,
   type: 'base',
+  description: '',
   disponible: true,
 };
 
@@ -123,7 +124,45 @@ const mockAvailableImprovement: AvailableImprovementDto = {
   nomInterne: 'blindage',
   prix: 4,
   emplacement: 1,
+  description: '',
   disponible: true,
+};
+
+// ── Options pour les tests du filtre "Afficher les indisponibles" ─────────────
+
+// Refus DÉFINITIF (sponsor/emplacements/règle de pose) — masquée par défaut.
+const mockUnavailableWeapon: AvailableWeaponDto = {
+  nom: 'BFG',
+  nomInterne: 'bfg',
+  prix: 18,
+  emplacement: 2,
+  type: 'avancée',
+  description: '',
+  disponible: false,
+  raison: 'Emplacements insuffisants : 6/4 requis avec "BFG"',
+};
+
+// "Il manque une information" (orientation) — TOUJOURS visible, cf.
+// `weaponNeedsOrientation` (contrat textuel `raison`).
+const mockOrientableWeapon: AvailableWeaponDto = {
+  nom: 'Lance-Flammes',
+  nomInterne: 'lance_flammes',
+  prix: 6,
+  emplacement: 1,
+  type: 'avancée',
+  description: '',
+  disponible: false,
+  raison: 'Une orientation est requise pour monter "Lance-Flammes" sur un arc de tir',
+};
+
+const mockUnavailableImprovement: AvailableImprovementDto = {
+  nom: 'Nitro',
+  nomInterne: 'nitro',
+  prix: 6,
+  emplacement: 0,
+  description: '',
+  disponible: false,
+  raison: 'Cette amélioration est réservée à un autre sponsor',
 };
 
 describe('EquipmentManager', () => {
@@ -412,5 +451,57 @@ describe('EquipmentManager', () => {
     expect(component.resolveWeaponName('inconnue')).toBe('inconnue');
     expect(component.resolveImprovementName('blindage')).toBe('Blindage');
     expect(component.resolveImprovementName('inconnue')).toBe('inconnue');
+  });
+
+  // ── Filtre "Afficher les indisponibles" ─────────────────────────────────────
+  // `showUnavailable()` démarre à `false` : seules les options disponibles OU
+  // nécessitant juste une orientation sont affichées. Les refus DÉFINITIFS
+  // (sponsor/emplacements/règle de pose) sont masqués jusqu'au clic sur le bouton.
+
+  describe('filtre des options indisponibles', () => {
+    beforeEach(() => {
+      mockVehicleService.getAvailableWeapons.mockReturnValue(of([mockAvailableWeapon, mockUnavailableWeapon, mockOrientableWeapon]));
+      mockVehicleService.getAvailableImprovements.mockReturnValue(of([mockAvailableImprovement, mockUnavailableImprovement]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+    });
+
+    it('masque par défaut les refus définitifs mais garde les options orientables visibles', () => {
+      expect(component.showUnavailable()).toBe(false);
+
+      // Disponible + orientable visibles, refus définitif masqué.
+      expect(component.visibleWeapons()).toEqual([mockAvailableWeapon, mockOrientableWeapon]);
+      expect(component.visibleImprovements()).toEqual([mockAvailableImprovement]);
+    });
+
+    it('compte les options masquées indépendamment de showUnavailable()', () => {
+      expect(component.hiddenWeaponsCount()).toBe(1); // BFG
+      expect(component.hiddenImprovementsCount()).toBe(1); // Nitro
+      expect(component.hiddenCount()).toBe(2);
+    });
+
+    it('le bouton de filtre affiche le nombre d\'options masquées et les rend visibles au clic', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.em-toggle') as HTMLButtonElement;
+
+      expect(toggle.textContent).toContain('Afficher les indisponibles (2)');
+      expect(el.textContent).not.toContain('BFG');
+      expect(el.textContent).not.toContain('Nitro');
+      // L'option orientable, elle, reste visible même filtre actif.
+      expect(el.textContent).toContain('Lance-Flammes');
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(component.showUnavailable()).toBe(true);
+      expect(toggle.textContent).toContain('Masquer les indisponibles');
+      expect(el.textContent).toContain('BFG');
+      expect(el.textContent).toContain('Nitro');
+    });
   });
 });

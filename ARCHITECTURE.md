@@ -82,6 +82,7 @@ Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `inpu
 | `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
 | `apps/frontend/src/app/catalog/catalog.service.ts` | Données publiques du catalogue (`/api/catalog/sponsors`) |
 | `apps/frontend/src/app/teams/` | Smart + dumb (team-card, team-form, sponsor-carousel) |
+| `apps/frontend/src/app/teams/vehicle-configurator-page/` | Page dédiée (`/teams/:teamId/vehicles/new` et `/:vehicleId`) — résout `team`/`vehicleId` depuis la route et délègue à `VehicleConfigurator` |
 
 ---
 

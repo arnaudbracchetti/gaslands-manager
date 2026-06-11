@@ -100,6 +100,60 @@ export class EquipmentManager {
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
 
+  // ── Filtrage des options définitivement indisponibles ───────────────────────
+
+  /**
+   * Affiche ou masque les options du catalogue refusées DÉFINITIVEMENT
+   * (sponsor incompatible, emplacements insuffisants, règle de pose...).
+   * `false` par défaut : la liste se concentre sur ce qui est réellement
+   * ajoutable — un bouton ("Afficher les indisponibles (N)") permet de les
+   * révéler grisées avec leur raison, comme avant l'introduction du filtre.
+   */
+  showUnavailable: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Armes masquées par le filtre — celles dont le refus est DÉFINITIF
+   * (`!disponible` ET pas seulement "orientation manquante", cf.
+   * `weaponNeedsOrientation`). Calculé indépendamment de `showUnavailable()`
+   * pour que le compteur du bouton reste correct même une fois la liste révélée.
+   */
+  hiddenWeaponsCount: Signal<number> = computed((): number => {
+    return this.availableWeapons().filter(
+      (w): boolean => !w.disponible && !this.weaponNeedsOrientation(w),
+    ).length;
+  });
+
+  /** Mirroir exact de `hiddenWeaponsCount` pour les améliorations. */
+  hiddenImprovementsCount: Signal<number> = computed((): number => {
+    return this.availableImprovements().filter(
+      (i): boolean => !i.disponible && !this.improvementNeedsOrientation(i),
+    ).length;
+  });
+
+  /** Total toutes catégories confondues — affiché dans le libellé du bouton. */
+  hiddenCount: Signal<number> = computed((): number => {
+    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount();
+  });
+
+  /**
+   * Armes effectivement affichées : toujours celles disponibles ou nécessitant
+   * juste une orientation (ce n'est pas un refus, cf. doc de
+   * `weaponNeedsOrientation`) ; les refus définitifs ne s'ajoutent que si
+   * `showUnavailable()` est activé.
+   */
+  visibleWeapons: Signal<AvailableWeaponDto[]> = computed((): AvailableWeaponDto[] => {
+    const all = this.availableWeapons();
+    if (this.showUnavailable()) return all;
+    return all.filter((w): boolean => w.disponible || this.weaponNeedsOrientation(w));
+  });
+
+  /** Mirroir exact de `visibleWeapons` pour les améliorations. */
+  visibleImprovements: Signal<AvailableImprovementDto[]> = computed((): AvailableImprovementDto[] => {
+    const all = this.availableImprovements();
+    if (this.showUnavailable()) return all;
+    return all.filter((i): boolean => i.disponible || this.improvementNeedsOrientation(i));
+  });
+
   // ── Gestion de la Tourelle — modale d'assignation ───────────────────────────
 
   /**

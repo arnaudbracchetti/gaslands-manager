@@ -481,6 +481,7 @@ export class VehicleService {
         nomInterne: amelioration.nom_interne,
         prix: amelioration.prix,
         emplacement: amelioration.emplacement,
+        description: amelioration.description,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
       };

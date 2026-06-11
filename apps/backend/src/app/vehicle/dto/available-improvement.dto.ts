@@ -17,6 +17,8 @@ export interface AvailableImprovementDto {
    *  et plan d'architecture §4 : reporté à la gestion du budget). */
   prix: number | string;
   emplacement: number;
+  /** Description de l'amélioration, reprise telle quelle du catalogue (`Amelioration.description`). */
+  description: string;
   /** `true` si cette amélioration peut être ajoutée au véhicule TEL QU'IL EST actuellement. */
   disponible: boolean;
   /** Présente uniquement si `disponible` est `false` — la raison du refus, lisible par un humain. */

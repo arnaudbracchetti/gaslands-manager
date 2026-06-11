@@ -1,0 +1,27 @@
+<!--
+  Page dédiée à la construction/édition d'un véhicule (cf. en-tête .ts) —
+  remplace l'ancienne <app-modal size="wide"> de Teams.
+
+  Le titre dépend du mode (`vehicleId() === null` ⇒ création), seule trace
+  visible ici de la distinction — `<app-vehicle-configurator>` gère le reste
+  (choix du véhicule en création, équipement dans les deux cas).
+-->
+<div class="vcp-page">
+
+  <div class="vcp-header">
+    <a class="vcp-back" routerLink="/teams">← Retour aux équipes</a>
+    <h1>{{ vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement du véhicule" }}</h1>
+  </div>
+
+  @if (loading()) {
+    <p class="vcp-status vcp-status--loading">Chargement…</p>
+  } @else if (error()) {
+    <p class="vcp-status vcp-status--error">{{ error() }}</p>
+  } @else if (team(); as t) {
+    <app-vehicle-configurator
+      [team]="t"
+      [vehicleId]="vehicleId()"
+      (done)="onDone()" />
+  }
+
+</div>

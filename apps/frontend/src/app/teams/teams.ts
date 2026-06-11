@@ -7,33 +7,33 @@
  *
  *   - TeamCard      → affiche une carte d'équipe (lecture + boutons Modifier/Supprimer/Ajouter un véhicule)
  *   - TeamForm      → gère le formulaire de création / modification
- *   - Modal + VehicleConfigurator → fenêtre UNIQUE de configuration de véhicule
- *     (création OU gestion d'équipement d'un véhicule existant — cf. son en-tête :
- *     fusion de deux anciens composants `VehicleBuilder`/`VehicleEditor` qui
- *     n'étaient distingués que par "comment obtient-on le véhicule de départ ?"
- *     et le libellé d'un bouton — un paramètre `vehicleId` optionnel suffit
- *     désormais à exprimer cette seule différence)
+ *
+ * La configuration d'un véhicule (création OU gestion d'équipement d'un
+ * véhicule existant) ne se fait plus dans une modale projetée ici, mais sur
+ * une page dédiée (`VehicleConfiguratorPage`, routes `/teams/:teamId/vehicles/new`
+ * et `/teams/:teamId/vehicles/:vehicleId` — cf. `app.routes.ts`) : `Teams` se
+ * contente de NAVIGUER vers cette page (cf. `openVehicleBuilder`/`openVehicleEditor`),
+ * et de se recharger naturellement (`ngOnInit` → `loadTeams`) au retour sur `/teams`.
  *
  * Responsabilités de ce composant :
  * - Charger la liste des équipes via TeamsService
  * - Contrôler la visibilité du formulaire (showForm, editingTeam)
  * - Recevoir le DTO validé de TeamForm et appeler l'API (create / update)
  * - Gérer la suppression (confirmation + appel API)
- * - Contrôler l'ouverture/fermeture de la modale de configuration de véhicule
- *   (vehicleModal) — cf. doc de `openVehicleBuilder`/`openVehicleEditor`/`closeVehicleModal`
+ * - Naviguer vers la page de configuration de véhicule — cf. doc de
+ *   `openVehicleBuilder`/`openVehicleEditor`
  * - Gérer la suppression d'un véhicule — cf. doc de `deleteVehicle`
  * - Charger et résumer les véhicules de chaque équipe pour l'affichage sur sa
  *   carte (vehicleSummaries) — cf. doc de `loadVehicleSummaries`
  * - Afficher les erreurs API globales
  */
 import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { forkJoin, of, map, catchError } from 'rxjs';
 import { TeamsService } from './teams.service';
 import { Team, CreateTeamDto } from './team.model';
 import { TeamCard } from './team-card/team-card';
 import { TeamForm } from './team-form/team-form';
-import { Modal } from './modal/modal';
-import { VehicleConfigurator } from './vehicle-configurator/vehicle-configurator';
 import { VehicleService } from './vehicle-configurator/vehicle.service';
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
 import { CatalogService } from '../catalog/catalog.service';
@@ -45,19 +45,20 @@ import { buildVehicleSummary, TeamVehiclePair, VehicleSummary } from './vehicle-
   standalone: true,
   // On importe les sous-composants ici pour pouvoir les utiliser dans le template.
   // FormsModule n'est PAS nécessaire ici — il est importé dans TeamForm uniquement.
-  imports: [TeamCard, TeamForm, Modal, VehicleConfigurator],
+  imports: [TeamCard, TeamForm],
   templateUrl: './teams.html',
   styleUrl: './teams.scss',
 })
 export class Teams implements OnInit {
   // ── Services injectés ──────────────────────────────────────────────────────
   private teamsService: TeamsService = inject(TeamsService);
+  private router: Router = inject(Router);
 
   // VehicleService/CatalogService : nécessaires UNIQUEMENT pour construire le
   // résumé des véhicules de chaque équipe (cf. `loadVehicleSummaries`) — Teams
   // ne participe à AUCUNE étape du flux de configuration lui-même (c'est le rôle
-  // de VehicleConfigurator, projeté dans la modale). Deux besoins distincts, déjà
-  // servis par les mêmes services — inutile d'en créer de nouveaux.
+  // de VehicleConfiguratorPage, sur sa propre route). Deux besoins distincts,
+  // déjà servis par les mêmes services — inutile d'en créer de nouveaux.
   private vehicleService: VehicleService = inject(VehicleService);
   private catalogService: CatalogService = inject(CatalogService);
 
@@ -86,34 +87,6 @@ export class Teams implements OnInit {
 
   /** Vrai pendant l'appel API de sauvegarde (passé à TeamForm pour désactiver les boutons) */
   saving: WritableSignal<boolean> = signal(false);
-
-  // ── État de la modale de configuration de véhicule ─────────────────────────
-
-  /**
-   * Couple `{ team, vehicleId }` pour lequel la modale de configuration de
-   * véhicule (`VehicleConfigurator`) est ouverte. `null` = modale fermée.
-   *
-   * UN SEUL signal pour les DEUX usages (création ET édition d'équipement) —
-   * fusion de deux anciens signaux `buildingTeam: Team | null` et
-   * `editingVehicle: { team, vehicleId } | null`, miroir direct de la fusion de
-   * `VehicleBuilder`/`VehicleEditor` en `VehicleConfigurator` (cf. son en-tête) :
-   * avoir deux signaux pour piloter un seul composant — qui n'a besoin que d'un
-   * `vehicleId` optionnel pour distinguer ses deux modes — aurait été la même
-   * duplication injustifiée, simplement déplacée ici.
-   *
-   * `vehicleId: null` ⇒ mode création (`VehicleConfigurator` choisit ET crée le
-   * véhicule) ; `vehicleId: number` ⇒ mode édition (charge directement celui-ci).
-   * `team` est TOUJOURS nécessaire (sponsor pour le catalogue, id pour la
-   * création/le rechargement — cf. `VehicleConfigurator.team`, `input.required`).
-   *
-   * Un seul signal — pas de paire `showX`/`xModal` comme pour le formulaire
-   * (`showForm`/`editingTeam`) — car ici la présence du couple SUFFIT à
-   * déterminer la visibilité (`@if (vehicleModal(); as modal)` dans le template) :
-   * il n'existe pas de "mode sans équipe" pour cette modale, contrairement au
-   * formulaire qui a un mode création (`editingTeam = null` ≠ "fermé").
-   */
-  vehicleModal: WritableSignal<{ team: Team; vehicleId: number | null } | null> =
-    signal<{ team: Team; vehicleId: number | null } | null>(null);
 
   // ── Résumés des véhicules (affichage sur les cartes) ────────────────────────
 
@@ -294,59 +267,39 @@ export class Teams implements OnInit {
     });
   }
 
-  // ── Modale de configuration de véhicule (création OU édition) ──────────────
+  // ── Navigation vers la configuration de véhicule (création OU édition) ─────
 
   /**
-   * Ouvre la modale en mode CRÉATION pour l'équipe choisie (`vehicleId: null`
-   * ⇒ `VehicleConfigurator` affichera le choix du véhicule, cf. son en-tête).
-   * Reçu depuis TeamCard via l'output (addVehicleClicked).
+   * Navigue vers la page de construction d'un véhicule pour l'équipe choisie
+   * (`/teams/:teamId/vehicles/new` — `VehicleConfiguratorPage` y affichera le
+   * choix du véhicule, cf. son en-tête). Reçu depuis TeamCard via l'output
+   * (addVehicleClicked).
    *
-   * Nom conservé tel quel malgré la fusion des modales (cf. doc de
-   * `vehicleModal`) : c'est une intention UTILISATEUR distincte et bien
-   * nommée — "je veux ajouter un véhicule" — seule sa CONSÉQUENCE interne
-   * (peupler `vehicleModal` plutôt qu'un signal `buildingTeam` dédié) change.
+   * Au retour sur `/teams` (lien "Retour"/`done`), le composant `Teams` est
+   * recréé par le routeur → `ngOnInit` rappelle `loadTeams()` automatiquement :
+   * pas de rechargement explicite à orchestrer ici (`vehicleCount` a pu changer
+   * dès le choix du véhicule — persistance immédiate d'un véhicule "nu").
    */
   openVehicleBuilder(team: Team): void {
-    this.vehicleModal.set({ team, vehicleId: null });
+    this.router.navigate(['/teams', team.id, 'vehicles', 'new']);
   }
 
   /**
-   * Ouvre la modale en mode ÉDITION pour le véhicule choisi (`vehicleId`
-   * renseigné ⇒ `VehicleConfigurator` charge directement ce véhicule,
-   * cf. son en-tête). Reçu depuis TeamCard via l'output (editVehicleClicked) —
-   * porte une `TeamVehiclePair` (cf. sa doc) dont on extrait les deux
-   * informations utiles : l'équipe (résolution du sponsor) et l'id du véhicule
-   * (isolement de l'entité brute). `VehicleSummary` ne porte pas l'objet `Team`
-   * complet — seul `TeamCard` peut assembler la paire au moment du clic.
+   * Navigue vers la page de gestion d'équipement du véhicule choisi
+   * (`/teams/:teamId/vehicles/:vehicleId` — `VehicleConfiguratorPage` y charge
+   * directement ce véhicule, cf. son en-tête). Reçu depuis TeamCard via
+   * l'output (editVehicleClicked) — porte une `TeamVehiclePair` (cf. sa doc)
+   * dont on extrait les deux informations utiles : l'id de l'équipe (route) et
+   * l'id du véhicule (isolement de l'entité brute). `VehicleSummary` ne porte
+   * pas l'objet `Team` complet — seul `TeamCard` peut assembler la paire au
+   * moment du clic.
    *
-   * Nom conservé tel quel — même raisonnement que `openVehicleBuilder` ci-dessus.
+   * Même remarque que `openVehicleBuilder` pour le rafraîchissement au retour
+   * (l'équipement a pu changer — ajouts ET retraits — le coût affiché sur la
+   * carte sera resynchronisé par `loadTeams()`).
    */
   openVehicleEditor(pair: TeamVehiclePair): void {
-    this.vehicleModal.set({ team: pair.team, vehicleId: pair.vehicle.id });
-  }
-
-  /**
-   * Ferme la modale et recharge la liste des équipes — DANS TOUS LES CAS, que
-   * l'utilisateur ait terminé («Terminer»/«Fermer», `done`) ou abandonné en
-   * cours de route (croix/overlay/Échap, `closeRequested` de la `Modal`), et
-   * QUEL QUE SOIT LE MODE (création OU édition).
-   *
-   * Un seul chemin de fermeture pour les deux modes — fusion de
-   * `closeVehicleBuilder`/`closeVehicleEditor`, dont le corps était déjà
-   * rigoureusement identique :
-   *   - en CRÉATION, la persistance est IMMÉDIATE dès le choix du véhicule
-   *     (cf. `VehicleConfigurator.selectVehicle` — un véhicule "nu" reste un
-   *     véhicule valide en Gaslands) : même une fermeture précoce a pu
-   *     modifier `vehicleCount`, qu'il faut refléter sur la carte (et qui
-   *     pilote le verrouillage du sponsor dans `TeamForm`) ;
-   *   - en ÉDITION, l'équipement a pu changer (ajouts ET retraits), donc le
-   *     coût affiché sur la carte (`vehicleSummaries`) doit être resynchronisé.
-   * Dans les deux cas : recharger systématiquement est le seul moyen simple et
-   * fiable de rester cohérent — pas de distinction de cas.
-   */
-  closeVehicleModal(): void {
-    this.vehicleModal.set(null);
-    this.loadTeams();
+    this.router.navigate(['/teams', pair.team.id, 'vehicles', pair.vehicle.id]);
   }
 
   /**

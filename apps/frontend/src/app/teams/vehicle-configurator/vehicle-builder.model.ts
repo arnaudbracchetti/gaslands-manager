@@ -116,6 +116,8 @@ export interface AvailableImprovementDto {
   nomInterne: string;
   prix: number | string;
   emplacement: number;
+  /** Description de l'amélioration, reprise du catalogue (`Amelioration.description`). */
+  description: string;
   disponible: boolean;
   raison?: string;
 }
@@ -146,6 +148,8 @@ export interface AvailableWeaponDto {
   prix: number;
   emplacement: number;
   type: 'base' | 'avancée' | 'équipage' | 'largable';
+  /** Description de l'arme, reprise du catalogue (`Arme.description`). */
+  description: string;
   disponible: boolean;
   raison?: string;
 }
@@ -164,6 +168,8 @@ export interface EquipmentOption {
   nomInterne: string;
   prix: number | string;
   emplacement: number;
+  /** Description de l'équipement, reprise du catalogue (cf. `AvailableWeaponDto.description`/`AvailableImprovementDto.description`). */
+  description: string;
   disponible: boolean;
   raison?: string;
 }

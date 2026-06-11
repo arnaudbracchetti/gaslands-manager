@@ -691,6 +691,7 @@ describe('VehicleService', () => {
           nomInterne: 'chenilles',
           prix: 4,
           emplacement: 1,
+          description: '',
           disponible: false,
           raison: 'Chenilles incompatibles avec ce véhicule',
         },
@@ -699,6 +700,7 @@ describe('VehicleService', () => {
           nomInterne: 'blindage',
           prix: 4,
           emplacement: 1,
+          description: '',
           disponible: true,
           raison: undefined,
         },
@@ -709,6 +711,7 @@ describe('VehicleService', () => {
           // (cf. commentaire de `AvailableImprovementDto.prix` et plan §4 : reporté au budget).
           prix: 'x3',
           emplacement: 0,
+          description: '',
           disponible: true,
           raison: undefined,
         },

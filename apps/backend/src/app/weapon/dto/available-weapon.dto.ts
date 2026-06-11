@@ -27,6 +27,8 @@ export interface AvailableWeaponDto {
   emplacement: number;
   /** Catégorie de l'arme — pilote l'affichage du sélecteur d'orientation côté frontend. */
   type: Arme['type'];
+  /** Description de l'arme, reprise telle quelle du catalogue (`Arme.description`). */
+  description: string;
   /** `true` si cette arme peut être montée sur le véhicule TEL QU'IL EST actuellement. */
   disponible: boolean;
   /** Présente uniquement si `disponible` est `false` — la raison du refus, lisible par un humain. */

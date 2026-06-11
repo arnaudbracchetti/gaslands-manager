@@ -267,6 +267,7 @@ describe('WeaponService', () => {
           prix: 4,
           emplacement: 1,
           type: 'base',
+          description: '',
           // Sans orientation fournie ⇒ "il manque une information" (cf. note de
           // la méthode — même nuance que `getAvailableImprovements`/Bélier).
           disponible: false,
@@ -278,6 +279,7 @@ describe('WeaponService', () => {
           prix: 12,
           emplacement: 2,
           type: 'avancée',
+          description: '',
           disponible: false,
           raison: 'Une orientation est requise pour monter "BFG" sur un arc de tir',
         },
@@ -287,6 +289,7 @@ describe('WeaponService', () => {
           prix: 2,
           emplacement: 0,
           type: 'équipage',
+          description: '',
           // Pas d'orientation requise pour une arme d'équipage ⇒ disponible d'emblée.
           disponible: true,
           raison: undefined,

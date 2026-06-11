@@ -17,6 +17,7 @@ const availableOption: EquipmentOptionDto = {
   nomInterne: 'mitrailleuse',
   prix: 4,
   emplacement: 1,
+  description: 'Arme de base à Portée Moyenne lançant 1D6.',
   disponible: true,
 };
 
@@ -25,6 +26,7 @@ const unavailableOption: EquipmentOptionDto = {
   nomInterne: 'bfg',
   prix: 18,
   emplacement: 2,
+  description: 'Arme lourde dévastatrice à courte portée.',
   disponible: false,
   raison: 'Emplacements insuffisants : 6/5 requis avec "BFG"',
 };
@@ -38,6 +40,7 @@ const orientableOption: EquipmentOptionDto = {
   nomInterne: 'mitrailleuse',
   prix: 4,
   emplacement: 1,
+  description: 'Arme de base à Portée Moyenne lançant 1D6.',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
 };
@@ -70,6 +73,15 @@ describe('EquipmentOption', () => {
     expect(el.querySelector('.option__name')?.textContent).toContain('Mitrailleuse');
     expect(el.textContent).toContain('4');
     expect(el.textContent).toContain('1');
+  });
+
+  it('affiche la description issue du catalogue', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
   });
 
   it('affiche un bouton "Ajouter" quand l\'option est disponible', () => {
@@ -178,6 +190,37 @@ describe('EquipmentOption', () => {
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0]).toEqual({ nomInterne: 'mitrailleuse', orientation: 'avant' });
+  });
+
+  // ── Extension de la carte pendant le choix d'orientation (cf. host binding) ──
+  // Item de grille `.em-equipment__list` (cf. equipment-manager.scss) : pendant
+  // le choix d'orientation, l'hôte reçoit `option-host--expanded` pour s'étendre
+  // sur toute la largeur (`grid-column: 1 / -1`).
+
+  it('ajoute la classe `option-host--expanded` sur l\'hôte pendant le choix d\'orientation', () => {
+    setUp(availableOption, true);
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.classList.contains('option-host--expanded')).toBe(false);
+
+    (host.querySelector('.option__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(host.classList.contains('option-host--expanded')).toBe(true);
+  });
+
+  it('retire la classe `option-host--expanded` après "Annuler"', () => {
+    setUp(availableOption, true);
+    const host = fixture.nativeElement as HTMLElement;
+
+    (host.querySelector('.option__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(host.classList.contains('option-host--expanded')).toBe(true);
+
+    (host.querySelector('.orientation-cancel') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(host.classList.contains('option-host--expanded')).toBe(false);
   });
 
   it('referme le sélecteur sans émettre au clic sur "Annuler"', () => {

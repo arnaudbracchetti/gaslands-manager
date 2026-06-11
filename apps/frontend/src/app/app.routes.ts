@@ -22,6 +22,22 @@ export const appRoutes: Route[] = [
     // Si l'utilisateur n'est pas connecté, il est redirigé vers /login.
     canActivate: [authGuard],
   },
+  // ─── Configuration de véhicule (page dédiée, ex-modale) ────────────────────
+  // Deux routes vers le même composant : 'new' (segment littéral) DOIT être
+  // déclaré AVANT ':vehicleId' (paramètre), sinon '/teams/5/vehicles/new'
+  // matcherait la route paramétrée avec vehicleId = "new".
+  {
+    path: 'teams/:teamId/vehicles/new',
+    loadComponent: () =>
+      import('./teams/vehicle-configurator-page/vehicle-configurator-page').then((m) => m.VehicleConfiguratorPage),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'teams/:teamId/vehicles/:vehicleId',
+    loadComponent: () =>
+      import('./teams/vehicle-configurator-page/vehicle-configurator-page').then((m) => m.VehicleConfiguratorPage),
+    canActivate: [authGuard],
+  },
   {
     path: 'vehicles',
     loadComponent: () =>

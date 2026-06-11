@@ -7,8 +7,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-width: min(640px, 80vw);
-  max-width: 720px;
+  width: 100%;
+  /* Largeur pilotée par .modal-content--wide (cf. modal.scss) — la modale qui
+     héberge ce composant est ouverte avec [size]="'wide'" (cf. teams.html). */
 }
 
 /* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
