@@ -5,6 +5,11 @@
    (`.em-equipment__list` a `align-items: stretch`). */
 :host {
   display: flex;
+  // Sans ça, :host (item de la grille .em-equipment__list) refuse de
+  // rétrécir sous la taille min-content de son contenu (titre non-wrappé +
+  // badges) — la carte déborde alors de sa cellule de grille au lieu de
+  // tronquer le titre avec ellipsis.
+  min-width: 0;
 }
 
 /* Pendant le choix d'orientation : la carte s'étend sur toute la largeur de la
@@ -18,6 +23,9 @@
 
 .option {
   flex: 1;
+  // Idem :host — .option est lui-même un flex item de :host et hérite du
+  // même problème de min-width: auto en cascade.
+  min-width: 0;
   background: var(--clr-bg-base);
   border: 1px solid var(--clr-border-subtle);
   border-radius: 8px;

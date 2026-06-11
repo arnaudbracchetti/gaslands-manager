@@ -44,7 +44,9 @@
 
 .vc-vehicle-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  // 240px : même largeur minimale que .em-equipment__list (catalogue
+  // d'équipement, étape suivante) — cohérence visuelle entre les deux étapes.
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
 }
 
