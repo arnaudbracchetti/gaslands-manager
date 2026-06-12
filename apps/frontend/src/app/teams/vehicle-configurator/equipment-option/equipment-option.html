@@ -11,14 +11,33 @@
      sélecteur qui apparaît au clic EST la réponse à ce message.
    - "c'est interdit" (sponsor/emplacements/règle de pose...) → on affiche LA
      raison telle quelle, et aucun bouton : rien à faire pour cette option ici.
+
+  Pendant le choix d'orientation (`choosingOrientation()`), la description est
+  masquée : le sélecteur 4 directions prend visuellement sa place, SANS changer
+  la taille de la carte (`flex-wrap` répartit le label + les 4 boutons +
+  "Annuler" sur plusieurs lignes si besoin). Elle réapparaît après "Annuler"
+  (retour à l'état de repos) ou une fois l'orientation choisie (l'item est
+  ajouté).
 -->
 <div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()">
 
-  <div class="option__info">
+  <div class="option__header">
     <span class="option__name">{{ option().nom }}</span>
-    <span class="option__stat" title="Coût en jerricans">{{ option().prix }} 🛢️</span>
-    <span class="option__stat" title="Emplacements requis">🔧 {{ option().emplacement }}</span>
+    <div class="option__badges">
+      <span class="option__badge" title="Coût en jerricans">
+        <img class="option__badge-icon" src="/icons/dollar.svg" alt="" />
+        {{ option().prix }}
+      </span>
+      <span class="option__badge" title="Emplacements requis">
+        <img class="option__badge-icon" src="/icons/wrench.svg" alt="" />
+        {{ option().emplacement }}
+      </span>
+    </div>
   </div>
+
+  @if (option().description && !choosingOrientation()) {
+    <p class="option__description">{{ option().description }}</p>
+  }
 
   @if (!option().disponible && !requiresOrientation()) {
     <!-- Refus définitif — la raison vient du backend (RuleResult.reason),
@@ -42,8 +61,8 @@
       </button>
     </div>
   } @else {
-    <button class="option__add" type="button" (click)="onAddClicked()">
-      Ajouter
+    <button class="option__add" type="button" (click)="onAddClicked()" aria-label="Ajouter">
+      <span aria-hidden="true">+</span>
     </button>
   }
 

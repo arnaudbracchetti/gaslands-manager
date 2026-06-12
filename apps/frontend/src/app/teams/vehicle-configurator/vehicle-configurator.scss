@@ -7,8 +7,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-width: min(640px, 80vw);
-  max-width: 720px;
+  width: 100%;
+  /* Largeur pilotée par .modal-content--wide (cf. modal.scss) — la modale qui
+     héberge ce composant est ouverte avec [size]="'wide'" (cf. teams.html). */
 }
 
 /* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
@@ -33,9 +34,24 @@
   margin: 0;
   font-size: 0.92rem;
   color: var(--clr-text);
+  // Reste visible sous .vcp-header (sticky) — cf. le commentaire détaillé
+  // dans vehicle-configurator-page.scss pour le calcul des `top` empilés.
+  position: sticky;
+  top: 156px;
+  z-index: 30;
+  background: var(--clr-bg-base);
+  padding: 10px 0;
 
   strong {
     color: var(--clr-accent-cyan);
+  }
+}
+
+@media (max-width: 760px) {
+  .vc-intro {
+    position: static;
+    background: none;
+    padding: 0;
   }
 }
 
@@ -43,7 +59,9 @@
 
 .vc-vehicle-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  // 240px : même largeur minimale que .em-equipment__list (catalogue
+  // d'équipement, étape suivante) — cohérence visuelle entre les deux étapes.
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
 }
 

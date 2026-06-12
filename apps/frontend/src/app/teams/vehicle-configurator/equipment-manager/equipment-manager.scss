@@ -26,31 +26,154 @@
   }
 }
 
-/* ── Introduction ───────────────────────────────────────────────────────────── */
+/* ── Disposition 2 colonnes : équipement actuel (sidebar) | catalogue ───────── */
+/* `align-items: start` : la colonne la plus courte ne s'étire pas à la hauteur
+   de l'autre — chaque colonne garde sa hauteur naturelle. */
 
-.em-intro {
+.em-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Sous ~760px : sidebar au-dessus du catalogue, plus de colonnes côte à côte. */
+@media (max-width: 760px) {
+  .em-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .em-current {
+    border-right: none;
+    border-bottom: 1px solid var(--clr-border);
+    padding: 0 0 16px;
+
+    // En une seule colonne, le récapitulatif est suivi du catalogue dans le
+    // flux normal — un sticky le collerait inutilement en haut de l'écran.
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  // `.em-current` n'étant plus sticky, son en-tête ne doit pas non plus
+  // rester collé en haut du DOCUMENT (il chevaucherait la navbar) — retour
+  // au flux normal, comme le reste de la carte.
+  .em-current__header {
+    position: static;
+    background: none;
+    padding-bottom: 8px;
+  }
+}
+
+/* ── Équipement actuel — liste retirable (colonne gauche) ───────────────────── */
+
+.em-current {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid var(--clr-border);
+  padding-right: 16px;
+
+  // Sidebar sticky : reste visible pendant que le catalogue (.em-equipment,
+  // souvent plus haut) défile à droite. `top` = sous .vcp-header (sticky) —
+  // cf. le commentaire détaillé dans vehicle-configurator-page.scss pour le
+  // calcul des `top` empilés. `.em-current` reprend la place qu'occupait le
+  // `.vc-intro` "Équipement de X" (supprimé, désormais redondant avec
+  // `.em-current__header` ci-dessous) — les deux ne coexistent jamais.
+  position: sticky;
+  top: 156px;
+  // Si le récapitulatif dépasse lui-même la hauteur de la fenêtre, il défile
+  // indépendamment plutôt que de déborder hors écran (sticky seul ne crée pas
+  // de zone de scroll). 16px de marge en bas, par cohérence avec les `gap`.
+  max-height: calc(100vh - 156px - 16px);
+  overflow-y: auto;
+}
+
+/* ── En-tête récap : nom du véhicule, emplacements, coût ────────────────────── */
+
+.em-current__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  // Reste visible en haut de la sidebar pendant que les listes Armes/
+  // Améliorations défilent dessous (`.em-current` a son propre scroll interne).
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--clr-bg-base);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.em-current__vehicle-name {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--clr-text);
+  // Troncature — même traitement que .option__name/.choice-card__name pour
+  // les noms longs ("Forteresse Mobile"...).
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-current__slots {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--clr-text-hint);
 
   strong {
     color: var(--clr-accent-cyan);
   }
 }
 
-/* ── Équipement actuel — liste retirable ────────────────────────────────────── */
-
-.em-current {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--clr-border);
+/* Icônes 🛢/🔧 de l'en-tête récap — mêmes assets et mêmes dimensions que
+   `.em-current__badge-icon`/`.option__badge-icon`, pour une iconographie
+   cohérente entre le résumé (emplacements/coût) et le détail par ligne. */
+.em-current__icon {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
 }
 
-.em-current__title {
+/* ── Coût du véhicule — base, équipement, total ─────────────────────────────── */
+
+.em-current__cost {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.em-current__cost-row {
   margin: 0;
-  font-size: 0.95rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+
+  &--total {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--clr-border);
+    color: var(--clr-accent-cyan);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+}
+
+/* ── Groupes Armes / Améliorations ──────────────────────────────────────────── */
+
+.em-current__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.em-current__group-title {
+  margin: 0;
+  font-size: 0.88rem;
   color: var(--clr-text);
   font-weight: 600;
 }
@@ -68,7 +191,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap; /* boutons sous le nom si la colonne est étroite */
+  gap: 8px 12px;
   padding: 8px 12px;
   background: var(--clr-bg-item);
   border: 1px solid var(--clr-border);
@@ -84,6 +208,32 @@
   margin-left: 6px;
   font-size: 0.8rem;
   color: var(--clr-text-hint);
+}
+
+/* Badges prix/emplacement par ligne — même apparence que .option__badge
+   (equipment-option.scss), pour la cohérence visuelle avec le catalogue. */
+.em-current__badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.em-current__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(var(--clr-accent-cyan-rgb), 0.1);
+  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
+  color: var(--clr-accent-cyan);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.em-current__badge-icon {
+  width: 13px;
+  height: 13px;
 }
 
 .em-current__remove {
@@ -125,10 +275,46 @@
   font-weight: 600;
 }
 
+/* Grille de cartes — remplace l'ancienne liste verticale pleine largeur,
+   exploite la largeur disponible dans la colonne droite. */
 .em-equipment__list {
+  display: grid;
+  // 240px : même largeur minimale que .vc-vehicle-grid (choix du véhicule,
+  // étape précédente) — cohérence visuelle entre les deux étapes.
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* ── Barre de filtre — masquer/afficher les options indisponibles ───────────── */
+
+.em-equipment__toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.em-equipment__toolbar-label {
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+}
+
+.em-toggle {
+  background: transparent;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--clr-accent-cyan);
+    color: var(--clr-accent-cyan);
+  }
 }
 
 /* ── Tourelle — badges et variantes inline ──────────────────────────────────── */

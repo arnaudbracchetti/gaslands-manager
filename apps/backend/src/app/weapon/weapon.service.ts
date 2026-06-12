@@ -193,6 +193,7 @@ export class WeaponService {
         prix: arme.prix,
         emplacement: arme.emplacement,
         type: arme.type,
+        description: arme.description,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
       };

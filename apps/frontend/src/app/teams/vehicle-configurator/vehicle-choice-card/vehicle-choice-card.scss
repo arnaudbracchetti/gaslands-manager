@@ -1,5 +1,13 @@
 /* ── Carte de choix de véhicule ────────────────────────────────────────────── */
 
+/* :host = item de la grille .vc-vehicle-grid. Sans min-width: 0, l'item
+   refuse par défaut de rétrécir sous la taille min-content de son contenu
+   (titre non-wrappé) — la carte déborde alors de sa cellule de grille au lieu
+   de tronquer le titre avec ellipsis (cf. .choice-card__name ci-dessous). */
+:host {
+  min-width: 0;
+}
+
 .choice-card {
   background: var(--clr-bg-base);
   border: 1px solid var(--clr-border);
@@ -27,6 +35,12 @@
     font-size: 1.05rem;
     font-weight: 700;
     margin: 0;
+    // Tronque les noms longs plutôt que de déborder de la carte
+    // (même pattern que .option__name dans equipment-option.scss).
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   &__weight {

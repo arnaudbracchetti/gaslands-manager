@@ -82,32 +82,4 @@
     </div>
   }
 
-  <!-- ── Modale UNIQUE de configuration de véhicule (création OU édition) ── -->
-  <!--
-    `vehicleModal(); as modal` capture le couple non-nul {team, vehicleId} pour
-    tout le bloc — `VehicleConfigurator` exige `team` en `input.required<Team>()`
-    et reçoit `vehicleId` (optionnel, `null` ⇒ création) — cf. son en-tête :
-    fusion de `VehicleBuilder`/`VehicleEditor`, qui ne se distinguaient que par
-    "comment obtient-on le véhicule de départ ?" et le libellé d'un bouton.
-
-    Le titre de la modale dépend du mode (`vehicleId === null` ⇒ création) —
-    seule trace visible ici de la distinction, le composant projeté est UNIQUE.
-
-    Fermeture via DEUX chemins, qui appellent volontairement la MÊME méthode
-    (`closeVehicleModal`) — cf. sa doc, "fermeture à mi-parcours acceptée" :
-      - (closeRequested) : overlay / croix / Échap (abandon possible à tout moment)
-      - (done)           : bouton "Terminer"/"Fermer" du configurateur (fin normale)
-  -->
-  @if (vehicleModal(); as modal) {
-    <app-modal
-      [visible]="true"
-      [title]="modal.vehicleId === null ? 'Ajouter un véhicule' : 'Gérer l\'équipement du véhicule'"
-      (closeRequested)="closeVehicleModal()">
-      <app-vehicle-configurator
-        [team]="modal.team"
-        [vehicleId]="modal.vehicleId"
-        (done)="closeVehicleModal()" />
-    </app-modal>
-  }
-
 </div>

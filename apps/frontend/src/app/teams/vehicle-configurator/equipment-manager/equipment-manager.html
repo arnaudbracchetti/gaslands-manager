@@ -1,120 +1,231 @@
 <!--
   EquipmentManager — gabarit FUSIONNÉ des deux mirroirs d'origine (étape 2 de
   l'ex-VehicleBuilder + ex-VehicleEditor, qui était déjà le sur-ensemble des deux
-  avec sa section "Équipement actuel"). Affiche systématiquement : intro
-  (nom + emplacements), erreur, équipement actuel RETIRABLE (toujours visible —
-  y compris vide), puis les deux listes Armes/Améliorations disponibles.
+  avec sa section "Équipement actuel"). Affiche systématiquement : erreur,
+  carte récapitulative du véhicule (`.em-current` — nom, emplacements, coût,
+  puis ses armes/améliorations montées, séparément, toujours RETIRABLES — y
+  compris vides), puis les deux listes Armes/Améliorations disponibles.
 -->
 <div class="em">
-
-  <p class="em-intro">
-    Équipement de
-    <strong>{{ chosenVehicule()?.nom ?? vehicle().nomInterne }}</strong>
-    — emplacements utilisés :
-    <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
-    🔧
-  </p>
 
   @if (equipmentError()) {
     <p class="em-status em-status--error">{{ equipmentError() }}</p>
   }
 
-  <!-- ═══ Équipement actuel — armes et améliorations montées, retirables ═══ -->
+  <!--
+    ═══ Disposition 2 colonnes ═══
+    Gauche : équipement actuel (sidebar, retirable). Droite : catalogue
+    disponible (Armes/Améliorations) en grille de cartes. Sur petit écran,
+    `.em-layout` repasse en 1 colonne (cf. equipment-manager.scss).
+  -->
+  <div class="em-layout">
+
+  <!-- ═══ Équipement actuel — carte récapitulative du véhicule (sidebar, sticky) ═══ -->
   <section class="em-current">
-    <h3 class="em-current__title">Équipement actuel</h3>
 
-    @if (vehicle().weapons.length === 0 && vehicle().improvements.length === 0) {
-      <p class="em-status">Ce véhicule n'a encore aucun équipement.</p>
-    } @else {
-      <ul class="em-current__list">
+    <!--
+      En-tête récap — nom, emplacements et coût du véhicule (remplace l'ancien
+      `.em-intro` ICI + le `.vc-intro` "Équipement de X" du parent, désormais
+      redondants — cf. vehicle-configurator.html).
+    -->
+    <div class="em-current__header">
+      <h3 class="em-current__vehicle-name" [title]="chosenVehicule()?.nom ?? vehicle().nomInterne">
+        {{ chosenVehicule()?.nom ?? vehicle().nomInterne }}
+      </h3>
 
-        <!-- ── Armes "normales" — hors celles absorbées par une ligne Tourelle ── -->
-        @for (weapon of vehicle().weapons; track weapon.id) {
-          <li class="em-current__item">
-            <span class="em-current__name">
-              {{ resolveWeaponName(weapon.nomInterne) }}
-              @if (weapon.orientation) {
-                <span class="em-current__orientation">({{ weapon.orientation }})</span>
+      <p class="em-current__slots">
+        <img class="em-current__icon" src="/icons/wrench.svg" alt="" />
+        Emplacements : <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
+      </p>
+
+      <div class="em-current__cost">
+        <p class="em-current__cost-row">
+          <span>Base</span>
+          <span>{{ coutBase() }} <img class="em-current__icon" src="/icons/dollar.svg" alt="" /></span>
+        </p>
+        <p class="em-current__cost-row">
+          <span>+ Équipement</span>
+          <span>{{ coutEquipement() }} <img class="em-current__icon" src="/icons/dollar.svg" alt="" /></span>
+        </p>
+        <p class="em-current__cost-row em-current__cost-row--total">
+          <span>Total</span>
+          <span>{{ coutTotal() }} <img class="em-current__icon" src="/icons/dollar.svg" alt="" /></span>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Armes montées — hors celles absorbées par une ligne Tourelle ── -->
+    <section class="em-current__group">
+      <h4 class="em-current__group-title">Armes ({{ vehicle().weapons.length }})</h4>
+      @if (vehicle().weapons.length === 0) {
+        <p class="em-status">Aucune arme montée.</p>
+      } @else {
+        <ul class="em-current__list">
+          @for (weapon of vehicle().weapons; track weapon.id) {
+            <li class="em-current__item">
+              <span class="em-current__name">
+                {{ resolveWeaponName(weapon.nomInterne) }}
+                @if (weapon.orientation) {
+                  <span class="em-current__orientation">({{ weapon.orientation }})</span>
+                }
+              </span>
+              <span class="em-current__badges">
+                <span class="em-current__badge" title="Coût en jerricans">
+                  <img class="em-current__badge-icon" src="/icons/dollar.svg" alt="" />
+                  {{ weapon.prix }}
+                </span>
+                <span class="em-current__badge" title="Emplacements requis">
+                  <img class="em-current__badge-icon" src="/icons/wrench.svg" alt="" />
+                  {{ resolveWeaponSlot(weapon.nomInterne) }}
+                </span>
+              </span>
+              <button
+                class="em-current__remove"
+                type="button"
+                title="Retirer cette arme"
+                (click)="removeWeapon(weapon)">
+                Retirer
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- ── Améliorations posées — les Tourelles reçoivent un traitement spécial ── -->
+    <section class="em-current__group">
+      <h4 class="em-current__group-title">Améliorations ({{ vehicle().improvements.length }})</h4>
+      @if (vehicle().improvements.length === 0) {
+        <p class="em-status">Aucune amélioration installée.</p>
+      } @else {
+        <ul class="em-current__list">
+          @for (improvement of vehicle().improvements; track improvement.id) {
+
+            @if (improvement.nomInterne === 'tourelle') {
+
+              @if (improvement.weaponNomInterne !== null) {
+                <!--
+                  Tourelle ASSIGNÉE → ligne fusionnée "Arme (Tourelle)".
+                  L'arme n'existe pas comme entité Weapon séparée : la Tourelle porte le
+                  coût total (3× le prix catalogue de l'arme). C'est `improvement.prix`
+                  qui contient déjà ce total — pas de champ weapon supplémentaire à lire.
+                  Le badge emplacement reprend celui de l'ARME montée (la Tourelle elle-même
+                  coûte 0 emplacement, cf. SPECIFICATION.md §7).
+                -->
+                <li class="em-current__item em-current__item--tourelle">
+                  <span class="em-current__name">
+                    🔫 {{ resolveWeaponName(improvement.weaponNomInterne) }}
+                    <span class="em-current__tourelle-badge">(Tourelle)</span>
+                    @if (improvement.orientation) {
+                      <span class="em-current__orientation">({{ improvement.orientation }})</span>
+                    }
+                  </span>
+                  <span class="em-current__badges">
+                    <span class="em-current__badge" title="Coût en jerricans (Tourelle incluse)">
+                      <img class="em-current__badge-icon" src="/icons/dollar.svg" alt="" />
+                      {{ improvement.prix }}
+                    </span>
+                    <span class="em-current__badge" title="Emplacements requis">
+                      <img class="em-current__badge-icon" src="/icons/wrench.svg" alt="" />
+                      {{ resolveWeaponSlot(improvement.weaponNomInterne) }}
+                    </span>
+                  </span>
+                  <!--
+                    [Désassigner] toujours disponible — y compris sur la Tourelle du Char
+                    d'assaut (estDefaut) : seul le RETRAIT de la Tourelle est interdit pour
+                    les améliorations par défaut, pas la modification de son arme.
+                  -->
+                  <button
+                    class="em-current__remove"
+                    type="button"
+                    title="Désassigner l'arme de la Tourelle (la Tourelle reste)"
+                    (click)="unassignWeaponFromTourelle(improvement)">
+                    Désassigner
+                  </button>
+                  @if (improvement.estDefaut) {
+                    <!-- Tourelle intégrée (Char d'assaut) — non supprimable -->
+                    <span
+                      class="em-current__badge-defaut"
+                      title="Tourelle intégrée au profil de base de ce véhicule">
+                      🔒 Tourelle intégrée
+                    </span>
+                  } @else {
+                    <button
+                      class="em-current__remove"
+                      type="button"
+                      title="Retirer la Tourelle (l'arme disparaît aussi)"
+                      (click)="removeImprovement(improvement)">
+                      Retirer la Tourelle
+                    </button>
+                  }
+                </li>
+
+              } @else {
+                <!--
+                  Tourelle ORPHELINE — aucune arme assignée.
+                  [Assigner] ouvre la modale de sélection d'arme catalogue.
+                  [Retirer] disponible seulement si la Tourelle est achetée (pas estDefaut).
+                -->
+                <li class="em-current__item em-current__item--tourelle-orpheline">
+                  <span class="em-current__name">
+                    ⚙ {{ resolveImprovementName(improvement.nomInterne) }}
+                    <span class="em-current__warning">⚠ Aucune arme assignée</span>
+                  </span>
+                  <span class="em-current__badges">
+                    <span class="em-current__badge" title="Coût en jerricans">
+                      <img class="em-current__badge-icon" src="/icons/dollar.svg" alt="" />
+                      {{ improvement.prix }}
+                    </span>
+                    <span class="em-current__badge" title="Emplacements requis">
+                      <img class="em-current__badge-icon" src="/icons/wrench.svg" alt="" />
+                      {{ improvement.emplacement }}
+                    </span>
+                  </span>
+                  <button
+                    class="em-current__add-weapon"
+                    type="button"
+                    title="Choisir l'arme de cette Tourelle"
+                    (click)="openAssignModal(improvement)">
+                    Assigner une arme
+                  </button>
+                  @if (improvement.estDefaut) {
+                    <span
+                      class="em-current__badge-defaut"
+                      title="Fait partie du profil de base de ce véhicule">
+                      🔒 Intégré
+                    </span>
+                  } @else {
+                    <button
+                      class="em-current__remove"
+                      type="button"
+                      title="Retirer cette Tourelle"
+                      (click)="removeImprovement(improvement)">
+                      Retirer
+                    </button>
+                  }
+                </li>
               }
-            </span>
-            <button
-              class="em-current__remove"
-              type="button"
-              title="Retirer cette arme"
-              (click)="removeWeapon(weapon)">
-              Retirer
-            </button>
-          </li>
-        }
 
-        <!-- ── Améliorations — les Tourelles reçoivent un traitement spécial ── -->
-        @for (improvement of vehicle().improvements; track improvement.id) {
+            } @else {
 
-          @if (improvement.nomInterne === 'tourelle') {
-
-            @if (improvement.weaponNomInterne !== null) {
-              <!--
-                Tourelle ASSIGNÉE → ligne fusionnée "Arme (Tourelle)".
-                L'arme n'existe pas comme entité Weapon séparée : la Tourelle porte le
-                coût total (3× le prix catalogue de l'arme). C'est `improvement.prix`
-                qui contient déjà ce total — pas de champ weapon supplémentaire à lire.
-              -->
-              <li class="em-current__item em-current__item--tourelle">
+              <!-- Amélioration NON-Tourelle — affichage standard -->
+              <li class="em-current__item">
                 <span class="em-current__name">
-                  🔫 {{ resolveWeaponName(improvement.weaponNomInterne) }}
-                  <span class="em-current__tourelle-badge">(Tourelle)</span>
+                  {{ resolveImprovementName(improvement.nomInterne) }}
                   @if (improvement.orientation) {
                     <span class="em-current__orientation">({{ improvement.orientation }})</span>
                   }
                 </span>
-                <!--
-                  [Désassigner] toujours disponible — y compris sur la Tourelle du Char
-                  d'assaut (estDefaut) : seul le RETRAIT de la Tourelle est interdit pour
-                  les améliorations par défaut, pas la modification de son arme.
-                -->
-                <button
-                  class="em-current__remove"
-                  type="button"
-                  title="Désassigner l'arme de la Tourelle (la Tourelle reste)"
-                  (click)="unassignWeaponFromTourelle(improvement)">
-                  Désassigner
-                </button>
-                @if (improvement.estDefaut) {
-                  <!-- Tourelle intégrée (Char d'assaut) — non supprimable -->
-                  <span
-                    class="em-current__badge-defaut"
-                    title="Tourelle intégrée au profil de base de ce véhicule">
-                    🔒 Tourelle intégrée
+                <span class="em-current__badges">
+                  <span class="em-current__badge" title="Coût en jerricans">
+                    <img class="em-current__badge-icon" src="/icons/dollar.svg" alt="" />
+                    {{ improvement.prix }}
                   </span>
-                } @else {
-                  <button
-                    class="em-current__remove"
-                    type="button"
-                    title="Retirer la Tourelle (l'arme disparaît aussi)"
-                    (click)="removeImprovement(improvement)">
-                    Retirer la Tourelle
-                  </button>
-                }
-              </li>
-
-            } @else {
-              <!--
-                Tourelle ORPHELINE — aucune arme assignée.
-                [Assigner] ouvre la modale de sélection d'arme catalogue.
-                [Retirer] disponible seulement si la Tourelle est achetée (pas estDefaut).
-              -->
-              <li class="em-current__item em-current__item--tourelle-orpheline">
-                <span class="em-current__name">
-                  ⚙ {{ resolveImprovementName(improvement.nomInterne) }}
-                  <span class="em-current__warning">⚠ Aucune arme assignée</span>
+                  <span class="em-current__badge" title="Emplacements requis">
+                    <img class="em-current__badge-icon" src="/icons/wrench.svg" alt="" />
+                    {{ improvement.emplacement }}
+                  </span>
                 </span>
-                <button
-                  class="em-current__add-weapon"
-                  type="button"
-                  title="Choisir l'arme de cette Tourelle"
-                  (click)="openAssignModal(improvement)">
-                  Assigner une arme
-                </button>
                 @if (improvement.estDefaut) {
                   <span
                     class="em-current__badge-defaut"
@@ -125,71 +236,59 @@
                   <button
                     class="em-current__remove"
                     type="button"
-                    title="Retirer cette Tourelle"
+                    title="Retirer cette amélioration"
                     (click)="removeImprovement(improvement)">
                     Retirer
                   </button>
                 }
               </li>
+
             }
-
-          } @else {
-
-            <!-- Amélioration NON-Tourelle — affichage standard -->
-            <li class="em-current__item">
-              <span class="em-current__name">
-                {{ resolveImprovementName(improvement.nomInterne) }}
-                @if (improvement.orientation) {
-                  <span class="em-current__orientation">({{ improvement.orientation }})</span>
-                }
-              </span>
-              @if (improvement.estDefaut) {
-                <span
-                  class="em-current__badge-defaut"
-                  title="Fait partie du profil de base de ce véhicule">
-                  🔒 Intégré
-                </span>
-              } @else {
-                <button
-                  class="em-current__remove"
-                  type="button"
-                  title="Retirer cette amélioration"
-                  (click)="removeImprovement(improvement)">
-                  Retirer
-                </button>
-              }
-            </li>
-
           }
-        }
+        </ul>
+      }
+    </section>
 
-      </ul>
-    }
   </section>
 
-  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
-       Composant dumb : reçoit la liste filtrée des armes posables et émet
-       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
-       gérée ici par `@if` — le composant s'affiche toujours quand instancié. -->
-  @if (selectedOrphanTourelle()) {
-    <app-tourelle-assignment-modal
-      [armes]="armesPourTourelle()"
-      (weaponChosen)="assignWeaponToTourelle($event)"
-      (cancelled)="selectedOrphanTourelle.set(null)" />
-  }
-
-  <!-- ═══ Équipement disponible — listes Armes/Améliorations avec verdict ═══ -->
+  <!-- ═══ Équipement disponible — catalogue en grille avec filtre ═══ -->
   @if (loadingEquipment()) {
     <p class="em-status em-status--loading">Chargement des équipements disponibles…</p>
   } @else {
     <div class="em-equipment">
+
+      <!--
+        Barre de filtre — masque par défaut les options DÉFINITIVEMENT
+        indisponibles (cf. doc de `showUnavailable`/`visibleWeapons`). Les
+        options nécessitant juste une orientation restent toujours visibles.
+      -->
+      <div class="em-equipment__toolbar">
+        <span class="em-equipment__toolbar-label">Catalogue disponible</span>
+        <button
+          class="em-toggle"
+          type="button"
+          (click)="showUnavailable.set(!showUnavailable())">
+          @if (showUnavailable()) {
+            Masquer les indisponibles
+          } @else {
+            Afficher les indisponibles ({{ hiddenCount() }})
+          }
+        </button>
+      </div>
+
       <section class="em-equipment__group">
         <h3 class="em-equipment__title">Armes</h3>
-        @if (availableWeapons().length === 0) {
-          <p class="em-status">Aucune arme disponible pour ce sponsor.</p>
+        @if (visibleWeapons().length === 0) {
+          <p class="em-status">
+            @if (availableWeapons().length === 0) {
+              Aucune arme disponible pour ce sponsor.
+            } @else {
+              Toutes les armes sont indisponibles — affichez-les pour voir pourquoi.
+            }
+          </p>
         } @else {
           <div class="em-equipment__list">
-            @for (weapon of availableWeapons(); track weapon.nomInterne) {
+            @for (weapon of visibleWeapons(); track weapon.nomInterne) {
               <app-equipment-option
                 [option]="weapon"
                 [requiresOrientation]="weaponNeedsOrientation(weapon)"
@@ -201,11 +300,17 @@
 
       <section class="em-equipment__group">
         <h3 class="em-equipment__title">Améliorations</h3>
-        @if (availableImprovements().length === 0) {
-          <p class="em-status">Aucune amélioration disponible pour ce sponsor.</p>
+        @if (visibleImprovements().length === 0) {
+          <p class="em-status">
+            @if (availableImprovements().length === 0) {
+              Aucune amélioration disponible pour ce sponsor.
+            } @else {
+              Toutes les améliorations sont indisponibles — affichez-les pour voir pourquoi.
+            }
+          </p>
         } @else {
           <div class="em-equipment__list">
-            @for (improvement of availableImprovements(); track improvement.nomInterne) {
+            @for (improvement of visibleImprovements(); track improvement.nomInterne) {
               <app-equipment-option
                 [option]="improvement"
                 [requiresOrientation]="improvementNeedsOrientation(improvement)"
@@ -215,6 +320,22 @@
         }
       </section>
     </div>
+  }
+
+  </div>
+  <!-- /.em-layout -->
+
+  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
+       Composant dumb : reçoit la liste filtrée des armes posables et émet
+       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
+       gérée ici par `@if` — le composant s'affiche toujours quand instancié.
+       Placée hors de `.em-layout` (overlay `position: fixed`, indépendant
+       de la grille). -->
+  @if (selectedOrphanTourelle()) {
+    <app-tourelle-assignment-modal
+      [armes]="armesPourTourelle()"
+      (weaponChosen)="assignWeaponToTourelle($event)"
+      (cancelled)="selectedOrphanTourelle.set(null)" />
   }
 
 </div>

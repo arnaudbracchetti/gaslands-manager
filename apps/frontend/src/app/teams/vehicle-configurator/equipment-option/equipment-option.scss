@@ -1,37 +1,90 @@
-/* ── Ligne d'équipement (arme ou amélioration) ─────────────────────────────── */
+/* ── Hôte = item de la grille `.em-equipment__list` ─────────────────────────── */
+/* `display: flex` : le host devient lui-même un conteneur flex qui étire `.option`
+   sur toute sa hauteur/largeur de cellule (cf. `.option { flex: 1 }` ci-dessous) —
+   nécessaire pour que toutes les cartes d'une rangée aient la même hauteur
+   (`.em-equipment__list` a `align-items: stretch`). */
+:host {
+  display: flex;
+  // Sans ça, :host (item de la grille .em-equipment__list) refuse de
+  // rétrécir sous la taille min-content de son contenu (titre non-wrappé +
+  // badges) — la carte déborde alors de sa cellule de grille au lieu de
+  // tronquer le titre avec ellipsis.
+  min-width: 0;
+}
+
+/* ── Carte d'équipement (arme ou amélioration) ─────────────────────────────── */
 
 .option {
+  flex: 1;
+  // Idem :host — .option est lui-même un flex item de :host et hérite du
+  // même problème de min-width: auto en cascade.
+  min-width: 0;
   background: var(--clr-bg-base);
   border: 1px solid var(--clr-border-subtle);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 10px 14px;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 
   /* Option indisponible : grisée, pas de transformation au survol */
   &--unavailable {
     opacity: 0.55;
   }
 
-  &__info {
+  /* Ligne d'en-tête : nom à gauche, badges prix/emplacement à droite */
+  &__header {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   &__name {
     color: var(--clr-text);
-    font-weight: 600;
-    font-size: 0.92rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    // Tronque les noms longs ("Membre d'Équipage Supplémentaire"...) plutôt
+    // que de pousser les badges hors de la carte.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
   }
 
-  &__stat {
-    color: var(--clr-text-muted);
+  &__badges {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(var(--clr-accent-cyan-rgb), 0.1);
+    border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
+    color: var(--clr-accent-cyan);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  &__badge-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* Description du catalogue (`Arme.description`/`Amelioration.description`) */
+  &__description {
+    color: var(--clr-text-hint);
     font-size: 0.8rem;
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0;
   }
 
   /* Raison d'indisponibilité — message du backend (RuleResult.reason) */
@@ -40,23 +93,31 @@
     font-size: 0.78rem;
     font-style: italic;
     margin: 0;
-    flex-basis: 100%;
+    margin-top: auto;
   }
 
+  /* Bouton rond "+" — pousse en bas à droite de la carte */
   &__add {
-    background: transparent;
-    border: 1px solid var(--clr-accent-cyan);
-    color: var(--clr-accent-cyan);
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    align-self: flex-end;
+    margin-top: auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: var(--clr-success);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: background 0.2s;
-    flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.1s;
 
     &:hover {
-      background: rgba(var(--clr-accent-cyan-rgb), 0.1);
+      opacity: 0.85;
+      transform: scale(1.05);
     }
   }
 }
@@ -68,7 +129,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  flex-basis: 100%;
+  width: 100%;
+  margin-top: auto;
 }
 
 .option__orientations-label {

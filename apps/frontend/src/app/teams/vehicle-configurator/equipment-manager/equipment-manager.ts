@@ -100,6 +100,60 @@ export class EquipmentManager {
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
 
+  // ── Filtrage des options définitivement indisponibles ───────────────────────
+
+  /**
+   * Affiche ou masque les options du catalogue refusées DÉFINITIVEMENT
+   * (sponsor incompatible, emplacements insuffisants, règle de pose...).
+   * `false` par défaut : la liste se concentre sur ce qui est réellement
+   * ajoutable — un bouton ("Afficher les indisponibles (N)") permet de les
+   * révéler grisées avec leur raison, comme avant l'introduction du filtre.
+   */
+  showUnavailable: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Armes masquées par le filtre — celles dont le refus est DÉFINITIF
+   * (`!disponible` ET pas seulement "orientation manquante", cf.
+   * `weaponNeedsOrientation`). Calculé indépendamment de `showUnavailable()`
+   * pour que le compteur du bouton reste correct même une fois la liste révélée.
+   */
+  hiddenWeaponsCount: Signal<number> = computed((): number => {
+    return this.availableWeapons().filter(
+      (w): boolean => !w.disponible && !this.weaponNeedsOrientation(w),
+    ).length;
+  });
+
+  /** Mirroir exact de `hiddenWeaponsCount` pour les améliorations. */
+  hiddenImprovementsCount: Signal<number> = computed((): number => {
+    return this.availableImprovements().filter(
+      (i): boolean => !i.disponible && !this.improvementNeedsOrientation(i),
+    ).length;
+  });
+
+  /** Total toutes catégories confondues — affiché dans le libellé du bouton. */
+  hiddenCount: Signal<number> = computed((): number => {
+    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount();
+  });
+
+  /**
+   * Armes effectivement affichées : toujours celles disponibles ou nécessitant
+   * juste une orientation (ce n'est pas un refus, cf. doc de
+   * `weaponNeedsOrientation`) ; les refus définitifs ne s'ajoutent que si
+   * `showUnavailable()` est activé.
+   */
+  visibleWeapons: Signal<AvailableWeaponDto[]> = computed((): AvailableWeaponDto[] => {
+    const all = this.availableWeapons();
+    if (this.showUnavailable()) return all;
+    return all.filter((w): boolean => w.disponible || this.weaponNeedsOrientation(w));
+  });
+
+  /** Mirroir exact de `visibleWeapons` pour les améliorations. */
+  visibleImprovements: Signal<AvailableImprovementDto[]> = computed((): AvailableImprovementDto[] => {
+    const all = this.availableImprovements();
+    if (this.showUnavailable()) return all;
+    return all.filter((i): boolean => i.disponible || this.improvementNeedsOrientation(i));
+  });
+
   // ── Gestion de la Tourelle — modale d'assignation ───────────────────────────
 
   /**
@@ -196,6 +250,27 @@ export class EquipmentManager {
 
     return weaponSlots + improvementSlots + tourelleWeaponSlots;
   });
+
+  // ── Coût (computed) — carte récapitulative (en-tête de `.em-current`) ───────
+
+  /** Prix de base du véhicule (catalogue) — `0` si `chosenVehicule` indisponible. */
+  coutBase: Signal<number> = computed((): number => this.chosenVehicule()?.prix ?? 0);
+
+  /**
+   * Somme des prix EFFECTIFS des armes et améliorations montées. Les getters
+   * backend (`Weapon.prix`, `VehicleImprovement.prix`) gèrent déjà le cas
+   * `estDefaut` (0) et la Tourelle assignée (3× le prix de l'arme) — aucune
+   * logique dupliquée ici, on additionne directement les `prix` du DTO.
+   */
+  coutEquipement: Signal<number> = computed((): number => {
+    const vehicle = this.vehicle();
+    const weaponsCost = vehicle.weapons.reduce((sum: number, w): number => sum + w.prix, 0);
+    const improvementsCost = vehicle.improvements.reduce((sum: number, imp): number => sum + imp.prix, 0);
+    return weaponsCost + improvementsCost;
+  });
+
+  /** Coût total du véhicule — prix de base + équipement monté. */
+  coutTotal: Signal<number> = computed((): number => this.coutBase() + this.coutEquipement());
 
   // ── Réaction aux changements de véhicule ────────────────────────────────────
 
@@ -421,6 +496,16 @@ export class EquipmentManager {
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
   resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
+  }
+
+  /**
+   * Résout l'emplacement consommé par une arme montée depuis le catalogue —
+   * mirroir de `resolveWeaponName`. Nécessaire pour le badge 🔧 des lignes
+   * "Armes" de `.em-current` : `Weapon` (DTO) ne porte pas `emplacement`,
+   * contrairement à `VehicleImprovement` qui l'expose déjà résolu.
+   */
+  resolveWeaponSlot(nomInterne: string): number {
+    return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.emplacement ?? 0;
   }
 
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──

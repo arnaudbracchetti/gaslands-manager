@@ -17,6 +17,7 @@ const availableOption: EquipmentOptionDto = {
   nomInterne: 'mitrailleuse',
   prix: 4,
   emplacement: 1,
+  description: 'Arme de base à Portée Moyenne lançant 1D6.',
   disponible: true,
 };
 
@@ -25,6 +26,7 @@ const unavailableOption: EquipmentOptionDto = {
   nomInterne: 'bfg',
   prix: 18,
   emplacement: 2,
+  description: 'Arme lourde dévastatrice à courte portée.',
   disponible: false,
   raison: 'Emplacements insuffisants : 6/5 requis avec "BFG"',
 };
@@ -38,6 +40,7 @@ const orientableOption: EquipmentOptionDto = {
   nomInterne: 'mitrailleuse',
   prix: 4,
   emplacement: 1,
+  description: 'Arme de base à Portée Moyenne lançant 1D6.',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
 };
@@ -70,6 +73,15 @@ describe('EquipmentOption', () => {
     expect(el.querySelector('.option__name')?.textContent).toContain('Mitrailleuse');
     expect(el.textContent).toContain('4');
     expect(el.textContent).toContain('1');
+  });
+
+  it('affiche la description issue du catalogue', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
   });
 
   it('affiche un bouton "Ajouter" quand l\'option est disponible', () => {
@@ -162,6 +174,31 @@ describe('EquipmentOption', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelectorAll('.orientation-btn')).toHaveLength(4);
+  });
+
+  it('masque la description pendant le choix d\'orientation, et la réaffiche après "Annuler"', () => {
+    setUp(availableOption, true);
+    const el = fixture.nativeElement as HTMLElement;
+
+    // État de repos : la description du catalogue est visible.
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
+
+    // Choix d'orientation en cours : le sélecteur prend la place de la description.
+    el.querySelector('.option__add')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.option__description')).toBeNull();
+    expect(el.querySelector('.option__orientations')).not.toBeNull();
+
+    // "Annuler" : retour à l'état de repos, la description réapparaît.
+    el.querySelector('.orientation-cancel')?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.option__description')?.textContent).toContain(
+      'Arme de base à Portée Moyenne lançant 1D6.',
+    );
   });
 
   it('émet chosen({ nomInterne, orientation }) au clic sur une direction', () => {

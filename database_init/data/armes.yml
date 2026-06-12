@@ -30,7 +30,7 @@ armes:
 
   - nom: "Pistolet"
     nom_interne: "pistolet"      # Identifiant technique : snake_case, sans accents
-    type: "base"
+    type: "équipage"
     prix: 0                      # Coût en Jerricans (0 = gratuit)
     emplacement: 0               # Slots occupés (0 = arme d'équipage ou gratuite)
     description: |

@@ -115,6 +115,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   prix: 4,
   emplacement: 1,
   type: 'base',
+  description: '',
   disponible: true,
 };
 
@@ -123,7 +124,45 @@ const mockAvailableImprovement: AvailableImprovementDto = {
   nomInterne: 'blindage',
   prix: 4,
   emplacement: 1,
+  description: '',
   disponible: true,
+};
+
+// ── Options pour les tests du filtre "Afficher les indisponibles" ─────────────
+
+// Refus DÉFINITIF (sponsor/emplacements/règle de pose) — masquée par défaut.
+const mockUnavailableWeapon: AvailableWeaponDto = {
+  nom: 'BFG',
+  nomInterne: 'bfg',
+  prix: 18,
+  emplacement: 2,
+  type: 'avancée',
+  description: '',
+  disponible: false,
+  raison: 'Emplacements insuffisants : 6/4 requis avec "BFG"',
+};
+
+// "Il manque une information" (orientation) — TOUJOURS visible, cf.
+// `weaponNeedsOrientation` (contrat textuel `raison`).
+const mockOrientableWeapon: AvailableWeaponDto = {
+  nom: 'Lance-Flammes',
+  nomInterne: 'lance_flammes',
+  prix: 6,
+  emplacement: 1,
+  type: 'avancée',
+  description: '',
+  disponible: false,
+  raison: 'Une orientation est requise pour monter "Lance-Flammes" sur un arc de tir',
+};
+
+const mockUnavailableImprovement: AvailableImprovementDto = {
+  nom: 'Nitro',
+  nomInterne: 'nitro',
+  prix: 6,
+  emplacement: 0,
+  description: '',
+  disponible: false,
+  raison: 'Cette amélioration est réservée à un autre sponsor',
 };
 
 describe('EquipmentManager', () => {
@@ -219,6 +258,91 @@ describe('EquipmentManager', () => {
     expect(component.emplacementsUtilises()).toBe(2);
   });
 
+  // ── Coût (computed) — carte récapitulative (en-tête de `.em-current`) ──────
+
+  it('coutBase reflète le prix catalogue du véhicule, coutEquipement est nul et coutTotal égal coutBase pour un véhicule nu', () => {
+    expect(component.coutBase()).toBe(16); // mockVehicule.prix
+    expect(component.coutEquipement()).toBe(0);
+    expect(component.coutTotal()).toBe(16);
+  });
+
+  it('coutEquipement additionne les prix EFFECTIFS des armes et améliorations montées, coutTotal = base + équipement', () => {
+    fixture.componentRef.setInput('vehicle', {
+      ...mockVehicle,
+      weapons: mockVehicleWithWeapon.weapons,
+      improvements: mockVehicleWithImprovement.improvements,
+    });
+    fixture.detectChanges();
+
+    // mitrailleuse (4) + blindage (4) = 8
+    expect(component.coutEquipement()).toBe(8);
+    expect(component.coutTotal()).toBe(24); // 16 (base) + 8 (équipement)
+  });
+
+  // ── Résolution de l'emplacement d'une arme montée (badge 🔧 des lignes "Armes") ──
+
+  it('résout l\'emplacement consommé par une arme depuis le catalogue, avec repli sur 0', () => {
+    expect(component.resolveWeaponSlot('mitrailleuse')).toBe(1);
+    expect(component.resolveWeaponSlot('inconnue')).toBe(0);
+  });
+
+  // ── En-tête récapitulatif `.em-current__header` (nom, emplacements, coût) ──
+
+  it('affiche le nom du véhicule, les emplacements et le détail du coût (base / équipement / total) dans l\'en-tête récap', () => {
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.em-current__vehicle-name')?.textContent?.trim()).toBe('Camion');
+    expect(el.querySelector('.em-current__slots')?.textContent).toContain('0 / 4');
+
+    const costRows = el.querySelectorAll('.em-current__cost-row');
+    expect(costRows[0].textContent).toContain('Base');
+    expect(costRows[0].textContent).toContain('16');
+    expect(costRows[1].textContent).toContain('Équipement');
+    expect(costRows[1].textContent).toContain('0');
+    expect(costRows[2].textContent).toContain('Total');
+    expect(costRows[2].textContent).toContain('16');
+    expect(costRows[2].classList).toContain('em-current__cost-row--total');
+  });
+
+  it('met à jour le coût total de l\'en-tête récap quand de l\'équipement est monté', () => {
+    fixture.componentRef.setInput('vehicle', {
+      ...mockVehicle,
+      weapons: mockVehicleWithWeapon.weapons,
+      improvements: mockVehicleWithImprovement.improvements,
+    });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const costRows = el.querySelectorAll('.em-current__cost-row');
+    expect(costRows[1].textContent).toContain('8'); // + Équipement
+    expect(costRows[2].textContent).toContain('24'); // = Total
+  });
+
+  // ── Sections "Armes (N)" / "Améliorations (N)" et badges prix/emplacement ──
+
+  it('affiche les titres de section avec le nombre d\'éléments et les badges prix/emplacement par ligne', () => {
+    fixture.componentRef.setInput('vehicle', {
+      ...mockVehicle,
+      weapons: mockVehicleWithWeapon.weapons,
+      improvements: mockVehicleWithImprovement.improvements,
+    });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const groupTitles = el.querySelectorAll('.em-current__group-title');
+
+    expect(groupTitles[0].textContent).toContain('Armes (1)');
+    expect(groupTitles[1].textContent).toContain('Améliorations (1)');
+
+    const badges = el.querySelectorAll('.em-current__badge');
+    // Arme montée (mitrailleuse) : prix 4, emplacement 1.
+    expect(badges[0].textContent).toContain('4');
+    expect(badges[1].textContent).toContain('1');
+    // Amélioration montée (blindage) : prix 4, emplacement 1.
+    expect(badges[2].textContent).toContain('4');
+    expect(badges[3].textContent).toContain('1');
+  });
+
   // ── Ajout d'arme ────────────────────────────────────────────────────────────
 
   it('ajoute une arme et notifie le parent via vehicleChanged avec l\'entité mise à jour', () => {
@@ -281,9 +405,10 @@ describe('EquipmentManager', () => {
 
   // ── Section "Équipement actuel" — affichage et retrait (TOUJOURS proposé) ──
 
-  it('affiche un message dédié quand le véhicule n\'a encore aucun équipement', () => {
+  it('affiche un message dédié dans chaque section quand le véhicule n\'a encore aucun équipement', () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.em-current')?.textContent).toContain('aucun équipement');
+    expect(el.querySelector('.em-current')?.textContent).toContain('Aucune arme montée');
+    expect(el.querySelector('.em-current')?.textContent).toContain('Aucune amélioration installée');
     expect(el.querySelectorAll('.em-current__item')).toHaveLength(0);
   });
 
@@ -412,5 +537,57 @@ describe('EquipmentManager', () => {
     expect(component.resolveWeaponName('inconnue')).toBe('inconnue');
     expect(component.resolveImprovementName('blindage')).toBe('Blindage');
     expect(component.resolveImprovementName('inconnue')).toBe('inconnue');
+  });
+
+  // ── Filtre "Afficher les indisponibles" ─────────────────────────────────────
+  // `showUnavailable()` démarre à `false` : seules les options disponibles OU
+  // nécessitant juste une orientation sont affichées. Les refus DÉFINITIFS
+  // (sponsor/emplacements/règle de pose) sont masqués jusqu'au clic sur le bouton.
+
+  describe('filtre des options indisponibles', () => {
+    beforeEach(() => {
+      mockVehicleService.getAvailableWeapons.mockReturnValue(of([mockAvailableWeapon, mockUnavailableWeapon, mockOrientableWeapon]));
+      mockVehicleService.getAvailableImprovements.mockReturnValue(of([mockAvailableImprovement, mockUnavailableImprovement]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+    });
+
+    it('masque par défaut les refus définitifs mais garde les options orientables visibles', () => {
+      expect(component.showUnavailable()).toBe(false);
+
+      // Disponible + orientable visibles, refus définitif masqué.
+      expect(component.visibleWeapons()).toEqual([mockAvailableWeapon, mockOrientableWeapon]);
+      expect(component.visibleImprovements()).toEqual([mockAvailableImprovement]);
+    });
+
+    it('compte les options masquées indépendamment de showUnavailable()', () => {
+      expect(component.hiddenWeaponsCount()).toBe(1); // BFG
+      expect(component.hiddenImprovementsCount()).toBe(1); // Nitro
+      expect(component.hiddenCount()).toBe(2);
+    });
+
+    it('le bouton de filtre affiche le nombre d\'options masquées et les rend visibles au clic', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const toggle = el.querySelector('.em-toggle') as HTMLButtonElement;
+
+      expect(toggle.textContent).toContain('Afficher les indisponibles (2)');
+      expect(el.textContent).not.toContain('BFG');
+      expect(el.textContent).not.toContain('Nitro');
+      // L'option orientable, elle, reste visible même filtre actif.
+      expect(el.textContent).toContain('Lance-Flammes');
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(component.showUnavailable()).toBe(true);
+      expect(toggle.textContent).toContain('Masquer les indisponibles');
+      expect(el.textContent).toContain('BFG');
+      expect(el.textContent).toContain('Nitro');
+    });
   });
 });
