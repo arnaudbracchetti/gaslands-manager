@@ -12,17 +12,26 @@
 }
 
 // ── Pile d'éléments sticky ────────────────────────────────────────────────
-// .vcp-header, .vc-intro (vehicle-configurator.scss) et .em-intro +
-// .em-current (equipment-manager.scss) restent tous visibles pendant le
-// défilement, empilés sous la navbar globale (.navbar, sticky top:0,
-// height:64px — cf. styles.scss). Chaque élément déclare son propre `top` =
-// somme des hauteurs (+ marges/gaps) des éléments sticky qui le précèdent,
-// et un `background` opaque pour masquer le contenu qui défile dessous.
+// .vcp-header, .vc-intro (vehicle-configurator.scss) et .em-current
+// (equipment-manager.scss — carte récapitulative du véhicule) restent tous
+// visibles pendant le défilement, empilés sous la navbar globale (.navbar,
+// sticky top:0, height:64px — cf. styles.scss). Chaque élément déclare son
+// propre `top` = somme des hauteurs (+ marges/gaps) des éléments sticky qui
+// le précèdent, et un `background` opaque pour masquer le contenu qui défile
+// dessous.
 //
-//   navbar (64px) → .vcp-header (top:64,  hauteur ~80px + margin 12px)
-//                 → .vc-intro   (top:156, hauteur ~40px)
-//                 → .em-intro   (top:212, hauteur ~40px + gap 16px)
-//                 → .em-current (top:268, cf. equipment-manager.scss)
+//   navbar (64px) → .vcp-header (top:64, hauteur ~80px + margin 12px)
+//                 → .vc-intro   (top:156, hauteur ~40px) — MODE CRÉATION
+//                                "Véhicules autorisés par X :"
+//                 → .em-current (top:156, cf. equipment-manager.scss) — MODE ÉQUIPEMENT
+//                                carte récap (nom, emplacements, coût) + listes
+//                                Armes/Améliorations
+//
+// `.vc-intro` et `.em-current` partagent le MÊME `top:156px` car ils sont
+// MUTUELLEMENT EXCLUSIFS : le premier n'existe que tant qu'aucun véhicule
+// n'est choisi/chargé (`vehicle() === null`), le second seulement une fois
+// `vehicle()` non-nul (cf. vehicle-configurator.html) — jamais les deux en
+// même temps dans le DOM.
 //
 // ⚠ Si l'un de ces éléments change de taille (police, padding…), recalculer
 // les `top` suivants en conséquence — valeurs à ajuster visuellement.

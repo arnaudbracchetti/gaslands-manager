@@ -28,11 +28,6 @@
            composant qui suit ignore totalement laquelle de ces deux origines
            a produit cette entité — c'est précisément le but de la fusion. -->
 
-      <p class="vc-intro">
-        Équipement de
-        <strong>{{ chosenVehicule()?.nom ?? v.nomInterne }}</strong>
-      </p>
-
       <app-equipment-manager
         [vehicle]="v"
         [sponsorCatalog]="catalog"

@@ -251,6 +251,27 @@ export class EquipmentManager {
     return weaponSlots + improvementSlots + tourelleWeaponSlots;
   });
 
+  // ── Coût (computed) — carte récapitulative (en-tête de `.em-current`) ───────
+
+  /** Prix de base du véhicule (catalogue) — `0` si `chosenVehicule` indisponible. */
+  coutBase: Signal<number> = computed((): number => this.chosenVehicule()?.prix ?? 0);
+
+  /**
+   * Somme des prix EFFECTIFS des armes et améliorations montées. Les getters
+   * backend (`Weapon.prix`, `VehicleImprovement.prix`) gèrent déjà le cas
+   * `estDefaut` (0) et la Tourelle assignée (3× le prix de l'arme) — aucune
+   * logique dupliquée ici, on additionne directement les `prix` du DTO.
+   */
+  coutEquipement: Signal<number> = computed((): number => {
+    const vehicle = this.vehicle();
+    const weaponsCost = vehicle.weapons.reduce((sum: number, w): number => sum + w.prix, 0);
+    const improvementsCost = vehicle.improvements.reduce((sum: number, imp): number => sum + imp.prix, 0);
+    return weaponsCost + improvementsCost;
+  });
+
+  /** Coût total du véhicule — prix de base + équipement monté. */
+  coutTotal: Signal<number> = computed((): number => this.coutBase() + this.coutEquipement());
+
   // ── Réaction aux changements de véhicule ────────────────────────────────────
 
   /**
@@ -475,6 +496,16 @@ export class EquipmentManager {
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
   resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
+  }
+
+  /**
+   * Résout l'emplacement consommé par une arme montée depuis le catalogue —
+   * mirroir de `resolveWeaponName`. Nécessaire pour le badge 🔧 des lignes
+   * "Armes" de `.em-current` : `Weapon` (DTO) ne porte pas `emplacement`,
+   * contrairement à `VehicleImprovement` qui l'expose déjà résolu.
+   */
+  resolveWeaponSlot(nomInterne: string): number {
+    return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.emplacement ?? 0;
   }
 
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──

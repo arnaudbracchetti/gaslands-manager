@@ -123,20 +123,6 @@ export class VehicleConfigurator implements OnInit {
   // ── Affichage du véhicule choisi/géré (computed, partagé par les deux modes) ─
 
   /**
-   * Le véhicule du CATALOGUE correspondant — résolu via `nomInterne` pour
-   * l'affichage de l'intro (nom, poids...). L'entité brute `vehicle` ne porte
-   * que l'identifiant catalogue (cf. `Vehicle`, doc) : c'est le catalogue déjà
-   * chargé qui connaît le nom affiché.
-   */
-  chosenVehicule: Signal<Vehicule | null> = computed((): Vehicule | null => {
-    const vehicle = this.vehicle();
-    const catalog = this.sponsorCatalog();
-    if (!vehicle || !catalog) return null;
-
-    return catalog.vehicules.find((v): boolean => v.nom_interne === vehicle.nomInterne) ?? null;
-  });
-
-  /**
    * Libellé du bouton de fin — "Terminer" en création (fin normale du flux de
    * construction), "Fermer" en édition (on referme simplement la modale de
    * gestion). Seule différence visuelle restante entre les deux modes.
