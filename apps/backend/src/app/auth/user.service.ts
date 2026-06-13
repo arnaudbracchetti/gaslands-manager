@@ -14,8 +14,10 @@
 
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -91,6 +93,56 @@ export class UserService {
       }
       throw new InternalServerErrorException('Erreur lors de la création du compte');
     }
+  }
+
+  /**
+   * Liste tous les utilisateurs (pour la page d'administration).
+   * Retourne les objets SANS le champ password.
+   */
+  async findAll(): Promise<SafeUser[]> {
+    const users = await this.userRepo.find();
+    return users.map((user) => this.sanitize(user));
+  }
+
+  /**
+   * Supprime un compte utilisateur (cascade sur ses équipes/véhicules via les
+   * relations TypeORM `onDelete: 'CASCADE'`).
+   *
+   * `requesterId` : id de l'admin qui effectue la demande. On interdit
+   * l'auto-suppression — un admin qui se supprime se retrouverait sans accès
+   * jusqu'au prochain redémarrage du backend (AdminSeedService recrée le compte).
+   */
+  async remove(id: number, requesterId: number): Promise<void> {
+    if (id === requesterId) {
+      throw new ForbiddenException('Vous ne pouvez pas supprimer votre propre compte');
+    }
+
+    const result = await this.userRepo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+  }
+
+  /**
+   * Active ou désactive un compte. Un compte désactivé ne peut plus se
+   * connecter (cf. AuthService.login()) mais conserve toutes ses données.
+   *
+   * Même garde-fou que `remove` : un admin ne peut pas se désactiver
+   * lui-même (auto-lockout avant le prochain redémarrage).
+   */
+  async setActive(id: number, requesterId: number, isActive: boolean): Promise<SafeUser> {
+    if (id === requesterId) {
+      throw new ForbiddenException('Vous ne pouvez pas modifier le statut de votre propre compte');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    user.isActive = isActive;
+    const saved = await this.userRepo.save(user);
+    return this.sanitize(saved);
   }
 
   /**

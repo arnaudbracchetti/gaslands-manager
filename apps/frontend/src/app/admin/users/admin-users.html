@@ -1,0 +1,65 @@
+<!-- Écran d'administration "Gestion des utilisateurs" -->
+<div class="admin-users-page">
+
+  <div class="admin-users-header">
+    <h1>🛠️ Utilisateurs</h1>
+  </div>
+
+  <!-- Message d'erreur API -->
+  @if (error()) {
+    <div class="admin-users-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="admin-users-loading">
+      <p>Chargement des utilisateurs...</p>
+    </div>
+  } @else if (users().length === 0) {
+    <div class="admin-users-empty">
+      <p>Aucun utilisateur enregistré.</p>
+    </div>
+  } @else {
+    <table class="admin-users-table">
+      <thead>
+        <tr>
+          <th>Prénom</th>
+          <th>Nom</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Créé le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users(); track user.id) {
+          <tr>
+            <td>{{ user.firstName }}</td>
+            <td>{{ user.lastName }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+              @if (user.isActive) {
+                <span class="badge badge--active">Actif</span>
+              } @else {
+                <span class="badge badge--inactive">Désactivé</span>
+              }
+            </td>
+            <td>{{ user.createdAt | date:'dd/MM/yyyy' }}</td>
+            <td class="admin-users-actions">
+              @if (user.id !== authService.currentUser()?.id) {
+                <button class="btn-toggle" (click)="toggleActive(user)">
+                  {{ user.isActive ? 'Désactiver' : 'Réactiver' }}
+                </button>
+                <button class="btn-delete" (click)="deleteUser(user)">
+                  Supprimer
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+</div>

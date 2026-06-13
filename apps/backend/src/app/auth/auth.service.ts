@@ -77,7 +77,15 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    // 4. Tout est bon : signer le JWT et retourner user sans password
+    // 4. Compte désactivé par un admin (UsersController) : on bloque ici,
+    // après la vérification du mot de passe — un message distinct est
+    // acceptable (le mot de passe a déjà été validé, pas de risque
+    // d'énumération d'emails supplémentaire).
+    if (!user.isActive) {
+      throw new UnauthorizedException('Ce compte a été désactivé');
+    }
+
+    // 5. Tout est bon : signer le JWT et retourner user sans password
     const { password, ...safeUser } = user;
     const access_token = this.signToken(user.id, user.email, user.role);
 

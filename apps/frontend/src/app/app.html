@@ -9,6 +9,9 @@
     <li><a routerLink="/vehicles" routerLinkActive="active">Véhicules</a></li>
     <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
     <li><a routerLink="/rules" routerLinkActive="active">Règles</a></li>
+    @if (authService.currentUser()?.role === 'admin') {
+      <li><a routerLink="/admin/users" routerLinkActive="active">Utilisateurs</a></li>
+    }
   </ul>
 
   <!--

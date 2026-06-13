@@ -21,6 +21,8 @@ const mockUser = {
   firstName: 'Jean',
   lastName: 'Dupont',
   email: 'jean@test.com',
+  role: 'user' as const,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 };

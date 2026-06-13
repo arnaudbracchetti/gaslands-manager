@@ -23,8 +23,10 @@ import { AdminSeedService } from './admin-seed.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { RolesGuard } from './roles.guard';
 import { User } from './user.entity';
 import { UserService } from './user.service';
+import { UsersController } from './users.controller';
 
 @Module({
   imports: [
@@ -48,12 +50,13 @@ import { UserService } from './user.service';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   providers: [
     AuthService,      // logique métier auth (register, login)
     UserService,      // accès base de données utilisateurs
     JwtStrategy,      // stratégie Passport pour valider les JWT entrants
     AdminSeedService, // crée/resynchronise le compte admin au démarrage (OnModuleInit)
+    RolesGuard,       // garde de rôle pour UsersController (@Roles(UserRole.ADMIN))
   ],
   // UserService est exporté pour être utilisable dans d'autres modules
   // (ex: futur TeamModule pour vérifier le propriétaire d'une équipe)

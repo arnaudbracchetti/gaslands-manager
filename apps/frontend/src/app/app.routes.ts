@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
+import { adminGuard } from './auth/admin.guard';
 
 // Chaque route associe un chemin URL à un composant Angular
 // loadComponent = lazy loading : le composant n'est chargé que quand l'utilisateur visite la page
@@ -52,6 +53,13 @@ export const appRoutes: Route[] = [
     path: 'rules',
     loadComponent: () =>
       import('./rules/rules').then((m) => m.Rules),
+  },
+  // ─── Administration (réservé aux admins) ───────────────────────────────────
+  {
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./admin/users/admin-users').then((m) => m.AdminUsers),
+    canActivate: [authGuard, adminGuard],
   },
   // ─── Routes d'authentification ────────────────────────────────────────────
   {

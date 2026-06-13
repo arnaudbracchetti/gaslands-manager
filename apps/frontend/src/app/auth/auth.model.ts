@@ -18,6 +18,8 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
   createdAt: string; // TypeORM sérialise les dates en string ISO 8601
   updatedAt: string;
 }

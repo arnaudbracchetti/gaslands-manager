@@ -10,7 +10,7 @@
  * C'est la façon standard de mocker des modules tiers dans Vitest.
  */
 
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 // vi.mock() doit être appelé avant les imports du module à mocker —
@@ -32,6 +32,7 @@ const mockUser: User = {
   email: 'jean@test.com',
   password: '$2b$10$hashedpassword',
   role: UserRole.USER,
+  isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -41,8 +42,10 @@ describe('UserService', () => {
 
   const mockRepo = {
     findOne: vi.fn(),
+    find: vi.fn(),
     create: vi.fn(),
     save: vi.fn(),
+    delete: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -125,6 +128,69 @@ describe('UserService', () => {
       mockRepo.save.mockRejectedValue({ code: '23505' });
 
       await expect(service.create(dto)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ── findAll ────────────────────────────────────────────────────────────────
+
+  describe('findAll()', () => {
+    it('retourne tous les utilisateurs SANS le champ password', async () => {
+      mockRepo.find.mockResolvedValue([mockUser]);
+
+      const result = await service.findAll();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).not.toHaveProperty('password');
+      expect(result[0]).toMatchObject({ id: 1, email: 'jean@test.com' });
+    });
+  });
+
+  // ── remove ─────────────────────────────────────────────────────────────────
+
+  describe('remove()', () => {
+    it('lève ForbiddenException si l\'admin tente de se supprimer lui-même', async () => {
+      await expect(service.remove(1, 1)).rejects.toThrow(ForbiddenException);
+      expect(mockRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'existe pas', async () => {
+      mockRepo.delete.mockResolvedValue({ affected: 0 });
+
+      await expect(service.remove(999, 1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('supprime l\'utilisateur si tout est valide', async () => {
+      mockRepo.delete.mockResolvedValue({ affected: 1 });
+
+      await service.remove(2, 1);
+
+      expect(mockRepo.delete).toHaveBeenCalledWith(2);
+    });
+  });
+
+  // ── setActive ──────────────────────────────────────────────────────────────
+
+  describe('setActive()', () => {
+    it('lève ForbiddenException si l\'admin tente de modifier son propre statut', async () => {
+      await expect(service.setActive(1, 1, false)).rejects.toThrow(ForbiddenException);
+      expect(mockRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'existe pas', async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.setActive(999, 1, false)).rejects.toThrow(NotFoundException);
+    });
+
+    it('désactive le compte et retourne l\'utilisateur SANS le champ password', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser, id: 2 });
+      mockRepo.save.mockResolvedValue({ ...mockUser, id: 2, isActive: false });
+
+      const result = await service.setActive(2, 1, false);
+
+      expect(mockRepo.save).toHaveBeenCalledWith(expect.objectContaining({ id: 2, isActive: false }));
+      expect(result).not.toHaveProperty('password');
+      expect(result.isActive).toBe(false);
     });
   });
 });

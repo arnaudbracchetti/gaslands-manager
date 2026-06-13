@@ -26,6 +26,7 @@ const mockUserWithPassword = {
   email: 'jean@test.com',
   password: '$2b$10$hashedpassword',
   role: UserRole.USER,
+  isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -130,6 +131,14 @@ describe('AuthService', () => {
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
       await expect(service.login(dto)).rejects.toThrow('Identifiants invalides');
+    });
+
+    it('lève UnauthorizedException si le compte est désactivé', async () => {
+      mockUserService.findByEmail.mockResolvedValue({ ...mockUserWithPassword, isActive: false });
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+      await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(dto)).rejects.toThrow('Ce compte a été désactivé');
     });
   });
 });

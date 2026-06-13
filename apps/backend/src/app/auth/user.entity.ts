@@ -53,6 +53,11 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
+  // Un compte désactivé (isActive: false) conserve toutes ses données (équipes,
+  // véhicules…) mais ne peut plus se connecter — cf. AuthService.login().
+  @Column({ default: true })
+  isActive: boolean;
+
   // TypeORM remplit automatiquement ces deux champs
   @CreateDateColumn()
   createdAt: Date;
