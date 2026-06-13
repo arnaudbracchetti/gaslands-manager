@@ -85,11 +85,28 @@ ok "pgAdmin disponible sur http://localhost:5050"
 # prochain `nx serve`.
 if [[ "$RESET" == true ]]; then
     step "Remise a zero du cache Nx (--reset detecte)..."
-    npx nx reset
+    # bash -lic : shell de login interactif -- source ~/.bashrc (nvm), pour
+    # que `npx`/`nx` resolvent vers le node Linux et non le binaire Windows
+    # (/mnt/c/Program Files/nodejs/npx), utilise par defaut dans un shell non interactif.
+    bash -lic "cd '$PROJECT_ROOT' && npx nx reset"
     ok "Cache Nx vide -- les serveurs recompileront depuis les sources"
 fi
 
-# ── 4. Lancement du backend et du frontend ────────────────────
+# ── 4. Arret des anciens serveurs (backend/frontend) ──────────
+# Si dev.sh a deja ete lance precedemment, les processus `nx serve`
+# tournent peut-etre encore sur les ports 3000/4200 -- on les tue
+# avant de relancer, sinon le nouveau `nx serve` echoue (EADDRINUSE)
+# ou cohabite avec l'ancien (versions desynchronisees).
+step "Arret des anciens serveurs (ports 3000/4200)..."
+for PORT in 3000 4200; do
+    PIDS=$(lsof -ti tcp:"$PORT" 2>/dev/null || true)
+    if [[ -n "$PIDS" ]]; then
+        kill $PIDS 2>/dev/null || true
+        ok "Processus sur le port $PORT arrete (PID(s) : $PIDS)"
+    fi
+done
+
+# ── 5. Lancement du backend et du frontend ────────────────────
 # Les deux serveurs sont lances en arriere-plan, avec logs dans /tmp.
 BACKEND_CMD="cd '$PROJECT_ROOT' && npx nx serve backend"
 FRONTEND_CMD="cd '$PROJECT_ROOT' && npx nx serve frontend"
