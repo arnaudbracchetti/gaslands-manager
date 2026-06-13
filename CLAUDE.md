@@ -75,6 +75,14 @@ npx nx sync                      # si Nx se plaint de "workspace out of sync"
 
 ---
 
+## Règles Git
+
+- **Ne jamais commiter sans demande explicite** de l'utilisateur.
+- **Ne jamais créer de branche sans demande explicite** de l'utilisateur.
+- Si plusieurs types de modifications distincts sont présents dans les fichiers modifiés, **proposer de les répartir en plusieurs commits**.
+
+---
+
 ## Conventions non-évidentes
 
 **Angular zoneless** : zone.js absent — toute mise à jour de template doit passer par un Signal (`signal()`, `computed()`). Une mutation directe ne déclenchera pas de re-rendu.
