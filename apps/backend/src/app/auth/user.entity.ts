@@ -19,6 +19,14 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+// Rôle de l'utilisateur. 'admin' est réservé au compte unique créé/synchronisé
+// par AdminSeedService depuis ADMIN_EMAIL/ADMIN_PASSWORD (.env) — jamais
+// attribuable via /api/auth/register (cf. RegisterDto, qui n'expose pas ce champ).
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
 @Entity('users')
 export class User {
   // Clé primaire auto-incrémentée (SERIAL en PostgreSQL)
@@ -41,6 +49,9 @@ export class User {
   // Ce champ contient exclusivement le hash bcrypt (ex: "$2b$10$...")
   @Column()
   password: string;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
 
   // TypeORM remplit automatiquement ces deux champs
   @CreateDateColumn()

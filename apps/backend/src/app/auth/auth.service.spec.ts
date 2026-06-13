@@ -16,6 +16,7 @@ vi.mock('bcrypt');
 
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
+import { UserRole } from './user.entity';
 import { UserService } from './user.service';
 
 const mockUserWithPassword = {
@@ -24,6 +25,7 @@ const mockUserWithPassword = {
   lastName: 'Dupont',
   email: 'jean@test.com',
   password: '$2b$10$hashedpassword',
+  role: UserRole.USER,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -33,6 +35,7 @@ const mockSafeUser = {
   firstName: 'Jean',
   lastName: 'Dupont',
   email: 'jean@test.com',
+  role: UserRole.USER,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -76,7 +79,7 @@ describe('AuthService', () => {
       const result = await service.register(dto);
 
       expect(mockUserService.create).toHaveBeenCalledWith(dto);
-      expect(mockJwtService.sign).toHaveBeenCalledWith({ sub: 1, email: 'jean@test.com' });
+      expect(mockJwtService.sign).toHaveBeenCalledWith({ sub: 1, email: 'jean@test.com', role: UserRole.USER });
       expect(result).toEqual({ access_token: 'mocked.jwt.token', user: mockSafeUser });
     });
 

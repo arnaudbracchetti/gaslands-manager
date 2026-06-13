@@ -111,7 +111,7 @@ Tout nouveau module doit être importé dans `app.module.ts` et ses entités Typ
 
 1. Client : `POST /api/auth/login` avec `{ email, password }`
 2. `AuthService.login()` vérifie avec `bcrypt.compare()`
-3. Si valide : signe un token JWT (`sub: userId, email`)
+3. Si valide : signe un token JWT (`sub: userId, email, role`)
 4. Client stocke le token dans `localStorage`
 5. `authInterceptor` l'injecte dans le header de chaque requête
 6. `JwtStrategy` (Passport) valide le token et charge l'utilisateur
@@ -158,6 +158,29 @@ get prix(): number { return (this.armeCatalogue?.prix as number) ?? 0; }
 Les contrôleurs appellent `VehicleService.toVehicleDto(vehicle)` qui lit les getters
 explicitement et retourne un objet plain sérialisable — **jamais retourner l'entité brute
 dans une réponse HTTP**.
+
+### 3.5 Compte administrateur — `AdminSeedService`
+
+`AdminSeedService` (`apps/backend/src/app/auth/admin-seed.service.ts`) garantit qu'un
+unique utilisateur `role: UserRole.ADMIN` existe en base, via `OnModuleInit` — **second
+exemple** de ce pattern après `CatalogService` (§3.3).
+
+Logique exécutée à chaque démarrage :
+1. Recherche d'un utilisateur avec `role: 'admin'` (jamais par email — garantit l'unicité
+   même si `ADMIN_EMAIL` change dans `.env`).
+2. **Absent** → création avec `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`.env`, mot de passe haché
+   bcrypt coût 10, même que `UserService.create()`).
+3. **Présent** → si `bcrypt.compare(ADMIN_PASSWORD, hash_actuel)` échoue, le hash est
+   régénéré et sauvegardé (resynchronisation depuis `.env`). Si `ADMIN_EMAIL` ne
+   correspond pas à l'email de l'admin existant, un simple warning est loggé — pas de
+   second compte créé, correction manuelle attendue.
+
+`ADMIN_PASSWORD` est lu via `config.getOrThrow()` (pas de valeur par défaut pour un
+secret, même logique que `DATABASE_PASSWORD` dans `app.module.ts`) : absent de `.env`
+→ crash explicite au démarrage. `ADMIN_EMAIL` a un défaut (`admin@gaslands.local`).
+
+`role` (enum `UserRole`, `user.entity.ts`) est exclu de `RegisterDto` : `/api/auth/register`
+ne peut jamais produire un admin, la colonne prend sa valeur `default: UserRole.USER`.
 
 ### 3.6 `TeamWithCount` — type enrichi
 

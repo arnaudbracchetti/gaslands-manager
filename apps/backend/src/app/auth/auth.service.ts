@@ -16,6 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UserRole } from './user.entity';
 import { SafeUser, UserService } from './user.service';
 
 // Forme de la réponse renvoyée au client après login ou register
@@ -46,7 +47,7 @@ export class AuthService {
     }
 
     const user = await this.userService.create(dto);
-    const access_token = this.signToken(user.id, user.email);
+    const access_token = this.signToken(user.id, user.email, user.role);
 
     return { access_token, user };
   }
@@ -78,22 +79,26 @@ export class AuthService {
 
     // 4. Tout est bon : signer le JWT et retourner user sans password
     const { password, ...safeUser } = user;
-    const access_token = this.signToken(user.id, user.email);
+    const access_token = this.signToken(user.id, user.email, user.role);
 
     return { access_token, user: safeUser };
   }
 
   /**
-   * Crée et signe un JWT contenant l'id et l'email de l'utilisateur.
+   * Crée et signe un JWT contenant l'id, l'email et le rôle de l'utilisateur.
    *
    * Le payload est encodé (base64) mais PAS chiffré → ne pas y mettre
    * d'informations sensibles (mot de passe, données bancaires, etc.).
    * La sécurité repose sur la SIGNATURE qui garantit l'intégrité.
+   *
+   * `role` est inclus pour permettre à de futurs guards (ex: RolesGuard)
+   * de vérifier les droits sans requête base de données supplémentaire.
    */
-  private signToken(userId: number, email: string): string {
+  private signToken(userId: number, email: string, role: UserRole): string {
     return this.jwtService.sign({
       sub: userId,  // "sub" = subject, convention JWT RFC 7519
       email,
+      role,
     });
   }
 }

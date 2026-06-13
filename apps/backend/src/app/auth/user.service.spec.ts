@@ -22,7 +22,7 @@ vi.mock('bcrypt');
 
 // L'import se fait APRÈS vi.mock() — les fonctions importées sont déjà des mocks
 import * as bcrypt from 'bcrypt';
-import { User } from './user.entity';
+import { User, UserRole } from './user.entity';
 import { UserService } from './user.service';
 
 const mockUser: User = {
@@ -31,6 +31,7 @@ const mockUser: User = {
   lastName: 'Dupont',
   email: 'jean@test.com',
   password: '$2b$10$hashedpassword',
+  role: UserRole.USER,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

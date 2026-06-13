@@ -19,12 +19,14 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { UserRole } from './user.entity';
 import { type SafeUser, UserService } from './user.service';
 
-// Le payload est ce qu'on a mis dans jwtService.sign({ sub: userId, email })
+// Le payload est ce qu'on a mis dans jwtService.sign({ sub: userId, email, role })
 interface JwtPayload {
   sub: number;  // "sub" = subject = identifiant de l'utilisateur (convention JWT)
   email: string;
+  role: UserRole;
 }
 
 @Injectable()

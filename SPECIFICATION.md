@@ -18,9 +18,10 @@
 | Rôle | Accès |
 |------|-------|
 | **Visiteur** (non connecté) | Lecture des pages Règles, Véhicules, Armes. Accès à la page d'accueil. |
-| **Utilisateur connecté** | Toutes les pages visiteur + gestion complète de ses propres équipes, véhicules et armes. |
+| **Utilisateur connecté** (`role: "user"`) | Toutes les pages visiteur + gestion complète de ses propres équipes, véhicules et armes. |
+| **Administrateur** (`role: "admin"`) | Toutes les pages utilisateur connecté. Compte unique, créé/synchronisé automatiquement au démarrage du serveur (cf. §3.1 "Compte administrateur"). Aucune fonctionnalité réservée à ce rôle n'est implémentée pour l'instant — `role` est posé en fondation pour un futur `RolesGuard`. |
 
-Il n'y a pas de rôle administrateur pour l'instant. Chaque utilisateur ne peut voir et modifier que ses propres données.
+Chaque utilisateur ne peut voir et modifier que ses propres données.
 
 ---
 
@@ -34,6 +35,20 @@ Il n'y a pas de rôle administrateur pour l'instant. Chaque utilisateur ne peut 
 - **Déconnexion** : suppression du token + redirection vers `/login`
 - **Protection des routes** : `authGuard` Angular bloque l'accès à `/teams` si non connecté
 - **Injection automatique** : `authInterceptor` ajoute l'en-tête `Authorization: Bearer <token>` à toutes les requêtes HTTP
+
+**Compte administrateur** : au démarrage du backend, `AdminSeedService` (`OnModuleInit`,
+même pattern que `CatalogService`, cf. ARCHITECTURE.md §3.3) garantit l'existence d'un
+unique utilisateur `role: "admin"` :
+- S'il n'existe aucun utilisateur `role: "admin"` en base, il est créé avec
+  `ADMIN_EMAIL`/`ADMIN_PASSWORD` (variables `.env`, mot de passe haché via bcrypt).
+- S'il existe déjà, son mot de passe est **resynchronisé** avec `ADMIN_PASSWORD` si
+  celui-ci a changé dans `.env` depuis le dernier démarrage (comparaison bcrypt puis
+  re-hash si différent) — un changement dans `.env` ne prend effet qu'au redémarrage
+  du backend.
+- **Unicité garantie** : la recherche se fait sur `role: "admin"` (jamais sur l'email) —
+  un seul compte admin peut exister, quel que soit le contenu de `.env`.
+- `/api/auth/register` ne peut jamais créer de compte admin : le champ `role` n'est pas
+  exposé dans `RegisterDto` et vaut `"user"` par défaut au niveau de la base.
 
 ### 3.2 Contenu Markdown
 
@@ -141,6 +156,7 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 | `lastName` | string | obligatoire |
 | `email` | string | obligatoire, unique |
 | `password` | string | hash bcrypt (jamais retourné en réponse) |
+| `role` | `'user' \| 'admin'` | défaut : `'user'`. Non modifiable via `/api/auth/register` (champ absent de `RegisterDto`). Le compte unique `role: 'admin'` est créé/synchronisé au démarrage par `AdminSeedService` (cf. §3.1). |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
 

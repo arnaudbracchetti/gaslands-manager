@@ -19,6 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminSeedService } from './admin-seed.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
@@ -49,9 +50,10 @@ import { UserService } from './user.service';
   ],
   controllers: [AuthController],
   providers: [
-    AuthService,    // logique métier auth (register, login)
-    UserService,    // accès base de données utilisateurs
-    JwtStrategy,    // stratégie Passport pour valider les JWT entrants
+    AuthService,      // logique métier auth (register, login)
+    UserService,      // accès base de données utilisateurs
+    JwtStrategy,      // stratégie Passport pour valider les JWT entrants
+    AdminSeedService, // crée/resynchronise le compte admin au démarrage (OnModuleInit)
   ],
   // UserService est exporté pour être utilisable dans d'autres modules
   // (ex: futur TeamModule pour vérifier le propriétaire d'une équipe)
