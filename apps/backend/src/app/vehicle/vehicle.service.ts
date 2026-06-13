@@ -79,6 +79,32 @@ export class VehicleService {
   }
 
   /**
+   * Budget restant de l'équipe (jerricans), AVANT l'ajout d'un nouvel équipement —
+   * mirroir backend de `buildVehicleSummary` (frontend, `vehicle-summary.ts`),
+   * appliqué à TOUS les véhicules de l'équipe plutôt qu'à un seul :
+   * `team.cans - (prix catalogue de chaque véhicule + somme de ses armes/améliorations)`.
+   *
+   * `vehicle.team.cans` est déjà chargé par `findOneForUser` (relation `team`,
+   * cf. son en-tête) — aucune requête supplémentaire pour le budget lui-même.
+   * `findAllForTeam` hydrate chaque véhicule (catalogue attaché aux armes/
+   * améliorations), donc `weapon.prix`/`improvement.prix` (getters) sont déjà
+   * résolus, Tourelle incluse.
+   */
+  async getRemainingBudget(vehicle: Vehicle, userId: number): Promise<number> {
+    const vehicles = await this.findAllForTeam(vehicle.teamId, userId);
+
+    let totalCost = 0;
+    for (const v of vehicles) {
+      const catalogVehicule = this.catalogService.getVehiculeByNomInterne(v.nomInterne);
+      totalCost += catalogVehicule?.prix ?? 0;
+      for (const weapon of v.weapons) totalCost += weapon.prix;
+      for (const imp of v.improvements) totalCost += imp.prix;
+    }
+
+    return vehicle.team.cans - totalCost;
+  }
+
+  /**
    * Crée un véhicule "nu" (sans arme ni amélioration) dans une équipe — première
    * étape du flux de configuration : on choisit d'abord le TYPE de véhicule,
    * on l'équipe ensuite (cf. plan, "Décisions actées" — persistance immédiate).
@@ -387,7 +413,8 @@ export class VehicleService {
       return fail(`Amélioration inconnue du catalogue : "${nomInterne}"`);
     }
 
-    return this.checkCandidate(vehicle, this.getBuild(vehicle), amelioration, opts);
+    const remainingBudget = await this.getRemainingBudget(vehicle, userId);
+    return this.checkCandidate(vehicle, this.getBuild(vehicle), amelioration, remainingBudget, opts);
   }
 
   /**
@@ -407,8 +434,26 @@ export class VehicleService {
     vehicle: Vehicle,
     currentBuild: VehicleBuild,
     amelioration: Amelioration,
+    remainingBudget: number,
     opts?: BuildOptions,
   ): RuleResult {
+    // Règle budget — AVANT toute validation de chaîne : un équipement inabordable
+    // est un refus DÉFINITIF, qui ne doit pas être masqué derrière un message
+    // "orientation requise" provenant du décorateur (cf. mirroir
+    // `WeaponService.checkCandidate`, règle 2).
+    //
+    // Cas Tourelle : `amelioration.prix` est la string "x3" (le coût dépend de
+    // l'arme qui sera assignée, encore inconnue à l'ajout — la Tourelle elle-même
+    // coûte 0 jerrican tant qu'orpheline, cf. `VehicleImprovement.prix`).
+    // `typeof !== 'number'` exclut donc la Tourelle de cette règle : l'assignation
+    // d'arme (3× son prix) n'est PAS validée contre le budget — sujet à reprendre
+    // séparément, non couvert ici.
+    if (typeof amelioration.prix === 'number' && amelioration.prix > remainingBudget) {
+      return fail(
+        `Budget de l'équipe insuffisant : ${amelioration.prix} 🛢️ requis, ${remainingBudget} 🛢️ restants`,
+      );
+    }
+
     // "Ajouter" : on enveloppe D'ABORD avec le décorateur du candidat — il existe
     // donc désormais dans une chaîne hypothétique, et se validera lui-même au
     // passage (cf. plan : correction du bug "première pose" jamais contrôlée).
@@ -474,8 +519,12 @@ export class VehicleService {
     // item à l'autre du catalogue, inutile de la reconstruire à chaque itération).
     const currentBuild = this.getBuild(vehicle);
 
+    // Calculé UNE SEULE FOIS — mirroir de `currentBuild` ci-dessus : le budget
+    // restant ne change pas d'un item à l'autre du catalogue (cf. `checkCandidate`).
+    const remainingBudget = await this.getRemainingBudget(vehicle, userId);
+
     return sponsor.ameliorations.map((amelioration): AvailableImprovementDto => {
-      const result = this.checkCandidate(vehicle, currentBuild, amelioration);
+      const result = this.checkCandidate(vehicle, currentBuild, amelioration, remainingBudget);
       return {
         nom: amelioration.nom,
         nomInterne: amelioration.nom_interne,

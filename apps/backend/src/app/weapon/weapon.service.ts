@@ -49,29 +49,34 @@ export class WeaponService {
 
   /**
    * Vérification à blanc — "puis-je monter CETTE arme précise sur CE véhicule,
-   * dans son état ACTUEL ?" Trois règles, dans un ordre DÉLIBÉRÉ qui garantit
+   * dans son état ACTUEL ?" Cinq règles, dans un ordre DÉLIBÉRÉ qui garantit
    * que la raison renvoyée reflète le VRAI blocage et non un artefact du flux
    * de contrôle :
    *
    *  1. l'arme appartient au catalogue DU SPONSOR de l'équipe (vérification la
    *     plus légère — pas de raison de calculer des emplacements pour une arme
    *     que le sponsor n'autorise de toute façon pas) ;
-   *  2. l'orientation est INCOHÉRENTE pour une arme d'équipage — INTERDITE par
+   *  2. le budget RESTANT de l'équipe (tous véhicules confondus, cf.
+   *     `VehicleService.getRemainingBudget`) couvre le prix de cette arme —
+   *     vérifiée tôt : une arme inabordable n'a pas à être évaluée plus
+   *     finement (emplacements, orientation) ;
+   *  3. l'orientation est INCOHÉRENTE pour une arme d'équipage — INTERDITE par
    *     définition (portée par un équipier, 360° automatique ; cf. `weapon.entity.ts`,
    *     note d'en-tête). Ce cas ne peut pas se produire lors du listing
    *     (`getAvailableWeapons` n'a pas d'orientation), mais au moment de l'ajout
    *     c'est une incohérence de la requête elle-même, pas un état du véhicule :
    *     un rejet explicite vaut mieux qu'une donnée acceptée puis perdue ;
-   *  3. le pool d'emplacements PARTAGÉ (améliorations + armes déjà montées, plus
+   *  4. le pool d'emplacements PARTAGÉ (améliorations + armes déjà montées, plus
    *     cette nouvelle arme) tient dans la capacité du véhicule catalogue —
    *     `improvementSlotsOf`/`weaponSlotsOf`, cf. leur en-tête sur `VehicleService` ;
-   *  4. l'orientation est MANQUANTE pour une arme hors-équipage — vérifiée EN
+   *  5. l'orientation est MANQUANTE pour une arme hors-équipage — vérifiée EN
    *     DERNIER car c'est une "information encore à fournir", pas un refus : lors
    *     du listing, cette règle signale "choisissez une orientation avant d'ajouter",
-   *     et seulement si les emplacements sont disponibles. Placer cette vérification
-   *     AVANT les emplacements (ancienne position) masquait le vrai blocage : une
-   *     arme refusée pour manque de place recevait le message "orientation requise"
-   *     au lieu de "emplacements insuffisants", trompant l'UI (cf. correctif).
+   *     et seulement si les emplacements sont disponibles ET le budget suffisant.
+   *     Placer cette vérification AVANT le budget/les emplacements masquerait le
+   *     vrai blocage : une arme refusée pour manque de place ou de budget recevrait
+   *     le message "orientation requise" au lieu du vrai motif, trompant l'UI
+   *     (cf. correctif d'origine sur les emplacements).
    *
    * Retourne un `RuleResult` (jamais un booléen) — `reason` alimente aussi bien
    * `BadRequestException` que l'UI (`getAvailableWeapons` ci-dessous), exactement
@@ -90,7 +95,8 @@ export class WeaponService {
       return fail(`Arme inconnue du catalogue : "${nomInterne}"`);
     }
 
-    return this.checkCandidate(vehicle, arme, orientation);
+    const remainingBudget = await this.vehicleService.getRemainingBudget(vehicle, userId);
+    return this.checkCandidate(vehicle, arme, remainingBudget, orientation);
   }
 
   /**
@@ -106,7 +112,7 @@ export class WeaponService {
    * à valider : les armes ne MODIFIENT rien (cf. en-tête de ce fichier) — les
    * trois règles se lisent directement sur le catalogue et les lignes persistées.
    */
-  private checkCandidate(vehicle: Vehicle, arme: Arme, orientation?: Orientation): RuleResult {
+  private checkCandidate(vehicle: Vehicle, arme: Arme, remainingBudget: number, orientation?: Orientation): RuleResult {
     const sponsor = this.catalogService.getSponsor(vehicle.team.sponsor);
     if (!sponsor) {
       // Incohérence de données (sponsor enregistré inconnu du catalogue) — pas
@@ -120,7 +126,15 @@ export class WeaponService {
       return fail(`L'arme "${arme.nom}" n'est pas autorisée pour le sponsor "${sponsor.nom}"`);
     }
 
-    // Règle 2 — orientation INTERDITE pour une arme d'équipage (portée par un
+    // Règle 2 — le budget RESTANT de l'équipe (tous véhicules confondus) doit
+    // couvrir le prix de cette arme. Vérifiée tôt, AVANT l'orientation manquante :
+    // une arme inabordable est un refus DÉFINITIF, qui ne doit pas être masqué
+    // derrière "choisissez une orientation" (cf. en-tête de `canAddWeapon`).
+    if (arme.prix > remainingBudget) {
+      return fail(`Budget de l'équipe insuffisant : ${arme.prix} 🛢️ requis, ${remainingBudget} 🛢️ restants`);
+    }
+
+    // Règle 3 — orientation INTERDITE pour une arme d'équipage (portée par un
     // équipier, 360° automatique ; cf. `weapon.entity.ts`, note d'en-tête et
     // en-tête de `canAddWeapon`). Vérifiée AVANT les emplacements : c'est une
     // incohérence de la requête elle-même, indépendante de l'état du véhicule.
@@ -129,7 +143,7 @@ export class WeaponService {
       return fail(`"${arme.nom}" est une arme d'équipage : elle ne se monte pas sur un arc de tir précis`);
     }
 
-    // Règle 3 — le pool d'emplacements PARTAGÉ (cf. en-tête de ce fichier et des
+    // Règle 4 — le pool d'emplacements PARTAGÉ (cf. en-tête de ce fichier et des
     // helpers sur `VehicleService`) : améliorations + armes déjà montées, PLUS
     // cette nouvelle arme, doivent tenir dans la capacité d'ORIGINE du véhicule
     // (le catalogue, jamais `stats` — rien dans Gaslands n'augmente cette capacité).
@@ -146,12 +160,13 @@ export class WeaponService {
       return fail(`Emplacements insuffisants : ${totalDemande}/${catalogVehicule.emplacements} requis avec "${arme.nom}"`);
     }
 
-    // Règle 4 — orientation MANQUANTE pour une arme hors-équipage (cf. en-tête de
+    // Règle 5 — orientation MANQUANTE pour une arme hors-équipage (cf. en-tête de
     // `canAddWeapon`). Vérifiée EN DERNIER : c'est une "information encore à fournir",
     // pas un refus définitif. Lors du listing (`getAvailableWeapons`), cette raison
     // indique "choisissez une orientation avant d'ajouter" — le frontend affiche alors
     // le sélecteur d'orientation plutôt que de griser l'arme. Elle ne doit apparaître
-    // QUE si l'arme est par ailleurs disponible (emplacements suffisants, sponsor ok).
+    // QUE si l'arme est par ailleurs disponible (budget et emplacements suffisants,
+    // sponsor ok).
     if (!estEquipage && orientation === undefined) {
       return fail(`Une orientation est requise pour monter "${arme.nom}" sur un arc de tir`);
     }
@@ -183,10 +198,14 @@ export class WeaponService {
       throw new Error(`Sponsor catalogue inconnu : "${vehicle.team.sponsor}" (équipe #${vehicle.teamId})`);
     }
 
+    // Calculé UNE SEULE FOIS — mirroir de `VehicleService.getAvailableImprovements` :
+    // le budget restant ne change pas d'une arme à l'autre du catalogue (cf. `checkCandidate`).
+    const remainingBudget = await this.vehicleService.getRemainingBudget(vehicle, userId);
+
     return sponsor.armes.map((arme): AvailableWeaponDto => {
       // Sans orientation : reproduit fidèlement, pour les armes orientables, le
       // message "il manque une information" plutôt que "c'est interdit" (cf. note ci-dessus).
-      const result = this.checkCandidate(vehicle, arme);
+      const result = this.checkCandidate(vehicle, arme, remainingBudget);
       return {
         nom: arme.nom,
         nomInterne: arme.nom_interne,

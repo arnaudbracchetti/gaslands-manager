@@ -86,6 +86,8 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 
 **Détail d'un équipement** : dans le catalogue filtré (étape 2 du `VehicleBuilder`), toute la carte d'une arme ou d'une amélioration (`equipment-option`, curseur en pointeur pour signaler l'interaction) est cliquable et ouvre une popup (`EquipmentDetailModal`) présentant toutes ses informations dans une mise en page aérée — nom, coût, emplacement, description, **règles complètes** (`regles`, repris du catalogue, non affiché sur la carte compacte) et, pour un refus définitif (sponsor/emplacements/règle de pose), la raison correspondante. Purement informative : un bouton "Annuler" referme la popup sans action, et cliquer en dehors de la popup (sur l'overlay) fait de même. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
+**Budget de l'équipe dans le configurateur** : le panneau de gauche (`EquipmentManager`, section `.em-current__header`) affiche, EN TÊTE (avant le récapitulatif "Base / + Équipement / Total" du véhicule en cours), un bloc "Budget de l'équipe" — jerricans utilisés (tous véhicules de l'équipe confondus) / budget total (`Team.cans`), barre de progression, et solde restant (ou dépassement, en rouge). Purement informatif côté frontend : la validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu) dans `WeaponService.checkCandidate`/`VehicleService.checkCandidate`, exactement comme la règle "emplacements insuffisants" existante (même mécanisme `EquipmentOption`/`raison`, cf. "Détail d'un équipement" ci-dessus). **Cas particulier de la Tourelle** : son prix catalogue est `"x3"` (non numérique, dépend de l'arme assignée) — elle n'est jamais bloquée par cette règle (cf. §7, "Budget (Jerricans)").
+
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
 ### 3.5 Navigation
@@ -105,28 +107,24 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 > **Construction et gestion de véhicules : implémentées.** La sélection du sponsor,
 > l'ajout d'un véhicule, son équipement (armes/améliorations dans la limite des
-> emplacements), la modification de cet équipement et la suppression d'un véhicule
-> sont désormais opérationnels — cf. §3.4 et les composants `vehicle-builder`/
-> `vehicle-editor` côté frontend. Cette section du backlog ne porte donc plus que
-> sur les fonctionnalités encore à construire.
+> emplacements et du budget), la modification de cet équipement et la suppression
+> d'un véhicule sont désormais opérationnels — cf. §3.4 et les composants
+> `vehicle-builder`/`vehicle-editor` côté frontend. **Gestion du budget : implémentée**
+> également (affichage + blocage des ajouts trop chers, cf. §3.4 "Budget de l'équipe
+> dans le configurateur"). Cette section du backlog ne porte donc plus que sur les
+> fonctionnalités encore à construire.
 
-### 4.1 Gestion du budget
-
-- Afficher le budget restant d'une équipe (budget total − coût des véhicules − coût des armes − coût des améliorations)
-- Bloquer l'ajout si le budget est dépassé
-- Cas particulier : coût de la **Tourelle** = 3× le prix de l'arme associée
-
-### 4.2 Frontend — Consultation du catalogue
+### 4.1 Frontend — Consultation du catalogue
 
 - Remplacer les pages `/vehicles` et `/weapons` (actuellement placeholders Markdown) par une vue dynamique depuis l'API `/api/catalog/`
 - Permettre de filtrer par sponsor pour voir uniquement les items autorisés
 
-### 4.3 Tableau de bord
+### 4.2 Tableau de bord
 
 - Vue d'ensemble de toutes les équipes de l'utilisateur
 - Accès rapide à chaque équipe et ses véhicules
 
-### 4.4 Export (futur)
+### 4.3 Export (futur)
 
 - Fiche récapitulative d'une équipe au format imprimable (HTML/PDF)
 
@@ -352,6 +350,13 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 - Chaque véhicule, arme et amélioration a un coût en jerricans
 - Exception : l'amélioration **Tourelle** coûte **3× le prix de l'arme** concernée (coût variable)
 - Le total ne doit pas dépasser le budget
+
+**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe
+(tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est
+marquée `disponible: false` (raison "Budget de l'équipe insuffisant…") — vérifiée **avant**
+toute autre règle (sponsor exclu), cf. §3.4 "Budget de l'équipe dans le configurateur".
+**Exception non couverte** : la Tourelle (`prix: "x3"`) n'est jamais bloquée par cette
+règle — son coût dépend de l'arme assignée, encore inconnue au moment de l'ajout.
 
 ### Véhicules (16 au total)
 

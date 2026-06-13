@@ -135,6 +135,7 @@ describe('WeaponService', () => {
     findOneForUser: vi.fn(),
     improvementSlotsOf: vi.fn(),
     weaponSlotsOf: vi.fn(),
+    getRemainingBudget: vi.fn(),
   };
   const mockCatalogService = {
     getArmeByNomInterne: vi.fn(),
@@ -161,6 +162,9 @@ describe('WeaponService', () => {
     mockVehicleService.findOneForUser.mockResolvedValue(mockVehicle);
     mockVehicleService.improvementSlotsOf.mockReturnValue(0);
     mockVehicleService.weaponSlotsOf.mockReturnValue(0);
+    // Budget large par défaut (50 🛢️) — la règle budget (Règle 2) ne s'active que
+    // dans les tests dédiés ci-dessous, qui le redéfinissent explicitement.
+    mockVehicleService.getRemainingBudget.mockResolvedValue(50);
     mockCatalogService.getSponsor.mockReturnValue(sponsorRutherford);
     mockCatalogService.getVehiculeByNomInterne.mockReturnValue(catalogVehicule);
     mockCatalogService.getArmeByNomInterne.mockImplementation((nomInterne: string) =>
@@ -227,6 +231,16 @@ describe('WeaponService', () => {
       const result = await service.canAddWeapon(7, 42, 'mitrailleuse');
 
       expect(result).toEqual(fail('Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir'));
+    });
+
+    it('refuse — BUDGET de l\'équipe insuffisant pour le prix de l\'arme (vérifié AVANT orientation manquante)', async () => {
+      // BFG coûte 12 🛢️, budget restant 10 → refus budget, pas "orientation requise"
+      // bien qu'aucune orientation ne soit fournie ici.
+      mockVehicleService.getRemainingBudget.mockResolvedValue(10);
+
+      const result = await service.canAddWeapon(7, 42, 'bfg');
+
+      expect(result).toEqual(fail('Budget de l\'équipe insuffisant : 12 🛢️ requis, 10 🛢️ restants'));
     });
 
     it('accepte — sponsor autorise, orientation cohérente, emplacements suffisants (arme orientable)', async () => {
@@ -326,6 +340,26 @@ describe('WeaponService', () => {
       await expect(service.getAvailableWeapons(7, 42)).rejects.toThrow(
         'Sponsor catalogue inconnu : "Rutherford" (équipe #3)',
       );
+    });
+
+    it('marque "Budget de l\'équipe insuffisant" pour les armes trop chères, sans masquer "orientation requise" pour les autres', async () => {
+      // Budget restant 3 🛢️ : Grenades (2) reste abordable, Mitrailleuse (4) et BFG (12) non.
+      mockVehicleService.getRemainingBudget.mockResolvedValue(3);
+
+      const result = await service.getAvailableWeapons(7, 42);
+
+      expect(result[0]).toMatchObject({
+        nomInterne: 'mitrailleuse',
+        disponible: false,
+        raison: 'Budget de l\'équipe insuffisant : 4 🛢️ requis, 3 🛢️ restants',
+      });
+      expect(result[1]).toMatchObject({
+        nomInterne: 'bfg',
+        disponible: false,
+        raison: 'Budget de l\'équipe insuffisant : 12 🛢️ requis, 3 🛢️ restants',
+      });
+      // Grenades (2 🛢️) reste dans le budget restant (3) — disponible (pas d'orientation requise).
+      expect(result[2]).toMatchObject({ nomInterne: 'grenades', disponible: true });
     });
   });
 

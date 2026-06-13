@@ -222,7 +222,11 @@ describe('VehicleConfigurator', () => {
     it('charge directement le véhicule visé parmi ceux de l\'équipe — pas d\'étape de choix', () => {
       createFixture(100);
 
-      expect(mockVehicleService.getAllForTeam).toHaveBeenCalledExactlyOnceWith(7);
+      // Au moins un appel pour le chargement initial du véhicule visé — `EquipmentManager`
+      // (rendu dès que `vehicle()` est non-nul) en déclenche un second via son `effect()`
+      // constructeur (`loadCoutAutresVehicules`, bloc "Budget de l'équipe") : plus
+      // `toHaveBeenCalledExactlyOnceWith`, l'appel initial reste vérifié.
+      expect(mockVehicleService.getAllForTeam).toHaveBeenCalledWith(7);
       expect(component.vehicle()).toEqual(mockCreatedVehicle);
       expect(component.loadingVehicle()).toBe(false);
       const el = fixture.nativeElement as HTMLElement;

@@ -117,6 +117,39 @@
   text-overflow: ellipsis;
 }
 
+/* ── Budget de l'équipe — bloc EN TÊTE, avant emplacements et coût du véhicule ── */
+
+.em-current__budget {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.em-current__budget-title {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--clr-text-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.em-current__budget-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--clr-bg-item);
+  overflow: hidden;
+}
+
+.em-current__budget-bar-fill {
+  height: 100%;
+  background: var(--clr-accent-cyan);
+  transition: width 0.2s, background 0.2s;
+
+  &--over {
+    background: var(--clr-accent);
+  }
+}
+
 .em-current__slots {
   margin: 0;
   font-size: 0.85rem;
@@ -160,6 +193,12 @@
     color: var(--clr-accent-cyan);
     font-weight: 700;
     font-size: 0.92rem;
+  }
+
+  // Dépassement de budget — remplace la couleur d'accent par défaut de
+  // `--total` (cf. `.em-current__budget`, ligne "Restant"/"Dépassement").
+  &--over {
+    color: var(--clr-accent) !important;
   }
 }
 

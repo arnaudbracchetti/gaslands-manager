@@ -45,6 +45,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { Team } from '../../team.model';
+import { buildVehicleSummary } from '../../vehicle-summary';
 import { Sponsor, Vehicule } from '../../../catalog/catalog.model';
 import { VehicleService } from '../vehicle.service';
 import {
@@ -272,6 +273,47 @@ export class EquipmentManager {
   /** Coût total du véhicule — prix de base + équipement monté. */
   coutTotal: Signal<number> = computed((): number => this.coutBase() + this.coutEquipement());
 
+  // ── Budget de l'équipe (computed) — bloc "Budget de l'équipe" en tête de `.em-current__header` ──
+  // Mirroir frontend de `VehicleService.getRemainingBudget` (backend) : la VALIDATION
+  // (options trop chères marquées `disponible: false`, cf. `availableWeapons`/
+  // `availableImprovements` ci-dessus) est déjà assurée par le backend — ce bloc est
+  // purement INFORMATIF, pour situer le coût de CE véhicule dans le budget global.
+
+  /**
+   * Coût cumulé des AUTRES véhicules de l'équipe (tout sauf celui en cours
+   * d'édition) — chargé via `getAllForTeam` et résolu par `buildVehicleSummary`
+   * (même fonction pure que `TeamCard`, cf. son en-tête). Rechargé à chaque
+   * changement de `vehicle()` par l'`effect()` du constructeur, à côté de
+   * `loadAvailableEquipment()`.
+   */
+  coutAutresVehicules: WritableSignal<number> = signal(0);
+
+  /** Budget total de l'équipe (jerricans) — `Team.cans`, tel que reçu en input. */
+  budgetEquipe: Signal<number> = computed((): number => this.team().cans);
+
+  /** Coût cumulé de TOUS les véhicules de l'équipe, CE véhicule inclus (`coutTotal`). */
+  coutEquipeTotal: Signal<number> = computed((): number => this.coutAutresVehicules() + this.coutTotal());
+
+  /** Solde restant — peut être négatif (cf. `budgetDepasse`, filet de sécurité d'affichage). */
+  budgetRestant: Signal<number> = computed((): number => this.budgetEquipe() - this.coutEquipeTotal());
+
+  /**
+   * `true` si le coût cumulé dépasse le budget. En principe jamais atteignable via
+   * l'ajout d'équipement — la règle "Budget de l'équipe insuffisant" côté backend
+   * (`VehicleService`/`WeaponService.checkCandidate`) marque par avance toute option
+   * trop chère `disponible: false`. Reste un filet de sécurité d'affichage pour le
+   * seul cas non couvert : la Tourelle (`prix: "x3"`, coût dépendant de l'arme
+   * assignée — cf. commentaire de `checkCandidate`, "sujet à reprendre séparément").
+   */
+  budgetDepasse: Signal<boolean> = computed((): boolean => this.budgetRestant() < 0);
+
+  /** Pourcentage du budget consommé — borné à 100% pour la barre de progression (même en cas de dépassement). */
+  budgetPourcentage: Signal<number> = computed((): number => {
+    const budget = this.budgetEquipe();
+    if (budget <= 0) return 100;
+    return Math.min(100, Math.round((this.coutEquipeTotal() / budget) * 100));
+  });
+
   // ── Réaction aux changements de véhicule ────────────────────────────────────
 
   /**
@@ -288,6 +330,7 @@ export class EquipmentManager {
       // parent → nouvel input) redéclenche le chargement.
       this.vehicle();
       this.loadAvailableEquipment();
+      this.loadCoutAutresVehicules();
     });
   }
 
@@ -316,6 +359,31 @@ export class EquipmentManager {
       error: (): void => {
         this.equipmentError.set('Impossible de charger les équipements disponibles. Réessayez.');
         this.loadingEquipment.set(false);
+      },
+    });
+  }
+
+  /**
+   * Charge le coût cumulé des AUTRES véhicules de l'équipe (`coutAutresVehicules`,
+   * cf. sa doc) — un seul appel à `getAllForTeam`, puis on exclut CE véhicule
+   * (`v.id !== vehicle().id`) et on somme `buildVehicleSummary(v, sponsorCatalog()).cout`
+   * pour chacun des autres. Échec silencieux (le bloc budget reste à 0 — purement
+   * informatif, ne bloque rien) : une erreur ici ne doit pas empêcher l'utilisateur
+   * de continuer à équiper son véhicule.
+   */
+  private loadCoutAutresVehicules(): void {
+    const vehicleId = this.vehicle().id;
+    const catalog = this.sponsorCatalog();
+
+    this.vehicleService.getAllForTeam(this.team().id).subscribe({
+      next: (vehicles: Vehicle[]): void => {
+        const total = vehicles
+          .filter((v: Vehicle): boolean => v.id !== vehicleId)
+          .reduce((sum: number, v: Vehicle): number => sum + buildVehicleSummary(v, catalog).cout, 0);
+        this.coutAutresVehicules.set(total);
+      },
+      error: (): void => {
+        this.coutAutresVehicules.set(0);
       },
     });
   }

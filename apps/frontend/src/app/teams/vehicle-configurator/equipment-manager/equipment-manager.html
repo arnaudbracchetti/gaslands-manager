@@ -33,11 +33,45 @@
         {{ chosenVehicule()?.nom ?? vehicle().nomInterne }}
       </h3>
 
+      <!--
+        ═══ Budget de l'équipe — EN TÊTE, avant le coût de CE véhicule ═══
+        Purement informatif : la validation (options trop chères grisées avec
+        "Budget de l'équipe insuffisant…") est déjà assurée côté backend
+        (cf. `EquipmentOption`/`option__reason`) — ce bloc situe le coût de CE
+        véhicule dans le budget global de l'équipe.
+      -->
+      <div class="em-current__budget">
+        <p class="em-current__budget-title">Budget de l'équipe</p>
+        <p class="em-current__cost-row">
+          <span>Utilisé</span>
+          <span>
+            {{ coutEquipeTotal() }} / {{ budgetEquipe() }}
+            <img class="em-current__icon" src="/icons/dollar.svg" alt="" />
+          </span>
+        </p>
+        <div class="em-current__budget-bar">
+          <div
+            class="em-current__budget-bar-fill"
+            [class.em-current__budget-bar-fill--over]="budgetDepasse()"
+            [style.width.%]="budgetPourcentage()"></div>
+        </div>
+        <p class="em-current__cost-row em-current__cost-row--total" [class.em-current__cost-row--over]="budgetDepasse()">
+          @if (budgetDepasse()) {
+            <span>Dépassement</span>
+            <span>{{ -budgetRestant() }} <img class="em-current__icon" src="/icons/dollar.svg" alt="" /></span>
+          } @else {
+            <span>Restant</span>
+            <span>{{ budgetRestant() }} <img class="em-current__icon" src="/icons/dollar.svg" alt="" /></span>
+          }
+        </p>
+      </div>
+
       <p class="em-current__slots">
         <img class="em-current__icon" src="/icons/wrench.svg" alt="" />
         Emplacements : <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
       </p>
 
+      <!-- ═══ Coût de CE véhicule — après le budget de l'équipe ═══ -->
       <div class="em-current__cost">
         <p class="em-current__cost-row">
           <span>Base</span>

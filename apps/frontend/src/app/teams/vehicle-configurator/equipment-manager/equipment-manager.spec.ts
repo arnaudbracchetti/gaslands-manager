@@ -284,6 +284,158 @@ describe('EquipmentManager', () => {
     expect(component.coutTotal()).toBe(24); // 16 (base) + 8 (équipement)
   });
 
+  // ── Budget de l'équipe (computed) — bloc "Budget de l'équipe" en tête de `.em-current__header` ──
+
+  describe('Budget de l\'équipe (computed)', () => {
+    // Véhicule "tiers" de la même équipe — nu (camion, prix catalogue 16),
+    // utilisé pour peupler `coutAutresVehicules` via `getAllForTeam` + `buildVehicleSummary`.
+    const mockOtherVehicle: Vehicle = {
+      id: 101,
+      nomInterne: 'camion',
+      teamId: 7,
+      improvements: [],
+      weapons: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    it('coutAutresVehicules exclut le véhicule courant et somme le coût des autres via buildVehicleSummary', () => {
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+
+      // mockVehicle (id 100, courant) exclu — seul mockOtherVehicle (16, camion nu) compte.
+      expect(component.coutAutresVehicules()).toBe(16);
+    });
+
+    it('coutEquipeTotal additionne coutAutresVehicules et coutTotal du véhicule courant', () => {
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+
+      // coutAutresVehicules (16) + coutTotal du véhicule nu (16, prix catalogue du Camion)
+      expect(component.coutEquipeTotal()).toBe(32);
+    });
+
+    it('budgetEquipe reflète Team.cans, budgetRestant = budget - coutEquipeTotal, budgetPourcentage arrondi', () => {
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+
+      expect(component.budgetEquipe()).toBe(50); // mockTeam.cans
+      expect(component.budgetRestant()).toBe(18); // 50 - 32
+      expect(component.budgetDepasse()).toBe(false);
+      expect(component.budgetPourcentage()).toBe(64); // round(32/50*100)
+    });
+
+    it('budgetDepasse passe à true et budgetPourcentage est borné à 100% en cas de dépassement', () => {
+      const mockTeamLowBudget: Team = { ...mockTeam, cans: 30 };
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeamLowBudget);
+      fixture.detectChanges();
+
+      // coutEquipeTotal = 32, budget = 30 → dépassement de 2
+      expect(component.budgetRestant()).toBe(-2);
+      expect(component.budgetDepasse()).toBe(true);
+      expect(component.budgetPourcentage()).toBe(100); // round(32/30*100) = 107 → borné à 100
+    });
+
+    it('coutAutresVehicules retombe à 0 en cas d\'échec de getAllForTeam (purement informatif, ne bloque rien)', () => {
+      mockVehicleService.getAllForTeam.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeam);
+      fixture.detectChanges();
+
+      expect(component.coutAutresVehicules()).toBe(0);
+      // Échec purement informatif — ne déclenche PAS le même message d'erreur que
+      // `loadAvailableEquipment` (cf. `loadCoutAutresVehicules`, "échec silencieux").
+      expect(component.equipmentError()).toBe('');
+    });
+  });
+
+  // ── Affichage du bloc "Budget de l'équipe" dans `.em-current__header` ───────
+
+  describe('Bloc "Budget de l\'équipe" dans le template', () => {
+    it('affiche le bloc budget EN PREMIER dans .em-current__header, avant .em-current__slots et .em-current__cost', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const header = el.querySelector('.em-current__header') as HTMLElement;
+      const children = Array.from(header.children);
+
+      const budgetIndex = children.findIndex((c): boolean => c.classList.contains('em-current__budget'));
+      const slotsIndex = children.findIndex((c): boolean => c.classList.contains('em-current__slots'));
+      const costIndex = children.findIndex((c): boolean => c.classList.contains('em-current__cost'));
+
+      expect(budgetIndex).toBeGreaterThanOrEqual(0);
+      expect(budgetIndex).toBeLessThan(slotsIndex);
+      expect(slotsIndex).toBeLessThan(costIndex);
+    });
+
+    it('affiche le titre, le ratio utilisé/budget et le solde restant', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const budgetBlock = el.querySelector('.em-current__budget') as HTMLElement;
+
+      expect(budgetBlock.textContent).toContain('Budget de l\'équipe');
+      // Véhicule nu (16) + autres véhicules (0, getAllForTeam → [mockVehicle] par défaut) = 16, budget 50.
+      expect(budgetBlock.textContent).toContain('16 / 50');
+      expect(budgetBlock.textContent).toContain('Restant');
+      expect(budgetBlock.textContent).toContain('34'); // 50 - 16
+    });
+
+    it('affiche "Dépassement" et la classe --over quand le coût cumulé dépasse le budget', () => {
+      const mockOtherVehicle: Vehicle = {
+        id: 101,
+        nomInterne: 'camion',
+        teamId: 7,
+        improvements: [],
+        weapons: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+      };
+      const mockTeamLowBudget: Team = { ...mockTeam, cans: 10 };
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
+
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', mockVehicle);
+      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+      fixture.componentRef.setInput('team', mockTeamLowBudget);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const budgetBlock = el.querySelector('.em-current__budget') as HTMLElement;
+      const totalRow = budgetBlock.querySelector('.em-current__cost-row--total') as HTMLElement;
+      const fill = budgetBlock.querySelector('.em-current__budget-bar-fill') as HTMLElement;
+
+      // coutEquipeTotal = 32 (16 courant + 16 autre), budget = 10 → dépassement de 22.
+      expect(totalRow.textContent).toContain('Dépassement');
+      expect(totalRow.textContent).toContain('22');
+      expect(totalRow.classList).toContain('em-current__cost-row--over');
+      expect(fill.classList).toContain('em-current__budget-bar-fill--over');
+    });
+  });
+
   // ── Résolution de l'emplacement d'une arme montée (badge 🔧 des lignes "Armes") ──
 
   it('résout l\'emplacement consommé par une arme depuis le catalogue, avec repli sur 0', () => {
@@ -299,7 +451,9 @@ describe('EquipmentManager', () => {
     expect(el.querySelector('.em-current__vehicle-name')?.textContent?.trim()).toBe('Camion');
     expect(el.querySelector('.em-current__slots')?.textContent).toContain('0 / 4');
 
-    const costRows = el.querySelectorAll('.em-current__cost-row');
+    // Scopé à `.em-current__cost` : `.em-current__budget` (bloc "Budget de l'équipe",
+    // en tête) porte aussi des `.em-current__cost-row` — cf. equipment-manager.html.
+    const costRows = el.querySelectorAll('.em-current__cost .em-current__cost-row');
     expect(costRows[0].textContent).toContain('Base');
     expect(costRows[0].textContent).toContain('16');
     expect(costRows[1].textContent).toContain('Équipement');
@@ -318,7 +472,8 @@ describe('EquipmentManager', () => {
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    const costRows = el.querySelectorAll('.em-current__cost-row');
+    // Scopé à `.em-current__cost` — cf. commentaire du test précédent.
+    const costRows = el.querySelectorAll('.em-current__cost .em-current__cost-row');
     expect(costRows[1].textContent).toContain('8'); // + Équipement
     expect(costRows[2].textContent).toContain('24'); // = Total
   });

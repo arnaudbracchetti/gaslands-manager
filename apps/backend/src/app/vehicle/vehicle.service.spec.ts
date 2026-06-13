@@ -105,8 +105,9 @@ const sponsorRutherford: Sponsor = {
 // Équipe minimale portée par la relation `team` — `findOneForUser` la charge
 // désormais systématiquement (cf. commentaire de la méthode : le `where` la
 // joint de toute façon, et `getAvailableImprovements` a besoin de `sponsor`).
-// Seul `sponsor` nous intéresse ici ; le reste est sans incidence sur ces tests.
-const mockTeam = { id: 3, sponsor: 'Rutherford' } as unknown as Vehicle['team'];
+// `cans: 50` — nécessaire à `getRemainingBudget` (budget par défaut Gaslands,
+// cf. SPECIFICATION.md §5/§7) ; sans incidence sur les tests qui ne le sollicitent pas.
+const mockTeam = { id: 3, sponsor: 'Rutherford', cans: 50 } as unknown as Vehicle['team'];
 
 const mockVehicle: Vehicle = {
   id: 7,
@@ -207,6 +208,9 @@ describe('VehicleService', () => {
   // Un mock par dépendance injectée — chacun isolé, remis à zéro entre les tests.
   const mockVehicleRepo = {
     findOne: vi.fn(),
+    // Nécessaire à `findAllForTeam` (cf. son commentaire) — sollicité par
+    // `getRemainingBudget` (Règle budget, `checkCandidate`/`getAvailableImprovements`).
+    find: vi.fn(),
     // Nécessaires à `create()` (cf. son describe ci-dessous) — `create` construit
     // l'entité en mémoire, `save` la persiste ; le résultat brut de `save` n'est
     // PAS celui retourné par le service (cf. contrat "persister PUIS recharger").
@@ -257,6 +261,16 @@ describe('VehicleService', () => {
 
     service = module.get<VehicleService>(VehicleService);
     vi.clearAllMocks();
+
+    // Socle par défaut pour `getRemainingBudget` (Règle budget, `checkCandidate`/
+    // `getAvailableImprovements`/`getAvailableWeapons` via `WeaponService`) :
+    // une équipe avec un seul véhicule "nu" (camion, 16 🛢️) et un budget de 50 🛢️
+    // → 34 🛢️ restants, largement suffisant pour les améliorations testées (4 🛢️).
+    // Les tests qui veulent un budget différent redéfinissent `mockVehicleRepo.find`
+    // ou court-circuitent via `vi.spyOn(service, 'getRemainingBudget')`.
+    mockTeamService.findOneForUser.mockResolvedValue(mockTeam);
+    mockVehicleRepo.find.mockResolvedValue([mockVehicle]);
+    mockCatalogService.getVehiculeByNomInterne.mockReturnValue(catalogVehicule);
   });
 
   // ── findOneForUser ──────────────────────────────────────────────────────────
@@ -464,6 +478,87 @@ describe('VehicleService', () => {
     });
   });
 
+  // ── getRemainingBudget ──────────────────────────────────────────────────────
+
+  describe('getRemainingBudget() — budget restant de l\'équipe, tous véhicules confondus', () => {
+    it('soustrait le prix catalogue de CHAQUE véhicule de l\'équipe au budget total', async () => {
+      const autreVehicule: Vehicle = { ...mockVehicle, id: 8, improvements: [], weapons: [] };
+      mockVehicleRepo.find.mockResolvedValue([mockVehicle, autreVehicule]);
+
+      const result = await service.getRemainingBudget(mockVehicle, 42);
+
+      // 50 - (16 + 16) = 18
+      expect(result).toBe(mockTeam.cans - 2 * catalogVehicule.prix);
+      // `findAllForTeam` (cf. son commentaire) — vérifie l'appartenance via TeamService
+      // PUIS charge les véhicules de CETTE équipe (`vehicle.teamId`, pas un autre).
+      expect(mockTeamService.findOneForUser).toHaveBeenCalledWith(mockVehicle.teamId, 42);
+      expect(mockVehicleRepo.find).toHaveBeenCalledWith({
+        where: { teamId: mockVehicle.teamId },
+        relations: { improvements: true, weapons: true },
+      });
+    });
+
+    it('ajoute le prix des armes et améliorations RÉELLEMENT montées (getters `prix`, déjà hydratés par `findAllForTeam`)', async () => {
+      // Instances RÉELLES (et non de simples littéraux) : `imp.prix`/`weapon.prix` sont
+      // des GETTERS portés par le PROTOTYPE de la classe (cf. en-tête de `hydrateVehicle`)
+      // — un littéral `{ ...installedChenilles }` n'y aurait pas accès (`undefined`,
+      // donc `NaN` après addition).
+      const vehiculeEquipe: Vehicle = {
+        ...mockVehicle,
+        improvements: [Object.assign(new VehicleImprovement(), installedChenilles)],
+        weapons: [Object.assign(new Weapon(), installedMitrailleuse)],
+      };
+      mockVehicleRepo.find.mockResolvedValue([vehiculeEquipe]);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+
+      const result = await service.getRemainingBudget(mockVehicle, 42);
+
+      // 50 - (16 [véhicule] + 4 [Chenilles] + 4 [Mitrailleuse]) = 26
+      expect(result).toBe(mockTeam.cans - catalogVehicule.prix - ameliorationChenilles.prix - armeMitrailleuse.prix);
+    });
+
+    it('compte une Tourelle ASSIGNÉE (estDefaut: false) d\'un AUTRE véhicule de l\'équipe — 3× le prix de son arme', async () => {
+      // Mirroir de `weaponSlotsOf` (cf. describe ci-dessus) : une Tourelle achetée par
+      // le joueur coûte 3× le prix de l'arme assignée — getter `VehicleImprovement.prix`,
+      // déjà résolu par `hydrateVehicle` (armes hydratées EN PREMIER, cf. son en-tête).
+      const autreVehicule: Vehicle = {
+        ...mockVehicle,
+        id: 8,
+        improvements: [Object.assign(new VehicleImprovement(), installedTourelleAssignee)],
+        weapons: [],
+      };
+      mockVehicleRepo.find.mockResolvedValue([mockVehicle, autreVehicule]);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationTourelle);
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+
+      const result = await service.getRemainingBudget(mockVehicle, 42);
+
+      // 50 - (16 [mockVehicle] + 16 [autreVehicule] + 3×4 [Tourelle assignée → Mitrailleuse]) = 6
+      expect(result).toBe(mockTeam.cans - 2 * catalogVehicule.prix - 3 * armeMitrailleuse.prix);
+    });
+
+    it('ignore une Tourelle INTÉGRÉE (estDefaut: true) — coût zéro, cf. getter `prix`', async () => {
+      const autreVehicule: Vehicle = {
+        ...mockVehicle,
+        id: 8,
+        improvements: [Object.assign(new VehicleImprovement(), installedTourelleDefaut)],
+        weapons: [],
+      };
+      mockVehicleRepo.find.mockResolvedValue([mockVehicle, autreVehicule]);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationTourelle);
+
+      const result = await service.getRemainingBudget(mockVehicle, 42);
+
+      // 50 - (16 + 16) = 18 — la Tourelle intégrée ne coûte rien (estDefaut: true),
+      // bien que `hydrateVehicle` résolve quand même `weaponCatalogueMonte` pour elle
+      // (cf. son en-tête — hydratation inconditionnelle) : c'est le getter `prix`
+      // (`if (this.estDefaut) return 0`, court-circuitant AVANT la lecture de
+      // `weaponCatalogueMonte`) qui neutralise son coût, pas l'hydratation.
+      expect(result).toBe(mockTeam.cans - 2 * catalogVehicule.prix);
+    });
+  });
+
   // ── canAddImprovement ───────────────────────────────────────────────────────
 
   describe('canAddImprovement() — vérification à blanc, sans persistance', () => {
@@ -581,6 +676,31 @@ describe('VehicleService', () => {
       // n'y a littéralement rien à "retirer" (cf. commentaire de la méthode).
       expect(mockImprovementRepo.create).not.toHaveBeenCalled();
       expect(mockImprovementRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('refuse — BUDGET de l\'équipe insuffisant — vérifié EN PREMIER, AVANT la chaîne de décorateurs', async () => {
+      // Budget restant 2 🛢️ < 4 🛢️ (Chenilles) — refus immédiat, sans enveloppe candidate.
+      vi.spyOn(service, 'getRemainingBudget').mockResolvedValue(2);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+
+      const result = await service.canAddImprovement(7, 42, 'chenilles');
+
+      expect(result).toEqual(fail('Budget de l\'équipe insuffisant : 4 🛢️ requis, 2 🛢️ restants'));
+      expect(mockDecoratorFactory.wrap).not.toHaveBeenCalled();
+    });
+
+    it('n\'applique PAS la règle budget à la Tourelle (`prix: "x3"`, coût dépendant de l\'arme — non couvert ici)', async () => {
+      // Même à budget nul, la Tourelle (prix non numérique) n'est jamais bloquée par
+      // cette règle — `typeof amelioration.prix !== 'number'` l'exclut explicitement
+      // (cf. commentaire de `checkCandidate` : l'assignation d'arme, 3× son prix,
+      // est hors périmètre de ce correctif).
+      vi.spyOn(service, 'getRemainingBudget').mockResolvedValue(0);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationTourelle);
+      mockDecoratorFactory.wrap.mockReturnValue(fakeBuild({ validate: () => ok() }));
+
+      const result = await service.canAddImprovement(7, 42, 'tourelle');
+
+      expect(result).toEqual(ok());
     });
   });
 
@@ -745,6 +865,30 @@ describe('VehicleService', () => {
 
       await expect(service.getAvailableImprovements(7, 99)).rejects.toThrow(NotFoundException);
       expect(mockCatalogService.getSponsor).not.toHaveBeenCalled();
+    });
+
+    it('marque "Budget de l\'équipe insuffisant" pour les améliorations trop chères, Tourelle (`prix: "x3"`) jamais bloquée par cette règle', async () => {
+      // Budget restant 3 🛢️ : Chenilles (4) et Blindage (4) deviennent indisponibles ;
+      // la Tourelle (prix non numérique) reste évaluée normalement par la chaîne
+      // (ici `ok()`, cf. mock ci-dessous) — la règle budget ne s'applique pas à elle.
+      vi.spyOn(service, 'getRemainingBudget').mockResolvedValue(3);
+      mockDecoratorFactory.wrap.mockReturnValue(fakeBuild({ validate: () => ok() }));
+
+      const result = await service.getAvailableImprovements(7, 42);
+
+      expect(result[0]).toMatchObject({
+        nomInterne: 'chenilles',
+        disponible: false,
+        raison: 'Budget de l\'équipe insuffisant : 4 🛢️ requis, 3 🛢️ restants',
+      });
+      expect(result[1]).toMatchObject({
+        nomInterne: 'blindage',
+        disponible: false,
+        raison: 'Budget de l\'équipe insuffisant : 4 🛢️ requis, 3 🛢️ restants',
+      });
+      expect(result[2]).toMatchObject({ nomInterne: 'tourelle', disponible: true });
+      // Échec précoce pour les deux premières — le décorateur n'est jamais sollicité pour elles.
+      expect(mockDecoratorFactory.wrap).toHaveBeenCalledTimes(1);
     });
   });
 
