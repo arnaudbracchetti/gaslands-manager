@@ -21,11 +21,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import { EquipmentChoice, EquipmentOption as EquipmentOptionDto, Orientation } from '../vehicle-builder.model';
+import { EquipmentDetailModal } from './equipment-detail-modal/equipment-detail-modal';
 
 @Component({
   selector: 'app-equipment-option',
   standalone: true,
-  imports: [],
+  imports: [EquipmentDetailModal],
   templateUrl: './equipment-option.html',
   styleUrl: './equipment-option.scss',
 })
@@ -74,6 +75,42 @@ export class EquipmentOption {
 
   /** Les 4 arcs de tir standard de Gaslands (cf. `Orientation`, SPECIFICATION.md §5). */
   readonly orientations: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
+
+  /**
+   * Affiche la popup de détail (`EquipmentDetailModal`) — état local, purement UI.
+   * Ouverte au clic sur la carte (cf. `openDetails`), fermée par "Annuler", un
+   * clic en dehors de la popup, ou "Ajouter" (qui referme ET déclenche l'ajout).
+   */
+  detailsOpen: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Clic sur la carte : ouvre la popup de détail. Ignoré pendant le choix
+   * d'orientation (`choosingOrientation()`) — la carte est alors occupée par
+   * le sélecteur 4 directions, pas par une zone "voir le détail". Les boutons
+   * internes (+, orientations, Annuler) appellent `$event.stopPropagation()`
+   * dans le template pour ne pas déclencher cette ouverture.
+   */
+  openDetails(): void {
+    if (this.choosingOrientation()) {
+      return;
+    }
+    this.detailsOpen.set(true);
+  }
+
+  /** Ferme la popup sans action — "Annuler" ou clic en dehors (cf. `EquipmentDetailModal`). */
+  closeDetails(): void {
+    this.detailsOpen.set(false);
+  }
+
+  /**
+   * "Ajouter" depuis la popup de détail : referme la popup puis délègue à
+   * `onAddClicked` — flux IDENTIQUE au bouton "+" de la carte (sélecteur
+   * d'orientation si nécessaire, émission directe sinon).
+   */
+  onModalAddClicked(): void {
+    this.detailsOpen.set(false);
+    this.onAddClicked();
+  }
 
   /**
    * Clic sur "Ajouter" : émet directement si aucune orientation n'est requise,

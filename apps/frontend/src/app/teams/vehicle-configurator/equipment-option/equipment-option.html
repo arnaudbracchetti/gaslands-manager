@@ -18,8 +18,15 @@
   "Annuler" sur plusieurs lignes si besoin). Elle réapparaît après "Annuler"
   (retour à l'état de repos) ou une fois l'orientation choisie (l'item est
   ajouté).
+
+  Clic sur la carte → popup de détail (`EquipmentDetailModal`, cf. en-tête
+  .ts de `openDetails`) : nom, coût, emplacement, description ET règles
+  complètes, dans une mise en page aérée. Chaque bouton interne (+, choix
+  d'orientation, Annuler) appelle `$event.stopPropagation()` pour ne pas
+  déclencher cette ouverture.
 -->
-<div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()">
+<div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()"
+     (click)="openDetails()">
 
   <div class="option__header">
     <span class="option__name" [title]="option().nom">{{ option().nom }}</span>
@@ -52,18 +59,26 @@
         <button
           class="orientation-btn"
           type="button"
-          (click)="onOrientationChosen(orientation)">
+          (click)="$event.stopPropagation(); onOrientationChosen(orientation)">
           {{ orientation }}
         </button>
       }
-      <button class="orientation-cancel" type="button" (click)="cancelOrientation()">
+      <button class="orientation-cancel" type="button" (click)="$event.stopPropagation(); cancelOrientation()">
         Annuler
       </button>
     </div>
   } @else {
-    <button class="option__add" type="button" (click)="onAddClicked()" aria-label="Ajouter">
+    <button class="option__add" type="button" (click)="$event.stopPropagation(); onAddClicked()" aria-label="Ajouter">
       <span aria-hidden="true">+</span>
     </button>
   }
 
 </div>
+
+@if (detailsOpen()) {
+  <app-equipment-detail-modal
+    [option]="option()"
+    [requiresOrientation]="requiresOrientation()"
+    (closed)="closeDetails()"
+    (addClicked)="onModalAddClicked()" />
+}

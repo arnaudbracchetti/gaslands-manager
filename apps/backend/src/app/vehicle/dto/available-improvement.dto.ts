@@ -19,6 +19,8 @@ export interface AvailableImprovementDto {
   emplacement: number;
   /** Description de l'amélioration, reprise telle quelle du catalogue (`Amelioration.description`). */
   description: string;
+  /** Règles détaillées de l'amélioration, reprises telles quelles du catalogue (`Amelioration.regles`). */
+  regles: string;
   /** `true` si cette amélioration peut être ajoutée au véhicule TEL QU'IL EST actuellement. */
   disponible: boolean;
   /** Présente uniquement si `disponible` est `false` — la raison du refus, lisible par un humain. */

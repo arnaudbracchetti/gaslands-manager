@@ -34,6 +34,7 @@ const mockAvailableImprovement: AvailableImprovementDto = {
   prix: 4,
   emplacement: 1,
   description: '',
+  regles: '',
   disponible: true,
 };
 
@@ -44,6 +45,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   emplacement: 1,
   type: 'base',
   description: '',
+  regles: '',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
 };

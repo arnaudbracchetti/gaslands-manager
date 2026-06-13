@@ -29,6 +29,8 @@ export interface AvailableWeaponDto {
   type: Arme['type'];
   /** Description de l'arme, reprise telle quelle du catalogue (`Arme.description`). */
   description: string;
+  /** Règles détaillées de l'arme, reprises telles quelles du catalogue (`Arme.regles`). */
+  regles: string;
   /** `true` si cette arme peut être montée sur le véhicule TEL QU'IL EST actuellement. */
   disponible: boolean;
   /** Présente uniquement si `disponible` est `false` — la raison du refus, lisible par un humain. */

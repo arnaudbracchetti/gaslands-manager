@@ -18,6 +18,7 @@ const availableOption: EquipmentOptionDto = {
   prix: 4,
   emplacement: 1,
   description: 'Arme de base à Portée Moyenne lançant 1D6.',
+  regles: 'Portée Moyenne. Lance 1D6.',
   disponible: true,
 };
 
@@ -27,6 +28,7 @@ const unavailableOption: EquipmentOptionDto = {
   prix: 18,
   emplacement: 2,
   description: 'Arme lourde dévastatrice à courte portée.',
+  regles: 'Portée Courte. Lance 5D6.',
   disponible: false,
   raison: 'Emplacements insuffisants : 6/5 requis avec "BFG"',
 };
@@ -41,6 +43,7 @@ const orientableOption: EquipmentOptionDto = {
   prix: 4,
   emplacement: 1,
   description: 'Arme de base à Portée Moyenne lançant 1D6.',
+  regles: 'Portée Moyenne. Lance 1D6.',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
 };
@@ -240,5 +243,105 @@ describe('EquipmentOption', () => {
     expect(emitted).toHaveLength(0);
     expect(component.choosingOrientation()).toBe(false);
     expect(fixture.nativeElement.querySelector('.option__add')).not.toBeNull();
+  });
+
+  // ── Popup de détail (`EquipmentDetailModal`) ────────────────────────────────
+
+  it('ouvre la popup de détail au clic sur la carte', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('app-equipment-detail-modal')).toBeNull();
+
+    (el.querySelector('.option') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(component.detailsOpen()).toBe(true);
+    expect(el.querySelector('app-equipment-detail-modal')).not.toBeNull();
+    expect(el.querySelector('.edm-modal__name')?.textContent).toContain('Mitrailleuse');
+  });
+
+  it('ne déclenche PAS l\'ouverture de la popup au clic sur "Ajouter" (stopPropagation)', () => {
+    setUp(availableOption);
+
+    const emitted: EquipmentChoice[] = [];
+    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
+
+    (fixture.nativeElement.querySelector('.option__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component.detailsOpen()).toBe(false);
+    expect(emitted).toHaveLength(1);
+  });
+
+  it('referme la popup sans émettre au clic sur "Annuler" de la popup', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const emitted: EquipmentChoice[] = [];
+    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
+
+    (el.querySelector('.option') as HTMLElement).click();
+    fixture.detectChanges();
+
+    (el.querySelector('.edm-modal__cancel') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component.detailsOpen()).toBe(false);
+    expect(el.querySelector('app-equipment-detail-modal')).toBeNull();
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('émet chosen et referme la popup au clic sur "Ajouter" de la popup (équipement non-orientable)', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const emitted: EquipmentChoice[] = [];
+    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
+
+    (el.querySelector('.option') as HTMLElement).click();
+    fixture.detectChanges();
+
+    (el.querySelector('.edm-modal__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([{ nomInterne: 'mitrailleuse' }]);
+    expect(component.detailsOpen()).toBe(false);
+    expect(el.querySelector('app-equipment-detail-modal')).toBeNull();
+  });
+
+  it('ouvre le sélecteur d\'orientation (et referme la popup) au clic sur "Ajouter" de la popup (équipement orientable)', () => {
+    setUp(availableOption, true);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const emitted: EquipmentChoice[] = [];
+    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
+
+    (el.querySelector('.option') as HTMLElement).click();
+    fixture.detectChanges();
+
+    (el.querySelector('.edm-modal__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(emitted).toHaveLength(0);
+    expect(component.detailsOpen()).toBe(false);
+    expect(component.choosingOrientation()).toBe(true);
+    expect(el.querySelectorAll('.orientation-btn')).toHaveLength(4);
+  });
+
+  it('n\'ouvre pas la popup de détail pendant le choix d\'orientation', () => {
+    setUp(availableOption, true);
+    const el = fixture.nativeElement as HTMLElement;
+
+    // Ouvre le sélecteur d'orientation.
+    (el.querySelector('.option__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    // Clic sur la carte (en dehors des boutons d'orientation) — ignoré.
+    (el.querySelector('.option') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(component.detailsOpen()).toBe(false);
+    expect(el.querySelector('app-equipment-detail-modal')).toBeNull();
   });
 });

@@ -482,6 +482,7 @@ export class VehicleService {
         prix: amelioration.prix,
         emplacement: amelioration.emplacement,
         description: amelioration.description,
+        regles: amelioration.regles,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
       };

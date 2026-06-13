@@ -194,6 +194,7 @@ export class WeaponService {
         emplacement: arme.emplacement,
         type: arme.type,
         description: arme.description,
+        regles: arme.regles,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
       };

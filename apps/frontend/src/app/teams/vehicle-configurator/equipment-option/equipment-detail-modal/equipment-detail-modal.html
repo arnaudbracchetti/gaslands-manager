@@ -1,0 +1,56 @@
+<!--
+  EquipmentDetailModal — overlay de détail d'un équipement (cf. en-tête .ts).
+
+  Structure calquée sur TourelleAssignmentModal (.tam-*) : fond semi-transparent
+  plein écran (.edm-overlay) + boîte centrale (.edm-modal). Le clic sur l'overlay
+  émet `closed` (fermeture "en cliquant à l'extérieur") ; `$event.stopPropagation()`
+  sur la boîte empêche qu'un clic À L'INTÉRIEUR ne remonte jusqu'à l'overlay et
+  ne ferme la popup par erreur.
+-->
+<div class="edm-overlay" role="dialog" aria-modal="true" [attr.aria-label]="option().nom"
+     (click)="closed.emit()">
+  <div class="edm-modal" (click)="$event.stopPropagation()">
+
+    <header class="edm-modal__header">
+      <h3 class="edm-modal__name">{{ option().nom }}</h3>
+      <div class="edm-modal__badges">
+        <span class="edm-modal__badge" title="Coût en jerricans">
+          <img class="edm-modal__badge-icon" src="/icons/dollar.svg" alt="" />
+          {{ option().prix }}
+        </span>
+        <span class="edm-modal__badge" title="Emplacements requis">
+          <img class="edm-modal__badge-icon" src="/icons/wrench.svg" alt="" />
+          {{ option().emplacement }}
+        </span>
+      </div>
+    </header>
+
+    @if (option().description) {
+      <p class="edm-modal__description">{{ option().description }}</p>
+    }
+
+    @if (option().regles) {
+      <section class="edm-modal__regles">
+        <h4 class="edm-modal__regles-title">Règles</h4>
+        <p>{{ option().regles }}</p>
+      </section>
+    }
+
+    @if (!option().disponible && !requiresOrientation()) {
+      <!-- Refus définitif — même message que .option__reason sur la carte. -->
+      <p class="edm-modal__reason">{{ option().raison }}</p>
+    }
+
+    <div class="edm-modal__actions">
+      <button class="edm-modal__cancel" type="button" (click)="closed.emit()">
+        Annuler
+      </button>
+      @if (option().disponible || requiresOrientation()) {
+        <button class="edm-modal__add" type="button" (click)="addClicked.emit()">
+          Ajouter
+        </button>
+      }
+    </div>
+
+  </div>
+</div>

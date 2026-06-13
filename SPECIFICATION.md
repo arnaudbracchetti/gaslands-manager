@@ -82,6 +82,8 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 
 **Construction d'un véhicule** : le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:teamId/vehicles/new` — même page `VehicleConfiguratorPage`/`VehicleConfigurator`, qui affiche d'abord le choix du véhicule parmi ceux autorisés par le sponsor, puis bascule vers la même section d'équipement que ci-dessus dès que le véhicule "nu" est créé. Ces deux parcours (création et édition d'équipement) vivaient auparavant dans une modale (`<app-modal size="wide">`) ; ils occupent désormais une page entière, pour donner plus d'espace à l'équipement actuel et au catalogue d'armes/améliorations.
 
+**Détail d'un équipement** : dans le catalogue filtré (étape 2 du `VehicleBuilder`), cliquer sur une carte d'arme ou d'amélioration (`equipment-option`) ouvre une popup (`EquipmentDetailModal`) présentant toutes ses informations dans une mise en page aérée — nom, coût, emplacement, description **et règles complètes** (`regles`, repris du catalogue, non affiché sur la carte compacte). Un bouton "Annuler" referme la popup sans action ; cliquer en dehors de la popup (sur l'overlay) fait de même. Un bouton "Ajouter" déclenche le même flux que le "+" de la carte (sélecteur d'orientation si nécessaire) puis referme la popup ; il est masqué pour un refus définitif (sponsor/emplacements/règle de pose), comme le bouton "+" de la carte.
+
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
 ### 3.5 Navigation
@@ -302,6 +304,11 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés par l
 > quel du catalogue (`Amelioration.description`/`Arme.description`) — affiché
 > par le frontend dans la carte de catalogue (`equipment-option`, étape 2 du
 > `VehicleBuilder`).
+>
+> Elles incluent également un champ `regles: string` (repris de
+> `Amelioration.regles`/`Arme.regles`), affiché uniquement dans la popup de
+> détail (`EquipmentDetailModal`) ouverte au clic sur une carte de catalogue —
+> cf. §3.4 "Détail d'un équipement".
 
 ---
 

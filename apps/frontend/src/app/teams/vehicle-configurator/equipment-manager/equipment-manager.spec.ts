@@ -116,6 +116,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   emplacement: 1,
   type: 'base',
   description: '',
+  regles: '',
   disponible: true,
 };
 
@@ -125,6 +126,7 @@ const mockAvailableImprovement: AvailableImprovementDto = {
   prix: 4,
   emplacement: 1,
   description: '',
+  regles: '',
   disponible: true,
 };
 
@@ -138,6 +140,7 @@ const mockUnavailableWeapon: AvailableWeaponDto = {
   emplacement: 2,
   type: 'avancée',
   description: '',
+  regles: '',
   disponible: false,
   raison: 'Emplacements insuffisants : 6/4 requis avec "BFG"',
 };
@@ -151,6 +154,7 @@ const mockOrientableWeapon: AvailableWeaponDto = {
   emplacement: 1,
   type: 'avancée',
   description: '',
+  regles: '',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Lance-Flammes" sur un arc de tir',
 };
@@ -161,6 +165,7 @@ const mockUnavailableImprovement: AvailableImprovementDto = {
   prix: 6,
   emplacement: 0,
   description: '',
+  regles: '',
   disponible: false,
   raison: 'Cette amélioration est réservée à un autre sponsor',
 };

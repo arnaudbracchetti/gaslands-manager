@@ -1,0 +1,152 @@
+/* ── EquipmentDetailModal — popup de détail d'un équipement ────────────────── */
+/* Même thème que TourelleAssignmentModal (`.tam-*`, cf. son fichier) : overlay
+   plein écran + boîte centrale, entièrement piloté par les design tokens --clr-*.
+   z-index supérieur à `.tam-overlay` (200) : la popup de détail peut s'ouvrir
+   depuis une carte du catalogue affichée à côté du sélecteur de Tourelle. */
+
+.edm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+/* Boîte de dialogue centrale — mise en page aérée (gap généreux entre sections) */
+.edm-modal {
+  background: var(--clr-bg-modal);
+  border: 1px solid var(--clr-border);
+  border-radius: 8px;
+  padding: 24px;
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* En-tête : nom à gauche, badges prix/emplacement à droite — même agencement
+   que `.option__header` dans equipment-option, en plus grand. */
+.edm-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edm-modal__name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--clr-text);
+}
+
+.edm-modal__badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.edm-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(var(--clr-accent-cyan-rgb), 0.1);
+  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
+  color: var(--clr-accent-cyan);
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.edm-modal__badge-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Description du catalogue — même ton que `.option__description` */
+.edm-modal__description {
+  margin: 0;
+  color: var(--clr-text-hint);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Section "Règles" — titre discret + texte complet, lisible (`white-space:
+   pre-line` respecte les retours à la ligne du catalogue YAML). */
+.edm-modal__regles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edm-modal__regles-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-muted);
+
+  & + p {
+    margin: 0;
+    color: var(--clr-text);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+}
+
+/* Raison d'indisponibilité — même couleur que `.option__reason` */
+.edm-modal__reason {
+  margin: 0;
+  color: var(--clr-accent);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Actions — "Annuler" / "Ajouter" alignés à droite */
+.edm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.edm-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--clr-text-disabled);
+  color: var(--clr-text-hint);
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: var(--clr-text);
+    color: var(--clr-text);
+  }
+}
+
+/* Bouton "Ajouter" — même vert que `.option__add` */
+.edm-modal__add {
+  border: none;
+  border-radius: 4px;
+  background: var(--clr-success);
+  color: #fff;
+  padding: 8px 24px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}

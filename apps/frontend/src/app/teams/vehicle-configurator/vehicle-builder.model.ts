@@ -118,6 +118,8 @@ export interface AvailableImprovementDto {
   emplacement: number;
   /** Description de l'amélioration, reprise du catalogue (`Amelioration.description`). */
   description: string;
+  /** Règles détaillées de l'amélioration, reprises du catalogue (`Amelioration.regles`). */
+  regles: string;
   disponible: boolean;
   raison?: string;
 }
@@ -150,6 +152,8 @@ export interface AvailableWeaponDto {
   type: 'base' | 'avancée' | 'équipage' | 'largable';
   /** Description de l'arme, reprise du catalogue (`Arme.description`). */
   description: string;
+  /** Règles détaillées de l'arme, reprises du catalogue (`Arme.regles`). */
+  regles: string;
   disponible: boolean;
   raison?: string;
 }
@@ -170,6 +174,8 @@ export interface EquipmentOption {
   emplacement: number;
   /** Description de l'équipement, reprise du catalogue (cf. `AvailableWeaponDto.description`/`AvailableImprovementDto.description`). */
   description: string;
+  /** Règles détaillées, reprises du catalogue (cf. `AvailableWeaponDto.regles`/`AvailableImprovementDto.regles`). */
+  regles: string;
   disponible: boolean;
   raison?: string;
 }
