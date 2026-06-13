@@ -75,6 +75,13 @@ describe('EquipmentOption', () => {
     expect(el.textContent).toContain('1');
   });
 
+  it('porte le nom complet dans l\'attribut `title` (tooltip natif au survol prolongé, si tronqué)', () => {
+    setUp(availableOption);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.option__name')?.getAttribute('title')).toBe('Mitrailleuse');
+  });
+
   it('affiche la description issue du catalogue', () => {
     setUp(availableOption);
     const el = fixture.nativeElement as HTMLElement;

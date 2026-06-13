@@ -22,7 +22,7 @@
 <div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()">
 
   <div class="option__header">
-    <span class="option__name">{{ option().nom }}</span>
+    <span class="option__name" [title]="option().nom">{{ option().nom }}</span>
     <div class="option__badges">
       <span class="option__badge" title="Coût en jerricans">
         <img class="option__badge-icon" src="/icons/dollar.svg" alt="" />
