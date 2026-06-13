@@ -78,8 +78,9 @@ export class EquipmentOption {
 
   /**
    * Affiche la popup de détail (`EquipmentDetailModal`) — état local, purement UI.
-   * Ouverte au clic sur la carte (cf. `openDetails`), fermée par "Annuler", un
-   * clic en dehors de la popup, ou "Ajouter" (qui referme ET déclenche l'ajout).
+   * Ouverte au clic sur la carte (cf. `openDetails`), fermée par "Annuler" ou un
+   * clic en dehors de la popup. Purement informative — l'ajout reste l'action
+   * exclusive du bouton "+" de la carte.
    */
   detailsOpen: WritableSignal<boolean> = signal(false);
 
@@ -100,16 +101,6 @@ export class EquipmentOption {
   /** Ferme la popup sans action — "Annuler" ou clic en dehors (cf. `EquipmentDetailModal`). */
   closeDetails(): void {
     this.detailsOpen.set(false);
-  }
-
-  /**
-   * "Ajouter" depuis la popup de détail : referme la popup puis délègue à
-   * `onAddClicked` — flux IDENTIQUE au bouton "+" de la carte (sélecteur
-   * d'orientation si nécessaire, émission directe sinon).
-   */
-  onModalAddClicked(): void {
-    this.detailsOpen.set(false);
-    this.onAddClicked();
   }
 
   /**

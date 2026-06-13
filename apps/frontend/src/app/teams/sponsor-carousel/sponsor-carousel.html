@@ -34,8 +34,11 @@
         <!-- Nom du sponsor -->
         <h3 class="sponsor-name">{{ sponsor.nom }}</h3>
 
-        <!-- Description courte -->
-        <p class="sponsor-description">{{ sponsor.description }}</p>
+        <!-- Description courte — [innerHTML] : convertie en HTML au chargement
+             du catalogue (CatalogService.onModuleInit, marked) — <div> et non
+             <p> car le HTML généré contient déjà ses propres balises (<p>...),
+             cf. sponsor-carousel.scss (::ng-deep). -->
+        <div class="sponsor-description" [innerHTML]="sponsor.description"></div>
 
         <!-- Badges des classes d'avantage -->
         <div class="sponsor-classes">

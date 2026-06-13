@@ -292,43 +292,6 @@ describe('EquipmentOption', () => {
     expect(emitted).toHaveLength(0);
   });
 
-  it('émet chosen et referme la popup au clic sur "Ajouter" de la popup (équipement non-orientable)', () => {
-    setUp(availableOption);
-    const el = fixture.nativeElement as HTMLElement;
-
-    const emitted: EquipmentChoice[] = [];
-    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
-
-    (el.querySelector('.option') as HTMLElement).click();
-    fixture.detectChanges();
-
-    (el.querySelector('.edm-modal__add') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    expect(emitted).toEqual([{ nomInterne: 'mitrailleuse' }]);
-    expect(component.detailsOpen()).toBe(false);
-    expect(el.querySelector('app-equipment-detail-modal')).toBeNull();
-  });
-
-  it('ouvre le sélecteur d\'orientation (et referme la popup) au clic sur "Ajouter" de la popup (équipement orientable)', () => {
-    setUp(availableOption, true);
-    const el = fixture.nativeElement as HTMLElement;
-
-    const emitted: EquipmentChoice[] = [];
-    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
-
-    (el.querySelector('.option') as HTMLElement).click();
-    fixture.detectChanges();
-
-    (el.querySelector('.edm-modal__add') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    expect(emitted).toHaveLength(0);
-    expect(component.detailsOpen()).toBe(false);
-    expect(component.choosingOrientation()).toBe(true);
-    expect(el.querySelectorAll('.orientation-btn')).toHaveLength(4);
-  });
-
   it('n\'ouvre pas la popup de détail pendant le choix d\'orientation', () => {
     setUp(availableOption, true);
     const el = fixture.nativeElement as HTMLElement;

@@ -140,13 +140,21 @@
   line-height: 1.2;
 }
 
-/* Description courte */
+/* Description courte — contenu HTML (converti depuis Markdown au chargement du
+   catalogue, cf. CatalogService.onModuleInit) : le style porté auparavant par
+   <p class="sponsor-description"> s'applique maintenant au <p> généré par
+   marked à l'intérieur du <div> (::ng-deep, même principe que .advantages-html
+   ci-dessous). */
 .sponsor-description {
-  color: #aaa;
-  font-size: 0.875rem;
-  font-style: italic;
-  line-height: 1.5;
   margin-bottom: 14px;
+
+  ::ng-deep p {
+    margin: 0;
+    color: #aaa;
+    font-size: 0.875rem;
+    font-style: italic;
+    line-height: 1.5;
+  }
 }
 
 /* Badges des classes d'avantage */

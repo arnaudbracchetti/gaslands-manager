@@ -21,7 +21,8 @@
 
   Clic sur la carte → popup de détail (`EquipmentDetailModal`, cf. en-tête
   .ts de `openDetails`) : nom, coût, emplacement, description ET règles
-  complètes, dans une mise en page aérée. Chaque bouton interne (+, choix
+  complètes, dans une mise en page aérée — purement informative, fermée par
+  "Annuler" ou un clic à l'extérieur. Chaque bouton interne (+, choix
   d'orientation, Annuler) appelle `$event.stopPropagation()` pour ne pas
   déclencher cette ouverture.
 -->
@@ -43,7 +44,11 @@
   </div>
 
   @if (option().description && !choosingOrientation()) {
-    <p class="option__description">{{ option().description }}</p>
+    <!-- [innerHTML] : description convertie en HTML au chargement du catalogue
+         (CatalogService.onModuleInit, marked) — <div> et non <p> car le HTML
+         généré contient déjà ses propres balises (<p>, <ul>...), cf.
+         equipment-option.scss (::ng-deep). -->
+    <div class="option__description" [innerHTML]="option().description"></div>
   }
 
   @if (!option().disponible && !requiresOrientation()) {
@@ -79,6 +84,5 @@
   <app-equipment-detail-modal
     [option]="option()"
     [requiresOrientation]="requiresOrientation()"
-    (closed)="closeDetails()"
-    (addClicked)="onModalAddClicked()" />
+    (closed)="closeDetails()" />
 }

@@ -937,4 +937,39 @@ describe('CatalogService', () => {
       }
     });
   });
+
+  // ── Conversion Markdown → HTML (description/regles) ────────────────────────
+
+  describe('description/regles — conversion Markdown → HTML au chargement', () => {
+    it('convertit la description d\'un sponsor en HTML (<p>...)', () => {
+      const rutherford = service.getSponsor('Rutherford');
+      expect(rutherford!.description).toContain('<p>Sponsor militaire de référence</p>');
+    });
+
+    it('convertit la description d\'un véhicule en HTML (<p>...)', () => {
+      const voiture = service.getAllVehicules().find((v) => v.nom === 'Voiture');
+      expect(voiture!.description).toContain('<p>Véhicule standard polyvalent</p>');
+    });
+
+    it('convertit des règles multi-lignes (liste Markdown) en <ul><li>', () => {
+      const helicoptere = service.getAllVehicules().find((v) => v.nom === 'Hélicoptère');
+      expect(helicoptere!.regles).toContain('<ul>');
+      expect(helicoptere!.regles).toContain('<li>Ignore les obstacles terrestres</li>');
+    });
+
+    it('convertit la description/regles d\'une arme en HTML', () => {
+      const mitrailleuse = service.getAllArmes().find((a) => a.nom === 'Mitrailleuse');
+      expect(mitrailleuse!.description).toContain('<p>Arme automatique standard</p>');
+    });
+
+    it('convertit la description/regles d\'une amélioration en HTML', () => {
+      const blindage = service.getAllAmeliorations().find((a) => a.nom === 'Blindage');
+      expect(blindage!.description).toContain('<p>Renforce la carrosserie de 2 points</p>');
+    });
+
+    it('un champ `regles` vide ("") reste une chaîne vide après conversion', () => {
+      const mitrailleuse = service.getAllArmes().find((a) => a.nom === 'Mitrailleuse');
+      expect(mitrailleuse!.regles).toBe('');
+    });
+  });
 });

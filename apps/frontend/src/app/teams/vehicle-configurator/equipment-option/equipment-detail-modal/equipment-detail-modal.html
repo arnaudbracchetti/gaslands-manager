@@ -26,13 +26,17 @@
     </header>
 
     @if (option().description) {
-      <p class="edm-modal__description">{{ option().description }}</p>
+      <!-- [innerHTML] : description/regles convertis en HTML au chargement du
+           catalogue (CatalogService.onModuleInit, marked) — <div> et non <p>
+           car le HTML généré contient déjà ses propres balises (<p>, <ul>...),
+           cf. equipment-detail-modal.scss (::ng-deep). -->
+      <div class="edm-modal__description" [innerHTML]="option().description"></div>
     }
 
     @if (option().regles) {
       <section class="edm-modal__regles">
         <h4 class="edm-modal__regles-title">Règles</h4>
-        <p>{{ option().regles }}</p>
+        <div [innerHTML]="option().regles"></div>
       </section>
     }
 
@@ -45,11 +49,6 @@
       <button class="edm-modal__cancel" type="button" (click)="closed.emit()">
         Annuler
       </button>
-      @if (option().disponible || requiresOrientation()) {
-        <button class="edm-modal__add" type="button" (click)="addClicked.emit()">
-          Ajouter
-        </button>
-      }
     </div>
 
   </div>

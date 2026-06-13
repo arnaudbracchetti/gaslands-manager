@@ -17,6 +17,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { parse } from 'yaml';
+import { marked } from 'marked';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -73,6 +74,27 @@ export class CatalogService implements OnModuleInit {
         ameliorations_vehicules: Amelioration[];
       }>('amelioration.yml').ameliorations_vehicules;
 
+      // Étape 1bis : Convertir les champs Markdown (`description`/`regles`) en HTML.
+      // Fait une seule fois ici, comme ContentService le fait pour les fichiers .md —
+      // évite de refaire la conversion à chaque rendu côté frontend (cf. ARCHITECTURE.md §3.3).
+      // Mutation en place : les objets ci-dessous sont les mêmes références que
+      // celles utilisées dans sponsorMap (Étape 2), donc le HTML y est visible aussi.
+      for (const s of rawSponsors) {
+        s.description = this.toHtml(s.description);
+      }
+      for (const v of this.allVehicules) {
+        v.description = this.toHtml(v.description);
+        v.regles = this.toHtml(v.regles);
+      }
+      for (const a of this.allArmes) {
+        a.description = this.toHtml(a.description);
+        a.regles = this.toHtml(a.regles);
+      }
+      for (const a of this.allAmeliorations) {
+        a.description = this.toHtml(a.description);
+        a.regles = this.toHtml(a.regles);
+      }
+
       // Étape 2 : Construire la Map avec les relations pré-résolues.
       // Pour chaque sponsor, on filtre les items dont sponsors_autorises[] contient son nom.
       // Ce filtrage ne se fait qu'UNE SEULE FOIS ici, pas à chaque requête.
@@ -117,6 +139,18 @@ export class CatalogService implements OnModuleInit {
   private loadYaml<T>(filename: string): T {
     const raw = this.readFileContent(filename);
     return parse(raw) as T;
+  }
+
+  /**
+   * Convertit un champ Markdown du catalogue (`description`/`regles`) en HTML.
+   *
+   * marked.parse() est synchrone par défaut (v18) — même hypothèse que
+   * `sponsor-carousel.ts` côté frontend pour `avantages_sponsorises`. Le cast
+   * `as string` est nécessaire car le type retourné est `string | Promise<string>`.
+   * `marked.parse('')` renvoie `''` (cas `regles: ""` du catalogue).
+   */
+  private toHtml(markdown: string): string {
+    return marked.parse(markdown) as string;
   }
 
   /**

@@ -61,6 +61,8 @@ Le catalogue contient :
 
 **Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané.
 
+**Conversion Markdown → HTML au chargement** : les champs `description`/`regles` (`Vehicule`, `Arme`, `Amelioration`) ainsi que `Sponsor.description` contiennent du Markdown dans les fichiers YAML (listes, mise en forme). `CatalogService.onModuleInit()` les convertit une seule fois en HTML via `marked` — comme `ContentService` le fait déjà pour les fichiers `.md` de `content/`. Le frontend affiche directement ce HTML via `[innerHTML]` (`equipment-option`, `equipment-detail-modal`, `vehicle-choice-card`, `sponsor-carousel`). `Sponsor.avantages_sponsorises` garde sa conversion existante côté client (`sponsor-carousel.ts`, `marked.parse()` + `DomSanitizer`), inchangée.
+
 Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel client peut consulter les données pour construire ses véhicules.
 
 ### 3.4 CRUD Équipes
@@ -82,7 +84,7 @@ Les endpoints du catalogue sont **publics** (pas de JWT requis) : n'importe quel
 
 **Construction d'un véhicule** : le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:teamId/vehicles/new` — même page `VehicleConfiguratorPage`/`VehicleConfigurator`, qui affiche d'abord le choix du véhicule parmi ceux autorisés par le sponsor, puis bascule vers la même section d'équipement que ci-dessus dès que le véhicule "nu" est créé. Ces deux parcours (création et édition d'équipement) vivaient auparavant dans une modale (`<app-modal size="wide">`) ; ils occupent désormais une page entière, pour donner plus d'espace à l'équipement actuel et au catalogue d'armes/améliorations.
 
-**Détail d'un équipement** : dans le catalogue filtré (étape 2 du `VehicleBuilder`), cliquer sur une carte d'arme ou d'amélioration (`equipment-option`) ouvre une popup (`EquipmentDetailModal`) présentant toutes ses informations dans une mise en page aérée — nom, coût, emplacement, description **et règles complètes** (`regles`, repris du catalogue, non affiché sur la carte compacte). Un bouton "Annuler" referme la popup sans action ; cliquer en dehors de la popup (sur l'overlay) fait de même. Un bouton "Ajouter" déclenche le même flux que le "+" de la carte (sélecteur d'orientation si nécessaire) puis referme la popup ; il est masqué pour un refus définitif (sponsor/emplacements/règle de pose), comme le bouton "+" de la carte.
+**Détail d'un équipement** : dans le catalogue filtré (étape 2 du `VehicleBuilder`), toute la carte d'une arme ou d'une amélioration (`equipment-option`, curseur en pointeur pour signaler l'interaction) est cliquable et ouvre une popup (`EquipmentDetailModal`) présentant toutes ses informations dans une mise en page aérée — nom, coût, emplacement, description, **règles complètes** (`regles`, repris du catalogue, non affiché sur la carte compacte) et, pour un refus définitif (sponsor/emplacements/règle de pose), la raison correspondante. Purement informative : un bouton "Annuler" referme la popup sans action, et cliquer en dehors de la popup (sur l'overlay) fait de même. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 

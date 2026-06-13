@@ -27,6 +27,9 @@
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
+  // Toute la carte ouvre la popup de détail au clic (cf. equipment-option.html,
+  // (click)="openDetails()") — le curseur "pointeur" signale cette interaction.
+  cursor: pointer;
 
   /* Option indisponible : grisée, pas de transformation au survol */
   &--unavailable {
@@ -78,13 +81,22 @@
     height: 13px;
   }
 
-  /* Description du catalogue (`Arme.description`/`Amelioration.description`) */
+  /* Description du catalogue (`Arme.description`/`Amelioration.description`) —
+     contenu HTML (converti depuis Markdown au chargement du catalogue, cf.
+     CatalogService.onModuleInit) : le style porté auparavant par <p class="option__description">
+     s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
   &__description {
-    color: var(--clr-text-hint);
-    font-size: 0.8rem;
-    font-style: italic;
-    line-height: 1.4;
-    margin: 0;
+    ::ng-deep p, ::ng-deep ul, ::ng-deep li {
+      color: var(--clr-text-hint);
+      font-size: 0.8rem;
+      font-style: italic;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    ::ng-deep ul {
+      padding-left: 1.2em;
+    }
   }
 
   /* Raison d'indisponibilité — message du backend (RuleResult.reason) */

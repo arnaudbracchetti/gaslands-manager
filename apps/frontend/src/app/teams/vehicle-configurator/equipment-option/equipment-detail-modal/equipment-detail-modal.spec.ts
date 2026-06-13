@@ -2,9 +2,9 @@
  * Tests unitaires pour EquipmentDetailModal.
  *
  * Mirroir de `equipment-option.spec.ts` (cf. son en-tête) : composant "dumb",
- * on vérifie l'affichage complet (nom, coût, emplacement, description, règles)
- * et les deux sorties — `closed` (Annuler / clic sur l'overlay) et `addClicked`
- * (bouton "Ajouter", masqué pour un refus définitif).
+ * purement informatif — on vérifie l'affichage complet (nom, coût, emplacement,
+ * description, règles, raison d'indisponibilité éventuelle) et la seule sortie
+ * `closed` (Annuler / clic sur l'overlay).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
@@ -77,27 +77,17 @@ describe('EquipmentDetailModal', () => {
     );
   });
 
-  it('affiche le bouton "Ajouter" quand l\'option est disponible', () => {
-    setUp(availableOption);
-    const el = fixture.nativeElement as HTMLElement;
-
-    expect(el.querySelector('.edm-modal__add')).not.toBeNull();
-    expect(el.querySelector('.edm-modal__reason')).toBeNull();
-  });
-
-  it('masque "Ajouter" et affiche la raison pour un refus définitif', () => {
+  it('affiche la raison pour un refus définitif', () => {
     setUp(unavailableOption);
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.edm-modal__add')).toBeNull();
     expect(el.querySelector('.edm-modal__reason')?.textContent).toContain('Emplacements insuffisants');
   });
 
-  it('propose "Ajouter" (et masque la raison) pour une option indisponible mais orientable', () => {
+  it('ne montre pas de raison quand une orientation est requise', () => {
     setUp(orientableOption, true);
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.edm-modal__add')).not.toBeNull();
     expect(el.querySelector('.edm-modal__reason')).toBeNull();
   });
 
@@ -134,16 +124,5 @@ describe('EquipmentDetailModal', () => {
       .dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(emittedCount).toBe(0);
-  });
-
-  it('émet `addClicked` au clic sur "Ajouter"', () => {
-    setUp(availableOption);
-
-    let emittedCount = 0;
-    outputToObservable(component.addClicked).subscribe(() => emittedCount++);
-
-    (fixture.nativeElement.querySelector('.edm-modal__add') as HTMLButtonElement).click();
-
-    expect(emittedCount).toBe(1);
   });
 });

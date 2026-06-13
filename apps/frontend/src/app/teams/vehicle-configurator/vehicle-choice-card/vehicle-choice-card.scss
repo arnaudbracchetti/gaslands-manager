@@ -51,11 +51,20 @@
     flex-shrink: 0;
   }
 
+  /* Contenu HTML (converti depuis Markdown au chargement du catalogue, cf.
+     CatalogService.onModuleInit) : le style porté auparavant par <p class="choice-card__description">
+     s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
   &__description {
-    color: var(--clr-text-muted);
-    font-size: 0.85rem;
-    line-height: 1.4;
-    margin: 0;
+    ::ng-deep p, ::ng-deep ul, ::ng-deep li {
+      color: var(--clr-text-muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    ::ng-deep ul {
+      padding-left: 1.2em;
+    }
   }
 
   &__stats {

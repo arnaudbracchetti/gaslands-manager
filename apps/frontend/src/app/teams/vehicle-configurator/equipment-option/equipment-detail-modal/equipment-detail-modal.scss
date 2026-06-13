@@ -68,17 +68,27 @@
   height: 14px;
 }
 
-/* Description du catalogue — même ton que `.option__description` */
+/* Description du catalogue — même ton que `.option__description`. Contenu HTML
+   (converti depuis Markdown au chargement du catalogue, cf.
+   CatalogService.onModuleInit) : le style porté auparavant par <p class="edm-modal__description">
+   s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
 .edm-modal__description {
-  margin: 0;
-  color: var(--clr-text-hint);
-  font-size: 0.92rem;
-  font-style: italic;
-  line-height: 1.5;
+  ::ng-deep p, ::ng-deep ul, ::ng-deep li {
+    margin: 0;
+    color: var(--clr-text-hint);
+    font-size: 0.92rem;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  ::ng-deep ul {
+    padding-left: 1.2em;
+  }
 }
 
-/* Section "Règles" — titre discret + texte complet, lisible (`white-space:
-   pre-line` respecte les retours à la ligne du catalogue YAML). */
+/* Section "Règles" — titre discret + contenu HTML (converti depuis Markdown au
+   chargement du catalogue, cf. CatalogService.onModuleInit). Les listes à puces
+   reprennent le style de `.advantages-html` (sponsor-carousel.scss). */
 .edm-modal__regles {
   display: flex;
   flex-direction: column;
@@ -93,12 +103,43 @@
   letter-spacing: 0.05em;
   color: var(--clr-text-muted);
 
-  & + p {
-    margin: 0;
-    color: var(--clr-text);
-    font-size: 0.92rem;
-    line-height: 1.6;
-    white-space: pre-line;
+  & + div {
+    ::ng-deep p {
+      margin: 0;
+      color: var(--clr-text);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    ::ng-deep ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    ::ng-deep li {
+      color: var(--clr-text);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      padding-left: 16px;
+      position: relative;
+
+      &::before {
+        content: '›';
+        position: absolute;
+        left: 0;
+        color: var(--clr-accent);
+        font-weight: 700;
+      }
+    }
+
+    ::ng-deep strong {
+      color: var(--clr-text);
+      font-weight: 700;
+    }
   }
 }
 
@@ -131,22 +172,5 @@
   &:hover {
     border-color: var(--clr-text);
     color: var(--clr-text);
-  }
-}
-
-/* Bouton "Ajouter" — même vert que `.option__add` */
-.edm-modal__add {
-  border: none;
-  border-radius: 4px;
-  background: var(--clr-success);
-  color: #fff;
-  padding: 8px 24px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:hover {
-    opacity: 0.85;
   }
 }

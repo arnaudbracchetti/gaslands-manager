@@ -6,7 +6,11 @@
     <span class="choice-card__weight">{{ vehicule().poids }}</span>
   </div>
 
-  <p class="choice-card__description">{{ vehicule().description }}</p>
+  <!-- [innerHTML] : description convertie en HTML au chargement du catalogue
+       (CatalogService.onModuleInit, marked) — <div> et non <p> car le HTML
+       généré contient déjà ses propres balises (<p>, <ul>...), cf.
+       vehicle-choice-card.scss (::ng-deep). -->
+  <div class="choice-card__description" [innerHTML]="vehicule().description"></div>
 
   <!-- Statistiques essentielles — cf. SPECIFICATION.md §5, modèle Vehicule -->
   <div class="choice-card__stats">

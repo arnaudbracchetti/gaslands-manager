@@ -8,13 +8,11 @@
  *
  * Composant **dumb**, même pattern que `TourelleAssignmentModal` (overlay plein
  * écran + boîte centrale, `role="dialog"`/`aria-modal`, cf.
- * `equipment-manager/tourelle-assignment-modal/`). Deux sorties :
- *  - `closed` : "Annuler" OU clic sur l'overlay (en dehors de la boîte) — le
- *    parent referme la popup sans action.
- *  - `addClicked` : bouton "Ajouter" — le parent déclenche exactement le même
- *    flux que le bouton "+" de la carte (`EquipmentOption.onAddClicked`), PUIS
- *    referme la popup. Masqué si l'équipement n'est pas ajoutable (refus
- *    définitif — cf. `EquipmentOption`, "DEUX nuances de raison").
+ * `equipment-manager/tourelle-assignment-modal/`). Purement informative : la
+ * seule sortie est `closed` ("Annuler" OU clic sur l'overlay, en dehors de la
+ * boîte) — le parent referme la popup sans action. L'ajout au véhicule reste
+ * l'action exclusive du bouton "+" de la carte (`EquipmentOption.onAddClicked`),
+ * non dupliquée ici.
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { EquipmentOption as EquipmentOptionDto } from '../../vehicle-builder.model';
@@ -39,7 +37,4 @@ export class EquipmentDetailModal {
 
   /** Fermeture sans action — "Annuler" ou clic hors de la boîte. */
   closed: OutputEmitterRef<void> = output<void>();
-
-  /** "Ajouter" — le parent gère le flux complet (orientation éventuelle) puis referme. */
-  addClicked: OutputEmitterRef<void> = output<void>();
 }
