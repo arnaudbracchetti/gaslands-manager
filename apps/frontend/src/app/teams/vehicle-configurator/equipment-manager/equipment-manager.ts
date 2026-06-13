@@ -59,11 +59,14 @@ import {
 import type { Arme } from '../../../catalog/catalog.model';
 import { EquipmentOption } from '../equipment-option/equipment-option';
 import { TourelleAssignmentModal } from './tourelle-assignment-modal/tourelle-assignment-modal';
+import { TeamBudget } from './team-budget/team-budget';
+import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary';
+import { MountedEquipment } from './mounted-equipment/mounted-equipment';
 
 @Component({
   selector: 'app-equipment-manager',
   standalone: true,
-  imports: [EquipmentOption, TourelleAssignmentModal],
+  imports: [EquipmentOption, TourelleAssignmentModal, TeamBudget, VehicleCostSummary, MountedEquipment],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',
 })
@@ -548,6 +551,12 @@ export class EquipmentManager {
   }
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────
+  // `resolveWeaponSlot` a été déplacée dans `MountedEquipment` (seul composant
+  // qui l'utilise désormais, via son input `sponsorCatalog`). `resolveWeaponName`/
+  // `resolveImprovementName` restent ICI en plus de leur copie dans
+  // `MountedEquipment` : `EquipmentManager` en a besoin pour le texte des
+  // confirmations `window.confirm` (`removeWeapon`/`removeImprovement`), une
+  // responsabilité que `MountedEquipment` (purement présentationnel) n'a pas.
 
   /**
    * Résout le nom AFFICHÉ d'une arme montée depuis son `nomInterne` — même
@@ -557,23 +566,13 @@ export class EquipmentManager {
    * l'entrée est introuvable (incohérence de données — on dégrade proprement
    * plutôt que de planter).
    */
-  resolveWeaponName(nomInterne: string): string {
+  private resolveWeaponName(nomInterne: string): string {
     return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
-  resolveImprovementName(nomInterne: string): string {
+  private resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
-  }
-
-  /**
-   * Résout l'emplacement consommé par une arme montée depuis le catalogue —
-   * mirroir de `resolveWeaponName`. Nécessaire pour le badge 🔧 des lignes
-   * "Armes" de `.em-current` : `Weapon` (DTO) ne porte pas `emplacement`,
-   * contrairement à `VehicleImprovement` qui l'expose déjà résolu.
-   */
-  resolveWeaponSlot(nomInterne: string): number {
-    return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.emplacement ?? 0;
   }
 
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──

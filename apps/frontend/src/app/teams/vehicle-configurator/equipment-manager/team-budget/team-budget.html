@@ -1,0 +1,31 @@
+<!--
+  TeamBudget — bloc "Budget de l'équipe" (ex `.em-current__budget`, désormais
+  EN TÊTE de `.em-current__header`, avant `app-vehicle-cost-summary`).
+  Purement informatif : la validation (options trop chères grisées avec
+  "Budget de l'équipe insuffisant…") est déjà assurée côté backend.
+-->
+<div class="tb">
+  <p class="tb-title">Budget de l'équipe</p>
+  <p class="tb-row">
+    <span>Utilisé</span>
+    <span>
+      {{ coutEquipeTotal() }} / {{ budgetEquipe() }}
+      <img class="tb-icon" src="/icons/dollar.svg" alt="" />
+    </span>
+  </p>
+  <div class="tb-bar">
+    <div
+      class="tb-bar-fill"
+      [class.tb-bar-fill--over]="budgetDepasse()"
+      [style.width.%]="budgetPourcentage()"></div>
+  </div>
+  <p class="tb-row tb-row--total" [class.tb-row--over]="budgetDepasse()">
+    @if (budgetDepasse()) {
+      <span>Dépassement</span>
+      <span>{{ -budgetRestant() }} <img class="tb-icon" src="/icons/dollar.svg" alt="" /></span>
+    } @else {
+      <span>Restant</span>
+      <span>{{ budgetRestant() }} <img class="tb-icon" src="/icons/dollar.svg" alt="" /></span>
+    }
+  </p>
+</div>

@@ -83,6 +83,7 @@ Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `inpu
 | `apps/frontend/src/app/catalog/catalog.service.ts` | Données publiques du catalogue (`/api/catalog/sponsors`) |
 | `apps/frontend/src/app/teams/` | Smart + dumb (team-card, team-form, sponsor-carousel) |
 | `apps/frontend/src/app/teams/vehicle-configurator-page/` | Page dédiée (`/teams/:teamId/vehicles/new` et `/:vehicleId`) — résout `team`/`vehicleId` depuis la route et délègue à `VehicleConfigurator` |
+| `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/` | Smart (`EquipmentManager`) — gestion de l'équipement (ajout/retrait, calculs emplacements/coûts/budget). Délègue l'affichage à 3 dumb : `team-budget/` (bloc "Budget de l'équipe", EN TÊTE de `.em-current__header`), `vehicle-cost-summary/` (nom/emplacements/coût du véhicule en cours), `mounted-equipment/` (listes Armes/Améliorations montées + logique d'affichage Tourelle) |
 
 ---
 

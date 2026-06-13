@@ -14,10 +14,14 @@
  * déjà couvert par sa propre spec).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { EquipmentManager } from './equipment-manager';
+import { TeamBudget } from './team-budget/team-budget';
+import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary';
+import { MountedEquipment } from './mounted-equipment/mounted-equipment';
 import { VehicleService } from '../vehicle.service';
 import { Sponsor, Vehicule } from '../../../catalog/catalog.model';
 import { Team } from '../../team.model';
@@ -181,6 +185,7 @@ describe('EquipmentManager', () => {
     removeWeapon: ReturnType<typeof vi.fn>;
     removeImprovement: ReturnType<typeof vi.fn>;
     getAllForTeam: ReturnType<typeof vi.fn>;
+    unassignWeaponFromTourelle: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -192,6 +197,7 @@ describe('EquipmentManager', () => {
       removeWeapon: vi.fn().mockReturnValue(of(undefined)),
       removeImprovement: vi.fn().mockReturnValue(of(undefined)),
       getAllForTeam: vi.fn().mockReturnValue(of([mockVehicle])),
+      unassignWeaponFromTourelle: vi.fn().mockReturnValue(of(mockVehicle)),
     };
 
     await TestBed.configureTestingModule({
@@ -376,131 +382,116 @@ describe('EquipmentManager', () => {
     });
   });
 
-  // ── Affichage du bloc "Budget de l'équipe" dans `.em-current__header` ───────
+  // ── Câblage des 3 sous-composants extraits — mirroir de vehicle-configurator.spec.ts ──
+  // Le DOM/contenu de chaque bloc est désormais testé dans son propre `.spec.ts`
+  // (team-budget, vehicle-cost-summary, mounted-equipment) — ici on vérifie
+  // uniquement que `EquipmentManager` leur transmet les bonnes valeurs/références
+  // et réagit correctement à leurs outputs.
 
-  describe('Bloc "Budget de l\'équipe" dans le template', () => {
-    it('affiche le bloc budget EN PREMIER dans .em-current__header, avant .em-current__slots et .em-current__cost', () => {
-      const el = fixture.nativeElement as HTMLElement;
-      const header = el.querySelector('.em-current__header') as HTMLElement;
-      const children = Array.from(header.children);
+  describe('Câblage vers TeamBudget', () => {
+    it('transmet les 5 valeurs computed du budget', () => {
+      const teamBudget = fixture.debugElement.query(By.directive(TeamBudget)).componentInstance as TeamBudget;
 
-      const budgetIndex = children.findIndex((c): boolean => c.classList.contains('em-current__budget'));
-      const slotsIndex = children.findIndex((c): boolean => c.classList.contains('em-current__slots'));
-      const costIndex = children.findIndex((c): boolean => c.classList.contains('em-current__cost'));
+      expect(teamBudget.budgetEquipe()).toBe(component.budgetEquipe());
+      expect(teamBudget.coutEquipeTotal()).toBe(component.coutEquipeTotal());
+      expect(teamBudget.budgetRestant()).toBe(component.budgetRestant());
+      expect(teamBudget.budgetDepasse()).toBe(component.budgetDepasse());
+      expect(teamBudget.budgetPourcentage()).toBe(component.budgetPourcentage());
+    });
+  });
 
-      expect(budgetIndex).toBeGreaterThanOrEqual(0);
-      expect(budgetIndex).toBeLessThan(slotsIndex);
-      expect(slotsIndex).toBeLessThan(costIndex);
+  describe('Câblage vers VehicleCostSummary', () => {
+    it('transmet le nom du véhicule, les emplacements et le détail du coût', () => {
+      const summary = fixture.debugElement.query(By.directive(VehicleCostSummary)).componentInstance as VehicleCostSummary;
+
+      expect(summary.vehicleName()).toBe('Camion'); // chosenVehicule()?.nom
+      expect(summary.emplacementsUtilises()).toBe(component.emplacementsUtilises());
+      expect(summary.emplacementsTotal()).toBe(component.emplacementsTotal());
+      expect(summary.coutBase()).toBe(component.coutBase());
+      expect(summary.coutEquipement()).toBe(component.coutEquipement());
+      expect(summary.coutTotal()).toBe(component.coutTotal());
     });
 
-    it('affiche le titre, le ratio utilisé/budget et le solde restant', () => {
-      const el = fixture.nativeElement as HTMLElement;
-      const budgetBlock = el.querySelector('.em-current__budget') as HTMLElement;
-
-      expect(budgetBlock.textContent).toContain('Budget de l\'équipe');
-      // Véhicule nu (16) + autres véhicules (0, getAllForTeam → [mockVehicle] par défaut) = 16, budget 50.
-      expect(budgetBlock.textContent).toContain('16 / 50');
-      expect(budgetBlock.textContent).toContain('Restant');
-      expect(budgetBlock.textContent).toContain('34'); // 50 - 16
-    });
-
-    it('affiche "Dépassement" et la classe --over quand le coût cumulé dépasse le budget', () => {
-      const mockOtherVehicle: Vehicle = {
-        id: 101,
-        nomInterne: 'camion',
-        teamId: 7,
-        improvements: [],
-        weapons: [],
-        createdAt: '2026-01-01T00:00:00.000Z',
-      };
-      const mockTeamLowBudget: Team = { ...mockTeam, cans: 10 };
-      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle, mockOtherVehicle]));
-
-      fixture = TestBed.createComponent(EquipmentManager);
-      component = fixture.componentInstance;
-      fixture.componentRef.setInput('vehicle', mockVehicle);
-      fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
-      fixture.componentRef.setInput('team', mockTeamLowBudget);
+    it('retombe sur `vehicle().nomInterne` si le véhicule est introuvable dans le catalogue (chosenVehicule null)', () => {
+      fixture.componentRef.setInput('vehicle', { ...mockVehicle, nomInterne: 'inconnu' });
       fixture.detectChanges();
 
-      const el = fixture.nativeElement as HTMLElement;
-      const budgetBlock = el.querySelector('.em-current__budget') as HTMLElement;
-      const totalRow = budgetBlock.querySelector('.em-current__cost-row--total') as HTMLElement;
-      const fill = budgetBlock.querySelector('.em-current__budget-bar-fill') as HTMLElement;
-
-      // coutEquipeTotal = 32 (16 courant + 16 autre), budget = 10 → dépassement de 22.
-      expect(totalRow.textContent).toContain('Dépassement');
-      expect(totalRow.textContent).toContain('22');
-      expect(totalRow.classList).toContain('em-current__cost-row--over');
-      expect(fill.classList).toContain('em-current__budget-bar-fill--over');
+      const summary = fixture.debugElement.query(By.directive(VehicleCostSummary)).componentInstance as VehicleCostSummary;
+      expect(summary.vehicleName()).toBe('inconnu');
     });
   });
 
-  // ── Résolution de l'emplacement d'une arme montée (badge 🔧 des lignes "Armes") ──
+  describe('Câblage vers MountedEquipment', () => {
+    it('transmet les armes/améliorations montées et le catalogue du sponsor', () => {
+      fixture.componentRef.setInput('vehicle', {
+        ...mockVehicle,
+        weapons: mockVehicleWithWeapon.weapons,
+        improvements: mockVehicleWithImprovement.improvements,
+      });
+      fixture.detectChanges();
 
-  it('résout l\'emplacement consommé par une arme depuis le catalogue, avec repli sur 0', () => {
-    expect(component.resolveWeaponSlot('mitrailleuse')).toBe(1);
-    expect(component.resolveWeaponSlot('inconnue')).toBe(0);
-  });
+      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
 
-  // ── En-tête récapitulatif `.em-current__header` (nom, emplacements, coût) ──
-
-  it('affiche le nom du véhicule, les emplacements et le détail du coût (base / équipement / total) dans l\'en-tête récap', () => {
-    const el = fixture.nativeElement as HTMLElement;
-
-    expect(el.querySelector('.em-current__vehicle-name')?.textContent?.trim()).toBe('Camion');
-    expect(el.querySelector('.em-current__slots')?.textContent).toContain('0 / 4');
-
-    // Scopé à `.em-current__cost` : `.em-current__budget` (bloc "Budget de l'équipe",
-    // en tête) porte aussi des `.em-current__cost-row` — cf. equipment-manager.html.
-    const costRows = el.querySelectorAll('.em-current__cost .em-current__cost-row');
-    expect(costRows[0].textContent).toContain('Base');
-    expect(costRows[0].textContent).toContain('16');
-    expect(costRows[1].textContent).toContain('Équipement');
-    expect(costRows[1].textContent).toContain('0');
-    expect(costRows[2].textContent).toContain('Total');
-    expect(costRows[2].textContent).toContain('16');
-    expect(costRows[2].classList).toContain('em-current__cost-row--total');
-  });
-
-  it('met à jour le coût total de l\'en-tête récap quand de l\'équipement est monté', () => {
-    fixture.componentRef.setInput('vehicle', {
-      ...mockVehicle,
-      weapons: mockVehicleWithWeapon.weapons,
-      improvements: mockVehicleWithImprovement.improvements,
+      expect(mounted.weapons()).toEqual(mockVehicleWithWeapon.weapons);
+      expect(mounted.improvements()).toEqual(mockVehicleWithImprovement.improvements);
+      expect(mounted.sponsorCatalog()).toEqual(mockSponsorCatalog);
     });
-    fixture.detectChanges();
 
-    const el = fixture.nativeElement as HTMLElement;
-    // Scopé à `.em-current__cost` — cf. commentaire du test précédent.
-    const costRows = el.querySelectorAll('.em-current__cost .em-current__cost-row');
-    expect(costRows[1].textContent).toContain('8'); // + Équipement
-    expect(costRows[2].textContent).toContain('24'); // = Total
-  });
+    it('weaponRemoved → removeWeapon (avec confirmation)', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      fixture.componentRef.setInput('vehicle', mockVehicleWithWeapon);
+      fixture.detectChanges();
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle]));
 
-  // ── Sections "Armes (N)" / "Améliorations (N)" et badges prix/emplacement ──
+      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
+      mounted.weaponRemoved.emit(mockVehicleWithWeapon.weapons[0]);
 
-  it('affiche les titres de section avec le nombre d\'éléments et les badges prix/emplacement par ligne', () => {
-    fixture.componentRef.setInput('vehicle', {
-      ...mockVehicle,
-      weapons: mockVehicleWithWeapon.weapons,
-      improvements: mockVehicleWithImprovement.improvements,
+      expect(mockVehicleService.removeWeapon).toHaveBeenCalledExactlyOnceWith(200);
+
+      vi.unstubAllGlobals();
     });
-    fixture.detectChanges();
 
-    const el = fixture.nativeElement as HTMLElement;
-    const groupTitles = el.querySelectorAll('.em-current__group-title');
+    it('improvementRemoved → removeImprovement (avec confirmation)', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      fixture.componentRef.setInput('vehicle', mockVehicleWithImprovement);
+      fixture.detectChanges();
+      mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle]));
 
-    expect(groupTitles[0].textContent).toContain('Armes (1)');
-    expect(groupTitles[1].textContent).toContain('Améliorations (1)');
+      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
+      mounted.improvementRemoved.emit(mockVehicleWithImprovement.improvements[0]);
 
-    const badges = el.querySelectorAll('.em-current__badge');
-    // Arme montée (mitrailleuse) : prix 4, emplacement 1.
-    expect(badges[0].textContent).toContain('4');
-    expect(badges[1].textContent).toContain('1');
-    // Amélioration montée (blindage) : prix 4, emplacement 1.
-    expect(badges[2].textContent).toContain('4');
-    expect(badges[3].textContent).toContain('1');
+      expect(mockVehicleService.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('tourelleAssignRequested → openAssignModal (ouvre la modale d\'assignation)', () => {
+      const tourelle: Vehicle['improvements'][number] = {
+        id: 301, nomInterne: 'tourelle', orientation: null, vehicleId: 100,
+        createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 0, emplacement: 0, weaponNomInterne: null,
+      };
+      fixture.componentRef.setInput('vehicle', { ...mockVehicle, improvements: [tourelle] });
+      fixture.detectChanges();
+
+      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
+      mounted.tourelleAssignRequested.emit(tourelle);
+
+      expect(component.selectedOrphanTourelle()).toEqual(tourelle);
+    });
+
+    it('tourelleUnassignRequested → unassignWeaponFromTourelle', () => {
+      const tourelleAssignee: Vehicle['improvements'][number] = {
+        id: 301, nomInterne: 'tourelle', orientation: 'avant', vehicleId: 100,
+        createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 12, emplacement: 0, weaponNomInterne: 'mitrailleuse',
+      };
+      fixture.componentRef.setInput('vehicle', { ...mockVehicle, improvements: [tourelleAssignee] });
+      fixture.detectChanges();
+
+      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
+      mounted.tourelleUnassignRequested.emit(tourelleAssignee);
+
+      expect(mockVehicleService.unassignWeaponFromTourelle).toHaveBeenCalledExactlyOnceWith(100, 301);
+    });
   });
 
   // ── Ajout d'arme ────────────────────────────────────────────────────────────
@@ -563,33 +554,8 @@ describe('EquipmentManager', () => {
     expect(component.equipmentError()).toBe('Une orientation est requise pour monter "Bélier"');
   });
 
-  // ── Section "Équipement actuel" — affichage et retrait (TOUJOURS proposé) ──
-
-  it('affiche un message dédié dans chaque section quand le véhicule n\'a encore aucun équipement', () => {
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.em-current')?.textContent).toContain('Aucune arme montée');
-    expect(el.querySelector('.em-current')?.textContent).toContain('Aucune amélioration installée');
-    expect(el.querySelectorAll('.em-current__item')).toHaveLength(0);
-  });
-
-  it('affiche chaque arme et amélioration montée avec son orientation et un bouton de retrait', () => {
-    fixture.componentRef.setInput('vehicle', {
-      ...mockVehicle,
-      weapons: mockVehicleWithWeapon.weapons,
-      improvements: mockVehicleWithImprovement.improvements,
-    });
-    fixture.detectChanges();
-
-    const el = fixture.nativeElement as HTMLElement;
-    const items = el.querySelectorAll('.em-current__item');
-
-    expect(items).toHaveLength(2);
-    // Noms RÉSOLUS depuis le catalogue (pas le `nomInterne` brut) + orientation affichée
-    expect(el.textContent).toContain('Mitrailleuse');
-    expect(el.textContent).toContain('(avant)');
-    expect(el.textContent).toContain('Blindage');
-    expect(el.querySelectorAll('.em-current__remove')).toHaveLength(2);
-  });
+  // ── Retrait d'équipement (TOUJOURS proposé) — logique métier, appelée depuis
+  // les outputs de `MountedEquipment` (cf. "Câblage vers MountedEquipment" ci-dessus) ──
 
   it('removeWeapon() demande confirmation, retire l\'arme et notifie le parent avec le véhicule rechargé', () => {
     vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
@@ -688,15 +654,6 @@ describe('EquipmentManager', () => {
       raison: 'Emplacements insuffisants : 5/4 requis avec "Bélier"',
     })).toBe(false);
     expect(component.improvementNeedsOrientation(mockAvailableImprovement)).toBe(false);
-  });
-
-  // ── Résolution des noms affichés (nomInterne → nom du catalogue) ────────────
-
-  it('résout le nom affiché d\'une arme/amélioration depuis le catalogue, avec repli sur le nomInterne', () => {
-    expect(component.resolveWeaponName('mitrailleuse')).toBe('Mitrailleuse');
-    expect(component.resolveWeaponName('inconnue')).toBe('inconnue');
-    expect(component.resolveImprovementName('blindage')).toBe('Blindage');
-    expect(component.resolveImprovementName('inconnue')).toBe('inconnue');
   });
 
   // ── Filtre "Afficher les indisponibles" ─────────────────────────────────────

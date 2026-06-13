@@ -1,0 +1,25 @@
+<!--
+  VehicleCostSummary — nom du véhicule, emplacements et coût (ex partie haute
+  de `.em-current__header`, après `app-team-budget`).
+-->
+<h3 class="vcs-name" [title]="vehicleName()">{{ vehicleName() }}</h3>
+
+<p class="vcs-slots">
+  <img class="vcs-icon" src="/icons/wrench.svg" alt="" />
+  Emplacements : <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
+</p>
+
+<div class="vcs-cost">
+  <p class="vcs-cost-row">
+    <span>Base</span>
+    <span>{{ coutBase() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+  </p>
+  <p class="vcs-cost-row">
+    <span>+ Équipement</span>
+    <span>{{ coutEquipement() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+  </p>
+  <p class="vcs-cost-row vcs-cost-row--total">
+    <span>Total</span>
+    <span>{{ coutTotal() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+  </p>
+</div>

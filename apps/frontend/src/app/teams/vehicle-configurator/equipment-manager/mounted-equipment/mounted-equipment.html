@@ -1,0 +1,194 @@
+<!-- ── Armes montées — hors celles absorbées par une ligne Tourelle ── -->
+<section class="me-group">
+  <h4 class="me-group-title">Armes ({{ weapons().length }})</h4>
+  @if (weapons().length === 0) {
+    <p class="me-status">Aucune arme montée.</p>
+  } @else {
+    <ul class="me-list">
+      @for (weapon of weapons(); track weapon.id) {
+        <li class="me-item">
+          <span class="me-name">
+            {{ resolveWeaponName(weapon.nomInterne) }}
+            @if (weapon.orientation) {
+              <span class="me-orientation">({{ weapon.orientation }})</span>
+            }
+          </span>
+          <span class="me-badges">
+            <span class="me-badge" title="Coût en jerricans">
+              <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+              {{ weapon.prix }}
+            </span>
+            <span class="me-badge" title="Emplacements requis">
+              <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+              {{ resolveWeaponSlot(weapon.nomInterne) }}
+            </span>
+          </span>
+          <button
+            class="me-remove"
+            type="button"
+            title="Retirer cette arme"
+            (click)="weaponRemoved.emit(weapon)">
+            Retirer
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<!-- ── Améliorations posées — les Tourelles reçoivent un traitement spécial ── -->
+<section class="me-group">
+  <h4 class="me-group-title">Améliorations ({{ improvements().length }})</h4>
+  @if (improvements().length === 0) {
+    <p class="me-status">Aucune amélioration installée.</p>
+  } @else {
+    <ul class="me-list">
+      @for (improvement of improvements(); track improvement.id) {
+
+        @if (improvement.nomInterne === 'tourelle') {
+
+          @if (improvement.weaponNomInterne !== null) {
+            <!--
+              Tourelle ASSIGNÉE → ligne fusionnée "Arme (Tourelle)".
+              L'arme n'existe pas comme entité Weapon séparée : la Tourelle porte le
+              coût total (3× le prix catalogue de l'arme). C'est `improvement.prix`
+              qui contient déjà ce total — pas de champ weapon supplémentaire à lire.
+              Le badge emplacement reprend celui de l'ARME montée (la Tourelle elle-même
+              coûte 0 emplacement, cf. SPECIFICATION.md §7).
+            -->
+            <li class="me-item me-item--tourelle">
+              <span class="me-name">
+                🔫 {{ resolveWeaponName(improvement.weaponNomInterne) }}
+                <span class="me-tourelle-badge">(Tourelle)</span>
+                @if (improvement.orientation) {
+                  <span class="me-orientation">({{ improvement.orientation }})</span>
+                }
+              </span>
+              <span class="me-badges">
+                <span class="me-badge" title="Coût en jerricans (Tourelle incluse)">
+                  <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+                  {{ improvement.prix }}
+                </span>
+                <span class="me-badge" title="Emplacements requis">
+                  <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+                  {{ resolveWeaponSlot(improvement.weaponNomInterne) }}
+                </span>
+              </span>
+              <!--
+                [Désassigner] toujours disponible — y compris sur la Tourelle du Char
+                d'assaut (estDefaut) : seul le RETRAIT de la Tourelle est interdit pour
+                les améliorations par défaut, pas la modification de son arme.
+              -->
+              <button
+                class="me-remove"
+                type="button"
+                title="Désassigner l'arme de la Tourelle (la Tourelle reste)"
+                (click)="tourelleUnassignRequested.emit(improvement)">
+                Désassigner
+              </button>
+              @if (improvement.estDefaut) {
+                <!-- Tourelle intégrée (Char d'assaut) — non supprimable -->
+                <span
+                  class="me-badge-defaut"
+                  title="Tourelle intégrée au profil de base de ce véhicule">
+                  🔒 Tourelle intégrée
+                </span>
+              } @else {
+                <button
+                  class="me-remove"
+                  type="button"
+                  title="Retirer la Tourelle (l'arme disparaît aussi)"
+                  (click)="improvementRemoved.emit(improvement)">
+                  Retirer la Tourelle
+                </button>
+              }
+            </li>
+
+          } @else {
+            <!--
+              Tourelle ORPHELINE — aucune arme assignée.
+              [Assigner] ouvre la modale de sélection d'arme catalogue.
+              [Retirer] disponible seulement si la Tourelle est achetée (pas estDefaut).
+            -->
+            <li class="me-item me-item--tourelle-orpheline">
+              <span class="me-name">
+                ⚙ {{ resolveImprovementName(improvement.nomInterne) }}
+                <span class="me-warning">⚠ Aucune arme assignée</span>
+              </span>
+              <span class="me-badges">
+                <span class="me-badge" title="Coût en jerricans">
+                  <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+                  {{ improvement.prix }}
+                </span>
+                <span class="me-badge" title="Emplacements requis">
+                  <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+                  {{ improvement.emplacement }}
+                </span>
+              </span>
+              <button
+                class="me-add-weapon"
+                type="button"
+                title="Choisir l'arme de cette Tourelle"
+                (click)="tourelleAssignRequested.emit(improvement)">
+                Assigner une arme
+              </button>
+              @if (improvement.estDefaut) {
+                <span
+                  class="me-badge-defaut"
+                  title="Fait partie du profil de base de ce véhicule">
+                  🔒 Intégré
+                </span>
+              } @else {
+                <button
+                  class="me-remove"
+                  type="button"
+                  title="Retirer cette Tourelle"
+                  (click)="improvementRemoved.emit(improvement)">
+                  Retirer
+                </button>
+              }
+            </li>
+          }
+
+        } @else {
+
+          <!-- Amélioration NON-Tourelle — affichage standard -->
+          <li class="me-item">
+            <span class="me-name">
+              {{ resolveImprovementName(improvement.nomInterne) }}
+              @if (improvement.orientation) {
+                <span class="me-orientation">({{ improvement.orientation }})</span>
+              }
+            </span>
+            <span class="me-badges">
+              <span class="me-badge" title="Coût en jerricans">
+                <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+                {{ improvement.prix }}
+              </span>
+              <span class="me-badge" title="Emplacements requis">
+                <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+                {{ improvement.emplacement }}
+              </span>
+            </span>
+            @if (improvement.estDefaut) {
+              <span
+                class="me-badge-defaut"
+                title="Fait partie du profil de base de ce véhicule">
+                🔒 Intégré
+              </span>
+            } @else {
+              <button
+                class="me-remove"
+                type="button"
+                title="Retirer cette amélioration"
+                (click)="improvementRemoved.emit(improvement)">
+                Retirer
+              </button>
+            }
+          </li>
+
+        }
+      }
+    </ul>
+  }
+</section>

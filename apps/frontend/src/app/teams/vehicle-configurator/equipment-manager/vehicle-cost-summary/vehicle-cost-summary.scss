@@ -1,0 +1,66 @@
+/* ── VehicleCostSummary — nom, emplacements, coût du véhicule ───────────────── */
+/* Styles migrés depuis equipment-manager.scss (`.em-current__vehicle-name`,
+   `.em-current__slots`, `.em-current__cost*`, `.em-current__icon`), préfixe
+   renommé `.vcs-*` — composant désormais autonome (encapsulation Angular). */
+
+/* `display: contents` : l'élément hôte `<app-vehicle-cost-summary>` disparaît
+   de la boîte — ses 3 enfants (nom, emplacements, coût) participent directement
+   au flex column/gap de `.em-current__header`, comme avant l'extraction. */
+:host {
+  display: contents;
+}
+
+.vcs-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--clr-text);
+  // Troncature — même traitement que .option__name/.choice-card__name pour
+  // les noms longs ("Forteresse Mobile"...).
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vcs-slots {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--clr-text-hint);
+
+  strong {
+    color: var(--clr-accent-cyan);
+  }
+}
+
+/* Icônes 🛢/🔧 — mêmes dimensions que `.tb-icon` (team-budget), pour une
+   iconographie cohérente entre les deux blocs de l'en-tête récap. */
+.vcs-icon {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+}
+
+.vcs-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.vcs-cost-row {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+
+  &--total {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--clr-border);
+    color: var(--clr-accent-cyan);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+}

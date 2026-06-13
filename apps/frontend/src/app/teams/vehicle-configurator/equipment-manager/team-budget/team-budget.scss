@@ -1,0 +1,77 @@
+/* ── TeamBudget — bloc "Budget de l'équipe" ─────────────────────────────────── */
+/* Styles migrés depuis equipment-manager.scss (`.em-current__budget*` et la
+   portion `.em-current__cost-row` nécessaire à la ligne "Restant"/"Dépassement"),
+   préfixe renommé `.tb-*` — composant désormais autonome (encapsulation Angular). */
+
+/* `display: contents` : l'élément hôte `<app-team-budget>` disparaît de la
+   boîte — `.tb` (racine du template) participe directement au flex column/gap
+   de `.em-current__header`, comme avant l'extraction en composant. */
+:host {
+  display: contents;
+}
+
+.tb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 16px;
+}
+
+.tb-title {
+ margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--clr-text);
+ 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-row {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--clr-text-muted);
+
+  &--total {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--clr-border);
+    color: var(--clr-accent-cyan);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+
+  // Dépassement de budget — remplace la couleur d'accent par défaut de `--total`.
+  &--over {
+    color: var(--clr-accent) !important;
+  }
+}
+
+.tb-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--clr-bg-item);
+  overflow: hidden;
+}
+
+.tb-bar-fill {
+  height: 100%;
+  background: var(--clr-accent-cyan);
+  transition: width 0.2s, background 0.2s;
+
+  &--over {
+    background: var(--clr-accent);
+  }
+}
+
+/* Icônes 🛢/🔧 — mêmes dimensions que `.me-badge-icon` (mounted-equipment),
+   pour une iconographie cohérente entre le résumé et le détail par ligne. */
+.tb-icon {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+}
