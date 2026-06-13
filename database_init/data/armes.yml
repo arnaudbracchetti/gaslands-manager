@@ -29,14 +29,17 @@ armes:
   # Armes montées sur châssis, orientées à l'achat, sans règle spéciale.
 
   - nom: "Pistolet"
-    nom_interne: "pistolet"      # Identifiant technique : snake_case, sans accents
+    nom_interne: "pistolet"
     type: "équipage"
-    prix: 0                      # Coût en Jerricans (0 = gratuit)
-    emplacement: 0               # Slots occupés (0 = arme d'équipage ou gratuite)
+    prix: 0
+    emplacement: 0
     description: |
-      Arme d'équipage standard à **Portée Moyenne** lançant **1D6**.
+      Arme de poing de base distribuée gratuitement à tous les membres d'équipage.
     regles: |
-      - **Arme d'Équipage** : bénéficie d'un Arc de Tir à 360° et n'a pas besoin d'être orientée lors de l'achat.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Ne nécessite pas d'orientation fixe lors de sa configuration.
+      - Portée : Moyenne.
+      - Dés d'attaque : 1D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -58,9 +61,11 @@ armes:
     prix: 2
     emplacement: 1
     description: |
-      Arme de tir simple à **Portée Double** lançant **2D6**.
+      Arme automatique standard montée sur le châssis pour des tirs en ligne droite.
     regles: |
-      Aucune règle spéciale.
+      - Arme de base montée sur châssis, nécessite une orientation fixe à l'achat.
+      - Portée : Double.
+      - Dés d'attaque : 2D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -82,9 +87,11 @@ armes:
     prix: 3
     emplacement: 1
     description: |
-      Arme de tir à **Portée Double** lançant **3D6**.
+      Version renforcée de la mitrailleuse de base offrant une puissance de feu accrue.
     regles: |
-      Aucune règle spéciale.
+      - Arme de base montée sur châssis, nécessite une orientation fixe à l'achat.
+      - Portée : Double.
+      - Dés d'attaque : 3D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -106,9 +113,11 @@ armes:
     prix: 5
     emplacement: 1
     description: |
-      Arme de tir lourde à **Portée Double** lançant **4D6**.
+      Arme rotative redoutable capable de saturer une trajectoire éloignée.
     regles: |
-      Aucune règle spéciale.
+      - Arme de base montée sur châssis, nécessite une orientation fixe à l'achat.
+      - Portée : Double.
+      - Dés d'attaque : 4D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -125,9 +134,6 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Armes avancées (type: avancée) ─────────────────────────────────────────
-  # Armes spéciales avec effets uniques (munitions, zones, électrique...).
-  # Les armes électriques sont marquées "Électrique" dans leurs règles
-  # et sont réservées à Mishkin (sponsors_autorises: ["Mishkin"]).
 
   - nom: "BFG"
     nom_interne: "bfg"
@@ -135,12 +141,14 @@ armes:
     prix: 1
     emplacement: 3
     description: |
-      Arme extrêmement puissante à **Portée Double** lançant **10D6**.
+      Arme destructrice frontale dont le recul colossal repousse violemment le véhicule.
     regles: |
       - **1 Munition**.
       - **Montage Avant uniquement**.
-      - Lorsqu'elle est utilisée, le véhicule effectue immédiatement un déplacement forcé en marche arrière avec le gabarit droit Moyen.
-      - Le véhicule passe en Vitesse 1 et prend 3 Jetons Danger.
+      - Portée : Double.
+      - Dés d'attaque : 10D6.
+      - Lors de l'utilisation, déclenche un déplacement forcé vers l'arrière de la longueur d'un gabarit droit Moyen.
+      - Force immédiatement le véhicule à rétrograder en Vitesse 1 et lui inflige 3 Jetons Danger.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -162,17 +170,15 @@ armes:
     prix: 2
     emplacement: 3
     description: |
-      Arme de contact à **Portée Courte**, conçue pour provoquer des collisions latérales en chaîne.
+      Fléau rotatif provoquant des collisions latérales dévastatrices en chaîne autour du véhicule.
     regles: |
-      - Ne nécessite pas de cible identifiée.
-      - Lorsqu'elle est utilisée, le véhicule effectue immédiatement une Collision Latérale avec chaque véhicule et obstacle Destructible à Portée Courte dans un Arc de Tir à 360°.
-      - Le propriétaire choisit l'ordre de résolution.
-      - Tous les véhicules impliqués sont considérés comme n'ayant aucune arme ou avantage, à l'exception de la Boule de démolition.
-      - Les autres véhicules doivent annoncer une réaction d'Esquive.
-      - À chaque Collision, le véhicule actif gagne +2 dés d'attaque pour l'Éperonnage.
-      - Le véhicule actif ne prend pas de Jeton Danger durant ces Collisions.
-      - Les Collisions déclenchées par cette arme ne bénéficient pas d'améliorations comme Bélier ou Bélier Explosif.
-      - Les modificateurs de différence de Poids s'appliquent normalement.
+      - Arc de tir à 360°, ne nécessite pas de cible identifiée à l'annonce.
+      - Déclenche immédiatement une Collision Latérale avec chaque véhicule et obstacle destructible situé à Portée Courte.
+      - Le propriétaire du véhicule actif choisit l'ordre de résolution des collisions.
+      - Durant ces collisions, toutes les cibles doivent obligatoirement annoncer une réaction d'Esquive.
+      - Durant ces collisions, tous les véhicules impliqués perdent l'accès à leurs armes ou avantages (sauf la Boule de démolition elle-même).
+      - Le véhicule actif gagne +2 dés d'attaque pour l'éperonnage et ne reçoit aucun Jeton Danger suite à ces collisions.
+      - Les bonus d'améliorations comme Bélier ou Bélier Explosif sont inutilisables, mais les modificateurs de différence de Poids s'appliquent normalement.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -194,11 +200,13 @@ armes:
     prix: 6
     emplacement: 1
     description: |
-      Arme de proximité à **Portée Courte** lançant **3D6**, utilisée pour déplacer brutalement une cible.
+      Pince articulée servant à agripper et repositionner brutalement les véhicules plus légers.
     regles: |
-      - Si la cible est d'une classe de Poids identique ou inférieure et subit au moins 1 touche non annulée, le propriétaire du véhicule actif peut la placer n'importe où à Portée Courte maximum de sa position initiale.
-      - La cible peut être pivotée dans n'importe quelle direction.
-      - Ce déplacement peut ouvrir une Fenêtre de Collision.
+      - Portée : Courte.
+      - Dés d'attaque : 3D6.
+      - Si l'attaque inflige au moins une touche non annulée à une cible de classe de Poids identique ou inférieure, le joueur actif peut déplacer la cible.
+      - La cible peut être repositionnée n'importe où à Portée Courte maximum de son emplacement d'origine et pivotée dans la direction souhaitée.
+      - Ce repositionnement forcé ouvre une Fenêtre de Collision.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -215,36 +223,37 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Brouilleur Électromagnétique"
-    nom_interne: "brouilleur_electromagnetique"  # Arme électrique exclusive Mishkin
+    nom_interne: "brouilleur_electromagnetique"
     type: "avancée"
     prix: 2
     emplacement: 0
     description: |
-      Arme électrique à **Portée Double** qui neutralise temporairement les munitions de la cible.
+      Dispositif Mishkin neutralisant les réserves de munitions de la cible pour son prochain tour.
     regles: |
-      - **Électrique**.
-      - La cible ne peut pas utiliser de Jeton Munition lors de sa prochaine activation.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - Portée : Double.
+      - N'inflige aucun dégât direct.
+      - La cible touchée subit un verrouillage l'empêchant d'utiliser le moindre Jeton Munition lors de sa prochaine activation.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Canon à Arc Électrique"
-    nom_interne: "canon_arc_electrique"          # Arme électrique exclusive Mishkin
+    nom_interne: "canon_arc_electrique"
     type: "avancée"
     prix: 6
     emplacement: 2
     description: |
-      Arme électrique à **Portée Double** lançant **6D6**, capable de chaîner ses attaques entre plusieurs cibles proches.
+      Générateur de foudre Mishkin propageant une décharge mortelle de cible en cible.
     regles: |
       - **1 Munition**.
-      - **Électrique**.
-      - Après avoir endommagé une cible, le véhicule doit immédiatement attaquer une autre cible depuis la cible actuelle, à Portée Courte maximum et avec un Arc de Tir à 360°.
-      - La nouvelle cible peut être un véhicule ami ou le véhicule actif lui-même.
-      - La réaction en chaîne continue jusqu'à ce que l'arme échoue à endommager une cible ou qu'il n'y ait plus de cible valide.
-      - Le même véhicule ne peut pas être ciblé deux fois lors d'une même Étape d'Attaque par ce Canon à Arc Électrique.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - Portée : Double (pour l'attaque initiale).
+      - Dés d'attaque : 6D6.
+      - S'il inflige des dégâts à une cible, l'éclair se propage automatiquement en effectuant une nouvelle attaque depuis cette cible vers une autre cible valide à Portée Courte (Arc à 360°).
+      - La foudre peut frapper des alliés ou le véhicule actif lui-même, et se transmet tant qu'une cible subit des dégâts et qu'il reste des cibles valides.
+      - Un même véhicule ne peut pas être frappé deux fois au cours de la même Étape d'Attaque.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Canon de 125 mm"
     nom_interne: "canon_125mm"
@@ -252,11 +261,13 @@ armes:
     prix: 6
     emplacement: 3
     description: |
-      Canon lourd à **Portée Double** lançant **8D6**.
+      Pièce d'artillerie lourde antichar provoquant d'importants traumatismes et un fort recul.
     regles: |
       - **3 Munitions**.
-      - **Impact** : chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
-      - Si le véhicule actif n'est pas un Char d'Assaut, il prend immédiatement 2 Jetons Danger lorsqu'il utilise cette arme.
+      - **Impact** : Chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - Portée : Double.
+      - Dés d'attaque : 8D6.
+      - Si le véhicule équipé n'est pas un Char d'Assaut (Tank), le contrecoup du tir lui inflige immédiatement 2 Jetons Danger.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -273,20 +284,21 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Canon Gravitationnel"
-    nom_interne: "canon_gravitationnel"          # Arme électrique exclusive Mishkin
+    nom_interne: "canon_gravitationnel"
     type: "avancée"
     prix: 2
     emplacement: 1
     description: |
-      Arme électrique à **Portée Double** lançant **3D6**, dont les touches ne causent pas de dégâts directs.
+      Arme Mishkin modifiant temporairement la masse et la classe de poids d'un véhicule adverse.
     regles: |
       - **1 Munition**.
-      - **Électrique**.
-      - Si l'arme inflige au moins une touche non annulée, la cible ne subit pas de dégâts.
-      - Le propriétaire du véhicule actif choisit si la cible est considérée comme d'une classe de Poids immédiatement supérieure ou inférieure jusqu'à la fin de sa prochaine activation.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - Portée : Double.
+      - Dés d'attaque : (3D6).
+      - N'inflige aucun dégât direct. S'il obtient au moins une touche non annulée, le joueur actif force la cible à modifier sa masse.
+      - La cible est considérée comme appartenant à la classe de Poids immédiatement supérieure ou inférieure, au choix du tireur, jusqu'à la fin de sa prochaine activation.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Canon Laser"
     nom_interne: "canon_laser"
@@ -294,10 +306,13 @@ armes:
     prix: 5
     emplacement: 1
     description: |
-      Arme à **Portée Double** lançant **3D6** et affectant plusieurs véhicules sous son gabarit.
+      Faisceau d'énergie concentré balayant instantanément toute une zone.
     regles: |
-      - **Effet de Zone** : cible et attaque chaque véhicule sous le gabarit de tir, y compris les véhicules amis.
-      - Chaque cible est attaquée individuellement.
+      - **Effet de Zone** : Touche et affecte obligatoirement chaque véhicule se trouvant sous le gabarit de tir rectiligne.
+      - Cible indifféremment les adversaires et les alliés.
+      - Chaque véhicule touché subit une attaque individuelle résolue séparément.
+      - Portée : Double.
+      - Dés d'attaque : 3D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -319,14 +334,15 @@ armes:
     prix: 2
     emplacement: 1
     description: |
-      Arme à **Portée Double** lançant **5D6**, conçue pour pivoter ou tracter la cible.
+      Câble d'acier harponnant les ennemis pour les faire pivoter ou les tracter de force.
     regles: |
-      - Les touches n'infligent aucun dégât.
-      - La première touche non annulée fait pivoter la cible vers le véhicule actif ou à l'opposé, selon la rotation la plus faible.
-      - Ce pivot ouvre une Fenêtre de Collision.
-      - Chaque touche non annulée suivante force la cible à effectuer un déplacement forcé avec le gabarit droit Court en direction du véhicule actif.
-      - Si la cible est d'un Poids supérieur à celui du véhicule actif, c'est le véhicule actif qui est tracté vers la cible.
-      - Si plusieurs harpons touchent la même cible, les touches sont combinées comme si elles provenaient d'une seule attaque.
+      - Portée : Double.
+      - Dés d'attaque : (5D6).
+      - N'inflige aucun dégât direct.
+      - La première touche non annulée accroche la cible et la fait pivoter sur place (vers le tireur ou à l'opposé, selon la plus petite rotation requise), ouvrant une Fenêtre de Collision.
+      - Chaque touche suivante non annulée rembobine le câble, provoquant un déplacement forcé de la cible via le gabarit droit Court en direction du tireur.
+      - Si la cible est d'une classe de Poids supérieure au tireur, l'effet s'inverse : c'est le tireur qui subit le déplacement forcé vers la cible.
+      - En cas de tirs multiples, toutes les touches se combinent en une unique séquence.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -348,15 +364,16 @@ armes:
     prix: 4
     emplacement: 4
     description: |
-      Arme lourde à **Portée Double** ou **Larguée**, qui projette ou dépose des épaves de voitures.
+      Catapulte lourde projetant des épaves entières ou les larguant pour bloquer la route.
     regles: |
       - **3 Munitions**.
-      - **Trébuchet** : ne nécessite pas de cible identifiée. Placez un marqueur d'environ 2 cm à Portée Double maximum dans l'Arc de Tir, puis lancez un Dé de Manœuvre.
-      - Sur **Embrayage**, placez une Épave de Voiture en contact avec le marqueur et ouvrez une Fenêtre de Collision.
-      - Sur **Rotation** ou **Dérapage**, le joueur à gauche du joueur actif place l'Épave n'importe où à Portée Courte maximum du marqueur et ouvre une Fenêtre de Collision.
-      - Sur **Danger**, le joueur à gauche du joueur actif place l'Épave en contact du véhicule actif et ouvre une Fenêtre de Collision.
-      - **Ferrailleur** : si le véhicule entre en Collision avec une Épave, il résout la Collision normalement puis gagne 1 Jeton Munition pour le Lance-Carcasse.
-      - **Largueur** : le véhicule peut utiliser le Lance-Carcasse comme arme largable montée à l'arrière. Dans ce cas, l'Épave est placée au contact de l'arrière du véhicule actif sans ouvrir de Fenêtre de Collision avec lui.
+      - Peut s'utiliser de deux manières distinctes au choix lors de l'attaque :
+      - **Mode Trébuchet** : Ne nécessite pas de cible. Place un marqueur à Portée Double maximum dans l'arc de tir, puis résout un Dé de Manœuvre. 
+        * *Embrayage* : Une Épave est posée au contact du marqueur (Fenêtre de Collision ouverte). 
+        * *Rotation / Dérapage* : Le joueur à gauche place l'Épave à Portée Courte maximum du marqueur (Fenêtre de Collision ouverte). 
+        * *Danger* : Le joueur à gauche place l'Épave au contact du véhicule actif (Fenêtre de Collision ouverte).
+      - **Mode Largueur** : S'utilise comme une arme largable à l'arrière, déposant directement une Épave au contact de la face arrière (sans Fenêtre de Collision avec le poseur).
+      - **Règle Spéciale Ferrailleur** : Si le véhicule équipé percute une Épave sur la table, la collision se résout normalement et l'arme récupère immédiatement 1 Jeton Munition.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -378,12 +395,13 @@ armes:
     prix: 4
     emplacement: 2
     description: |
-      Arme à gabarit **Grande Zone** lançant **6D6**.
+      Arme incendiaire de zone projetant un torrent de feu liquide à travers les obstacles.
     regles: |
       - **3 Munitions**.
-      - **Effet de Zone** : attaque chaque véhicule sous le gabarit.
-      - **Incendiaire** : si la cible subit au moins 1 dégât, elle devient Enflammée.
-      - **Indirecte** : ignore les obstacles et les mises à Couvert pendant l'attaque.
+      - **Effet de Zone** : Utilise le gabarit Grande Zone et frappe individuellement chaque véhicule situé en dessous, y compris les alliés.
+      - **Incendiaire** : Si une cible subit au moins 1 dégât, elle prend feu et devient Enflammée (perte d'un point de carrosserie au début de ses activations futures).
+      - **Indirecte** : Le tir ignore totalement les obstacles et les bonus de mise à Couvert.
+      - Dés d'attaque : 6D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -405,9 +423,11 @@ armes:
     prix: 5
     emplacement: 2
     description: |
-      Arme explosive à **Portée Double** lançant **6D6**.
+      Lanceur lourd tirant des roquettes autopropulsées à longue distance.
     regles: |
       - **3 Munitions**.
+      - Portée : Double.
+      - Dés d'attaque : 6D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -429,10 +449,12 @@ armes:
     prix: 4
     emplacement: 2
     description: |
-      Arme à **Portée Double** lançant **3D6** et générant du danger sur la cible.
+      Arme d'assaut à projectiles explosifs déstabilisant l'équilibre de la cible.
     regles: |
       - **3 Munitions**.
-      - **Impact** : chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - **Impact** : Chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - Portée : Double.
+      - Dés d'attaque : 3D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -449,23 +471,21 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Marteleur"
-    nom_interne: "marteleur"                     # Arme électrique exclusive Mishkin
+    nom_interne: "marteleur"
     type: "avancée"
     prix: 4
     emplacement: 2
     description: |
-      Arme sonique électrique à **Portée Moyenne**, sans dés d'attaque directs, affectant tous les véhicules proches.
+      Émetteur Mishkin propageant une onde de choc sonique omnidirectionnelle perturbant le contrôle des véhicules.
     regles: |
       - **1 Munition**.
-      - **Électrique**.
-      - **Indirecte**.
-      - **Arc de Tir à 360°**.
-      - Ne nécessite pas d'orientation lors de l'achat.
-      - Lorsqu'elle est utilisée, tous les autres véhicules, amis ou adverses, à Portée Moyenne dans un Arc de Tir à 360° effectuent immédiatement un Test de Contrôle.
-      - Pour ce Test de Contrôle, leur Vitesse actuelle est considérée comme majorée de 2, jusqu'à un maximum de 6.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - **Indirecte** : Ignore les obstacles et couverts.
+      - **Arc de Tir à 360°** : Ne nécessite aucune orientation fixe à l'achat.
+      - Ne génère pas de dés d'attaque. Lors de l'utilisation, tous les véhicules (alliés comme ennemis) à Portée Moyenne doivent immédiatement résoudre un Test de Contrôle.
+      - Pour ce test, leur Vitesse actuelle est virtuellement augmentée de 2 (jusqu'à un maximum de 6), augmentant considérablement le risque de tonneau.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Mortier"
     nom_interne: "mortier"
@@ -473,10 +493,12 @@ armes:
     prix: 4
     emplacement: 1
     description: |
-      Arme indirecte à **Portée Double** lançant **4D6**.
+      Arme d'artillerie lourde effectuant des tirs en cloche par-dessus les décors.
     regles: |
       - **3 Munitions**.
-      - **Indirecte** : ignore les obstacles et les mises à Couvert pendant l'attaque.
+      - **Indirecte** : Le tir passe au-dessus des obstacles et annule les bonus de mise à Couvert des cibles.
+      - Portée : Double.
+      - Dés d'attaque : 4D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -498,14 +520,12 @@ armes:
     prix: 4
     emplacement: 3
     description: |
-      Arme sonore à **Portée Moyenne**, affectant les véhicules proches dans un Arc de Tir à 360°.
+      Système audio surpuissant projetant une onde sonore capable de stresser ou de calmer les pilotes environnants.
     regles: |
-      - **Arc de Tir à 360°**.
-      - Ne nécessite pas de cible identifiée.
-      - Lorsqu'elle est utilisée, l'arme inflige automatiquement une touche à chaque véhicule à Portée Moyenne dans un Arc de Tir à 360°.
-      - Ces touches ne causent pas de dégâts.
-      - Les touches peuvent être Esquivées.
-      - Pour chaque touche non annulée, le propriétaire du véhicule actif choisit d'ajouter ou de défausser 1 Jeton Danger au véhicule touché.
+      - Arc de tir à 360°, ne requiert aucune cible désignée à l'annonce.
+      - Inflige automatiquement et simultanément une touche à chaque véhicule situé à Portée Moyenne.
+      - N'inflige aucun point de dégât. Les touches subies peuvent être Esquivées normalement.
+      - Pour chaque touche non annulée, le joueur actif choisit d'ajouter 1 Jeton Danger ou de défausser 1 Jeton Danger sur le Tableau de Bord du véhicule affecté.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -522,41 +542,40 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Rayon Désintégrateur"
-    nom_interne: "rayon_desintegrateur"          # Arme électrique exclusive Mishkin
+    nom_interne: "rayon_desintegrateur"
     type: "avancée"
     prix: 3
     emplacement: 1
     description: |
-      Arme électrique à **Portée Double** lançant **3D6**, capable de retirer une cible de la partie.
+      Canon énergétique Mishkin capable de volatiliser instantanément sa cible.
     regles: |
       - **1 Munition**.
-      - **Électrique**.
-      - Si l'arme inflige au moins 5 touches non annulées à une cible lors d'une même attaque, la cible ne subit pas de dégâts : elle est immédiatement retirée de la partie.
-      - La cible retirée compte comme ayant été transformée en Épave pour les Votes du Public, les règles de scénario et les effets similaires.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - Portée : Double.
+      - Dés d'attaque : 3D6.
+      - Si l'attaque obtient un total d'au moins 5 touches non annulées après l'esquive, la cible ne subit aucun dégât matériel : elle est immédiatement et définitivement retirée du jeu.
+      - Le véhicule ainsi désintégré compte comme une Épave pour les conditions de victoire, scénarios et Votes du Public.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Super Amplificateur Cinétique"
-    nom_interne: "super_amplificateur_cinetique" # Arme électrique exclusive Mishkin
+    nom_interne: "super_amplificateur_cinetique"
     type: "avancée"
     prix: 6
     emplacement: 2
     description: |
-      Arme électrique à **Portée Double** lançant **6D6**, qui accélère la cible au lieu de l'endommager.
+      Rayon Mishkin convertissant l'énergie pure en accélération cinétique brute pour la cible.
     regles: |
       - **1 Munition**.
-      - **Électrique**.
-      - La cible ne subit aucun dégât.
-      - Pour chaque touche non annulée, la cible augmente immédiatement sa Vitesse actuelle d'un cran sans prendre de Jeton Danger.
-      - La Vitesse actuelle ne peut pas dépasser la Vitesse maximale de la cible.
-      - Arme réservée aux équipes sponsorisées par Mishkin.
+      - **Électrique** (Exclusivité Mishkin).
+      - Portée : Double.
+      - Dés d'attaque : (6D6).
+      - N'inflige aucun dégât. Pour chaque touche non annulée, la Vitesse actuelle du véhicule ciblé augmente immédiatement d'un cran.
+      - Cette accélération forcée ne génère aucun Jeton Danger pour la cible et ne peut pas dépasser sa Vitesse maximale autorisée.
     sponsors_autorises:
-      - "Mishkin"                # Arme électrique exclusive Mishkin
+      - "Mishkin"
 
   # ── Armes d'équipage (type: équipage) ─────────────────────────────────────
-  # Utilisées par un membre d'équipage, arc 360°, emplacement 0.
-  # Les armes avec "Blitz" peuvent être utilisées plusieurs fois par activation.
 
   - nom: "Cocktails Molotov"
     nom_interne: "cocktails_molotov"
@@ -564,13 +583,15 @@ armes:
     prix: 1
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Moyenne** lançant **1D6**, conçue pour enflammer les cibles.
+      Bouteilles incendiaires lancées à la main pouvant enflammer rapidement plusieurs cibles.
     regles: |
       - **5 Munitions**.
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Incendiaire** : si la cible subit au moins 1 dégât, elle devient Enflammée.
-      - **Indirecte** : ignore les obstacles et les mises à Couvert pendant l'attaque.
-      - **Blitz** : peut être utilisée plusieurs fois pendant une même Étape d'Attaque, dans la limite des Jetons Munition disponibles et de la Valeur d'Équipage.
+      - **Blitz** : Peut être lancée plusieurs fois au cours d'une même Étape d'Attaque (dans la limite des munitions et de la valeur d'Équipage).
+      - **Incendiaire** : Si l'attaque inflige au moins 1 dégât, la cible devient Enflammée.
+      - **Indirecte** : Ignore les obstacles et couverts.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée : Moyenne.
+      - Dés d'attaque : 1D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -592,12 +613,14 @@ armes:
     prix: 4
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Longue**, dont le nombre de dés dépend de la distance.
+      Arme à dispersion à courte portée perdant de son efficacité avec la distance.
     regles: |
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - Lance **3D6** si la cible est à Portée Courte.
-      - Lance **2D6** si la cible est à Portée Moyenne.
-      - Lance **1D6** si la cible est à Portée Longue.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée maximale : Longue.
+      - Le nombre de dés d'attaque dépend de la distance de la cible :
+        * 3D6 à Portée Courte.
+        * 2D6 à Portée Moyenne.
+        * 1D6 à Portée Longue.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -619,11 +642,13 @@ armes:
     prix: 2
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Courte** lançant **3D6**, conçue pour gêner la cible plutôt que la détruire.
+      Filet lesté jeté sur les pilotes adverses pour entraver leurs manœuvres sans endommager le châssis.
     regles: |
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Impact** : chaque touche non annulée inflige 1 Jeton Danger.
-      - Les touches de cette arme n'infligent aucun dégât ; elles ajoutent seulement des Jetons Danger grâce à Impact.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée : Courte.
+      - Dés d'attaque : (3D6).
+      - N'inflige aucun dégât direct.
+      - **Impact** : Chaque touche non annulée applique directement 1 Jeton Danger sur le Tableau de Bord du véhicule ciblé.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -645,13 +670,15 @@ armes:
     prix: 1
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Moyenne** lançant **1D6**.
+      Projectiles explosifs à main idéaux pour déloger les ennemis à couvert.
     regles: |
       - **5 Munitions**.
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Impact** : chaque touche non annulée inflige immédiatement 1 Jeton Danger.
-      - **Indirecte** : ignore les obstacles et les mises à Couvert pendant l'attaque.
-      - **Blitz** : peut être utilisée plusieurs fois pendant une même Étape d'Attaque, dans la limite des Jetons Munition disponibles et de la Valeur d'Équipage.
+      - **Impact** : Chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - **Indirecte** : Ignore les obstacles et les bonus de couverture.
+      - **Blitz** : Peut être utilisée plusieurs fois par Étape d'Attaque (selon les munitions et la valeur d'Équipage).
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée : Moyenne.
+      - Dés d'attaque : 1D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -673,14 +700,15 @@ armes:
     prix: 1
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Moyenne** lançant **1D6**, destinée à réduire temporairement l'Équipage adverse.
+      Projectiles de gaz asphyxiant neutralisant temporairement les équipages adverses.
     regles: |
       - **5 Munitions**.
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Indirecte** : ignore les obstacles et les mises à Couvert pendant l'attaque.
-      - **Blitz** : peut être utilisée plusieurs fois pendant une même Étape d'Attaque, dans la limite des Jetons Munition disponibles et de la Valeur d'Équipage.
-      - Si l'arme inflige une ou plusieurs touches non annulées, elle n'inflige pas de dégâts.
-      - À la place, réduisez la Valeur d'Équipage de la cible de 1 par touche non annulée, jusqu'à un minimum de 0, jusqu'à la fin de la Phase de Vitesse.
+      - **Indirecte** : Ignore les obstacles et couvertures.
+      - **Blitz** : Utilisable plusieurs fois par tour sous réserve d'équipage et de munitions.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée : Moyenne.
+      - Dés d'attaque : (1D6).
+      - N'inflige aucun dégât. Chaque touche non annulée réduit définitivement la Valeur d'Équipage de la cible de 1 point (jusqu'à un minimum de 0) jusqu'à la fin de la Phase de Vitesse en cours.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -702,10 +730,12 @@ armes:
     prix: 3
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Double** lançant **1D6**.
+      Arme de poing de gros calibre combinant une excellente allonge et un fort pouvoir d'arrêt.
     regles: |
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Impact** : chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - **Impact** : Chaque touche non annulée inflige immédiatement 1 Jeton Danger à la cible.
+      - Portée : Double.
+      - Dés d'attaque : 1D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -727,9 +757,11 @@ armes:
     prix: 5
     emplacement: 0
     description: |
-      Arme d'équipage à **Portée Moyenne** lançant **3D6**.
+      Arme automatique légère d'équipage délivrant une rafale compacte à moyenne portée.
     regles: |
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - Portée : Moyenne.
+      - Dés d'attaque : 3D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -751,10 +783,12 @@ armes:
     prix: 2
     emplacement: 0
     description: |
-      Arme d'équipage à gabarit **Petite Zone** lançant **2D6**.
+      Arme à feu à canon évasé arrosant une zone compacte de projectiles.
     regles: |
-      - **Arme d'Équipage** : Arc de Tir à 360° et pas d'orientation à l'achat.
-      - **Effet de Zone** : attaque chaque véhicule sous le gabarit de tir, y compris les véhicules amis.
+      - Arme d'Équipage (Arc de tir à 360°).
+      - **Effet de Zone** : Utilise le gabarit Petite Zone et applique l'attaque individuellement sur chaque véhicule situé en dessous (alliés inclus).
+      - Portée : Petite Zone.
+      - Dés d'attaque : 2D6.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -771,8 +805,6 @@ armes:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Armes largables (type: largable) ───────────────────────────────────────
-  # Déposées ou projetées derrière/sous le véhicule, elles affectent les
-  # véhicules qui passent dessus ou interagissent avec leur gabarit.
 
   - nom: "Auto-Tourelle"
     nom_interne: "auto_tourelle"
@@ -780,17 +812,14 @@ armes:
     prix: 3
     emplacement: 0
     description: |
-      Arme largable qui place une tourelle autonome sur la table.
+      Balise déployable larguant une tourelle fixe automatisée qui tire sur les ennemis proches.
     regles: |
       - **3 Munitions**.
-      - Utilise un gabarit **Grande Zone**.
-      - Lorsque l'arme est larguée, placez une Auto-Tourelle à Portée Courte maximum du véhicule actif.
-      - L'Auto-Tourelle reste en jeu comme élément de décor Destructible de Poids Léger.
-      - Elle possède 2 Points de Carrosserie et peut être ciblée par des attaques à distance.
-      - Elle effectue une attaque automatique à **2D6** contre tout véhicule qui termine son Étape de Déplacement à Portée Moyenne, dans un Arc de Tir à 360°.
-      - La cible peut Esquiver normalement.
-      - L'Auto-Tourelle ne cible jamais les véhicules de l'équipe qui l'a larguée.
-      - Elle est contrôlée par le joueur qui l'a larguée, mais ne compte pas comme membre de son équipe pour les scénarios, Votes du Public ou avantages.
+      - Déployée en utilisant le gabarit Grande Zone à Portée Courte maximum du véhicule actif.
+      - Reste sur la table comme élément de décor Destructible de Poids Léger (2 Points de Carrosserie, ciblable à distance).
+      - Effectue automatiquement une attaque à 2D6 (Arc à 360°) contre le premier véhicule qui termine son Étape de Déplacement à Portée Moyenne d'elle au cours de chaque Phase de Vitesse.
+      - N'attaque jamais les véhicules de l'équipe du joueur qui l'a larguée.
+      - Ne compte pas comme un membre de l'équipe pour les scénarios, objectifs ou avantages.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -812,19 +841,14 @@ armes:
     prix: 3
     emplacement: 0
     description: |
-      Arme largable représentée par une petite voiture téléguidée explosive.
+      Petite voiture radiocommandée explosive envoyée percuter les adversaires.
     regles: |
       - **3 Munitions**.
-      - Utilise un gabarit **Grande Zone**.
-      - Lorsque l'arme est larguée, placez une Voiture Téléguidée à Portée Courte maximum du véhicule actif, orientée dans n'importe quelle direction.
-      - Ce largage ouvre une Fenêtre de Collision.
-      - La Voiture Téléguidée est un véhicule de Poids Léger avec Vitesse actuelle 3, 1 Point de Carrosserie, Équipage 1 et Manœuvrabilité 0.
-      - Elle peut attaquer, mais ne peut pas changer de Vitesse.
-      - Elle est contrôlée par le joueur qui l'a larguée, mais ne compte pas comme membre de son équipe pour les scénarios, Votes du Public ou avantages.
-      - Lorsqu'elle est impliquée dans une Collision, elle subit 1 dégât avant la résolution de la Collision.
-      - Au lieu de devenir une Épave, elle explose.
-      - Lorsqu'elle explose, son propriétaire lance **4D6**, comme pour un véhicule de Poids Moyen.
-      - Si elle subit une Perte de Contrôle, elle subit 1 dégât et explose avant la résolution de la Perte de Contrôle.
+      - Déployée à Portée Courte maximum (via le gabarit Grande Zone) dans la direction souhaitée, ouvrant une Fenêtre de Collision.
+      - Consigne les caractéristiques suivantes : Véhicule Poids Léger, Vitesse actuelle 3, Carrosserie 1, Équipage 1, Manœuvrabilité 0.
+      - Peut attaquer mais sa vitesse reste fixe à 3. Non comptabilisée dans l'équipe pour les scénarios ou avantages.
+      - Si elle est impliquée dans une collision ou subit une Perte de Contrôle, elle prend 1 dégât et explose immédiatement avant la résolution de l'état.
+      - Lors de l'explosion, elle lance 4D6 dés d'attaque (équivalent Poids Moyen) sur son emplacement.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -846,12 +870,12 @@ armes:
     prix: 1
     emplacement: 1
     description: |
-      Arme largable à gabarit **Petite Zone** lançant **2D6** contre le premier véhicule affecté.
+      Zone de pointes métalliques crevant les pneus du premier véhicule qui s'y aventure.
     regles: |
       - **3 Munitions**.
-      - Le gabarit est considéré comme un terrain Dangereux.
-      - Le premier véhicule affecté subit une attaque à **2D6**.
-      - Après cette attaque, le gabarit de Chausse-Trapes est retiré de la zone de jeu.
+      - Le gabarit Petite Zone déposé est traité durablement comme un terrain Dangereux.
+      - Le tout premier véhicule dont le gabarit de déplacement ou la position finale chevauche la zone subit immédiatement une attaque automatique de 2D6.
+      - Le gabarit est définitivement retiré du jeu dès qu'un véhicule a subi cette attaque.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -873,13 +897,13 @@ armes:
     prix: 1
     emplacement: 1
     description: |
-      Arme largable à gabarit **Grande Zone** qui ralentit les véhicules.
+      Nappe de résine gluante ralentissant fortement la cadence des poursuivants.
     regles: |
       - **1 Munition**.
-      - Le gabarit est considéré comme un terrain Dangereux.
-      - Tout véhicule affecté descend de 2 sa Vitesse actuelle à la fin de son Étape de Déplacement, jusqu'à un minimum de 1.
-      - Un même véhicule ne peut pas être affecté par cette arme deux activations d'affilée.
-      - Le gabarit reste en jeu jusqu'à la fin de la partie.
+      - Dépose un gabarit Grande Zone considéré comme un terrain Dangereux.
+      - Tout véhicule entrant en contact avec la colle doit obligatoirement réduire sa Vitesse actuelle de 2 crans à la fin de son Étape de Déplacement (jusqu'à un minimum de Vitesse 1).
+      - Un même véhicule ne peut pas subir les effets de la colle deux activations consécutives.
+      - Le gabarit reste définitivement en jeu sur la table.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -901,12 +925,12 @@ armes:
     prix: 1
     emplacement: 0
     description: |
-      Arme largable à gabarit **Grande Zone** créant un écran de fumée.
+      Épais nuage opaque masquant la visibilité et perturbant la conduite.
     regles: |
       - **3 Munitions**.
-      - Le gabarit est considéré comme un obstacle pour déterminer si un véhicule est à couvert.
-      - Tant qu'un véhicule est en contact avec le gabarit, il est considéré comme Désorienté.
-      - Si le gabarit de déplacement ou la Position Finale d'un véhicule chevauche ce gabarit, ce véhicule prend 1 Jeton Danger à la fin de son Étape de Déplacement.
+      - Dépose un gabarit Grande Zone considéré comme un obstacle pour les lignes de vue (génère un modificateur de mise à Couvert).
+      - Tout véhicule situé dans la fumée est traité comme Désorienté.
+      - Si le gabarit de déplacement ou la position finale d'un véhicule chevauche la zone, il reçoit automatiquement 1 Jeton Danger à la fin de son Étape de Déplacement.
       - Le gabarit reste en jeu jusqu'à la fin de la partie.
     sponsors_autorises:
       - "Rutherford"
@@ -929,11 +953,11 @@ armes:
     prix: 2
     emplacement: 0
     description: |
-      Arme largable à gabarit **Grande Zone** transformant une portion de terrain en surface dangereuse.
+      Flaque de lubrifiant rendant la piste glissante et très instable.
     regles: |
       - **3 Munitions**.
-      - Le gabarit est considéré comme un terrain Dangereux.
-      - Le gabarit reste en jeu jusqu'à la fin de la partie.
+      - Dépose un gabarit Grande Zone traité en permanence comme un terrain Dangereux (+2 Jetons Danger en cas de chevauchement à la fin du déplacement).
+      - Le gabarit reste sur la table jusqu'à la conclusion de la partie.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -955,12 +979,13 @@ armes:
     prix: 1
     emplacement: 1
     description: |
-      Arme largable à gabarit **Petite Zone** lançant **4D6** contre le premier véhicule affecté.
+      Champ de mines de proximité explosant violemment au premier passage de roue.
     regles: |
       - **3 Munitions**.
-      - **Impact** : chaque touche non annulée inflige immédiatement 1 Jeton Danger.
-      - Le premier véhicule affecté subit une attaque à **4D6** avec Impact.
-      - Après cette attaque, le gabarit des Mines est retiré de la zone de jeu.
+      - Dépose un gabarit Petite Zone.
+      - Le premier véhicule qui entre en contact avec le gabarit subit immédiatement une attaque automatique de 4D6.
+      - **Impact** : Chaque touche non annulée inflige 1 Jeton Danger supplémentaire à la cible.
+      - Retire définitivement le gabarit de la table dès que l'explosion a été déclenchée.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -982,12 +1007,12 @@ armes:
     prix: 1
     emplacement: 1
     description: |
-      Arme largable à gabarit **Petite Zone** lançant **4D6** et pouvant enflammer la cible.
+      Piège de carburant gélifié infligeant une violente déflagration thermique.
     regles: |
       - **3 Munitions**.
-      - **Incendiaire** : si la cible subit au moins 1 dégât, elle devient Enflammée.
-      - Le premier véhicule affecté subit une attaque à **4D6** avec Incendiaire.
-      - Après cette attaque, le gabarit du Napalm est retiré de la zone de jeu.
+      - Dépose un gabarit Petite Zone. Le premier véhicule affecté subit une attaque automatique de 4D6.
+      - **Incendiaire** : Si l'attaque cause au moins 1 dégât, le véhicule affecté prend feu et subit le statut Enflammé.
+      - Le gabarit de Napalm est retiré de la zone de jeu immédiatement après cette première résolution.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"

@@ -31,14 +31,14 @@ ameliorations_vehicules:
   # ── Améliorations standard (disponibles à tous les sponsors) ──────────────
 
   - nom: "Arceaux"
-    nom_interne: "arceaux"       # Identifiant technique stable
-    prix: 4                      # Coût en Jerricans
-    emplacement: 1               # Slots occupés sur le véhicule
-    description: |               # Texte libre affiché dans l'UI
-      Protection structurelle renforçant le véhicule lorsqu'il part en tonneau.
-    regles: |                    # Règles spéciales au format liste Markdown
-      - Lorsque ce véhicule part en **Tonneau**, il peut choisir d'ignorer les deux dégâts infligés par le Tonneau.
-    sponsors_autorises:          # Sponsors pouvant acheter cette amélioration
+    nom_interne: "arceaux"
+    prix: 4
+    emplacement: 1
+    description: |
+      Structure de protection permettant de préserver la carrosserie lors des tonneaux.
+    regles: |
+      - Lorsque ce véhicule part en Tonneau, il peut choisir d'ignorer les deux dégâts infligés par le Tonneau.
+    sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
       - "Mishkin"
@@ -54,27 +54,24 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Bélier standard (tous les sponsors SAUF Slime) ────────────────────────
-  # Slime utilise "Bélier (Slime)" ci-dessous, qui ne requiert aucun emplacement.
   - nom: "Bélier"
     nom_interne: "belier"
-    comportement: "belier"       # Clé du décorateur métier — partagée avec "Bélier (Slime)" :
-                                 # même règle de pose (orientation, unicité par position),
-                                 # seuls prix/emplacement diffèrent (cf. CatalogService)
+    comportement: "belier"
     prix: 4
-    emplacement: 1               # Occupe 1 slot — Slime a une variante à 0 slot
+    emplacement: 1
     description: |
-      Arme de choc fixée au véhicule : tête de bélier, lame de pelleteuse, pare-buffle, tronçonneuse, pointes, faux ou tout autre dispositif de combat rapproché.
+      Arme de combat rapproché attachée au véhicule augmentant les dégâts d'impact et protégeant contre le danger.
     regles: |
-      - Lors de l'achat, définissez l'orientation du Bélier comme pour une arme.
-      - Un véhicule ne peut acheter qu'un seul **Bélier** par orientation.
-      - Lorsqu'il est impliqué dans une Collision sur l'orientation définie, ce véhicule peut ajouter **+2 dés d'attaque** à son Éperonnage.
-      - Lors de cette Collision, ce véhicule ne prend pas les Jetons Danger dus à la Collision.
+      - Lorsque vous achetez cette amélioration, vous devez définir son orientation, comme pour une arme.
+      - Un véhicule ne peut acheter qu'un seul Bélier par orientation.
+      - Lorsqu'il est impliqué dans une Collision sur l'orientation définie, ce véhicule peut ajouter 2 dés d'attaque à son Éperonnage.
+      - Ce véhicule ne prend pas les Jetons Danger suite à cette Collision.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
       - "Mishkin"
       - "Idris"
-      - "La Geôlière"            # Slime absent : utilise "Bélier (Slime)" à emplacement 0
+      - "La Geôlière"
       - "Scarlett"
       - "La Patrouille de l'Autoroute"
       - "Verney"
@@ -84,42 +81,38 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Variante Slime : Bélier sans emplacement ──────────────────────────────
-  # Règle Slime "Hérissé" : le Bélier ne requiert aucun Emplacement.
   - nom: "Bélier (Slime)"
-    nom_interne: "belier_slime"  # Suffixe _slime identifie la variante sponsor
-    comportement: "belier"       # Même comportement que "Bélier" : même classe instanciée,
-                                 # même règle de pose — seul l'emplacement change (0 ici)
-    prix: 4                      # Même prix que l'original
-    emplacement: 0               # 0 slot au lieu de 1 (avantage Slime)
+    nom_interne: "belier_slime"
+    comportement: "belier"
+    prix: 4
+    emplacement: 0
     description: |
-      Bélier sans emplacement réservé à Slime. Règle spéciale Hérissé : le Bélier ne requiert aucun Emplacement sur le véhicule.
+      Version du bélier de choc modifiée par l'équipe Slime pour ne requérir aucun emplacement.
     regles: |
-      - Lors de l'achat, définissez l'orientation du Bélier comme pour une arme.
-      - Un véhicule ne peut acheter qu'un seul **Bélier** par orientation.
-      - Lorsqu'il est impliqué dans une Collision sur l'orientation définie, ce véhicule peut ajouter **+2 dés d'attaque** à son Éperonnage.
-      - Lors de cette Collision, ce véhicule ne prend pas les Jetons Danger dus à la Collision.
+      - Règle exclusive Sponsor (Slime - Hérissé) : Cette équipe considère que l'amélioration Bélier ne requiert aucun Emplacement pour son montage.
+      - Lors de l'achat, vous devez définir son orientation, comme pour une arme.
+      - Un véhicule ne peut acheter qu'un seul Bélier par orientation.
+      - Lorsqu'il est impliqué dans une Collision sur l'orientation définie, ce véhicule peut ajouter 2 dés d'attaque à son Éperonnage.
+      - Ce véhicule ne prend pas les Jetons Danger suite à cette Collision.
     sponsors_autorises:
-      - "Slime"                  # Variante exclusive Slime
+      - "Slime"
 
   - nom: "Bélier Explosif"
     nom_interne: "belier_explosif"
-    comportement: "belier_explosif"   # Décorateur indépendant — pas de lien avec "Bélier"
-                                      # malgré la proximité de nom (cf. règles ci-dessous :
-                                      # explicitement compatibles et cumulatifs)
+    comportement: "belier_explosif"
     prix: 3
     emplacement: 0
     description: |
-      Bélier à usage explosif, conçu pour produire un impact initial extrêmement violent, mais dangereux pour son propre véhicule.
+      Charge d'impact jetable interdite aux véhicules légers octroyant un bonus d'attaque massif lors de la première collision.
     regles: |
-      - **1 Munition**.
-      - Lors de l'achat, définissez l'orientation du Bélier Explosif comme pour une arme.
+      - Cette amélioration dispose d'une limitation initiale fixée à 1 munition.
+      - Lorsque vous achetez cette amélioration, vous devez définir son orientation, comme pour une arme.
       - Un véhicule ne peut acheter cette amélioration qu'une seule fois.
-      - Cette amélioration ne peut pas être achetée par les véhicules de **Poids Léger**.
-      - La première fois de la partie que ce véhicule est impliqué dans une Collision sur l'orientation définie, son propriétaire doit annoncer un **Éperonnage**, même en cas de Collision Arrière.
-      - Lors de cet Éperonnage, ce véhicule gagne **+6 dés d'attaque**.
-      - Si des résultats **1** ou **2** sont obtenus sur ces dés d'attaque, ce véhicule perd immédiatement **1 Point de Carrosserie** pour chacun de ces résultats.
-      - Un véhicule peut être équipé à la fois d'un **Bélier** et d'un **Bélier Explosif** sur la même orientation.
-      - Les effets du Bélier et du Bélier Explosif sont cumulatifs.
+      - Cette amélioration ne peut pas être achetée pour les véhicules de Poids Léger.
+      - La première fois de la partie que ce véhicule est impliqué dans une Collision sur l'orientation définie, son propriétaire doit annoncer un Éperonnage, même en cas de Collision Arrière.
+      - Lors de cet Éperonnage, ce véhicule gagne +6 dés d'attaque.
+      - Si des résultats 1 ou des 2 sont obtenus sur ces dés d'attaque, ce véhicule perd immédiatement un Point de Carrosserie pour chacun de ces résultats.
+      - Un véhicule peut être équipé à la fois d'un Bélier et d'un Bélier Explosif sur la même orientation, et leurs effets sont cumulatifs.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -137,17 +130,14 @@ ameliorations_vehicules:
 
   - nom: "Blindage"
     nom_interne: "blindage"
-    comportement: "blindage"     # +2 carrosserie, cumulable sans limite — règle partagée
-                                 # avec "Micro-Blindage" (même effet, seuls prix/emplacement
-                                 # diffèrent), cf. plus bas
+    comportement: "blindage"
     prix: 4
     emplacement: 1
     description: |
-      Plaques de blindage supplémentaires augmentant durablement la résistance du véhicule.
+      Plaques de protection rivetées augmentant la structure de carrosserie maximale de manière permanente.
     regles: |
-      - Ce véhicule augmente sa Valeur de **Carrosserie** de **+2** de façon permanente.
-      - Un même véhicule peut acheter plusieurs améliorations **Blindage**.
-      - Chaque achat ajoute à nouveau **+2 Points de Carrosserie**.
+      - Ce véhicule voit sa Valeur de Carrosserie augmentée de 2 de façon permanente.
+      - Un même véhicule peut être équipé de plusieurs améliorations Blindage pour un gain de +2 Points de Carrosserie à chaque fois.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -168,10 +158,11 @@ ameliorations_vehicules:
     prix: 2
     emplacement: 1
     description: |
-      Dispositif bricolé permettant de projeter les armes largables à distance plutôt que de les déposer directement derrière le véhicule.
+      Dispositif permettant de projeter des armes largables à portée moyenne dans un arc de 360°.
     regles: |
-      - Le propriétaire de ce véhicule peut placer le gabarit de Zone adapté de ses armes largables, **Petite Zone** ou **Grande Zone** selon l'arme, où il le souhaite à **Portée Moyenne** maximum de la position actuelle du véhicule.
-      - Le placement s'effectue dans un **Arc de Tir à 360°**.
+      - Le propriétaire de ce véhicule peut placer le gabarit de Zone adapté (Petite ou Grande Zone, selon l'arme) de ses armes largables où il souhaite.
+      - Ce gabarit peut être positionné au maximum à Portée Moyenne de la position actuelle du véhicule.
+      - Le ciblage s'effectue librement dans un Arc de Tir à 360°.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -189,18 +180,17 @@ ameliorations_vehicules:
 
   - nom: "Chenilles"
     nom_interne: "chenilles"
-    comportement: "chenilles"    # -1 vitesse_max / +1 manœuvrabilité, unique, incompatible
-                                 # avec Char d'Assaut / Hélicoptère / Gyrocoptère
+    comportement: "chenilles"
     prix: 4
     emplacement: 1
     description: |
-      Remplacement des roues par des chenilles de char, améliorant la motricité et la manœuvrabilité au prix de la vitesse maximale.
+      Remplacement des roues par des chenilles de char pour ignorer les terrains difficiles et augmenter la manœuvrabilité.
     regles: |
-      - Ce véhicule gagne **+1 Manœuvrabilité**.
-      - Ce véhicule subit **-1 Vitesse maximale**.
-      - Ce véhicule peut ignorer les **Terrains Difficiles** et les **Terrains Dangereux**.
+      - Ceci augmente de 1 la manœuvrabilité du véhicule.
+      - En contrepartie, réduit de 1 sa Vitesse maximale.
+      - Ce véhicule peut également ignorer les Terrains Difficiles et Dangereux.
       - Un véhicule ne peut acheter cette amélioration qu'une seule fois.
-      - Les **Chars d'Assaut**, les **Hélicoptères** et les **Gyrocoptères** ne peuvent pas acheter cette amélioration.
+      - Les Chars d'Assaut, les Hélicoptères et les Gyrocoptères ne peuvent pas acheter de Chenilles.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -217,20 +207,17 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Membre d'Équipage Supplémentaire standard (tous SAUF Scarlett) ─────────
-  # Scarlett utilise "Membre d'Équipage Supplémentaire (Scarlett)" à moitié prix.
   - nom: "Membre d'Équipage Supplémentaire"
     nom_interne: "membre_equipage_sup"
-    comportement: "membre_equipage"   # +1 équipage, max = 2× l'équipage de départ — règle
-                                      # partagée avec la variante Scarlett ci-dessous
-    prix: 4                      # Prix standard — Scarlett a une variante à 2 Jerricans
+    comportement: "membre_equipage"
+    prix: 4
     emplacement: 0
     description: |
-      Ajout d'un membre d'équipage, augmentant la capacité du véhicule à effectuer des attaques.
+      Ajoute un passager pour augmenter la valeur d'équipage et le nombre d'attaques réalisables.
     regles: |
-      - Chaque **Membre d'Équipage Supplémentaire** augmente de **+1** la Valeur d'Équipage du véhicule.
-      - Cela augmente le nombre d'attaques que le véhicule peut effectuer lors de son Étape d'Attaque.
-      - Le nombre maximum de Membres d'Équipage que peut accueillir un véhicule est égal au **double de sa Valeur d'Équipage de départ**.
-      - Exemple : un Camion avec Équipage 3 peut acheter jusqu'à 3 Membres d'Équipage Supplémentaires, pour atteindre Équipage 6.
+      - Chaque Membre d'Équipage supplémentaire acheté augmente de 1 la Valeur d'Équipage du véhicule.
+      - Ceci augmente le nombre d'attaques que le véhicule peut effectuer lors de son Étape d'Attaque.
+      - Le nombre maximum de Membres d'Équipage que peut accueillir un véhicule est égal au double de sa Valeur d'Équipage de départ.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -238,7 +225,7 @@ ameliorations_vehicules:
       - "Idris"
       - "Slime"
       - "La Geôlière"
-      - "La Patrouille de l'Autoroute"  # Scarlett absente : utilise la variante à moitié prix
+      - "La Patrouille de l'Autoroute"
       - "Verney"
       - "Maxxine"
       - "L'Ordre Infernal"
@@ -246,44 +233,39 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Variante Scarlett : Membre d'Équipage Supplémentaire demi-prix ─────────
-  # Règle Scarlett "Quartiers de l'Équipage" : coûte moitié prix.
   - nom: "Membre d'Équipage Supplémentaire (Scarlett)"
     nom_interne: "membre_equipage_sup_scarlett"
-    comportement: "membre_equipage"   # Même comportement que l'original : même classe,
-                                      # même règle — seul le prix change
-    prix: 2                      # 4 / 2 = 2 (demi-prix Scarlett)
+    comportement: "membre_equipage"
+    prix: 2
     emplacement: 0
     description: |
-      Membre d'Équipage Supplémentaire à moitié prix pour Scarlett. Règle Quartiers de l'Équipage : coûte 2 Jerricans au lieu de 4.
+      Recrutement d'un membre d'équipage supplémentaire à moitié prix pour l'équipe Scarlett.
     regles: |
-      - Chaque **Membre d'Équipage Supplémentaire** augmente de **+1** la Valeur d'Équipage du véhicule.
-      - Cela augmente le nombre d'attaques que le véhicule peut effectuer lors de son Étape d'Attaque.
-      - Le nombre maximum de Membres d'Équipage que peut accueillir un véhicule est égal au **double de sa Valeur d'Équipage de départ**.
-      - Exemple : un Camion avec Équipage 3 peut acheter jusqu'à 3 Membres d'Équipage Supplémentaires, pour atteindre Équipage 6.
+      - Règle exclusive Sponsor (Scarlett - Quartiers de l'Équipage) : Cette équipe peut acheter l'amélioration Membre d'Équipage Supplémentaire pour la moitié du prix indiqué.
+      - Chaque Membre d'Équipage supplémentaire acheté augmente de 1 la Valeur d'Équipage du véhicule.
+      - Ceci augmente le nombre d'attaques que le véhicule peut effectuer lors de son Étape d'Attaque.
+      - Le nombre maximum de Membres d'Équipage que peut accueillir un véhicule est égal au double de sa Valeur d'Équipage de départ.
     sponsors_autorises:
-      - "Scarlett"               # Variante exclusive Scarlett
+      - "Scarlett"
 
   # ── Nitro standard (tous les sponsors SAUF Idris) ─────────────────────────
-  # Idris utilise "Nitro (Idris)" ci-dessous, à moitié prix.
   - nom: "Nitro"
     nom_interne: "nitro"
-    prix: 6                      # Prix standard — Idris a une variante à 3 Jerricans
+    prix: 6
     emplacement: 0
     description: |
-      Injection de puissance permettant une accélération brutale au prix d'une forte accumulation de Jetons Danger.
+      Boost jetable provoquant un déplacement forcé rectiligne long et fixant le danger à un niveau élevé.
     regles: |
-      - **1 Munition**.
-      - Une fois par activation, au début d'une Étape de Déplacement, ce véhicule peut annoncer qu'il utilise sa **Nitro**.
-      - Il effectue immédiatement un déplacement forcé avec le gabarit droit **Long**.
-      - Après ce déplacement forcé, il prend des Jetons Danger jusqu'à en avoir **5**.
-      - Il résout ensuite normalement son Étape de Déplacement.
-      - Lors de cette Étape de Déplacement, il ne peut pas se déplacer en marche arrière.
-      - À la fin de l'Étape de Déplacement où il a utilisé sa Nitro, il prend à nouveau des Jetons Danger jusqu'à en avoir au minimum **5**.
+      - Cette amélioration dispose d'une limitation initiale fixée à 1 munition.
+      - Une fois par activation, au début d'une Étape de Déplacement, ce véhicule peut annoncer qu'il va utiliser sa Nitro.
+      - Ce véhicule effectue alors immédiatement un déplacement forcé avec le gabarit droit Long, après quoi il prend des Jetons Danger jusqu'à en avoir 5.
+      - Il résout ensuite normalement son Étape de Déplacement mais sans possibilité de se déplacer en marche arrière.
+      - À la fin de l'Étape de Déplacement où ce véhicule a utilisé sa Nitro, il prend des Jetons Danger jusqu'à en avoir un minimum de 5.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
       - "Mishkin"
-      - "Slime"                  # Idris absent : utilise "Nitro (Idris)" à 3 Jerricans
+      - "Slime"
       - "La Geôlière"
       - "Scarlett"
       - "La Patrouille de l'Autoroute"
@@ -294,84 +276,71 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Variante Idris : Nitro à moitié prix ──────────────────────────────────
-  # Règle Idris "Accro à la Nitro" : l'équipe achète les améliorations Nitro
-  # à moitié prix, soit 3 Jerricans au lieu de 6.
   - nom: "Nitro (Idris)"
-    nom_interne: "nitro_idris"   # Suffixe _idris identifie la variante sponsor
-    prix: 3                      # 6 / 2 = 3 (demi-prix Idris)
+    nom_interne: "nitro_idris"
+    prix: 3
     emplacement: 0
     description: |
-      Nitro à moitié prix pour Idris. Règle Accro à la Nitro : coûte 3 Jerricans au lieu de 6.
+      Système de Nitro acheté à prix réduit pour l'équipe Idris, générant moins de danger lors de son utilisation.
     regles: |
-      - **1 Munition**.
-      - Une fois par activation, au début d'une Étape de Déplacement, ce véhicule peut annoncer qu'il utilise sa **Nitro**.
-      - Il effectue immédiatement un déplacement forcé avec le gabarit droit **Long**.
-      - Après ce déplacement forcé, il prend des Jetons Danger jusqu'à en avoir **3** (au lieu de 5 grâce à la règle Démon de la Vitesse d'Idris).
-      - Il résout ensuite normalement son Étape de Déplacement.
-      - Lors de cette Étape de Déplacement, il ne peut pas se déplacer en marche arrière.
-      - À la fin de l'Étape de Déplacement où il a utilisé sa Nitro, il prend à nouveau des Jetons Danger jusqu'à en avoir au minimum **3**.
+      - Règle exclusive Sponsor (Idris - Accro à la Nitro) : Cette équipe peut acheter des améliorations Nitro pour la moitié du prix indiqué.
+      - Une fois par activation, au début d'une Étape de Déplacement, ce véhicule peut annoncer qu'il va utiliser sa Nitro.
+      - Ce véhicule effectue alors immédiatement un déplacement forcé avec le gabarit droit Long.
+      - Règle exclusive Sponsor (Idris - Démon de la Vitesse) : Lorsque ce véhicule prend des Jetons Danger en utilisant sa Nitro, il n'en prend que jusqu'à en avoir 3 au lieu de 5.
+      - Il résout ensuite normalement son Étape de Déplacement mais sans possibilité de se déplacer en marche arrière.
+      - À la fin de l'Étape de Déplacement où ce véhicule a utilisé sa Nitro, il prend des Jetons Danger jusqu'à en avoir un minimum de 3 au lieu de 5.
     sponsors_autorises:
-      - "Idris"                  # Variante exclusive Idris
+      - "Idris"
 
   # ── Améliorations exclusives (un seul sponsor) ───────────────────────────
 
   - nom: "Réacteur Nucléaire Expérimental"
-    nom_interne: "reacteur_nucleaire"            # Amélioration électrique exclusive Mishkin
-    comportement: "mishkin_exclusif"   # Règle partagée avec "Téléporteur Expérimental" :
-                                       # un seul exemplaire par véhicule (rien d'autre)
+    nom_interne: "reacteur_nucleaire"
+    comportement: "mishkin_exclusif"
     prix: 5
     emplacement: 0
     description: |
-      Amélioration électrique expérimentale de Mishkin, augmentant massivement la vitesse potentielle du véhicule, avec un risque catastrophique en cas de perte de contrôle.
+      Prototype Mishkin non léger augmentant la vitesse maximale, modifiant le gabarit long et explosant lourdement en cas d'échec.
     regles: |
-      - **Électrique**.
-      - Uniquement pour les équipes sponsorisées par **Mishkin**.
-      - Cette amélioration ne peut pas être achetée par les véhicules de **Poids Léger**.
+      - Cette amélioration est réservée uniquement pour les équipes sponsorisées par Mishkin.
+      - Cette amélioration ne peut pas être achetée pour les véhicules de Poids Léger.
       - Un véhicule ne peut acheter cette amélioration qu'une seule fois.
-      - Augmentez de **+2** la Vitesse maximale de ce véhicule, jusqu'à un maximum de **6**.
-      - Ce véhicule considère le gabarit de déplacement droit **Long** comme autorisé à n'importe quelle Vitesse.
-      - Le gabarit droit Long n'est considéré comme **Dangereux** ou **Trivial** à aucune Vitesse.
-      - Si ce véhicule échoue à un **Test de Contrôle**, il devient immédiatement une **Épave** et explose automatiquement.
-      - Lorsque ce véhicule explose, il est considéré comme étant de **Poids Lourd**.
+      - Augmente de 2 la Vitesse maximale de ce véhicule (jusqu'à un maximum de 6).
+      - Ce véhicule considère le gabarit de déplacement droit Long comme étant autorisé à n'importe quelle Vitesse.
+      - Le gabarit droit Long n'est considéré comme Dangereux ou Trivial dans aucune vitesse.
+      - Si ce véhicule échoue à un Test de Contrôle, il devient immédiatement une Épave et explose automatiquement.
+      - Lorsque ce véhicule explose, il est considéré comme étant de Poids Lourd.
     sponsors_autorises:
-      - "Mishkin"                # Amélioration électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Téléporteur Expérimental"
-    nom_interne: "teleporteur"                   # Amélioration électrique exclusive Mishkin
-    comportement: "mishkin_exclusif"   # Même règle que le Réacteur Nucléaire : un seul
-                                       # exemplaire par véhicule
+    nom_interne: "teleporteur"
+    comportement: "mishkin_exclusif"
     prix: 7
     emplacement: 0
     description: |
-      Amélioration électrique expérimentale de Mishkin permettant de déplacer instantanément un véhicule, avec un risque de téléportation incontrôlée.
+      Module électrique Mishkin permettant un bond de position avant le déplacement, sujet à une déviation ennemie sur un résultat de danger.
     regles: |
-      - **Électrique**.
-      - Uniquement pour les équipes sponsorisées par **Mishkin**.
+      - Cette amélioration est réservée uniquement pour les équipes sponsorisées par Mishkin.
       - Un véhicule ne peut acheter cette amélioration qu'une seule fois.
-      - Au début de l'activation de ce véhicule, il peut activer son **Téléporteur Expérimental** avant, et en plus de, son Étape de Déplacement normale.
-      - Lorsque le Téléporteur est activé, ce véhicule prend **3 Jetons Danger**.
-      - Son propriétaire lance ensuite un **Dé de Manœuvre**.
-      - Si le résultat n'est pas **Danger**, placez ce véhicule n'importe où à **Portée Moyenne** maximum de sa position actuelle.
-      - Il ne peut pas être placé en contact avec un obstacle ou un terrain Difficile ou Dangereux.
-      - Son orientation ne change pas.
-      - Ce déplacement ne provoque pas de Collision.
-      - Le véhicule commence ensuite son Étape de Déplacement depuis cette nouvelle position.
-      - Si le résultat est **Danger**, le joueur à gauche du propriétaire place ce véhicule n'importe où à **Portée Longue** maximum de sa position actuelle.
-      - Dans ce cas également, le véhicule ne peut pas être placé en contact avec un obstacle ou un terrain Difficile ou Dangereux, son orientation ne change pas et cela ne provoque pas de Collision.
+      - Au début de l'activation de ce véhicule, il peut choisir d'activer son Téléporteur Expérimental avant (et en plus de) son Étape de Déplacement normale.
+      - Lorsque le Téléporteur Expérimental est activé, ce véhicule prend 3 Jetons Danger et son propriétaire lance un Dé de Manœuvre.
+      - Si le résultat du Dé de Manœuvre est autre qu'un Danger, placez ce véhicule n'importe où à Portée Moyenne maximum de sa position actuelle, sans modifier son orientation, et hors de contact avec un obstacle ou un terrain Difficile ou Dangereux.
+      - Ce déplacement réussi n'occasionne pas de Collision et le véhicule commence son Étape de Déplacement à partir de cette nouvelle position.
+      - Si le résultat du Dé de Manœuvre est un Danger, le joueur à gauche du propriétaire du véhicule place ce dernier n'importe où à Portée Longue maximum de sa position actuelle, sans qu'il soit en contact avec un obstacle ou un terrain Difficile ou Dangereux, et sans modifier son orientation.
+      - Ce déplacement dévié n'occasionne pas de Collision.
     sponsors_autorises:
-      - "Mishkin"                # Amélioration électrique exclusive Mishkin
+      - "Mishkin"
 
   - nom: "Tourelle"
     nom_interne: "tourelle"
-    prix: "x3"                   # Coût multiplicateur : 3× le prix de l'arme montée dessus
-                                 # Uniquement applicable aux armes (jamais aux améliorations)
+    prix: "x3"
     emplacement: 0
     description: |
-      Montage spécial d'une arme de tir permettant de lui donner un Arc de Tir à 360°.
+      Modification d'arme triplant son coût pour lui accorder un arc de tir complet à 360°.
     regles: |
-      - Lorsque vous achetez une arme de tir pour ce véhicule, vous pouvez payer **trois fois son coût de base** pour la monter sur Tourelle.
-      - Une arme montée sur Tourelle bénéficie d'un **Arc de Tir à 360°**.
-      - Exemple : un Minigun coûtant 5 Jerricans coûte 15 Jerricans s'il est monté sur Tourelle.
+      - Lorsque vous achetez une arme de tir pour ce véhicule, vous pouvez payer trois fois son coût de base pour la monter sur Tourelle.
+      - Une arme montée sur Tourelle bénéficie d'un Arc de Tir à 360°.
     sponsors_autorises:
       - "Rutherford"
       - "Miyazaki"
@@ -388,93 +357,94 @@ ameliorations_vehicules:
       - "Rusty et ses Trafiquants d'Alcool"
 
   # ── Améliorations exclusives — La Patrouille de l'Autoroute ───────────────
-  # Règle "Mégaphone" : permet d'appliquer la règle Sirène à tout véhicule adverse
-  # (et pas seulement au Bandit désigné).
   - nom: "Mégaphone"
-    nom_interne: "megaphone"     # Amélioration exclusive La Patrouille
+    nom_interne: "megaphone"
     prix: 2
     emplacement: 0
     description: |
-      Amélioration exclusive à La Patrouille de l'Autoroute. Permet d'appliquer la règle Sirène à n'importe quel véhicule adverse, et non seulement au Bandit désigné.
+      Haut-parleur exclusif à la Patrouille propageant l'effet de sirène à l'ensemble des véhicules adverses.
     regles: |
-      - Si ce véhicule est dans l'Arc Arrière d'un véhicule adverse (et pas uniquement le Bandit), ce véhicule adverse doit réduire sa Vitesse ou prendre 2 Jetons Danger.
+      - Cette amélioration est exclusive aux équipes sponsorisées par La Patrouille de l'Autoroute.
+      - Appliquez la règle spéciale de la Sirène à tout véhicule adverse et non uniquement au Bandit.
+      - En vertu de la règle Sirène, à la fin de l'Étape d'Attaque de ce véhicule, s'il se trouve dans l'Arc de Tir arrière d'un véhicule affecté, ce dernier doit soit réduire sa Vitesse actuelle de 1 (et ainsi prendre un Jeton Danger), soit prendre 2 Jetons Danger.
     sponsors_autorises:
-      - "La Patrouille de l'Autoroute"  # Amélioration exclusive La Patrouille
+      - "La Patrouille de l'Autoroute"
 
   # ── Améliorations exclusives — Verney ─────────────────────────────────────
-  # Règle "Micro-Blindage" : +2 Carrosserie pour 6 Jerricans, sans slot.
-  # Différent du Blindage standard (4j, 1 emplacement).
   - nom: "Micro-Blindage"
-    nom_interne: "micro_blindage"               # Amélioration exclusive Verney
-    comportement: "blindage"     # Même règle que "Blindage" (+2 carrosserie permanent,
-                                 # cumulable sans limite) — seuls prix/emplacement diffèrent ;
-                                 # même classe instanciée, aucune duplication de logique
+    nom_interne: "micro_blindage"
+    comportement: "blindage"
     prix: 6
-    emplacement: 0               # Aucun slot requis (avantage vs Blindage standard à 1 slot)
+    emplacement: 0
     description: |
-      Amélioration exclusive à Verney. Renforce la carrosserie de 2 points sans occuper d'emplacement, grâce aux techniques d'ingénierie avancées de l'ancien prisonnier.
+      Blindage compact conçu par Verney pour augmenter définitivement la carrosserie sans utiliser d'emplacement.
     regles: |
-      - Ce véhicule augmente sa Valeur de **Carrosserie** de **+2** de façon permanente.
-      - Cette amélioration n'occupe aucun Emplacement.
-      - Un même véhicule peut acheter plusieurs améliorations **Micro-Blindage**.
+      - Cette amélioration est exclusive aux équipes sponsorisées par Verney.
+      - Elle augmente de 2 la Valeur de Carrosserie permanente du véhicule.
     sponsors_autorises:
-      - "Verney"                 # Amélioration exclusive Verney
+      - "Verney"
 
   # ── Améliorations exclusives — Rusty et ses Trafiquants d'Alcool ──────────
-  # Les Remorques s'attachent aux véhicules Moyens/Lourds et ajoutent des
-  # emplacements d'armes. Elles sont obligatoires : l'équipe Rusty doit
-  # inclure au moins un véhicule avec Remorque ou une Forteresse Mobile.
 
   - nom: "Remorque de Transport"
     nom_interne: "remorque_transport"
-    prix: 0                      # Gratuite : chaque véhicule avec Remorque la reçoit automatiquement
+    prix: 0
     emplacement: 0
     description: |
-      Remorque de transport offerte gratuitement par Rusty à chaque véhicule équipé d'une Remorque (Légère, Moyenne ou Lourde) ou à chaque Forteresse Mobile de l'équipe.
+      Module octroyé aux remorques et forteresses de Rusty, appliquant une série de règles spéciales thématiques.
     regles: |
-      - Ce véhicule reçoit cette amélioration gratuitement s'il est équipé d'une Remorque ou s'il est une Forteresse Mobile.
-      - Permet de transporter du matériel ou des marchandises de contrebande (effet narratif).
+      - Chaque véhicule de cette équipe qui possède l'amélioration Remorque et chaque Forteresse Mobile de cette équipe peut avoir gratuitement une unique amélioration Remorque de Transport.
+      - Règle Tord-boyaux de Pêche : Les Cocktails Molotov de ce véhicule sont considérés comme ayant un nombre illimité de Jetons Munition.
+      - Règle Turbo de Fond de Tonneau : À la fin de l’Étape de Déplacement de ce véhicule, s’il cumule au moins 5 Jetons Danger, il doit immédiatement effectuer un déplacement forcé vers l’avant avec le gabarit droit Long.
+      - Règle Pompe à Syphon : Au début de l’Étape d’Attaque de ce véhicule, qu’il soit Désorienté ou non, ce véhicule peut prendre jusqu’à un Jeton Danger de chaque véhicule à Portée Courte de lui et le placer sur lui.
+      - Règle Liqueur de Maïs à l’Ancienne : Lorsqu’un véhicule à Portée Moyenne de ce véhicule (dont lui-même) prend un ou plusieurs Jetons Danger, il prend un Jeton Danger supplémentaire.
+      - Règle Marteau à Bovins : Ce véhicule peut considérer que sa Vitesse actuelle est la valeur de son choix, jusqu’à sa Vitesse maximale, lors de l’Étape de Perte de Contrôle et également lors des Collisions résolues durant l’Étape de Perte de Contrôle.
     sponsors_autorises:
-      - "Rusty et ses Trafiquants d'Alcool"  # Exclusive Rusty
+      - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Remorque Légère"
     nom_interne: "remorque_legere"
-    prix: 4                      # 4 Jerricans pour la version légère
-    emplacement: 0               # La remorque elle-même n'occupe pas de slot sur le véhicule
+    prix: 4
+    emplacement: 0
     description: |
-      Remorque légère attachée à un véhicule Moyen ou Lourd. Ajoute des emplacements d'armes supplémentaires à l'arrière du véhicule.
+      Châssis articulé léger pour véhicule moyen ou lourd, conférant les règles de convoi et une remorque de transport.
     regles: |
-      - Peut être attachée à un véhicule de **Poids Moyen ou Lourd** uniquement.
-      - Ajoute **2 Emplacements** d'armes supplémentaires montés sur la remorque.
-      - Les armes montées sur la remorque tirent depuis l'arrière du véhicule.
-      - Déclenche l'attribution gratuite de la **Remorque de Transport**.
+      - Cette amélioration est une remorque à Accès Limité qui ne peut être achetée que par les équipes de Rusty et ses Trafiquants d'Alcool.
+      - Un véhicule ne peut être équipé que d’une seule remorque.
+      - Un véhicule équipé d’une Remorque gagne les règles spéciales Articulé, Mastodonte et Passage en Force.
+      - Lorsque vous achetez une arme pour un véhicule avec remorque, le joueur doit annoncer si cette arme est installée côté cabine ou côté remorque.
+      - Lorsque vous mesurez les portées, placez le gabarit de tir au contact de la cabine ou de la remorque, selon la position de l’arme.
     sponsors_autorises:
-      - "Rusty et ses Trafiquants d'Alcool"  # Exclusive Rusty
+      - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Remorque Moyenne"
     nom_interne: "remorque_moyenne"
-    prix: 8                      # 8 Jerricans pour la version moyenne
+    prix: 8
     emplacement: 0
     description: |
-      Remorque de taille moyenne attachée à un véhicule Moyen ou Lourd. Ajoute davantage d'emplacements d'armes que la version légère.
+      Châssis articulé moyen pour véhicule moyen ou lourd, conférant les règles de convoi et un emplacement d'arrimage d'arme.
     regles: |
-      - Peut être attachée à un véhicule de **Poids Moyen ou Lourd** uniquement.
-      - Ajoute **3 Emplacements** d'armes supplémentaires montés sur la remorque.
-      - Les armes montées sur la remorque tirent depuis l'arrière du véhicule.
-      - Déclenche l'attribution gratuite de la **Remorque de Transport**.
+      - Cette amélioration est une remorque à Accès Limité qui ne peut être achetée que par des véhicules de Poids Moyen et Lourd sponsorisés par Rusty.
+      - Un véhicule ne peut être équipé que d’une seule remorque.
+      - Un véhicule équipé d’une Remorque gagne les règles spéciales Articulé, Mastodonte et Passage en Force.
+      - Règle Arrimage : Les remorques de Poids Moyen fournissent 1 Emplacement supplémentaire au véhicule remorqueur.
+      - Lorsque vous achetez une arme pour un véhicule avec remorque, le joueur doit annoncer si cette arme est installée côté cabine ou côté remorque.
+      - Lorsque vous mesurez les portées, placez le gabarit de tir au contact de la cabine ou de la remorque, selon la position de l’arme.
     sponsors_autorises:
-      - "Rusty et ses Trafiquants d'Alcool"  # Exclusive Rusty
+      - "Rusty et ses Trafiquants d'Alcool"
 
   - nom: "Remorque Lourde"
     nom_interne: "remorque_lourde"
-    prix: 12                     # 12 Jerricans pour la version lourde
+    prix: 12
     emplacement: 0
     description: |
-      Grande remorque attachée à un véhicule Lourd uniquement. Offre le plus d'emplacements d'armes supplémentaires.
+      Châssis articulé lourd réservé aux véhicules lourds, conférant les règles de convoi et trois emplacements d'arrimage.
     regles: |
-      - Peut être attachée à un véhicule de **Poids Lourd** uniquement.
-      - Ajoute **4 Emplacements** d'armes supplémentaires montés sur la remorque.
-      - Les armes montées sur la remorque tirent depuis l'arrière du véhicule.
-      - Déclenche l'attribution gratuite de la **Remorque de Transport**.
+      - Cette amélioration est une remorque à Accès Limité qui ne peut être achetée que par des véhicules de Poids Lourd sponsorisés par Rusty.
+      - Un véhicule ne peut être équipé que d’une seule remorque.
+      - Un véhicule équipé d’une Remorque gagne les règles spéciales Articulé, Mastodonte et Passage en Force.
+      - Règle Arrimage : Les remorques de Poids Lourd fournissent 3 Emplacements supplémentaires au véhicule remorqueur.
+      - Lorsque vous achetez une arme pour un véhicule avec remorque, le joueur doit annoncer si cette arme est installée côté cabine ou côté remorque.
+      - Lorsque vous mesurez les portées, placez le gabarit de tir au contact de la cabine ou de la remorque, selon la position de l’arme.
     sponsors_autorises:
-      - "Rusty et ses Trafiquants d'Alcool"  # Exclusive Rusty
+      - "Rusty et ses Trafiquants d'Alcool"
