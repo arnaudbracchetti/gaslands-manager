@@ -8,7 +8,7 @@ import axios from 'axios';
 
 // Les variables d'environnement HOST et PORT permettent de cibler
 // un serveur différent (ex: CI, staging). Par défaut : localhost:3000.
-const host = process.env['HOST'] ?? '127.0.0.1';
+const host = process.env['HOST'] ?? 'localhost';
 const port = process.env['PORT'] ?? '3000';
 
 axios.defaults.baseURL = `http://${host}:${port}`;

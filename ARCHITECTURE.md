@@ -16,7 +16,7 @@ gaslands/                    ← Monorepo Nx 22.7
 │   └── backend-e2e/         ← Tests Vitest E2E (axios)
 ├── content/                 ← Fichiers Markdown (contenu du jeu)
 ├── docker-compose.yml       ← Infrastructure locale et production
-├── dev.ps1                  ← Script de démarrage dev (Windows)
+├── dev.sh                   ← Script de démarrage dev (WSL/Linux)
 └── nx.json                  ← Configuration Nx
 ```
 
@@ -56,10 +56,8 @@ Tous les composants sont chargés à la demande via `loadComponent`. Routes déf
 
 ```json
 // apps/frontend/proxy.conf.json
-{ "/api": { "target": "http://127.0.0.1:3000", "secure": false } }
+{ "/api": { "target": "http://localhost:3000", "secure": false } }
 ```
-
-⚠️ **`127.0.0.1` et non `localhost`** : sur Windows, `localhost` peut résoudre en IPv6 (`::1`), incompatible avec le backend qui écoute en IPv4.
 
 ### 2.5 Pattern Smart / Dumb Components
 
@@ -243,11 +241,9 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 
 ---
 
-## 7. Monorepo Nx + contraintes Windows
+## 7. Monorepo Nx
 
-**Contrainte TypeScript Nx** : `tsconfig.base.json` contient des options (`composite`, `emitDeclarationOnly`) incompatibles avec Angular → toujours définir `$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"` avant les commandes Nx (déjà dans `dev.ps1`).
-
-Pour les autres contraintes Windows (SSL non vérifié, IPv4), voir [CLAUDE.md](CLAUDE.md).
+**Dépannage TypeScript Nx** : `tsconfig.base.json` contient des options (`composite`, `emitDeclarationOnly`) incompatibles avec Angular → si Nx affiche une erreur de configuration TypeScript, définir `export NX_IGNORE_UNSUPPORTED_TS_SETUP=true` avant les commandes Nx (cf. [CLAUDE.md](CLAUDE.md)).
 
 ---
 

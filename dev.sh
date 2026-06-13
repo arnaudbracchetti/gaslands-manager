@@ -2,18 +2,14 @@
 # ============================================================
 # dev.sh -- Script de demarrage de l'environnement de dev (Linux/WSL)
 #
-# Equivalent de dev.ps1 pour bash. Lance les trois composants
-# necessaires au dev :
+# Lance les trois composants necessaires au dev :
 #   1. PostgreSQL + pgAdmin (via Docker)
 #   2. Backend NestJS   --> http://localhost:3000/api
 #   3. Frontend Angular --> http://localhost:4200
 #
-# Sous WSL/Linux il n'existe pas d'equivalent universel a
-# "Start-Process powershell" (nouvelle fenetre). Ce script tente
-# d'ouvrir un terminal graphique (Windows Terminal via wt.exe,
-# ou x-terminal-emulator) pour le backend et le frontend ; si
-# aucun n'est disponible, il les lance en arriere-plan et journalise
-# leur sortie dans /tmp.
+# Le backend et le frontend sont lances en arriere-plan (nohup),
+# avec leur sortie journalisee dans /tmp/gaslands-backend.log et
+# /tmp/gaslands-frontend.log (`tail -f` pour les suivre).
 #
 # Usage :
 #   ./dev.sh           # demarrage normal
@@ -67,10 +63,20 @@ fi
 # On demarre UNIQUEMENT postgres et pgadmin du docker-compose.yml.
 # Le frontend et le backend tournent en local (hot reload, debogage).
 # L'option -d (detached) lance les containers en arriere-plan.
+#
+# Si l'environnement a deja ete lance precedemment, les containers
+# "gaslands_db"/"gaslands_pgadmin" tournent peut-etre deja.
+# `docker compose up` echouerait alors avec un conflit de nom -- on
+# verifie donc d'abord s'ils sont deja actifs avant de les (re)creer.
 step "Demarrage de PostgreSQL et pgAdmin..."
-docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d postgres pgadmin
-ok "PostgreSQL demarre sur localhost:5432"
-ok "pgAdmin demarre sur http://localhost:5050"
+if docker ps --filter "name=^gaslands_db$" --filter "status=running" --format '{{.Names}}' | grep -q . \
+    && docker ps --filter "name=^gaslands_pgadmin$" --filter "status=running" --format '{{.Names}}' | grep -q .; then
+    ok "PostgreSQL et pgAdmin sont deja demarres (containers existants)"
+else
+    docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d postgres pgadmin
+fi
+ok "PostgreSQL disponible sur localhost:5432"
+ok "pgAdmin disponible sur http://localhost:5050"
 
 # ── 3. (optionnel) Remise a zero du cache Nx ──────────────────
 # Declenchee uniquement si --reset est passe en argument.
@@ -84,46 +90,17 @@ if [[ "$RESET" == true ]]; then
 fi
 
 # ── 4. Lancement du backend et du frontend ────────────────────
-# Sous WSL/Linux, pas d'equivalent direct a "Start-Process powershell".
-# On tente d'ouvrir des terminaux separes (Windows Terminal depuis WSL,
-# ou un emulateur de terminal Linux) ; sinon, on lance en arriere-plan
-# avec logs dans /tmp.
+# Les deux serveurs sont lances en arriere-plan, avec logs dans /tmp.
 BACKEND_CMD="cd '$PROJECT_ROOT' && npx nx serve backend"
 FRONTEND_CMD="cd '$PROJECT_ROOT' && npx nx serve frontend"
 
-launch_in_terminal() {
-    local title="$1"
-    local cmd="$2"
-
-    if command -v wt.exe > /dev/null 2>&1; then
-        # Windows Terminal (accessible depuis WSL) : nouvel onglet
-        wt.exe new-tab --title "$title" wsl.exe bash -lic "$cmd; exec bash" > /dev/null 2>&1 &
-        return 0
-    elif command -v x-terminal-emulator > /dev/null 2>&1; then
-        x-terminal-emulator -T "$title" -e bash -lic "$cmd; exec bash" > /dev/null 2>&1 &
-        return 0
-    elif command -v gnome-terminal > /dev/null 2>&1; then
-        gnome-terminal --title="$title" -- bash -lic "$cmd; exec bash" > /dev/null 2>&1 &
-        return 0
-    fi
-    return 1
-}
-
 step "Demarrage du backend NestJS..."
-if launch_in_terminal "Gaslands - Backend :3000" "$BACKEND_CMD"; then
-    ok "Terminal backend ouvert"
-else
-    nohup bash -lic "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
-    ok "Backend lance en arriere-plan (logs : tail -f /tmp/gaslands-backend.log)"
-fi
+nohup bash -lic "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
+ok "Backend lance en arriere-plan (logs : tail -f /tmp/gaslands-backend.log)"
 
 step "Demarrage du frontend Angular..."
-if launch_in_terminal "Gaslands - Frontend :4200" "$FRONTEND_CMD"; then
-    ok "Terminal frontend ouvert"
-else
-    nohup bash -lic "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
-    ok "Frontend lance en arriere-plan (logs : tail -f /tmp/gaslands-frontend.log)"
-fi
+nohup bash -lic "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
+ok "Frontend lance en arriere-plan (logs : tail -f /tmp/gaslands-frontend.log)"
 
 # ── Resume ────────────────────────────────────────────────────
 echo ""

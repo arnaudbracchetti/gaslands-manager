@@ -40,7 +40,7 @@ Le frontend (nginx) proxie automatiquement `/api/*` vers `http://backend:3000`.
 
 - [Node.js](https://nodejs.org/) 20+
 - [Docker](https://www.docker.com/) + Docker Compose
-- PowerShell (Windows) **ou** bash (Linux/WSL)
+- bash (Linux/WSL)
 
 ---
 
@@ -48,19 +48,11 @@ Le frontend (nginx) proxie automatiquement `/api/*` vers `http://backend:3000`.
 
 ### Démarrage rapide
 
-**Windows (PowerShell)**
-
-```powershell
-.\dev.ps1
-```
-
-**Linux / WSL (bash)**
-
 ```bash
 ./dev.sh
 ```
 
-Ce script démarre automatiquement PostgreSQL + pgAdmin via Docker, puis lance le backend et le frontend (fenêtres/onglets séparés si possible, sinon en arrière-plan avec logs dans `/tmp`).
+Ce script démarre automatiquement PostgreSQL + pgAdmin via Docker, puis lance le backend et le frontend en arrière-plan, avec logs dans `/tmp/gaslands-backend.log` et `/tmp/gaslands-frontend.log`.
 
 | Service  | URL                       |
 |----------|---------------------------|
@@ -68,25 +60,6 @@ Ce script démarre automatiquement PostgreSQL + pgAdmin via Docker, puis lance l
 | API      | http://localhost:3000/api |
 
 ### Démarrage manuel
-
-**Windows (PowerShell)**
-
-```powershell
-# 1. Démarrer PostgreSQL (Docker requis)
-docker compose up -d postgres
-
-# 2. Backend NestJS → http://localhost:3000/api
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-npx nx serve backend
-
-# 3. Frontend Angular → http://localhost:4200
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"
-npx nx serve frontend
-```
-
-**Linux / WSL (bash)**
 
 ```bash
 # 1. Démarrer PostgreSQL (Docker requis)
@@ -99,22 +72,12 @@ npx nx serve backend
 npx nx serve frontend
 ```
 
-> Sous Linux/WSL, les variables `NODE_TLS_REJECT_UNAUTHORIZED` et
-> `NX_IGNORE_UNSUPPORTED_TS_SETUP` ne sont en général pas nécessaires —
-> voir [Notes Linux / WSL](#notes-linux--wsl).
+> En cas d'erreur de configuration TypeScript au démarrage de Nx, voir
+> [Dépannage](#dépannage).
 
 ### Configuration de l'environnement
 
 Copier les fichiers d'exemple et renseigner les valeurs :
-
-**Windows (PowerShell)**
-
-```powershell
-Copy-Item apps/backend/.env.example apps/backend/.env
-Copy-Item .env.example .env
-```
-
-**Linux / WSL (bash)**
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
@@ -137,7 +100,6 @@ CONTENT_DIR=content
 
 ## Déploiement — Production (Docker)
 
-> Les commandes ci-dessous sont identiques sous Windows (PowerShell) et Linux/WSL.
 > Sous WSL, Docker fonctionne soit via **Docker Desktop avec l'intégration WSL2**
 > activée (Settings → Resources → WSL Integration), soit via un **Docker Engine natif**
 > installé directement dans la distribution Linux.
@@ -185,8 +147,6 @@ docker compose ps
 
 ## Commandes Nx courantes
 
-> Identiques sous Windows (PowerShell) et Linux/WSL (bash).
-
 ```bash
 # Installation des dépendances
 npm install
@@ -217,48 +177,23 @@ Aucun redémarrage du backend n'est nécessaire.
 
 ---
 
-## Notes Windows
-
-Ce projet est développé sous Windows. Deux variables d'environnement sont nécessaires avant les commandes `npx nx` :
-
-```powershell
-$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"        # SSL non vérifié sur ce réseau
-$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"   # Compatibilité TypeScript Angular
-```
-
-Le script `dev.ps1` les applique automatiquement.
-
----
-
-## Notes Linux / WSL
-
-Le projet est en cours de migration vers Linux/WSL. Quelques différences avec
-l'environnement Windows ci-dessus :
-
-- **`NODE_TLS_REJECT_UNAUTHORIZED=0`** : ce contournement répond à une interception
-  SSL propre au réseau Windows de certains postes. **Pas nécessaire en général sous
-  Linux/WSL.** Si `npm`/`npx` échouent avec une erreur de certificat (réseau
-  d'entreprise filtrant aussi le trafic WSL), l'exporter avant les commandes Nx :
-  ```bash
-  export NODE_TLS_REJECT_UNAUTHORIZED=0
-  ```
+## Dépannage
 
 - **`NX_IGNORE_UNSUPPORTED_TS_SETUP=true`** : contourne une incompatibilité entre
-  `tsconfig.base.json` et la config Angular. Si Nx affiche une erreur de configuration
-  TypeScript au démarrage, exporter cette variable avant les commandes `npx nx` :
+  `tsconfig.base.json` (`composite`/`emitDeclarationOnly`) et la config Angular. Si Nx
+  affiche une erreur de configuration TypeScript au démarrage, exporter cette variable
+  avant les commandes `npx nx` :
   ```bash
   export NX_IGNORE_UNSUPPORTED_TS_SETUP=true
   ```
   Sinon, elle peut être omise.
 
-- **`127.0.0.1` vs `localhost`** : la contrainte Windows (où `localhost` peut résoudre
-  en IPv6 `::1`, incompatible avec un backend en écoute IPv4) ne s'applique pas sous
-  WSL2 — `localhost` fonctionne normalement. Le `.env` et
-  `apps/frontend/proxy.conf.json` peuvent utiliser `localhost` ou `127.0.0.1`
-  indifféremment.
+- **`NODE_TLS_REJECT_UNAUTHORIZED=0`** : uniquement si `npm`/`npx` échouent avec une
+  erreur de certificat (réseau d'entreprise filtrant le trafic SSL) :
+  ```bash
+  export NODE_TLS_REJECT_UNAUTHORIZED=0
+  ```
 
-- **`dev.sh`** : équivalent de `dev.ps1` pour bash. Tente d'ouvrir des terminaux
-  séparés pour le backend et le frontend (Windows Terminal via `wt.exe` si lancé
-  depuis WSL, ou un émulateur de terminal Linux) ; sinon les deux serveurs tournent
-  en arrière-plan avec leurs logs dans `/tmp/gaslands-backend.log` et
+- **`dev.sh`** : démarre PostgreSQL + pgAdmin via Docker, puis lance le backend et le
+  frontend en arrière-plan, avec logs dans `/tmp/gaslands-backend.log` et
   `/tmp/gaslands-frontend.log` (`tail -f` pour les suivre).

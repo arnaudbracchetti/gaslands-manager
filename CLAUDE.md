@@ -48,30 +48,26 @@ Lire avant toute modification — mettre à jour après chaque changement :
 
 ---
 
-## Environnement Windows — Contraintes critiques
+## Environnement de développement (WSL)
 
-**SSL** : préfixer `npm`/`npx` avec `$env:NODE_TLS_REJECT_UNAUTHORIZED = "0"`. git SSL désactivé globalement.
-
-**Nx + TypeScript** : définir `$env:NX_IGNORE_UNSUPPORTED_TS_SETUP = "true"` avant toute commande Nx (déjà dans `dev.ps1`).
-
-**Réseau** : utiliser `127.0.0.1` (pas `localhost`) dans toutes les configs.
+**Dépannage Nx + TypeScript** : si Nx se plaint d'une configuration TypeScript incompatible
+(`tsconfig.base.json` contient `composite`/`emitDeclarationOnly`, incompatibles avec Angular),
+définir `export NX_IGNORE_UNSUPPORTED_TS_SETUP=true` avant la commande.
 
 ---
 
 ## Commandes de développement
 
-```powershell
-.\dev.ps1                        # démarrer tout l'environnement (recommandé)
-npx nx serve backend             # backend seul → http://127.0.0.1:3000/api
-npx nx serve frontend            # frontend seul → http://localhost:4200
-npx nx test backend              # tests unitaires backend (Vitest)
-npx nx test frontend             # tests unitaires frontend (Vitest)
-npx nx e2e backend-e2e           # tests E2E backend (axios)
-npx nx run frontend:build        # build production
-npx nx sync                      # si Nx se plaint de "workspace out of sync"
+```bash
+./dev.sh                          # démarrer tout l'environnement (recommandé)
+npx nx serve backend              # backend seul → http://localhost:3000/api
+npx nx serve frontend             # frontend seul → http://localhost:4200
+npx nx test backend               # tests unitaires backend (Vitest)
+npx nx test frontend               # tests unitaires frontend (Vitest)
+npx nx e2e backend-e2e             # tests E2E backend (axios)
+npx nx run frontend:build          # build production
+npx nx sync                        # si Nx se plaint de "workspace out of sync"
 ```
-
-⚠️ Préfixer avec les deux variables d'env Windows ci-dessus.
 
 ---
 
