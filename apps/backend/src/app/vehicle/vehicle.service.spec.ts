@@ -666,6 +666,39 @@ describe('VehicleService', () => {
       expect(result).toEqual(ok());
     });
 
+    it('refuse — POOL D\'EMPLACEMENTS PARTAGÉ, PRIORITAIRE sur "orientation requise" — pour une amélioration orientable (Bélier) sans orientation fournie', async () => {
+      // Reproduit le bug : `getAvailableImprovements` n'envoie JAMAIS d'orientation
+      // (cf. son commentaire) — la chaîne candidate refuserait donc TOUJOURS avec
+      // "Une orientation est requise pour le Bélier" (validateSelf du décorateur),
+      // masquant le VRAI blocage si le véhicule est déjà plein. `totalEmplacements`
+      // (1, Bélier) + armes déjà montées (4, doublée comme ci-dessus) = 5 > 5... on
+      // pousse à 6 > 5 pour un dépassement net, avec `validate()` qui échouerait de
+      // toute façon sur l'orientation manquante — la priorité du pool doit l'emporter.
+      const vehiculeAvecArmes = {
+        ...mockVehicle,
+        weapons: [installedMitrailleuse, installedMitrailleuse],
+      };
+      mockVehicleRepo.findOne.mockResolvedValue(vehiculeAvecArmes);
+      mockCatalogService.getArmeByNomInterne.mockReturnValue(armeMitrailleuse);
+      mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
+      mockDecoratorFactory.wrap.mockReturnValue(
+        fakeBuild({
+          validate: () => fail('Une orientation est requise pour le Bélier'),
+          totalEmplacements: () => 4,
+        }),
+      );
+
+      const result = await service.canAddImprovement(7, 42, 'belier');
+
+      // "Emplacements insuffisants" — PAS "Une orientation est requise" : le pool
+      // partagé est vérifié AVANT la chaîne d'améliorations (mirroir
+      // `WeaponService.checkCandidate`, règle 4 avant règle 5).
+      expect(result).toEqual({
+        ok: false,
+        reason: expect.stringContaining('Emplacements insuffisants'),
+      });
+    });
+
     it('ne touche JAMAIS au repository — succès ou échec : "retirer dans la foulée" = ne rien persister', async () => {
       mockCatalogService.getAmeliorationByNomInterne.mockReturnValue(ameliorationChenilles);
       mockDecoratorFactory.wrap.mockReturnValue(fakeBuild({ validate: () => fail('Refusé') }));

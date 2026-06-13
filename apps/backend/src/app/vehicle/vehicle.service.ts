@@ -463,23 +463,28 @@ export class VehicleService {
     };
     const candidateBuild = this.decoratorFactory.wrap(currentBuild, amelioration, candidateInstance);
 
-    // "Valider" : la chaîne d'améliorations est-elle cohérente avec ELLE-MÊME ?
-    const chainResult = candidateBuild.validate();
-    if (!chainResult.ok) {
-      return chainResult;
-    }
-
-    // Et MAINTENANT, le pool d'emplacements PARTAGÉ : la chaîne candidate
-    // (améliorations, candidat inclus) PLUS les armes déjà montées tiennent-elles
-    // dans la capacité totale du véhicule ? `baseStats.emplacements` — pas
-    // `stats.emplacements` — car ce total est une caractéristique D'ORIGINE du
-    // véhicule (rien dans Gaslands ne l'augmente ; cf. la distinction baseStats/
-    // stats documentée dans `VehicleBuild`).
+    // Le pool d'emplacements PARTAGÉ : la chaîne candidate (améliorations, candidat
+    // inclus) PLUS les armes déjà montées tiennent-elles dans la capacité totale du
+    // véhicule ? `baseStats.emplacements` — pas `stats.emplacements` — car ce total
+    // est une caractéristique D'ORIGINE du véhicule (rien dans Gaslands ne l'augmente ;
+    // cf. la distinction baseStats/stats documentée dans `VehicleBuild`).
+    // `totalEmplacements()` ne dépend PAS de l'orientation : ce calcul peut donc se
+    // faire AVANT `validate()`. Vérifiée AVANT la chaîne d'améliorations (donc avant
+    // "orientation requise") : si le véhicule est plein, c'est le vrai blocage — l'UI
+    // doit griser l'amélioration avec "emplacements insuffisants", pas masquer ce refus
+    // derrière "orientation requise" (mirroir `WeaponService.checkCandidate`, règle 4).
     const totalDemande = candidateBuild.totalEmplacements() + this.weaponSlotsOf(vehicle);
     if (totalDemande > candidateBuild.baseStats.emplacements) {
       return fail(
         `Emplacements insuffisants : ${totalDemande}/${candidateBuild.baseStats.emplacements} requis avec "${amelioration.nom}"`,
       );
+    }
+
+    // "Valider" : la chaîne d'améliorations est-elle cohérente avec ELLE-MÊME ?
+    // (orientation requise, règles spécifiques au comportement...)
+    const chainResult = candidateBuild.validate();
+    if (!chainResult.ok) {
+      return chainResult;
     }
 
     return ok();
