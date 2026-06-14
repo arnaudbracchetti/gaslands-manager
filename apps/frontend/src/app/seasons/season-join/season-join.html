@@ -1,0 +1,57 @@
+<!-- Page "Rejoindre une saison via code" -->
+<div class="season-join-page">
+
+  <h1>🏁 Rejoindre une saison</h1>
+
+  @if (loading()) {
+    <div class="season-join-loading">
+      <p>Chargement...</p>
+    </div>
+  } @else if (error()) {
+    <!-- CA2 : message générique, pas de fuite d'info -->
+    <div class="season-join-error">{{ error() }}</div>
+  } @else if (summary()) {
+    <div class="season-join-card">
+
+      <!-- CA1 : nom, état, organisateur -->
+      <h2>{{ summary()!.name }}</h2>
+      <p class="season-join-card__state">État : {{ summary()!.state }}</p>
+      <p class="season-join-card__organizer">Organisé par {{ summary()!.organizerName }}</p>
+
+      @if (submitted()) {
+        <div class="season-join-success">
+          Demande envoyée ! Elle sera examinée par l'organisateur de la saison.
+        </div>
+      } @else {
+
+        @if (submitError()) {
+          <div class="season-join-error">{{ submitError() }}</div>
+        }
+
+        @if (userTeams().length === 0) {
+          <div class="season-join-info">
+            Vous devez d'abord créer une équipe pour rejoindre une saison.
+          </div>
+        } @else {
+          <div class="form-group">
+            <label for="join-team">Équipe engagée *</label>
+            <select
+              id="join-team"
+              [ngModel]="selectedTeamId()"
+              (ngModelChange)="selectedTeamId.set(+$event)">
+              @for (team of userTeams(); track team.id) {
+                <option [value]="team.id">{{ team.name }}</option>
+              }
+            </select>
+          </div>
+
+          <button class="btn-primary" type="button" (click)="submitJoinRequest()" [disabled]="submitting()">
+            @if (submitting()) { Envoi... } @else { Demander à rejoindre }
+          </button>
+        }
+      }
+
+    </div>
+  }
+
+</div>

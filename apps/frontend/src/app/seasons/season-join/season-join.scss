@@ -1,0 +1,101 @@
+/* ── Page "Rejoindre une saison via code" ─────────────────────────────────── */
+/* Même esprit que seasons.scss / season-form.scss */
+
+.season-join-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 24px;
+
+  h1 {
+    color: var(--clr-accent);
+    font-size: 2rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+}
+
+.season-join-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--clr-text-muted);
+}
+
+.season-join-error,
+.season-join-info,
+.season-join-success {
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.season-join-error {
+  background: rgba(var(--clr-accent-rgb), 0.15);
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
+}
+
+.season-join-info {
+  background: var(--clr-bg-base);
+  border: 1px dashed var(--clr-border);
+  color: var(--clr-text-muted);
+}
+
+.season-join-success {
+  background: rgba(var(--clr-accent-cyan-rgb), 0.15);
+  border: 1px solid var(--clr-accent-cyan);
+  color: var(--clr-accent-cyan);
+}
+
+.season-join-card {
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: 8px;
+  padding: 28px;
+
+  h2 {
+    color: var(--clr-text);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  &__state,
+  &__organizer {
+    color: var(--clr-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+}
+
+.form-group {
+  margin: 20px 0;
+
+  label {
+    display: block;
+    color: var(--clr-text-hint);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  select {
+    width: 100%;
+    background: var(--clr-bg-base);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--clr-accent);
+    }
+  }
+}

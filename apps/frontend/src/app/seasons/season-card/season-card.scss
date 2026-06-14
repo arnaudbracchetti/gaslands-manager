@@ -1,0 +1,74 @@
+/* ── Carte de saison ──────────────────────────────────────────────────────── */
+/* Même esprit visuel que team-card.scss : surface, bordure subtile, hover accent */
+
+.season-card {
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: 8px;
+  padding: 20px;
+  transition: border-color 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &:hover {
+    border-color: var(--clr-accent);
+    transform: translateY(-2px);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__name {
+    color: var(--clr-text);
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  /* Badge d'état — couleur neutre par défaut, accent pour EN_COURS (saison active) */
+  &__state {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    background: rgba(var(--clr-accent-cyan-rgb), 0.15);
+    border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.3);
+    color: var(--clr-accent-cyan);
+
+    &--EN_COURS {
+      background: rgba(var(--clr-accent-rgb), 0.15);
+      border-color: rgba(var(--clr-accent-rgb), 0.3);
+      color: var(--clr-accent);
+    }
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Badge organisateur — même teinte accent que team-card__badge */
+  &__badge {
+    background: rgba(var(--clr-accent-rgb), 0.15);
+    border: 1px solid rgba(var(--clr-accent-rgb), 0.3);
+    color: var(--clr-accent);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__participants {
+    color: var(--clr-text-muted);
+    font-size: 0.85rem;
+  }
+}

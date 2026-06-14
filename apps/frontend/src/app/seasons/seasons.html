@@ -1,0 +1,62 @@
+<!-- Écran de gestion des saisons Gaslands -->
+<div class="seasons-page">
+
+  <!-- En-tête avec titre et bouton d'ajout -->
+  <div class="seasons-header">
+    <h1>🏆 Mes Saisons</h1>
+    @if (!showForm()) {
+      <button class="btn-primary btn-add" (click)="openCreate()">
+        + Créer une saison
+      </button>
+    }
+  </div>
+
+  <!-- Rejoindre une saison via code d'invitation -->
+  <form class="seasons-join-form" (ngSubmit)="goToJoin()">
+    <input
+      type="text"
+      placeholder="Code d'invitation"
+      [ngModel]="joinCode()"
+      (ngModelChange)="joinCode.set($event)"
+      name="joinCode" />
+    <button class="btn-secondary" type="submit">Rejoindre via code</button>
+  </form>
+
+  <!-- Message d'erreur API -->
+  @if (error()) {
+    <div class="seasons-error">{{ error() }}</div>
+  }
+
+  <!-- Formulaire de création -->
+  @if (showForm()) {
+    <app-season-form
+      [saving]="saving()"
+      [teams]="userTeams()"
+      (saved)="onSaved($event)"
+      (formCancel)="cancelForm()" />
+  }
+
+  <!-- Liste des saisons -->
+  @if (loading()) {
+    <div class="seasons-loading">
+      <p>Chargement de vos saisons...</p>
+    </div>
+  } @else if (seasons().length === 0 && !showForm()) {
+    <!-- État vide -->
+    <div class="seasons-empty">
+      <p class="seasons-empty__icon">🏁</p>
+      <p class="seasons-empty__title">Aucune saison pour l'instant</p>
+      <p class="seasons-empty__subtitle">Créez votre première saison pour commencer !</p>
+      <button class="btn-primary" (click)="openCreate()">
+        + Créer ma saison
+      </button>
+    </div>
+  } @else {
+    <div class="seasons-grid">
+      @for (season of seasons(); track season.id) {
+        <app-season-card [season]="season" />
+      }
+    </div>
+  }
+
+</div>

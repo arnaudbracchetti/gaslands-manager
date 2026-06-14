@@ -1,0 +1,8 @@
+<!-- Code d'invitation + bouton copier -->
+<div class="invite-link">
+  <span class="invite-link__label">Code d'invitation :</span>
+  <code class="invite-link__code">{{ inviteCode() }}</code>
+  <button class="invite-link__copy" type="button" (click)="copyCode()">
+    {{ copied() ? '✅ Copié !' : '📋 Copier' }}
+  </button>
+</div>

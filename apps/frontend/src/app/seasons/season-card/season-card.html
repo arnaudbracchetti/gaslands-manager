@@ -1,0 +1,24 @@
+<!-- Carte d'une saison -->
+<div class="season-card">
+
+  <div class="season-card__header">
+    <h2 class="season-card__name">{{ season().name }}</h2>
+    <span class="season-card__state season-card__state--{{ season().state }}">
+      {{ season().state }}
+    </span>
+  </div>
+
+  <div class="season-card__info">
+    @if (season().myRole === 'organizer') {
+      <span class="season-card__badge">🏆 Organisateur</span>
+    }
+    <span class="season-card__participants">
+      {{ season().participantCount }} participant{{ season().participantCount > 1 ? 's' : '' }}
+    </span>
+  </div>
+
+  @if (season().myRole === 'organizer') {
+    <app-invite-link [inviteCode]="season().inviteCode" />
+  }
+
+</div>

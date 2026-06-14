@@ -6,6 +6,9 @@
   <ul class="navbar-links">
     <!-- routerLinkActive="active" ajoute la classe CSS "active" sur le lien de la page courante -->
     <li><a routerLink="/teams" routerLinkActive="active">Équipes</a></li>
+    @if (authService.isLoggedIn()) {
+      <li><a routerLink="/seasons" routerLinkActive="active">Saisons</a></li>
+    }
     <li><a routerLink="/vehicles" routerLinkActive="active">Véhicules</a></li>
     <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
     <li><a routerLink="/rules" routerLinkActive="active">Règles</a></li>

@@ -9,6 +9,9 @@ import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
 import { Team } from './team/team.entity';
+import { SeasonModule } from './season/season.module';
+import { Season } from './season/season.entity';
+import { SeasonParticipant } from './season/season-participant.entity';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { Vehicle, VehicleImprovement } from './vehicle/vehicle.entity';
 import { WeaponModule } from './weapon/weapon.module';
@@ -40,7 +43,7 @@ import { Weapon } from './weapon/weapon.entity';
         database: config.get('DATABASE_NAME', 'gaslands'),
         // Toutes les entités TypeORM doivent être listées ici
         // TypeORM crée ou met à jour les tables correspondantes (synchronize: true)
-        entities: [Team, User, Vehicle, VehicleImprovement, Weapon],
+        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant],
         // synchronize: true = TypeORM crée/modifie les tables automatiquement
         // ⚠️ À désactiver en production ! En prod, on utilise des migrations.
         synchronize: true,
@@ -55,6 +58,7 @@ import { Weapon } from './weapon/weapon.entity';
     WeaponModule,  // Armes montées sur les véhicules d'équipe
     AuthModule,    // Inscription, connexion, JWT
     CatalogModule, // Catalogue de jeu chargé au démarrage (sponsors, véhicules, armes, améliorations)
+    SeasonModule,  // Saisons (ligues) regroupant plusieurs équipes et organisateurs
   ],
   controllers: [AppController],
   providers: [AppService],

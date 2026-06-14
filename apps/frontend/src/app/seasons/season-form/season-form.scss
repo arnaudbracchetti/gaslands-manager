@@ -1,0 +1,101 @@
+/* ── Carte formulaire ─────────────────────────────────────────────────────── */
+/* Mêmes classes/styles que team-form.scss — composants scopés, pas de partage
+   de CSS entre fichiers, donc on reproduit ce qu'il faut ici. */
+
+.season-form-card {
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-accent);
+  border-radius: 8px;
+  padding: 28px;
+  margin-bottom: 32px;
+
+  h2 {
+    color: var(--clr-accent);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+/* Erreur de validation locale */
+.form-error {
+  background: rgba(var(--clr-accent-rgb), 0.15);
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* Message informatif (CA3 : aucune équipe disponible) */
+.form-info {
+  background: var(--clr-bg-base);
+  border: 1px dashed var(--clr-border);
+  color: var(--clr-text-muted);
+  padding: 14px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+/* Grille responsive pour les champs du formulaire */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Styles des champs texte et select */
+.season-form-card {
+
+  input,
+  select {
+    width: 100%;
+    background: var(--clr-bg-base);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--clr-accent);
+    }
+
+    &::placeholder {
+      color: var(--clr-text-disabled);
+    }
+  }
+
+  label {
+    display: block;
+    color: var(--clr-text-hint);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+}
+
+/* ── Actions du formulaire ─────────────────────────────────────────────────── */
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+
+  button {
+    width: auto;
+    padding: 10px 24px;
+  }
+}
