@@ -192,4 +192,21 @@ describe('SeasonsService', () => {
       expect(result).toEqual(updated);
     });
   });
+
+  // ── remove() ─────────────────────────────────────────────────────────────
+
+  describe('remove()', () => {
+    it('effectue DELETE /api/seasons/:id', () => {
+      let done = false;
+
+      service.remove(1).subscribe(() => { done = true; });
+
+      const req = httpMock.expectOne('/api/seasons/1');
+      expect(req.request.method).toBe('DELETE');
+
+      req.flush(null);
+
+      expect(done).toBe(true);
+    });
+  });
 });

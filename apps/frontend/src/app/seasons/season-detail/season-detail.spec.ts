@@ -5,7 +5,7 @@
  * le pattern de mock + ActivatedRoute).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { SeasonDetail } from './season-detail';
 import { SeasonsService } from '../seasons.service';
@@ -35,13 +35,16 @@ describe('SeasonDetail', () => {
     getOne: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
     validateParticipant: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
   };
+  let mockRouter: { navigate: ReturnType<typeof vi.fn> };
 
   function configure(seasonId = '1'): void {
     TestBed.configureTestingModule({
       imports: [SeasonDetail],
       providers: [
         { provide: SeasonsService, useValue: mockSeasonsService },
+        { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: { snapshot: { params: { id: seasonId } } } },
       ],
     });
@@ -52,7 +55,9 @@ describe('SeasonDetail', () => {
       getOne: vi.fn().mockReturnValue(of(mockSeason)),
       getParticipants: vi.fn().mockReturnValue(of(mockParticipants)),
       validateParticipant: vi.fn(),
+      remove: vi.fn(),
     };
+    mockRouter = { navigate: vi.fn() };
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -149,6 +154,54 @@ describe('SeasonDetail', () => {
 
       expect(component.pending()).toEqual([]);
       expect(component.validated()).toEqual([mockParticipants[0]]);
+    });
+  });
+
+  // ── deleteSeason() ───────────────────────────────────────────────────────
+
+  describe('deleteSeason()', () => {
+    it('supprime la saison et navigue vers /seasons après confirmation', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockSeasonsService.remove.mockReturnValue(of(undefined));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.deleteSeason();
+
+      expect(mockSeasonsService.remove).toHaveBeenCalledWith(1);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/seasons']);
+    });
+
+    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.deleteSeason();
+
+      expect(mockSeasonsService.remove).not.toHaveBeenCalled();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('affiche un message d\'erreur si la suppression échoue', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockSeasonsService.remove.mockReturnValue(throwError(() => new Error('500')));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.deleteSeason();
+
+      expect(component.error()).not.toBe('');
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
   });
 });

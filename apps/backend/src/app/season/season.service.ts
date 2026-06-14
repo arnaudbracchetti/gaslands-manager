@@ -168,6 +168,27 @@ export class SeasonService {
    *    (seasonId, userId) (CA5) — contrôle explicite pour renvoyer un message
    *    clair plutôt que laisser la contrainte unique remonter une erreur SQL.
    */
+  /**
+   * Supprime définitivement une saison — organisateur uniquement.
+   *
+   * - `userId` doit correspondre à un SeasonParticipant VALIDATED avec
+   *   isOrganizer=true pour cette saison, sinon NotFoundException (même
+   *   principe que validate(), pas de fuite d'information).
+   * - La suppression de la Season cascade sur tous ses SeasonParticipant
+   *   (onDelete: 'CASCADE', cf. season-participant.entity.ts) — les équipes
+   *   des participants ne sont pas affectées (aucune référence Team → Season).
+   */
+  async remove(seasonId: number, userId: number): Promise<void> {
+    const organizer = await this.participantRepo.findOne({
+      where: { seasonId, userId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+    });
+    if (!organizer) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    await this.seasonRepo.delete(seasonId);
+  }
+
   async requestJoin(seasonId: number, userId: number, dto: JoinSeasonDto): Promise<SeasonParticipant> {
     await this.teamService.findOneForUser(dto.teamId, userId);
 

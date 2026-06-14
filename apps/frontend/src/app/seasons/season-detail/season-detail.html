@@ -9,8 +9,18 @@
     <!-- CA3 : message générique, pas de fuite d'info -->
     <div class="season-detail-error">{{ error() }}</div>
   } @else if (season()) {
-    <h1>{{ season()!.name }}</h1>
-    <span class="season-detail-state">{{ season()!.state }}</span>
+    <div class="season-detail-header">
+      <div>
+        <h1>{{ season()!.name }}</h1>
+        <span class="season-detail-state">{{ season()!.state }}</span>
+      </div>
+
+      @if (isOrganizer()) {
+        <button type="button" class="season-detail-delete" (click)="deleteSeason()">
+          🗑 Supprimer la saison
+        </button>
+      }
+    </div>
 
     <section class="season-detail-section">
       <h2>Participants</h2>

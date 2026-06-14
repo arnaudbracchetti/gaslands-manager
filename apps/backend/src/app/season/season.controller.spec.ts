@@ -36,6 +36,7 @@ describe('SeasonController', () => {
     findByInviteCode: vi.fn(),
     requestJoin: vi.fn(),
     findOne: vi.fn(),
+    remove: vi.fn(),
   };
 
   const mockSeasonParticipantService = {
@@ -174,6 +175,19 @@ describe('SeasonController', () => {
 
       expect(mockSeasonService.findOne).toHaveBeenCalledWith(1, 42);
       expect(result).toEqual(mockSeasonResponse);
+    });
+  });
+
+  // ── DELETE /seasons/:id ─────────────────────────────────────────────────────
+
+  describe('remove()', () => {
+    it('appelle SeasonService.remove avec l\'id de saison et l\'id user', async () => {
+      mockSeasonService.remove.mockResolvedValue(undefined);
+
+      const result = await controller.remove(mockRequest as never, 1);
+
+      expect(mockSeasonService.remove).toHaveBeenCalledWith(1, 42);
+      expect(result).toBeUndefined();
     });
   });
 });

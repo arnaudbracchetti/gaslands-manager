@@ -14,7 +14,7 @@
  * (sans recharger la page) — le participant change de liste immédiatement.
  */
 import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SeasonsService } from '../seasons.service';
 import { Season } from '../season.model';
 import { SeasonParticipant } from '../season-participant.model';
@@ -29,6 +29,7 @@ import { ParticipantList } from '../participant-list/participant-list';
 })
 export class SeasonDetail implements OnInit {
   private route: ActivatedRoute = inject(ActivatedRoute);
+  private router: Router = inject(Router);
   private seasonsService: SeasonsService = inject(SeasonsService);
 
   /** Id de la saison lu depuis l'URL */
@@ -99,6 +100,26 @@ export class SeasonDetail implements OnInit {
           this.participants().map((p) => (p.id === updated.id ? updated : p)),
         );
       },
+    });
+  }
+
+  /**
+   * Supprime définitivement la saison — organisateur uniquement (CA visible
+   * via isOrganizer() dans le template). Cascade côté backend sur les
+   * SeasonParticipant ; les équipes des participants ne sont pas affectées.
+   */
+  deleteSeason(): void {
+    const season = this.season();
+    if (!season) {
+      return;
+    }
+    if (!window.confirm(`Supprimer définitivement la saison "${season.name}" ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    this.seasonsService.remove(this.seasonId).subscribe({
+      next: () => this.router.navigate(['/seasons']),
+      error: () => this.error.set('Erreur lors de la suppression de la saison.'),
     });
   }
 }

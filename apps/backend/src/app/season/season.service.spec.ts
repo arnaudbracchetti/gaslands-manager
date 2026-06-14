@@ -45,6 +45,7 @@ describe('SeasonService', () => {
     create: vi.fn(),
     save: vi.fn(),
     findOne: vi.fn(),
+    delete: vi.fn(),
   };
 
   const mockParticipantRepo = {
@@ -292,6 +293,36 @@ describe('SeasonService', () => {
       await expect(service.requestJoin(mockSeason.id, 42, dto)).rejects.toThrow('Équipe introuvable');
       expect(mockSeasonRepo.findOne).not.toHaveBeenCalled();
       expect(mockParticipantRepo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── remove ───────────────────────────────────────────────────────────────────
+
+  describe('remove()', () => {
+    it('supprime la saison si l\'utilisateur est organisateur validé', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue(mockParticipant);
+      mockSeasonRepo.delete.mockResolvedValue({ affected: 1 });
+
+      await service.remove(mockSeason.id, 42);
+
+      expect(mockParticipantRepo.findOne).toHaveBeenCalledWith({
+        where: { seasonId: mockSeason.id, userId: 42, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+      });
+      expect(mockSeasonRepo.delete).toHaveBeenCalledWith(mockSeason.id);
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'est pas organisateur (findOne ne retourne rien pour isOrganizer: true)', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.remove(mockSeason.id, 42)).rejects.toThrow('Saison introuvable.');
+      expect(mockSeasonRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'a pas de participant VALIDATED pour cette saison', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.remove(mockSeason.id, 99)).rejects.toThrow('Saison introuvable.');
+      expect(mockSeasonRepo.delete).not.toHaveBeenCalled();
     });
   });
 });

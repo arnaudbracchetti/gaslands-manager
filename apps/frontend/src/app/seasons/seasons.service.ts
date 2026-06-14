@@ -67,4 +67,13 @@ export class SeasonsService {
   validateParticipant(seasonId: number, pid: number, dto: ValidateParticipantDto): Observable<SeasonParticipant> {
     return this.http.put<SeasonParticipant>(`/api/seasons/${seasonId}/participants/${pid}/validate`, dto);
   }
+
+  /**
+   * DELETE /api/seasons/:id → supprime définitivement la saison
+   * (organisateur uniquement). Cascade sur les participants ; les équipes
+   * des participants ne sont pas affectées.
+   */
+  remove(seasonId: number): Observable<void> {
+    return this.http.delete<void>(`/api/seasons/${seasonId}`);
+  }
 }

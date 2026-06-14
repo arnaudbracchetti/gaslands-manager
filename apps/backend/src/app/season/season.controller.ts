@@ -5,7 +5,20 @@
  *   GET  /api/seasons → liste des saisons de l'utilisateur connecté
  *   POST /api/seasons → créer une nouvelle saison
  */
-import { Controller, Get, Post, Put, Body, Param, ParseIntPipe, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  Request,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SeasonService } from './season.service';
 import { SeasonParticipantService } from './season-participant.service';
@@ -112,5 +125,20 @@ export class SeasonController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<SeasonResponseDto> {
     return this.seasonService.findOne(id, req.user.id);
+  }
+
+  /**
+   * DELETE /api/seasons/:id
+   * Supprime définitivement une saison — organisateur uniquement.
+   * Cascade : tous les SeasonParticipant de la saison sont supprimés
+   * (onDelete: 'CASCADE'). Les équipes des participants ne sont pas affectées.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    return this.seasonService.remove(id, req.user.id);
   }
 }

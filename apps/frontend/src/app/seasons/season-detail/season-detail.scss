@@ -31,6 +31,29 @@
   }
 }
 
+.season-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.season-detail-delete {
+  background: transparent;
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(var(--clr-accent-rgb), 0.15);
+  }
+}
+
 .season-detail-state {
   display: inline-block;
   background: rgba(var(--clr-accent-cyan-rgb), 0.15);

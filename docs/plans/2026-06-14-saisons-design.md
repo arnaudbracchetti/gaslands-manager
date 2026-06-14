@@ -151,6 +151,7 @@ vérification organisateur.
 | GET | `/api/seasons/pending` | mes demandes d'inscription en attente (candidat) |
 | GET | `/api/seasons/organizing/pending-requests` | inscriptions en attente dans mes saisons (organisateur) |
 | GET | `/api/seasons/:id` | détail (participant validé) |
+| DELETE | `/api/seasons/:id` | supprimer la saison — implémenté (organisateur, cascade sur les participants, équipes non affectées) |
 | PUT | `/api/seasons/:id/state` | transition d'état (organisateur) |
 | GET | `/api/seasons/by-code/:code` | infos minimales par code (utilisateur connecté) |
 | GET | `/api/seasons/:id/participants` | liste des participants |
