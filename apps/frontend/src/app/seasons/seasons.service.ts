@@ -8,6 +8,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Season, CreateSeasonDto, SeasonSummary, JoinSeasonDto } from './season.model';
+import { SeasonParticipant, ValidateParticipantDto } from './season-participant.model';
 
 @Injectable({ providedIn: 'root' })
 export class SeasonsService {
@@ -42,5 +43,28 @@ export class SeasonsService {
    */
   requestJoin(seasonId: number, dto: JoinSeasonDto): Observable<unknown> {
     return this.http.post(`/api/seasons/${seasonId}/participants`, dto);
+  }
+
+  /**
+   * GET /api/seasons/:id → détail d'une saison (participant VALIDATED uniquement).
+   */
+  getOne(id: number): Observable<Season> {
+    return this.http.get<Season>(`/api/seasons/${id}`);
+  }
+
+  /**
+   * GET /api/seasons/:id/participants → tous les participants de la saison
+   * (tous statuts), avec nom d'utilisateur et d'équipe.
+   */
+  getParticipants(seasonId: number): Observable<SeasonParticipant[]> {
+    return this.http.get<SeasonParticipant[]>(`/api/seasons/${seasonId}/participants`);
+  }
+
+  /**
+   * PUT /api/seasons/:id/participants/:pid/validate → valide ou refuse une
+   * demande d'inscription (organisateur uniquement).
+   */
+  validateParticipant(seasonId: number, pid: number, dto: ValidateParticipantDto): Observable<SeasonParticipant> {
+    return this.http.put<SeasonParticipant>(`/api/seasons/${seasonId}/participants/${pid}/validate`, dto);
   }
 }

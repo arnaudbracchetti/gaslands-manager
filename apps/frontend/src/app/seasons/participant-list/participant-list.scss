@@ -1,0 +1,87 @@
+/* ── Liste de participants ────────────────────────────────────────────────── */
+/* Même esprit que season-card.scss : surface, bordure subtile, tokens --clr-* */
+
+.participant-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+
+  &__item {
+    background: var(--clr-bg-surface);
+    border: 1px solid var(--clr-border-subtle);
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__user {
+    color: var(--clr-text);
+    font-weight: 600;
+  }
+
+  &__team {
+    color: var(--clr-text-muted);
+    font-size: 0.85rem;
+  }
+
+  &__badge {
+    background: rgba(var(--clr-accent-rgb), 0.15);
+    border: 1px solid rgba(var(--clr-accent-rgb), 0.3);
+    color: var(--clr-accent);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__validate,
+  &__reject {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+
+  &__validate {
+    background: var(--clr-accent-cyan);
+    color: var(--clr-bg-base);
+  }
+
+  &__reject {
+    background: transparent;
+    border-color: var(--clr-accent);
+    color: var(--clr-accent);
+  }
+
+  &__empty {
+    color: var(--clr-text-muted);
+    font-size: 0.9rem;
+    padding: 12px 0;
+  }
+}

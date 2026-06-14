@@ -4,6 +4,7 @@ import { Season } from './season.entity';
 import { SeasonParticipant } from './season-participant.entity';
 import { SeasonController } from './season.controller';
 import { SeasonService } from './season.service';
+import { SeasonParticipantService } from './season-participant.service';
 import { TeamModule } from '../team/team.module';
 
 // TeamModule importé pour injecter TeamService (vérification que `teamId`
@@ -12,7 +13,7 @@ import { TeamModule } from '../team/team.module';
 @Module({
   imports: [TypeOrmModule.forFeature([Season, SeasonParticipant]), TeamModule],
   controllers: [SeasonController],
-  providers: [SeasonService],
+  providers: [SeasonService, SeasonParticipantService],
   exports: [TypeOrmModule, SeasonService],
 })
 export class SeasonModule {}

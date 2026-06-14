@@ -7,13 +7,14 @@
  * une US ultérieure).
  */
 import { Component, InputSignal, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Season } from '../season.model';
 import { InviteLink } from '../invite-link/invite-link';
 
 @Component({
   selector: 'app-season-card',
   standalone: true,
-  imports: [InviteLink],
+  imports: [InviteLink, RouterLink],
   templateUrl: './season-card.html',
   styleUrl: './season-card.scss',
 })

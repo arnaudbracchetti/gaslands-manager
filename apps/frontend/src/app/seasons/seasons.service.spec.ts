@@ -13,6 +13,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { SeasonsService } from './seasons.service';
 import { Season, SeasonSummary } from './season.model';
+import { SeasonParticipant } from './season-participant.model';
 
 const mockSeason: Season = {
   id: 1,
@@ -130,6 +131,65 @@ describe('SeasonsService', () => {
       req.flush({});
 
       expect(done).toBe(true);
+    });
+  });
+
+  // ── getOne() ─────────────────────────────────────────────────────────────
+
+  describe('getOne()', () => {
+    it('effectue GET /api/seasons/:id et retourne la saison', () => {
+      let result: Season | undefined;
+
+      service.getOne(1).subscribe((season) => { result = season; });
+
+      const req = httpMock.expectOne('/api/seasons/1');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockSeason);
+
+      expect(result).toEqual(mockSeason);
+    });
+  });
+
+  // ── getParticipants() ────────────────────────────────────────────────────
+
+  describe('getParticipants()', () => {
+    it('effectue GET /api/seasons/:id/participants et retourne la liste', () => {
+      const participants: SeasonParticipant[] = [
+        { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
+      ];
+      let result: SeasonParticipant[] | undefined;
+
+      service.getParticipants(1).subscribe((p) => { result = p; });
+
+      const req = httpMock.expectOne('/api/seasons/1/participants');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(participants);
+
+      expect(result).toEqual(participants);
+    });
+  });
+
+  // ── validateParticipant() ────────────────────────────────────────────────
+
+  describe('validateParticipant()', () => {
+    it('effectue PUT /api/seasons/:id/participants/:pid/validate avec le DTO', () => {
+      const dto = { accept: true };
+      const updated: SeasonParticipant = {
+        id: 2, userId: 43, teamId: 8, status: 'VALIDATED', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings',
+      };
+      let result: SeasonParticipant | undefined;
+
+      service.validateParticipant(1, 2, dto).subscribe((p) => { result = p; });
+
+      const req = httpMock.expectOne('/api/seasons/1/participants/2/validate');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(dto);
+
+      req.flush(updated);
+
+      expect(result).toEqual(updated);
     });
   });
 });

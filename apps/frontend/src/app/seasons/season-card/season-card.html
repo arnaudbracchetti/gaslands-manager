@@ -1,5 +1,5 @@
-<!-- Carte d'une saison -->
-<div class="season-card">
+<!-- Carte d'une saison — cliquable, navigue vers le détail -->
+<a class="season-card" [routerLink]="['/seasons', season().id]">
 
   <div class="season-card__header">
     <h2 class="season-card__name">{{ season().name }}</h2>
@@ -18,7 +18,10 @@
   </div>
 
   @if (season().myRole === 'organizer') {
-    <app-invite-link [inviteCode]="season().inviteCode" />
+    <!-- stopPropagation : "Copier" ne doit pas déclencher la navigation de la carte -->
+    <div (click)="$event.stopPropagation()">
+      <app-invite-link [inviteCode]="season().inviteCode" />
+    </div>
   }
 
-</div>
+</a>

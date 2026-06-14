@@ -1,0 +1,31 @@
+<!-- Page de détail d'une saison -->
+<div class="season-detail-page">
+
+  @if (loading()) {
+    <div class="season-detail-loading">
+      <p>Chargement...</p>
+    </div>
+  } @else if (error()) {
+    <!-- CA3 : message générique, pas de fuite d'info -->
+    <div class="season-detail-error">{{ error() }}</div>
+  } @else if (season()) {
+    <h1>{{ season()!.name }}</h1>
+    <span class="season-detail-state">{{ season()!.state }}</span>
+
+    <section class="season-detail-section">
+      <h2>Participants</h2>
+
+      <h3>Validés ({{ validated().length }})</h3>
+      <app-participant-list [participants]="validated()" />
+
+      @if (pending().length > 0 || isOrganizer()) {
+        <h3>En attente de validation ({{ pending().length }})</h3>
+        <app-participant-list
+          [participants]="pending()"
+          [showActions]="isOrganizer()"
+          (validate)="onValidate($event)" />
+      }
+    </section>
+  }
+
+</div>

@@ -198,6 +198,39 @@ describe('SeasonService', () => {
     });
   });
 
+  // ── findOne ──────────────────────────────────────────────────────────────────
+
+  describe('findOne()', () => {
+    it('retourne la saison enrichie si l\'utilisateur a un participant VALIDATED', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue(mockParticipant);
+      mockParticipantRepo.count.mockResolvedValue(3);
+
+      const result = await service.findOne(mockSeason.id, 42);
+
+      expect(mockParticipantRepo.findOne).toHaveBeenCalledWith({
+        where: { seasonId: mockSeason.id, userId: 42, status: ParticipantStatus.VALIDATED },
+        relations: { season: true },
+      });
+      expect(result).toEqual({ ...mockSeason, participantCount: 3, myRole: 'organizer' });
+    });
+
+    it('retourne myRole: "participant" si l\'utilisateur n\'est pas organisateur', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue({ ...mockParticipant, isOrganizer: false });
+      mockParticipantRepo.count.mockResolvedValue(2);
+
+      const result = await service.findOne(mockSeason.id, 42);
+
+      expect(result.myRole).toBe('participant');
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'a pas de participant VALIDATED pour cette saison', async () => {
+      mockParticipantRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne(mockSeason.id, 99)).rejects.toThrow('Saison introuvable.');
+      expect(mockParticipantRepo.count).not.toHaveBeenCalled();
+    });
+  });
+
   // ── requestJoin ──────────────────────────────────────────────────────────────
 
   describe('requestJoin()', () => {

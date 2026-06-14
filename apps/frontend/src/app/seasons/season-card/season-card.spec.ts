@@ -4,6 +4,7 @@
  * Composant "dumb" : on vérifie uniquement l'affichage des données reçues en input.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { SeasonCard } from './season-card';
 import { Season } from '../season.model';
 
@@ -25,6 +26,7 @@ describe('SeasonCard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SeasonCard],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SeasonCard);

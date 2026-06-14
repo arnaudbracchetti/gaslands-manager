@@ -10,6 +10,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     border-color: var(--clr-accent);

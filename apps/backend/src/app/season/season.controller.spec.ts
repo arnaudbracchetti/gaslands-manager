@@ -8,8 +8,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { SeasonController } from './season.controller';
 import { SeasonService } from './season.service';
-import { SeasonState } from './season.enums';
+import { SeasonParticipantService } from './season-participant.service';
+import { SeasonState, ParticipantStatus } from './season.enums';
 import { SeasonResponseDto } from './dto/season-response.dto';
+import { SeasonParticipantResponseDto } from './dto/season-participant-response.dto';
 
 const mockUser = { id: 42, email: 'test@test.com' };
 const mockRequest = { user: mockUser };
@@ -33,12 +35,21 @@ describe('SeasonController', () => {
     create: vi.fn(),
     findByInviteCode: vi.fn(),
     requestJoin: vi.fn(),
+    findOne: vi.fn(),
+  };
+
+  const mockSeasonParticipantService = {
+    findParticipants: vi.fn(),
+    validate: vi.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SeasonController],
-      providers: [{ provide: SeasonService, useValue: mockSeasonService }],
+      providers: [
+        { provide: SeasonService, useValue: mockSeasonService },
+        { provide: SeasonParticipantService, useValue: mockSeasonParticipantService },
+      ],
     }).compile();
 
     controller = module.get<SeasonController>(SeasonController);
@@ -103,6 +114,66 @@ describe('SeasonController', () => {
 
       expect(mockSeasonService.requestJoin).toHaveBeenCalledWith(1, 42, dto);
       expect(result).toEqual(participant);
+    });
+  });
+
+  // ── GET /seasons/:id/participants ──────────────────────────────────────────
+
+  describe('getParticipants()', () => {
+    it('appelle SeasonParticipantService.findParticipants avec l\'id de saison et l\'id user', async () => {
+      const participants: SeasonParticipantResponseDto[] = [
+        {
+          id: 1,
+          userId: 42,
+          teamId: 7,
+          status: ParticipantStatus.VALIDATED,
+          isOrganizer: true,
+          userName: 'Jean Dupont',
+          teamName: 'Furies',
+        },
+      ];
+      mockSeasonParticipantService.findParticipants.mockResolvedValue(participants);
+
+      const result = await controller.getParticipants(mockRequest as never, 1);
+
+      expect(mockSeasonParticipantService.findParticipants).toHaveBeenCalledWith(1, 42);
+      expect(result).toEqual(participants);
+    });
+  });
+
+  // ── PUT /seasons/:id/participants/:pid/validate ────────────────────────────
+
+  describe('validateParticipant()', () => {
+    it('appelle SeasonParticipantService.validate avec saison, participant, user et accept', async () => {
+      const dto = { accept: true };
+      const participant: SeasonParticipantResponseDto = {
+        id: 2,
+        userId: 43,
+        teamId: 8,
+        status: ParticipantStatus.VALIDATED,
+        isOrganizer: false,
+        userName: 'Alice Martin',
+        teamName: 'Scrap Kings',
+      };
+      mockSeasonParticipantService.validate.mockResolvedValue(participant);
+
+      const result = await controller.validateParticipant(mockRequest as never, 1, 2, dto);
+
+      expect(mockSeasonParticipantService.validate).toHaveBeenCalledWith(1, 2, 42, true);
+      expect(result).toEqual(participant);
+    });
+  });
+
+  // ── GET /seasons/:id ────────────────────────────────────────────────────────
+
+  describe('getOne()', () => {
+    it('appelle SeasonService.findOne avec l\'id de saison et l\'id user', async () => {
+      mockSeasonService.findOne.mockResolvedValue(mockSeasonResponse);
+
+      const result = await controller.getOne(mockRequest as never, 1);
+
+      expect(mockSeasonService.findOne).toHaveBeenCalledWith(1, 42);
+      expect(result).toEqual(mockSeasonResponse);
     });
   });
 });

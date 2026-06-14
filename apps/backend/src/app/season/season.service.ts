@@ -131,6 +131,33 @@ export class SeasonService {
   }
 
   /**
+   * Retourne le détail d'une saison — accessible uniquement aux utilisateurs
+   * ayant un SeasonParticipant VALIDATED pour cette saison.
+   *
+   * Lève NotFoundException (message générique) sinon — pas de fuite
+   * d'information sur l'existence de la saison (CA3).
+   */
+  async findOne(id: number, userId: number): Promise<SeasonResponseDto> {
+    const participation = await this.participantRepo.findOne({
+      where: { seasonId: id, userId, status: ParticipantStatus.VALIDATED },
+      relations: { season: true },
+    });
+    if (!participation) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    const participantCount = await this.participantRepo.count({
+      where: { seasonId: id },
+    });
+
+    return {
+      ...participation.season,
+      participantCount,
+      myRole: participation.isOrganizer ? 'organizer' : 'participant',
+    };
+  }
+
+  /**
    * Crée une demande d'inscription (SeasonParticipant, status: PENDING) pour
    * l'utilisateur, avec l'équipe choisie.
    *
