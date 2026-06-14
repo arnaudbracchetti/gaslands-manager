@@ -93,15 +93,32 @@ if [[ "$RESET" == true ]]; then
 fi
 
 # ── 4. Arret des anciens serveurs (backend/frontend) ──────────
-# Si dev.sh a deja ete lance precedemment, les processus `nx serve`
-# tournent peut-etre encore sur les ports 3000/4200 -- on les tue
-# avant de relancer, sinon le nouveau `nx serve` echoue (EADDRINUSE)
-# ou cohabite avec l'ancien (versions desynchronisees).
-step "Arret des anciens serveurs (ports 3000/4200)..."
+# Si dev.sh a deja ete lance precedemment, des processus `nx serve`
+# tournent peut-etre encore -- on les tue avant de relancer, sinon le
+# nouveau `nx serve` echoue (EADDRINUSE) ou cohabite avec l'ancien
+# (versions desynchronisees).
+#
+# Tuer uniquement le processus lie au port (ancien comportement) ne
+# suffit pas : `nx serve` lance une CHAINE de processus (npm exec -> sh
+# -c "nx" -> node .../nx -> run-executor.js, et un daemon Nx partage).
+# Si seul le process sur le port est tue, le reste de la chaine
+# survit -- le PROCHAIN `nx serve` se bloque alors sur "Waiting for
+# backend:serve:development in another nx process" car il detecte ces
+# processus orphelins. On tue donc d'abord toute la chaine par motif
+# (pkill -f), puis on nettoie par port en filet de securite.
+step "Arret des anciens serveurs (processus nx serve + ports 3000/4200)..."
+for PATTERN in "nx serve backend" "nx serve frontend"; do
+    PIDS=$(pgrep -f "$PATTERN" 2>/dev/null || true)
+    if [[ -n "$PIDS" ]]; then
+        pkill -9 -f "$PATTERN" 2>/dev/null || true
+        ok "Processus '$PATTERN' arretes (PID(s) : $(echo $PIDS | tr '\n' ' '))"
+    fi
+done
+
 for PORT in 3000 4200; do
     PIDS=$(lsof -ti tcp:"$PORT" 2>/dev/null || true)
     if [[ -n "$PIDS" ]]; then
-        kill $PIDS 2>/dev/null || true
+        kill -9 $PIDS 2>/dev/null || true
         ok "Processus sur le port $PORT arrete (PID(s) : $PIDS)"
     fi
 done
