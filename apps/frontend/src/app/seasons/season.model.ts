@@ -21,6 +21,11 @@ export interface Season {
   participantCount: number;
   /** Rôle de l'utilisateur connecté dans cette saison */
   myRole: 'organizer' | 'participant';
+  /**
+   * Nombre de demandes d'inscription PENDING pour cette saison — présent
+   * uniquement dans la réponse de GET /api/seasons/organizing/pending-requests.
+   */
+  pendingRequestsCount?: number;
 }
 
 /** Corps de la requête POST /api/seasons */

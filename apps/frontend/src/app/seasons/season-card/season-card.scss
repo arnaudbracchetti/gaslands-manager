@@ -18,6 +18,17 @@
     transform: translateY(-2px);
   }
 
+  /* Saison avec demande d'inscription PENDING : non cliquable (détail
+     inaccessible tant que la demande n'est pas validée, cf. CA US3/US4) */
+  &--locked {
+    cursor: default;
+
+    &:hover {
+      border-color: var(--clr-border-subtle);
+      transform: none;
+    }
+  }
+
   &__header {
     display: flex;
     align-items: center;
@@ -67,6 +78,20 @@
     border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 600;
+
+    /* Demande d'inscription en attente — teinte neutre, n'attire pas l'œil autant que --alert */
+    &--pending {
+      background: transparent;
+      border-color: var(--clr-border-subtle);
+      color: var(--clr-text-muted);
+    }
+
+    /* Demandes à valider (organisateur) — teinte d'avertissement */
+    &--alert {
+      background: transparent;
+      border-color: var(--clr-warning);
+      color: var(--clr-warning);
+    }
   }
 
   &__participants {

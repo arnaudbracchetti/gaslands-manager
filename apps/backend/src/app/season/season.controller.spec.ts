@@ -37,6 +37,8 @@ describe('SeasonController', () => {
     requestJoin: vi.fn(),
     findOne: vi.fn(),
     remove: vi.fn(),
+    findPendingForUser: vi.fn(),
+    findOrganizedWithPendingRequests: vi.fn(),
   };
 
   const mockSeasonParticipantService = {
@@ -162,6 +164,34 @@ describe('SeasonController', () => {
 
       expect(mockSeasonParticipantService.validate).toHaveBeenCalledWith(1, 2, 42, true);
       expect(result).toEqual(participant);
+    });
+  });
+
+  // ── GET /seasons/pending ────────────────────────────────────────────────────
+
+  describe('getPending()', () => {
+    it('appelle SeasonService.findPendingForUser avec l\'id de l\'utilisateur connecté', async () => {
+      const pending = { ...mockSeasonResponse, myRole: 'participant' as const };
+      mockSeasonService.findPendingForUser.mockResolvedValue([pending]);
+
+      const result = await controller.getPending(mockRequest as never);
+
+      expect(mockSeasonService.findPendingForUser).toHaveBeenCalledWith(42);
+      expect(result).toEqual([pending]);
+    });
+  });
+
+  // ── GET /seasons/organizing/pending-requests ───────────────────────────────
+
+  describe('getOrganizingPendingRequests()', () => {
+    it('appelle SeasonService.findOrganizedWithPendingRequests avec l\'id de l\'utilisateur connecté', async () => {
+      const organized = { ...mockSeasonResponse, pendingRequestsCount: 2 };
+      mockSeasonService.findOrganizedWithPendingRequests.mockResolvedValue([organized]);
+
+      const result = await controller.getOrganizingPendingRequests(mockRequest as never);
+
+      expect(mockSeasonService.findOrganizedWithPendingRequests).toHaveBeenCalledWith(42);
+      expect(result).toEqual([organized]);
     });
   });
 

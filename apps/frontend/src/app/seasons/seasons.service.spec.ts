@@ -73,6 +73,42 @@ describe('SeasonsService', () => {
     });
   });
 
+  // ── getPending() ─────────────────────────────────────────────────────────
+
+  describe('getPending()', () => {
+    it('effectue GET /api/seasons/pending et retourne un tableau de saisons', () => {
+      const pending: Season[] = [{ ...mockSeason, myRole: 'participant' }];
+      let result: Season[] | undefined;
+
+      service.getPending().subscribe((seasons) => { result = seasons; });
+
+      const req = httpMock.expectOne('/api/seasons/pending');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(pending);
+
+      expect(result).toEqual(pending);
+    });
+  });
+
+  // ── getOrganizingPendingRequests() ──────────────────────────────────────
+
+  describe('getOrganizingPendingRequests()', () => {
+    it('effectue GET /api/seasons/organizing/pending-requests et retourne un tableau de saisons', () => {
+      const organized: Season[] = [{ ...mockSeason, pendingRequestsCount: 2 }];
+      let result: Season[] | undefined;
+
+      service.getOrganizingPendingRequests().subscribe((seasons) => { result = seasons; });
+
+      const req = httpMock.expectOne('/api/seasons/organizing/pending-requests');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(organized);
+
+      expect(result).toEqual(organized);
+    });
+  });
+
   // ── create() ─────────────────────────────────────────────────────────────
 
   describe('create()', () => {

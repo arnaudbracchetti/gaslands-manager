@@ -54,7 +54,10 @@
   } @else {
     <div class="seasons-grid">
       @for (season of seasons(); track season.id) {
-        <app-season-card [season]="season" />
+        <app-season-card
+          [season]="season"
+          [isPending]="pendingSeasonIds().has(season.id)"
+          [pendingRequestsCount]="organizedPendingCounts().get(season.id) ?? 0" />
       }
     </div>
   }

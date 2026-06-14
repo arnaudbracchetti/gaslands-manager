@@ -166,6 +166,77 @@ describe('SeasonService', () => {
     });
   });
 
+  // ── findPendingForUser ──────────────────────────────────────────────────────
+
+  describe('findPendingForUser()', () => {
+    it('retourne les saisons où l\'utilisateur a une demande PENDING, myRole: "participant"', async () => {
+      const pending = { ...mockParticipant, status: ParticipantStatus.PENDING, isOrganizer: false };
+      mockParticipantRepo.find.mockResolvedValue([pending]);
+      mockParticipantRepo.count.mockResolvedValue(3);
+
+      const result = await service.findPendingForUser(42);
+
+      expect(mockParticipantRepo.find).toHaveBeenCalledWith({
+        where: { userId: 42, status: ParticipantStatus.PENDING },
+        relations: { season: true },
+      });
+      expect(result).toEqual([{ ...mockSeason, participantCount: 3, myRole: 'participant' }]);
+    });
+
+    it('retourne un tableau vide si l\'utilisateur n\'a aucune demande PENDING', async () => {
+      mockParticipantRepo.find.mockResolvedValue([]);
+
+      const result = await service.findPendingForUser(42);
+
+      expect(result).toEqual([]);
+      expect(mockParticipantRepo.count).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── findOrganizedWithPendingRequests ───────────────────────────────────────
+
+  describe('findOrganizedWithPendingRequests()', () => {
+    it('retourne les saisons organisées avec pendingRequestsCount > 0', async () => {
+      mockParticipantRepo.find.mockResolvedValue([mockParticipant]);
+      mockParticipantRepo.count
+        .mockResolvedValueOnce(3) // participantCount
+        .mockResolvedValueOnce(2); // pendingRequestsCount
+
+      const result = await service.findOrganizedWithPendingRequests(42);
+
+      expect(mockParticipantRepo.find).toHaveBeenCalledWith({
+        where: { userId: 42, isOrganizer: true, status: ParticipantStatus.VALIDATED },
+        relations: { season: true },
+      });
+      expect(mockParticipantRepo.count).toHaveBeenCalledWith({
+        where: { seasonId: mockSeason.id, status: ParticipantStatus.PENDING },
+      });
+      expect(result).toEqual([
+        { ...mockSeason, participantCount: 3, myRole: 'organizer', pendingRequestsCount: 2 },
+      ]);
+    });
+
+    it('exclut les saisons sans demande PENDING', async () => {
+      mockParticipantRepo.find.mockResolvedValue([mockParticipant]);
+      mockParticipantRepo.count
+        .mockResolvedValueOnce(1) // participantCount
+        .mockResolvedValueOnce(0); // pendingRequestsCount
+
+      const result = await service.findOrganizedWithPendingRequests(42);
+
+      expect(result).toEqual([]);
+    });
+
+    it('retourne un tableau vide si l\'utilisateur n\'organise aucune saison', async () => {
+      mockParticipantRepo.find.mockResolvedValue([]);
+
+      const result = await service.findOrganizedWithPendingRequests(99);
+
+      expect(result).toEqual([]);
+      expect(mockParticipantRepo.count).not.toHaveBeenCalled();
+    });
+  });
+
   // ── findByInviteCode ────────────────────────────────────────────────────────
 
   describe('findByInviteCode()', () => {

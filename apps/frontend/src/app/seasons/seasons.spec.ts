@@ -51,6 +51,8 @@ describe('Seasons Component', () => {
   let mockSeasonsService: {
     getAll: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
+    getPending: ReturnType<typeof vi.fn>;
+    getOrganizingPendingRequests: ReturnType<typeof vi.fn>;
   };
   let mockTeamsService: {
     getAll: ReturnType<typeof vi.fn>;
@@ -60,6 +62,8 @@ describe('Seasons Component', () => {
     mockSeasonsService = {
       getAll: vi.fn().mockReturnValue(of(mockSeasons)),
       create: vi.fn(),
+      getPending: vi.fn().mockReturnValue(of([])),
+      getOrganizingPendingRequests: vi.fn().mockReturnValue(of([])),
     };
 
     mockTeamsService = {
@@ -91,6 +95,47 @@ describe('Seasons Component', () => {
     expect(component.seasons()).toEqual(mockSeasons);
     expect(component.userTeams()).toEqual(mockTeams);
     expect(component.loading()).toBe(false);
+  });
+
+  // ── Saisons en attente (US4) ────────────────────────────────────────────
+
+  it('charge les ids des saisons en attente de validation au démarrage', () => {
+    expect(mockSeasonsService.getPending).toHaveBeenCalledTimes(1);
+    expect(component.pendingSeasonIds()).toEqual(new Set());
+  });
+
+  it('expose les ids des saisons retournées par getPending()', async () => {
+    mockSeasonsService.getPending.mockReturnValue(of([{ ...mockSeasons[0], id: 5 }]));
+
+    component['loadPendingRequests']();
+
+    expect(component.pendingSeasonIds()).toEqual(new Set([5]));
+  });
+
+  it('ignore l\'erreur de getPending() (badge secondaire)', () => {
+    mockSeasonsService.getPending.mockReturnValue(throwError(() => new Error('fail')));
+
+    component['loadPendingRequests']();
+
+    expect(component.pendingSeasonIds()).toEqual(new Set());
+  });
+
+  it('expose les pendingRequestsCount des saisons organisées', () => {
+    mockSeasonsService.getOrganizingPendingRequests.mockReturnValue(
+      of([{ ...mockSeasons[0], id: 1, pendingRequestsCount: 2 }]),
+    );
+
+    component['loadOrganizedPendingCounts']();
+
+    expect(component.organizedPendingCounts().get(1)).toBe(2);
+  });
+
+  it('ignore l\'erreur de getOrganizingPendingRequests() (badge secondaire)', () => {
+    mockSeasonsService.getOrganizingPendingRequests.mockReturnValue(throwError(() => new Error('fail')));
+
+    component['loadOrganizedPendingCounts']();
+
+    expect(component.organizedPendingCounts()).toEqual(new Map());
   });
 
   it('affiche un message d\'erreur si le chargement des saisons échoue', () => {

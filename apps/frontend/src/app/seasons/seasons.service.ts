@@ -22,6 +22,22 @@ export class SeasonsService {
   }
 
   /**
+   * GET /api/seasons/pending → saisons où l'utilisateur connecté a une
+   * demande d'inscription en attente de validation.
+   */
+  getPending(): Observable<Season[]> {
+    return this.http.get<Season[]>('/api/seasons/pending');
+  }
+
+  /**
+   * GET /api/seasons/organizing/pending-requests → saisons organisées par
+   * l'utilisateur connecté ayant au moins une demande d'inscription en attente.
+   */
+  getOrganizingPendingRequests(): Observable<Season[]> {
+    return this.http.get<Season[]>('/api/seasons/organizing/pending-requests');
+  }
+
+  /**
    * POST /api/seasons → crée une nouvelle saison.
    * Retourne la saison créée (avec inviteCode généré, participantCount: 1, myRole: 'organizer').
    */

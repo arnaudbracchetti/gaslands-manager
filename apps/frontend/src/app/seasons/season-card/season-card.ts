@@ -7,6 +7,7 @@
  * une US ultérieure).
  */
 import { Component, InputSignal, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Season } from '../season.model';
 import { InviteLink } from '../invite-link/invite-link';
@@ -14,11 +15,17 @@ import { InviteLink } from '../invite-link/invite-link';
 @Component({
   selector: 'app-season-card',
   standalone: true,
-  imports: [InviteLink, RouterLink],
+  imports: [InviteLink, RouterLink, NgTemplateOutlet],
   templateUrl: './season-card.html',
   styleUrl: './season-card.scss',
 })
 export class SeasonCard {
   /** La saison à afficher. */
   season: InputSignal<Season> = input.required<Season>();
+
+  /** Vrai si l'utilisateur a une demande d'inscription PENDING pour cette saison (US4) */
+  isPending: InputSignal<boolean> = input(false);
+
+  /** Nombre de demandes d'inscription PENDING à valider, si organisateur (US4) */
+  pendingRequestsCount: InputSignal<number> = input(0);
 }

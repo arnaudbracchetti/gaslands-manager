@@ -1,5 +1,17 @@
-<!-- Carte d'une saison — cliquable, navigue vers le détail -->
-<a class="season-card" [routerLink]="['/seasons', season().id]">
+<!-- Carte d'une saison — cliquable et navigue vers le détail, SAUF si une
+     demande d'inscription est encore PENDING : GET /api/seasons/:id exige un
+     participant VALIDATED, donc le détail serait inaccessible (404). -->
+@if (isPending()) {
+  <div class="season-card season-card--locked">
+    <ng-container [ngTemplateOutlet]="content" />
+  </div>
+} @else {
+  <a class="season-card" [routerLink]="['/seasons', season().id]">
+    <ng-container [ngTemplateOutlet]="content" />
+  </a>
+}
+
+<ng-template #content>
 
   <div class="season-card__header">
     <h2 class="season-card__name">{{ season().name }}</h2>
@@ -11,6 +23,12 @@
   <div class="season-card__info">
     @if (season().myRole === 'organizer') {
       <span class="season-card__badge">🏆 Organisateur</span>
+    }
+    @if (isPending()) {
+      <span class="season-card__badge season-card__badge--pending">⏳ En attente de validation</span>
+    }
+    @if (season().myRole === 'organizer' && pendingRequestsCount() > 0) {
+      <span class="season-card__badge season-card__badge--alert">⚠️ {{ pendingRequestsCount() }} à valider</span>
     }
     <span class="season-card__participants">
       {{ season().participantCount }} participant{{ season().participantCount > 1 ? 's' : '' }}
@@ -24,4 +42,4 @@
     </div>
   }
 
-</a>
+</ng-template>

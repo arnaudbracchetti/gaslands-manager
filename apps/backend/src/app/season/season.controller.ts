@@ -72,6 +72,32 @@ export class SeasonController {
   }
 
   /**
+   * GET /api/seasons/pending
+   * Retourne les saisons où l'utilisateur connecté a une demande
+   * d'inscription en attente de validation.
+   *
+   * Déclarée avant @Get(':id') pour que 'pending' ne soit pas capturé par
+   * le paramètre :id.
+   */
+  @Get('pending')
+  getPending(@Request() req: AuthenticatedRequest): Promise<SeasonResponseDto[]> {
+    return this.seasonService.findPendingForUser(req.user.id);
+  }
+
+  /**
+   * GET /api/seasons/organizing/pending-requests
+   * Retourne les saisons organisées par l'utilisateur connecté ayant au
+   * moins une demande d'inscription en attente, avec leur nombre.
+   *
+   * Déclarée avant @Get(':id') pour que 'organizing' ne soit pas capturé par
+   * le paramètre :id.
+   */
+  @Get('organizing/pending-requests')
+  getOrganizingPendingRequests(@Request() req: AuthenticatedRequest): Promise<SeasonResponseDto[]> {
+    return this.seasonService.findOrganizedWithPendingRequests(req.user.id);
+  }
+
+  /**
    * POST /api/seasons/:id/participants
    * Crée une demande d'inscription (status: PENDING) pour l'utilisateur connecté,
    * avec l'équipe choisie.

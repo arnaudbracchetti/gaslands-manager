@@ -52,9 +52,17 @@ export class Seasons implements OnInit {
   /** Code d'invitation saisi dans le champ "Rejoindre via code" */
   joinCode: WritableSignal<string> = signal('');
 
+  /** Ids des saisons pour lesquelles l'utilisateur a une demande PENDING (US4) */
+  pendingSeasonIds: WritableSignal<Set<number>> = signal(new Set<number>());
+
+  /** seasonId → nombre de demandes PENDING à valider, pour les saisons organisées (US4) */
+  organizedPendingCounts: WritableSignal<Map<number, number>> = signal(new Map<number, number>());
+
   ngOnInit(): void {
     this.loadSeasons();
     this.loadUserTeams();
+    this.loadPendingRequests();
+    this.loadOrganizedPendingCounts();
   }
 
   /** Charge toutes les saisons depuis l'API et met à jour le signal */
@@ -81,6 +89,34 @@ export class Seasons implements OnInit {
       // Une erreur ici laisse simplement userTeams vide → SeasonForm affiche
       // le message CA3 ("vous devez d'abord créer une équipe").
       error: () => this.userTeams.set([]),
+    });
+  }
+
+  /**
+   * Charge les saisons où l'utilisateur a une demande PENDING (badge "⏳ En
+   * attente de validation"). Erreur silencieuse — badge secondaire, ne doit
+   * pas bloquer l'affichage des saisons (cf. loadUserTeams).
+   */
+  private loadPendingRequests(): void {
+    this.seasonsService.getPending().subscribe({
+      next: (seasons: Season[]) => this.pendingSeasonIds.set(new Set(seasons.map((s) => s.id))),
+      error: () => this.pendingSeasonIds.set(new Set()),
+    });
+  }
+
+  /**
+   * Charge les saisons organisées par l'utilisateur ayant des demandes
+   * PENDING à valider (badge "⚠️ N à valider"). Erreur silencieuse — même
+   * raisonnement que loadPendingRequests.
+   */
+  private loadOrganizedPendingCounts(): void {
+    this.seasonsService.getOrganizingPendingRequests().subscribe({
+      next: (seasons: Season[]) => {
+        const counts = new Map<number, number>();
+        seasons.forEach((season) => counts.set(season.id, season.pendingRequestsCount ?? 0));
+        this.organizedPendingCounts.set(counts);
+      },
+      error: () => this.organizedPendingCounts.set(new Map()),
     });
   }
 

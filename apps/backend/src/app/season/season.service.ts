@@ -73,6 +73,64 @@ export class SeasonService {
   }
 
   /**
+   * Retourne les saisons où l'utilisateur a une demande d'inscription
+   * (SeasonParticipant.status: PENDING) encore non traitée.
+   *
+   * Un participant PENDING n'est jamais organisateur — myRole vaut donc
+   * toujours 'participant' (US4, CA1).
+   */
+  async findPendingForUser(userId: number): Promise<SeasonResponseDto[]> {
+    const participations = await this.participantRepo.find({
+      where: { userId, status: ParticipantStatus.PENDING },
+      relations: { season: true },
+    });
+
+    return Promise.all(
+      participations.map(async (participation): Promise<SeasonResponseDto> => {
+        const participantCount = await this.participantRepo.count({
+          where: { seasonId: participation.seasonId },
+        });
+        return {
+          ...participation.season,
+          participantCount,
+          myRole: 'participant',
+        };
+      }),
+    );
+  }
+
+  /**
+   * Retourne les saisons organisées par l'utilisateur (participation
+   * VALIDATED, isOrganizer: true) qui ont au moins une demande d'inscription
+   * PENDING à traiter, avec le nombre de ces demandes (US4, CA2/CA3).
+   */
+  async findOrganizedWithPendingRequests(userId: number): Promise<SeasonResponseDto[]> {
+    const organizedSeasons = await this.participantRepo.find({
+      where: { userId, isOrganizer: true, status: ParticipantStatus.VALIDATED },
+      relations: { season: true },
+    });
+
+    const enriched = await Promise.all(
+      organizedSeasons.map(async (participation) => {
+        const [participantCount, pendingRequestsCount] = await Promise.all([
+          this.participantRepo.count({ where: { seasonId: participation.seasonId } }),
+          this.participantRepo.count({
+            where: { seasonId: participation.seasonId, status: ParticipantStatus.PENDING },
+          }),
+        ]);
+        return {
+          ...participation.season,
+          participantCount,
+          myRole: 'organizer' as const,
+          pendingRequestsCount,
+        };
+      }),
+    );
+
+    return enriched.filter((season) => (season.pendingRequestsCount ?? 0) > 0);
+  }
+
+  /**
    * Crée une nouvelle saison et inscrit son créateur comme organisateur.
    *
    * 1. Vérifie que `dto.teamId` appartient à l'utilisateur (NotFoundException
