@@ -8,13 +8,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { SeasonParticipant } from './season-participant.entity';
-import { ParticipantStatus } from './season.enums';
+import { ParticipantStatus, SeasonState } from './season.enums';
 import { SeasonParticipantService } from './season-participant.service';
+
+const mockSeasonEnConstruction = { id: 1, state: SeasonState.EN_CONSTRUCTION } as never;
 
 const mockOrganizer: SeasonParticipant = {
   id: 1,
   seasonId: 1,
-  season: null as never,
+  season: mockSeasonEnConstruction,
   userId: 42,
   user: { firstName: 'Jean', lastName: 'Dupont' } as never,
   teamId: 7,
@@ -29,7 +31,7 @@ const mockOrganizer: SeasonParticipant = {
 const mockPendingParticipant: SeasonParticipant = {
   id: 2,
   seasonId: 1,
-  season: null as never,
+  season: mockSeasonEnConstruction,
   userId: 43,
   user: { firstName: 'Alice', lastName: 'Martin' } as never,
   teamId: 8,
@@ -48,6 +50,8 @@ describe('SeasonParticipantService', () => {
     findOne: vi.fn(),
     find: vi.fn(),
     save: vi.fn(),
+    count: vi.fn(),
+    delete: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -157,6 +161,91 @@ describe('SeasonParticipantService', () => {
 
       await expect(service.validate(1, 999, 42, true)).rejects.toThrow('Demande d\'inscription introuvable.');
       expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── remove ───────────────────────────────────────────────────────────────────
+
+  describe('remove()', () => {
+    it('retire un participant VALIDATED non-organisateur (CA1)', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer) // vérification organisateur
+        .mockResolvedValueOnce({ ...mockPendingParticipant, status: ParticipantStatus.VALIDATED }); // participant cible
+      mockParticipantRepo.delete.mockResolvedValue({ affected: 1 });
+
+      await service.remove(1, 2, 42);
+
+      expect(mockParticipantRepo.findOne).toHaveBeenNthCalledWith(1, {
+        where: { seasonId: 1, userId: 42, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+      });
+      expect(mockParticipantRepo.findOne).toHaveBeenNthCalledWith(2, {
+        where: { id: 2, seasonId: 1 },
+        relations: { season: true },
+      });
+      expect(mockParticipantRepo.delete).toHaveBeenCalledWith(2);
+    });
+
+    it('retire une demande PENDING (CA2)', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(mockPendingParticipant);
+      mockParticipantRepo.delete.mockResolvedValue({ affected: 1 });
+
+      await service.remove(1, 2, 42);
+
+      expect(mockParticipantRepo.delete).toHaveBeenCalledWith(2);
+    });
+
+    it('lève NotFoundException si l\'appelant n\'est pas organisateur validé', async () => {
+      mockParticipantRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.remove(1, 2, 99)).rejects.toThrow('Saison introuvable.');
+      expect(mockParticipantRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si le participant ciblé n\'existe pas dans cette saison', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(null);
+
+      await expect(service.remove(1, 999, 42)).rejects.toThrow('Participant introuvable.');
+      expect(mockParticipantRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si la saison n\'est plus EN_CONSTRUCTION (CA3)', async () => {
+      const seasonEnCours = { id: 1, state: SeasonState.EN_COURS } as never;
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce({ ...mockPendingParticipant, season: seasonEnCours });
+
+      await expect(service.remove(1, 2, 42)).rejects.toThrow(
+        'Cette saison n\'accepte plus de modifications de participants.',
+      );
+      expect(mockParticipantRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si la cible est le dernier organisateur (CA4)', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer) // vérification organisateur
+        .mockResolvedValueOnce(mockOrganizer); // participant cible = lui-même
+      mockParticipantRepo.count.mockResolvedValue(1);
+
+      await expect(service.remove(1, 1, 42)).rejects.toThrow(
+        'Impossible de retirer le dernier organisateur de la saison.',
+      );
+      expect(mockParticipantRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('retire un organisateur s\'il en reste au moins un autre (CA5)', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(mockOrganizer);
+      mockParticipantRepo.count.mockResolvedValue(2);
+      mockParticipantRepo.delete.mockResolvedValue({ affected: 1 });
+
+      await service.remove(1, 1, 42);
+
+      expect(mockParticipantRepo.delete).toHaveBeenCalledWith(1);
     });
   });
 });

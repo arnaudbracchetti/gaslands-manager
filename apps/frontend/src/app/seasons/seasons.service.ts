@@ -85,6 +85,14 @@ export class SeasonsService {
   }
 
   /**
+   * DELETE /api/seasons/:id/participants/:pid → retire un participant
+   * (organisateur uniquement, saison EN_CONSTRUCTION uniquement).
+   */
+  removeParticipant(seasonId: number, pid: number): Observable<void> {
+    return this.http.delete<void>(`/api/seasons/${seasonId}/participants/${pid}`);
+  }
+
+  /**
    * DELETE /api/seasons/:id → supprime définitivement la saison
    * (organisateur uniquement). Cascade sur les participants ; les équipes
    * des participants ne sont pas affectées.

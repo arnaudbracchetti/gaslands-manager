@@ -78,6 +78,58 @@ describe('ParticipantList', () => {
     ]);
   });
 
+  it('masque le bouton Retirer quand canRemove est false (défaut)', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.participant-list__remove')).toBeNull();
+  });
+
+  it('affiche le bouton Retirer et émet `remove` au clic quand canRemove est true', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('canRemove', true);
+    fixture.detectChanges();
+
+    const emitted: number[] = [];
+    outputToObservable(component.remove).subscribe((pid) => emitted.push(pid));
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+
+    (items[1].querySelector('.participant-list__remove') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual([2]);
+  });
+
+  it('masque le bouton Retirer pour l\'unique organisateur de la liste (CA4)', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('canRemove', true);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+
+    expect(items[0].querySelector('.participant-list__remove')).toBeNull();
+    expect(items[1].querySelector('.participant-list__remove')).not.toBeNull();
+  });
+
+  it('affiche le bouton Retirer pour un organisateur s\'il en reste un autre (CA5)', () => {
+    const twoOrganizers: SeasonParticipant[] = [
+      { ...mockParticipants[0] },
+      { ...mockParticipants[1], isOrganizer: true, status: 'VALIDATED' },
+    ];
+    fixture.componentRef.setInput('participants', twoOrganizers);
+    fixture.componentRef.setInput('canRemove', true);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+
+    expect(items[0].querySelector('.participant-list__remove')).not.toBeNull();
+    expect(items[1].querySelector('.participant-list__remove')).not.toBeNull();
+  });
+
   it('affiche un message si la liste est vide', () => {
     fixture.componentRef.setInput('participants', []);
     fixture.detectChanges();

@@ -79,6 +79,24 @@
     color: var(--clr-accent);
   }
 
+  &__remove {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    background: transparent;
+    border: 1px solid var(--clr-border-subtle);
+    color: var(--clr-text-muted);
+
+    &:hover {
+      opacity: 0.85;
+      border-color: var(--clr-accent);
+      color: var(--clr-accent);
+    }
+  }
+
   &__empty {
     color: var(--clr-text-muted);
     font-size: 0.9rem;

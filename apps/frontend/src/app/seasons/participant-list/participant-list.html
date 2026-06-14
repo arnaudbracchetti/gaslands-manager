@@ -20,6 +20,14 @@
           </button>
         </div>
       }
+
+      @if (canRemove() && !isLastOrganizer(participant)) {
+        <div class="participant-list__actions">
+          <button class="participant-list__remove" type="button" (click)="onRemove(participant.id)">
+            Retirer
+          </button>
+        </div>
+      }
     </li>
   } @empty {
     <li class="participant-list__empty">Aucun participant.</li>

@@ -104,6 +104,31 @@ export class SeasonDetail implements OnInit {
   }
 
   /**
+   * Retire un participant (validé ou en attente) de la saison — organisateur
+   * uniquement, saison EN_CONSTRUCTION uniquement (CA visibles via canRemove
+   * dans le template). Retrait optimiste de la liste, avec rollback via
+   * loadParticipants() en cas d'erreur (ex. dernier organisateur, CA4).
+   */
+  onRemoveParticipant(pid: number): void {
+    const participant = this.participants().find((p) => p.id === pid);
+    if (!participant) {
+      return;
+    }
+    if (!window.confirm(`Retirer "${participant.userName}" de la saison ?`)) {
+      return;
+    }
+
+    this.participants.update((list) => list.filter((p) => p.id !== pid));
+
+    this.seasonsService.removeParticipant(this.seasonId, pid).subscribe({
+      error: () => {
+        this.error.set('Erreur lors du retrait du participant.');
+        this.loadParticipants();
+      },
+    });
+  }
+
+  /**
    * Supprime définitivement la saison — organisateur uniquement (CA visible
    * via isOrganizer() dans le template). Cascade côté backend sur les
    * SeasonParticipant ; les équipes des participants ne sont pas affectées.

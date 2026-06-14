@@ -139,6 +139,21 @@ export class SeasonController {
   }
 
   /**
+   * DELETE /api/seasons/:id/participants/:pid
+   * Retire un participant (validé ou en attente) — organisateur uniquement,
+   * saison EN_CONSTRUCTION uniquement.
+   */
+  @Delete(':id/participants/:pid')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeParticipant(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pid', ParseIntPipe) pid: number,
+  ): Promise<void> {
+    return this.seasonParticipantService.remove(id, pid, req.user.id);
+  }
+
+  /**
    * GET /api/seasons/:id
    * Détail d'une saison — accessible uniquement à un participant VALIDATED.
    *

@@ -26,14 +26,19 @@
       <h2>Participants</h2>
 
       <h3>Validés ({{ validated().length }})</h3>
-      <app-participant-list [participants]="validated()" />
+      <app-participant-list
+        [participants]="validated()"
+        [canRemove]="isOrganizer() && season()!.state === 'EN_CONSTRUCTION'"
+        (remove)="onRemoveParticipant($event)" />
 
       @if (pending().length > 0 || isOrganizer()) {
         <h3>En attente de validation ({{ pending().length }})</h3>
         <app-participant-list
           [participants]="pending()"
           [showActions]="isOrganizer()"
-          (validate)="onValidate($event)" />
+          [canRemove]="isOrganizer() && season()!.state === 'EN_CONSTRUCTION'"
+          (validate)="onValidate($event)"
+          (remove)="onRemoveParticipant($event)" />
       }
     </section>
   }

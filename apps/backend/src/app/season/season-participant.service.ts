@@ -12,11 +12,11 @@
  * les deux services (cf. season.service.ts pour le contrôle équivalent dans
  * findOne()).
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SeasonParticipant } from './season-participant.entity';
-import { ParticipantStatus } from './season.enums';
+import { ParticipantStatus, SeasonState } from './season.enums';
 import { SeasonParticipantResponseDto } from './dto/season-participant-response.dto';
 
 @Injectable()
@@ -96,5 +96,49 @@ export class SeasonParticipantService {
     await this.participantRepo.save(participant);
 
     return this.toDto(participant);
+  }
+
+  /**
+   * Retire un participant (validé ou en attente) d'une saison.
+   *
+   * - `organizerUserId` doit correspondre à un SeasonParticipant VALIDATED
+   *   avec isOrganizer=true pour cette saison, sinon NotFoundException.
+   * - `pid` doit désigner un SeasonParticipant de cette saison, sinon
+   *   NotFoundException.
+   * - La saison doit être EN_CONSTRUCTION, sinon BadRequestException.
+   * - Si la cible est organisatrice, il doit rester au moins un autre
+   *   organisateur validé après le retrait — sinon BadRequestException
+   *   (évite une saison orpheline, cf. doc de conception §4).
+   */
+  async remove(seasonId: number, pid: number, organizerUserId: number): Promise<void> {
+    const organizer = await this.participantRepo.findOne({
+      where: { seasonId, userId: organizerUserId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+    });
+    if (!organizer) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    const participant = await this.participantRepo.findOne({
+      where: { id: pid, seasonId },
+      relations: { season: true },
+    });
+    if (!participant) {
+      throw new NotFoundException('Participant introuvable.');
+    }
+
+    if (participant.season.state !== SeasonState.EN_CONSTRUCTION) {
+      throw new BadRequestException('Cette saison n\'accepte plus de modifications de participants.');
+    }
+
+    if (participant.isOrganizer) {
+      const organizerCount = await this.participantRepo.count({
+        where: { seasonId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+      });
+      if (organizerCount <= 1) {
+        throw new BadRequestException('Impossible de retirer le dernier organisateur de la saison.');
+      }
+    }
+
+    await this.participantRepo.delete(pid);
   }
 }

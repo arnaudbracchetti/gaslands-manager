@@ -44,6 +44,7 @@ describe('SeasonController', () => {
   const mockSeasonParticipantService = {
     findParticipants: vi.fn(),
     validate: vi.fn(),
+    remove: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -164,6 +165,19 @@ describe('SeasonController', () => {
 
       expect(mockSeasonParticipantService.validate).toHaveBeenCalledWith(1, 2, 42, true);
       expect(result).toEqual(participant);
+    });
+  });
+
+  // ── DELETE /seasons/:id/participants/:pid ──────────────────────────────────
+
+  describe('removeParticipant()', () => {
+    it('appelle SeasonParticipantService.remove avec saison, participant et user', async () => {
+      mockSeasonParticipantService.remove.mockResolvedValue(undefined);
+
+      const result = await controller.removeParticipant(mockRequest as never, 1, 2);
+
+      expect(mockSeasonParticipantService.remove).toHaveBeenCalledWith(1, 2, 42);
+      expect(result).toBeUndefined();
     });
   });
 

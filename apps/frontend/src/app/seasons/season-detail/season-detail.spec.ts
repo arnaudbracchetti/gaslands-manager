@@ -36,6 +36,7 @@ describe('SeasonDetail', () => {
     getParticipants: ReturnType<typeof vi.fn>;
     validateParticipant: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
+    removeParticipant: ReturnType<typeof vi.fn>;
   };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
 
@@ -56,6 +57,7 @@ describe('SeasonDetail', () => {
       getParticipants: vi.fn().mockReturnValue(of(mockParticipants)),
       validateParticipant: vi.fn(),
       remove: vi.fn(),
+      removeParticipant: vi.fn(),
     };
     mockRouter = { navigate: vi.fn() };
   });
@@ -154,6 +156,54 @@ describe('SeasonDetail', () => {
 
       expect(component.pending()).toEqual([]);
       expect(component.validated()).toEqual([mockParticipants[0]]);
+    });
+  });
+
+  // ── onRemoveParticipant() ────────────────────────────────────────────────
+
+  describe('onRemoveParticipant()', () => {
+    it('retire le participant localement après confirmation (CA1/CA2)', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockSeasonsService.removeParticipant.mockReturnValue(of(undefined));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onRemoveParticipant(2);
+
+      expect(mockSeasonsService.removeParticipant).toHaveBeenCalledWith(1, 2);
+      expect(component.participants()).toEqual([mockParticipants[0]]);
+    });
+
+    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onRemoveParticipant(2);
+
+      expect(mockSeasonsService.removeParticipant).not.toHaveBeenCalled();
+      expect(component.participants()).toEqual(mockParticipants);
+    });
+
+    it('affiche une erreur et recharge la liste si le retrait échoue (CA4)', () => {
+      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+      mockSeasonsService.removeParticipant.mockReturnValue(throwError(() => new Error('400')));
+
+      configure();
+      fixture = TestBed.createComponent(SeasonDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onRemoveParticipant(1);
+
+      expect(component.error()).not.toBe('');
+      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(2);
     });
   });
 
