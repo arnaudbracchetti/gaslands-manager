@@ -11,7 +11,7 @@ import { ParticipantStatus } from '../season.enums';
 export interface SeasonParticipantResponseDto {
   id: number;
   userId: number;
-  teamId: number;
+  teamId: number | null;
   status: ParticipantStatus;
   isOrganizer: boolean;
   userName: string;

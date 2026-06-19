@@ -22,6 +22,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from './team.entity';
 import { Vehicle } from '../vehicle/vehicle.entity';
+import { SeasonParticipant } from '../season/season-participant.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
@@ -40,6 +41,8 @@ export class TeamService {
     // (éviter tout cycle `TeamModule ↔ VehicleModule`).
     @InjectRepository(Vehicle)
     private vehicleRepo: Repository<Vehicle>,
+    @InjectRepository(SeasonParticipant)
+    private participantRepo: Repository<SeasonParticipant>,
   ) {}
 
   /**
@@ -50,6 +53,17 @@ export class TeamService {
    */
   private countVehicles(teamId: number): Promise<number> {
     return this.vehicleRepo.count({ where: { teamId } });
+  }
+
+  /**
+   * Vrai si l'équipe est référencée dans au moins un SeasonParticipant,
+   * quelle que soit la saison ou le statut du participant.
+   * Utilisé pour informer le frontend qu'une équipe ne peut pas être
+   * engagée dans une nouvelle saison (règle absolue).
+   */
+  private async isTeamEngaged(teamId: number): Promise<boolean> {
+    const count = await this.participantRepo.count({ where: { teamId } });
+    return count > 0;
   }
 
   /**
@@ -71,6 +85,7 @@ export class TeamService {
         async (team: Team): Promise<TeamResponseDto> => ({
           ...team,
           vehicleCount: await this.countVehicles(team.id),
+          isEngaged: await this.isTeamEngaged(team.id),
         }),
       ),
     );
@@ -111,7 +126,7 @@ export class TeamService {
       userId, // On force le userId depuis le token JWT, pas depuis le body
     });
     const saved = await this.teamRepo.save(team);
-    return { ...saved, vehicleCount: 0 };
+    return { ...saved, vehicleCount: 0, isEngaged: false };
   }
 
   /**
@@ -126,7 +141,7 @@ export class TeamService {
     const team = await this.findOneForUser(id, userId);
     Object.assign(team, dto);
     const saved = await this.teamRepo.save(team);
-    return { ...saved, vehicleCount: await this.countVehicles(saved.id) };
+    return { ...saved, vehicleCount: await this.countVehicles(saved.id), isEngaged: await this.isTeamEngaged(saved.id) };
   }
 
   /**

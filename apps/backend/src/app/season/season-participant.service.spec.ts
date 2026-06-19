@@ -311,6 +311,7 @@ describe('SeasonParticipantService', () => {
       const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED };
       mockParticipantRepo.findOne
         .mockResolvedValueOnce(validated) // recherche du participant courant
+        .mockResolvedValueOnce(null) // assertTeamNotAlreadyEngaged : équipe libre
         .mockResolvedValueOnce({ ...validated, teamId: 99, team: { name: 'Roadkill' } }); // relecture après save
       mockTeamService.findOneForUser.mockResolvedValue({ id: 99, userId: 43 });
       mockParticipantRepo.save.mockImplementation((p) => Promise.resolve(p));
@@ -350,6 +351,19 @@ describe('SeasonParticipantService', () => {
       mockTeamService.findOneForUser.mockRejectedValue(new Error('Équipe #99 introuvable'));
 
       await expect(service.updateMyTeam(1, 43, 99)).rejects.toThrow('Équipe #99 introuvable');
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException si l\'équipe choisie est déjà engagée dans une autre saison', async () => {
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED };
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(validated) // recherche du participant courant
+        .mockResolvedValueOnce(mockOrganizer); // assertTeamNotAlreadyEngaged : équipe déjà prise
+      mockTeamService.findOneForUser.mockResolvedValue({ id: 99, userId: 43 });
+
+      await expect(service.updateMyTeam(1, 43, 99)).rejects.toThrow(
+        'Cette équipe est déjà engagée dans une autre saison.',
+      );
       expect(mockParticipantRepo.save).not.toHaveBeenCalled();
     });
   });

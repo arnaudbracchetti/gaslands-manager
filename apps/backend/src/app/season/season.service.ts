@@ -12,7 +12,7 @@
  */
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
 import { Season } from './season.entity';
 import { SeasonParticipant } from './season-participant.entity';
@@ -45,6 +45,16 @@ export class SeasonService {
    */
   private generateInviteCode(): string {
     return randomBytes(6).toString('hex');
+  }
+
+  private async assertTeamNotAlreadyEngaged(teamId: number, excludeSeasonId?: number): Promise<void> {
+    const where = excludeSeasonId
+      ? { teamId, seasonId: Not(excludeSeasonId) }
+      : { teamId };
+    const existing = await this.participantRepo.findOne({ where });
+    if (existing) {
+      throw new ConflictException('Cette équipe est déjà engagée dans une autre saison.');
+    }
   }
 
   /**
@@ -142,6 +152,7 @@ export class SeasonService {
   async create(userId: number, dto: CreateSeasonDto): Promise<SeasonResponseDto> {
     if (dto.teamId) {
       await this.teamService.findOneForUser(dto.teamId, userId);
+      await this.assertTeamNotAlreadyEngaged(dto.teamId);
     }
 
     const season = this.seasonRepo.create({
@@ -298,6 +309,8 @@ export class SeasonService {
     if (existing) {
       throw new ConflictException('Vous avez déjà une demande d\'inscription pour cette saison.');
     }
+
+    await this.assertTeamNotAlreadyEngaged(dto.teamId);
 
     const participant = this.participantRepo.create({
       seasonId,

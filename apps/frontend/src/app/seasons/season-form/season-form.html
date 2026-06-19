@@ -30,7 +30,9 @@
           (ngModelChange)="formTeamId.set($event ? +$event : null)">
           <option [ngValue]="null">— Sans équipe —</option>
           @for (team of teams(); track team.id) {
-            <option [value]="team.id">{{ team.name }}</option>
+            <option [value]="team.id" [disabled]="team.isEngaged ?? false">
+              {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : '' }}
+            </option>
           }
         </select>
       } @else {

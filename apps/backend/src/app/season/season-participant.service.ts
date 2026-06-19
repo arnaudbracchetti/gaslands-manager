@@ -12,9 +12,9 @@
  * les deux services (cf. season.service.ts pour le contrôle équivalent dans
  * findOne()).
  */
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { SeasonParticipant } from './season-participant.entity';
 import { ParticipantStatus, SeasonState } from './season.enums';
 import { SeasonParticipantResponseDto } from './dto/season-participant-response.dto';
@@ -29,6 +29,22 @@ export class SeasonParticipantService {
     // dans updateMyTeam() — même principe que SeasonService.requestJoin.
     private teamService: TeamService,
   ) {}
+
+  /**
+   * Lève ConflictException si l'équipe est déjà engagée dans une autre saison
+   * (toutes saisons et tous statuts confondus).
+   * Si `excludeSeasonId` est fourni, la saison courante est exclue de la
+   * recherche — utile pour le changement d'équipe au sein d'une même saison.
+   */
+  private async assertTeamNotAlreadyEngaged(teamId: number, excludeSeasonId?: number): Promise<void> {
+    const where = excludeSeasonId
+      ? { teamId, seasonId: Not(excludeSeasonId) }
+      : { teamId };
+    const existing = await this.participantRepo.findOne({ where });
+    if (existing) {
+      throw new ConflictException('Cette équipe est déjà engagée dans une autre saison.');
+    }
+  }
 
   /** Mappe une entité SeasonParticipant (avec relations user/team chargées) vers son DTO de réponse. */
   private toDto(participant: SeasonParticipant): SeasonParticipantResponseDto {
@@ -229,6 +245,7 @@ export class SeasonParticipantService {
       participant.teamId = null;
     } else {
       await this.teamService.findOneForUser(teamId, userId);
+      await this.assertTeamNotAlreadyEngaged(teamId, seasonId);
       participant.teamId = teamId;
     }
 

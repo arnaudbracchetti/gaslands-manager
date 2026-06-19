@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Team } from './team.entity';
 import { Vehicle } from '../vehicle/vehicle.entity';
+import { SeasonParticipant } from '../season/season-participant.entity';
 import { TeamController } from './team.controller';
 import { TeamService } from './team.service';
 
@@ -18,7 +19,7 @@ import { TeamService } from './team.service';
 // l'injecter (cf. raisonnement ci-dessus) — `TypeOrmModule` reste exporté pour
 // les usages préexistants (aucun changement de comportement pour eux).
 @Module({
-  imports: [TypeOrmModule.forFeature([Team, Vehicle])],
+  imports: [TypeOrmModule.forFeature([Team, Vehicle, SeasonParticipant])],
   controllers: [TeamController],
   providers: [TeamService],
   exports: [TypeOrmModule, TeamService],

@@ -57,7 +57,9 @@
               [ngModel]="selectedTeamId()"
               (ngModelChange)="selectedTeamId.set(+$event)">
               @for (team of userTeams(); track team.id) {
-                <option [value]="team.id">{{ team.name }}</option>
+                <option [value]="team.id" [disabled]="team.isEngaged ?? false">
+                  {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : '' }}
+                </option>
               }
             </select>
           </div>

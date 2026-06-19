@@ -81,6 +81,7 @@ describe('SeasonService', () => {
       const dto: CreateSeasonDto = { name: 'Coupe Verney', teamId: 7 };
 
       mockTeamService.findOneForUser.mockResolvedValue({ id: 7, userId: 42 });
+      mockParticipantRepo.findOne.mockResolvedValue(null);
       mockSeasonRepo.create.mockReturnValue({
         name: dto.name,
         state: SeasonState.EN_CONSTRUCTION,
@@ -126,6 +127,17 @@ describe('SeasonService', () => {
 
       expect(mockSeasonRepo.create).not.toHaveBeenCalled();
       expect(mockParticipantRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException si l\'équipe est déjà engagée dans une autre saison', async () => {
+      const dto: CreateSeasonDto = { name: 'Coupe Verney', teamId: 7 };
+      mockTeamService.findOneForUser.mockResolvedValue({ id: 7, userId: 42 });
+      mockParticipantRepo.findOne.mockResolvedValue(mockParticipant);
+
+      await expect(service.create(42, dto)).rejects.toThrow(
+        'Cette équipe est déjà engagée dans une autre saison.',
+      );
+      expect(mockSeasonRepo.create).not.toHaveBeenCalled();
     });
   });
 
@@ -312,7 +324,8 @@ describe('SeasonService', () => {
     it('crée un SeasonParticipant PENDING si tout est valide', async () => {
       mockTeamService.findOneForUser.mockResolvedValue({ id: 7, userId: 42 });
       mockSeasonRepo.findOne.mockResolvedValue(mockSeason);
-      mockParticipantRepo.findOne.mockResolvedValue(null);
+      // 1er findOne : vérif doublon userId+seasonId / 2e findOne : vérif équipe déjà engagée
+      mockParticipantRepo.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
       const created = {
         seasonId: mockSeason.id,
         userId: 42,
@@ -364,6 +377,19 @@ describe('SeasonService', () => {
 
       await expect(service.requestJoin(mockSeason.id, 42, dto)).rejects.toThrow('Équipe introuvable');
       expect(mockSeasonRepo.findOne).not.toHaveBeenCalled();
+      expect(mockParticipantRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException si l\'équipe est déjà engagée dans une autre saison', async () => {
+      mockTeamService.findOneForUser.mockResolvedValue({ id: 7, userId: 42 });
+      mockSeasonRepo.findOne.mockResolvedValue(mockSeason);
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(null) // pas de doublon userId+seasonId
+        .mockResolvedValueOnce(mockParticipant); // équipe déjà engagée
+
+      await expect(service.requestJoin(mockSeason.id, 42, dto)).rejects.toThrow(
+        'Cette équipe est déjà engagée dans une autre saison.',
+      );
       expect(mockParticipantRepo.create).not.toHaveBeenCalled();
     });
   });

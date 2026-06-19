@@ -21,7 +21,11 @@
         <option value="">— Sans équipe —</option>
       }
       @for (team of teams(); track team.id) {
-        <option [value]="team.id">{{ team.name }}</option>
+        <option
+          [value]="team.id"
+          [disabled]="team.isEngaged && team.id !== currentTeamId()">
+          {{ team.name }}{{ team.isEngaged && team.id !== currentTeamId() ? ' (déjà engagée)' : '' }}
+        </option>
       }
     </select>
 

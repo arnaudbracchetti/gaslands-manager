@@ -26,6 +26,11 @@ export interface Team {
    * Toujours 0 tant que le module Véhicules n'est pas implémenté.
    */
   vehicleCount?: number;
+  /**
+   * Vrai si l'équipe est déjà engagée dans une saison (toutes saisons confondues).
+   * Utilisé pour griser l'équipe dans les sélecteurs de saison.
+   */
+  isEngaged?: boolean;
 }
 
 /**

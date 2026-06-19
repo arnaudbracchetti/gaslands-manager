@@ -23,4 +23,9 @@ export type TeamResponseDto = Team & {
    * Utilisé par le frontend pour verrouiller le choix du sponsor.
    */
   vehicleCount: number;
+  /**
+   * Vrai si l'équipe est déjà engagée dans une saison (n'importe quel état).
+   * Permet au frontend de griser ou exclure l'équipe des sélecteurs de saison.
+   */
+  isEngaged: boolean;
 };
