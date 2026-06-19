@@ -1,0 +1,37 @@
+<!--
+  ChangeTeamModal — overlay de sélection d'équipe.
+
+  Structure (calquée sur TourelleAssignmentModal) :
+  - Fond semi-transparent couvrant l'écran (.ctm-overlay)
+  - Boîte de dialogue centrale (.ctm-modal) avec :
+    - Titre
+    - Select avec les équipes de l'utilisateur
+    - Option "— Sans équipe —" visible uniquement pour les organisateurs
+    - Boutons Valider / Annuler
+-->
+<div class="ctm-overlay" role="dialog" aria-modal="true" aria-label="Choisir votre équipe">
+  <div class="ctm-modal">
+    <h4 class="ctm-modal__title">Choisir votre équipe</h4>
+
+    <select
+      class="ctm-modal__select"
+      [value]="selectedTeamId() ?? ''"
+      (change)="onSelectChange($any($event.target).value)">
+      @if (isOrganizer()) {
+        <option value="">— Sans équipe —</option>
+      }
+      @for (team of teams(); track team.id) {
+        <option [value]="team.id">{{ team.name }}</option>
+      }
+    </select>
+
+    <div class="ctm-modal__actions">
+      <button class="ctm-modal__confirm" type="button" (click)="onConfirm()">
+        Valider
+      </button>
+      <button class="ctm-modal__cancel" type="button" (click)="cancelled.emit()">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>

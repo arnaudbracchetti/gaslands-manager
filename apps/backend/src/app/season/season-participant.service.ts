@@ -208,7 +208,7 @@ export class SeasonParticipantService {
     return this.toDto(participant);
   }
 
-  async updateMyTeam(seasonId: number, userId: number, teamId: number): Promise<SeasonParticipantResponseDto> {
+  async updateMyTeam(seasonId: number, userId: number, teamId: number | null): Promise<SeasonParticipantResponseDto> {
     const participant = await this.participantRepo.findOne({
       where: { seasonId, userId, status: ParticipantStatus.VALIDATED },
       relations: { season: true },
@@ -221,9 +221,17 @@ export class SeasonParticipantService {
       throw new BadRequestException('Cette saison n\'accepte plus de changement d\'équipe.');
     }
 
-    await this.teamService.findOneForUser(teamId, userId);
+    if (teamId === null) {
+      // Seul l'organisateur peut se désengager sans choisir une nouvelle équipe
+      if (!participant.isOrganizer) {
+        throw new BadRequestException('Seul un organisateur peut retirer son équipe sans en choisir une autre.');
+      }
+      participant.teamId = null;
+    } else {
+      await this.teamService.findOneForUser(teamId, userId);
+      participant.teamId = teamId;
+    }
 
-    participant.teamId = teamId;
     await this.participantRepo.save(participant);
 
     const updated = await this.participantRepo.findOne({

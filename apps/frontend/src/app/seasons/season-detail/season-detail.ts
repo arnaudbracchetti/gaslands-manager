@@ -23,6 +23,9 @@ import { SeasonParticipant } from '../season-participant.model';
 import { ParticipantList } from '../participant-list/participant-list';
 import { InviteLink } from '../invite-link/invite-link';
 import { AuthService } from '../../auth/auth.service';
+import { TeamsService } from '../../teams/teams.service';
+import { Team } from '../../teams/team.model';
+import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 
 const STATE_LABELS: Record<SeasonState, string> = {
   EN_CONSTRUCTION: 'En construction',
@@ -33,7 +36,7 @@ const STATE_LABELS: Record<SeasonState, string> = {
 @Component({
   selector: 'app-season-detail',
   standalone: true,
-  imports: [ParticipantList, InviteLink, RouterLink],
+  imports: [ParticipantList, InviteLink, RouterLink, ChangeTeamModal],
   templateUrl: './season-detail.html',
   styleUrl: './season-detail.scss',
 })
@@ -42,6 +45,7 @@ export class SeasonDetail implements OnInit {
   private router: Router = inject(Router);
   private seasonsService: SeasonsService = inject(SeasonsService);
   private authService: AuthService = inject(AuthService);
+  private teamsService: TeamsService = inject(TeamsService);
 
   private seasonId: number = Number(this.route.snapshot.params['id']);
 
@@ -49,6 +53,8 @@ export class SeasonDetail implements OnInit {
   error: WritableSignal<string> = signal('');
   season: WritableSignal<Season | null> = signal<Season | null>(null);
   participants: WritableSignal<SeasonParticipant[]> = signal<SeasonParticipant[]>([]);
+  myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
+  showChangeTeamModal: WritableSignal<boolean> = signal(false);
 
   /** Vrai pendant un appel PUT /state */
   stateTransitioning: WritableSignal<boolean> = signal(false);
@@ -61,6 +67,9 @@ export class SeasonDetail implements OnInit {
   currentUserId: Signal<number | undefined> = computed(() => this.authService.currentUser()?.id);
 
   isOrganizer: Signal<boolean> = computed(() => this.season()?.myRole === 'organizer');
+
+  /** Vrai quand le choix d'équipe est encore modifiable (saison EN_CONSTRUCTION). */
+  canChangeTeam: Signal<boolean> = computed(() => this.season()?.state === 'EN_CONSTRUCTION');
 
   stateLabel: Signal<string> = computed(() => {
     const state = this.season()?.state;
@@ -78,6 +87,10 @@ export class SeasonDetail implements OnInit {
   ngOnInit(): void {
     this.loading.set(true);
     this.error.set('');
+
+    this.teamsService.getAll().subscribe({
+      next: (teams: Team[]) => this.myTeams.set(teams),
+    });
 
     this.seasonsService.getOne(this.seasonId).subscribe({
       next: (season: Season) => {
@@ -168,6 +181,22 @@ export class SeasonDetail implements OnInit {
         this.error.set('Erreur lors du changement d\'état.');
         this.stateTransitioning.set(false);
       },
+    });
+  }
+
+  openChangeTeamModal(): void {
+    this.showChangeTeamModal.set(true);
+  }
+
+  onConfirmChangeTeam(teamId: number | null): void {
+    this.showChangeTeamModal.set(false);
+    this.seasonsService.updateMyTeam(this.seasonId, { teamId }).subscribe({
+      next: (updated: SeasonParticipant) => {
+        this.participants.set(
+          this.participants().map((p) => (p.id === updated.id ? updated : p)),
+        );
+      },
+      error: () => this.error.set('Erreur lors du changement d\'équipe.'),
     });
   }
 

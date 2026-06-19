@@ -48,7 +48,7 @@ export interface SeasonSummary {
 
 /** Corps de la requête POST /api/seasons/:id/participants */
 export interface JoinSeasonDto {
-  teamId: number;
+  teamId?: number | null;
 }
 
 /** Corps de la requête PUT /api/seasons/:id/state */

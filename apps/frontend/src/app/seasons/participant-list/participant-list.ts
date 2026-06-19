@@ -41,6 +41,12 @@ export class ParticipantList {
   /** Émis au clic sur "Promouvoir", avec l'id du SeasonParticipant ciblé. */
   promote: OutputEmitterRef<number> = output<number>();
 
+  /** Vrai quand l'équipe est encore modifiable (saison EN_CONSTRUCTION). */
+  canChangeTeam: InputSignal<boolean> = input(false);
+
+  /** Émis au clic sur "Modifier l'équipe" — le parent possède la liste des équipes. */
+  changeTeam: OutputEmitterRef<void> = output<void>();
+
   private organizerCount: Signal<number> = computed(
     () => this.participants().filter((p) => p.isOrganizer && p.status === 'VALIDATED').length,
   );

@@ -152,7 +152,7 @@ export class SeasonController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: JoinSeasonDto,
   ): Promise<SeasonParticipantResponseDto> {
-    return this.seasonParticipantService.updateMyTeam(id, req.user.id, dto.teamId);
+    return this.seasonParticipantService.updateMyTeam(id, req.user.id, dto.teamId ?? null);
   }
 
   /**

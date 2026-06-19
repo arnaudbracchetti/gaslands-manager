@@ -84,9 +84,20 @@
         [participants]="participants()"
         [isOrganizer]="isOrganizer()"
         [currentUserId]="currentUserId()"
+        [canChangeTeam]="canChangeTeam()"
         (validate)="onValidate($event)"
         (remove)="onRemoveParticipant($event)"
-        (promote)="onPromote($event)" />
+        (promote)="onPromote($event)"
+        (changeTeam)="openChangeTeamModal()" />
+
+      @if (showChangeTeamModal()) {
+        <app-change-team-modal
+          [teams]="myTeams()"
+          [currentTeamId]="myParticipant()?.teamId ?? null"
+          [isOrganizer]="isOrganizer()"
+          (confirmed)="onConfirmChangeTeam($event)"
+          (cancelled)="showChangeTeamModal.set(false)" />
+      }
     </section>
 
     <!-- Zone dangereuse — organisateur uniquement -->

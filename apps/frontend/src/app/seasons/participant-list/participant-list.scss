@@ -99,11 +99,12 @@
     gap: 8px;
   }
 
-  // Boutons Valider / Refuser / Promouvoir / Retirer
+  // Boutons Valider / Refuser / Promouvoir / Retirer / Modifier l'équipe
   &__validate,
   &__reject,
   &__promote,
-  &__remove {
+  &__remove,
+  &__change-team {
     padding: 5px 12px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
@@ -155,6 +156,17 @@
     &:hover {
       border-color: var(--tb-rouille);
       color: var(--tb-rouille-lt);
+    }
+  }
+
+  &__change-team {
+    background: transparent;
+    border-color: var(--border-rust);
+    color: var(--text-dim);
+
+    &:hover {
+      border-color: var(--tb-os);
+      color: var(--tb-os);
     }
   }
 

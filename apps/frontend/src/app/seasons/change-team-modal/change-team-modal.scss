@@ -1,0 +1,95 @@
+// Styles calqués sur TourelleAssignmentModal (.tam-*) pour cohérence visuelle.
+
+.ctm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.ctm-modal {
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(400px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-stamp-lg);
+}
+
+.ctm-modal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ctm-modal__select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--tb-metal-1);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  color: var(--text-main);
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--tb-os);
+  }
+}
+
+.ctm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ctm-modal__confirm {
+  background: var(--tb-danger);
+  border: 1px solid var(--tb-danger);
+  color: var(--text-main);
+  padding: 7px 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 160ms, border-color 160ms;
+
+  &:hover {
+    background: var(--tb-os);
+    border-color: var(--tb-os);
+  }
+}
+
+.ctm-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 7px 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-os);
+    color: var(--tb-os);
+  }
+}

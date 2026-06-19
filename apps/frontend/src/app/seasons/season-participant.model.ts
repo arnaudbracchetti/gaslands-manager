@@ -11,7 +11,7 @@ export type ParticipantStatus = 'PENDING' | 'VALIDATED' | 'REJECTED';
 export interface SeasonParticipant {
   id: number;
   userId: number;
-  teamId: number;
+  teamId: number | null;
   status: ParticipantStatus;
   isOrganizer: boolean;
   userName: string;

@@ -6,5 +6,6 @@
  * réutilise TeamService.findOneForUser, même principe que CreateSeasonDto).
  */
 export class JoinSeasonDto {
-  teamId: number;
+  // nullable : l'organisateur peut se désengager d'une saison en passant null
+  teamId?: number | null;
 }

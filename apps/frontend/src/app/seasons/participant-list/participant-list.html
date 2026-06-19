@@ -28,6 +28,16 @@
         </span>
       </div>
 
+      <!-- Bouton modifier l'équipe — propre ligne uniquement, EN_CONSTRUCTION -->
+      @if (isSelf(participant) && canChangeTeam()) {
+        <div class="participant-list__actions">
+          <button class="participant-list__change-team" type="button"
+            (click)="changeTeam.emit()">
+            ✏️ Modifier l'équipe
+          </button>
+        </div>
+      }
+
       <!-- Actions (organisateur uniquement, hors soi-même) -->
       @if (isOrganizer() && !isSelf(participant)) {
         <div class="participant-list__actions">
