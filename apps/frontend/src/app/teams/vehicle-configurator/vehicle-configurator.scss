@@ -1,49 +1,36 @@
-/* ── VehicleConfigurator — orchestration unique (cf. vehicle-configurator.html) ── */
-/* Fusion des feuilles de styles d'origine (`.vb-*`/`.ve-*`, préfixe `.vc-` ici) :
-   le "stepper" de l'ex-builder a disparu (cf. en-tête du composant — la
-   présence/absence de `vehicle()` suffit à piloter l'affichage). */
-
 .vc {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  /* Largeur pilotée par .modal-content--wide (cf. modal.scss) — la modale qui
-     héberge ce composant est ouverte avec [size]="'wide'" (cf. teams.html). */
 }
-
-/* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
 
 .vc-status {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
 
-  &--loading {
-    color: var(--clr-accent-cyan);
-  }
-
-  &--error {
-    color: var(--clr-accent);
-  }
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
 }
-
-/* ── Introduction ───────────────────────────────────────────────────────────── */
 
 .vc-intro {
   margin: 0;
-  font-size: 0.92rem;
-  color: var(--clr-text);
-  // Reste visible sous .vcp-header (sticky) — cf. le commentaire détaillé
-  // dans vehicle-configurator-page.scss pour le calcul des `top` empilés.
+  font-family: var(--font-text);
+  font-weight: 300;
+  font-size: 0.9rem;
+  color: var(--text-body);
   position: sticky;
   top: 156px;
   z-index: 30;
-  background: var(--clr-bg-base);
+  background: var(--tb-bitume);
   padding: 10px 0;
 
   strong {
-    color: var(--clr-accent-cyan);
+    color: var(--tb-danger);
+    font-weight: 600;
   }
 }
 
@@ -55,37 +42,33 @@
   }
 }
 
-/* ── Mode création : grille de véhicules ────────────────────────────────────── */
-
 .vc-vehicle-grid {
   display: grid;
-  // 240px : même largeur minimale que .em-equipment__list (catalogue
-  // d'équipement, étape suivante) — cohérence visuelle entre les deux étapes.
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
 }
-
-/* ── Pied de modale : bouton de fin ("Terminer"/"Fermer" selon le mode) ─────── */
 
 .vc-footer {
   display: flex;
   justify-content: flex-end;
   padding-top: 12px;
-  border-top: 1px solid var(--clr-border);
+  border-top: 1px solid var(--border-rust);
 }
 
 .vc-finish {
-  background: var(--clr-accent);
+  background: var(--tb-danger);
   border: none;
-  color: var(--clr-bg-base);
+  color: var(--tb-bitume);
   padding: 9px 22px;
-  border-radius: 4px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  border-radius: var(--r-sm);
+  font-family: var(--font-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 160ms;
+  box-shadow: var(--shadow-stamp);
 
-  &:hover {
-    opacity: 0.85;
-  }
+  &:hover { opacity: 0.88; }
 }

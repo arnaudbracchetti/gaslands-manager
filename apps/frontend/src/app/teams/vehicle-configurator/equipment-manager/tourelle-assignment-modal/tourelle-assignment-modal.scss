@@ -1,10 +1,3 @@
-/* ── TourelleAssignmentModal — overlay de sélection d'arme pour une Tourelle ── */
-/* Extrait de `equipment-manager.scss` (ex-`.em-modal*`), préfixe `.tam-`
-   (Tourelle Assignment Modal). Même thème sombre que le reste de l'application,
-   entièrement piloté par les design tokens --clr-*. */
-
-/* Fond semi-transparent couvrant tout l'écran — z-index élevé pour passer
-   devant la liste des équipements disponibles affichée derrière. */
 .tam-overlay {
   position: fixed;
   inset: 0;
@@ -15,11 +8,10 @@
   z-index: 200;
 }
 
-/* Boîte de dialogue centrale */
 .tam-modal {
-  background: var(--clr-bg-modal);
-  border: 1px solid var(--clr-border);
-  border-radius: 8px;
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 24px;
   width: min(480px, 92vw);
   max-height: 80vh;
@@ -27,97 +19,106 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: var(--shadow-stamp-lg);
 }
 
 .tam-modal__title {
   margin: 0;
-  font-size: 1rem;
-  color: var(--clr-text);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .tam-modal__hint {
   margin: 0;
-  font-size: 0.82rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
 }
 
-/* Liste des armes — sans puces */
 .tam-modal__list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Message affiché quand aucune arme n'est disponible (@empty) */
 .tam-modal__empty {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-/* Bouton arme — calqué sur .option de EquipmentOption :
-   fond sombre, nom en gras à gauche, stats grises à droite */
 .tam-modal__option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  background: var(--clr-bg-base);
-  border: 1px solid var(--clr-border-subtle);
-  border-radius: 6px;
-  padding: 10px 14px;
+  background: var(--tb-metal-1);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 9px 14px;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 160ms, background 160ms;
 
   &:hover {
-    border-color: var(--clr-accent-cyan);
-    background: rgba(var(--clr-accent-cyan-rgb), 0.05);
+    border-color: var(--tb-danger);
+    background: var(--tb-bitume-4);
   }
 }
 
-/* Nom de l'arme — même style que .option__name */
 .tam-modal__option-name {
-  color: var(--clr-text);
+  font-family: var(--font-text);
   font-weight: 600;
-  font-size: 0.92rem;
+  color: var(--tb-os);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   flex: 1;
 }
 
-/* Groupe de stats (coût + emplacements) */
 .tam-modal__option-stats {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-/* Chaque stat individuelle — même style que .option__stat */
 .tam-modal__option-stat {
-  color: var(--clr-text-muted);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
-/* Bouton "Annuler" — aligné à droite, ton neutre */
 .tam-modal__cancel {
   align-self: flex-end;
   background: transparent;
-  border: 1px solid var(--clr-text-disabled);
-  color: var(--clr-text-hint);
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
   padding: 6px 18px;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 160ms, color 160ms;
 
   &:hover {
-    border-color: var(--clr-text);
-    color: var(--clr-text);
+    border-color: var(--tb-os);
+    color: var(--tb-os);
   }
 }

@@ -1,37 +1,44 @@
-/* ── Code d'invitation + bouton copier ────────────────────────────────────── */
-
 .invite-link {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.85rem;
 
   &__label {
-    color: var(--clr-text-muted);
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
   }
 
   &__code {
-    background: var(--clr-bg-base);
-    border: 1px solid var(--clr-border-subtle);
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-family: monospace;
-    color: var(--clr-text);
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    border-radius: var(--r-sm);
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--tb-danger);
+    letter-spacing: 0.12em;
   }
 
   &__copy {
     background: transparent;
-    border: 1px solid var(--clr-border-subtle);
-    border-radius: 4px;
-    padding: 2px 8px;
-    color: var(--clr-text);
+    border: 1px solid var(--border-hair);
+    border-radius: var(--r-sm);
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
     cursor: pointer;
-    font-size: 0.8rem;
-    transition: border-color 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: border-color 160ms, color 160ms;
 
     &:hover {
-      border-color: var(--clr-accent-cyan);
+      border-color: var(--tb-danger);
+      color: var(--tb-danger);
     }
   }
 }

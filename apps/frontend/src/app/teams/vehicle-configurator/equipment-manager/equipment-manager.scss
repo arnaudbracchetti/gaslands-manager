@@ -1,34 +1,19 @@
-/* ── EquipmentManager — gestion d'équipement (ajout + retrait), partagée ────── */
-/* Fusion des deux feuilles de styles d'origine (`.vb-*`/`.ve-*`, préfixe `.em-`
-   ici) — mêmes teintes, mêmes espacements. La section `.em-current` (équipement
-   actuel retirable) provient de l'ex-VehicleEditor, désormais TOUJOURS affichée
-   (cf. en-tête du composant : "Retrait toujours proposé"). */
-
 .em {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* ── Messages d'état (chargement / erreur / liste vide) ────────────────────── */
-
 .em-status {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
 
-  &--loading {
-    color: var(--clr-accent-cyan);
-  }
-
-  &--error {
-    color: var(--clr-accent);
-  }
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
 }
-
-/* ── Disposition 2 colonnes : équipement actuel (sidebar) | catalogue ───────── */
-/* `align-items: start` : la colonne la plus courte ne s'étire pas à la hauteur
-   de l'autre — chaque colonne garde sa hauteur naturelle. */
 
 .em-layout {
   display: grid;
@@ -37,7 +22,6 @@
   align-items: start;
 }
 
-/* Sous ~760px : sidebar au-dessus du catalogue, plus de colonnes côte à côte. */
 @media (max-width: 760px) {
   .em-layout {
     grid-template-columns: 1fr;
@@ -45,19 +29,13 @@
 
   .em-current {
     border-right: none;
-    border-bottom: 1px solid var(--clr-border);
+    border-bottom: 1px solid var(--border-rust);
     padding: 0 0 16px;
-
-    // En une seule colonne, le récapitulatif est suivi du catalogue dans le
-    // flux normal — un sticky le collerait inutilement en haut de l'écran.
     position: static;
     max-height: none;
     overflow-y: visible;
   }
 
-  // `.em-current` n'étant plus sticky, son en-tête ne doit pas non plus
-  // rester collé en haut du DOCUMENT (il chevaucherait la navbar) — retour
-  // au flux normal, comme le reste de la carte.
   .em-current__header {
     position: static;
     background: none;
@@ -65,47 +43,33 @@
   }
 }
 
-/* ── Équipement actuel — liste retirable (colonne gauche) ───────────────────── */
+// ─── Équipement actuel — sidebar sticky ───────────────────────────────────────
 
 .em-current {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-right: 1px solid var(--clr-border);
+  border-right: 1px solid var(--border-rust);
   padding-right: 16px;
-
-  // Sidebar sticky : reste visible pendant que le catalogue (.em-equipment,
-  // souvent plus haut) défile à droite. `top` = sous .vcp-header (sticky) —
-  // cf. le commentaire détaillé dans vehicle-configurator-page.scss pour le
-  // calcul des `top` empilés. `.em-current` reprend la place qu'occupait le
-  // `.vc-intro` "Équipement de X" (supprimé, désormais redondant avec
-  // `.em-current__header` ci-dessous) — les deux ne coexistent jamais.
   position: sticky;
   top: 156px;
-  // Si le récapitulatif dépasse lui-même la hauteur de la fenêtre, il défile
-  // indépendamment plutôt que de déborder hors écran (sticky seul ne crée pas
-  // de zone de scroll). 16px de marge en bas, par cohérence avec les `gap`.
   max-height: calc(100vh - 156px - 16px);
   overflow-y: auto;
 }
-
-/* ── En-tête récap : nom du véhicule, emplacements, coût ────────────────────── */
 
 .em-current__header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  // Reste visible en haut de la sidebar pendant que les listes Armes/
-  // Améliorations défilent dessous (`.em-current` a son propre scroll interne).
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--clr-bg-base);
+  background: var(--tb-bitume);
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--clr-border);
+  border-bottom: 1px solid var(--border-rust);
 }
 
-/* ── Équipement disponible — sections (mirroir exact de l'ex-`.vb-equipment*`) ── */
+// ─── Catalogue — sections droite ─────────────────────────────────────────────
 
 .em-equipment {
   display: flex;
@@ -121,23 +85,24 @@
 
 .em-equipment__title {
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--clr-text);
+  font-family: var(--font-text);
+  font-size: 0.9rem;
   font-weight: 600;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-left: 2px solid var(--tb-danger);
+  padding-left: 8px;
 }
 
-/* Grille de cartes — remplace l'ancienne liste verticale pleine largeur,
-   exploite la largeur disponible dans la colonne droite. */
 .em-equipment__list {
   display: grid;
-  // 240px : même largeur minimale que .vc-vehicle-grid (choix du véhicule,
-  // étape précédente) — cohérence visuelle entre les deux étapes.
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 10px;
   align-items: stretch;
 }
 
-/* ── Barre de filtre — masquer/afficher les options indisponibles ───────────── */
+// ─── Barre de filtre ─────────────────────────────────────────────────────────
 
 .em-equipment__toolbar {
   display: flex;
@@ -147,32 +112,28 @@
 }
 
 .em-equipment__toolbar-label {
-  font-size: 0.85rem;
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
 }
 
 .em-toggle {
   background: transparent;
-  border: 1px solid var(--clr-border);
-  color: var(--clr-text-muted);
-  padding: 5px 12px;
-  border-radius: 4px;
-  font-size: 0.78rem;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 160ms, color 160ms;
   white-space: nowrap;
 
   &:hover {
-    border-color: var(--clr-accent-cyan);
-    color: var(--clr-accent-cyan);
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
   }
 }
-
-/* ── Tourelle — badges et variantes inline ──────────────────────────────────── */
-/* Styles migrés dans mounted-equipment/mounted-equipment.scss (préfixe .me-*).
-   Ce composant n'utilise plus aucune classe .em-current__badge-defaut/
-   .em-current__tourelle-badge/.em-current__warning/.em-current__add-weapon. */
-
-/* ── Modale d'assignation d'arme sur Tourelle ──────────────────────────────── */
-/* Styles migrés dans tourelle-assignment-modal/tourelle-assignment-modal.scss
-   (préfixe .tam-*). Ce composant n'utilise plus aucune classe .em-modal*. */

@@ -1,45 +1,56 @@
-/* ── Page de détail d'une saison ──────────────────────────────────────────── */
-/* Même esprit que season-join.scss */
-
 .season-detail-page {
   max-width: 1100px;
   margin: 0 auto;
   padding: 40px 24px;
 
   h1 {
-    color: var(--clr-accent);
+    font-family: var(--font-display);
+    color: var(--tb-os);
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.04em;
     margin-bottom: 8px;
+    text-shadow: var(--shadow-stamp);
   }
 
   h2 {
-    color: var(--clr-text);
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-family: var(--font-text);
+    color: var(--tb-os);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     margin: 24px 0 12px;
+    border-left: 3px solid var(--tb-danger);
+    padding-left: 10px;
   }
 
   h3 {
-    color: var(--clr-text-muted);
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.18em;
     margin: 16px 0 8px;
   }
 }
 
 .season-detail-back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 16px;
-  color: var(--clr-text-muted);
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-decoration: none;
+  transition: color 160ms;
 
   &:hover {
-    color: var(--clr-accent);
+    color: var(--tb-danger);
   }
 }
 
@@ -52,47 +63,59 @@
 
 .season-detail-delete {
   background: transparent;
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
-  border-radius: 4px;
+  border: 1px solid rgba(162, 58, 28, 0.5);
+  color: var(--tb-rouille-lt);
+  border-radius: var(--r-sm);
   padding: 8px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 160ms, border-color 160ms;
 
   &:hover {
-    background: rgba(var(--clr-accent-rgb), 0.15);
+    background: rgba(162, 58, 28, 0.12);
+    border-color: var(--tb-rouille);
   }
 }
 
 .season-detail-state {
   display: inline-block;
-  background: rgba(var(--clr-accent-cyan-rgb), 0.15);
-  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.3);
-  color: var(--clr-accent-cyan);
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  background: rgba(78, 124, 138, 0.15);
+  border: 1px solid rgba(78, 124, 138, 0.4);
+  color: var(--tb-coolant);
+  padding: 2px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.12em;
 }
 
 .season-detail-loading {
   text-align: center;
   padding: 60px 20px;
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .season-detail-error {
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   margin-bottom: 16px;
-  font-size: 0.9rem;
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  background: rgba(162, 58, 28, 0.12);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
 }
 
 .season-detail-section {
@@ -101,43 +124,51 @@
 
 .season-detail-state-badge {
   display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: rgba(var(--clr-accent-cyan-rgb), 0.15);
-  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.3);
-  color: var(--clr-accent-cyan);
+  letter-spacing: 0.12em;
+  background: rgba(78, 124, 138, 0.15);
+  border: 1px solid rgba(78, 124, 138, 0.4);
+  color: var(--tb-coolant);
 }
 
 .season-detail-role-badge {
   display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: rgba(var(--clr-accent-rgb), 0.12);
-  border: 1px solid rgba(var(--clr-accent-rgb), 0.25);
-  color: var(--clr-accent);
+  padding: 2px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  background: rgba(230, 180, 28, 0.12);
+  border: 1px solid rgba(230, 180, 28, 0.35);
+  color: var(--tb-danger);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-/* ── Carte d'état (organisateur) ──────────────────────────────────────────── */
+// ─── Carte d'état (organisateur) ─────────────────────────────────────────────
 
 .season-state-card {
-  background: var(--clr-bg-surface);
-  border: 1px solid var(--clr-border-subtle);
-  border-radius: 8px;
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin: 20px 0 8px;
+  box-shadow: var(--shadow-stamp);
 
   &__message {
-    color: var(--clr-text-muted);
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-dim);
     font-size: 0.9rem;
+    line-height: 1.5;
   }
 
   &__actions {
@@ -153,21 +184,26 @@
 
   &__btn-close {
     background: transparent;
-    border: 1px solid var(--clr-accent);
-    color: var(--clr-accent);
-    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    color: var(--text-dim);
+    border-radius: var(--r-sm);
     padding: 8px 18px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 160ms, border-color 160ms;
 
     &:hover:not(:disabled) {
-      background: rgba(var(--clr-accent-rgb), 0.12);
+      background: var(--tb-danger);
+      border-color: var(--tb-danger);
+      color: var(--tb-bitume);
     }
 
     &:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
     }
   }
@@ -176,14 +212,18 @@
 .season-detail-danger-zone {
   margin-top: 40px;
   padding-top: 16px;
-  border-top: 1px solid var(--clr-border-subtle);
+  border-top: 1px solid var(--border-rust);
 
   h3 {
-    color: var(--clr-accent);
+    color: var(--tb-rouille-lt);
+    border-left: 3px solid var(--tb-rouille);
+    padding-left: 10px;
+    margin-bottom: 8px;
   }
 
   p {
-    color: var(--clr-text-muted);
+    font-family: var(--font-text);
+    color: var(--text-dim);
     font-size: 0.85rem;
     margin-bottom: 12px;
   }

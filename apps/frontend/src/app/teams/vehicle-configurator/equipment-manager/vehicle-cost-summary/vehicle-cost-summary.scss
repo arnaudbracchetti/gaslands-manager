@@ -1,22 +1,15 @@
-/* ── VehicleCostSummary — nom, emplacements, coût du véhicule ───────────────── */
-/* Styles migrés depuis equipment-manager.scss (`.em-current__vehicle-name`,
-   `.em-current__slots`, `.em-current__cost*`, `.em-current__icon`), préfixe
-   renommé `.vcs-*` — composant désormais autonome (encapsulation Angular). */
-
-/* `display: contents` : l'élément hôte `<app-vehicle-cost-summary>` disparaît
-   de la boîte — ses 3 enfants (nom, emplacements, coût) participent directement
-   au flex column/gap de `.em-current__header`, comme avant l'extraction. */
 :host {
   display: contents;
 }
 
 .vcs-name {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--clr-text);
-  // Troncature — même traitement que .option__name/.choice-card__name pour
-  // les noms longs ("Forteresse Mobile"...).
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -24,16 +17,17 @@
 
 .vcs-slots {
   margin: 0;
-  font-size: 0.85rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
 
   strong {
-    color: var(--clr-accent-cyan);
+    color: var(--tb-danger);
+    font-weight: 700;
   }
 }
 
-/* Icônes 🛢/🔧 — mêmes dimensions que `.tb-icon` (team-budget), pour une
-   iconographie cohérente entre les deux blocs de l'en-tête récap. */
 .vcs-icon {
   width: 13px;
   height: 13px;
@@ -52,15 +46,17 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 0.85rem;
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
 
   &--total {
     margin-top: 4px;
     padding-top: 4px;
-    border-top: 1px solid var(--clr-border);
-    color: var(--clr-accent-cyan);
+    border-top: 1px solid var(--border-rust);
+    color: var(--tb-danger);
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.85rem;
   }
 }

@@ -1,89 +1,235 @@
-/* Styles globaux de l'application Gaslands Manager */
+// ─── Polices — Terres Brûlées ────────────────────────────────────────────────
+// Anton (display), Oswald (titres + corps), Space Mono (données / tags)
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 
-// ─── Design tokens — propriétés CSS natives ─────────────────────────────────
-// Définies dans :root : disponibles partout dans l'application sans import,
-// y compris à l'intérieur des styles Angular encapsulés (pas de ::ng-deep
-// nécessaire). Visibles dans les DevTools (onglet Styles → :root).
-//
-// Convention : --clr-* pour les couleurs.
-// - Couleurs pleines   → var(--clr-accent)
-// - Variantes rgba()   → rgba(var(--clr-accent-rgb), 0.15)
-//   Les valeurs RGB séparées (*-rgb) compensent l'impossibilité d'extraire
-//   les canaux d'une valeur hex dans une fonction rgba().
-// Ne jamais coder une couleur en dur dans un fichier .scss de composant.
+// ─── Design tokens — Terres Brûlées ─────────────────────────────────────────
 :root {
-  /* ── Couleurs d'accent ──────────────────────────────────────────────────── */
-  --clr-accent:      #e94560;   /* rouge principal : boutons, bordures actives, titres */
-  --clr-accent-cyan: #7ec8e3;   /* cyan secondaire : boutons alternatifs, stats, badges */
-  --clr-warning:     #f0a500;   /* orange : avertissements (Tourelle orpheline…) */
-  --clr-success:     #2ecc71;   /* vert succès : action d'ajout positive (bouton "+") */
+  // ── Palette principale ────────────────────────────────────────────────────
+  --tb-bitume:  #14100C;
+  --tb-sable:   #C98A47;
+  --tb-os:      #E7DDC6;
+  --tb-rouille: #A23A1C;
+  --tb-danger:  #E6B41C;
 
-  --clr-accent-rgb:      233, 69, 96;    /* canaux de --clr-accent pour rgba() */
-  --clr-accent-cyan-rgb: 126, 200, 227;  /* canaux de --clr-accent-cyan pour rgba() */
-  --clr-success-rgb:     46, 204, 113;   /* canaux de --clr-success pour rgba() */
+  // ── Surfaces bitume ───────────────────────────────────────────────────────
+  --tb-black:    #0C0907;
+  --tb-stripe:   #161210;
+  --tb-bitume-2: #1B140E;
+  --tb-bitume-3: #221A13;
+  --tb-bitume-4: #2A2018;
+  --tb-earth:    #251A11;
+  --tb-burnt:    #6E3D1C;
 
-  /* ── Fonds (du plus sombre au moins sombre) ─────────────────────────────── */
-  --clr-bg-base:    #0a0a14;   /* fond app, cartes catalogue */
-  --clr-bg-surface: #0f0f1a;   /* navbar, cartes d'équipe, fond formulaire */
-  --clr-bg-modal:   #12121e;   /* boîte des modales */
-  --clr-bg-item:    #1a1a28;   /* items de liste (équipement actuel) */
+  // ── Métal ─────────────────────────────────────────────────────────────────
+  --tb-metal-1: #2E261D;
+  --tb-metal-2: #3A3026;
+  --tb-metal-3: #4A3E2F;
+  --tb-metal-4: #5A4C39;
 
-  /* ── Bordures ───────────────────────────────────────────────────────────── */
-  --clr-border:        #2a2a3a;   /* bordure standard */
-  --clr-border-subtle: #1e1e2e;   /* bordure secondaire (cards catalogue, footers) */
+  // ── Sable / désert ────────────────────────────────────────────────────────
+  --tb-sand-deep: #B06A30;
+  --tb-sand:      #C98A47;
+  --tb-sand-lt:   #DDD0B4;
+  --tb-paper:     #E7DDC6;
+  --tb-paper-hi:  #EFE6D2;
 
-  /* ── Texte ──────────────────────────────────────────────────────────────── */
-  --clr-text:          #e0e0e0;   /* texte principal */
-  --clr-text-muted:    #888;      /* texte secondaire (stats, labels) */
-  --clr-text-hint:     #999;      /* texte atténué (hints, descriptions) */
-  --clr-text-disabled: #555;      /* états désactivés, boutons neutres */
+  // ── Accents ───────────────────────────────────────────────────────────────
+  --tb-rouille-deep: #7E2C13;
+  --tb-rouille-lt:   #C2522E;
+  --tb-danger-deep:  #B98A12;
+  --tb-danger-lt:    #F0C840;
+  --tb-ember:        #F0B25C;
 
-  /* ── Overlay ────────────────────────────────────────────────────────────── */
-  --clr-overlay: rgba(0, 0, 0, 0.7);   /* fond semi-transparent des modales */
+  // ── Statuts sémantiques ───────────────────────────────────────────────────
+  --tb-toxic:   #8A9B2E;
+  --tb-coolant: #4E7C8A;
+  --tb-warn:    #E6B41C;
+  --tb-crit:    #A23A1C;
+
+  // ── Surfaces sémantiques ──────────────────────────────────────────────────
+  --surface-page:   var(--tb-bitume);
+  --surface-sunk:   var(--tb-black);
+  --surface-raised: var(--tb-bitume-3);
+  --surface-hover:  var(--tb-bitume-4);
+  --surface-metal:  var(--tb-metal-2);
+  --surface-invert: var(--tb-os);
+  --surface-hero:   var(--tb-burnt);
+
+  // ── Texte sémantique ──────────────────────────────────────────────────────
+  --text-strong: var(--tb-os);
+  --text-body:   rgba(231, 221, 198, 0.82);
+  --text-dim:    rgba(231, 221, 198, 0.55);
+  --text-faint:  rgba(231, 221, 198, 0.32);
+  --text-invert: var(--tb-bitume-2);
+  --text-signal: var(--tb-danger);
+  --text-accent: var(--tb-rouille);
+
+  // ── Bordures ──────────────────────────────────────────────────────────────
+  --border-hair:   rgba(231, 221, 198, 0.18);
+  --border-strong: rgba(231, 221, 198, 0.40);
+  --border-rust:   rgba(162, 58, 28, 0.55);
+  --border-signal: var(--tb-danger);
+
+  // ── Interactif ────────────────────────────────────────────────────────────
+  --action-primary:      var(--tb-danger);
+  --action-primary-ink:  var(--tb-bitume);
+  --action-danger:       var(--tb-rouille);
+  --focus-ring:          var(--tb-danger);
+
+  // ── Typographie ───────────────────────────────────────────────────────────
+  --font-display: 'Anton', 'Oswald', Impact, sans-serif;
+  --font-text:    'Oswald', 'Arial Narrow', sans-serif;
+  --font-mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
+
+  // ── Effets ────────────────────────────────────────────────────────────────
+  --noise-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --stripe-danger:    repeating-linear-gradient(135deg, var(--tb-danger) 0 40px, var(--tb-stripe) 40px 80px);
+  --stripe-danger-ui: repeating-linear-gradient(135deg, var(--tb-danger) 0 16px, var(--tb-stripe) 16px 32px);
+  --stripe-rust:      repeating-linear-gradient(135deg, var(--tb-rouille) 0 16px, var(--tb-stripe) 16px 32px);
+  --metal-sheen:      linear-gradient(115deg, var(--tb-metal-3) 0%, var(--tb-metal-1) 38%, var(--tb-metal-4) 62%, var(--tb-metal-1) 100%);
+  --earth-glow:       radial-gradient(ellipse 120% 100% at 50% 0%, var(--tb-earth) 0%, var(--tb-bitume) 70%);
+  --sun-flare:        radial-gradient(ellipse 90% 70% at 50% 22%, var(--tb-ember) 0%, #d59248 12%, var(--tb-sand-deep) 34%, #743f1d 64%, #2a1810 100%);
+  --vignette:         inset 0 0 320px 90px rgba(20, 8, 2, 0.6);
+  --vignette-sm:      inset 0 0 120px 30px rgba(20, 8, 2, 0.5);
+  --shadow-stamp:     0 3px 0 rgba(0, 0, 0, 0.45);
+  --shadow-stamp-lg:  0 6px 0 rgba(36, 14, 4, 0.45);
+  --glow-danger:      0 0 40px rgba(230, 180, 28, 0.35);
+  --glow-rust:        0 0 40px rgba(162, 58, 28, 0.4);
+  --ease-mech:        cubic-bezier(0.2, 0, 0, 1);
+
+  // ── Espacements (base 4px) ────────────────────────────────────────────────
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+
+  // ── Rayons — carré par défaut ─────────────────────────────────────────────
+  --r-0:   0;
+  --r-sm:  2px;
+  --r-md:  4px;
+
+  // ── Bordures ──────────────────────────────────────────────────────────────
+  --bw-bold: 3px;
+
+  // ── Bridge de compatibilité (templates existants utilisent --clr-*) ───────
+  // Les composants Angular utilisent ces variables via var(--clr-*) dans
+  // leurs SCSS. On les remplace par des alias vers les tokens TB.
+  --clr-accent:      var(--tb-danger);
+  --clr-accent-cyan: var(--tb-rouille-lt);
+  --clr-warning:     var(--tb-ember);
+  --clr-success:     var(--tb-toxic);
+  --clr-bg-base:     var(--tb-bitume);
+  --clr-bg-surface:  var(--tb-bitume-2);
+  --clr-bg-modal:    var(--tb-bitume-3);
+  --clr-bg-item:     var(--tb-metal-1);
+  --clr-border:      var(--border-rust);
+  --clr-border-subtle: var(--border-hair);
+  --clr-text:          var(--tb-os);
+  --clr-text-muted:    var(--text-dim);
+  --clr-text-hint:     var(--text-faint);
+  --clr-text-disabled: var(--text-faint);
+  --clr-overlay:       rgba(12, 9, 7, 0.82);
+
+  // Les valeurs RGB pour rgba() — conservées pour les composants qui les utilisent encore
+  --clr-accent-rgb:      230, 180, 28;   // = --tb-danger
+  --clr-accent-cyan-rgb: 194, 82, 46;    // = --tb-rouille-lt
+  --clr-success-rgb:     138, 155, 46;   // = --tb-toxic
 }
 
-// Reset CSS : supprime les marges et paddings par défaut des navigateurs
+// ─── Utilitaires Terres Brûlées ──────────────────────────────────────────────
+
+// Grain / texture film noise sur toute surface positionnée
+.tb-grain {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.11;
+    mix-blend-mode: overlay;
+    background-image: var(--noise-svg);
+    background-size: 180px 180px;
+  }
+}
+
+// Ruban de rayures danger (bande d'alerte / CTA)
+.tb-tape {
+  background-image: var(--stripe-danger-ui);
+  box-shadow: var(--shadow-stamp);
+}
+
+// Coins en L (marques d'enregistrement)
+.tb-brackets {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: var(--bw-bold) solid var(--tb-danger);
+  }
+
+  &::before {
+    top: 12px;
+    left: 12px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  &::after {
+    bottom: 12px;
+    right: 12px;
+    border-left: 0;
+    border-top: 0;
+  }
+}
+
+// ─── Reset CSS ───────────────────────────────────────────────────────────────
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-// Fond sombre sur toute l'application, police système
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--clr-bg-base);
-  color: var(--clr-text);
+  font-family: var(--font-text);
+  background: var(--tb-bitume);
+  color: var(--tb-os);
   min-height: 100vh;
 }
 
-// Styles de la barre de navigation (définis ici car app.ts utilise le sélecteur global)
+// ─── Navbar ──────────────────────────────────────────────────────────────────
+
 .navbar {
-  background: var(--clr-bg-surface);
-  border-bottom: 2px solid var(--clr-accent);
+  background: var(--tb-black);
+  border-bottom: 2px solid var(--border-rust);
   padding: 0 24px;
   height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  // sticky + z-index : la navbar reste visible lors du scroll
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 20px rgba(var(--clr-accent-rgb), 0.2);
+  box-shadow: var(--shadow-stamp);
 }
 
 .navbar-brand {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--clr-accent);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--tb-danger);
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 3px;
-  transition: opacity 0.2s;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transition: opacity 160ms var(--ease-mech);
 
   &:hover {
-    opacity: 0.85;
+    opacity: 0.8;
   }
 }
 
@@ -93,21 +239,21 @@ body {
   list-style: none;
 
   a {
-    color: var(--clr-text-muted);
+    font-family: var(--font-mono);
+    color: var(--text-dim);
     text-decoration: none;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 400;
     text-transform: uppercase;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    transition: color 0.2s;
+    letter-spacing: 0.12em;
     padding: 4px 0;
     border-bottom: 2px solid transparent;
+    transition: color 160ms, border-color 160ms;
 
-    // routerLinkActive ajoute la classe "active" sur le lien courant
     &:hover,
     &.active {
-      color: var(--clr-accent);
-      border-bottom-color: var(--clr-accent);
+      color: var(--tb-danger);
+      border-bottom-color: var(--tb-danger);
     }
   }
 }
@@ -116,7 +262,7 @@ main {
   min-height: calc(100vh - 64px);
 }
 
-// ─── Zone utilisateur dans la navbar ────────────────────────────────────────
+// ─── Zone utilisateur (navbar) ────────────────────────────────────────────────
 
 .navbar-user {
   display: flex;
@@ -125,182 +271,173 @@ main {
 }
 
 .user-name {
-  color: var(--clr-accent-cyan);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.12em;
 }
 
-// Bouton de déconnexion
 .btn-logout {
   background: transparent;
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
   padding: 6px 14px;
-  border-radius: 3px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.1em;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 160ms, color 160ms, border-color 160ms;
 
   &:hover {
-    background: var(--clr-accent);
-    color: #fff;
+    background: var(--tb-rouille);
+    border-color: var(--tb-rouille);
+    color: var(--tb-os);
   }
 }
 
-// Lien "Connexion" dans la navbar (quand non connecté)
 .btn-nav-auth {
-  color: var(--clr-accent);
+  font-family: var(--font-mono);
+  color: var(--tb-danger);
   text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  border: 1px solid var(--clr-accent);
+  letter-spacing: 0.1em;
+  border: 1px solid var(--border-signal);
   padding: 6px 14px;
-  border-radius: 3px;
-  transition: background 0.2s, color 0.2s;
+  border-radius: var(--r-sm);
+  transition: background 160ms, color 160ms;
 
   &:hover {
-    background: var(--clr-accent);
-    color: #fff;
+    background: var(--tb-danger);
+    color: var(--tb-bitume);
   }
 }
 
-// ─── Formulaires d'authentification (Login / Register) ──────────────────────
+// ─── Formulaires d'authentification ──────────────────────────────────────────
 
-// Centrage vertical de la carte de formulaire
 .auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  // Hauteur totale moins la navbar (64px)
   min-height: calc(100vh - 64px);
   padding: 2rem;
+  background: var(--earth-glow);
 }
 
-// Carte du formulaire
 .auth-card {
-  background: var(--clr-bg-surface);
-  border: 1px solid rgba(var(--clr-accent-rgb), 0.4);
-  border-radius: 4px;
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 2.5rem;
   width: 100%;
   max-width: 440px;
-  // Halo rouge subtil autour de la carte
-  box-shadow: 0 0 40px rgba(var(--clr-accent-rgb), 0.12);
+  box-shadow: var(--shadow-stamp-lg);
+  position: relative;
+
+  // Coins d'enregistrement
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--tb-danger);
+  }
+
+  &::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+  &::after  { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
 }
 
 .auth-title {
-  color: var(--clr-accent);
-  font-size: 1.8rem;
-  font-weight: 900;
-  letter-spacing: 4px;
+  font-family: var(--font-display);
+  color: var(--tb-danger);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
   margin-bottom: 2rem;
+  text-shadow: var(--shadow-stamp);
 }
 
-// Groupe label + input
 .form-group {
   margin-bottom: 1.25rem;
 
   label {
     display: block;
-    color: var(--clr-text-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.18em;
     margin-bottom: 6px;
   }
 
   input {
     width: 100%;
-    background: #16161f;
-    border: 1px solid var(--clr-border);
-    color: var(--clr-text);
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-os);
     padding: 10px 14px;
-    border-radius: 3px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-text);
     font-size: 1rem;
-    transition: border-color 0.2s;
+    transition: border-color 160ms;
 
     &:focus {
       outline: none;
-      border-color: var(--clr-accent);
-      box-shadow: 0 0 0 2px rgba(var(--clr-accent-rgb), 0.15);
+      border-color: var(--tb-danger);
+      box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.18);
     }
 
     &::placeholder {
-      color: #444;
+      color: var(--text-faint);
     }
   }
 }
 
-// Message d'erreur en rouge
 .auth-error {
-  background: rgba(var(--clr-accent-rgb), 0.08);
-  border: 1px solid rgba(var(--clr-accent-rgb), 0.5);
-  color: var(--clr-accent);
+  background: rgba(162, 58, 28, 0.12);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
   padding: 10px 14px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   margin-bottom: 1.25rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
 }
 
-// Bouton principal du formulaire
+// ─── Boutons globaux ──────────────────────────────────────────────────────────
+
 .btn-primary {
   width: 100%;
-  background: var(--clr-accent);
-  color: #fff;
+  background: var(--tb-danger);
+  color: var(--tb-bitume);
   border: none;
   padding: 12px;
-  border-radius: 3px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  border-radius: var(--r-sm);
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: opacity 160ms, transform 90ms;
   margin-top: 0.5rem;
+  box-shadow: var(--shadow-stamp);
 
   &:hover:not(:disabled) {
-    opacity: 0.9;
+    opacity: 0.88;
     transform: translateY(-1px);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Bouton secondaire (Annuler, actions moins importantes)
-// Fond transparent, bordure blanche — contraste avec .btn-primary
-.btn-secondary {
-  width: 100%;
-  background: transparent;
-  color: var(--clr-text);
-  border: 1px solid var(--clr-text);
-  padding: 12px;
-  border-radius: 3px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  margin-top: 0.5rem;
-
-  &:hover:not(:disabled) {
-    background: rgba(224, 224, 224, 0.1);
-    border-color: #fff;
-    color: #fff;
   }
 
   &:disabled {
@@ -309,17 +446,46 @@ main {
   }
 }
 
-// Lien de bascule entre login et register
+.btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: var(--tb-os);
+  border: 2px solid var(--border-rust);
+  padding: 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, color 160ms;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    background: var(--tb-bitume-4);
+    border-color: var(--border-strong);
+    color: var(--tb-os);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
 .auth-switch {
   text-align: center;
   margin-top: 1.5rem;
-  color: #666;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
 
   a {
-    color: var(--clr-accent);
+    color: var(--tb-danger);
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 700;
 
     &:hover {
       text-decoration: underline;

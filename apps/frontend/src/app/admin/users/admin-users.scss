@@ -1,5 +1,3 @@
-/* ── Page AdminUsers — layout global ───────────────────────────────────────── */
-
 .admin-users-page {
   max-width: 1100px;
   margin: 0 auto;
@@ -10,76 +8,86 @@
   margin-bottom: 32px;
 
   h1 {
-    color: var(--clr-accent);
+    font-family: var(--font-display);
+    color: var(--tb-danger);
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.04em;
   }
 }
 
-/* Message d'erreur API */
 .admin-users-error {
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  background: rgba(162, 58, 28, 0.15);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   margin-bottom: 24px;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
 }
-
-/* ── États chargement / vide ──────────────────────────────────────────────── */
 
 .admin-users-loading,
 .admin-users-empty {
   text-align: center;
   padding: 60px 20px;
-  color: var(--clr-text-muted);
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
-
-/* ── Table ─────────────────────────────────────────────────────────────────── */
 
 .admin-users-table {
   width: 100%;
   border-collapse: collapse;
-  color: var(--clr-text);
+  color: var(--tb-os);
 
   th,
   td {
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid var(--clr-border);
+    border-bottom: 1px solid var(--border-hair);
   }
 
   th {
-    color: var(--clr-text-muted);
-    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.16em;
+  }
+
+  tr:hover td {
+    background: var(--tb-bitume-4);
   }
 }
 
-/* Badges de statut */
 .badge {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-weight: 700;
 
   &--active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    background: rgba(138, 155, 46, 0.15);
+    color: var(--tb-toxic);
+    border: 1px solid rgba(138, 155, 46, 0.3);
   }
 
   &--inactive {
-    background: rgba(var(--clr-accent-rgb), 0.15);
-    color: var(--clr-accent);
+    background: rgba(162, 58, 28, 0.12);
+    color: var(--tb-rouille-lt);
+    border: 1px solid rgba(162, 58, 28, 0.3);
   }
 }
-
-/* ── Actions ──────────────────────────────────────────────────────────────── */
 
 .admin-users-actions {
   display: flex;
@@ -89,21 +97,26 @@
 
 .btn-toggle,
 .btn-delete {
-  padding: 6px 14px;
-  font-size: 0.85rem;
-  border-radius: 4px;
-  border: 1px solid var(--clr-border);
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-rust);
   background: transparent;
-  color: var(--clr-text);
+  color: var(--text-dim);
   cursor: pointer;
+  transition: border-color 160ms, color 160ms, background 160ms;
 
   &:hover {
-    border-color: var(--clr-accent);
-    color: var(--clr-accent);
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
   }
 }
 
 .btn-delete:hover {
-  border-color: var(--clr-accent);
-  background: rgba(var(--clr-accent-rgb), 0.1);
+  border-color: var(--tb-rouille);
+  color: var(--tb-rouille-lt);
+  background: rgba(162, 58, 28, 0.1);
 }

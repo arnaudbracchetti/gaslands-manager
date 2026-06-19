@@ -1,6 +1,3 @@
-/* ── Page Seasons — layout global ─────────────────────────────────────────── */
-/* Miroir de teams.scss : même structure (en-tête, erreur, état vide, grille). */
-
 .seasons-page {
   max-width: 1000px;
   margin: 0 auto;
@@ -12,20 +9,34 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--border-rust);
 
   h1 {
-    color: var(--clr-accent);
+    font-family: var(--font-display);
+    color: var(--tb-os);
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.04em;
+
+    &::after {
+      content: '// SAISONS';
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: var(--text-signal);
+      letter-spacing: 0.18em;
+      margin-left: 12px;
+      vertical-align: middle;
+    }
   }
 }
 
 .btn-add {
   width: auto;
-  padding: 10px 24px;
-  font-size: 0.95rem;
+  padding: 10px 22px;
+  font-size: 0.9rem;
 }
 
 .seasons-header__actions {
@@ -39,12 +50,12 @@
   }
 }
 
-/* ── Modales (création / rejoindre) ─────────────────────────────────────────── */
+// ─── Modales (création / rejoindre) ──────────────────────────────────────────
 
 .seasons-modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--clr-overlay, rgba(0, 0, 0, 0.6));
+  background: var(--clr-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,28 +64,34 @@
 }
 
 .seasons-modal-content {
-  background: var(--clr-bg-surface);
-  border-radius: 8px;
+  background: var(--tb-bitume-3);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-stamp-lg);
 }
 
 .seasons-join-modal {
   padding: 28px 28px 24px;
 
   h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--clr-text);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     margin-bottom: 8px;
   }
 
   &__hint {
-    color: var(--clr-text-muted);
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
     margin-bottom: 20px;
   }
 
@@ -92,45 +109,51 @@
 }
 
 .seasons-error {
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  background: rgba(162, 58, 28, 0.12);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   margin-bottom: 24px;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
 }
-
-/* ── État chargement ──────────────────────────────────────────────────────── */
 
 .seasons-loading {
   text-align: center;
   padding: 60px 20px;
-  color: var(--clr-text-muted);
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-
-/* ── État vide ────────────────────────────────────────────────────────────── */
 
 .seasons-empty {
   text-align: center;
   padding: 80px 20px;
 
   &__icon {
-    font-size: 4rem;
+    font-size: 3.5rem;
     margin-bottom: 16px;
+    opacity: 0.6;
   }
 
   &__title {
-    color: var(--clr-text);
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    font-size: 1.4rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     margin-bottom: 8px;
   }
 
   &__subtitle {
-    color: var(--clr-text-muted);
-    font-size: 0.95rem;
+    font-family: var(--font-text);
+    color: var(--text-dim);
+    font-size: 0.9rem;
     margin-bottom: 24px;
   }
 
@@ -140,8 +163,6 @@
     display: inline-block;
   }
 }
-
-/* ── Grille des cartes de saisons ─────────────────────────────────────────── */
 
 .seasons-grid {
   display: grid;

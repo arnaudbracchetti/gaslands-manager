@@ -1,88 +1,119 @@
-// Section hero : grande bannière plein écran
+// ─── Hero — plein écran, fond scorched-earth ──────────────────────────────────
+
 .hero {
-  // Dégradé propre à cette page — pas de token global (couleurs bleues marines
-  // distinctes du thème sombre général de l'app).
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: white;
+  background: var(--earth-glow);
+  color: var(--tb-os);
   padding: 80px 20px;
   text-align: center;
   min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+
+  // Grain texture over the hero
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.10;
+    mix-blend-mode: overlay;
+    background-image: var(--noise-svg);
+    background-size: 180px 180px;
+  }
+
+  // Coins d'enregistrement (registration marks)
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    border: 1px solid var(--border-rust);
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 .hero-content {
   max-width: 700px;
+  position: relative;
+  z-index: 2;
 }
 
 .hero-title {
-  font-size: clamp(2rem, 6vw, 4rem); // clamp = taille responsive entre 2rem et 4rem
-  font-weight: 900;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 6px;
-  color: var(--clr-accent);
-  // Effet néon : ombre lumineuse autour du texte
-  text-shadow:
-    0 0 20px rgba(var(--clr-accent-rgb), 0.6),
-    0 0 40px rgba(var(--clr-accent-rgb), 0.3);
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  color: var(--tb-danger);
+  text-shadow: var(--shadow-stamp-lg);
   margin-bottom: 1.5rem;
 }
 
 .hero-subtitle {
-  font-size: 1.2rem;
-  opacity: 0.85;
-  line-height: 1.7;
+  font-family: var(--font-text);
+  font-weight: 300;
+  font-size: 1.1rem;
+  color: var(--text-body);
+  line-height: 1.6;
   margin-bottom: 2.5rem;
+  letter-spacing: 0.02em;
 }
 
 .hero-actions {
   display: flex;
   gap: 1rem;
   justify-content: center;
-  flex-wrap: wrap; // Sur mobile, les boutons passent à la ligne
+  flex-wrap: wrap;
 }
 
-// Styles des boutons
 .btn {
-  padding: 14px 32px;
-  border-radius: 4px;
-  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-text);
+  font-weight: 600;
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  letter-spacing: 0.06em;
+  font-size: 0.95rem;
+  transition: all 160ms var(--ease-mech);
   display: inline-block;
+  box-shadow: var(--shadow-stamp);
 
   &-primary {
-    background: var(--clr-accent);
-    color: white;
-    box-shadow: 0 4px 15px rgba(var(--clr-accent-rgb), 0.4);
+    background: var(--tb-danger);
+    color: var(--tb-bitume);
+    border: 2px solid var(--tb-danger);
 
     &:hover {
-      background: #c73652; // assombri manuel — pas de token pour le survol du hero
-      transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(var(--clr-accent-rgb), 0.5);
+      background: var(--tb-danger-lt);
+      border-color: var(--tb-danger-lt);
+      transform: translateY(-2px);
+      box-shadow: var(--glow-danger);
     }
   }
 
   &-secondary {
-    border: 2px solid rgba(255, 255, 255, 0.7);
-    color: white;
+    background: transparent;
+    border: 2px solid var(--border-rust);
+    color: var(--tb-os);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: white;
-      transform: translateY(-3px);
+      background: var(--tb-bitume-4);
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
     }
   }
 }
 
-// Grille des 4 cartes de fonctionnalités
+// ─── Section features ─────────────────────────────────────────────────────────
+
 .features {
   display: grid;
-  // auto-fit + minmax = responsive automatique : 4 colonnes sur large écran, 2 sur tablette, 1 sur mobile
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
   padding: 60px 20px;
@@ -91,43 +122,69 @@
 }
 
 .feature-card {
-  background: #16213e;   // couleur propre à la section hero
-  border: 1px solid #0f3460;
-  border-radius: 10px;
-  padding: 32px 24px;
-  color: white;
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 28px 22px;
+  color: var(--tb-os);
   text-decoration: none;
-  transition: all 0.25s ease;
+  transition: border-color 160ms, box-shadow 160ms, transform 90ms;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  box-shadow: var(--shadow-stamp);
+  position: relative;
+
+  // Coin bracket supérieur gauche
+  &::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 16px;
+    height: 16px;
+    border-top: 2px solid var(--tb-danger);
+    border-left: 2px solid var(--tb-danger);
+    opacity: 0;
+    transition: opacity 160ms;
+  }
 
   &:hover {
-    transform: translateY(-6px);
-    border-color: var(--clr-accent);
-    box-shadow: 0 8px 30px rgba(var(--clr-accent-rgb), 0.2);
+    border-color: var(--tb-danger);
+    box-shadow: var(--glow-danger);
+    transform: translateY(-3px);
+
+    &::before { opacity: 1; }
   }
 
   .feature-icon {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   h2 {
-    font-size: 1.4rem;
-    color: var(--clr-accent);
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--tb-danger);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   p {
-    opacity: 0.75;
-    line-height: 1.6;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-body);
+    line-height: 1.55;
     flex-grow: 1;
   }
 
   .feature-link {
-    color: var(--clr-accent);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--text-signal);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     margin-top: 0.5rem;
   }
 }

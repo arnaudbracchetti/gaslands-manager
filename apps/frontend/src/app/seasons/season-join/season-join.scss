@@ -1,17 +1,15 @@
-/* ── Page "Rejoindre une saison via code" ─────────────────────────────────── */
-/* Même esprit que seasons.scss / season-form.scss */
-
 .season-join-page {
   max-width: 600px;
   margin: 0 auto;
   padding: 40px 24px;
 
   h1 {
-    color: var(--clr-accent);
+    font-family: var(--font-display);
+    color: var(--tb-os);
     font-size: 2rem;
-    font-weight: 900;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.04em;
     margin-bottom: 24px;
   }
 }
@@ -19,126 +17,61 @@
 .season-join-loading {
   text-align: center;
   padding: 60px 20px;
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .season-join-error,
 .season-join-info {
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   margin-bottom: 16px;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
 }
 
 .season-join-error {
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  background: rgba(162, 58, 28, 0.12);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
 }
 
 .season-join-info {
-  background: var(--clr-bg-base);
-  border: 1px dashed var(--clr-border);
-  color: var(--clr-text-muted);
+  background: var(--tb-bitume);
+  border: 1px dashed var(--border-rust);
+  color: var(--text-dim);
 }
 
-/* ── Étape 3 : écran de succès ────────────────────────────────────────────── */
-
-.season-join-success {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-
-  &__card {
-    background: var(--clr-bg-surface);
-    border: 1px solid var(--clr-border-subtle);
-    border-radius: 12px;
-    padding: 40px 36px;
-    text-align: center;
-    max-width: 420px;
-    width: 100%;
-  }
-
-  &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--clr-ok, #3c7a4e);
-    color: #fff;
-    font-size: 1.6rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--clr-text);
-    margin-bottom: 12px;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
-  &__season {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--clr-text);
-    margin-bottom: 6px;
-  }
-
-  &__team {
-    color: var(--clr-text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 16px;
-  }
-
-  &__preview-badge {
-    display: inline-block;
-    background: var(--clr-bg-base);
-    border: 1px solid var(--clr-border);
-    color: var(--clr-text-muted);
-    font-size: 0.85rem;
-    padding: 6px 14px;
-    border-radius: 20px;
-    margin-bottom: 12px;
-  }
-
-  &__hint {
-    color: var(--clr-text-muted);
-    font-size: 0.85rem;
-    margin-bottom: 24px;
-  }
-
-  &__back {
-    display: inline-block;
-    width: auto;
-    padding: 10px 24px;
-    text-decoration: none;
-  }
-}
+// ─── Carte d'infos de la saison ───────────────────────────────────────────────
 
 .season-join-card {
-  background: var(--clr-bg-surface);
-  border: 1px solid var(--clr-border-subtle);
-  border-radius: 8px;
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 28px;
+  box-shadow: var(--shadow-stamp);
 
   h2 {
-    color: var(--clr-text);
+    font-family: var(--font-display);
+    color: var(--tb-os);
     font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     margin-bottom: 8px;
   }
 
   &__state,
   &__organizer,
   &__participants {
-    color: var(--clr-text-muted);
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
     margin-bottom: 4px;
   }
 }
@@ -148,27 +81,120 @@
 
   label {
     display: block;
-    color: var(--clr-text-hint);
-    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.18em;
     margin-bottom: 6px;
   }
 
   select {
     width: 100%;
-    background: var(--clr-bg-base);
-    border: 1px solid var(--clr-border);
-    color: var(--clr-text);
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-os);
     padding: 10px 12px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-text);
     font-size: 0.95rem;
-    font-family: inherit;
-    transition: border-color 0.2s;
+    transition: border-color 160ms;
 
     &:focus {
       outline: none;
-      border-color: var(--clr-accent);
+      border-color: var(--tb-danger);
     }
+  }
+}
+
+// ─── Écran de succès ──────────────────────────────────────────────────────────
+
+.season-join-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+
+  &__card {
+    background: var(--tb-bitume-2);
+    border: 2px solid var(--border-rust);
+    border-radius: var(--r-sm);
+    padding: 40px 36px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: var(--shadow-stamp-lg);
+  }
+
+  &__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--r-sm);
+    background: var(--tb-toxic);
+    color: var(--tb-bitume);
+    font-size: 1.4rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: var(--shadow-stamp);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 400;
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+
+  &__season {
+    font-family: var(--font-text);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+
+  &__team {
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+  }
+
+  &__preview-badge {
+    display: inline-block;
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    padding: 5px 14px;
+    border-radius: var(--r-sm);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  &__hint {
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 24px;
+  }
+
+  &__back {
+    display: inline-block;
+    width: auto;
+    padding: 10px 24px;
+    text-decoration: none;
   }
 }

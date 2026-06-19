@@ -1,10 +1,9 @@
-/* ── Carousel de sponsors ─────────────────────────────────────────────────── */
+// ─── Carousel de sponsors — style métal TB ────────────────────────────────────
 
 .sponsor-carousel {
   width: 100%;
 }
 
-/* En-tête : label + badge de verrouillage */
 .carousel-header {
   display: flex;
   align-items: center;
@@ -14,192 +13,178 @@
 }
 
 .carousel-label {
-  color: var(--clr-text-hint);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.18em;
 }
 
 .lock-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(80, 80, 80, 0.3);
-  border: 1px solid var(--clr-text-disabled);
-  color: var(--clr-text-muted);
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  background: var(--tb-metal-1);
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 2px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-/* Corps du carousel : flèches + carte */
 .carousel-wrapper {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-/* ── Boutons de navigation (flèches) ─────────────────────────────────────── */
+// ─── Boutons de navigation (flèches) — carrés métal ──────────────────────────
 
 .carousel-nav {
-  background: transparent;
-  border: 1px solid var(--clr-border);
-  color: var(--clr-text-muted);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-size: 1.6rem;
+  background: var(--tb-metal-1);
+  border: 2px solid var(--border-rust);
+  color: var(--text-dim);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: border-color 160ms, color 160ms, background 160ms;
   flex-shrink: 0;
-  /* Alignement vertical centré sur le nom du sponsor (haut de carte) */
   margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  box-shadow: var(--shadow-stamp);
 
   &:hover:not(:disabled) {
-    border-color: var(--clr-accent);
-    color: var(--clr-accent);
-    background: rgba(var(--clr-accent-rgb), 0.08);
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+    background: var(--tb-bitume-4);
   }
 
   &:disabled {
-    opacity: 0.35;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 }
 
-/* ── Carte sponsor ───────────────────────────────────────────────────────── */
+// ─── Carte sponsor ────────────────────────────────────────────────────────────
 
 .sponsor-card {
   flex: 1;
-  background: var(--clr-bg-base);
-  border: 2px solid var(--clr-accent);
-  border-radius: 8px;
+  background: var(--tb-bitume);
+  border: 2px solid var(--tb-danger);
+  border-radius: var(--r-sm);
   padding: 20px 22px;
   min-height: 300px;
   max-height: 440px;
   overflow-y: auto;
   position: relative;
-  transition: border-color 0.2s, opacity 0.2s;
+  transition: border-color 160ms, opacity 160ms;
+  box-shadow: var(--glow-danger);
 
-  /* Scrollbar discrète */
   scrollbar-width: thin;
-  scrollbar-color: var(--clr-border) transparent;
+  scrollbar-color: var(--border-rust) transparent;
 
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border-rust); border-radius: 0; }
 
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--clr-border);
-    border-radius: 3px;
-  }
-
-  /* État verrouillé */
   &.locked {
-    border-color: var(--clr-text-disabled);
-    opacity: 0.8;
+    border-color: var(--border-rust);
+    box-shadow: none;
+    opacity: 0.75;
   }
 
-  /* Carte vide (état de chargement) */
   &--empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--clr-text-disabled);
-    font-style: italic;
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     border-style: dashed;
   }
 }
 
-/* Compteur de position (ex: "3 / 13") */
 .sponsor-position {
-  color: var(--clr-text-disabled);
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.68rem;
   text-align: right;
   margin-bottom: 8px;
-  letter-spacing: 1px;
+  letter-spacing: 0.12em;
 }
 
-/* Nom du sponsor */
 .sponsor-name {
-  color: var(--clr-accent);
-  font-size: 1.25rem;
-  font-weight: 900;
+  font-family: var(--font-display);
+  color: var(--tb-danger);
+  font-size: 1.4rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.04em;
   margin-bottom: 10px;
-  line-height: 1.2;
+  line-height: 1.1;
+  text-shadow: var(--shadow-stamp);
 }
 
-/* Description courte — contenu HTML (converti depuis Markdown au chargement du
-   catalogue, cf. CatalogService.onModuleInit) : le style porté auparavant par
-   <p class="sponsor-description"> s'applique maintenant au <p> généré par
-   marked à l'intérieur du <div> (::ng-deep, même principe que .advantages-html
-   ci-dessous). */
 .sponsor-description {
   margin-bottom: 14px;
 
   ::ng-deep p {
     margin: 0;
-    color: #aaa;
-    font-size: 0.875rem;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    line-height: 1.55;
     font-style: italic;
-    line-height: 1.5;
   }
 }
 
-/* Badges des classes d'avantage */
 .sponsor-classes {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .class-badge {
-  background: rgba(var(--clr-accent-rgb), 0.12);
-  border: 1px solid rgba(var(--clr-accent-rgb), 0.35);
-  color: var(--clr-accent);
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  background: rgba(230, 180, 28, 0.1);
+  border: 1px solid rgba(230, 180, 28, 0.35);
+  color: var(--tb-danger);
+  padding: 2px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.12em;
   white-space: nowrap;
 }
 
-/* Zone des avantages */
 .advantages-section {
-  border-top: 1px solid var(--clr-border-subtle);
-  padding-top: 14px;
+  border-top: 1px solid var(--border-rust);
+  padding-top: 12px;
 }
 
 .advantages-title {
-  color: var(--clr-text-disabled);
-  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.22em;
   margin-bottom: 10px;
 }
 
-/*
- * Styles pour le HTML généré par marked (via [innerHTML]).
- *
- * ::ng-deep est nécessaire car Angular n'injecte pas les styles scoped
- * à l'intérieur du contenu rendu par [innerHTML].
- * Portée limitée à .advantages-html pour éviter les fuites de style.
- */
-/* stylelint-disable selector-combinator-space-before */
 .advantages-html {
   ::ng-deep ul {
     list-style: none;
@@ -207,69 +192,71 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
 
   ::ng-deep li {
-    color: #ccc;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-body);
     font-size: 0.85rem;
-    line-height: 1.55;
-    padding-left: 16px;
+    line-height: 1.5;
+    padding-left: 14px;
     position: relative;
 
     &::before {
       content: '›';
       position: absolute;
       left: 0;
-      color: var(--clr-accent);
+      color: var(--tb-danger);
       font-weight: 700;
     }
   }
 
   ::ng-deep strong {
-    color: var(--clr-text);
-    font-weight: 700;
+    color: var(--tb-os);
+    font-weight: 600;
   }
 
   ::ng-deep p {
-    color: #ccc;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-body);
     font-size: 0.85rem;
-    line-height: 1.55;
+    line-height: 1.5;
     margin: 0;
   }
 }
 
-/* ── Dots de navigation ──────────────────────────────────────────────────── */
+// ─── Dots de navigation — segments de barre ───────────────────────────────────
 
 .carousel-dots {
   display: flex;
   justify-content: center;
-  gap: 7px;
-  margin-top: 14px;
+  gap: 4px;
+  margin-top: 12px;
   flex-wrap: wrap;
-  padding: 0 50px; /* aligne avec la largeur de la carte */
+  padding: 0 50px;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--clr-border);
-  border: 1px solid var(--clr-border);
+  width: 18px;
+  height: 4px;
+  border-radius: 0;
+  background: var(--tb-metal-3);
+  border: none;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  transition: background 160ms, transform 90ms;
   padding: 0;
   flex-shrink: 0;
 
   &.active {
-    background: var(--clr-accent);
-    border-color: var(--clr-accent);
-    transform: scale(1.2);
+    background: var(--tb-danger);
+    transform: scaleY(1.5);
   }
 
   &:hover:not(.active):not(:disabled) {
-    background: var(--clr-text-disabled);
-    border-color: var(--clr-text-disabled);
+    background: var(--border-rust);
   }
 
   &:disabled {

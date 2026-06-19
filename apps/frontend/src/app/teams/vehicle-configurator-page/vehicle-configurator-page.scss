@@ -1,40 +1,8 @@
-/* ── Page de configuration de véhicule — layout ────────────────────────────── */
-/*
-  Mirroir de `.teams-page`/`.teams-header` (cf. teams.scss), mais avec un
-  max-width plus généreux : c'est précisément le but de cette page que de
-  libérer plus d'espace que l'ancienne modale (`min(1300px, 95vw)`).
-*/
-
 .vcp-page {
   max-width: 1600px;
   margin: 0 auto;
   padding: 40px 24px;
 }
-
-// ── Pile d'éléments sticky ────────────────────────────────────────────────
-// .vcp-header, .vc-intro (vehicle-configurator.scss) et .em-current
-// (equipment-manager.scss — carte récapitulative du véhicule) restent tous
-// visibles pendant le défilement, empilés sous la navbar globale (.navbar,
-// sticky top:0, height:64px — cf. styles.scss). Chaque élément déclare son
-// propre `top` = somme des hauteurs (+ marges/gaps) des éléments sticky qui
-// le précèdent, et un `background` opaque pour masquer le contenu qui défile
-// dessous.
-//
-//   navbar (64px) → .vcp-header (top:64, hauteur ~80px + margin 12px)
-//                 → .vc-intro   (top:156, hauteur ~40px) — MODE CRÉATION
-//                                "Véhicules autorisés par X :"
-//                 → .em-current (top:156, cf. equipment-manager.scss) — MODE ÉQUIPEMENT
-//                                carte récap (nom, emplacements, coût) + listes
-//                                Armes/Améliorations
-//
-// `.vc-intro` et `.em-current` partagent le MÊME `top:156px` car ils sont
-// MUTUELLEMENT EXCLUSIFS : le premier n'existe que tant qu'aucun véhicule
-// n'est choisi/chargé (`vehicle() === null`), le second seulement une fois
-// `vehicle()` non-nul (cf. vehicle-configurator.html) — jamais les deux en
-// même temps dans le DOM.
-//
-// ⚠ Si l'un de ces éléments change de taille (police, padding…), recalculer
-// les `top` suivants en conséquence — valeurs à ajuster visuellement.
 
 .vcp-header {
   display: flex;
@@ -43,54 +11,54 @@
   position: sticky;
   top: 64px;
   z-index: 40;
-  background: var(--clr-bg-base);
-  padding: 20px 0;
+  background: var(--tb-bitume);
+  padding: 16px 0;
   margin-bottom: 12px;
+  border-bottom: 2px solid var(--border-rust);
 
   h1 {
-    color: var(--clr-accent);
-    font-size: 2rem;
-    font-weight: 900;
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    font-size: 1.8rem;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 0.04em;
   }
 }
 
-// Sous ~760px, l'équipement repasse en une colonne (cf. .em-layout dans
-// equipment-manager.scss) — la pile sticky n'a plus de sens, retour au flux.
 @media (max-width: 760px) {
   .vcp-header {
     position: static;
     background: none;
     padding: 0;
     margin-bottom: 32px;
+    border-bottom: none;
   }
 }
 
 .vcp-back {
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
   text-decoration: none;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   white-space: nowrap;
+  transition: color 160ms;
 
   &:hover {
-    color: var(--clr-accent);
+    color: var(--tb-danger);
   }
 }
-
-/* ── États de chargement / erreur ──────────────────────────────────────────── */
 
 .vcp-status {
   text-align: center;
   padding: 60px 20px;
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 
-  &--loading {
-    color: var(--clr-text-muted);
-  }
-
-  &--error {
-    color: var(--clr-accent);
-  }
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
 }

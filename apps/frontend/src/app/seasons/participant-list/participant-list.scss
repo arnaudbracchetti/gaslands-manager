@@ -1,36 +1,45 @@
-/* ── Liste de participants ────────────────────────────────────────────────── */
-/* Même esprit que season-card.scss : surface, bordure subtile, tokens --clr-* */
+// ─── Liste de participants — style "standings" (BoardScreen TB) ───────────────
 
 .participant-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding: 0;
   margin: 0;
 
   &__item {
-    background: var(--clr-bg-surface);
-    border: 1px solid var(--clr-border-subtle);
-    border-radius: 6px;
+    background: var(--tb-bitume-2);
+    border: 2px solid var(--border-hair);
+    border-radius: var(--r-sm);
     padding: 12px 16px;
     display: flex;
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    box-shadow: var(--shadow-stamp);
+    transition: border-color 160ms;
+
+    // Ligne mise en avant : l'utilisateur courant
+    &--me {
+      border-color: var(--tb-danger);
+    }
   }
 
+  // Avatar — initiales dans un carré métal
   &__avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--clr-accent);
-    color: var(--clr-bg-base);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-sm);
+    background: var(--tb-metal-2);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-danger);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 400;
     flex-shrink: 0;
   }
 
@@ -43,57 +52,68 @@
   }
 
   &__name {
-    color: var(--clr-text);
+    font-family: var(--font-text);
     font-weight: 600;
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.95rem;
   }
 
+  // Badges statut/rôle
   &__badge {
-    background: rgba(var(--clr-accent-rgb), 0.1);
-    border: 1px solid rgba(var(--clr-accent-rgb), 0.25);
-    color: var(--clr-text-muted);
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--border-hair);
+    color: var(--text-dim);
+    padding: 2px 10px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 
     &--organizer {
-      background: rgba(var(--clr-accent-rgb), 0.15);
-      border-color: rgba(var(--clr-accent-rgb), 0.3);
-      color: var(--clr-accent);
+      background: rgba(230, 180, 28, 0.12);
+      border-color: rgba(230, 180, 28, 0.35);
+      color: var(--tb-danger);
     }
 
     &--pending {
-      background: var(--clr-bg-base);
-      border-color: var(--clr-border);
-      color: var(--clr-text-muted);
+      background: var(--tb-bitume);
+      border-color: var(--border-hair);
+      color: var(--text-faint);
     }
 
     &--rejected {
-      background: rgba(var(--clr-accent-rgb), 0.08);
-      border-color: rgba(var(--clr-accent-rgb), 0.2);
-      color: var(--clr-accent);
-      opacity: 0.7;
+      background: rgba(162, 58, 28, 0.08);
+      border-color: rgba(162, 58, 28, 0.25);
+      color: var(--tb-rouille-lt);
+      opacity: 0.8;
     }
   }
 
   &__actions {
     margin-left: auto;
-  }
-
-  &__actions {
     display: flex;
     gap: 8px;
   }
 
+  // Boutons Valider / Refuser / Promouvoir / Retirer
   &__validate,
-  &__reject {
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 600;
+  &__reject,
+  &__promote,
+  &__remove {
+    padding: 5px 12px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     cursor: pointer;
     border: 1px solid transparent;
-    transition: opacity 0.2s;
+    transition: opacity 160ms, background 160ms, border-color 160ms;
 
     &:hover {
       opacity: 0.85;
@@ -101,53 +121,49 @@
   }
 
   &__validate {
-    background: var(--clr-accent-cyan);
-    color: var(--clr-bg-base);
+    background: var(--tb-toxic);
+    color: var(--tb-bitume);
+    border-color: var(--tb-toxic);
   }
 
   &__reject {
     background: transparent;
-    border-color: var(--clr-accent);
-    color: var(--clr-accent);
+    border-color: rgba(162, 58, 28, 0.5);
+    color: var(--tb-rouille-lt);
+
+    &:hover {
+      background: rgba(162, 58, 28, 0.12);
+    }
   }
 
   &__promote {
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
     background: transparent;
-    border: 1px solid var(--clr-accent-cyan, #3cb0c0);
-    color: var(--clr-accent-cyan, #3cb0c0);
+    border-color: var(--border-rust);
+    color: var(--text-dim);
 
     &:hover {
-      opacity: 0.85;
+      border-color: var(--tb-os);
+      color: var(--tb-os);
     }
   }
 
   &__remove {
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
     background: transparent;
-    border: 1px solid var(--clr-border-subtle);
-    color: var(--clr-text-muted);
+    border-color: var(--border-hair);
+    color: var(--text-faint);
 
     &:hover {
-      opacity: 0.85;
-      border-color: var(--clr-accent);
-      color: var(--clr-accent);
+      border-color: var(--tb-rouille);
+      color: var(--tb-rouille-lt);
     }
   }
 
   &__empty {
-    color: var(--clr-text-muted);
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
     padding: 12px 0;
+    text-transform: uppercase;
   }
 }

@@ -1,33 +1,72 @@
-/* ── Carte formulaire ──────────────────────────────────────────────────────── */
-
 .team-form-card {
-  background: var(--clr-bg-surface);
-  border: 1px solid var(--clr-accent);
-  border-radius: 8px;
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 28px;
   margin-bottom: 32px;
+  box-shadow: var(--shadow-stamp);
 
   h2 {
-    color: var(--clr-accent);
+    font-family: var(--font-display);
+    color: var(--tb-danger);
     font-size: 1.2rem;
-    margin-bottom: 20px;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 6px;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-os);
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-text);
+    font-size: 0.95rem;
+    transition: border-color 160ms;
+
+    &:focus {
+      outline: none;
+      border-color: var(--tb-danger);
+      box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.15);
+    }
+
+    &::placeholder {
+      color: var(--text-faint);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
   }
 }
 
-/* Erreur de validation locale */
 .form-error {
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  background: rgba(162, 58, 28, 0.12);
+  border: 1px solid var(--tb-rouille);
+  color: var(--tb-rouille-lt);
   padding: 10px 14px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   margin-bottom: 16px;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
 }
 
-/* Grille responsive pour les champs du formulaire (2 colonnes : nom + budget) */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -39,51 +78,11 @@
   }
 }
 
-/* Champ pleine largeur (description, carousel) */
 .form-group--full {
   grid-column: 1 / -1;
 }
 
-/* Styles des champs texte, number et textarea */
-.team-form-card {
-
-  input,
-  textarea {
-    width: 100%;
-    background: var(--clr-bg-base);
-    border: 1px solid var(--clr-border);
-    color: var(--clr-text);
-    padding: 10px 12px;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    font-family: inherit;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: var(--clr-accent);
-    }
-
-    &::placeholder {
-      color: var(--clr-text-disabled);
-    }
-  }
-
-  textarea {
-    resize: vertical;
-  }
-
-  label {
-    display: block;
-    color: var(--clr-text-hint);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-  }
-}
-
-/* ── Spinner de chargement des sponsors ─────────────────────────────────── */
+// ─── Spinner chargement sponsors ──────────────────────────────────────────────
 
 .sponsors-loading {
   display: flex;
@@ -91,48 +90,35 @@
   justify-content: center;
   gap: 6px;
   padding: 32px;
-  border: 1px dashed var(--clr-border);
-  border-radius: 8px;
-  background: var(--clr-bg-base);
+  border: 1px dashed var(--border-rust);
+  border-radius: var(--r-sm);
+  background: var(--tb-bitume);
 }
 
 .sponsors-loading__text {
-  color: var(--clr-text-disabled);
-  font-size: 0.85rem;
-  font-style: italic;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-left: 4px;
 }
 
-/* Points clignotants animés */
 .sponsors-loading__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--clr-accent);
+  width: 5px;
+  height: 5px;
+  border-radius: 0;
+  background: var(--tb-danger);
   animation: dot-pulse 1.2s ease-in-out infinite;
 
-  &:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-
-  &:nth-child(3) {
-    animation-delay: 0.4s;
-  }
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
 }
 
 @keyframes dot-pulse {
-  0%, 80%, 100% {
-    opacity: 0.2;
-    transform: scale(0.8);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40%            { opacity: 1;   transform: scale(1); }
 }
-
-/* ── Actions du formulaire ──────────────────────────────────────────────── */
 
 .form-actions {
   display: flex;

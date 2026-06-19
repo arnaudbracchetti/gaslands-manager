@@ -1,0 +1,32 @@
+<!-- Création rapide d'une équipe (nom uniquement, sponsor/budget par défaut) -->
+<div class="quick-team-create">
+
+  @if (!expanded()) {
+    <button class="btn-link" type="button" (click)="expand()" [disabled]="saving()">
+      + Créer une nouvelle équipe
+    </button>
+  } @else {
+
+    @if (error()) {
+      <div class="form-error">{{ error() }}</div>
+    }
+
+    <div class="quick-team-create__row">
+      <input
+        type="text"
+        placeholder="Nom de la nouvelle équipe"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+        [disabled]="saving()" />
+
+      <button class="btn-primary" type="button" (click)="confirm()" [disabled]="saving()">
+        @if (saving()) { Création... } @else { Créer }
+      </button>
+      <button class="btn-secondary" type="button" (click)="cancel()" [disabled]="saving()">
+        Annuler
+      </button>
+    </div>
+
+  }
+
+</div>

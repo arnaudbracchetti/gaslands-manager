@@ -1,23 +1,13 @@
-/* ── MountedEquipment — listes "Armes"/"Améliorations" montées ──────────────── */
-/* Styles migrés depuis equipment-manager.scss (`.em-current__group*`,
-   `.em-current__list`, `.em-current__item*`, `.em-current__name`,
-   `.em-current__orientation`, `.em-current__badges`, `.em-current__badge*`,
-   `.em-current__remove`, `.em-current__badge-defaut`, `.em-current__tourelle-badge`,
-   `.em-current__warning`, `.em-current__add-weapon`, `.em-status`), préfixe
-   renommé `.me-*` — composant désormais autonome (encapsulation Angular). */
-
-/* `display: contents` : l'élément hôte `<app-mounted-equipment>` disparaît de
-   la boîte — ses deux `<section class="me-group">` (Armes/Améliorations)
-   participent directement au flex column/gap de `.em-current`, comme avant
-   l'extraction. */
 :host {
   display: contents;
 }
 
 .me-status {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
 }
 
 .me-group {
@@ -28,15 +18,18 @@
 
 .me-group-title {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--clr-text);
+  font-family: var(--font-text);
+  font-size: 0.82rem;
+  color: var(--text-dim);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .me-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -46,30 +39,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap; /* boutons sous le nom si la colonne est étroite */
+  flex-wrap: wrap;
   gap: 8px 12px;
-  padding: 8px 12px;
-  background: var(--clr-bg-item);
-  border: 1px solid var(--clr-border);
-  border-radius: 4px;
+  padding: 7px 12px;
+  background: var(--metal-sheen);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
 }
 
 .me-name {
-  font-size: 0.86rem;
-  color: var(--clr-text);
+  font-family: var(--font-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .me-orientation {
   margin-left: 6px;
-  font-size: 0.8rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
 }
 
-/* Badges prix/emplacement par ligne — même apparence que .option__badge
-   (equipment-option.scss), pour la cohérence visuelle avec le catalogue. */
 .me-badges {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -77,12 +74,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(var(--clr-accent-cyan-rgb), 0.1);
-  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
-  color: var(--clr-accent-cyan);
+  background: rgba(230, 180, 28, 0.08);
+  border: 1px solid rgba(230, 180, 28, 0.25);
+  color: var(--tb-danger);
   padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.78rem;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
@@ -93,62 +92,67 @@
 
 .me-remove {
   background: transparent;
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
-  padding: 5px 14px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border: 1px solid rgba(162, 58, 28, 0.45);
+  color: var(--tb-rouille-lt);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 160ms, border-color 160ms;
   white-space: nowrap;
 
   &:hover {
-    background: var(--clr-accent);
-    color: var(--clr-bg-base);
+    background: rgba(162, 58, 28, 0.15);
+    border-color: var(--tb-rouille);
   }
 }
 
-/* ── Tourelle — badges et variantes inline ──────────────────────────────────── */
+// ─── Tourelle ────────────────────────────────────────────────────────────────
 
-/* Badge "🔒 Intégré" / "🔒 Tourelle intégrée" — indicateur visuel non interactif */
 .me-badge-defaut {
-  font-size: 0.8rem;
-  color: var(--clr-accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
   white-space: nowrap;
   opacity: 0.85;
 }
 
-/* Badge "(Tourelle)" affiché après le nom de l'arme sur une ligne fusionnée */
 .me-tourelle-badge {
   margin-left: 4px;
-  font-size: 0.78rem;
-  color: var(--clr-text-hint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
   font-style: italic;
 }
 
-/* "⚠ Aucune arme assignée" sur une Tourelle orpheline */
 .me-warning {
   margin-left: 8px;
-  font-size: 0.8rem;
-  color: var(--clr-warning);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--tb-ember);
+  letter-spacing: 0.04em;
 }
 
-/* Bouton "Assigner une arme" — ton neutre (action secondaire, pas destructrice) */
 .me-add-weapon {
   background: transparent;
-  border: 1px solid var(--clr-accent-cyan);
-  color: var(--clr-accent-cyan);
-  padding: 5px 14px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: border-color 160ms, color 160ms;
   white-space: nowrap;
 
   &:hover {
-    background: var(--clr-accent-cyan);
-    color: var(--clr-bg-base);
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
   }
 }

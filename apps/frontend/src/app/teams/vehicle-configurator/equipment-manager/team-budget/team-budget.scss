@@ -1,11 +1,4 @@
-/* ── TeamBudget — bloc "Budget de l'équipe" ─────────────────────────────────── */
-/* Styles migrés depuis equipment-manager.scss (`.em-current__budget*` et la
-   portion `.em-current__cost-row` nécessaire à la ligne "Restant"/"Dépassement"),
-   préfixe renommé `.tb-*` — composant désormais autonome (encapsulation Angular). */
-
-/* `display: contents` : l'élément hôte `<app-team-budget>` disparaît de la
-   boîte — `.tb` (racine du template) participe directement au flex column/gap
-   de `.em-current__header`, comme avant l'extraction en composant. */
+// Préfixe .tb ici = TeamBudget — à ne pas confondre avec les tokens --tb-*
 :host {
   display: contents;
 }
@@ -18,11 +11,13 @@
 }
 
 .tb-title {
- margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--clr-text);
- 
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -33,43 +28,42 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 0.85rem;
-  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
 
   &--total {
     margin-top: 4px;
     padding-top: 4px;
-    border-top: 1px solid var(--clr-border);
-    color: var(--clr-accent-cyan);
+    border-top: 1px solid var(--border-rust);
+    color: var(--tb-coolant);
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.85rem;
   }
 
-  // Dépassement de budget — remplace la couleur d'accent par défaut de `--total`.
   &--over {
-    color: var(--clr-accent) !important;
+    color: var(--tb-rouille-lt) !important;
   }
 }
 
 .tb-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--clr-bg-item);
+  height: 4px;
+  border-radius: 0;
+  background: var(--tb-metal-2);
   overflow: hidden;
 }
 
 .tb-bar-fill {
   height: 100%;
-  background: var(--clr-accent-cyan);
-  transition: width 0.2s, background 0.2s;
+  background: var(--tb-coolant);
+  transition: width 160ms, background 160ms;
 
   &--over {
-    background: var(--clr-accent);
+    background: var(--tb-rouille);
   }
 }
 
-/* Icônes 🛢/🔧 — mêmes dimensions que `.me-badge-icon` (mounted-equipment),
-   pour une iconographie cohérente entre le résumé et le détail par ligne. */
 .tb-icon {
   width: 13px;
   height: 13px;

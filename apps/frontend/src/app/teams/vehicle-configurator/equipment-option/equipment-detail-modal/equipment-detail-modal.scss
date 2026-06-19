@@ -1,9 +1,3 @@
-/* ── EquipmentDetailModal — popup de détail d'un équipement ────────────────── */
-/* Même thème que TourelleAssignmentModal (`.tam-*`, cf. son fichier) : overlay
-   plein écran + boîte centrale, entièrement piloté par les design tokens --clr-*.
-   z-index supérieur à `.tam-overlay` (200) : la popup de détail peut s'ouvrir
-   depuis une carte du catalogue affichée à côté du sélecteur de Tourelle. */
-
 .edm-overlay {
   position: fixed;
   inset: 0;
@@ -14,11 +8,10 @@
   z-index: 300;
 }
 
-/* Boîte de dialogue centrale — mise en page aérée (gap généreux entre sections) */
 .edm-modal {
-  background: var(--clr-bg-modal);
-  border: 1px solid var(--clr-border);
-  border-radius: 8px;
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 24px;
   width: min(520px, 92vw);
   max-height: 80vh;
@@ -26,10 +19,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: var(--shadow-stamp-lg);
 }
 
-/* En-tête : nom à gauche, badges prix/emplacement à droite — même agencement
-   que `.option__header` dans equipment-option, en plus grand. */
 .edm-modal__header {
   display: flex;
   align-items: flex-start;
@@ -39,9 +31,12 @@
 
 .edm-modal__name {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--clr-text);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .edm-modal__badges {
@@ -54,12 +49,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(var(--clr-accent-cyan-rgb), 0.1);
-  border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
-  color: var(--clr-accent-cyan);
+  background: rgba(230, 180, 28, 0.1);
+  border: 1px solid rgba(230, 180, 28, 0.28);
+  color: var(--tb-danger);
   padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 0.85rem;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
@@ -68,15 +65,13 @@
   height: 14px;
 }
 
-/* Description du catalogue — même ton que `.option__description`. Contenu HTML
-   (converti depuis Markdown au chargement du catalogue, cf.
-   CatalogService.onModuleInit) : le style porté auparavant par <p class="edm-modal__description">
-   s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
 .edm-modal__description {
   ::ng-deep p, ::ng-deep ul, ::ng-deep li {
     margin: 0;
-    color: var(--clr-text-hint);
-    font-size: 0.92rem;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-dim);
+    font-size: 0.9rem;
     font-style: italic;
     line-height: 1.5;
   }
@@ -86,9 +81,6 @@
   }
 }
 
-/* Section "Règles" — titre discret + contenu HTML (converti depuis Markdown au
-   chargement du catalogue, cf. CatalogService.onModuleInit). Les listes à puces
-   reprennent le style de `.advantages-html` (sponsor-carousel.scss). */
 .edm-modal__regles {
   display: flex;
   flex-direction: column;
@@ -97,17 +89,20 @@
 
 .edm-modal__regles-title {
   margin: 0;
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--clr-text-muted);
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
 
   & + div {
     ::ng-deep p {
       margin: 0;
-      color: var(--clr-text);
-      font-size: 0.92rem;
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--tb-os);
+      font-size: 0.9rem;
       line-height: 1.6;
     }
 
@@ -121,37 +116,39 @@
     }
 
     ::ng-deep li {
-      color: var(--clr-text);
-      font-size: 0.92rem;
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--tb-os);
+      font-size: 0.9rem;
       line-height: 1.6;
-      padding-left: 16px;
+      padding-left: 14px;
       position: relative;
 
       &::before {
         content: '›';
         position: absolute;
         left: 0;
-        color: var(--clr-accent);
+        color: var(--tb-danger);
         font-weight: 700;
       }
     }
 
     ::ng-deep strong {
-      color: var(--clr-text);
-      font-weight: 700;
+      color: var(--tb-os);
+      font-weight: 600;
     }
   }
 }
 
-/* Raison d'indisponibilité — même couleur que `.option__reason` */
 .edm-modal__reason {
   margin: 0;
-  color: var(--clr-accent);
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  color: var(--tb-rouille-lt);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
   font-style: italic;
 }
 
-/* Actions — "Annuler" / "Ajouter" alignés à droite */
 .edm-modal__actions {
   display: flex;
   justify-content: flex-end;
@@ -161,16 +158,19 @@
 
 .edm-modal__cancel {
   background: transparent;
-  border: 1px solid var(--clr-text-disabled);
-  color: var(--clr-text-hint);
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
   padding: 8px 20px;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 160ms, color 160ms;
 
   &:hover {
-    border-color: var(--clr-text);
-    color: var(--clr-text);
+    border-color: var(--tb-os);
+    color: var(--tb-os);
   }
 }

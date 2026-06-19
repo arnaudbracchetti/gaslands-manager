@@ -1,0 +1,60 @@
+/* ── Création rapide d'équipe ─────────────────────────────────────────────── */
+
+.quick-team-create {
+  margin-top: 12px;
+}
+
+/* Bouton discret façon lien — pas de fond, couleur d'accent */
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--clr-accent);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+
+  &:disabled {
+    color: var(--clr-text-disabled);
+    cursor: default;
+  }
+}
+
+.quick-team-create__row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+
+  input {
+    flex: 1;
+    background: var(--clr-bg-base);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: var(--clr-accent);
+    }
+  }
+
+  button {
+    width: auto;
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+}
+
+.form-error {
+  background: rgba(var(--clr-accent-rgb), 0.15);
+  border: 1px solid var(--clr-accent);
+  color: var(--clr-accent);
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}

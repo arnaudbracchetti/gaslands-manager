@@ -1,42 +1,31 @@
-/* ── Hôte = item de la grille `.em-equipment__list` ─────────────────────────── */
-/* `display: flex` : le host devient lui-même un conteneur flex qui étire `.option`
-   sur toute sa hauteur/largeur de cellule (cf. `.option { flex: 1 }` ci-dessous) —
-   nécessaire pour que toutes les cartes d'une rangée aient la même hauteur
-   (`.em-equipment__list` a `align-items: stretch`). */
 :host {
   display: flex;
-  // Sans ça, :host (item de la grille .em-equipment__list) refuse de
-  // rétrécir sous la taille min-content de son contenu (titre non-wrappé +
-  // badges) — la carte déborde alors de sa cellule de grille au lieu de
-  // tronquer le titre avec ellipsis.
   min-width: 0;
 }
 
-/* ── Carte d'équipement (arme ou amélioration) ─────────────────────────────── */
-
 .option {
   flex: 1;
-  // Idem :host — .option est lui-même un flex item de :host et hérite du
-  // même problème de min-width: auto en cascade.
   min-width: 0;
-  background: var(--clr-bg-base);
-  border: 1px solid var(--clr-border-subtle);
-  border-radius: 8px;
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-hair);
+  border-radius: var(--r-sm);
   padding: 10px 14px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  // Toute la carte ouvre la popup de détail au clic (cf. equipment-option.html,
-  // (click)="openDetails()") — le curseur "pointeur" signale cette interaction.
   cursor: pointer;
+  transition: border-color 160ms, box-shadow 160ms;
+  box-shadow: var(--shadow-stamp);
 
-  /* Option indisponible : grisée, pas de transformation au survol */
-  &--unavailable {
-    opacity: 0.55;
+  &:hover {
+    border-color: var(--border-rust);
   }
 
-  /* Ligne d'en-tête : nom à gauche, badges prix/emplacement à droite */
+  &--unavailable {
+    opacity: 0.45;
+  }
+
   &__header {
     display: flex;
     align-items: flex-start;
@@ -45,11 +34,12 @@
   }
 
   &__name {
-    color: var(--clr-text);
-    font-weight: 700;
-    font-size: 0.95rem;
-    // Tronque les noms longs ("Membre d'Équipage Supplémentaire"...) plutôt
-    // que de pousser les badges hors de la carte.
+    font-family: var(--font-text);
+    font-weight: 600;
+    color: var(--tb-os);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -59,7 +49,7 @@
 
   &__badges {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
   }
 
@@ -67,12 +57,14 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgba(var(--clr-accent-cyan-rgb), 0.1);
-    border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
-    color: var(--clr-accent-cyan);
+    background: rgba(230, 180, 28, 0.08);
+    border: 1px solid rgba(230, 180, 28, 0.25);
+    color: var(--tb-danger);
     padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.78rem;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
     white-space: nowrap;
   }
 
@@ -81,13 +73,11 @@
     height: 13px;
   }
 
-  /* Description du catalogue (`Arme.description`/`Amelioration.description`) —
-     contenu HTML (converti depuis Markdown au chargement du catalogue, cf.
-     CatalogService.onModuleInit) : le style porté auparavant par <p class="option__description">
-     s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
   &__description {
     ::ng-deep p, ::ng-deep ul, ::ng-deep li {
-      color: var(--clr-text-hint);
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--text-faint);
       font-size: 0.8rem;
       font-style: italic;
       line-height: 1.4;
@@ -99,33 +89,34 @@
     }
   }
 
-  /* Raison d'indisponibilité — message du backend (RuleResult.reason) */
   &__reason {
-    color: var(--clr-accent);
-    font-size: 0.78rem;
-    font-style: italic;
+    font-family: var(--font-mono);
+    color: var(--tb-rouille-lt);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
     margin: 0;
     margin-top: auto;
   }
 
-  /* Bouton rond "+" — pousse en bas à droite de la carte */
+  // Bouton "+" — ajout
   &__add {
     align-self: flex-end;
     margin-top: auto;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-sm);
     border: none;
-    background: var(--clr-success);
-    color: #fff;
-    font-size: 1.2rem;
+    background: var(--tb-toxic);
+    color: var(--tb-bitume);
+    font-size: 1.1rem;
     font-weight: 700;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
+    transition: opacity 160ms, transform 90ms;
+    box-shadow: var(--shadow-stamp);
 
     &:hover {
       opacity: 0.85;
@@ -134,7 +125,7 @@
   }
 }
 
-/* ── Sélecteur d'orientation (4 directions + annuler) ──────────────────────── */
+// ─── Sélecteur d'orientation ─────────────────────────────────────────────────
 
 .option__orientations {
   display: flex;
@@ -146,38 +137,46 @@
 }
 
 .option__orientations-label {
-  color: var(--clr-text-muted);
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .orientation-btn {
-  background: rgba(var(--clr-accent-rgb), 0.1);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
-  padding: 5px 12px;
-  border-radius: 4px;
-  font-size: 0.78rem;
+  background: rgba(230, 180, 28, 0.08);
+  border: 1px solid var(--tb-danger);
+  color: var(--tb-danger);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
   text-transform: capitalize;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 160ms;
 
   &:hover {
-    background: rgba(var(--clr-accent-rgb), 0.25);
+    background: rgba(230, 180, 28, 0.2);
   }
 }
 
 .orientation-cancel {
   background: transparent;
-  border: 1px solid var(--clr-text-disabled);
-  color: var(--clr-text-muted);
-  padding: 5px 12px;
-  border-radius: 4px;
-  font-size: 0.78rem;
+  border: 1px solid var(--border-hair);
+  color: var(--text-faint);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 160ms, color 160ms;
 
   &:hover {
-    border-color: var(--clr-text-muted);
-    color: var(--clr-text);
+    border-color: var(--tb-os);
+    color: var(--tb-os);
   }
 }

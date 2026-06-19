@@ -1,25 +1,21 @@
-/* ── Carte de choix de véhicule ────────────────────────────────────────────── */
-
-/* :host = item de la grille .vc-vehicle-grid. Sans min-width: 0, l'item
-   refuse par défaut de rétrécir sous la taille min-content de son contenu
-   (titre non-wrappé) — la carte déborde alors de sa cellule de grille au lieu
-   de tronquer le titre avec ellipsis (cf. .choice-card__name ci-dessous). */
 :host {
   min-width: 0;
 }
 
 .choice-card {
-  background: var(--clr-bg-base);
-  border: 1px solid var(--clr-border);
-  border-radius: 8px;
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.2s, transform 0.15s;
+  transition: border-color 160ms, box-shadow 160ms, transform 90ms;
+  box-shadow: var(--shadow-stamp);
 
   &:hover {
-    border-color: var(--clr-accent);
+    border-color: var(--tb-danger);
+    box-shadow: var(--glow-danger);
     transform: translateY(-2px);
   }
 
@@ -31,12 +27,13 @@
   }
 
   &__name {
-    color: var(--clr-text);
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    font-size: 1rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     margin: 0;
-    // Tronque les noms longs plutôt que de déborder de la carte
-    // (même pattern que .option__name dans equipment-option.scss).
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -44,20 +41,20 @@
   }
 
   &__weight {
-    color: var(--clr-text-muted);
-    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+    font-size: 0.68rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.14em;
     flex-shrink: 0;
   }
 
-  /* Contenu HTML (converti depuis Markdown au chargement du catalogue, cf.
-     CatalogService.onModuleInit) : le style porté auparavant par <p class="choice-card__description">
-     s'applique maintenant aux balises générées par marked à l'intérieur du <div> (::ng-deep). */
   &__description {
     ::ng-deep p, ::ng-deep ul, ::ng-deep li {
-      color: var(--clr-text-muted);
-      font-size: 0.85rem;
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--text-dim);
+      font-size: 0.82rem;
       line-height: 1.4;
       margin: 0;
     }
@@ -70,15 +67,17 @@
   &__stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 6px;
 
     .stat {
-      background: rgba(var(--clr-accent-cyan-rgb), 0.1);
-      border: 1px solid rgba(var(--clr-accent-cyan-rgb), 0.25);
-      color: var(--clr-accent-cyan);
+      background: rgba(230, 180, 28, 0.08);
+      border: 1px solid rgba(230, 180, 28, 0.22);
+      color: var(--tb-danger);
       padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.78rem;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
     }
   }
 
@@ -88,28 +87,33 @@
     justify-content: space-between;
     margin-top: auto;
     padding-top: 8px;
-    border-top: 1px solid var(--clr-border-subtle);
+    border-top: 1px solid var(--border-hair);
   }
 
   &__price {
-    color: var(--clr-text);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    color: var(--tb-os);
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.06em;
   }
 
   &__choose {
     background: transparent;
-    border: 1px solid var(--clr-accent);
-    color: var(--clr-accent);
-    padding: 7px 14px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    border: 1px solid var(--tb-danger);
+    color: var(--tb-danger);
+    padding: 6px 14px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 160ms;
 
     &:hover {
-      background: rgba(var(--clr-accent-rgb), 0.1);
+      background: rgba(230, 180, 28, 0.15);
     }
   }
 }
