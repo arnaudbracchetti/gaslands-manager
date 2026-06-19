@@ -16,4 +16,6 @@ export type SeasonResponseDto = Season & {
   participantCount: number;
   myRole: 'organizer' | 'participant';
   pendingRequestsCount?: number;
+  /** Nom de l'équipe engagée par l'utilisateur connecté — absent si sans équipe */
+  myTeamName?: string;
 };

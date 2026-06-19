@@ -118,19 +118,6 @@ Transitions possibles : `EN_CONSTRUCTION → EN_COURS → TERMINEE` (séquentiel
 - **Garde-fou** : un organisateur ne peut pas se rétrograder lui-même s'il est le seul
   organisateur restant (pas de saison "orpheline").
 
-**Transitions de statut via `PUT .../participants/:pid/validate` (`{ accept: boolean }`)** :
-ce même endpoint couvre désormais trois cas, distingués par le statut de départ du
-participant ciblé :
-- `PENDING → VALIDATED` (`accept: true`) ou `PENDING → REJECTED` (`accept: false`) —
-  traitement initial d'une demande d'inscription.
-- `VALIDATED → REJECTED` (`accept: false`, bouton "Refuser" sur "Les autres équipes") —
-  réversible, contrairement à `DELETE .../participants/:pid` (retrait définitif).
-  Requiert `season.state === EN_CONSTRUCTION` et, si le participant est organisateur,
-  qu'il reste au moins un autre organisateur `VALIDATED` (même garde-fou que pour le
-  retrait définitif).
-- `REJECTED → VALIDATED` (`accept: true`, bouton "Valider" dans la section "Refusé") —
-  revalidation, aucune contrainte d'état supplémentaire.
-
 ---
 
 ## 5. Backend — Module `season/`
@@ -169,8 +156,7 @@ vérification organisateur.
 | GET | `/api/seasons/by-code/:code` | infos minimales par code (utilisateur connecté) |
 | GET | `/api/seasons/:id/participants` | liste des participants |
 | POST | `/api/seasons/:id/participants` | demande d'inscription (`{ teamId }`) |
-| PUT | `/api/seasons/:id/participants/me` | changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) |
-| PUT | `/api/seasons/:id/participants/:pid/validate` | valider/refuser — `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` (`{ accept }`, organisateur) |
+| PUT | `/api/seasons/:id/participants/:pid/validate` | valider/refuser (`{ accept }`, organisateur) |
 | PUT | `/api/seasons/:id/participants/:pid/promote` | promouvoir co-organisateur (organisateur) |
 | DELETE | `/api/seasons/:id/participants/:pid` | retirer (organisateur, `EN_CONSTRUCTION` uniquement) |
 | GET/POST | `/api/seasons/:id/games` | lister / créer une partie (création : organisateur) |
@@ -228,44 +214,28 @@ saisie → navigue vers `/seasons/join/:code`).
 
 ```
 /seasons/12 - Coupe Verney --------------------------------
-  EN_CONSTRUCTION   🏆 Organisateur        [🗑 Supprimer la saison]
+  🔔 EN_CONSTRUCTION   🔗 Code: ABCD-1234   [Passer en EN_COURS]
 
-  —— Votre équipe ——
-  [ select: Furies ▾ ]   (lecture seule si saison ≠ EN_CONSTRUCTION)
-
-  —— Les autres équipes ——
+  —— Participants (3 validés, 2 en attente) ——
   ┌──────────────────────────────────────────────┐
-  │ Bob · Scrap Kings              [Refuser]       │
-  │ Dan · Roadkill    🏆 Organisateur               │
+  │ Alice · Furies        🏆 Organisateur          │
+  │ Bob · Scrap Kings                              │
+  │ Dan · Roadkill        [Valider] [Refuser]      │
   └──────────────────────────────────────────────┘
 
-  —— En attente de validation (1) ——     (organisateur uniquement)
+  —— Parties (4) ——                        [+ Ajouter]
   ┌──────────────────────────────────────────────┐
-  │ Alice · Buggy Crew   [Valider] [Refuser] [Retirer] │
-  └──────────────────────────────────────────────┘
-
-  —— Refusé (1) ——                        (organisateur uniquement)
-  ┌──────────────────────────────────────────────┐
-  │ Eve · Outlaws                    [Valider]     │
+  │ Manche 1 · 12/06 · 3 équipes                    │
+  │ Manche 2 · 19/06 · 4 équipes                    │
   └──────────────────────────────────────────────┘
 ```
 
-- Le bouton "🗑 Supprimer la saison" et le badge "🏆 Organisateur" du bandeau ne sont
-  visibles que pour les organisateurs.
-- **"Votre équipe"** : tout participant `VALIDATED` peut changer l'équipe qu'il engage
-  via `PUT .../participants/me` tant que la saison est `EN_CONSTRUCTION` (sélecteur
-  parmi ses propres équipes, `TeamsService.getAll()`) — affichage en lecture seule sinon.
-- **"Les autres équipes"** : participants `VALIDATED` autres que l'utilisateur courant.
-  Le bouton "Refuser" (`VALIDATED → REJECTED`, cf. §4) n'est visible qu'aux
-  organisateurs, masqué sur l'unique organisateur restant (garde-fou UI, doublé côté
-  backend).
-- **"En attente de validation"** et **"Refusé"** : entièrement absentes du DOM pour les
-  non-organisateurs (`@if (isOrganizer())`), pas seulement masquées visuellement —
-  un participant normal ne voit jamais ces statuts pour les autres. "Refuser" dans
-  "En attente" reste le retrait de la demande initiale (`PENDING → REJECTED`) ; "Retirer"
-  (`DELETE`) supprime définitivement la ligne tant que `EN_CONSTRUCTION`. "Valider" dans
-  "Refusé" revalide (`REJECTED → VALIDATED`).
-- Section Parties : non implémentée dans cette itération (cf. §8).
+- Le bandeau d'état + bouton de transition + code d'invitation ne sont visibles/actifs
+  que pour les organisateurs.
+- Section Participants : actions Valider/Refuser/Promouvoir/Retirer visibles
+  uniquement aux organisateurs, sur les lignes concernées.
+- Section Parties : bouton "+ Ajouter" (organisateur) ouvre `game-form` — sélection
+  multiple des participants validés.
 
 ### Écran de création / rejoindre une saison
 
@@ -277,13 +247,6 @@ saisie → navigue vers `/seasons/join/:code`).
 ### Composants dumb
 
 `season-card/`, `participant-list/`, `game-card/`, `game-form/`, `invite-link/`.
-
-`ParticipantList` expose un input `actions: 'none' | 'validate-reject' | 'reject-only' | 'validate-only'`
-qui détermine les boutons affichés par ligne — `validate-reject` (Valider+Refuser, section
-"En attente"), `reject-only` (Refuser seul, "Les autres équipes"), `validate-only`
-(Valider seul, "Refusé"), `none` (lecture seule, vue non-organisateur). Un output unique
-`validate: { pid: number; accept: boolean }` couvre les trois transitions. `canRemove`
-reste séparé (bouton "Retirer", `DELETE`).
 
 ### Services et modèles
 

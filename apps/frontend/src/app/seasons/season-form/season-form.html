@@ -7,51 +7,49 @@
     <div class="form-error">{{ formError() }}</div>
   }
 
-  @if (noTeams()) {
-    <!-- CA3 : aucune équipe disponible — empêche la soumission -->
-    <div class="form-info">
-      Vous devez d'abord créer une équipe pour participer à une saison.
+  <div class="form-grid">
+
+    <!-- Nom de la saison (obligatoire) -->
+    <div class="form-group">
+      <label for="season-name">Nom de la saison *</label>
+      <input
+        id="season-name"
+        type="text"
+        placeholder="Ex : Coupe Verney"
+        [ngModel]="formName()"
+        (ngModelChange)="formName.set($event)" />
     </div>
-  } @else {
-    <div class="form-grid">
 
-      <!-- Nom de la saison -->
-      <div class="form-group">
-        <label for="season-name">Nom de la saison *</label>
-        <input
-          id="season-name"
-          type="text"
-          placeholder="Ex : Coupe Verney"
-          [ngModel]="formName()"
-          (ngModelChange)="formName.set($event)" />
-      </div>
-
-      <!-- Équipe engagée -->
-      <div class="form-group">
-        <label for="season-team">Équipe engagée *</label>
+    <!-- Équipe engagée (optionnelle) -->
+    <div class="form-group">
+      <label for="season-team">Mon équipe engagée</label>
+      @if (teams().length > 0) {
         <select
           id="season-team"
           [ngModel]="formTeamId()"
-          (ngModelChange)="formTeamId.set(+$event)">
+          (ngModelChange)="formTeamId.set($event ? +$event : null)">
+          <option [ngValue]="null">— Sans équipe —</option>
           @for (team of teams(); track team.id) {
             <option [value]="team.id">{{ team.name }}</option>
           }
         </select>
-      </div>
+      } @else {
+        <p class="form-hint">Vous n'avez pas encore d'équipe. Vous pouvez en créer une ci-dessous ou rejoindre la saison sans équipe.</p>
+      }
 
+      <app-quick-team-create [saving]="creatingTeam()" (created)="teamCreated.emit($event)" />
     </div>
-  }
+
+  </div>
 
   <!-- Boutons Annuler / Enregistrer -->
   <div class="form-actions">
     <button class="btn-secondary" type="button" (click)="cancelForm()" [disabled]="saving()">
       Annuler
     </button>
-    @if (!noTeams()) {
-      <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
-        @if (saving()) { Enregistrement... } @else { Enregistrer }
-      </button>
-    }
+    <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
+      @if (saving()) { Enregistrement... } @else { Enregistrer }
+    </button>
   </div>
 
 </div>

@@ -1,33 +1,69 @@
-<!-- Liste de participants d'une saison -->
+<!-- Liste unifiée de tous les participants (tous statuts) -->
 <ul class="participant-list">
   @for (participant of participants(); track participant.id) {
     <li class="participant-list__item">
+
+      <!-- Avatar initiales -->
+      <div class="participant-list__avatar">{{ avatarInitials(participant) }}</div>
+
+      <!-- Informations -->
       <div class="participant-list__info">
-        <span class="participant-list__user">{{ participant.userName }}</span>
-        <span class="participant-list__team">{{ participant.teamName }}</span>
-        @if (participant.isOrganizer) {
-          <span class="participant-list__badge">🏆 Organisateur</span>
-        }
+        <span class="participant-list__name">
+          {{ participant.userName }}
+          @if (participant.teamName) { · {{ participant.teamName }} }
+        </span>
+        <span class="participant-list__badge"
+          [class.participant-list__badge--organizer]="participant.isOrganizer"
+          [class.participant-list__badge--pending]="participant.status === 'PENDING'"
+          [class.participant-list__badge--rejected]="participant.status === 'REJECTED'">
+          @if (participant.isOrganizer) {
+            ★ Organisateur
+          } @else if (participant.status === 'PENDING') {
+            ◷ En attente
+          } @else if (participant.status === 'REJECTED') {
+            Refusé
+          } @else {
+            ▲ Participant
+          }
+        </span>
       </div>
 
-      @if (showActions()) {
+      <!-- Actions (organisateur uniquement, hors soi-même) -->
+      @if (isOrganizer() && !isSelf(participant)) {
         <div class="participant-list__actions">
-          <button class="participant-list__validate" type="button" (click)="onValidate(participant.id, true)">
-            Valider
-          </button>
-          <button class="participant-list__reject" type="button" (click)="onValidate(participant.id, false)">
-            Refuser
-          </button>
+          @if (canValidate(participant)) {
+            <button class="participant-list__validate" type="button"
+              (click)="onValidate(participant.id, true)">
+              Valider
+            </button>
+          }
+          @if (canReject(participant)) {
+            <button class="participant-list__reject" type="button"
+              (click)="onValidate(participant.id, false)">
+              Refuser
+            </button>
+          }
+          @if (canRevalidate(participant)) {
+            <button class="participant-list__validate" type="button"
+              (click)="onValidate(participant.id, true)">
+              Valider
+            </button>
+          }
+          @if (canPromote(participant)) {
+            <button class="participant-list__promote" type="button"
+              (click)="promote.emit(participant.id)">
+              Promouvoir
+            </button>
+          }
+          @if (canRetire(participant)) {
+            <button class="participant-list__remove" type="button"
+              (click)="onRemove(participant.id)">
+              Retirer
+            </button>
+          }
         </div>
       }
 
-      @if (canRemove() && !isLastOrganizer(participant)) {
-        <div class="participant-list__actions">
-          <button class="participant-list__remove" type="button" (click)="onRemove(participant.id)">
-            Retirer
-          </button>
-        </div>
-      }
     </li>
   } @empty {
     <li class="participant-list__empty">Aucun participant.</li>

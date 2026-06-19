@@ -18,12 +18,16 @@ import { Repository } from 'typeorm';
 import { SeasonParticipant } from './season-participant.entity';
 import { ParticipantStatus, SeasonState } from './season.enums';
 import { SeasonParticipantResponseDto } from './dto/season-participant-response.dto';
+import { TeamService } from '../team/team.service';
 
 @Injectable()
 export class SeasonParticipantService {
   constructor(
     @InjectRepository(SeasonParticipant)
     private participantRepo: Repository<SeasonParticipant>,
+    // Réutilisé pour vérifier que `teamId` appartient bien à l'utilisateur
+    // dans updateMyTeam() — même principe que SeasonService.requestJoin.
+    private teamService: TeamService,
   ) {}
 
   /** Mappe une entité SeasonParticipant (avec relations user/team chargées) vers son DTO de réponse. */
@@ -35,7 +39,7 @@ export class SeasonParticipantService {
       status: participant.status,
       isOrganizer: participant.isOrganizer,
       userName: `${participant.user.firstName} ${participant.user.lastName}`,
-      teamName: participant.team.name,
+      teamName: participant.team?.name ?? '',
     };
   }
 
@@ -63,13 +67,19 @@ export class SeasonParticipantService {
   }
 
   /**
-   * Valide ou refuse une demande d'inscription PENDING.
+   * Valide ou refuse une demande d'inscription PENDING, repasse un
+   * participant REJECTED en VALIDATED, ou refuse un participant déjà
+   * VALIDATED (l'exclut de la saison sans le supprimer — il apparaît alors
+   * dans la section "Refusé" et peut être revalidé).
    *
    * - `organizerUserId` doit correspondre à un SeasonParticipant VALIDATED
    *   avec isOrganizer=true pour cette saison, sinon NotFoundException (CA7).
    * - `pid` doit désigner un SeasonParticipant de cette saison, sinon
    *   NotFoundException.
    * - `accept` true → status passe à VALIDATED, false → REJECTED.
+   * - Refuser un participant VALIDATED (transition VALIDATED → REJECTED)
+   *   n'est possible que si la saison est EN_CONSTRUCTION, et ne doit pas
+   *   retirer le dernier organisateur validé (mêmes garde-fous que remove()).
    */
   async validate(
     seasonId: number,
@@ -86,10 +96,24 @@ export class SeasonParticipantService {
 
     const participant = await this.participantRepo.findOne({
       where: { id: pid, seasonId },
-      relations: { user: true, team: true },
+      relations: { user: true, team: true, season: true },
     });
     if (!participant) {
       throw new NotFoundException('Demande d\'inscription introuvable.');
+    }
+
+    if (participant.status === ParticipantStatus.VALIDATED && !accept) {
+      if (participant.season.state !== SeasonState.EN_CONSTRUCTION) {
+        throw new BadRequestException('Cette saison n\'accepte plus de modifications de participants.');
+      }
+      if (participant.isOrganizer) {
+        const organizerCount = await this.participantRepo.count({
+          where: { seasonId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+        });
+        if (organizerCount <= 1) {
+          throw new BadRequestException('Impossible de refuser le dernier organisateur de la saison.');
+        }
+      }
     }
 
     participant.status = accept ? ParticipantStatus.VALIDATED : ParticipantStatus.REJECTED;
@@ -140,5 +164,72 @@ export class SeasonParticipantService {
     }
 
     await this.participantRepo.delete(pid);
+  }
+
+  /**
+   * Change l'équipe que l'utilisateur connecté engage dans la saison.
+   *
+   * - L'utilisateur doit avoir un SeasonParticipant VALIDATED pour cette
+   *   saison, sinon NotFoundException (CA3, même principe que findOne).
+   * - La saison doit être EN_CONSTRUCTION, sinon BadRequestException.
+   * - `teamId` doit appartenir à l'utilisateur (TeamService.findOneForUser),
+   *   sinon NotFoundException.
+   */
+  /**
+   * Promeut un participant validé au rang de co-organisateur — organisateur uniquement.
+   *
+   * - La cible doit avoir status VALIDATED (pas PENDING ni REJECTED).
+   * - La cible ne doit pas être déjà organisateur.
+   */
+  async promote(seasonId: number, pid: number, organizerUserId: number): Promise<SeasonParticipantResponseDto> {
+    const organizer = await this.participantRepo.findOne({
+      where: { seasonId, userId: organizerUserId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+    });
+    if (!organizer) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    const participant = await this.participantRepo.findOne({
+      where: { id: pid, seasonId },
+      relations: { user: true, team: true },
+    });
+    if (!participant) {
+      throw new NotFoundException('Participant introuvable.');
+    }
+    if (participant.status !== ParticipantStatus.VALIDATED) {
+      throw new BadRequestException('Seul un participant validé peut être promu.');
+    }
+    if (participant.isOrganizer) {
+      throw new BadRequestException('Ce participant est déjà organisateur.');
+    }
+
+    participant.isOrganizer = true;
+    await this.participantRepo.save(participant);
+    return this.toDto(participant);
+  }
+
+  async updateMyTeam(seasonId: number, userId: number, teamId: number): Promise<SeasonParticipantResponseDto> {
+    const participant = await this.participantRepo.findOne({
+      where: { seasonId, userId, status: ParticipantStatus.VALIDATED },
+      relations: { season: true },
+    });
+    if (!participant) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    if (participant.season.state !== SeasonState.EN_CONSTRUCTION) {
+      throw new BadRequestException('Cette saison n\'accepte plus de changement d\'équipe.');
+    }
+
+    await this.teamService.findOneForUser(teamId, userId);
+
+    participant.teamId = teamId;
+    await this.participantRepo.save(participant);
+
+    const updated = await this.participantRepo.findOne({
+      where: { id: participant.id },
+      relations: { user: true, team: true },
+    });
+    return this.toDto(updated as SeasonParticipant);
   }
 }

@@ -10,6 +10,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { SeasonParticipant } from './season-participant.entity';
 import { ParticipantStatus, SeasonState } from './season.enums';
 import { SeasonParticipantService } from './season-participant.service';
+import { TeamService } from '../team/team.service';
 
 const mockSeasonEnConstruction = { id: 1, state: SeasonState.EN_CONSTRUCTION } as never;
 
@@ -54,11 +55,16 @@ describe('SeasonParticipantService', () => {
     delete: vi.fn(),
   };
 
+  const mockTeamService = {
+    findOneForUser: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SeasonParticipantService,
         { provide: getRepositoryToken(SeasonParticipant), useValue: mockParticipantRepo },
+        { provide: TeamService, useValue: mockTeamService },
       ],
     }).compile();
 
@@ -128,7 +134,7 @@ describe('SeasonParticipantService', () => {
       });
       expect(mockParticipantRepo.findOne).toHaveBeenNthCalledWith(2, {
         where: { id: 2, seasonId: 1 },
-        relations: { user: true, team: true },
+        relations: { user: true, team: true, season: true },
       });
       expect(mockParticipantRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: ParticipantStatus.VALIDATED }),
@@ -160,6 +166,55 @@ describe('SeasonParticipantService', () => {
         .mockResolvedValueOnce(null);
 
       await expect(service.validate(1, 999, 42, true)).rejects.toThrow('Demande d\'inscription introuvable.');
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('repasse un participant REJECTED en VALIDATED (revalidation)', async () => {
+      const rejected = { ...mockPendingParticipant, status: ParticipantStatus.REJECTED };
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(rejected);
+      mockParticipantRepo.save.mockImplementation((p) => Promise.resolve(p));
+
+      const result = await service.validate(1, 2, 42, true);
+
+      expect(result.status).toBe(ParticipantStatus.VALIDATED);
+    });
+
+    it('refuse un participant VALIDATED non-organisateur si la saison est EN_CONSTRUCTION', async () => {
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED };
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(validated);
+      mockParticipantRepo.save.mockImplementation((p) => Promise.resolve(p));
+
+      const result = await service.validate(1, 2, 42, false);
+
+      expect(result.status).toBe(ParticipantStatus.REJECTED);
+    });
+
+    it('lève BadRequestException si on refuse un participant VALIDATED hors EN_CONSTRUCTION', async () => {
+      const seasonEnCours = { id: 1, state: SeasonState.EN_COURS } as never;
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED, season: seasonEnCours };
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer)
+        .mockResolvedValueOnce(validated);
+
+      await expect(service.validate(1, 2, 42, false)).rejects.toThrow(
+        'Cette saison n\'accepte plus de modifications de participants.',
+      );
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si on refuse le dernier organisateur VALIDATED', async () => {
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(mockOrganizer) // vérification organisateur
+        .mockResolvedValueOnce(mockOrganizer); // participant cible = lui-même
+      mockParticipantRepo.count.mockResolvedValue(1);
+
+      await expect(service.validate(1, 1, 42, false)).rejects.toThrow(
+        'Impossible de refuser le dernier organisateur de la saison.',
+      );
       expect(mockParticipantRepo.save).not.toHaveBeenCalled();
     });
   });
@@ -246,6 +301,56 @@ describe('SeasonParticipantService', () => {
       await service.remove(1, 1, 42);
 
       expect(mockParticipantRepo.delete).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ── updateMyTeam ─────────────────────────────────────────────────────────────
+
+  describe('updateMyTeam()', () => {
+    it('change l\'équipe engagée si la saison est EN_CONSTRUCTION et l\'équipe appartient à l\'utilisateur', async () => {
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED };
+      mockParticipantRepo.findOne
+        .mockResolvedValueOnce(validated) // recherche du participant courant
+        .mockResolvedValueOnce({ ...validated, teamId: 99, team: { name: 'Roadkill' } }); // relecture après save
+      mockTeamService.findOneForUser.mockResolvedValue({ id: 99, userId: 43 });
+      mockParticipantRepo.save.mockImplementation((p) => Promise.resolve(p));
+
+      const result = await service.updateMyTeam(1, 43, 99);
+
+      expect(mockParticipantRepo.findOne).toHaveBeenNthCalledWith(1, {
+        where: { seasonId: 1, userId: 43, status: ParticipantStatus.VALIDATED },
+        relations: { season: true },
+      });
+      expect(mockTeamService.findOneForUser).toHaveBeenCalledWith(99, 43);
+      expect(mockParticipantRepo.save).toHaveBeenCalledWith(expect.objectContaining({ teamId: 99 }));
+      expect(result.teamName).toBe('Roadkill');
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'a pas de participant VALIDATED pour cette saison', async () => {
+      mockParticipantRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.updateMyTeam(1, 99, 5)).rejects.toThrow('Saison introuvable.');
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si la saison n\'est plus EN_CONSTRUCTION', async () => {
+      const seasonEnCours = { id: 1, state: SeasonState.EN_COURS } as never;
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED, season: seasonEnCours };
+      mockParticipantRepo.findOne.mockResolvedValueOnce(validated);
+
+      await expect(service.updateMyTeam(1, 43, 99)).rejects.toThrow(
+        'Cette saison n\'accepte plus de changement d\'équipe.',
+      );
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException si l\'équipe choisie n\'appartient pas à l\'utilisateur', async () => {
+      const validated = { ...mockPendingParticipant, status: ParticipantStatus.VALIDATED };
+      mockParticipantRepo.findOne.mockResolvedValueOnce(validated);
+      mockTeamService.findOneForUser.mockRejectedValue(new Error('Équipe #99 introuvable'));
+
+      await expect(service.updateMyTeam(1, 43, 99)).rejects.toThrow('Équipe #99 introuvable');
+      expect(mockParticipantRepo.save).not.toHaveBeenCalled();
     });
   });
 });

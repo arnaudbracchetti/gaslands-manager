@@ -140,7 +140,7 @@ describe('SeasonService', () => {
 
       expect(mockParticipantRepo.find).toHaveBeenCalledWith({
         where: { userId: 42 },
-        relations: { season: true },
+        relations: { season: true, team: true },
       });
       expect(mockParticipantRepo.count).toHaveBeenCalledWith({ where: { seasonId: mockSeason.id } });
       expect(result).toEqual([{ ...mockSeason, participantCount: 3, myRole: 'organizer' }]);
@@ -259,6 +259,7 @@ describe('SeasonService', () => {
         name: mockSeason.name,
         state: mockSeason.state,
         organizerName: 'Jean Dupont',
+        participantCount: expect.any(Number),
       });
     });
 

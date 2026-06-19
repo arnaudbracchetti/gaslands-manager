@@ -1,39 +1,18 @@
 <!-- Écran de gestion des saisons Gaslands -->
 <div class="seasons-page">
 
-  <!-- En-tête avec titre et bouton d'ajout -->
+  <!-- En-tête avec titre et boutons d'action -->
   <div class="seasons-header">
     <h1>🏆 Mes Saisons</h1>
-    @if (!showForm()) {
-      <button class="btn-primary btn-add" (click)="openCreate()">
-        + Créer une saison
-      </button>
-    }
+    <div class="seasons-header__actions">
+      <button class="btn-secondary" type="button" (click)="openJoin()">⌗ Rejoindre via code</button>
+      <button class="btn-primary btn-add" type="button" (click)="openCreate()">+ Créer une saison</button>
+    </div>
   </div>
-
-  <!-- Rejoindre une saison via code d'invitation -->
-  <form class="seasons-join-form" (ngSubmit)="goToJoin()">
-    <input
-      type="text"
-      placeholder="Code d'invitation"
-      [ngModel]="joinCode()"
-      (ngModelChange)="joinCode.set($event)"
-      name="joinCode" />
-    <button class="btn-secondary" type="submit">Rejoindre via code</button>
-  </form>
 
   <!-- Message d'erreur API -->
   @if (error()) {
     <div class="seasons-error">{{ error() }}</div>
-  }
-
-  <!-- Formulaire de création -->
-  @if (showForm()) {
-    <app-season-form
-      [saving]="saving()"
-      [teams]="userTeams()"
-      (saved)="onSaved($event)"
-      (formCancel)="cancelForm()" />
   }
 
   <!-- Liste des saisons -->
@@ -41,13 +20,13 @@
     <div class="seasons-loading">
       <p>Chargement de vos saisons...</p>
     </div>
-  } @else if (seasons().length === 0 && !showForm()) {
+  } @else if (seasons().length === 0) {
     <!-- État vide -->
     <div class="seasons-empty">
       <p class="seasons-empty__icon">🏁</p>
       <p class="seasons-empty__title">Aucune saison pour l'instant</p>
-      <p class="seasons-empty__subtitle">Créez votre première saison pour commencer !</p>
-      <button class="btn-primary" (click)="openCreate()">
+      <p class="seasons-empty__subtitle">Créez votre première saison ou rejoignez-en une !</p>
+      <button class="btn-primary" type="button" (click)="openCreate()">
         + Créer ma saison
       </button>
     </div>
@@ -59,6 +38,50 @@
           [isPending]="pendingSeasonIds().has(season.id)"
           [pendingRequestsCount]="organizedPendingCounts().get(season.id) ?? 0" />
       }
+    </div>
+  }
+
+  <!-- Modale : Créer une saison -->
+  @if (showForm()) {
+    <div class="seasons-modal-overlay" role="dialog" aria-modal="true" (click)="cancelForm()">
+      <div class="seasons-modal-content" (click)="$event.stopPropagation()">
+        <app-season-form
+          [saving]="saving()"
+          [teams]="userTeams()"
+          [creatingTeam]="creatingTeam()"
+          (saved)="onSaved($event)"
+          (formCancel)="cancelForm()"
+          (teamCreated)="onTeamCreated($event)" />
+      </div>
+    </div>
+  }
+
+  <!-- Modale : Rejoindre via code -->
+  @if (showJoinModal()) {
+    <div class="seasons-modal-overlay" role="dialog" aria-modal="true" (click)="closeJoinModal()">
+      <div class="seasons-modal-content seasons-join-modal" (click)="$event.stopPropagation()">
+        <h2>⌗ Rejoindre via code</h2>
+        <p class="seasons-join-modal__hint">Saisissez le code d'invitation fourni par l'organisateur.</p>
+        <form (ngSubmit)="goToJoin()">
+          <div class="form-group">
+            <label for="join-code">Code d'invitation</label>
+            <input
+              id="join-code"
+              type="text"
+              placeholder="Ex : abc123def456"
+              [ngModel]="joinCode()"
+              (ngModelChange)="joinCode.set($event)"
+              name="joinCode"
+              autocomplete="off" />
+          </div>
+          <div class="seasons-join-modal__actions">
+            <button class="btn-secondary" type="button" (click)="closeJoinModal()">Annuler</button>
+            <button class="btn-primary" type="submit" [disabled]="!joinCode().trim()">
+              Valider le code →
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   }
 

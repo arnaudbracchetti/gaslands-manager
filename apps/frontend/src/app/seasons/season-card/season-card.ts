@@ -10,12 +10,11 @@ import { Component, InputSignal, input } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Season } from '../season.model';
-import { InviteLink } from '../invite-link/invite-link';
 
 @Component({
   selector: 'app-season-card',
   standalone: true,
-  imports: [InviteLink, RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet],
   templateUrl: './season-card.html',
   styleUrl: './season-card.scss',
 })

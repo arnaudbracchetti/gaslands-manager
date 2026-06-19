@@ -1,13 +1,18 @@
 /**
- * Composant ParticipantList — affiche une liste de participants d'une saison.
+ * Composant ParticipantList — liste unifiée de tous les participants d'une saison.
  *
- * Composant "dumb" (cf. season-card.ts) : reçoit la liste via input(), émet
- * un événement `validate` quand l'utilisateur clique sur "Valider"/"Refuser".
- * `showActions` contrôle l'affichage de ces boutons — le parent (SeasonDetail)
- * ne les passe à `true` que pour la liste "En attente" et si l'utilisateur
- * courant est organisateur (`myRole`).
+ * Composant "dumb" : reçoit la liste complète (tous statuts) et le contexte via
+ * inputs, calcule localement quelles actions sont disponibles par ligne selon le
+ * statut et le rôle. Plus de prop `actions` discriminante — le composant encapsule
+ * toutes les règles de visibilité.
+ *
+ * Actions par ligne (organisateur uniquement, hors soi-même) :
+ *   - PENDING  : Valider / Refuser
+ *   - VALIDATED non-orga : Promouvoir / Retirer
+ *   - Orga (autre que soi) : Retirer (sauf dernier organisateur)
+ *   - REJECTED : Valider
  */
-import { Component, InputSignal, OutputEmitterRef, computed, input, output, Signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { SeasonParticipant } from '../season-participant.model';
 
 @Component({
@@ -18,14 +23,14 @@ import { SeasonParticipant } from '../season-participant.model';
   styleUrl: './participant-list.scss',
 })
 export class ParticipantList {
-  /** Les participants à afficher. */
+  /** Tous les participants de la saison (tous statuts). */
   participants: InputSignal<SeasonParticipant[]> = input.required<SeasonParticipant[]>();
 
-  /** Affiche les boutons Valider/Refuser sur chaque ligne. */
-  showActions: InputSignal<boolean> = input<boolean>(false);
+  /** Vrai si l'utilisateur connecté est organisateur de cette saison. */
+  isOrganizer: InputSignal<boolean> = input(false);
 
-  /** Affiche le bouton "Retirer" sur chaque ligne, indépendamment de showActions. */
-  canRemove: InputSignal<boolean> = input<boolean>(false);
+  /** Id de l'utilisateur connecté — pour identifier sa propre ligne. */
+  currentUserId: InputSignal<number | undefined> = input<number | undefined>(undefined);
 
   /** Émis au clic sur "Valider" (accept: true) ou "Refuser" (accept: false). */
   validate: OutputEmitterRef<{ pid: number; accept: boolean }> = output<{ pid: number; accept: boolean }>();
@@ -33,9 +38,11 @@ export class ParticipantList {
   /** Émis au clic sur "Retirer", avec l'id du SeasonParticipant ciblé. */
   remove: OutputEmitterRef<number> = output<number>();
 
-  /** Nombre d'organisateurs dans la liste affichée (cf. isLastOrganizer). */
+  /** Émis au clic sur "Promouvoir", avec l'id du SeasonParticipant ciblé. */
+  promote: OutputEmitterRef<number> = output<number>();
+
   private organizerCount: Signal<number> = computed(
-    () => this.participants().filter((p) => p.isOrganizer).length,
+    () => this.participants().filter((p) => p.isOrganizer && p.status === 'VALIDATED').length,
   );
 
   onValidate(pid: number, accept: boolean): void {
@@ -46,11 +53,56 @@ export class ParticipantList {
     this.remove.emit(pid);
   }
 
-  /**
-   * Vrai si `participant` est l'unique organisateur de cette liste — masque
-   * alors le bouton "Retirer" (garde-fou saison orpheline, cf. US6 CA4).
-   */
+  isSelf(participant: SeasonParticipant): boolean {
+    return participant.userId === this.currentUserId();
+  }
+
+  /** Dernier organisateur validé — empêche de le retirer ou refuser (saison orpheline). */
   isLastOrganizer(participant: SeasonParticipant): boolean {
     return participant.isOrganizer && this.organizerCount() <= 1;
+  }
+
+  canValidate(participant: SeasonParticipant): boolean {
+    return this.isOrganizer() && !this.isSelf(participant) && participant.status === 'PENDING';
+  }
+
+  canReject(participant: SeasonParticipant): boolean {
+    return (
+      this.isOrganizer() &&
+      !this.isSelf(participant) &&
+      (participant.status === 'PENDING' || participant.status === 'VALIDATED') &&
+      !this.isLastOrganizer(participant)
+    );
+  }
+
+  canPromote(participant: SeasonParticipant): boolean {
+    return (
+      this.isOrganizer() &&
+      !this.isSelf(participant) &&
+      participant.status === 'VALIDATED' &&
+      !participant.isOrganizer
+    );
+  }
+
+  canRetire(participant: SeasonParticipant): boolean {
+    return (
+      this.isOrganizer() &&
+      !this.isSelf(participant) &&
+      participant.status !== 'REJECTED' &&
+      !this.isLastOrganizer(participant)
+    );
+  }
+
+  canRevalidate(participant: SeasonParticipant): boolean {
+    return this.isOrganizer() && !this.isSelf(participant) && participant.status === 'REJECTED';
+  }
+
+  avatarInitials(participant: SeasonParticipant): string {
+    return participant.userName
+      .split(' ')
+      .map((w: string) => w[0] ?? '')
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   }
 }

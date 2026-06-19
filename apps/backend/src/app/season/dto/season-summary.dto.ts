@@ -14,4 +14,5 @@ export class SeasonSummaryDto {
   name: string;
   state: SeasonState;
   organizerName: string;
+  participantCount: number;
 }

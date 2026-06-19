@@ -13,17 +13,18 @@
  */
 import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SeasonsService } from '../seasons.service';
 import { SeasonSummary } from '../season.model';
 import { TeamsService } from '../../teams/teams.service';
-import { Team } from '../../teams/team.model';
+import { Team, CreateTeamDto } from '../../teams/team.model';
+import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 
 @Component({
   selector: 'app-season-join',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, QuickTeamCreate, RouterLink],
   templateUrl: './season-join.html',
   styleUrl: './season-join.scss',
 })
@@ -59,6 +60,12 @@ export class SeasonJoin implements OnInit {
   /** Vrai après une demande d'inscription réussie */
   submitted: WritableSignal<boolean> = signal(false);
 
+  /** Nom de l'équipe sélectionnée au moment de la soumission — affiché à l'étape 3 */
+  submittedTeamName: WritableSignal<string> = signal('');
+
+  /** Vrai pendant l'appel API de création rapide d'équipe */
+  creatingTeam: WritableSignal<boolean> = signal(false);
+
   ngOnInit(): void {
     this.loadSummary();
     this.loadUserTeams();
@@ -92,6 +99,28 @@ export class SeasonJoin implements OnInit {
     });
   }
 
+  /**
+   * Crée une nouvelle équipe (QuickTeamCreate) et la sélectionne immédiatement
+   * pour la demande d'inscription — l'utilisateur n'a pas besoin de quitter
+   * cette page pour engager une équipe créée pour l'occasion.
+   */
+  onTeamCreated(dto: CreateTeamDto): void {
+    this.creatingTeam.set(true);
+    this.submitError.set('');
+
+    this.teamsService.create(dto).subscribe({
+      next: (team: Team) => {
+        this.userTeams.update((teams) => [...teams, team]);
+        this.selectedTeamId.set(team.id);
+        this.creatingTeam.set(false);
+      },
+      error: () => {
+        this.submitError.set('Erreur lors de la création de l\'équipe. Veuillez réessayer.');
+        this.creatingTeam.set(false);
+      },
+    });
+  }
+
   /** Soumet la demande d'inscription pour l'équipe sélectionnée. */
   submitJoinRequest(): void {
     const summary = this.summary();
@@ -99,6 +128,10 @@ export class SeasonJoin implements OnInit {
     if (!summary || teamId === null) {
       return;
     }
+
+    // Capture le nom de l'équipe avant l'appel API pour l'afficher à l'étape 3
+    const teamName = this.userTeams().find((t) => t.id === teamId)?.name ?? '';
+    this.submittedTeamName.set(teamName);
 
     this.submitting.set(true);
     this.submitError.set('');

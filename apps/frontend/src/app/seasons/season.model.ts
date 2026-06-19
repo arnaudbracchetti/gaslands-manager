@@ -26,12 +26,15 @@ export interface Season {
    * uniquement dans la réponse de GET /api/seasons/organizing/pending-requests.
    */
   pendingRequestsCount?: number;
+  /** Nom de l'équipe engagée par l'utilisateur connecté — absent si sans équipe */
+  myTeamName?: string;
 }
 
 /** Corps de la requête POST /api/seasons */
 export interface CreateSeasonDto {
   name: string;
-  teamId: number;
+  /** Optionnel : l'organisateur peut créer sans équipe engagée (décision de design) */
+  teamId?: number;
 }
 
 /** Informations minimales retournées par GET /api/seasons/by-code/:code */
@@ -40,9 +43,15 @@ export interface SeasonSummary {
   name: string;
   state: SeasonState;
   organizerName: string;
+  participantCount: number;
 }
 
 /** Corps de la requête POST /api/seasons/:id/participants */
 export interface JoinSeasonDto {
   teamId: number;
+}
+
+/** Corps de la requête PUT /api/seasons/:id/state */
+export interface ChangeStateDto {
+  state: SeasonState;
 }

@@ -28,35 +28,66 @@
   font-size: 0.95rem;
 }
 
-.seasons-join-form {
+.seasons-header__actions {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
-
-  input {
-    flex: 1;
-    background: var(--clr-bg-base);
-    border: 1px solid var(--clr-border);
-    color: var(--clr-text);
-    padding: 10px 12px;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    font-family: inherit;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: var(--clr-accent);
-    }
-
-    &::placeholder {
-      color: var(--clr-text-disabled);
-    }
-  }
+  align-items: center;
 
   button {
     width: auto;
-    padding: 10px 24px;
+    padding: 10px 20px;
+  }
+}
+
+/* ── Modales (création / rejoindre) ─────────────────────────────────────────── */
+
+.seasons-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay, rgba(0, 0, 0, 0.6));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.seasons-modal-content {
+  background: var(--clr-bg-surface);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.seasons-join-modal {
+  padding: 28px 28px 24px;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    margin-bottom: 8px;
+  }
+
+  &__hint {
+    color: var(--clr-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+
+    button {
+      width: auto;
+      padding: 10px 20px;
+    }
   }
 }
 

@@ -7,7 +7,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Season, CreateSeasonDto, SeasonSummary, JoinSeasonDto } from './season.model';
+import { Season, CreateSeasonDto, SeasonSummary, JoinSeasonDto, ChangeStateDto } from './season.model';
 import { SeasonParticipant, ValidateParticipantDto } from './season-participant.model';
 
 @Injectable({ providedIn: 'root' })
@@ -90,6 +90,30 @@ export class SeasonsService {
    */
   removeParticipant(seasonId: number, pid: number): Observable<void> {
     return this.http.delete<void>(`/api/seasons/${seasonId}/participants/${pid}`);
+  }
+
+  /**
+   * PUT /api/seasons/:id/participants/me → change l'équipe engagée par
+   * l'utilisateur connecté (saison EN_CONSTRUCTION uniquement).
+   */
+  updateMyTeam(seasonId: number, dto: JoinSeasonDto): Observable<SeasonParticipant> {
+    return this.http.put<SeasonParticipant>(`/api/seasons/${seasonId}/participants/me`, dto);
+  }
+
+  /**
+   * PUT /api/seasons/:id/state → change l'état de la saison (organisateur uniquement).
+   * Transitions bidirectionnelles.
+   */
+  changeState(seasonId: number, dto: ChangeStateDto): Observable<Season> {
+    return this.http.put<Season>(`/api/seasons/${seasonId}/state`, dto);
+  }
+
+  /**
+   * PUT /api/seasons/:id/participants/:pid/promote → promeut un participant
+   * validé au rang de co-organisateur (organisateur uniquement).
+   */
+  promote(seasonId: number, pid: number): Observable<SeasonParticipant> {
+    return this.http.put<SeasonParticipant>(`/api/seasons/${seasonId}/participants/${pid}/promote`, {});
   }
 
   /**

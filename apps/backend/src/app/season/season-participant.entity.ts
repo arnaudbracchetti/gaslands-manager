@@ -36,12 +36,13 @@ export class SeasonParticipant {
   @Column()
   userId: number;
 
-  @ManyToOne(() => Team, { onDelete: 'CASCADE' })
+  // nullable : l'organisateur peut créer une saison sans engager d'équipe immédiatement
+  @ManyToOne(() => Team, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'teamId' })
   team: Team;
 
-  @Column()
-  teamId: number;
+  @Column({ nullable: true })
+  teamId: number | null;
 
   // PENDING par défaut : passe à VALIDATED dès qu'un organisateur accepte la
   // demande (ou immédiatement pour le créateur de la saison, cf. SeasonService.create).

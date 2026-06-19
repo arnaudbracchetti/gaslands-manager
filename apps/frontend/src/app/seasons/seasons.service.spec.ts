@@ -137,6 +137,7 @@ describe('SeasonsService', () => {
         name: 'Coupe Verney',
         state: 'EN_CONSTRUCTION',
         organizerName: 'Jean Dupont',
+        participantCount: 3,
       };
       let result: SeasonSummary | undefined;
 

@@ -10,7 +10,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { SeasonForm } from './season-form';
-import { Team } from '../../teams/team.model';
+import { Team, CreateTeamDto } from '../../teams/team.model';
 import { CreateSeasonDto } from '../season.model';
 
 const mockTeams: Team[] = [
@@ -47,26 +47,13 @@ describe('SeasonForm', () => {
     component = fixture.componentInstance;
   });
 
-  // ── CA3 : aucune équipe disponible ──────────────────────────────────────────
-
-  it('affiche un message et masque le bouton Enregistrer si l\'utilisateur n\'a aucune équipe', () => {
-    fixture.componentRef.setInput('teams', []);
-    fixture.detectChanges();
-
-    expect(component.noTeams()).toBe(true);
-
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.form-info')?.textContent).toContain('créer une équipe');
-    expect(el.querySelector('.btn-primary')).toBeNull();
-  });
-
   // ── Pré-sélection ─────────────────────────────────────────────────────────
 
-  it('pré-sélectionne la première équipe quand teams est fourni', () => {
+  it('ne pré-sélectionne pas d\'équipe par défaut (teamId optionnel)', () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
-    expect(component.formTeamId()).toBe(7);
+    expect(component.formTeamId()).toBeNull();
   });
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -113,5 +100,49 @@ describe('SeasonForm', () => {
     component.cancelForm();
 
     expect(cancelled).toBe(true);
+  });
+
+  // ── Création rapide d'équipe (QuickTeamCreate) ───────────────────────────
+
+  it('relaie la création rapide d\'équipe au parent via teamCreated', () => {
+    fixture.componentRef.setInput('teams', mockTeams);
+    fixture.detectChanges();
+
+    const emitted: CreateTeamDto[] = [];
+    outputToObservable(component.teamCreated).subscribe((dto) => emitted.push(dto));
+
+    const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+    component.teamCreated.emit(dto);
+
+    expect(emitted).toEqual([dto]);
+  });
+
+  it('sélectionne automatiquement la nouvelle équipe ajoutée à teams', () => {
+    fixture.componentRef.setInput('teams', mockTeams);
+    fixture.detectChanges();
+
+    expect(component.formTeamId()).toBeNull();
+
+    const newTeam: Team = {
+      id: 9,
+      name: 'Équipe du Vendredi',
+      sponsor: 'Rutherford',
+      cans: 50,
+      userId: 42,
+      createdAt: '2025-06-01T00:00:00.000Z',
+      updatedAt: '2025-06-01T00:00:00.000Z',
+    };
+    fixture.componentRef.setInput('teams', [...mockTeams, newTeam]);
+    fixture.detectChanges();
+
+    expect(component.formTeamId()).toBe(9);
+  });
+
+  it('affiche le bouton de création rapide même quand l\'utilisateur n\'a aucune équipe', () => {
+    fixture.componentRef.setInput('teams', []);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-quick-team-create')).not.toBeNull();
   });
 });

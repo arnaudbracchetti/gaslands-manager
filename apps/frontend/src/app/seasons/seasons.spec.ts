@@ -18,7 +18,7 @@ import { Seasons } from './seasons';
 import { SeasonsService } from './seasons.service';
 import { TeamsService } from '../teams/teams.service';
 import { Season, CreateSeasonDto } from './season.model';
-import { Team } from '../teams/team.model';
+import { Team, CreateTeamDto } from '../teams/team.model';
 
 const mockSeasons: Season[] = [
   {
@@ -56,6 +56,7 @@ describe('Seasons Component', () => {
   };
   let mockTeamsService: {
     getAll: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -68,6 +69,7 @@ describe('Seasons Component', () => {
 
     mockTeamsService = {
       getAll: vi.fn().mockReturnValue(of(mockTeams)),
+      create: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -161,9 +163,11 @@ describe('Seasons Component', () => {
 
   // ── Création d'une saison ────────────────────────────────────────────────
 
-  it('crée une saison puis recharge la liste et ferme le formulaire', () => {
+  it('crée une saison puis navigue vers le détail et ferme le formulaire', () => {
     const newSeason: Season = { ...mockSeasons[0], id: 2, name: 'Coupe Slime' };
     mockSeasonsService.create.mockReturnValue(of(newSeason));
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
     component.openCreate();
 
     const dto: CreateSeasonDto = { name: 'Coupe Slime', teamId: 7 };
@@ -172,8 +176,9 @@ describe('Seasons Component', () => {
     expect(mockSeasonsService.create).toHaveBeenCalledWith(dto);
     expect(component.showForm()).toBe(false);
     expect(component.saving()).toBe(false);
-    // loadSeasons a été appelé une deuxième fois (1 initial + 1 après création)
-    expect(mockSeasonsService.getAll).toHaveBeenCalledTimes(2);
+    expect(navigateSpy).toHaveBeenCalledWith(['/seasons', 2]);
+    // getAll n'est appelé qu'une seule fois (chargement initial)
+    expect(mockSeasonsService.getAll).toHaveBeenCalledTimes(1);
   });
 
   it('affiche un message d\'erreur si la création échoue', () => {
@@ -185,6 +190,39 @@ describe('Seasons Component', () => {
     expect(component.error()).toContain('Une erreur est survenue');
     expect(component.saving()).toBe(false);
     expect(component.showForm()).toBe(true);
+  });
+
+  // ── Création rapide d'équipe (QuickTeamCreate, depuis SeasonForm) ────────
+
+  describe('onTeamCreated()', () => {
+    it('ajoute la nouvelle équipe à userTeams', () => {
+      const newTeam: Team = {
+        id: 9,
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+        userId: 42,
+        createdAt: '2025-06-01T00:00:00.000Z',
+        updatedAt: '2025-06-01T00:00:00.000Z',
+      };
+      mockTeamsService.create.mockReturnValue(of(newTeam));
+
+      const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+      component.onTeamCreated(dto);
+
+      expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
+      expect(component.userTeams()).toEqual([...mockTeams, newTeam]);
+      expect(component.creatingTeam()).toBe(false);
+    });
+
+    it('affiche un message d\'erreur en cas d\'échec de la création', () => {
+      mockTeamsService.create.mockReturnValue(throwError(() => new Error('500')));
+
+      component.onTeamCreated({ name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 });
+
+      expect(component.error()).toContain('création de l\'équipe');
+      expect(component.creatingTeam()).toBe(false);
+    });
   });
 
   // ── Rejoindre via code ────────────────────────────────────────────────────

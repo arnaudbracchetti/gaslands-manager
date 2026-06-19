@@ -1,6 +1,4 @@
-<!-- Carte d'une saison — cliquable et navigue vers le détail, SAUF si une
-     demande d'inscription est encore PENDING : GET /api/seasons/:id exige un
-     participant VALIDATED, donc le détail serait inaccessible (404). -->
+<!-- Carte d'une saison — cliquable vers le détail, SAUF si PENDING (accès 404) -->
 @if (isPending()) {
   <div class="season-card season-card--locked">
     <ng-container [ngTemplateOutlet]="content" />
@@ -21,25 +19,25 @@
   </div>
 
   <div class="season-card__info">
+    <!-- Badge de rôle -->
     @if (season().myRole === 'organizer') {
-      <span class="season-card__badge">🏆 Organisateur</span>
+      <span class="season-card__badge season-card__badge--organizer">★ Organisateur</span>
+    } @else if (isPending()) {
+      <span class="season-card__badge season-card__badge--pending">◷ En attente</span>
+    } @else {
+      <span class="season-card__badge season-card__badge--participant">
+        ▲ Participant@if (season().myTeamName) { · {{ season().myTeamName }}}
+      </span>
     }
-    @if (isPending()) {
-      <span class="season-card__badge season-card__badge--pending">⏳ En attente de validation</span>
-    }
+
+    <!-- Alerte demandes à valider (organisateur) -->
     @if (season().myRole === 'organizer' && pendingRequestsCount() > 0) {
       <span class="season-card__badge season-card__badge--alert">⚠️ {{ pendingRequestsCount() }} à valider</span>
     }
+
     <span class="season-card__participants">
       {{ season().participantCount }} participant{{ season().participantCount > 1 ? 's' : '' }}
     </span>
   </div>
-
-  @if (season().myRole === 'organizer') {
-    <!-- stopPropagation : "Copier" ne doit pas déclencher la navigation de la carte -->
-    <div (click)="$event.stopPropagation()">
-      <app-invite-link [inviteCode]="season().inviteCode" />
-    </div>
-  }
 
 </ng-template>

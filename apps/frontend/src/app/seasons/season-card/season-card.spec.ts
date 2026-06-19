@@ -57,7 +57,7 @@ describe('SeasonCard', () => {
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.season-card__badge')).toBeNull();
+    expect(el.querySelector('.season-card__badge--organizer')).toBeNull();
   });
 
   it('affiche le nombre de participants', () => {
@@ -68,31 +68,16 @@ describe('SeasonCard', () => {
     expect(el.querySelector('.season-card__participants')?.textContent).toContain('3 participants');
   });
 
-  it('affiche le code d\'invitation quand myRole === "organizer"', () => {
-    fixture.componentRef.setInput('season', mockSeason);
-    fixture.detectChanges();
+  // ── Badge "En attente" (US4) ────────────────────────────────────────────
 
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('app-invite-link')).not.toBeNull();
-  });
-
-  it('masque le code d\'invitation quand myRole === "participant"', () => {
+  it('affiche le badge "En attente" quand isPending() est vrai (myRole participant)', () => {
     fixture.componentRef.setInput('season', { ...mockSeason, myRole: 'participant' });
-    fixture.detectChanges();
-
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('app-invite-link')).toBeNull();
-  });
-
-  // ── Badge "En attente de validation" (US4) ──────────────────────────────
-
-  it('affiche le badge "En attente de validation" quand isPending() est vrai', () => {
-    fixture.componentRef.setInput('season', mockSeason);
     fixture.componentRef.setInput('isPending', true);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.season-card__badge--pending')?.textContent).toContain('En attente de validation');
+    expect(el.querySelector('.season-card__badge--pending')).not.toBeNull();
+    expect(el.querySelector('.season-card__badge--pending')?.textContent).toContain('En attente');
   });
 
   it('masque le badge "En attente de validation" par défaut', () => {

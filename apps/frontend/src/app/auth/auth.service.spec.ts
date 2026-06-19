@@ -14,6 +14,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 
 const mockUser = {
@@ -86,6 +87,10 @@ describe('AuthService', () => {
 
   it('isLoggedIn() retourne false quand currentUser est null', () => {
     expect(service.isLoggedIn()).toBe(false);
+  });
+
+  it('whenSessionReady() se résout immédiatement si aucun token n\'est en localStorage', async () => {
+    await expect(firstValueFrom(service.whenSessionReady())).resolves.toBeUndefined();
   });
 
   // ── login() ──────────────────────────────────────────────────────────────
@@ -180,6 +185,33 @@ describe('AuthService', () => {
       const req = freshHttpMock.expectOne('/api/auth/me');
       req.flush(mockUser);
 
+      expect(freshService.currentUser()).toEqual(mockUser);
+      freshHttpMock.verify();
+    });
+
+    it('whenSessionReady() se résout une fois GET /api/auth/me terminé (succès)', async () => {
+      const lsWithToken = createLocalStorageMock('existing.jwt.token');
+      vi.stubGlobal('localStorage', lsWithToken);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AuthService,
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+        ],
+      });
+
+      const freshService = TestBed.inject(AuthService);
+      const freshHttpMock = TestBed.inject(HttpTestingController);
+
+      const ready = firstValueFrom(freshService.whenSessionReady());
+
+      const req = freshHttpMock.expectOne('/api/auth/me');
+      req.flush(mockUser);
+
+      await expect(ready).resolves.toBeUndefined();
       expect(freshService.currentUser()).toEqual(mockUser);
       freshHttpMock.verify();
     });

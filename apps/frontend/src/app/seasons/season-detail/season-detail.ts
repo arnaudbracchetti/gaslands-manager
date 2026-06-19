@@ -1,29 +1,39 @@
 /**
  * Composant SeasonDetail — page "/seasons/:id".
  *
- * Composant "smart" (cf. season-join.ts) : lit l'id de saison dans l'URL,
- * charge le détail de la saison (GET /api/seasons/:id) et ses participants
- * (GET /api/seasons/:id/participants), puis délègue l'affichage à
- * ParticipantList (deux listes : "Validés" et "En attente").
+ * Composant "smart" : charge le détail de la saison et ses participants, puis
+ * délègue l'affichage à ParticipantList (liste unifiée — tous statuts, toutes
+ * sections).
  *
- * CA3 : si l'utilisateur n'a pas de SeasonParticipant VALIDATED pour cette
- * saison, le backend renvoie 404 — affiché ici comme un message d'erreur
- * générique (pas de fuite d'information).
+ * Structure de la page :
+ *  1. Carte d'état (organisateur uniquement) — gestion des transitions EN_CONSTRUCTION
+ *     / EN_COURS / TERMINÉE avec code d'invitation et boutons de transition.
+ *  2. Section "Participants" unifiée — tous les participants dans une seule liste,
+ *     avec actions contextuelles selon statut et rôle.
+ *  3. Zone dangereuse — suppression de la saison (organisateur uniquement).
  *
- * CA4/CA5 : Valider/Refuser met à jour le signal `participants` localement
- * (sans recharger la page) — le participant change de liste immédiatement.
+ * CA3 : si l'utilisateur n'a pas de SeasonParticipant VALIDATED pour cette saison,
+ * le backend renvoie 404 — affiché comme message d'erreur générique.
  */
 import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SeasonsService } from '../seasons.service';
-import { Season } from '../season.model';
+import { Season, SeasonState, ChangeStateDto } from '../season.model';
 import { SeasonParticipant } from '../season-participant.model';
 import { ParticipantList } from '../participant-list/participant-list';
+import { InviteLink } from '../invite-link/invite-link';
+import { AuthService } from '../../auth/auth.service';
+
+const STATE_LABELS: Record<SeasonState, string> = {
+  EN_CONSTRUCTION: 'En construction',
+  EN_COURS: 'En cours',
+  TERMINEE: 'Terminée',
+};
 
 @Component({
   selector: 'app-season-detail',
   standalone: true,
-  imports: [ParticipantList],
+  imports: [ParticipantList, InviteLink, RouterLink],
   templateUrl: './season-detail.html',
   styleUrl: './season-detail.scss',
 })
@@ -31,34 +41,39 @@ export class SeasonDetail implements OnInit {
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
   private seasonsService: SeasonsService = inject(SeasonsService);
+  private authService: AuthService = inject(AuthService);
 
-  /** Id de la saison lu depuis l'URL */
   private seasonId: number = Number(this.route.snapshot.params['id']);
 
-  /** Vrai pendant le chargement initial */
   loading: WritableSignal<boolean> = signal(true);
-
-  /** Message d'erreur générique (CA3) — vide si pas d'erreur */
   error: WritableSignal<string> = signal('');
-
-  /** Détail de la saison — null si non chargé ou en erreur */
   season: WritableSignal<Season | null> = signal<Season | null>(null);
-
-  /** Tous les participants de la saison (tous statuts) */
   participants: WritableSignal<SeasonParticipant[]> = signal<SeasonParticipant[]>([]);
 
-  /** Participants validés */
-  validated: Signal<SeasonParticipant[]> = computed(() =>
-    this.participants().filter((p) => p.status === 'VALIDATED'),
-  );
+  /** Vrai pendant un appel PUT /state */
+  stateTransitioning: WritableSignal<boolean> = signal(false);
 
-  /** Demandes en attente de validation */
-  pending: Signal<SeasonParticipant[]> = computed(() =>
-    this.participants().filter((p) => p.status === 'PENDING'),
-  );
+  myParticipant: Signal<SeasonParticipant | null> = computed(() => {
+    const userId = this.authService.currentUser()?.id;
+    return this.participants().find((p) => p.userId === userId) ?? null;
+  });
 
-  /** Vrai si l'utilisateur connecté est organisateur de cette saison */
+  currentUserId: Signal<number | undefined> = computed(() => this.authService.currentUser()?.id);
+
   isOrganizer: Signal<boolean> = computed(() => this.season()?.myRole === 'organizer');
+
+  stateLabel: Signal<string> = computed(() => {
+    const state = this.season()?.state;
+    return state ? STATE_LABELS[state] : '';
+  });
+
+  validatedCount: Signal<number> = computed(
+    () => this.participants().filter((p) => p.status === 'VALIDATED').length,
+  );
+
+  pendingCount: Signal<number> = computed(
+    () => this.participants().filter((p) => p.status === 'PENDING').length,
+  );
 
   ngOnInit(): void {
     this.loading.set(true);
@@ -89,10 +104,6 @@ export class SeasonDetail implements OnInit {
     });
   }
 
-  /**
-   * Valide ou refuse une demande PENDING — met à jour le statut localement
-   * sans recharger la liste complète (CA4/CA5).
-   */
   onValidate(event: { pid: number; accept: boolean }): void {
     this.seasonsService.validateParticipant(this.seasonId, event.pid, { accept: event.accept }).subscribe({
       next: (updated: SeasonParticipant) => {
@@ -103,20 +114,10 @@ export class SeasonDetail implements OnInit {
     });
   }
 
-  /**
-   * Retire un participant (validé ou en attente) de la saison — organisateur
-   * uniquement, saison EN_CONSTRUCTION uniquement (CA visibles via canRemove
-   * dans le template). Retrait optimiste de la liste, avec rollback via
-   * loadParticipants() en cas d'erreur (ex. dernier organisateur, CA4).
-   */
   onRemoveParticipant(pid: number): void {
     const participant = this.participants().find((p) => p.id === pid);
-    if (!participant) {
-      return;
-    }
-    if (!window.confirm(`Retirer "${participant.userName}" de la saison ?`)) {
-      return;
-    }
+    if (!participant) return;
+    if (!window.confirm(`Retirer "${participant.userName}" de la saison ?`)) return;
 
     this.participants.update((list) => list.filter((p) => p.id !== pid));
 
@@ -128,19 +129,52 @@ export class SeasonDetail implements OnInit {
     });
   }
 
+  onPromote(pid: number): void {
+    const participant = this.participants().find((p) => p.id === pid);
+    if (!participant) return;
+    if (!window.confirm(`Promouvoir "${participant.userName}" co-organisateur ?`)) return;
+
+    this.seasonsService.promote(this.seasonId, pid).subscribe({
+      next: (updated: SeasonParticipant) => {
+        this.participants.set(
+          this.participants().map((p) => (p.id === updated.id ? updated : p)),
+        );
+      },
+      error: () => this.error.set('Erreur lors de la promotion.'),
+    });
+  }
+
   /**
-   * Supprime définitivement la saison — organisateur uniquement (CA visible
-   * via isOrganizer() dans le template). Cascade côté backend sur les
-   * SeasonParticipant ; les équipes des participants ne sont pas affectées.
+   * Change l'état de la saison — transitions bidirectionnelles.
+   * Une confirmation est requise avant chaque transition.
    */
+  onChangeState(newState: SeasonState): void {
+    const season = this.season();
+    if (!season) return;
+
+    const label = STATE_LABELS[newState];
+    if (!window.confirm(`Passer la saison à l'état "${label}" ?`)) return;
+
+    this.stateTransitioning.set(true);
+    this.error.set('');
+
+    const dto: ChangeStateDto = { state: newState };
+    this.seasonsService.changeState(this.seasonId, dto).subscribe({
+      next: (updated: Season) => {
+        this.season.set(updated);
+        this.stateTransitioning.set(false);
+      },
+      error: () => {
+        this.error.set('Erreur lors du changement d\'état.');
+        this.stateTransitioning.set(false);
+      },
+    });
+  }
+
   deleteSeason(): void {
     const season = this.season();
-    if (!season) {
-      return;
-    }
-    if (!window.confirm(`Supprimer définitivement la saison "${season.name}" ? Cette action est irréversible.`)) {
-      return;
-    }
+    if (!season) return;
+    if (!window.confirm(`Supprimer définitivement la saison "${season.name}" ? Cette action est irréversible.`)) return;
 
     this.seasonsService.remove(this.seasonId).subscribe({
       next: () => this.router.navigate(['/seasons']),

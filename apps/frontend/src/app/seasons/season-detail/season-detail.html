@@ -1,46 +1,105 @@
 <!-- Page de détail d'une saison -->
 <div class="season-detail-page">
 
+  <a class="season-detail-back" routerLink="/seasons">← Mes saisons</a>
+
   @if (loading()) {
     <div class="season-detail-loading">
       <p>Chargement...</p>
     </div>
   } @else if (error()) {
-    <!-- CA3 : message générique, pas de fuite d'info -->
     <div class="season-detail-error">{{ error() }}</div>
   } @else if (season()) {
-    <div class="season-detail-header">
-      <div>
-        <h1>{{ season()!.name }}</h1>
-        <span class="season-detail-state">{{ season()!.state }}</span>
-      </div>
 
+    <!-- En-tête : nom + badge état -->
+    <div class="season-detail-header">
+      <h1>{{ season()!.name }}</h1>
+      <span class="season-detail-state-badge season-detail-state-badge--{{ season()!.state }}">
+        {{ stateLabel() }}
+      </span>
       @if (isOrganizer()) {
-        <button type="button" class="season-detail-delete" (click)="deleteSeason()">
-          🗑 Supprimer la saison
-        </button>
+        <span class="season-detail-role-badge">🏆 Organisateur</span>
       }
     </div>
 
+    <!-- Carte d'état — organisateur uniquement -->
+    @if (isOrganizer()) {
+      <div class="season-state-card">
+        @switch (season()!.state) {
+          @case ('EN_CONSTRUCTION') {
+            <p class="season-state-card__message">
+              Inscriptions ouvertes. Validez les demandes avant de lancer.
+            </p>
+            <app-invite-link [inviteCode]="season()!.inviteCode" />
+            <div class="season-state-card__actions">
+              <button class="btn-primary" type="button"
+                [disabled]="stateTransitioning()"
+                (click)="onChangeState('EN_COURS')">
+                Lancer → EN COURS
+              </button>
+            </div>
+          }
+          @case ('EN_COURS') {
+            <p class="season-state-card__message">
+              Inscriptions fermées. Les parties restent ajoutables.
+            </p>
+            <app-invite-link [inviteCode]="season()!.inviteCode" />
+            <div class="season-state-card__actions">
+              <button class="btn-secondary" type="button"
+                [disabled]="stateTransitioning()"
+                (click)="onChangeState('EN_CONSTRUCTION')">
+                ← Rouvrir les inscriptions
+              </button>
+              <button class="season-state-card__btn-close" type="button"
+                [disabled]="stateTransitioning()"
+                (click)="onChangeState('TERMINEE')">
+                Clôturer → TERMINÉE
+              </button>
+            </div>
+          }
+          @case ('TERMINEE') {
+            <p class="season-state-card__message">
+              Saison archivée. Lecture seule.
+            </p>
+            <div class="season-state-card__actions">
+              <button class="btn-secondary" type="button"
+                [disabled]="stateTransitioning()"
+                (click)="onChangeState('EN_COURS')">
+                ← Rouvrir EN COURS
+              </button>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (error()) {
+      <div class="season-detail-error">{{ error() }}</div>
+    }
+
+    <!-- Section Participants — liste unifiée -->
     <section class="season-detail-section">
-      <h2>Participants</h2>
-
-      <h3>Validés ({{ validated().length }})</h3>
+      <h2>Participants ({{ validatedCount() }} validé{{ validatedCount() > 1 ? 's' : '' }} · {{ pendingCount() }} en attente)</h2>
       <app-participant-list
-        [participants]="validated()"
-        [canRemove]="isOrganizer() && season()!.state === 'EN_CONSTRUCTION'"
-        (remove)="onRemoveParticipant($event)" />
-
-      @if (pending().length > 0 || isOrganizer()) {
-        <h3>En attente de validation ({{ pending().length }})</h3>
-        <app-participant-list
-          [participants]="pending()"
-          [showActions]="isOrganizer()"
-          [canRemove]="isOrganizer() && season()!.state === 'EN_CONSTRUCTION'"
-          (validate)="onValidate($event)"
-          (remove)="onRemoveParticipant($event)" />
-      }
+        [participants]="participants()"
+        [isOrganizer]="isOrganizer()"
+        [currentUserId]="currentUserId()"
+        (validate)="onValidate($event)"
+        (remove)="onRemoveParticipant($event)"
+        (promote)="onPromote($event)" />
     </section>
+
+    <!-- Zone dangereuse — organisateur uniquement -->
+    @if (isOrganizer()) {
+      <section class="season-detail-danger-zone">
+        <h3>Zone dangereuse</h3>
+        <p>Cette action est définitive et supprime la saison pour tous les participants.</p>
+        <button type="button" class="season-detail-delete" (click)="deleteSeason()">
+          🗑 Supprimer la saison
+        </button>
+      </section>
+    }
+
   }
 
 </div>

@@ -14,10 +14,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SeasonsService } from './seasons.service';
 import { Season, CreateSeasonDto } from './season.model';
+
 import { SeasonCard } from './season-card/season-card';
 import { SeasonForm } from './season-form/season-form';
 import { TeamsService } from '../teams/teams.service';
-import { Team } from '../teams/team.model';
+import { Team, CreateTeamDto } from '../teams/team.model';
 
 @Component({
   selector: 'app-seasons',
@@ -46,11 +47,17 @@ export class Seasons implements OnInit {
   /** Vrai pendant l'appel API de création (passé à SeasonForm pour désactiver les boutons) */
   saving: WritableSignal<boolean> = signal(false);
 
+  /** Vrai pendant l'appel API de création rapide d'équipe (QuickTeamCreate) */
+  creatingTeam: WritableSignal<boolean> = signal(false);
+
   /** Équipes de l'utilisateur connecté, pour le select de SeasonForm (CA3) */
   userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
 
-  /** Code d'invitation saisi dans le champ "Rejoindre via code" */
+  /** Code d'invitation saisi dans la modale "Rejoindre via code" */
   joinCode: WritableSignal<string> = signal('');
+
+  /** Vrai quand la modale "Rejoindre via code" est ouverte */
+  showJoinModal: WritableSignal<boolean> = signal(false);
 
   /** Ids des saisons pour lesquelles l'utilisateur a une demande PENDING (US4) */
   pendingSeasonIds: WritableSignal<Set<number>> = signal(new Set<number>());
@@ -120,22 +127,55 @@ export class Seasons implements OnInit {
     });
   }
 
-  /** Ouvre le formulaire de création */
+  /** Ouvre la modale de création */
   openCreate(): void {
     this.showForm.set(true);
   }
 
-  /** Navigue vers la page de jointure pour le code saisi. */
+  /** Ferme la modale de création sans sauvegarder */
+  cancelForm(): void {
+    this.showForm.set(false);
+  }
+
+  /** Ouvre la modale "Rejoindre via code" */
+  openJoin(): void {
+    this.joinCode.set('');
+    this.showJoinModal.set(true);
+  }
+
+  /** Ferme la modale "Rejoindre via code" */
+  closeJoinModal(): void {
+    this.showJoinModal.set(false);
+  }
+
+  /** Navigue vers la page de jointure pour le code saisi, puis ferme la modale. */
   goToJoin(): void {
     const code = this.joinCode().trim();
     if (code) {
       this.router.navigate(['/seasons/join', code]);
+      this.closeJoinModal();
     }
   }
 
-  /** Ferme le formulaire sans sauvegarder */
-  cancelForm(): void {
-    this.showForm.set(false);
+  /**
+   * Crée une nouvelle équipe (QuickTeamCreate, depuis SeasonForm) et l'ajoute
+   * à userTeams — SeasonForm sélectionne automatiquement la nouvelle équipe
+   * (cf. son effect() de pré-sélection).
+   */
+  onTeamCreated(dto: CreateTeamDto): void {
+    this.creatingTeam.set(true);
+    this.error.set('');
+
+    this.teamsService.create(dto).subscribe({
+      next: (team: Team) => {
+        this.userTeams.update((teams) => [...teams, team]);
+        this.creatingTeam.set(false);
+      },
+      error: () => {
+        this.error.set('Erreur lors de la création de l\'équipe. Veuillez réessayer.');
+        this.creatingTeam.set(false);
+      },
+    });
   }
 
   /**
@@ -146,10 +186,11 @@ export class Seasons implements OnInit {
     this.error.set('');
 
     this.seasonsService.create(dto).subscribe({
-      next: () => {
+      next: (season: Season) => {
         this.saving.set(false);
         this.showForm.set(false);
-        this.loadSeasons();
+        // Redirige vers le détail de la saison créée (décision de design)
+        this.router.navigate(['/seasons', season.id]);
       },
       error: () => {
         this.error.set('Une erreur est survenue. Veuillez réessayer.');

@@ -11,13 +11,14 @@ import { SeasonJoin } from './season-join';
 import { SeasonsService } from '../seasons.service';
 import { TeamsService } from '../../teams/teams.service';
 import { SeasonSummary } from '../season.model';
-import { Team } from '../../teams/team.model';
+import { Team, CreateTeamDto } from '../../teams/team.model';
 
 const mockSummary: SeasonSummary = {
   id: 1,
   name: 'Coupe Verney',
   state: 'EN_CONSTRUCTION',
   organizerName: 'Jean Dupont',
+  participantCount: 3,
 };
 
 const mockTeams: Team[] = [
@@ -41,6 +42,7 @@ describe('SeasonJoin Component', () => {
   };
   let mockTeamsService: {
     getAll: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -51,6 +53,7 @@ describe('SeasonJoin Component', () => {
 
     mockTeamsService = {
       getAll: vi.fn().mockReturnValue(of(mockTeams)),
+      create: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -138,6 +141,40 @@ describe('SeasonJoin Component', () => {
       component.submitJoinRequest();
 
       expect(mockSeasonsService.requestJoin).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Création rapide d'équipe (QuickTeamCreate) ───────────────────────────
+
+  describe('onTeamCreated()', () => {
+    it('ajoute la nouvelle équipe à la liste et la sélectionne', () => {
+      const newTeam: Team = {
+        id: 9,
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+        userId: 42,
+        createdAt: '2025-06-01T00:00:00.000Z',
+        updatedAt: '2025-06-01T00:00:00.000Z',
+      };
+      mockTeamsService.create.mockReturnValue(of(newTeam));
+
+      const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+      component.onTeamCreated(dto);
+
+      expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
+      expect(component.userTeams()).toEqual([...mockTeams, newTeam]);
+      expect(component.selectedTeamId()).toBe(9);
+      expect(component.creatingTeam()).toBe(false);
+    });
+
+    it('affiche un message d\'erreur en cas d\'échec de la création', () => {
+      mockTeamsService.create.mockReturnValue(throwError(() => new Error('500')));
+
+      component.onTeamCreated({ name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 });
+
+      expect(component.submitError()).toContain('création de l\'équipe');
+      expect(component.creatingTeam()).toBe(false);
     });
   });
 });

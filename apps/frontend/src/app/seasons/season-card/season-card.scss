@@ -79,6 +79,18 @@
     font-size: 0.8rem;
     font-weight: 600;
 
+    &--organizer {
+      background: rgba(var(--clr-accent-rgb), 0.15);
+      border-color: rgba(var(--clr-accent-rgb), 0.3);
+      color: var(--clr-accent);
+    }
+
+    &--participant {
+      background: transparent;
+      border-color: var(--clr-border-subtle);
+      color: var(--clr-text-muted);
+    }
+
     /* Demande d'inscription en attente — teinte neutre, n'attire pas l'œil autant que --alert */
     &--pending {
       background: transparent;

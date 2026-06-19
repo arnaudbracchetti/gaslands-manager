@@ -55,7 +55,7 @@ export class SeasonService {
   async findAll(userId: number): Promise<SeasonResponseDto[]> {
     const participations = await this.participantRepo.find({
       where: { userId },
-      relations: { season: true },
+      relations: { season: true, team: true },
     });
 
     return Promise.all(
@@ -67,6 +67,7 @@ export class SeasonService {
           ...participation.season,
           participantCount,
           myRole: participation.isOrganizer ? 'organizer' : 'participant',
+          myTeamName: participation.team?.name,
         };
       }),
     );
@@ -139,7 +140,9 @@ export class SeasonService {
    * 3. Crée le SeasonParticipant du créateur (isOrganizer: true, status: VALIDATED).
    */
   async create(userId: number, dto: CreateSeasonDto): Promise<SeasonResponseDto> {
-    await this.teamService.findOneForUser(dto.teamId, userId);
+    if (dto.teamId) {
+      await this.teamService.findOneForUser(dto.teamId, userId);
+    }
 
     const season = this.seasonRepo.create({
       name: dto.name,
@@ -151,7 +154,7 @@ export class SeasonService {
     const participant = this.participantRepo.create({
       seasonId: savedSeason.id,
       userId,
-      teamId: dto.teamId,
+      teamId: dto.teamId ?? null,
       status: ParticipantStatus.VALIDATED,
       isOrganizer: true,
     });
@@ -175,16 +178,22 @@ export class SeasonService {
       throw new NotFoundException('Code d\'invitation invalide.');
     }
 
-    const organizer = await this.participantRepo.findOne({
-      where: { seasonId: season.id, isOrganizer: true },
-      relations: { user: true },
-    });
+    const [organizer, participantCount] = await Promise.all([
+      this.participantRepo.findOne({
+        where: { seasonId: season.id, isOrganizer: true },
+        relations: { user: true },
+      }),
+      this.participantRepo.count({
+        where: { seasonId: season.id, status: ParticipantStatus.VALIDATED },
+      }),
+    ]);
 
     return {
       id: season.id,
       name: season.name,
       state: season.state,
       organizerName: organizer ? `${organizer.user.firstName} ${organizer.user.lastName}` : '',
+      participantCount,
     };
   }
 
@@ -236,6 +245,32 @@ export class SeasonService {
    *   (onDelete: 'CASCADE', cf. season-participant.entity.ts) — les équipes
    *   des participants ne sont pas affectées (aucune référence Team → Season).
    */
+  /**
+   * Change l'état d'une saison — organisateur uniquement.
+   *
+   * Les transitions sont bidirectionnelles (décision de design, cf. README.md §divergences).
+   * Aucune garde de séquence n'est appliquée — seul le rôle organisateur est vérifié.
+   */
+  async changeState(seasonId: number, userId: number, newState: SeasonState): Promise<SeasonResponseDto> {
+    const organizer = await this.participantRepo.findOne({
+      where: { seasonId, userId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+    });
+    if (!organizer) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    const season = await this.seasonRepo.findOne({ where: { id: seasonId } });
+    if (!season) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+
+    season.state = newState;
+    const saved = await this.seasonRepo.save(season);
+
+    const participantCount = await this.participantRepo.count({ where: { seasonId } });
+    return { ...saved, participantCount, myRole: 'organizer' };
+  }
+
   async remove(seasonId: number, userId: number): Promise<void> {
     const organizer = await this.participantRepo.findOne({
       where: { seasonId, userId, status: ParticipantStatus.VALIDATED, isOrganizer: true },

@@ -20,11 +20,18 @@
 
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = async () => {
   const authService = inject(AuthService);
   const router = inject(Router);
+
+  // Attend la fin de la restauration de session (GET /api/auth/me) avant de
+  // statuer — sinon, sur un rechargement de page, isLoggedIn() vaudrait
+  // encore `false` (currentUser pas encore peuplé) et redirigerait vers
+  // /login même pour un utilisateur connecté (cf. AuthService.whenSessionReady).
+  await firstValueFrom(authService.whenSessionReady());
 
   if (authService.isLoggedIn()) {
     return true; // Navigation autorisée

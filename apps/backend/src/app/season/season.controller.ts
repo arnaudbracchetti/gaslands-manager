@@ -27,6 +27,7 @@ import { SeasonResponseDto } from './dto/season-response.dto';
 import { SeasonSummaryDto } from './dto/season-summary.dto';
 import { JoinSeasonDto } from './dto/join-season.dto';
 import { ValidateParticipantDto } from './dto/validate-participant.dto';
+import { ChangeStateDto } from './dto/change-state.dto';
 import { SeasonParticipantResponseDto } from './dto/season-participant-response.dto';
 import { SeasonParticipant } from './season-participant.entity';
 
@@ -125,8 +126,55 @@ export class SeasonController {
   }
 
   /**
+   * PUT /api/seasons/:id/state
+   * Change l'état de la saison — organisateur uniquement. Transitions bidirectionnelles.
+   */
+  @Put(':id/state')
+  changeState(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ChangeStateDto,
+  ): Promise<SeasonResponseDto> {
+    return this.seasonService.changeState(id, req.user.id, dto.state);
+  }
+
+  /**
+   * PUT /api/seasons/:id/participants/me
+   * Change l'équipe engagée par l'utilisateur connecté — uniquement tant que
+   * la saison est EN_CONSTRUCTION.
+   *
+   * Déclarée avant ':id/participants/:pid/validate' pour que 'me' ne soit
+   * pas capturé par le paramètre :pid.
+   */
+  @Put(':id/participants/me')
+  updateMyTeam(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: JoinSeasonDto,
+  ): Promise<SeasonParticipantResponseDto> {
+    return this.seasonParticipantService.updateMyTeam(id, req.user.id, dto.teamId);
+  }
+
+  /**
+   * PUT /api/seasons/:id/participants/:pid/promote
+   * Promeut un participant VALIDATED en co-organisateur — organisateur uniquement.
+   *
+   * Déclaré avant ':pid/validate' pour éviter toute ambiguïté de routage NestJS.
+   */
+  @Put(':id/participants/:pid/promote')
+  promoteParticipant(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pid', ParseIntPipe) pid: number,
+  ): Promise<SeasonParticipantResponseDto> {
+    return this.seasonParticipantService.promote(id, pid, req.user.id);
+  }
+
+  /**
    * PUT /api/seasons/:id/participants/:pid/validate
-   * Valide ou refuse une demande d'inscription PENDING — organisateur uniquement.
+   * Valide ou refuse une demande d'inscription PENDING, repasse un
+   * participant REJECTED en VALIDATED, ou refuse un participant déjà
+   * VALIDATED — organisateur uniquement.
    */
   @Put(':id/participants/:pid/validate')
   validateParticipant(

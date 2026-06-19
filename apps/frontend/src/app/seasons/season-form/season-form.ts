@@ -15,22 +15,21 @@ import {
   Component,
   InputSignal,
   OutputEmitterRef,
-  Signal,
   WritableSignal,
-  computed,
   effect,
   input,
   output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Team } from '../../teams/team.model';
+import { Team, CreateTeamDto } from '../../teams/team.model';
 import { CreateSeasonDto } from '../season.model';
+import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 
 @Component({
   selector: 'app-season-form',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, QuickTeamCreate],
   templateUrl: './season-form.html',
   styleUrl: './season-form.scss',
 })
@@ -43,10 +42,16 @@ export class SeasonForm {
   /** Équipes de l'utilisateur connecté, pour le select. */
   teams: InputSignal<Team[]> = input<Team[]>([]);
 
+  /** Vrai pendant que le parent attend la réponse de l'API de création d'équipe. */
+  creatingTeam: InputSignal<boolean> = input(false);
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   saved: OutputEmitterRef<CreateSeasonDto> = output<CreateSeasonDto>();
   formCancel: OutputEmitterRef<void> = output<void>();
+
+  /** Relaie la demande de création rapide d'équipe (QuickTeamCreate) au parent. */
+  teamCreated: OutputEmitterRef<CreateTeamDto> = output<CreateTeamDto>();
 
   // ── État interne du formulaire ───────────────────────────────────────────────
 
@@ -56,21 +61,24 @@ export class SeasonForm {
   /** Message d'erreur de validation locale */
   formError: WritableSignal<string> = signal('');
 
-  /** Vrai si l'utilisateur n'a aucune équipe (CA3) */
-  noTeams: Signal<boolean> = computed((): boolean => this.teams().length === 0);
+  /** Nombre d'équipes lors du dernier passage de l'effect — détecte un ajout. */
+  private previousTeamsLength = 0;
 
   constructor() {
-    // Pré-sélectionne la première équipe disponible dès que `teams` est chargé,
-    // sans écraser un choix déjà fait par l'utilisateur.
+    // Après une création rapide (QuickTeamCreate), sélectionne automatiquement
+    // la nouvelle équipe (dernière de la liste ajoutée).
     effect((): void => {
       const teams = this.teams();
-      if (teams.length > 0 && this.formTeamId() === null) {
-        this.formTeamId.set(teams[0].id);
+
+      if (teams.length > this.previousTeamsLength && this.previousTeamsLength > 0) {
+        this.formTeamId.set(teams[teams.length - 1].id);
       }
+
+      this.previousTeamsLength = teams.length;
     });
   }
 
-  /** Valide les champs et émet le DTO si tout est correct. */
+  /** Valide les champs et émet le DTO si tout est correct. teamId est optionnel. */
   saveForm(): void {
     const name = this.formName().trim();
     const teamId = this.formTeamId();
@@ -80,13 +88,9 @@ export class SeasonForm {
       return;
     }
 
-    if (teamId === null) {
-      this.formError.set('Vous devez sélectionner une équipe.');
-      return;
-    }
-
     this.formError.set('');
-    this.saved.emit({ name, teamId });
+    // teamId undefined si aucune équipe sélectionnée (organisateur sans équipe)
+    this.saved.emit({ name, ...(teamId !== null ? { teamId } : {}) });
   }
 
   /** Ferme le formulaire sans sauvegarder. */

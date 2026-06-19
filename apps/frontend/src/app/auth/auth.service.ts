@@ -24,7 +24,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, ReplaySubject, tap, map } from 'rxjs';
 import { AuthResponse, RegisterDto, User } from './auth.model';
 
 // Clé de stockage du JWT dans localStorage
@@ -56,6 +56,17 @@ export class AuthService {
   // Signal<boolean> : type retourné par computed() (lecture seule — pas WritableSignal).
   readonly isLoggedIn: Signal<boolean> = computed(() => this.currentUser() !== null);
 
+  /**
+   * Émet une fois (puis se complète) quand la restauration de session
+   * (restoreSession()) est terminée — succès, échec ou absence de token.
+   *
+   * ReplaySubject(1) : tout abonné, même tardif, reçoit immédiatement la
+   * valeur si elle a déjà été émise — évite une course entre `authGuard`
+   * (exécuté très tôt, avant la réponse de GET /api/auth/me) et la
+   * restauration du token depuis localStorage.
+   */
+  private readonly sessionReady$: ReplaySubject<void> = new ReplaySubject<void>(1);
+
   constructor() {
     // Au démarrage de l'application (quand ce service est instancié),
     // on vérifie si un token existe en localStorage (session précédente).
@@ -64,22 +75,41 @@ export class AuthService {
   }
 
   /**
+   * Résout (émet puis se complète) une fois que la restauration de session
+   * est terminée — à utiliser par `authGuard` pour ne pas rediriger vers
+   * /login avant que GET /api/auth/me ait répondu (cf. sessionReady$).
+   */
+  whenSessionReady(): Observable<void> {
+    return this.sessionReady$.asObservable();
+  }
+
+  /**
    * Restaure la session utilisateur depuis localStorage.
    * Appelé une seule fois au démarrage.
    */
   private restoreSession(): void {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return;
+    if (!token) {
+      this.sessionReady$.next();
+      this.sessionReady$.complete();
+      return;
+    }
 
     // GET /api/auth/me vérifie que le token est encore valide
     // et retourne le profil utilisateur à jour
     this.http.get<User>('/api/auth/me').subscribe({
       // (user: User) : paramètre annoté car la règle `parameter: true` l'exige.
-      next: (user: User) => this.currentUser.set(user),
+      next: (user: User) => {
+        this.currentUser.set(user);
+        this.sessionReady$.next();
+        this.sessionReady$.complete();
+      },
       error: () => {
         // Token expiré ou invalide → nettoyage silencieux
         localStorage.removeItem(TOKEN_KEY);
         this.currentUser.set(null);
+        this.sessionReady$.next();
+        this.sessionReady$.complete();
       },
     });
   }
