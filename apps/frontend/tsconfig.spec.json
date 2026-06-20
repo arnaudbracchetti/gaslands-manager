@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
+    "rootDir": "src",
     // vitest/globals fournit describe, it, expect, vi comme globaux (sans import)
     "types": ["vitest/globals"],
     // Surcharge les options incompatibles héritées de tsconfig.base.json
