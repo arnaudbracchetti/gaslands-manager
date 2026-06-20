@@ -168,10 +168,9 @@ Logique exécutée à chaque démarrage :
    même si `ADMIN_EMAIL` change dans `.env`).
 2. **Absent** → création avec `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`.env`, mot de passe haché
    bcrypt coût 10, même que `UserService.create()`).
-3. **Présent** → si `bcrypt.compare(ADMIN_PASSWORD, hash_actuel)` échoue, le hash est
-   régénéré et sauvegardé (resynchronisation depuis `.env`). Si `ADMIN_EMAIL` ne
-   correspond pas à l'email de l'admin existant, un simple warning est loggé — pas de
-   second compte créé, correction manuelle attendue.
+3. **Présent** → si `ADMIN_EMAIL` ou `ADMIN_PASSWORD` a changé dans `.env`, la valeur
+   correspondante est mise à jour en base (re-hash bcrypt pour le mot de passe). Un
+   warning est loggé dans les deux cas pour signaler la modification.
 
 `ADMIN_PASSWORD` est lu via `config.getOrThrow()` (pas de valeur par défaut pour un
 secret, même logique que `DATABASE_PASSWORD` dans `app.module.ts`) : absent de `.env`

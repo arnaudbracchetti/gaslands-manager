@@ -41,10 +41,10 @@ même pattern que `CatalogService`, cf. ARCHITECTURE.md §3.3) garantit l'existe
 unique utilisateur `role: "admin"` :
 - S'il n'existe aucun utilisateur `role: "admin"` en base, il est créé avec
   `ADMIN_EMAIL`/`ADMIN_PASSWORD` (variables `.env`, mot de passe haché via bcrypt).
-- S'il existe déjà, son mot de passe est **resynchronisé** avec `ADMIN_PASSWORD` si
-  celui-ci a changé dans `.env` depuis le dernier démarrage (comparaison bcrypt puis
-  re-hash si différent) — un changement dans `.env` ne prend effet qu'au redémarrage
-  du backend.
+- S'il existe déjà, son email et son mot de passe sont **resynchronisés** avec
+  `ADMIN_EMAIL`/`ADMIN_PASSWORD` si l'une ou l'autre de ces valeurs a changé dans `.env`
+  depuis le dernier démarrage (comparaison bcrypt pour le mot de passe) — un warning est
+  loggé dans les deux cas, et le changement ne prend effet qu'au redémarrage du backend.
 - **Unicité garantie** : la recherche se fait sur `role: "admin"` (jamais sur l'email) —
   un seul compte admin peut exister, quel que soit le contenu de `.env`.
 - `/api/auth/register` ne peut jamais créer de compte admin : le champ `role` n'est pas

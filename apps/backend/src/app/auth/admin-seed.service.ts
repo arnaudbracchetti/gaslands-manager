@@ -9,8 +9,9 @@
  * - Un seul compte admin peut exister (recherche par `role: ADMIN`, jamais par
  *   email) : s'il en existe déjà un, on ne le duplique jamais.
  * - S'il n'existe pas, on le crée avec ADMIN_EMAIL/ADMIN_PASSWORD (.env).
- * - S'il existe, on resynchronise son mot de passe avec ADMIN_PASSWORD si celui-ci
- *   a changé dans .env (bcrypt.compare puis re-hash si différent).
+ * - S'il existe, on resynchronise ADMIN_EMAIL et ADMIN_PASSWORD si l'une ou
+ *   l'autre de ces valeurs a changé dans .env depuis le dernier démarrage.
+ *   Un warning est loggé dans les deux cas pour signaler la mise à jour en base.
  * - ADMIN_PASSWORD est obligatoire (getOrThrow) : pas de valeur par défaut pour
  *   un secret, même logique que DATABASE_PASSWORD dans app.module.ts.
  */
@@ -61,16 +62,17 @@ export class AdminSeedService implements OnModuleInit {
     if (existingAdmin.email !== email) {
       this.logger.warn(
         `ADMIN_EMAIL (.env) = "${email}" ne correspond pas à l'email admin ` +
-          `existant ("${existingAdmin.email}"). L'email existant est conservé ; ` +
-          'mettez-le à jour manuellement si nécessaire.',
+          `existant ("${existingAdmin.email}"). Mise à jour en base.`,
       );
+      existingAdmin.email = email;
+      await this.userRepo.save(existingAdmin);
     }
 
     const passwordMatches = await bcrypt.compare(password, existingAdmin.password);
     if (!passwordMatches) {
+      this.logger.warn('ADMIN_PASSWORD (.env) a changé. Mise à jour du hash en base.');
       existingAdmin.password = await bcrypt.hash(password, 10);
       await this.userRepo.save(existingAdmin);
-      this.logger.log('Mot de passe admin resynchronisé depuis .env');
     }
   }
 }
