@@ -1,11 +1,19 @@
 <!-- Carte d'une équipe Gaslands — cliquer n'importe où navigue vers l'édition -->
-<div class="team-card" (click)="cardClicked.emit(team())" role="button" tabindex="0"
+<div class="team-card"
+     [class.team-card--over]="budgetDepasse()"
+     (click)="cardClicked.emit(team())" role="button" tabindex="0"
      (keydown.enter)="cardClicked.emit(team())" (keydown.space)="cardClicked.emit(team())">
 
+  <!-- Numéro en filigrane (fond de carte) -->
+  <span class="team-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
+
+  <!-- En-tête : préfixe + nom -->
   <div class="team-card__header">
+    <span class="team-card__prefix">// ÉQUIPE {{ indexFormate() }}</span>
     <h2 class="team-card__name">{{ team().name }}</h2>
   </div>
 
+  <!-- Sponsor et budget total -->
   <div class="team-card__info">
     <span class="team-card__badge">{{ team().sponsor }}</span>
     <span class="team-card__cans">
@@ -13,40 +21,53 @@
     </span>
   </div>
 
-  <!-- Budget consommé : visible uniquement si au moins un véhicule -->
-  @if (vehicles().length > 0) {
-    <div class="team-card__budget"
-         [class.team-card__budget--over]="coutVehiclesTotal() > team().cans">
+  <!-- Bloc budget — toujours visible -->
+  <div class="team-card__budget" [class.team-card__budget--over]="budgetDepasse()">
+    <div class="team-card__budget-row">
       <span class="team-card__budget-label">Dépensé</span>
       <span class="team-card__budget-value">
         {{ coutVehiclesTotal() }} / {{ team().cans }}
         <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+        @if (budgetDepasse()) {
+          <span class="team-card__budget-alert">▲</span>
+        }
       </span>
     </div>
-  }
+    <div class="team-card__progress-track">
+      <div class="team-card__progress-bar"
+           [style.width.%]="budgetPourcentage()">
+      </div>
+    </div>
+    <span class="team-card__statut"
+          [class]="'team-card__statut--' + messageStatut().niveau">
+      {{ messageStatut().texte }}
+    </span>
+  </div>
 
+  <!-- Description optionnelle -->
   @if (team().description) {
     <p class="team-card__description">{{ team().description }}</p>
   }
 
-  <!--
-    Liste des véhicules : nom, coût (dollar.svg) et emplacements utilisés/total (wrench.svg).
-    Icônes cohérentes avec vehicle-cost-summary et mounted-equipment.
-  -->
+  <!-- Liste des véhicules -->
   @if (vehicles().length > 0) {
-    <ul class="team-card__vehicles">
-      @for (vehicle of vehicles(); track vehicle.id) {
-        <li class="team-card__vehicle">
-          <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
-          <span class="team-card__vehicle-stats">
-            <span class="team-card__vehicle-cost">
-              {{ vehicle.cout }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+    <div class="team-card__vehicles-section">
+      <span class="team-card__vehicles-title">// VÉHICULES ({{ vehicles().length }})</span>
+      <ul class="team-card__vehicles">
+        @for (vehicle of vehicles(); track vehicle.id) {
+          <li class="team-card__vehicle">
+            <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
+            <span class="team-card__vehicle-stats">
+              <span class="team-card__vehicle-cost">
+                {{ vehicle.cout }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+              </span>
+              <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
+              <span class="team-card__vehicle-arrow" aria-hidden="true">~</span>
             </span>
-            <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
-          </span>
-        </li>
-      }
-    </ul>
+          </li>
+        }
+      </ul>
+    </div>
   }
 
 </div>

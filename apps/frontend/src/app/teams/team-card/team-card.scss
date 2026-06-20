@@ -1,7 +1,9 @@
 // ─── Carte d'équipe — panneau métal estampé TB ────────────────────────────────
 
 .team-card {
-  background: var(--metal-sheen);
+  // --surface-raised = --tb-bitume-3 (#221A13) : token design system pour les cartes.
+  // On abandonne --metal-sheen (dégradé trop clair) qui nuisait au contraste des textes.
+  background: var(--surface-raised);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 20px;
@@ -10,10 +12,55 @@
   flex-direction: column;
   gap: 12px;
   box-shadow: var(--shadow-stamp);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
 
   &:hover {
     border-color: var(--tb-danger);
     box-shadow: var(--glow-danger);
+  }
+
+  // État budget dépassé — bordure rouge permanente
+  &--over {
+    border-color: var(--tb-rouille);
+    box-shadow: var(--glow-danger);
+
+    &:hover {
+      border-color: var(--tb-danger);
+    }
+  }
+
+  // ─── Filigrane — grand numéro en fond ──────────────────────────────────────
+
+  &__watermark {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    font-family: var(--font-display);
+    font-size: 6.5rem;
+    font-weight: 700;
+    color: var(--tb-os);
+    opacity: 0.06;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.02em;
+  }
+
+  // ─── En-tête ───────────────────────────────────────────────────────────────
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__prefix {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
   }
 
   &__name {
@@ -25,6 +72,8 @@
     letter-spacing: 0.04em;
   }
 
+  // ─── Ligne sponsor + budget total ──────────────────────────────────────────
+
   &__info {
     display: flex;
     align-items: center;
@@ -32,7 +81,6 @@
     flex-wrap: wrap;
   }
 
-  // Badge sponsor
   &__badge {
     background: rgba(230, 180, 28, 0.12);
     border: 1px solid rgba(230, 180, 28, 0.35);
@@ -46,7 +94,6 @@
     letter-spacing: 0.1em;
   }
 
-  // Budget en jerricans
   &__cans {
     font-family: var(--font-mono);
     color: var(--text-dim);
@@ -57,8 +104,26 @@
     gap: 3px;
   }
 
-  // Ligne budget consommé / budget total
+  // ─── Bloc budget ───────────────────────────────────────────────────────────
+
   &__budget {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    &--over {
+      .team-card__budget-value,
+      .team-card__budget-alert {
+        color: var(--tb-rouille-lt);
+      }
+
+      .team-card__progress-bar {
+        background: var(--tb-rouille);
+      }
+    }
+  }
+
+  &__budget-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -66,10 +131,6 @@
     font-size: 0.75rem;
     color: var(--text-dim);
     letter-spacing: 0.04em;
-
-    &--over {
-      color: var(--tb-rouille-lt);
-    }
   }
 
   &__budget-label {
@@ -85,25 +146,83 @@
     gap: 3px;
   }
 
+  &__budget-alert {
+    color: var(--tb-rouille-lt);
+    font-size: 0.7rem;
+  }
+
+  &__progress-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__progress-bar {
+    height: 100%;
+    background: var(--tb-coolant);
+    border-radius: 2px;
+    transition: width 300ms var(--ease-mech);
+  }
+
+  &__statut {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+
+    &--over {
+      color: var(--tb-rouille-lt);
+    }
+
+    &--epuise {
+      color: var(--text-dim);
+    }
+
+    &--critique {
+      color: var(--tb-rouille-lt);
+    }
+
+    &--ok {
+      color: var(--text-dim);
+    }
+  }
+
+  // ─── Description ───────────────────────────────────────────────────────────
+
   &__description {
     font-family: var(--font-text);
     font-weight: 300;
-    color: var(--text-faint);
+    font-style: italic;
+    color: var(--text-dim);
     font-size: 0.85rem;
     line-height: 1.5;
-    flex: 1;
   }
 
-  // Liste des véhicules
+  // ─── Section véhicules ─────────────────────────────────────────────────────
+
+  &__vehicles-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--border-hair);
+    padding-top: 10px;
+  }
+
+  &__vehicles-title {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   &__vehicles {
     list-style: none;
     margin: 0;
-    padding: 8px 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-top: 1px solid var(--border-hair);
-    border-bottom: 1px solid var(--border-hair);
   }
 
   &__vehicle {
@@ -125,7 +244,7 @@
   &__vehicle-stats {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-left: auto;
     flex-shrink: 0;
   }
@@ -140,116 +259,16 @@
     white-space: nowrap;
   }
 
+  &__vehicle-arrow {
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+    font-size: 0.75rem;
+  }
+
   &__icon {
     width: 12px;
     height: 12px;
     opacity: 0.7;
     flex-shrink: 0;
-  }
-
-  &__vehicle-actions {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 8px;
-    margin-top: auto;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-hair);
-  }
-}
-
-// ─── Bouton "Ajouter un véhicule" ────────────────────────────────────────────
-
-.btn-add-vehicle {
-  background: rgba(230, 180, 28, 0.08);
-  border: 1px solid var(--tb-danger);
-  color: var(--tb-danger);
-  padding: 7px 12px;
-  border-radius: var(--r-sm);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: background 160ms;
-
-  &:hover {
-    background: rgba(230, 180, 28, 0.18);
-  }
-}
-
-// ─── Boutons d'action (Modifier / Supprimer) ──────────────────────────────────
-
-.btn-action {
-  flex: 1;
-  padding: 7px 12px;
-  border-radius: var(--r-sm);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 160ms, border-color 160ms, color 160ms;
-
-  &--edit {
-    background: transparent;
-    border-color: var(--border-rust);
-    color: var(--text-dim);
-
-    &:hover {
-      border-color: var(--tb-os);
-      color: var(--tb-os);
-    }
-  }
-
-  &--delete {
-    background: transparent;
-    border-color: rgba(162, 58, 28, 0.5);
-    color: var(--tb-rouille-lt);
-
-    &:hover {
-      background: rgba(162, 58, 28, 0.12);
-      border-color: var(--tb-rouille);
-    }
-  }
-}
-
-// ─── Boutons d'action par véhicule (icône seule) ──────────────────────────────
-
-.btn-vehicle-action {
-  padding: 2px 6px;
-  border-radius: var(--r-sm);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  cursor: pointer;
-  border: 1px solid transparent;
-  background: transparent;
-  transition: background 160ms, border-color 160ms;
-
-  &--edit {
-    border-color: var(--border-hair);
-    color: var(--text-dim);
-
-    &:hover {
-      border-color: var(--tb-os);
-      color: var(--tb-os);
-    }
-  }
-
-  &--delete {
-    border-color: rgba(162, 58, 28, 0.4);
-    color: var(--tb-rouille-lt);
-
-    &:hover {
-      background: rgba(162, 58, 28, 0.12);
-      border-color: var(--tb-rouille);
-    }
   }
 }

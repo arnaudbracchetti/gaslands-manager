@@ -46,6 +46,7 @@
       @for (team of teams(); track team.id) {
         <app-team-card
           [team]="team"
+          [index]="$index + 1"
           [vehicles]="vehicleSummaries().get(team.id) ?? []"
           (cardClicked)="navigateToEdit($event)" />
       }
