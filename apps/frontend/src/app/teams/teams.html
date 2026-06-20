@@ -1,7 +1,6 @@
-<!-- Écran de gestion des équipes Gaslands -->
+<!-- Écran de liste des équipes Gaslands -->
 <div class="teams-page">
 
-  <!-- En-tête avec titre et bouton d'ajout -->
   <div class="teams-header">
     <h1>👥 Mes Équipes</h1>
     @if (!showForm()) {
@@ -11,42 +10,25 @@
     }
   </div>
 
-  <!-- Message d'erreur API (erreurs de chargement ou de sauvegarde) -->
   @if (error()) {
     <div class="teams-error">{{ error() }}</div>
   }
 
-  <!-- ── Formulaire de création / modification ─────────────────────────── -->
-  <!--
-    app-team-form reçoit :
-      [team]    : l'équipe à éditer (null = création)
-      [saving]  : vrai pendant l'appel API → désactive les boutons
-    et émet :
-      (saved)   : DTO validé → onSaved() appelle l'API
-      (cancel)  : utilisateur annule → on ferme le formulaire
-  -->
+  <!-- Formulaire de création uniquement (pas d'édition ici) -->
   @if (showForm()) {
-    <!--
-      [hasVehicles] : vrai si l'équipe en cours d'édition a déjà au moins un véhicule.
-      Dans ce cas, le carousel de sponsors sera verrouillé (règle Gaslands : sponsor
-      immutable dès le 1er véhicule). vehicleCount reflète désormais le nombre RÉEL
-      de véhicules de l'équipe (cf. TeamService — module Véhicules implémenté).
-    -->
     <app-team-form
-      [team]="editingTeam()"
+      [team]="null"
       [saving]="saving()"
-      [hasVehicles]="(editingTeam()?.vehicleCount ?? 0) > 0"
+      [hasVehicles]="false"
       (saved)="onSaved($event)"
       (formCancel)="cancelForm()" />
   }
 
-  <!-- ── Liste des équipes ─────────────────────────────────────────────── -->
   @if (loading()) {
     <div class="teams-loading">
       <p>Chargement de vos équipes...</p>
     </div>
   } @else if (teams().length === 0 && !showForm()) {
-    <!-- État vide : invitation à créer une première équipe -->
     <div class="teams-empty">
       <p class="teams-empty__icon">🏎️</p>
       <p class="teams-empty__title">Aucune équipe pour l'instant</p>
@@ -57,45 +39,17 @@
     </div>
   } @else {
     <!--
-      app-team-card reçoit l'équipe (+ le résumé de ses véhicules) et émet les actions :
-        (editClicked)         → openEdit() ouvre le formulaire pré-rempli
-        (deleteClicked)       → deleteTeam() demande confirmation puis supprime
-        (addVehicleClicked)   → openVehicleBuilder() ouvre la modale de construction
-        (editVehicleClicked)  → openVehicleEditor() ouvre la modale de gestion d'équipement
-        (deleteVehicleClicked) → deleteVehicle() demande confirmation puis supprime le véhicule
-
-      [vehicles] : `vehicleSummaries().get(team.id) ?? []` — `Map.get` renvoie
-      `undefined` pour une équipe pas encore chargée OU sans véhicule ; `?? []`
-      ramène les deux cas à "rien à afficher" (cf. doc de `vehicleSummaries`).
+      Clic sur une carte → navigation vers /teams/:id/edit (hub de gestion).
+      [vehicles] : résumés en lecture seule (nom, coût, emplacements).
     -->
     <div class="teams-grid">
       @for (team of teams(); track team.id) {
         <app-team-card
           [team]="team"
           [vehicles]="vehicleSummaries().get(team.id) ?? []"
-          (editClicked)="openEdit($event)"
-          (deleteClicked)="deleteTeam($event)"
-          (addVehicleClicked)="openVehicleBuilder($event)"
-          (editVehicleClicked)="openVehicleEditor($event)"
-          (deleteVehicleClicked)="deleteVehicle($event)" />
+          (cardClicked)="navigateToEdit($event)" />
       }
     </div>
-  }
-
-  @if (pendingDeleteTeam()) {
-    <app-confirm-modal
-      [message]="'Supprimer l\'équipe &quot;' + pendingDeleteTeam()!.name + '&quot; ? Cette action est irréversible.'"
-      confirmLabel="Supprimer"
-      (confirmed)="onConfirmDeleteTeam()"
-      (cancelled)="pendingDeleteTeam.set(null)" />
-  }
-
-  @if (pendingDeleteVehicle()) {
-    <app-confirm-modal
-      [message]="'Supprimer le véhicule &quot;' + pendingDeleteVehicle()!.vehicle.nom + '&quot; ? Cette action est irréversible.'"
-      confirmLabel="Supprimer"
-      (confirmed)="onConfirmDeleteVehicle()"
-      (cancelled)="pendingDeleteVehicle.set(null)" />
   }
 
 </div>

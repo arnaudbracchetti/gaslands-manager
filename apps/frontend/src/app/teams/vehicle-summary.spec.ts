@@ -225,4 +225,52 @@ describe('buildVehicleSummary', () => {
 
     expect(summary.id).toBe(42);
   });
+
+  // ── Emplacements ──────────────────────────────────────────────────────────
+
+  it('expose emplacementsTotal depuis le catalogue (Vehicule.emplacements)', () => {
+    const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
+
+    expect(summary.emplacementsTotal).toBe(3); // mockVehiculeCatalogue.emplacements
+  });
+
+  it('emplacementsUtilises = 0 pour un véhicule "nu"', () => {
+    const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(0);
+  });
+
+  it('compte les emplacements des armes montées (via catalogue)', () => {
+    // Mitrailleuse : 1 emplacement, Minigun : 1 emplacement
+    const vehicle = buildVehicle([buildWeapon('mitrailleuse', 3), buildWeapon('minigun', 6)], []);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(2);
+  });
+
+  it('compte les emplacements des améliorations achetées (via improvement.emplacement)', () => {
+    // Blindage : emplacement = 1 (valeur dans le DTO)
+    const vehicle = buildVehicle([], [buildImprovement('blindage', 4, false, null, 1)]);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(1);
+  });
+
+  it('ignore les emplacements des améliorations estDefaut', () => {
+    // Amélioration intégrée — ne consomme pas d'emplacement achetable
+    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0, /* estDefaut */ true, null, 0)]);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(0);
+  });
+
+  it('combine emplacements armes + améliorations', () => {
+    const vehicle = buildVehicle(
+      [buildWeapon('mitrailleuse', 3)],
+      [buildImprovement('blindage', 4, false, null, 1)],
+    );
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(2); // 1 (arme) + 1 (blindage)
+  });
 });

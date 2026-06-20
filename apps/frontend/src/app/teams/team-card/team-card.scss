@@ -52,6 +52,37 @@
     color: var(--text-dim);
     font-size: 0.78rem;
     letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  // Ligne budget consommé / budget total
+  &__budget {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+
+    &--over {
+      color: var(--tb-rouille-lt);
+    }
+  }
+
+  &__budget-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    opacity: 0.7;
+  }
+
+  &__budget-value {
+    display: flex;
+    align-items: center;
+    gap: 3px;
   }
 
   &__description {
@@ -91,11 +122,30 @@
     letter-spacing: 0.02em;
   }
 
-  &__vehicle-cost {
+  &__vehicle-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  &__vehicle-cost,
+  &__vehicle-slots {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     font-family: var(--font-mono);
     color: var(--text-dim);
     font-size: 0.75rem;
     white-space: nowrap;
+  }
+
+  &__icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+    flex-shrink: 0;
   }
 
   &__vehicle-actions {

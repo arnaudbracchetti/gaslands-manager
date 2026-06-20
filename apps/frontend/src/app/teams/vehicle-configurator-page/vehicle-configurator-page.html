@@ -1,15 +1,11 @@
 <!--
-  Page dédiée à la construction/édition d'un véhicule (cf. en-tête .ts) —
-  remplace l'ancienne <app-modal size="wide"> de Teams.
-
-  Le titre dépend du mode (`vehicleId() === null` ⇒ création), seule trace
-  visible ici de la distinction — `<app-vehicle-configurator>` gère le reste
-  (choix du véhicule en création, équipement dans les deux cas).
+  Page de construction/édition d'un véhicule.
+  Le lien de retour dépend de returnTo : TeamEditPage ou liste des équipes.
 -->
 <div class="vcp-page">
 
   <div class="vcp-header">
-    <a class="vcp-back" routerLink="/teams">← Retour aux équipes</a>
+    <a class="vcp-back" [routerLink]="backRoute()">{{ backLabel() }}</a>
     <h1>{{ vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement du véhicule" }}</h1>
   </div>
 

@@ -28,13 +28,24 @@
         </span>
       </div>
 
-      <!-- Bouton modifier l'équipe — propre ligne uniquement, EN_CONSTRUCTION -->
-      @if (isSelf(participant) && canChangeTeam()) {
+      <!-- Actions sur sa propre ligne -->
+      @if (isSelf(participant)) {
         <div class="participant-list__actions">
-          <button class="participant-list__change-team" type="button"
-            (click)="changeTeam.emit()">
-            ✏️ Modifier l'équipe
-          </button>
+          <!-- Changer l'équipe engagée (EN_CONSTRUCTION uniquement) -->
+          @if (canChangeTeam()) {
+            <button class="participant-list__change-team" type="button"
+              (click)="changeTeam.emit()">
+              ✏️ Changer d'équipe
+            </button>
+          }
+          <!-- Gérer son équipe — disponible dès qu'une équipe est engagée -->
+          @if (participant.teamId && seasonId()) {
+            <a class="participant-list__manage-team"
+               [routerLink]="['/teams', participant.teamId, 'edit']"
+               [queryParams]="{ from: 'season', seasonId: seasonId() }">
+              🔧 Gérer mon équipe
+            </a>
+          }
         </div>
       }
 

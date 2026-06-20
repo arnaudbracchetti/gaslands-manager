@@ -39,6 +39,14 @@ export interface VehicleSummary {
    * plus de cas `"x3"` string ni d'approximation côté frontend.
    */
   cout: number;
+  /**
+   * Emplacements consommés par les armes et améliorations ACHETÉES (hors `estDefaut`).
+   * Résolu en combinant `weapon` (via catalogue) et `improvement.emplacement` (déjà
+   * fourni par le backend dans `VehicleImprovement.emplacement`).
+   */
+  emplacementsUtilises: number;
+  /** Emplacements totaux du véhicule selon son profil catalogue (`Vehicule.emplacements`). */
+  emplacementsTotal: number;
 }
 
 /**
@@ -87,22 +95,29 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
 
   // Prix de base du véhicule — toujours depuis le catalogue (non fourni par le DTO).
   let cout: number = vehiculeCatalogue?.prix ?? 0;
+  let emplacementsUtilises: number = 0;
 
-  // Armes : `weapon.prix` est résolu côté backend (catalogue en mémoire → getter).
+  // Armes : `weapon.prix` résolu côté backend ; emplacement résolu via le catalogue.
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
+    const armeCatalogue = catalog.armes.find((a) => a.nom_interne === weapon.nomInterne);
+    emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
   }
 
-  // Améliorations : `improvement.prix` est résolu côté backend — toujours un number réel.
-  // La Tourelle y est incluse avec son prix exact (3× arme ou 0 si orpheline/défaut).
-  // Aucune logique spéciale ici — on additionne sans distinction.
+  // Améliorations : `improvement.prix` et `improvement.emplacement` résolus côté backend.
+  // Les défauts (`estDefaut`) ne consomment pas d'emplacement (cf. SPECIFICATION.md §5).
   for (const improvement of vehicle.improvements) {
     cout += improvement.prix;
+    if (!improvement.estDefaut) {
+      emplacementsUtilises += improvement.emplacement;
+    }
   }
 
   return {
     id: vehicle.id,
     nom: vehiculeCatalogue?.nom ?? vehicle.nomInterne,
     cout,
+    emplacementsUtilises,
+    emplacementsTotal: vehiculeCatalogue?.emplacements ?? 0,
   };
 }

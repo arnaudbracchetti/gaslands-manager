@@ -41,6 +41,14 @@ export const appRoutes: Route[] = [
       import('./seasons/season-detail/season-detail').then((m) => m.SeasonDetail),
     canActivate: [authGuard],
   },
+  // ─── Édition d'une équipe (hub : infos + véhicules) ────────────────────────
+  // Déclarée AVANT les routes vehicles pour éviter tout conflit de paramètres.
+  {
+    path: 'teams/:id/edit',
+    loadComponent: () =>
+      import('./teams/team-edit-page/team-edit-page').then((m) => m.TeamEditPage),
+    canActivate: [authGuard],
+  },
   // ─── Configuration de véhicule (page dédiée, ex-modale) ────────────────────
   // Deux routes vers le même composant : 'new' (segment littéral) DOIT être
   // déclaré AVANT ':vehicleId' (paramètre), sinon '/teams/5/vehicles/new'

@@ -1,0 +1,155 @@
+// ─── TeamEditPage — hub de gestion d'une équipe ──────────────────────────────
+
+.tep-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// ── Fil d'Ariane ─────────────────────────────────────────────────────────────
+
+.tep-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+
+  &__link {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 160ms;
+
+    &:hover {
+      color: var(--tb-danger);
+    }
+  }
+
+  &__sep {
+    color: var(--text-faint);
+  }
+
+  &__current {
+    color: var(--tb-os);
+  }
+}
+
+// ── Statuts ───────────────────────────────────────────────────────────────────
+
+.tep-status {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
+}
+
+.tep-error {
+  color: var(--tb-rouille-lt);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+.tep-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &--danger {
+    padding-top: 16px;
+    border-top: 1px solid var(--border-rust);
+    align-items: flex-start;
+  }
+}
+
+// ── Véhicules ─────────────────────────────────────────────────────────────────
+
+.tep-vehicles-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tep-vehicles-title {
+  font-family: var(--font-display);
+  color: var(--tb-os);
+  font-size: 1.1rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tep-vehicles-empty {
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.tep-vehicles-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tep-vehicle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--metal-sheen);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+}
+
+.tep-vehicle-name {
+  font-family: var(--font-display);
+  color: var(--tb-os);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+.tep-vehicle-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.tep-vehicle-cost,
+.tep-vehicle-slots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tep-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.75;
+}
+
+.tep-vehicle-actions {
+  display: flex;
+  gap: 6px;
+}

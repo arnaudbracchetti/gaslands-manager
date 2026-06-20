@@ -104,6 +104,7 @@ describe('VehicleConfiguratorPage', () => {
     const activatedRouteMock = {
       snapshot: {
         paramMap: convertToParamMap({ teamId, ...(vehicleId !== null ? { vehicleId } : {}) }),
+        queryParamMap: convertToParamMap({}),
       },
     };
 

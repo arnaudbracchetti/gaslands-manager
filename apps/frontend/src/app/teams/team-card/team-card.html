@@ -1,87 +1,55 @@
-<!-- Carte d'une équipe Gaslands -->
-<!--
-  team() appelle le signal input pour lire sa valeur.
-  Les outputs émettent l'équipe vers le composant parent via (click).
--->
-<div class="team-card">
+<!-- Carte d'une équipe Gaslands — cliquer n'importe où navigue vers l'édition -->
+<div class="team-card" (click)="cardClicked.emit(team())" role="button" tabindex="0"
+     (keydown.enter)="cardClicked.emit(team())" (keydown.space)="cardClicked.emit(team())">
 
-  <!-- Nom de l'équipe -->
   <div class="team-card__header">
     <h2 class="team-card__name">{{ team().name }}</h2>
   </div>
 
-  <!-- Sponsor + budget sur la même ligne -->
   <div class="team-card__info">
     <span class="team-card__badge">{{ team().sponsor }}</span>
-    <span class="team-card__cans">🥫 {{ team().cans }} jerricans</span>
+    <span class="team-card__cans">
+      {{ team().cans }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+    </span>
   </div>
 
-  <!-- Description : masquée si vide ou absente -->
+  <!-- Budget consommé : visible uniquement si au moins un véhicule -->
+  @if (vehicles().length > 0) {
+    <div class="team-card__budget"
+         [class.team-card__budget--over]="coutVehiclesTotal() > team().cans">
+      <span class="team-card__budget-label">Dépensé</span>
+      <span class="team-card__budget-value">
+        {{ coutVehiclesTotal() }} / {{ team().cans }}
+        <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+      </span>
+    </div>
+  }
+
   @if (team().description) {
     <p class="team-card__description">{{ team().description }}</p>
   }
 
   <!--
-    Liste des véhicules de l'équipe — masquée si vide (équipe sans véhicule,
-    ou résumé pas encore chargé : les deux cas se traduisent par un tableau
-    vide côté `Teams`, cf. doc de `vehicles`).
-    Le coût est désormais TOUJOURS exact : le backend résout le prix de la Tourelle
-    (3× le prix de l'arme assignée) dans `improvement.prix` — plus besoin du "≈"
-    ni de `coutApproximatif` (cf. `VehicleSummary`, `VehicleService.toVehicleDto`).
+    Liste des véhicules : nom, coût (dollar.svg) et emplacements utilisés/total (wrench.svg).
+    Icônes cohérentes avec vehicle-cost-summary et mounted-equipment.
   -->
   @if (vehicles().length > 0) {
     <ul class="team-card__vehicles">
       @for (vehicle of vehicles(); track vehicle.id) {
         <li class="team-card__vehicle">
           <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
-          <span class="team-card__vehicle-cost">{{ vehicle.cout }} 🥫</span>
-          <!--
-            Actions par véhicule — émettent une `TeamVehiclePair` (équipe courante
-            + véhicule visé), cf. doc de `editVehicleClicked`/`deleteVehicleClicked`.
-            Mirroir visuel des boutons d'action sur l'équipe (`.btn-action--*`),
-            déclinés en plus petit (`.btn-vehicle-action--*`) pour tenir sur une ligne.
-          -->
-          <span class="team-card__vehicle-actions">
-            <button
-              class="btn-vehicle-action btn-vehicle-action--edit"
-              (click)="editVehicleClicked.emit({ team: team(), vehicle })"
-              title="Gérer l'équipement de ce véhicule">
-              ✏️
-            </button>
-            <button
-              class="btn-vehicle-action btn-vehicle-action--delete"
-              (click)="deleteVehicleClicked.emit({ team: team(), vehicle })"
-              title="Supprimer ce véhicule">
-              🗑
-            </button>
+          <span class="team-card__vehicle-stats">
+            <span class="team-card__vehicle-cost">
+              {{ vehicle.cout }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+            </span>
+            <span class="team-card__vehicle-slots">
+              {{ vehicle.emplacementsUtilises }}/{{ vehicle.emplacementsTotal }}
+              <img class="team-card__icon" src="/icons/wrench.svg" alt="emplacements" />
+            </span>
           </span>
         </li>
       }
     </ul>
   }
-
-  <!-- Bouton "Ajouter un véhicule" — toujours visible (cf. doc de addVehicleClicked) -->
-  <button
-    class="btn-add-vehicle"
-    (click)="addVehicleClicked.emit(team())"
-    title="Ajouter un véhicule à cette équipe">
-    🚗 Ajouter un véhicule
-  </button>
-
-  <!-- Boutons Modifier / Supprimer -->
-  <div class="team-card__actions">
-    <button
-      class="btn-action btn-action--edit"
-      (click)="editClicked.emit(team())"
-      title="Modifier cette équipe">
-      ✏️ Modifier
-    </button>
-    <button
-      class="btn-action btn-action--delete"
-      (click)="deleteClicked.emit(team())"
-      title="Supprimer cette équipe">
-      🗑 Supprimer
-    </button>
-  </div>
 
 </div>

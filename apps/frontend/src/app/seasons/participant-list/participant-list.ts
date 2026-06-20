@@ -13,12 +13,13 @@
  *   - REJECTED : Valider
  */
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { SeasonParticipant } from '../season-participant.model';
 
 @Component({
   selector: 'app-participant-list',
   standalone: true,
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './participant-list.html',
   styleUrl: './participant-list.scss',
 })
@@ -46,6 +47,9 @@ export class ParticipantList {
 
   /** Émis au clic sur "Modifier l'équipe" — le parent possède la liste des équipes. */
   changeTeam: OutputEmitterRef<void> = output<void>();
+
+  /** Id de la saison courante — utilisé pour construire le lien de retour vers TeamEditPage. */
+  seasonId: InputSignal<number | undefined> = input<number | undefined>(undefined);
 
   private organizerCount: Signal<number> = computed(
     () => this.participants().filter((p) => p.isOrganizer && p.status === 'VALIDATED').length,

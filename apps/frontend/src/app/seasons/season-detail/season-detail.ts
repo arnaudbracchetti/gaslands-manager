@@ -48,7 +48,7 @@ export class SeasonDetail implements OnInit {
   private authService: AuthService = inject(AuthService);
   private teamsService: TeamsService = inject(TeamsService);
 
-  private seasonId: number = Number(this.route.snapshot.params['id']);
+  readonly seasonId: WritableSignal<number> = signal(Number(this.route.snapshot.params['id']));
 
   loading: WritableSignal<boolean> = signal(true);
   error: WritableSignal<string> = signal('');
@@ -110,7 +110,7 @@ export class SeasonDetail implements OnInit {
       next: (teams: Team[]) => this.myTeams.set(teams),
     });
 
-    this.seasonsService.getOne(this.seasonId).subscribe({
+    this.seasonsService.getOne(this.seasonId()).subscribe({
       next: (season: Season) => {
         this.season.set(season);
         this.loadParticipants();
@@ -123,7 +123,7 @@ export class SeasonDetail implements OnInit {
   }
 
   private loadParticipants(): void {
-    this.seasonsService.getParticipants(this.seasonId).subscribe({
+    this.seasonsService.getParticipants(this.seasonId()).subscribe({
       next: (participants: SeasonParticipant[]) => {
         this.participants.set(participants);
         this.loading.set(false);
@@ -136,7 +136,7 @@ export class SeasonDetail implements OnInit {
   }
 
   onValidate(event: { pid: number; accept: boolean }): void {
-    this.seasonsService.validateParticipant(this.seasonId, event.pid, { accept: event.accept }).subscribe({
+    this.seasonsService.validateParticipant(this.seasonId(), event.pid, { accept: event.accept }).subscribe({
       next: (updated: SeasonParticipant) => {
         this.participants.set(
           this.participants().map((p) => (p.id === updated.id ? updated : p)),
@@ -158,7 +158,7 @@ export class SeasonDetail implements OnInit {
 
     this.participants.update((list) => list.filter((p) => p.id !== participant.id));
 
-    this.seasonsService.removeParticipant(this.seasonId, participant.id).subscribe({
+    this.seasonsService.removeParticipant(this.seasonId(), participant.id).subscribe({
       error: () => {
         this.error.set('Erreur lors du retrait du participant.');
         this.loadParticipants();
@@ -177,7 +177,7 @@ export class SeasonDetail implements OnInit {
     this.pendingPromote.set(null);
     if (!participant) return;
 
-    this.seasonsService.promote(this.seasonId, participant.id).subscribe({
+    this.seasonsService.promote(this.seasonId(), participant.id).subscribe({
       next: (updated: SeasonParticipant) => {
         this.participants.set(
           this.participants().map((p) => (p.id === updated.id ? updated : p)),
@@ -206,7 +206,7 @@ export class SeasonDetail implements OnInit {
     this.error.set('');
 
     const dto: ChangeStateDto = { state: newState };
-    this.seasonsService.changeState(this.seasonId, dto).subscribe({
+    this.seasonsService.changeState(this.seasonId(), dto).subscribe({
       next: (updated: Season) => {
         this.season.set(updated);
         this.stateTransitioning.set(false);
@@ -224,7 +224,7 @@ export class SeasonDetail implements OnInit {
 
   onConfirmChangeTeam(teamId: number | null): void {
     this.showChangeTeamModal.set(false);
-    this.seasonsService.updateMyTeam(this.seasonId, { teamId }).subscribe({
+    this.seasonsService.updateMyTeam(this.seasonId(), { teamId }).subscribe({
       next: (updated: SeasonParticipant) => {
         this.participants.set(
           this.participants().map((p) => (p.id === updated.id ? updated : p)),
@@ -243,7 +243,7 @@ export class SeasonDetail implements OnInit {
   onConfirmDeleteSeason(): void {
     this.showDeleteSeasonConfirm.set(false);
 
-    this.seasonsService.remove(this.seasonId).subscribe({
+    this.seasonsService.remove(this.seasonId()).subscribe({
       next: () => this.router.navigate(['/seasons']),
       error: () => this.error.set('Erreur lors de la suppression de la saison.'),
     });
