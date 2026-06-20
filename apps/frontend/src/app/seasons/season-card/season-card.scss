@@ -106,7 +106,7 @@
     &--pending {
       background: transparent;
       border-color: var(--border-hair);
-      color: var(--text-faint);
+      color: var(--text-dim);
     }
 
     &--alert {
@@ -118,7 +118,7 @@
 
   &__participants {
     font-family: var(--font-mono);
-    color: var(--text-faint);
+    color: var(--text-dim);
     font-size: 0.72rem;
     letter-spacing: 0.08em;
   }

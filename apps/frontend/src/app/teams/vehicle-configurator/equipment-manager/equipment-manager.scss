@@ -9,7 +9,7 @@
   font-family: var(--font-mono);
   font-size: 0.82rem;
   letter-spacing: 0.06em;
-  color: var(--text-faint);
+  color: var(--text-dim);
 
   &--loading { color: var(--text-dim); }
   &--error   { color: var(--tb-rouille-lt); }
