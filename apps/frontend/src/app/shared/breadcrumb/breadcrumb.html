@@ -1,0 +1,10 @@
+<nav class="bc">
+  @for (crumb of crumbs(); track crumb.label) {
+    @if (!$last) {
+      <a class="bc__link" [routerLink]="crumb.route">{{ crumb.label }}</a>
+      <span class="bc__sep">›</span>
+    } @else {
+      <span class="bc__current">{{ crumb.label }}</span>
+    }
+  }
+</nav>

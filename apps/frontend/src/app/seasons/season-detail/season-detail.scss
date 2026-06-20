@@ -36,24 +36,6 @@
   }
 }
 
-.season-detail-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 16px;
-  font-family: var(--font-mono);
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-decoration: none;
-  transition: color 160ms;
-
-  &:hover {
-    color: var(--tb-danger);
-  }
-}
-
 .season-detail-header {
   display: flex;
   justify-content: space-between;

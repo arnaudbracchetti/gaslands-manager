@@ -9,36 +9,6 @@
   gap: 32px;
 }
 
-// ── Fil d'Ariane ─────────────────────────────────────────────────────────────
-
-.tep-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-
-  &__link {
-    color: var(--text-dim);
-    text-decoration: none;
-    transition: color 160ms;
-
-    &:hover {
-      color: var(--tb-danger);
-    }
-  }
-
-  &__sep {
-    color: var(--text-dim);
-  }
-
-  &__current {
-    color: var(--tb-os);
-  }
-}
-
 // ── Statuts ───────────────────────────────────────────────────────────────────
 
 .tep-status {

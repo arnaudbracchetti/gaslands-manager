@@ -2,11 +2,7 @@
 <div class="tep-page">
 
   <!-- Fil d'Ariane -->
-  <nav class="tep-breadcrumb">
-    <a class="tep-breadcrumb__link" [routerLink]="backRoute()">{{ backLabel() }}</a>
-    <span class="tep-breadcrumb__sep">›</span>
-    <span class="tep-breadcrumb__current">{{ team()?.name ?? '…' }}</span>
-  </nav>
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
 
   @if (loading()) {
     <p class="tep-status tep-status--loading">Chargement…</p>

@@ -17,7 +17,7 @@
  * n'existe pas de endpoint GET /api/teams/:id.
  */
 import { Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of, map, catchError } from 'rxjs';
 import { Team, CreateTeamDto } from '../team.model';
 import { TeamsService } from '../teams.service';
@@ -29,11 +29,12 @@ import { Vehicle } from '../vehicle-configurator/vehicle-builder.model';
 import { Sponsor } from '../../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
 import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
+import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [TeamForm, ConfirmModal, RouterLink, SlotGauge],
+  imports: [TeamForm, ConfirmModal, SlotGauge, Breadcrumb],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })
@@ -75,6 +76,11 @@ export class TeamEditPage implements OnInit {
       ? ['/seasons', this.seasonIdParam()!]
       : ['/teams'],
   );
+
+  breadcrumbs = computed((): BreadcrumbItem[] => [
+    { label: this.backLabel(), route: this.backRoute() },
+    { label: this.team()?.name ?? '…' },
+  ]);
 
   hasVehicles = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
 

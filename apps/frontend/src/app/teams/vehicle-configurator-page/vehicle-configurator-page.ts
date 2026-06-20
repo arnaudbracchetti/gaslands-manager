@@ -12,15 +12,16 @@
  * `TeamEditPage` passe `returnTo=edit` lors de la navigation vers cette page.
  */
 import { Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Team } from '../team.model';
 import { TeamsService } from '../teams.service';
 import { VehicleConfigurator } from '../vehicle-configurator/vehicle-configurator';
+import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 
 @Component({
   selector: 'app-vehicle-configurator-page',
   standalone: true,
-  imports: [VehicleConfigurator, RouterLink],
+  imports: [VehicleConfigurator, Breadcrumb],
   templateUrl: './vehicle-configurator-page.html',
   styleUrl: './vehicle-configurator-page.scss',
 })
@@ -36,15 +37,25 @@ export class VehicleConfiguratorPage implements OnInit {
 
   private returnTo: WritableSignal<string> = signal('teams');
 
-  /** Route de retour — /teams/:teamId/edit si returnTo=edit, sinon /teams */
+  /** Route de retour — conservée pour onDone() */
   backRoute = computed((): string[] => {
     const t = this.team();
     return this.returnTo() === 'edit' && t ? ['/teams', String(t.id), 'edit'] : ['/teams'];
   });
 
-  backLabel = computed((): string =>
-    this.returnTo() === 'edit' ? "← Retour à l'équipe" : '← Retour aux équipes',
-  );
+  breadcrumbs = computed((): BreadcrumbItem[] => {
+    const t = this.team();
+    const isEdit = this.returnTo() === 'edit';
+    const current = this.vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement";
+    if (isEdit && t) {
+      return [
+        { label: 'Mes Équipes', route: ['/teams'] },
+        { label: t.name, route: ['/teams', String(t.id), 'edit'] },
+        { label: current },
+      ];
+    }
+    return [{ label: 'Mes Équipes', route: ['/teams'] }, { label: current }];
+  });
 
   ngOnInit(): void {
     const teamId = Number(this.route.snapshot.paramMap.get('teamId'));

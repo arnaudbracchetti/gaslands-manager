@@ -1,11 +1,12 @@
 <!--
   Page de construction/édition d'un véhicule.
-  Le lien de retour dépend de returnTo : TeamEditPage ou liste des équipes.
+  Le fil d'Ariane dépend de returnTo : TeamEditPage ou liste des équipes.
 -->
 <div class="vcp-page">
 
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
+
   <div class="vcp-header">
-    <a class="vcp-back" [routerLink]="backRoute()">{{ backLabel() }}</a>
     <h1>{{ vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement du véhicule" }}</h1>
   </div>
 

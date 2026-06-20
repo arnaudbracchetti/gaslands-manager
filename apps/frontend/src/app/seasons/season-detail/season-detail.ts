@@ -16,7 +16,7 @@
  * le backend renvoie 404 — affiché comme message d'erreur générique.
  */
 import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SeasonsService } from '../seasons.service';
 import { Season, SeasonState, ChangeStateDto } from '../season.model';
 import { SeasonParticipant } from '../season-participant.model';
@@ -27,6 +27,7 @@ import { TeamsService } from '../../teams/teams.service';
 import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
+import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 
 const STATE_LABELS: Record<SeasonState, string> = {
   EN_CONSTRUCTION: 'En construction',
@@ -37,7 +38,7 @@ const STATE_LABELS: Record<SeasonState, string> = {
 @Component({
   selector: 'app-season-detail',
   standalone: true,
-  imports: [ParticipantList, InviteLink, RouterLink, ChangeTeamModal, ConfirmModal],
+  imports: [ParticipantList, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb],
   templateUrl: './season-detail.html',
   styleUrl: './season-detail.scss',
 })
@@ -85,6 +86,11 @@ export class SeasonDetail implements OnInit {
 
   /** Vrai quand le choix d'équipe est encore modifiable (saison EN_CONSTRUCTION). */
   canChangeTeam: Signal<boolean> = computed(() => this.season()?.state === 'EN_CONSTRUCTION');
+
+  breadcrumbs: Signal<BreadcrumbItem[]> = computed(() => [
+    { label: 'Saisons', route: ['/seasons'] },
+    { label: this.season()?.name ?? '…' },
+  ]);
 
   /** Message de confirmation pour la transition d'état (utilisé dans le template). */
   pendingStateLabel: Signal<string> = computed(() => STATE_LABELS[this.pendingState() ?? 'EN_CONSTRUCTION']);

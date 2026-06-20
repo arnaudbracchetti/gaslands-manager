@@ -1,7 +1,7 @@
 <!-- Page de détail d'une saison -->
 <div class="season-detail-page">
 
-  <a class="season-detail-back" routerLink="/seasons">← Mes saisons</a>
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
 
   @if (loading()) {
     <div class="season-detail-loading">
