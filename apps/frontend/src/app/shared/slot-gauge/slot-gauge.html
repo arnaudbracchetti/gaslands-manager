@@ -1,0 +1,10 @@
+<span class="slot-gauge"
+      [class]="'slot-gauge slot-gauge--' + size()"
+      [title]="used() + '/' + total() + ' emplacements utilisés'">
+  @for (i of slotsArray(); track i) {
+    <span class="slot-gauge__square"
+          [class.slot-gauge__square--used]="i < used()">
+    </span>
+  }
+  <img class="slot-gauge__icon" src="/icons/wrench.svg" alt="emplacements" />
+</span>

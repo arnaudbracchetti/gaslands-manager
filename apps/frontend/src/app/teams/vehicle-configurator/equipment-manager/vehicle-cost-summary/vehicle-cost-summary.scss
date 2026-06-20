@@ -16,15 +16,15 @@
 }
 
 .vcs-slots {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-faint);
-  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
-  strong {
-    color: var(--tb-danger);
-    font-weight: 700;
+  &__label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    letter-spacing: 0.06em;
   }
 }
 

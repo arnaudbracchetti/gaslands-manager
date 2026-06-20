@@ -4,10 +4,10 @@
 -->
 <h3 class="vcs-name" [title]="vehicleName()">{{ vehicleName() }}</h3>
 
-<p class="vcs-slots">
-  <img class="vcs-icon" src="/icons/wrench.svg" alt="" />
-  Emplacements : <strong>{{ emplacementsUtilises() }} / {{ emplacementsTotal() }}</strong>
-</p>
+<div class="vcs-slots">
+  <span class="vcs-slots__label">Emplacements</span>
+  <app-slot-gauge [used]="emplacementsUtilises()" [total]="emplacementsTotal()" size="md" />
+</div>
 
 <div class="vcs-cost">
   <p class="vcs-cost-row">

@@ -28,11 +28,12 @@ import { CatalogService } from '../../catalog/catalog.service';
 import { Vehicle } from '../vehicle-configurator/vehicle-builder.model';
 import { Sponsor } from '../../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
+import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
 
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [TeamForm, ConfirmModal, RouterLink],
+  imports: [TeamForm, ConfirmModal, RouterLink, SlotGauge],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })

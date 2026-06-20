@@ -13,11 +13,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { Vehicule } from '../../../catalog/catalog.model';
+import { SlotGauge } from '../../../shared/slot-gauge/slot-gauge';
 
 @Component({
   selector: 'app-vehicle-choice-card',
   standalone: true,
-  imports: [],
+  imports: [SlotGauge],
   templateUrl: './vehicle-choice-card.html',
   styleUrl: './vehicle-choice-card.scss',
 })

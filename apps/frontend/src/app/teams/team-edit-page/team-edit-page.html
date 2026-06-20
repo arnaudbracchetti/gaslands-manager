@@ -48,10 +48,7 @@
                 <span class="tep-vehicle-cost">
                   {{ vehicle.cout }} <img class="tep-icon" src="/icons/dollar.svg" alt="jerricans" />
                 </span>
-                <span class="tep-vehicle-slots">
-                  {{ vehicle.emplacementsUtilises }}/{{ vehicle.emplacementsTotal }}
-                  <img class="tep-icon" src="/icons/wrench.svg" alt="emplacements" />
-                </span>
+                <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
               </span>
               <span class="tep-vehicle-actions">
                 <button

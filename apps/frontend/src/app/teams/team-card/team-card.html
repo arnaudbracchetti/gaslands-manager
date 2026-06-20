@@ -42,10 +42,7 @@
             <span class="team-card__vehicle-cost">
               {{ vehicle.cout }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
             </span>
-            <span class="team-card__vehicle-slots">
-              {{ vehicle.emplacementsUtilises }}/{{ vehicle.emplacementsTotal }}
-              <img class="team-card__icon" src="/icons/wrench.svg" alt="emplacements" />
-            </span>
+            <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
           </span>
         </li>
       }

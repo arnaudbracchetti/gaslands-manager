@@ -12,10 +12,12 @@
  * récapitulatif d'UN véhicule, déjà résolu par `EquipmentManager`).
  */
 import { Component, InputSignal, input } from '@angular/core';
+import { SlotGauge } from '../../../../shared/slot-gauge/slot-gauge';
 
 @Component({
   selector: 'app-vehicle-cost-summary',
   standalone: true,
+  imports: [SlotGauge],
   templateUrl: './vehicle-cost-summary.html',
   styleUrl: './vehicle-cost-summary.scss',
 })

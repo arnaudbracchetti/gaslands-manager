@@ -18,7 +18,7 @@
     <span class="stat" title="Manœuvrabilité">🎮 {{ vehicule().manoeuvrabilite }}</span>
     <span class="stat" title="Vitesse maximale">💨 {{ vehicule().vitesse_max }}</span>
     <span class="stat" title="Équipage">👥 {{ vehicule().equipage }}</span>
-    <span class="stat" title="Emplacements (armes + améliorations)">🔧 {{ vehicule().emplacements }}</span>
+    <app-slot-gauge [used]="0" [total]="vehicule().emplacements" />
   </div>
 
   <div class="choice-card__footer">

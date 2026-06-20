@@ -130,8 +130,7 @@
     flex-shrink: 0;
   }
 
-  &__vehicle-cost,
-  &__vehicle-slots {
+  &__vehicle-cost {
     display: flex;
     align-items: center;
     gap: 3px;

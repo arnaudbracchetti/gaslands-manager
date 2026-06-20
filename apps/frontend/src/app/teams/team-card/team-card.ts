@@ -10,11 +10,12 @@
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { Team } from '../team.model';
 import { VehicleSummary } from '../vehicle-summary';
+import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
 
 @Component({
   selector: 'app-team-card',
   standalone: true,
-  imports: [],
+  imports: [SlotGauge],
   templateUrl: './team-card.html',
   styleUrl: './team-card.scss',
 })
@@ -41,4 +42,5 @@ export class TeamCard {
    * Le parent navigue vers `/teams/:id/edit`.
    */
   cardClicked: OutputEmitterRef<Team> = output<Team>();
+
 }

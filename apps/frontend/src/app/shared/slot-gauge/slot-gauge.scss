@@ -1,0 +1,40 @@
+// ─── SlotGauge — jauge visuelle d'emplacements ───────────────────────────────
+
+.slot-gauge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+
+  &__square {
+    border: 1px solid var(--clr-accent);
+    opacity: 0.5;
+    flex-shrink: 0;
+
+    &--used {
+      background-color: var(--clr-accent);
+      opacity: 1;
+    }
+  }
+
+  &__icon {
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  // ── Tailles ──────────────────────────────────────────────────────────────
+
+  &--sm {
+    .slot-gauge__square { width: 10px; height: 10px; }
+    .slot-gauge__icon   { width: 12px; height: 12px; }
+  }
+
+  &--md {
+    .slot-gauge__square { width: 13px; height: 13px; }
+    .slot-gauge__icon   { width: 14px; height: 14px; }
+  }
+
+  &--lg {
+    .slot-gauge__square { width: 16px; height: 16px; }
+    .slot-gauge__icon   { width: 16px; height: 16px; }
+  }
+}
