@@ -1,0 +1,40 @@
+<!--
+  ConfirmModal — overlay de confirmation générique.
+
+  Structure (design system Terres Brûlées) :
+  - Fond semi-transparent (.cm-overlay)
+  - Boîte Panel "métal + coins d'enregistrement" (.cm-modal + tb-grain)
+    - Bande HazardTape en tête (.cm-modal__tape, couleur selon variant)
+    - Texte du message (.cm-modal__message)
+    - Boutons Confirmer (danger ou primary) / Annuler (ghost) (.cm-modal__actions)
+-->
+<div class="cm-overlay" role="dialog" aria-modal="true" [attr.aria-label]="message()">
+  <div class="cm-modal tb-grain" [class.cm-modal--primary]="variant() === 'primary'">
+
+    <!-- Bande HazardTape : rust pour danger, danger-ui pour primary -->
+    <div class="cm-modal__tape"></div>
+
+    <div class="cm-modal__body">
+      <p class="cm-modal__message">{{ message() }}</p>
+
+      <div class="cm-modal__actions">
+        <button
+          class="cm-modal__confirm"
+          type="button"
+          (click)="confirmed.emit()"
+          (mousedown)="$any($event.currentTarget).style.transform='translateY(3px)'; $any($event.currentTarget).style.boxShadow='0 0 0 rgba(0,0,0,0.45)'"
+          (mouseup)="$any($event.currentTarget).style.transform=''; $any($event.currentTarget).style.boxShadow=''"
+          (mouseleave)="$any($event.currentTarget).style.transform=''; $any($event.currentTarget).style.boxShadow=''; $any($event.currentTarget).style.filter=''">
+          {{ confirmLabel() }}
+        </button>
+        <button
+          class="cm-modal__cancel"
+          type="button"
+          (click)="cancelled.emit()">
+          {{ cancelLabel() }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

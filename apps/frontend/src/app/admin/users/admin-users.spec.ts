@@ -113,25 +113,26 @@ describe('AdminUsers Component', () => {
   // ── Suppression ────────────────────────────────────────────────────────────
 
   it('appelle UsersService.remove() après confirmation et retire l\'utilisateur de la liste', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
     mockUsersService.remove.mockReturnValue(of(undefined));
 
     component.deleteUser(mockUsers[1]);
+    expect(component.pendingDeleteUser()).toEqual(mockUsers[1]);
+    expect(mockUsersService.remove).not.toHaveBeenCalled();
+
+    component.onConfirmDeleteUser();
 
     expect(mockUsersService.remove).toHaveBeenCalledWith(2);
     expect(component.users().find((u) => u.id === 2)).toBeUndefined();
-
-    vi.unstubAllGlobals();
+    expect(component.pendingDeleteUser()).toBeNull();
   });
 
   it('n\'appelle pas remove() si l\'utilisateur annule la confirmation', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
     component.deleteUser(mockUsers[1]);
+    expect(component.pendingDeleteUser()).toEqual(mockUsers[1]);
+
+    component.pendingDeleteUser.set(null);
 
     expect(mockUsersService.remove).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
   });
 
   // ── Toggle actif/inactif ────────────────────────────────────────────────────

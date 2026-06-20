@@ -34,6 +34,7 @@ import { TeamsService } from './teams.service';
 import { Team, CreateTeamDto } from './team.model';
 import { TeamCard } from './team-card/team-card';
 import { TeamForm } from './team-form/team-form';
+import { ConfirmModal } from '../shared/confirm-modal/confirm-modal';
 import { VehicleService } from './vehicle-configurator/vehicle.service';
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
 import { CatalogService } from '../catalog/catalog.service';
@@ -45,7 +46,7 @@ import { buildVehicleSummary, TeamVehiclePair, VehicleSummary } from './vehicle-
   standalone: true,
   // On importe les sous-composants ici pour pouvoir les utiliser dans le template.
   // FormsModule n'est PAS nécessaire ici — il est importé dans TeamForm uniquement.
-  imports: [TeamCard, TeamForm],
+  imports: [TeamCard, TeamForm, ConfirmModal],
   templateUrl: './teams.html',
   styleUrl: './teams.scss',
 })
@@ -87,6 +88,14 @@ export class Teams implements OnInit {
 
   /** Vrai pendant l'appel API de sauvegarde (passé à TeamForm pour désactiver les boutons) */
   saving: WritableSignal<boolean> = signal(false);
+
+  // ── Confirmations de suppression ───────────────────────────────────────────
+
+  /** Équipe en attente de confirmation de suppression (null = aucune) */
+  pendingDeleteTeam: WritableSignal<Team | null> = signal<Team | null>(null);
+
+  /** Véhicule en attente de confirmation de suppression (null = aucun) */
+  pendingDeleteVehicle: WritableSignal<TeamVehiclePair | null> = signal<TeamVehiclePair | null>(null);
 
   // ── Résumés des véhicules (affichage sur les cartes) ────────────────────────
 
@@ -252,9 +261,13 @@ export class Teams implements OnInit {
    * pour une UX réactive, puis on appelle l'API.
    */
   deleteTeam(team: Team): void {
-    if (!window.confirm(`Supprimer l'équipe "${team.name}" ? Cette action est irréversible.`)) {
-      return;
-    }
+    this.pendingDeleteTeam.set(team);
+  }
+
+  onConfirmDeleteTeam(): void {
+    const team = this.pendingDeleteTeam();
+    this.pendingDeleteTeam.set(null);
+    if (!team) return;
 
     // Suppression optimiste — (list: Team[]) et (t: Team) annotés (règle `parameter: true`).
     this.teams.update((list: Team[]) => list.filter((t: Team) => t.id !== team.id));
@@ -316,9 +329,13 @@ export class Teams implements OnInit {
    * pas (supprimer une équipe ne déverrouille rien).
    */
   deleteVehicle(pair: TeamVehiclePair): void {
-    if (!window.confirm(`Supprimer le véhicule "${pair.vehicle.nom}" ? Cette action est irréversible.`)) {
-      return;
-    }
+    this.pendingDeleteVehicle.set(pair);
+  }
+
+  onConfirmDeleteVehicle(): void {
+    const pair = this.pendingDeleteVehicle();
+    this.pendingDeleteVehicle.set(null);
+    if (!pair) return;
 
     this.vehicleService.remove(pair.vehicle.id).subscribe({
       next: () => this.loadTeams(),

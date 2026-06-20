@@ -62,11 +62,12 @@ import { TourelleAssignmentModal } from './tourelle-assignment-modal/tourelle-as
 import { TeamBudget } from './team-budget/team-budget';
 import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary';
 import { MountedEquipment } from './mounted-equipment/mounted-equipment';
+import { ConfirmModal } from '../../../shared/confirm-modal/confirm-modal';
 
 @Component({
   selector: 'app-equipment-manager',
   standalone: true,
-  imports: [EquipmentOption, TourelleAssignmentModal, TeamBudget, VehicleCostSummary, MountedEquipment],
+  imports: [EquipmentOption, TourelleAssignmentModal, TeamBudget, VehicleCostSummary, MountedEquipment, ConfirmModal],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',
 })
@@ -103,6 +104,14 @@ export class EquipmentManager {
   availableImprovements: WritableSignal<AvailableImprovementDto[]> = signal<AvailableImprovementDto[]>([]);
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
+
+  // ── Confirmations de retrait ────────────────────────────────────────────────
+
+  /** Arme en attente de confirmation de retrait (null = aucune) */
+  pendingRemoveWeapon: WritableSignal<Weapon | null> = signal<Weapon | null>(null);
+
+  /** Amélioration en attente de confirmation de retrait (null = aucune) */
+  pendingRemoveImprovement: WritableSignal<VehicleImprovement | null> = signal<VehicleImprovement | null>(null);
 
   // ── Filtrage des options définitivement indisponibles ───────────────────────
 
@@ -464,10 +473,13 @@ export class EquipmentManager {
    * de la classe). Succès : `reloadVehicle` (le backend renvoie `204`).
    */
   removeWeapon(weapon: Weapon): void {
-    const nom = this.resolveWeaponName(weapon.nomInterne);
-    if (!window.confirm(`Retirer "${nom}" de ce véhicule ?`)) {
-      return;
-    }
+    this.pendingRemoveWeapon.set(weapon);
+  }
+
+  onConfirmRemoveWeapon(): void {
+    const weapon = this.pendingRemoveWeapon();
+    this.pendingRemoveWeapon.set(null);
+    if (!weapon) return;
 
     this.equipmentError.set('');
 
@@ -481,13 +493,15 @@ export class EquipmentManager {
 
   /** Retire une amélioration — mirroir exact de `removeWeapon` ci-dessus. */
   removeImprovement(improvement: VehicleImprovement): void {
+    this.pendingRemoveImprovement.set(improvement);
+  }
+
+  onConfirmRemoveImprovement(): void {
+    const improvement = this.pendingRemoveImprovement();
+    this.pendingRemoveImprovement.set(null);
+    if (!improvement) return;
+
     const vehicle = this.vehicle();
-
-    const nom = this.resolveImprovementName(improvement.nomInterne);
-    if (!window.confirm(`Retirer "${nom}" de ce véhicule ?`)) {
-      return;
-    }
-
     this.equipmentError.set('');
 
     this.vehicleService.removeImprovement(vehicle.id, improvement.id).subscribe({
@@ -566,12 +580,12 @@ export class EquipmentManager {
    * l'entrée est introuvable (incohérence de données — on dégrade proprement
    * plutôt que de planter).
    */
-  private resolveWeaponName(nomInterne: string): string {
+  resolveWeaponName(nomInterne: string): string {
     return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
-  private resolveImprovementName(nomInterne: string): string {
+  resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 

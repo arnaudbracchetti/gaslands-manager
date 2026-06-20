@@ -1,0 +1,143 @@
+// ConfirmModal — design system Terres Brûlées
+// Panel métal + coins d'enregistrement + HazardTape + boutons Button DS
+
+// ── Overlay ──────────────────────────────────────────────────────────────────
+
+.cm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+// ── Boîte (Panel metal + brackets) ───────────────────────────────────────────
+
+.cm-modal {
+  position: relative;
+  overflow: hidden;
+  width: min(440px, 92vw);
+
+  // Panel "metal" — dégradé métal, bordure discrète
+  background-image: var(--metal-sheen);
+  border: 2px solid var(--border-hair);
+  box-shadow: var(--shadow-stamp-lg);
+
+  // Coins d'enregistrement (tb-brackets) — jaune danger par défaut
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    z-index: 7;
+    pointer-events: none;
+    border-color: var(--tb-danger);
+    border-style: solid;
+  }
+
+  &::before {
+    top: 10px;
+    left: 10px;
+    border-width: 3px 0 0 3px;
+  }
+
+  &::after {
+    bottom: 10px;
+    right: 10px;
+    border-width: 0 3px 3px 0;
+  }
+}
+
+// ── Bande HazardTape ──────────────────────────────────────────────────────────
+
+.cm-modal__tape {
+  height: 10px;
+  background-image: var(--stripe-rust);   // rouille pour variant danger (défaut)
+  box-shadow: var(--shadow-stamp);
+  position: relative;
+  z-index: 6;
+
+  // Variant primary → bande jaune danger
+  .cm-modal--primary & {
+    background-image: var(--stripe-danger-ui);
+  }
+}
+
+// ── Corps ─────────────────────────────────────────────────────────────────────
+
+.cm-modal__body {
+  position: relative;
+  z-index: 6;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cm-modal__message {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-strong);
+  line-height: 1.55;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+
+.cm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+// Boutons — fidèles au composant Button du design system (font-text, 600, uppercase)
+%btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-text);
+  font-weight: 600;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 12px 24px;
+  min-height: 44px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  transition:
+    filter 160ms var(--ease-mech),
+    transform 90ms var(--ease-mech),
+    box-shadow 90ms var(--ease-mech);
+
+  &:hover {
+    filter: brightness(1.12);
+  }
+}
+
+// Bouton de confirmation — variant "danger" (rouge rouille, défaut)
+.cm-modal__confirm {
+  @extend %btn-base;
+  background: var(--tb-rouille);
+  color: var(--tb-os);
+  border: 2px solid var(--tb-rouille);
+
+  // Variant "primary" (jaune danger) via classe parent
+  .cm-modal--primary & {
+    background: var(--tb-danger);
+    color: var(--tb-bitume);
+    border-color: var(--tb-danger);
+  }
+}
+
+// Bouton d'annulation — variant "ghost"
+.cm-modal__cancel {
+  @extend %btn-base;
+  background: transparent;
+  color: var(--tb-os);
+  border: 2px solid var(--border-strong);
+}

@@ -151,4 +151,20 @@
       (cancelled)="selectedOrphanTourelle.set(null)" />
   }
 
+  @if (pendingRemoveWeapon()) {
+    <app-confirm-modal
+      [message]="'Retirer &quot;' + resolveWeaponName(pendingRemoveWeapon()!.nomInterne) + '&quot; de ce véhicule ?'"
+      confirmLabel="Retirer"
+      (confirmed)="onConfirmRemoveWeapon()"
+      (cancelled)="pendingRemoveWeapon.set(null)" />
+  }
+
+  @if (pendingRemoveImprovement()) {
+    <app-confirm-modal
+      [message]="'Retirer &quot;' + resolveImprovementName(pendingRemoveImprovement()!.nomInterne) + '&quot; de ce véhicule ?'"
+      confirmLabel="Retirer"
+      (confirmed)="onConfirmRemoveImprovement()"
+      (cancelled)="pendingRemoveImprovement.set(null)" />
+  }
+
 </div>

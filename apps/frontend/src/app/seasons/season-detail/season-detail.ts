@@ -26,6 +26,7 @@ import { AuthService } from '../../auth/auth.service';
 import { TeamsService } from '../../teams/teams.service';
 import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
+import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 
 const STATE_LABELS: Record<SeasonState, string> = {
   EN_CONSTRUCTION: 'En construction',
@@ -36,7 +37,7 @@ const STATE_LABELS: Record<SeasonState, string> = {
 @Component({
   selector: 'app-season-detail',
   standalone: true,
-  imports: [ParticipantList, InviteLink, RouterLink, ChangeTeamModal],
+  imports: [ParticipantList, InviteLink, RouterLink, ChangeTeamModal, ConfirmModal],
   templateUrl: './season-detail.html',
   styleUrl: './season-detail.scss',
 })
@@ -56,6 +57,20 @@ export class SeasonDetail implements OnInit {
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
 
+  // ── Confirmations ──────────────────────────────────────────────────────────
+
+  /** Participant en attente de confirmation de retrait (null = aucun) */
+  pendingRemoveParticipant: WritableSignal<SeasonParticipant | null> = signal<SeasonParticipant | null>(null);
+
+  /** Participant en attente de confirmation de promotion (null = aucun) */
+  pendingPromote: WritableSignal<SeasonParticipant | null> = signal<SeasonParticipant | null>(null);
+
+  /** Nouvel état en attente de confirmation de transition (null = aucun) */
+  pendingState: WritableSignal<SeasonState | null> = signal<SeasonState | null>(null);
+
+  /** Vrai quand la suppression de la saison attend confirmation */
+  showDeleteSeasonConfirm: WritableSignal<boolean> = signal(false);
+
   /** Vrai pendant un appel PUT /state */
   stateTransitioning: WritableSignal<boolean> = signal(false);
 
@@ -70,6 +85,9 @@ export class SeasonDetail implements OnInit {
 
   /** Vrai quand le choix d'équipe est encore modifiable (saison EN_CONSTRUCTION). */
   canChangeTeam: Signal<boolean> = computed(() => this.season()?.state === 'EN_CONSTRUCTION');
+
+  /** Message de confirmation pour la transition d'état (utilisé dans le template). */
+  pendingStateLabel: Signal<string> = computed(() => STATE_LABELS[this.pendingState() ?? 'EN_CONSTRUCTION']);
 
   stateLabel: Signal<string> = computed(() => {
     const state = this.season()?.state;
@@ -130,11 +148,17 @@ export class SeasonDetail implements OnInit {
   onRemoveParticipant(pid: number): void {
     const participant = this.participants().find((p) => p.id === pid);
     if (!participant) return;
-    if (!window.confirm(`Retirer "${participant.userName}" de la saison ?`)) return;
+    this.pendingRemoveParticipant.set(participant);
+  }
 
-    this.participants.update((list) => list.filter((p) => p.id !== pid));
+  onConfirmRemoveParticipant(): void {
+    const participant = this.pendingRemoveParticipant();
+    this.pendingRemoveParticipant.set(null);
+    if (!participant) return;
 
-    this.seasonsService.removeParticipant(this.seasonId, pid).subscribe({
+    this.participants.update((list) => list.filter((p) => p.id !== participant.id));
+
+    this.seasonsService.removeParticipant(this.seasonId, participant.id).subscribe({
       error: () => {
         this.error.set('Erreur lors du retrait du participant.');
         this.loadParticipants();
@@ -145,9 +169,15 @@ export class SeasonDetail implements OnInit {
   onPromote(pid: number): void {
     const participant = this.participants().find((p) => p.id === pid);
     if (!participant) return;
-    if (!window.confirm(`Promouvoir "${participant.userName}" co-organisateur ?`)) return;
+    this.pendingPromote.set(participant);
+  }
 
-    this.seasonsService.promote(this.seasonId, pid).subscribe({
+  onConfirmPromote(): void {
+    const participant = this.pendingPromote();
+    this.pendingPromote.set(null);
+    if (!participant) return;
+
+    this.seasonsService.promote(this.seasonId, participant.id).subscribe({
       next: (updated: SeasonParticipant) => {
         this.participants.set(
           this.participants().map((p) => (p.id === updated.id ? updated : p)),
@@ -164,9 +194,13 @@ export class SeasonDetail implements OnInit {
   onChangeState(newState: SeasonState): void {
     const season = this.season();
     if (!season) return;
+    this.pendingState.set(newState);
+  }
 
-    const label = STATE_LABELS[newState];
-    if (!window.confirm(`Passer la saison à l'état "${label}" ?`)) return;
+  onConfirmChangeState(): void {
+    const newState = this.pendingState();
+    this.pendingState.set(null);
+    if (!newState) return;
 
     this.stateTransitioning.set(true);
     this.error.set('');
@@ -203,7 +237,11 @@ export class SeasonDetail implements OnInit {
   deleteSeason(): void {
     const season = this.season();
     if (!season) return;
-    if (!window.confirm(`Supprimer définitivement la saison "${season.name}" ? Cette action est irréversible.`)) return;
+    this.showDeleteSeasonConfirm.set(true);
+  }
+
+  onConfirmDeleteSeason(): void {
+    this.showDeleteSeasonConfirm.set(false);
 
     this.seasonsService.remove(this.seasonId).subscribe({
       next: () => this.router.navigate(['/seasons']),

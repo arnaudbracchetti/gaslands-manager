@@ -82,4 +82,20 @@
     </div>
   }
 
+  @if (pendingDeleteTeam()) {
+    <app-confirm-modal
+      [message]="'Supprimer l\'équipe &quot;' + pendingDeleteTeam()!.name + '&quot; ? Cette action est irréversible.'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDeleteTeam()"
+      (cancelled)="pendingDeleteTeam.set(null)" />
+  }
+
+  @if (pendingDeleteVehicle()) {
+    <app-confirm-modal
+      [message]="'Supprimer le véhicule &quot;' + pendingDeleteVehicle()!.vehicle.nom + '&quot; ? Cette action est irréversible.'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDeleteVehicle()"
+      (cancelled)="pendingDeleteVehicle.set(null)" />
+  }
+
 </div>

@@ -16,11 +16,12 @@ import { DatePipe } from '@angular/common';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
 import { UsersService } from './users.service';
+import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, ConfirmModal],
   templateUrl: './admin-users.html',
   styleUrl: './admin-users.scss',
 })
@@ -36,6 +37,9 @@ export class AdminUsers implements OnInit {
 
   /** Message d'erreur API affiché à l'utilisateur (vide = pas d'erreur) */
   error: WritableSignal<string> = signal('');
+
+  /** Utilisateur en attente de confirmation de suppression (null = aucun) */
+  pendingDeleteUser: WritableSignal<User | null> = signal<User | null>(null);
 
   ngOnInit(): void {
     this.loadUsers();
@@ -63,9 +67,13 @@ export class AdminUsers implements OnInit {
    * Suppression optimiste : retire le compte du signal local immédiatement.
    */
   deleteUser(user: User): void {
-    if (!window.confirm(`Supprimer le compte de "${user.firstName} ${user.lastName}" ? Cette action est irréversible.`)) {
-      return;
-    }
+    this.pendingDeleteUser.set(user);
+  }
+
+  onConfirmDeleteUser(): void {
+    const user = this.pendingDeleteUser();
+    this.pendingDeleteUser.set(null);
+    if (!user) return;
 
     this.users.update((list: User[]) => list.filter((u: User) => u.id !== user.id));
 

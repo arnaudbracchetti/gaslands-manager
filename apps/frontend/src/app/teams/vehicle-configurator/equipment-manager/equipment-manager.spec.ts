@@ -437,8 +437,7 @@ describe('EquipmentManager', () => {
       expect(mounted.sponsorCatalog()).toEqual(mockSponsorCatalog);
     });
 
-    it('weaponRemoved → removeWeapon (avec confirmation)', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+    it('weaponRemoved → removeWeapon (ouvre la modale de confirmation)', () => {
       fixture.componentRef.setInput('vehicle', mockVehicleWithWeapon);
       fixture.detectChanges();
       mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle]));
@@ -446,13 +445,16 @@ describe('EquipmentManager', () => {
       const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
       mounted.weaponRemoved.emit(mockVehicleWithWeapon.weapons[0]);
 
-      expect(mockVehicleService.removeWeapon).toHaveBeenCalledExactlyOnceWith(200);
+      // removeWeapon positionne le signal, la modale attend la confirmation
+      expect(component.pendingRemoveWeapon()).toEqual(mockVehicleWithWeapon.weapons[0]);
+      expect(mockVehicleService.removeWeapon).not.toHaveBeenCalled();
 
-      vi.unstubAllGlobals();
+      // Simulation du clic "Confirmer"
+      component.onConfirmRemoveWeapon();
+      expect(mockVehicleService.removeWeapon).toHaveBeenCalledExactlyOnceWith(200);
     });
 
-    it('improvementRemoved → removeImprovement (avec confirmation)', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+    it('improvementRemoved → removeImprovement (ouvre la modale de confirmation)', () => {
       fixture.componentRef.setInput('vehicle', mockVehicleWithImprovement);
       fixture.detectChanges();
       mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle]));
@@ -460,9 +462,11 @@ describe('EquipmentManager', () => {
       const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
       mounted.improvementRemoved.emit(mockVehicleWithImprovement.improvements[0]);
 
-      expect(mockVehicleService.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
+      expect(component.pendingRemoveImprovement()).toEqual(mockVehicleWithImprovement.improvements[0]);
+      expect(mockVehicleService.removeImprovement).not.toHaveBeenCalled();
 
-      vi.unstubAllGlobals();
+      component.onConfirmRemoveImprovement();
+      expect(mockVehicleService.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
     });
 
     it('tourelleAssignRequested → openAssignModal (ouvre la modale d\'assignation)', () => {
@@ -557,8 +561,7 @@ describe('EquipmentManager', () => {
   // ── Retrait d'équipement (TOUJOURS proposé) — logique métier, appelée depuis
   // les outputs de `MountedEquipment` (cf. "Câblage vers MountedEquipment" ci-dessus) ──
 
-  it('removeWeapon() demande confirmation, retire l\'arme et notifie le parent avec le véhicule rechargé', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+  it('removeWeapon() ouvre la modale puis, à confirmation, retire l\'arme et notifie le parent avec le véhicule rechargé', () => {
     fixture.componentRef.setInput('vehicle', mockVehicleWithWeapon);
     fixture.detectChanges();
     mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle])); // véhicule "nu" après retrait
@@ -566,29 +569,32 @@ describe('EquipmentManager', () => {
     outputToObservable(component.vehicleChanged).subscribe((v) => emitted.push(v));
 
     component.removeWeapon(mockVehicleWithWeapon.weapons[0]);
+    expect(component.pendingRemoveWeapon()).toEqual(mockVehicleWithWeapon.weapons[0]);
+    expect(mockVehicleService.removeWeapon).not.toHaveBeenCalled();
+
+    component.onConfirmRemoveWeapon();
 
     expect(mockVehicleService.removeWeapon).toHaveBeenCalledExactlyOnceWith(200);
     // Retrait ⇒ 204 No Content : on recharge via getAllForTeam + .find() (cf. `reloadVehicle`)
     expect(mockVehicleService.getAllForTeam).toHaveBeenCalledWith(7);
     expect(emitted).toEqual([mockVehicle]);
-
-    vi.unstubAllGlobals();
+    expect(component.pendingRemoveWeapon()).toBeNull();
   });
 
   it('n\'appelle pas removeWeapon si l\'utilisateur annule la confirmation', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
     fixture.componentRef.setInput('vehicle', mockVehicleWithWeapon);
     fixture.detectChanges();
 
     component.removeWeapon(mockVehicleWithWeapon.weapons[0]);
+    expect(component.pendingRemoveWeapon()).toEqual(mockVehicleWithWeapon.weapons[0]);
+
+    // Simulation du clic "Annuler"
+    component.pendingRemoveWeapon.set(null);
 
     expect(mockVehicleService.removeWeapon).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
   });
 
   it('affiche une erreur si le retrait d\'une arme échoue, sans recharger le véhicule', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
     fixture.componentRef.setInput('vehicle', mockVehicleWithWeapon);
     fixture.detectChanges();
     mockVehicleService.removeWeapon.mockReturnValue(
@@ -597,15 +603,13 @@ describe('EquipmentManager', () => {
     mockVehicleService.getAllForTeam.mockClear();
 
     component.removeWeapon(mockVehicleWithWeapon.weapons[0]);
+    component.onConfirmRemoveWeapon();
 
     expect(component.equipmentError()).toBe('Erreur serveur');
     expect(mockVehicleService.getAllForTeam).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
   });
 
-  it('removeImprovement() demande confirmation, retire l\'amélioration et notifie le parent (mirroir de removeWeapon)', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+  it('removeImprovement() ouvre la modale puis, à confirmation, retire l\'amélioration et notifie le parent (mirroir de removeWeapon)', () => {
     fixture.componentRef.setInput('vehicle', mockVehicleWithImprovement);
     fixture.detectChanges();
     mockVehicleService.getAllForTeam.mockReturnValue(of([mockVehicle]));
@@ -613,12 +617,14 @@ describe('EquipmentManager', () => {
     outputToObservable(component.vehicleChanged).subscribe((v) => emitted.push(v));
 
     component.removeImprovement(mockVehicleWithImprovement.improvements[0]);
+    expect(component.pendingRemoveImprovement()).toEqual(mockVehicleWithImprovement.improvements[0]);
+    expect(mockVehicleService.removeImprovement).not.toHaveBeenCalled();
+
+    component.onConfirmRemoveImprovement();
 
     expect(mockVehicleService.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
     expect(mockVehicleService.getAllForTeam).toHaveBeenCalledWith(7);
     expect(emitted).toEqual([mockVehicle]);
-
-    vi.unstubAllGlobals();
   });
 
   // ── Détection "orientation requise" ─────────────────────────────────────────

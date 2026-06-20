@@ -113,4 +113,38 @@
 
   }
 
+  @if (pendingRemoveParticipant()) {
+    <app-confirm-modal
+      [message]="'Retirer &quot;' + pendingRemoveParticipant()!.userName + '&quot; de la saison ?'"
+      confirmLabel="Retirer"
+      (confirmed)="onConfirmRemoveParticipant()"
+      (cancelled)="pendingRemoveParticipant.set(null)" />
+  }
+
+  @if (pendingPromote()) {
+    <app-confirm-modal
+      [message]="'Promouvoir &quot;' + pendingPromote()!.userName + '&quot; co-organisateur ?'"
+      confirmLabel="Promouvoir"
+      variant="primary"
+      (confirmed)="onConfirmPromote()"
+      (cancelled)="pendingPromote.set(null)" />
+  }
+
+  @if (pendingState()) {
+    <app-confirm-modal
+      [message]="'Passer la saison à l\'état ' + pendingStateLabel() + ' ?'"
+      confirmLabel="Confirmer"
+      variant="primary"
+      (confirmed)="onConfirmChangeState()"
+      (cancelled)="pendingState.set(null)" />
+  }
+
+  @if (showDeleteSeasonConfirm()) {
+    <app-confirm-modal
+      [message]="'Supprimer définitivement la saison &quot;' + season()!.name + '&quot; ? Cette action est irréversible.'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDeleteSeason()"
+      (cancelled)="showDeleteSeasonConfirm.set(false)" />
+  }
+
 </div>

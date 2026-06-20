@@ -199,7 +199,6 @@ describe('SeasonDetail', () => {
     it('promeut un participant et met à jour la liste localement', () => {
       const updated: SeasonParticipant = { ...mockParticipants[2], isOrganizer: true };
       mockSeasonsService.promote.mockReturnValue(of(updated));
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
 
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
@@ -207,20 +206,23 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.onPromote(3);
+      expect(component.pendingPromote()).toEqual(mockParticipants[2]);
+      expect(mockSeasonsService.promote).not.toHaveBeenCalled();
+
+      component.onConfirmPromote();
 
       expect(mockSeasonsService.promote).toHaveBeenCalledWith(1, 3);
       expect(component.participants()).toContainEqual(updated);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onPromote(3);
+      component.pendingPromote.set(null);
 
       expect(mockSeasonsService.promote).not.toHaveBeenCalled();
     });
@@ -232,7 +234,6 @@ describe('SeasonDetail', () => {
     it('change l\'état de la saison après confirmation', () => {
       const updated: Season = { ...mockSeason, state: 'EN_COURS' };
       mockSeasonsService.changeState.mockReturnValue(of(updated));
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
 
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
@@ -240,6 +241,10 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.onChangeState('EN_COURS');
+      expect(component.pendingState()).toBe('EN_COURS');
+      expect(mockSeasonsService.changeState).not.toHaveBeenCalled();
+
+      component.onConfirmChangeState();
 
       expect(mockSeasonsService.changeState).toHaveBeenCalledWith(1, { state: 'EN_COURS' });
       expect(component.season()?.state).toBe('EN_COURS');
@@ -247,21 +252,19 @@ describe('SeasonDetail', () => {
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onChangeState('EN_COURS');
+      component.pendingState.set(null);
 
       expect(mockSeasonsService.changeState).not.toHaveBeenCalled();
     });
 
     it('affiche une erreur si le changement d\'état échoue', () => {
       mockSeasonsService.changeState.mockReturnValue(throwError(() => new Error('500')));
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
 
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
@@ -269,6 +272,7 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.onChangeState('EN_COURS');
+      component.onConfirmChangeState();
 
       expect(component.error()).not.toBe('');
       expect(component.stateTransitioning()).toBe(false);
@@ -279,7 +283,6 @@ describe('SeasonDetail', () => {
 
   describe('onRemoveParticipant()', () => {
     it('retire le participant localement après confirmation', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockSeasonsService.removeParticipant.mockReturnValue(of(undefined));
 
       configure();
@@ -288,27 +291,29 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.onRemoveParticipant(2);
+      expect(component.pendingRemoveParticipant()).toEqual(mockParticipants[1]);
+      expect(mockSeasonsService.removeParticipant).not.toHaveBeenCalled();
+
+      component.onConfirmRemoveParticipant();
 
       expect(mockSeasonsService.removeParticipant).toHaveBeenCalledWith(1, 2);
       expect(component.participants()).toEqual([mockParticipants[0], mockParticipants[2], mockParticipants[3]]);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onRemoveParticipant(2);
+      component.pendingRemoveParticipant.set(null);
 
       expect(mockSeasonsService.removeParticipant).not.toHaveBeenCalled();
       expect(component.participants()).toEqual(mockParticipants);
     });
 
     it('affiche une erreur et recharge la liste si le retrait échoue', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockSeasonsService.removeParticipant.mockReturnValue(throwError(() => new Error('400')));
 
       configure();
@@ -317,6 +322,7 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.onRemoveParticipant(1);
+      component.onConfirmRemoveParticipant();
 
       expect(component.error()).not.toBe('');
       expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(2);
@@ -327,7 +333,6 @@ describe('SeasonDetail', () => {
 
   describe('deleteSeason()', () => {
     it('supprime la saison et navigue vers /seasons après confirmation', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockSeasonsService.remove.mockReturnValue(of(undefined));
 
       configure();
@@ -336,26 +341,28 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.deleteSeason();
+      expect(component.showDeleteSeasonConfirm()).toBe(true);
+      expect(mockSeasonsService.remove).not.toHaveBeenCalled();
+
+      component.onConfirmDeleteSeason();
 
       expect(mockSeasonsService.remove).toHaveBeenCalledWith(1);
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/seasons']);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.deleteSeason();
+      component.showDeleteSeasonConfirm.set(false);
 
       expect(mockSeasonsService.remove).not.toHaveBeenCalled();
     });
 
     it('affiche un message d\'erreur si la suppression échoue', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockSeasonsService.remove.mockReturnValue(throwError(() => new Error('500')));
 
       configure();
@@ -364,6 +371,7 @@ describe('SeasonDetail', () => {
       fixture.detectChanges();
 
       component.deleteSeason();
+      component.onConfirmDeleteSeason();
 
       expect(component.error()).not.toBe('');
       expect(mockRouter.navigate).not.toHaveBeenCalled();

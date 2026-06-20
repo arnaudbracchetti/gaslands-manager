@@ -308,26 +308,30 @@ describe('Teams Component', () => {
   // ── Suppression ────────────────────────────────────────────────────────────
 
   it('appelle TeamsService.remove() après confirmation et retire l\'équipe de la liste', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
     mockTeamsService.remove.mockReturnValue(of(undefined));
 
     component.deleteTeam(mockTeams[0]);
+    // deleteTeam positionne le signal — la modale attend la confirmation
+    expect(component.pendingDeleteTeam()).toEqual(mockTeams[0]);
+    expect(mockTeamsService.remove).not.toHaveBeenCalled();
+
+    // Simulation du clic "Confirmer" dans la modale
+    component.onConfirmDeleteTeam();
 
     expect(mockTeamsService.remove).toHaveBeenCalledWith(1);
     // La suppression optimiste retire immédiatement l'équipe du signal
     expect(component.teams().find((t) => t.id === 1)).toBeUndefined();
-
-    vi.unstubAllGlobals();
+    expect(component.pendingDeleteTeam()).toBeNull();
   });
 
   it('n\'appelle pas remove() si l\'utilisateur annule la confirmation', () => {
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
     component.deleteTeam(mockTeams[0]);
+    expect(component.pendingDeleteTeam()).toEqual(mockTeams[0]);
+
+    // Simulation du clic "Annuler" dans la modale
+    component.pendingDeleteTeam.set(null);
 
     expect(mockTeamsService.remove).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
   });
 
   // ── Navigation vers la configuration de véhicule (création ET édition) ─────
@@ -387,41 +391,40 @@ describe('Teams Component', () => {
     const mockPair: TeamVehiclePair = { team: mockTeams[0], vehicle: mockSummary };
 
     it('appelle VehicleService.remove() après confirmation et recharge la liste (resynchronisation de vehicleCount)', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockVehicleService.remove.mockReturnValue(of(undefined));
       mockTeamsService.getAll.mockClear(); // ne compter que les appels déclenchés par deleteVehicle lui-même
 
       component.deleteVehicle(mockPair);
+      expect(component.pendingDeleteVehicle()).toEqual(mockPair);
+      expect(mockVehicleService.remove).not.toHaveBeenCalled();
+
+      component.onConfirmDeleteVehicle();
 
       expect(mockVehicleService.remove).toHaveBeenCalledExactlyOnceWith(100);
       // PAS de suppression optimiste — `loadTeams()` recharge `teams` ET
       // `vehicleSummaries` en un aller-retour (cf. doc de `deleteVehicle`).
       expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
-
-      vi.unstubAllGlobals();
+      expect(component.pendingDeleteVehicle()).toBeNull();
     });
 
     it('n\'appelle pas remove() si l\'utilisateur annule la confirmation', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
-
       component.deleteVehicle(mockPair);
+      expect(component.pendingDeleteVehicle()).toEqual(mockPair);
+
+      component.pendingDeleteVehicle.set(null);
 
       expect(mockVehicleService.remove).not.toHaveBeenCalled();
-
-      vi.unstubAllGlobals();
     });
 
     it('affiche une erreur si la suppression échoue, sans recharger la liste', () => {
-      vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
       mockVehicleService.remove.mockReturnValue(throwError(() => new Error('API error')));
       mockTeamsService.getAll.mockClear();
 
       component.deleteVehicle(mockPair);
+      component.onConfirmDeleteVehicle();
 
       expect(component.error()).toContain('suppression');
       expect(mockTeamsService.getAll).not.toHaveBeenCalled();
-
-      vi.unstubAllGlobals();
     });
   });
 

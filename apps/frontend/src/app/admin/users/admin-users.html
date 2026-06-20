@@ -62,4 +62,12 @@
     </table>
   }
 
+  @if (pendingDeleteUser()) {
+    <app-confirm-modal
+      [message]="'Supprimer le compte de &quot;' + pendingDeleteUser()!.firstName + ' ' + pendingDeleteUser()!.lastName + '&quot; ? Cette action est irréversible.'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDeleteUser()"
+      (cancelled)="pendingDeleteUser.set(null)" />
+  }
+
 </div>
