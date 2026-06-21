@@ -25,7 +25,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { SlicePipe, UpperCasePipe } from '@angular/common';
+import { UpperCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of, map, catchError } from 'rxjs';
@@ -37,13 +37,13 @@ import { CatalogService } from '../../catalog/catalog.service';
 import { Vehicle } from '../vehicle-configurator/vehicle-builder.model';
 import { Sponsor } from '../../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
-import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
 import { SponsorCarousel } from '../sponsor-carousel/sponsor-carousel';
+import { VehicleSummaryCard } from '../vehicle-summary-card/vehicle-summary-card';
 
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [FormsModule, ConfirmModal, SlotGauge, SponsorCarousel, RouterLink, UpperCasePipe, SlicePipe],
+  imports: [FormsModule, ConfirmModal, SponsorCarousel, RouterLink, UpperCasePipe, VehicleSummaryCard],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })

@@ -169,59 +169,10 @@
         } @else {
           <div class="tep-vehicles-list">
             @for (vehicle of vehicles(); track vehicle.id) {
-              <div class="tep-vehicle-card">
-
-                <!-- En-tête de la carte -->
-                <div class="tep-vehicle-card__header">
-                  <div class="tep-vehicle-card__identity">
-                    <h3 class="tep-vehicle-card__name">{{ vehicle.nom | uppercase }}</h3>
-                    <span class="tep-vehicle-card__type">{{ vehicle.nom | uppercase }}</span>
-                  </div>
-                  <div class="tep-vehicle-card__meta">
-                    <div class="tep-vehicle-card__cost">
-                      {{ vehicle.cout }}
-                      <img class="tep-icon" src="/icons/dollar.svg" alt="jerricans" />
-                    </div>
-                    <div class="tep-vehicle-card__slots">
-                      <span class="tep-vehicle-card__slots-label">EMP.</span>
-                      <app-slot-gauge
-                        [used]="vehicle.emplacementsUtilises"
-                        [total]="vehicle.emplacementsTotal" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Tags équipement (armes + améliorations) -->
-                @if (vehicle.equipements.length > 0) {
-                  <div class="tep-vehicle-card__tags">
-                    @for (tag of (vehicle.equipements | slice:0:4); track tag) {
-                      <span class="tep-vehicle-card__tag">{{ tag | uppercase }}</span>
-                    }
-                    @if (vehicle.equipements.length > 4) {
-                      <span class="tep-vehicle-card__tag tep-vehicle-card__tag--overflow">
-                        +{{ vehicle.equipements.length - 4 }} AUTRES
-                      </span>
-                    }
-                  </div>
-                }
-
-                <!-- Actions -->
-                <div class="tep-vehicle-card__actions">
-                  <button
-                    class="tep-btn-manage"
-                    (click)="openVehicleEditor(vehicle.id)"
-                    title="Gérer l'équipement de ce véhicule">
-                    GÉRER L'ÉQUIPEMENT
-                  </button>
-                  <button
-                    class="tep-btn-delete-vehicle"
-                    (click)="deleteVehicle(vehicle)"
-                    title="Supprimer ce véhicule">
-                    🗑
-                  </button>
-                </div>
-
-              </div>
+              <app-vehicle-summary-card
+                [vehicle]="vehicle"
+                (manageClicked)="openVehicleEditor($event)"
+                (deleteClicked)="deleteVehicle($event)" />
             }
           </div>
         }
