@@ -256,21 +256,6 @@ SeasonDetailState {
 
 ---
 
-## Composants dumb recommandés
-
-| Composant | Entrées clés | Usage |
-|---|---|---|
-| `season-card` | `season`, `myRole`, `pendingCount` | carte dans la grille liste |
-| `participant-list` | `participants`, `isOrganizer` | liste dans le détail |
-| `participant-row` | `participant`, `isOrganizer`, callbacks | une ligne de participant |
-| `season-state-card` | `season`, callbacks de transition | bandeau d'état organisateur |
-| `game-list` | `games`, `isOrganizer` | liste des parties |
-| `game-form` | `seasonId`, `validatedParticipants`, `game?` | modale ajout/modif partie |
-| `invite-link` | `inviteCode` | affichage + copie du code |
-| `season-form` | callback création | modale création saison |
-
----
-
 ## Design tokens à appliquer
 
 Appliquer le design system existant. Les valeurs ci-dessous sont celles des wireframes lo-fi — **ne pas les copier telles quelles**, utiliser leurs équivalents dans le DS en place.

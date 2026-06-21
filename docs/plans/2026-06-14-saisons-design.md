@@ -202,16 +202,9 @@ importer `SeasonModule`.
 
 ---
 
-## 7. Frontend — `apps/frontend/src/app/seasons/`
+## 7. Frontend — UX et règles de visibilité
 
-### Routes (`app.routes.ts`, toutes sous `authGuard`)
-
-- `/seasons` — `Seasons` (smart) : liste unique de cartes (saisons organisées,
-  participations, demandes en attente), badges de rôle/statut.
-- `/seasons/join/:code` — `SeasonJoin` (smart) : affiche nom/organisateur/état de la
-  saison, sélection d'une équipe, soumission de la demande.
-- `/seasons/:id` — `SeasonDetail` (smart) : page unique à sections empilées
-  (Participants, Parties, Paramètres).
+> Composants implémentés (`Seasons`, `SeasonDetail`, `SeasonJoin`, `ParticipantList`…) : voir [@docs/COMPONENTS.md](../COMPONENTS.md).
 
 ### Écran `/seasons` — liste de cartes avec badges
 
@@ -273,23 +266,6 @@ saisie → navigue vers `/seasons/join/:code`).
   même esprit que `team-form`.
 - **Rejoindre** : page dédiée `/seasons/join/:code` — affiche les infos de la saison
   (nom, organisateur, état) puis sélection d'équipe + bouton "Demander à rejoindre".
-
-### Composants dumb
-
-`season-card/`, `participant-list/`, `game-card/`, `game-form/`, `invite-link/`.
-
-`ParticipantList` expose un input `actions: 'none' | 'validate-reject' | 'reject-only' | 'validate-only'`
-qui détermine les boutons affichés par ligne — `validate-reject` (Valider+Refuser, section
-"En attente"), `reject-only` (Refuser seul, "Les autres équipes"), `validate-only`
-(Valider seul, "Refusé"), `none` (lecture seule, vue non-organisateur). Un output unique
-`validate: { pid: number; accept: boolean }` couvre les trois transitions. `canRemove`
-reste séparé (bouton "Retirer", `DELETE`).
-
-### Services et modèles
-
-`seasons.service.ts`, `season-participants.service.ts`, `season-games.service.ts` +
-`season.model.ts`, `season-participant.model.ts`, `game.model.ts` (mêmes conventions
-que `team.model.ts`/`teams.service.ts`).
 
 ---
 

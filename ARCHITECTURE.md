@@ -59,14 +59,9 @@ Tous les composants sont chargés à la demande via `loadComponent`. Routes déf
 { "/api": { "target": "http://localhost:3000", "secure": false } }
 ```
 
-### 2.5 Pattern Smart / Dumb Components
+### 2.5 Composants
 
-- **Smart** (ex : `teams/`) : connaît les services, gère les appels HTTP et l'état d'affichage.
-- **Dumb** (ex : `team-card/`, `team-form/`, `sponsor-carousel/`) : reçoit des données via `input()`, émet des événements via `output()`. Ne connaît pas les services.
-
-**Pattern `locked`** : un composant dumb peut recevoir un input booléen `locked` pour appliquer une contrainte métier sans en connaître la raison. Le parent seul décide quand et pourquoi verrouiller (ex : sponsor immutable dès qu'un véhicule existe).
-
-Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `input()` Signal (ex : pré-remplissage du formulaire quand l'entité à éditer change).
+> Catalogue complet (rôles, inputs/outputs, diagramme de dépendances) : [@docs/COMPONENTS.md](docs/COMPONENTS.md).
 
 ### 2.6 Fichiers clés
 
@@ -79,9 +74,6 @@ Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `inpu
 | `apps/frontend/src/app/auth/auth.guard.ts` | Protection des routes privées |
 | `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
 | `apps/frontend/src/app/catalog/catalog.service.ts` | Données publiques du catalogue (`/api/catalog/sponsors`) |
-| `apps/frontend/src/app/teams/` | Smart + dumb (team-card, team-form, sponsor-carousel) |
-| `apps/frontend/src/app/teams/vehicle-configurator-page/` | Page dédiée (`/teams/:teamId/vehicles/new` et `/:vehicleId`) — résout `team`/`vehicleId` depuis la route et délègue à `VehicleConfigurator` |
-| `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/` | Smart (`EquipmentManager`) — gestion de l'équipement (ajout/retrait, calculs emplacements/coûts/budget). Délègue l'affichage à 3 dumb : `team-budget/` (bloc "Budget de l'équipe", EN TÊTE de `.em-current__header`), `vehicle-cost-summary/` (nom/emplacements/coût du véhicule en cours), `mounted-equipment/` (listes Armes/Améliorations montées + logique d'affichage Tourelle) |
 
 ---
 

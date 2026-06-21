@@ -897,10 +897,6 @@ met à jour son signal `vehicle` et relance le calcul des emplacements et du bud
 
 ### Frontend
 
-| Fichier | Rôle |
-|---------|------|
-| `apps/frontend/src/app/teams/vehicle-configurator/` | `VehicleConfigurator` (Smart) — orchestrateur création + édition |
-| `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/` | `EquipmentManager` (Smart) — ajout/retrait + modale Tourelle + `armesPourTourelle()` |
-| `apps/frontend/src/app/teams/vehicle-configurator/equipment-option/` | `EquipmentOption` (Dumb) — UX sélection + orientation |
-| `apps/frontend/src/app/teams/vehicle-summary.ts` | Type `VehicleSummary` — résumé pour la carte équipe (prix exact, sans `coutApproximatif`) |
-| `apps/frontend/src/app/teams/vehicle.service.ts` | Tous les appels HTTP véhicule/arme/amélioration — dont `assignWeaponToTourelle` et `unassignWeaponFromTourelle` |
+> Composants impliqués (`VehicleConfigurator`, `EquipmentManager`, `EquipmentOption`…) : voir [@docs/COMPONENTS.md](COMPONENTS.md).
+
+`vehicle.service.ts` (`apps/frontend/src/app/teams/vehicle.service.ts`) centralise tous les appels HTTP véhicule/arme/amélioration, dont `assignWeaponToTourelle` et `unassignWeaponFromTourelle`.

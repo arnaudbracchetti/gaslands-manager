@@ -45,6 +45,7 @@ Lire avant toute modification — mettre à jour après chaque changement :
 
 - @SPECIFICATION.md — fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
 - @ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
+- @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
 
 ---
 
