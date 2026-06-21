@@ -1,7 +1,7 @@
 // ─── Carte de saison — panneau métal TB ──────────────────────────────────────
 
 .season-card {
-  background: var(--metal-sheen);
+  background: var(--surface-raised);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 20px;
@@ -12,6 +12,9 @@
   text-decoration: none;
   cursor: pointer;
   box-shadow: var(--shadow-stamp);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
 
   &:hover {
     border-color: var(--tb-danger);
@@ -26,6 +29,23 @@
       border-color: var(--border-rust);
       box-shadow: var(--shadow-stamp);
     }
+  }
+
+  // ─── Filigrane — grand numéro en fond ──────────────────────────────────────
+
+  &__watermark {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    font-family: var(--font-display);
+    font-size: 6.5rem;
+    font-weight: 700;
+    color: var(--tb-os);
+    opacity: 0.06;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.02em;
   }
 
   &__header {

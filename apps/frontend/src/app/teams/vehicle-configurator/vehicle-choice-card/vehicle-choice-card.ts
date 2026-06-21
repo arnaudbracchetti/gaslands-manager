@@ -11,7 +11,7 @@
  * Mirroir du découpage `TeamCard` (cf. son en-tête) : un composant par élément
  * de liste, réutilisable et testable indépendamment.
  */
-import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { Vehicule } from '../../../catalog/catalog.model';
 import { SlotGauge } from '../../../shared/slot-gauge/slot-gauge';
 
@@ -30,10 +30,18 @@ export class VehicleChoiceCard {
    */
   vehicule: InputSignal<Vehicule> = input.required<Vehicule>();
 
+  /** Position dans la liste (1-based) — affichée en filigrane. */
+  index: InputSignal<number> = input<number>(1);
+
   /**
    * Émis quand l'utilisateur choisit ce véhicule.
    * Le parent déclenche alors `vehicleService.create()` — persistance immédiate
    * (cf. plan, "Décisions actées" : un véhicule "nu" reste un véhicule valide).
    */
   chosen: OutputEmitterRef<Vehicule> = output<Vehicule>();
+
+  /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
+  indexFormate: Signal<string> = computed(() =>
+    String(this.index()).padStart(2, '0'),
+  );
 }

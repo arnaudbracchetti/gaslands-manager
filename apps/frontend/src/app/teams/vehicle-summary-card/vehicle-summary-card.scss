@@ -1,7 +1,26 @@
 .tep-vehicle-card {
-  border: 2px solid var(--tb-metal-1);
-  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  background: var(--surface-raised);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-stamp);
   padding: 18px 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tep-vehicle-card__watermark {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  font-family: var(--font-display);
+  font-size: 6.5rem;
+  font-weight: 700;
+  color: var(--tb-os);
+  opacity: 0.06;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.02em;
 }
 
 .tep-vehicle-card__header {

@@ -1,6 +1,8 @@
 <!-- Carte de présentation d'un véhicule du catalogue — cf. en-tête de vehicle-choice-card.ts -->
 <div class="choice-card">
 
+  <span class="choice-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
+
   <div class="choice-card__header">
     <h3 class="choice-card__name">{{ vehicule().nom }}</h3>
     <span class="choice-card__weight">{{ vehicule().poids }}</span>

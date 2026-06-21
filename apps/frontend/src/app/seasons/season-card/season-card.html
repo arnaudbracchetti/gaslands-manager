@@ -11,6 +11,8 @@
 
 <ng-template #content>
 
+  <span class="season-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
+
   <div class="season-card__header">
     <h2 class="season-card__name">{{ season().name }}</h2>
     <span class="season-card__state season-card__state--{{ season().state }}">

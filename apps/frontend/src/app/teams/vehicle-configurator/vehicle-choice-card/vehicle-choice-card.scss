@@ -3,7 +3,7 @@
 }
 
 .choice-card {
-  background: var(--metal-sheen);
+  background: var(--surface-raised);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 16px;
@@ -12,11 +12,31 @@
   gap: 10px;
   transition: border-color 160ms, box-shadow 160ms, transform 90ms;
   box-shadow: var(--shadow-stamp);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
 
   &:hover {
     border-color: var(--tb-danger);
     box-shadow: var(--glow-danger);
     transform: translateY(-2px);
+  }
+
+  // ─── Filigrane — grand numéro en fond ──────────────────────────────────────
+
+  &__watermark {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    font-family: var(--font-display);
+    font-size: 6.5rem;
+    font-weight: 700;
+    color: var(--tb-os);
+    opacity: 0.06;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.02em;
   }
 
   &__header {

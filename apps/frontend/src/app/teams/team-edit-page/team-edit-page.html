@@ -161,9 +161,10 @@
           <p class="tep-vehicles-empty">Aucun véhicule dans cette équipe.</p>
         } @else {
           <div class="tep-vehicles-list">
-            @for (vehicle of vehicles(); track vehicle.id) {
+            @for (vehicle of vehicles(); track vehicle.id; let i = $index) {
               <app-vehicle-summary-card
                 [vehicle]="vehicle"
+                [index]="i + 1"
                 (manageClicked)="openVehicleEditor($event)"
                 (deleteClicked)="deleteVehicle($event)" />
             }

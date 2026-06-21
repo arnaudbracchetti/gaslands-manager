@@ -61,8 +61,8 @@
         <p class="vc-status">Aucun véhicule disponible pour ce sponsor.</p>
       } @else {
         <div class="vc-vehicle-grid">
-          @for (vehicule of catalog.vehicules; track vehicule.nom_interne) {
-            <app-vehicle-choice-card [vehicule]="vehicule" (chosen)="selectVehicle($event)" />
+          @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i = $index) {
+            <app-vehicle-choice-card [vehicule]="vehicule" [index]="i + 1" (chosen)="selectVehicle($event)" />
           }
         </div>
       }
