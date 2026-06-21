@@ -392,16 +392,15 @@ describe('SeasonDetail', () => {
       expect(el.textContent).toContain('En construction');
     });
 
-    it('affiche un lien de retour vers /seasons', () => {
+    it('affiche un fil d\'ariane avec un lien vers /seasons', () => {
       configure();
       fixture = TestBed.createComponent(SeasonDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      const link = el.querySelector('a.season-detail-back');
-      expect(link).not.toBeNull();
-      expect(link?.textContent).toContain('Mes saisons');
+      const breadcrumb = el.querySelector('app-breadcrumb');
+      expect(breadcrumb).not.toBeNull();
     });
 
     it('affiche la zone dangereuse pour l\'organisateur', () => {

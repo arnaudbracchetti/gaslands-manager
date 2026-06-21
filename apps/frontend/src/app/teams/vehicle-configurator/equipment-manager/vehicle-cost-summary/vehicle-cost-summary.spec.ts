@@ -34,9 +34,13 @@ describe('VehicleCostSummary', () => {
     expect(name.getAttribute('title')).toBe('Camion');
   });
 
-  it('affiche les emplacements utilisés / totaux', () => {
+  it('affiche la section emplacements avec le label et un slot-gauge', () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.vcs-slots')?.textContent).toContain('0 / 4');
+    const slots = el.querySelector('.vcs-slots');
+    expect(slots).not.toBeNull();
+    expect(slots?.textContent).toContain('Emplacements');
+    // les valeurs (0 / 4) sont rendues par SlotGauge, pas en texte brut
+    expect(slots?.querySelector('app-slot-gauge')).not.toBeNull();
   });
 
   it('affiche le détail du coût (base / équipement / total)', () => {

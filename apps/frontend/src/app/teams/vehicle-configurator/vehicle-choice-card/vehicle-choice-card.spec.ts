@@ -61,11 +61,11 @@ describe('VehicleChoiceCard', () => {
     const el = fixture.nativeElement as HTMLElement;
     const stats = Array.from(el.querySelectorAll('.stat')).map((s) => s.textContent ?? '');
 
-    expect(stats.some((s) => s.includes('12'))).toBe(true);
-    expect(stats.some((s) => s.includes('1'))).toBe(true);
-    expect(stats.some((s) => s.includes('5'))).toBe(true);
-    expect(stats.some((s) => s.includes('2'))).toBe(true);
-    expect(stats.some((s) => s.includes('4'))).toBe(true);
+    expect(stats.some((s) => s.includes('12'))).toBe(true); // carrosserie
+    expect(stats.some((s) => s.includes('1'))).toBe(true);  // manoeuvrabilité
+    expect(stats.some((s) => s.includes('5'))).toBe(true);  // vitesse_max
+    expect(stats.some((s) => s.includes('2'))).toBe(true);  // equipage
+    // emplacements (4) affichés via SlotGauge, pas en texte brut dans .stat
   });
 
   it('affiche le prix en jerricans', () => {

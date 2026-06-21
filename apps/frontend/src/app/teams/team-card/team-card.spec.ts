@@ -89,8 +89,7 @@ describe('TeamCard', () => {
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain('Camion');
     expect(items[0].textContent).toContain('21');
-    expect(items[0].textContent).toContain('2');
-    expect(items[0].textContent).toContain('3');
+    // les emplacements (2 utilisés / 3 total) sont affichés via SlotGauge, pas en texte brut
     expect(items[1].textContent).toContain('Monster Truck');
     expect(items[1].textContent).toContain('28');
   });
