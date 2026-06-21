@@ -170,6 +170,23 @@
     }
   }
 
+  &__manage-team {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border: 1px solid var(--border-rust);
+    background: transparent;
+
+    &:hover {
+      border-color: var(--tb-os);
+      color: var(--tb-os);
+    }
+  }
+
   &__empty {
     font-family: var(--font-mono);
     color: var(--text-faint);
