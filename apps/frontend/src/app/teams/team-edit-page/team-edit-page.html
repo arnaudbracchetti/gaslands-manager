@@ -24,7 +24,10 @@
       <div class="tep-panel tep-panel--left">
 
         <!-- IDENTITÉ -->
-        <div class="tep-section-label">// IDENTITÉ</div>
+        <div>
+          <div class="tep-section-label">// IDENTITÉ</div>
+          <h2 class="tep-vehicles-title">IDENTITÉ DE L'ÉQUIPE</h2>
+        </div>
 
         @if (formError()) {
           <div class="tep-form-error">{{ formError() }}</div>
@@ -134,7 +137,7 @@
         <div class="tep-vehicles-header">
           <div>
             <div class="tep-section-label">// VÉHICULES</div>
-            <h2 class="tep-vehicles-title">MES VÉHICULES</h2>
+            <h2 class="tep-vehicles-title">LES VÉHICULES DE L'ÉQUIPE</h2>
           </div>
           <button class="tep-btn-add-vehicle" (click)="openVehicleBuilder()">
             + AJOUTER UN VÉHICULE
