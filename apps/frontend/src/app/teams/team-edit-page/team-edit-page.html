@@ -7,7 +7,9 @@
     <p class="tep-status tep-status--error">{{ error() }}</p>
   } @else if (team(); as t) {
 
-    <app-breadcrumb [crumbs]="breadcrumbs()" />
+    <div class="tep-breadcrumb">
+      <app-breadcrumb [crumbs]="breadcrumbs()" />
+    </div>
 
     @if (error()) {
       <div class="tep-error">{{ error() }}</div>
