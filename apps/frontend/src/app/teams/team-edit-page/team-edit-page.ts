@@ -10,6 +10,11 @@
  * occupent maintenant deux panneaux séparés et ne peuvent pas être encapsulés
  * dans un seul composant enfant.
  *
+ * ── Auto-save ─────────────────────────────────────────────────────────────────
+ * Chaque champ déclenche `saveField()` au blur (perte de focus). Le sponsor
+ * déclenche `saveField('sponsor')` directement via l'event `(sponsorChange)`.
+ * Il n'y a pas de boutons Annuler / Enregistrer.
+ *
  * ── Fil d'Ariane ─────────────────────────────────────────────────────────────
  * Le query param `from` détermine le lien de retour :
  *   - `from=teams`               → /teams (liste des équipes)
@@ -72,7 +77,6 @@ export class TeamEditPage implements OnInit {
   formCans: WritableSignal<number>        = signal(DEFAULT_CANS);
   formDescription: WritableSignal<string> = signal('');
   formError: WritableSignal<string>       = signal('');
-  saving: WritableSignal<boolean>         = signal(false);
 
   /** Budget utilisé = coût total de tous les véhicules. */
   budgetUtilise = computed((): number =>
@@ -97,6 +101,11 @@ export class TeamEditPage implements OnInit {
   pendingDeleteTeam: WritableSignal<boolean>     = signal(false);
   pendingDeleteVehicleId: WritableSignal<number | null> = signal<number | null>(null);
   pendingDeleteVehicleName: WritableSignal<string>      = signal('');
+
+  // ── Confirmation ajout premier véhicule ───────────────────────────────────
+
+  /** Vrai quand la ConfirmModal d'avertissement verrouillage sponsor est ouverte. */
+  pendingAddVehicle: WritableSignal<boolean> = signal(false);
 
   // ── Navigation / fil d'Ariane ─────────────────────────────────────────────
 
@@ -186,43 +195,38 @@ export class TeamEditPage implements OnInit {
       });
   }
 
-  // ── Édition de l'équipe ───────────────────────────────────────────────────
+  // ── Édition de l'équipe (auto-save au blur) ──────────────────────────────
 
-  saveForm(): void {
-    const name = this.formName().trim();
-    if (!name) {
-      this.formError.set("Le nom de l'équipe est obligatoire.");
-      return;
+  saveField(fieldName: 'name' | 'description' | 'cans' | 'sponsor'): void {
+    if (fieldName === 'name') {
+      const name = this.formName().trim();
+      if (!name) {
+        this.formError.set("Le nom de l'équipe est obligatoire.");
+        return;
+      }
+      this.formError.set('');
     }
-    this.formError.set('');
 
     const team = this.team();
     if (!team) return;
 
     const dto: CreateTeamDto = {
-      name,
+      name:        this.formName().trim() || team.name,
       sponsor:     this.formSponsor(),
       cans:        this.formCans(),
       description: this.formDescription().trim() || undefined,
     };
 
-    this.saving.set(true);
     this.error.set('');
 
     this.teamsService.update(team.id, dto).subscribe({
       next: (updated: Team): void => {
         this.team.set({ ...updated, vehicleCount: team.vehicleCount });
-        this.saving.set(false);
       },
       error: (): void => {
-        this.error.set('Une erreur est survenue. Veuillez réessayer.');
-        this.saving.set(false);
+        this.error.set('Une erreur est survenue lors de la sauvegarde.');
       },
     });
-  }
-
-  goBack(): void {
-    this.router.navigate(this.breadcrumbs()[0].route!);
   }
 
   // ── Suppression de l'équipe ───────────────────────────────────────────────
@@ -249,6 +253,23 @@ export class TeamEditPage implements OnInit {
   // ── Navigation véhicules ──────────────────────────────────────────────────
 
   openVehicleBuilder(): void {
+    if (!this.hasVehicles()) {
+      this.pendingAddVehicle.set(true);
+      return;
+    }
+    this.navigateToVehicleBuilder();
+  }
+
+  confirmAddVehicle(): void {
+    this.pendingAddVehicle.set(false);
+    this.navigateToVehicleBuilder();
+  }
+
+  cancelAddVehicle(): void {
+    this.pendingAddVehicle.set(false);
+  }
+
+  private navigateToVehicleBuilder(): void {
     const team = this.team();
     if (!team) return;
     this.router.navigate(['/teams', team.id, 'vehicles', 'new'], { queryParams: { returnTo: 'edit' } });

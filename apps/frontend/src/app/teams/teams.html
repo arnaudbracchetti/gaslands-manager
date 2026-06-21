@@ -3,37 +3,25 @@
 
   <div class="teams-header">
     <h1>👥 Mes Équipes</h1>
-    @if (!showForm()) {
-      <button class="btn-primary btn-add" (click)="openCreate()">
-        + Nouvelle équipe
-      </button>
-    }
+    <button class="btn-primary btn-add" (click)="createAndEdit()" [disabled]="saving()">
+      + Nouvelle équipe
+    </button>
   </div>
 
   @if (error()) {
     <div class="teams-error">{{ error() }}</div>
   }
 
-  <!-- Formulaire de création uniquement (pas d'édition ici) -->
-  @if (showForm()) {
-    <app-team-form
-      [team]="null"
-      [saving]="saving()"
-      [hasVehicles]="false"
-      (saved)="onSaved($event)"
-      (formCancel)="cancelForm()" />
-  }
-
   @if (loading()) {
     <div class="teams-loading">
       <p>Chargement de vos équipes...</p>
     </div>
-  } @else if (teams().length === 0 && !showForm()) {
+  } @else if (teams().length === 0) {
     <div class="teams-empty">
       <p class="teams-empty__icon">🏎️</p>
       <p class="teams-empty__title">Aucune équipe pour l'instant</p>
       <p class="teams-empty__subtitle">Créez votre première équipe pour commencer !</p>
-      <button class="btn-primary" (click)="openCreate()">
+      <button class="btn-primary" (click)="createAndEdit()" [disabled]="saving()">
         + Créer mon équipe
       </button>
     </div>

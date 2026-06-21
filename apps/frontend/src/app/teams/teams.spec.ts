@@ -3,7 +3,8 @@
  *
  * Teams est désormais un composant "smart" allégé qui orchestre :
  * - Le chargement de la liste des équipes
- * - La création d'une nouvelle équipe (TeamForm en mode création)
+ * - La création immédiate d'une nouvelle équipe (sans modale) et la redirection
+ *   vers TeamEditPage
  * - La navigation vers TeamEditPage au clic sur une carte
  * - La construction des résumés de véhicules (vehicleSummaries)
  *
@@ -16,7 +17,7 @@ import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Teams } from './teams';
 import { TeamsService } from './teams.service';
-import { Team, CreateTeamDto } from './team.model';
+import { Team } from './team.model';
 import { CatalogService } from '../catalog/catalog.service';
 import { VehicleService } from './vehicle-configurator/vehicle.service';
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
@@ -171,54 +172,35 @@ describe('Teams Component', () => {
     expect(compiled.textContent).toContain('Aucune équipe');
   });
 
-  // ── Formulaire de création ─────────────────────────────────────────────────
+  // ── Création immédiate d'une équipe ───────────────────────────────────────
 
-  it('n\'affiche pas le formulaire au démarrage', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-team-form')).toBeNull();
+  it('createAndEdit() appelle getSponsors() puis create() et navigue vers l\'édition', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    const sponsorList = [{ nom: 'Rutherford' }];
+    mockCatalogService.getSponsors.mockReturnValue(of(sponsorList));
+    mockTeamsService.create.mockReturnValue(of({ ...mockTeams[0], id: 99 }));
+
+    component.createAndEdit();
+
+    expect(mockTeamsService.create).toHaveBeenCalledWith({
+      name: 'Nouvelle équipe',
+      sponsor: 'Rutherford',
+      cans: 50,
+    });
+    expect(navigateSpy).toHaveBeenCalledWith(
+      ['/teams', 99, 'edit'],
+      { queryParams: { from: 'teams' } },
+    );
   });
 
-  it('affiche le formulaire au clic sur "Nouvelle équipe"', () => {
-    component.openCreate();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-team-form')).toBeTruthy();
-  });
-
-  it('masque le formulaire au clic sur "Annuler"', () => {
-    component.openCreate();
-    fixture.detectChanges();
-
-    component.cancelForm();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-team-form')).toBeNull();
-  });
-
-  // ── Création d'une équipe ──────────────────────────────────────────────────
-
-  it('appelle create() lors de onSaved() et ferme le formulaire', () => {
-    mockTeamsService.create.mockReturnValue(of(mockTeams[0]));
-    mockTeamsService.getAll.mockReturnValue(of(mockTeams));
-
-    component.openCreate();
-    const dto: CreateTeamDto = { name: 'Nouvelle', sponsor: 'Idris', cans: 50 };
-    component.onSaved(dto);
-
-    expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
-    expect(component.showForm()).toBe(false);
-  });
-
-  it('affiche une erreur API si la création échoue', () => {
+  it('createAndEdit() affiche une erreur si la création échoue', () => {
+    mockCatalogService.getSponsors.mockReturnValue(of([{ nom: 'Rutherford' }]));
     mockTeamsService.create.mockReturnValue(throwError(() => new Error('API error')));
 
-    component.openCreate();
-    component.onSaved({ name: 'Test', sponsor: 'Rutherford', cans: 50 });
+    component.createAndEdit();
 
     expect(component.error()).toContain('erreur');
-    expect(component.showForm()).toBe(true);
   });
 
   // ── Navigation vers TeamEditPage ───────────────────────────────────────────

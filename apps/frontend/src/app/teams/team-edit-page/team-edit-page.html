@@ -44,7 +44,8 @@
             type="text"
             placeholder="Ex : Les Furieux du Désert"
             [ngModel]="formName()"
-            (ngModelChange)="formName.set($event)" />
+            (ngModelChange)="formName.set($event)"
+            (blur)="saveField('name')" />
         </div>
 
         <!-- Description -->
@@ -56,7 +57,8 @@
             rows="3"
             placeholder="Décrivez votre équipe (optionnel)…"
             [ngModel]="formDescription()"
-            (ngModelChange)="formDescription.set($event)">
+            (ngModelChange)="formDescription.set($event)"
+            (blur)="saveField('description')">
           </textarea>
         </div>
 
@@ -70,7 +72,8 @@
               type="number"
               min="0"
               [ngModel]="formCans()"
-              (ngModelChange)="formCans.set(+$event)" />
+              (ngModelChange)="formCans.set(+$event)"
+              (blur)="saveField('cans')" />
             <span class="tep-budget-icon" aria-hidden="true">🥫</span>
           </div>
           <!-- Barre budget utilisé -->
@@ -113,18 +116,8 @@
             [selectedSponsor]="formSponsor()"
             [locked]="hasVehicles()"
             [sponsors]="sponsors()"
-            (sponsorChange)="formSponsor.set($event)" />
+            (sponsorChange)="formSponsor.set($event); saveField('sponsor')" />
         }
-
-        <!-- Boutons Annuler / Enregistrer -->
-        <div class="tep-form-actions">
-          <button class="btn-secondary" type="button" (click)="goBack()" [disabled]="saving()">
-            Annuler
-          </button>
-          <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
-            @if (saving()) { Enregistrement… } @else { Enregistrer }
-          </button>
-        </div>
 
       </div>
 
@@ -190,6 +183,16 @@
   }
 
   <!-- Modales de confirmation -->
+  @if (pendingAddVehicle()) {
+    <app-confirm-modal
+      [message]="'Le sponsor ' + formSponsor() + ' sera définitivement verrouillé pour cette équipe dès l\'ajout du premier véhicule. Pour pouvoir le modifier à nouveau, il faudra supprimer tous les véhicules de l\'équipe. Continuer ?'"
+      confirmLabel="Ajouter un véhicule"
+      cancelLabel="Annuler"
+      variant="primary"
+      (confirmed)="confirmAddVehicle()"
+      (cancelled)="cancelAddVehicle()" />
+  }
+
   @if (pendingDeleteTeam()) {
     <app-confirm-modal
       [message]="'Supprimer l\'équipe &quot;' + team()!.name + '&quot; ? Cette action est irréversible.'"
