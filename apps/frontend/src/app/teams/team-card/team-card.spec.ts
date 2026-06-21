@@ -23,8 +23,8 @@ const mockTeam: Team = {
 };
 
 const mockVehicleSummaries: VehicleSummary[] = [
-  { id: 1, nom: 'Camion', cout: 21, emplacementsUtilises: 2, emplacementsTotal: 3 },
-  { id: 2, nom: 'Monster Truck', cout: 28, emplacementsUtilises: 3, emplacementsTotal: 4 },
+  { id: 1, nom: 'Camion', cout: 21, emplacementsUtilises: 2, emplacementsTotal: 3, equipements: [] },
+  { id: 2, nom: 'Monster Truck', cout: 28, emplacementsUtilises: 3, emplacementsTotal: 4, equipements: [] },
 ];
 
 describe('TeamCard', () => {

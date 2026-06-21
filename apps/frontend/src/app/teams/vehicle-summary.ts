@@ -17,7 +17,7 @@
  * séparer le calcul pur de son orchestration).
  */
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
-import { Sponsor, Vehicule } from '../catalog/catalog.model';
+import { Amelioration, Arme, Sponsor, Vehicule } from '../catalog/catalog.model';
 import { Team } from './team.model';
 
 /**
@@ -47,6 +47,12 @@ export interface VehicleSummary {
   emplacementsUtilises: number;
   /** Emplacements totaux du véhicule selon son profil catalogue (`Vehicule.emplacements`). */
   emplacementsTotal: number;
+  /**
+   * Noms affichables des équipements montés (armes + améliorations non-défaut),
+   * résolus depuis le catalogue du sponsor. Ordre : armes en premier, puis améliorations.
+   * Utilisé pour les tags d'équipement dans `TeamEditPage`.
+   */
+  equipements: string[];
 }
 
 /**
@@ -96,20 +102,29 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
   // Prix de base du véhicule — toujours depuis le catalogue (non fourni par le DTO).
   let cout: number = vehiculeCatalogue?.prix ?? 0;
   let emplacementsUtilises: number = 0;
+  const equipements: string[] = [];
 
   // Armes : `weapon.prix` résolu côté backend ; emplacement résolu via le catalogue.
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
-    const armeCatalogue = catalog.armes.find((a) => a.nom_interne === weapon.nomInterne);
+    const armeCatalogue: Arme | undefined = catalog.armes.find(
+      (a: Arme): boolean => a.nom_interne === weapon.nomInterne,
+    );
     emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
+    equipements.push(armeCatalogue?.nom ?? weapon.nomInterne);
   }
 
   // Améliorations : `improvement.prix` et `improvement.emplacement` résolus côté backend.
-  // Les défauts (`estDefaut`) ne consomment pas d'emplacement (cf. SPECIFICATION.md §5).
+  // Les défauts (`estDefaut`) ne consomment pas d'emplacement (cf. SPECIFICATION.md §5)
+  // et ne sont pas listés dans les tags (ils font partie du profil de base du véhicule).
   for (const improvement of vehicle.improvements) {
     cout += improvement.prix;
     if (!improvement.estDefaut) {
       emplacementsUtilises += improvement.emplacement;
+      const amCatalogue: Amelioration | undefined = catalog.ameliorations.find(
+        (a: Amelioration): boolean => a.nom_interne === improvement.nomInterne,
+      );
+      equipements.push(amCatalogue?.nom ?? improvement.nomInterne);
     }
   }
 
@@ -119,5 +134,6 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
     cout,
     emplacementsUtilises,
     emplacementsTotal: vehiculeCatalogue?.emplacements ?? 0,
+    equipements,
   };
 }

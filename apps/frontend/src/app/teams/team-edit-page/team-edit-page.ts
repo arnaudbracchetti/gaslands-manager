@@ -1,27 +1,36 @@
 /**
  * TeamEditPage — hub complet de gestion d'une équipe.
  *
- * Accessible via `/teams/:id/edit`. Regroupe :
- * - L'édition des infos de l'équipe (TeamForm)
- * - La liste des véhicules avec actions (ajouter, gérer équipement, supprimer)
- * - La suppression de l'équipe
+ * Accessible via `/teams/:id/edit`. Layout deux panneaux côte à côte :
+ * - Panneau gauche : identité (nom, description, budget) + sponsor
+ * - Panneau droit  : liste des véhicules avec actions + suppression équipe
+ *
+ * Les signaux de formulaire (formName, formSponsor…) sont gérés directement
+ * ici plutôt que via <app-team-form>, car le formulaire et les véhicules
+ * occupent maintenant deux panneaux séparés et ne peuvent pas être encapsulés
+ * dans un seul composant enfant.
  *
  * ── Fil d'Ariane ─────────────────────────────────────────────────────────────
  * Le query param `from` détermine le lien de retour :
  *   - `from=teams`               → /teams (liste des équipes)
  *   - `from=season&seasonId=X`   → /seasons/X (détail d'une saison)
  *   - absent                     → fallback /teams
- *
- * ── Résolution de l'équipe ───────────────────────────────────────────────────
- * Même pattern que VehicleConfiguratorPage : getAll().find(...), car il
- * n'existe pas de endpoint GET /api/teams/:id.
  */
-import { Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import {
+  Component,
+  OnInit,
+  WritableSignal,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { SlicePipe, UpperCasePipe } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { forkJoin, of, map, catchError } from 'rxjs';
-import { Team, CreateTeamDto } from '../team.model';
+import { Team, CreateTeamDto, SponsorInfo, DEFAULT_CANS } from '../team.model';
 import { TeamsService } from '../teams.service';
-import { TeamForm } from '../team-form/team-form';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { VehicleService } from '../vehicle-configurator/vehicle.service';
 import { CatalogService } from '../../catalog/catalog.service';
@@ -29,12 +38,12 @@ import { Vehicle } from '../vehicle-configurator/vehicle-builder.model';
 import { Sponsor } from '../../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
 import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
-import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
+import { SponsorCarousel } from '../sponsor-carousel/sponsor-carousel';
 
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [TeamForm, ConfirmModal, SlotGauge, Breadcrumb],
+  imports: [FormsModule, ConfirmModal, SlotGauge, SponsorCarousel, RouterLink, UpperCasePipe, SlicePipe],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })
@@ -45,44 +54,80 @@ export class TeamEditPage implements OnInit {
   private readonly vehicleService: VehicleService = inject(VehicleService);
   private readonly catalogService: CatalogService = inject(CatalogService);
 
-  // ── État ──────────────────────────────────────────────────────────────────
+  // ── État équipe ───────────────────────────────────────────────────────────
 
   team: WritableSignal<Team | null> = signal<Team | null>(null);
   loading: WritableSignal<boolean> = signal(true);
   error: WritableSignal<string> = signal('');
-  saving: WritableSignal<boolean> = signal(false);
 
   vehicles: WritableSignal<VehicleSummary[]> = signal<VehicleSummary[]>([]);
 
-  /** Équipe en attente de confirmation de suppression */
-  pendingDeleteTeam: WritableSignal<boolean> = signal(false);
-  /** Véhicule en attente de confirmation de suppression */
+  /** Vrai si l'équipe possède au moins un véhicule (verrouille le carousel sponsor). */
+  hasVehicles = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
+
+  // ── État formulaire (migré depuis TeamForm) ────────────────────────────────
+
+  formName: WritableSignal<string>        = signal('');
+  formSponsor: WritableSignal<string>     = signal('Rutherford');
+  formCans: WritableSignal<number>        = signal(DEFAULT_CANS);
+  formDescription: WritableSignal<string> = signal('');
+  formError: WritableSignal<string>       = signal('');
+  saving: WritableSignal<boolean>         = signal(false);
+
+  /** Budget utilisé = coût total de tous les véhicules. */
+  budgetUtilise = computed((): number =>
+    this.vehicles().reduce((sum: number, v: VehicleSummary): number => sum + v.cout, 0),
+  );
+
+  /** Pourcentage du budget utilisé, plafonné à 100%. */
+  budgetPourcentage = computed((): number =>
+    Math.min(100, Math.round((this.budgetUtilise() / (this.formCans() || 1)) * 100)),
+  );
+
+  /** Solde restant (peut être négatif si dépassement). */
+  budgetRestant = computed((): number => this.formCans() - this.budgetUtilise());
+
+  // ── Catalogue des sponsors ─────────────────────────────────────────────────
+
+  sponsors: WritableSignal<SponsorInfo[]>  = signal<SponsorInfo[]>([]);
+  loadingSponsors: WritableSignal<boolean> = signal<boolean>(true);
+
+  // ── Confirmation de suppression ────────────────────────────────────────────
+
+  pendingDeleteTeam: WritableSignal<boolean>     = signal(false);
   pendingDeleteVehicleId: WritableSignal<number | null> = signal<number | null>(null);
-  pendingDeleteVehicleName: WritableSignal<string> = signal('');
+  pendingDeleteVehicleName: WritableSignal<string>      = signal('');
 
   // ── Navigation / fil d'Ariane ─────────────────────────────────────────────
 
-  private fromParam: WritableSignal<string> = signal('teams');
+  private fromParam: WritableSignal<string>         = signal('teams');
   private seasonIdParam: WritableSignal<string | null> = signal<string | null>(null);
 
-  /** Libellé du lien de retour affiché dans le fil d'Ariane */
   backLabel = computed((): string =>
     this.fromParam() === 'season' ? 'Saisons' : 'Mes Équipes',
   );
 
-  /** Route du lien de retour */
   backRoute = computed((): string[] =>
     this.fromParam() === 'season' && this.seasonIdParam()
       ? ['/seasons', this.seasonIdParam()!]
       : ['/teams'],
   );
 
-  breadcrumbs = computed((): BreadcrumbItem[] => [
-    { label: this.backLabel(), route: this.backRoute() },
-    { label: this.team()?.name ?? '…' },
-  ]);
-
-  hasVehicles = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
+  constructor() {
+    /**
+     * Pré-remplit les champs du formulaire quand l'équipe est chargée ou change.
+     */
+    effect((): void => {
+      const t = this.team();
+      if (t) {
+        this.formName.set(t.name);
+        this.formSponsor.set(t.sponsor);
+        this.formCans.set(t.cans);
+        this.formDescription.set(t.description ?? '');
+      }
+      this.formError.set('');
+    });
+  }
 
   // ── Cycle de vie ──────────────────────────────────────────────────────────
 
@@ -106,6 +151,16 @@ export class TeamEditPage implements OnInit {
       error: (): void => {
         this.error.set("Impossible de charger l'équipe.");
         this.loading.set(false);
+      },
+    });
+
+    this.catalogService.getSponsors().subscribe({
+      next: (sponsors: SponsorInfo[]): void => {
+        this.sponsors.set(sponsors);
+        this.loadingSponsors.set(false);
+      },
+      error: (): void => {
+        this.loadingSponsors.set(false);
       },
     });
   }
@@ -133,9 +188,23 @@ export class TeamEditPage implements OnInit {
 
   // ── Édition de l'équipe ───────────────────────────────────────────────────
 
-  onSaved(dto: CreateTeamDto): void {
+  saveForm(): void {
+    const name = this.formName().trim();
+    if (!name) {
+      this.formError.set("Le nom de l'équipe est obligatoire.");
+      return;
+    }
+    this.formError.set('');
+
     const team = this.team();
     if (!team) return;
+
+    const dto: CreateTeamDto = {
+      name,
+      sponsor:     this.formSponsor(),
+      cans:        this.formCans(),
+      description: this.formDescription().trim() || undefined,
+    };
 
     this.saving.set(true);
     this.error.set('');
@@ -150,6 +219,10 @@ export class TeamEditPage implements OnInit {
         this.saving.set(false);
       },
     });
+  }
+
+  goBack(): void {
+    this.router.navigate(this.backRoute());
   }
 
   // ── Suppression de l'équipe ───────────────────────────────────────────────
@@ -203,7 +276,6 @@ export class TeamEditPage implements OnInit {
       next: (): void => {
         const team = this.team();
         if (team) {
-          // Recharge équipe + véhicules pour synchroniser vehicleCount
           this.teamsService.getAll().subscribe({
             next: (teams: Team[]): void => {
               const updated = teams.find((t: Team): boolean => t.id === team.id) ?? null;
@@ -219,9 +291,5 @@ export class TeamEditPage implements OnInit {
         this.error.set('Erreur lors de la suppression du véhicule.');
       },
     });
-  }
-
-  goBack(): void {
-    this.router.navigate(this.backRoute());
   }
 }

@@ -1,8 +1,5 @@
-<!-- Hub de gestion d'une équipe — infos + véhicules -->
-<div class="tep-page">
-
-  <!-- Fil d'Ariane -->
-  <app-breadcrumb [crumbs]="breadcrumbs()" />
+<!-- Hub de gestion d'une équipe — layout deux panneaux (design Option C) -->
+<div class="tep-layout">
 
   @if (loading()) {
     <p class="tep-status tep-status--loading">Chargement…</p>
@@ -10,68 +7,234 @@
     <p class="tep-status tep-status--error">{{ error() }}</p>
   } @else if (team(); as t) {
 
+    <!-- ── NAVBAR breadcrumb ─────────────────────────────────────────── -->
+    <nav class="tep-nav">
+      <a class="tep-nav__back" [routerLink]="backRoute()">{{ backLabel() | uppercase }}</a>
+      <span class="tep-nav__sep" aria-hidden="true">›</span>
+      <span class="tep-nav__current">{{ t.name | uppercase }}</span>
+    </nav>
+
     @if (error()) {
       <div class="tep-error">{{ error() }}</div>
     }
 
-    <!-- Formulaire d'édition de l'équipe -->
-    <section class="tep-section">
-      <app-team-form
-        [team]="t"
-        [saving]="saving()"
-        [hasVehicles]="hasVehicles()"
-        (saved)="onSaved($event)"
-        (formCancel)="goBack()" />
-    </section>
+    <!-- ── DEUX PANNEAUX ─────────────────────────────────────────────── -->
+    <div class="tep-panels">
 
-    <!-- Section véhicules -->
-    <section class="tep-section tep-section--vehicles">
-      <div class="tep-vehicles-header">
-        <h2 class="tep-vehicles-title">Véhicules</h2>
-        <button class="btn-primary btn-add-vehicle" (click)="openVehicleBuilder()">
-          🚗 Ajouter un véhicule
-        </button>
+      <!-- ════════════════════════════════════════════════════════════
+           PANNEAU GAUCHE — Identité + Sponsor
+      ════════════════════════════════════════════════════════════ -->
+      <div class="tep-panel tep-panel--left">
+
+        <!-- IDENTITÉ -->
+        <div class="tep-section-label">// IDENTITÉ</div>
+
+        @if (formError()) {
+          <div class="tep-form-error">{{ formError() }}</div>
+        }
+
+        <!-- Nom -->
+        <div class="tep-field">
+          <label class="tep-field__label" for="tep-name">
+            Nom de l'équipe <span class="tep-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="tep-name"
+            class="tep-field__input tep-field__input--display"
+            type="text"
+            placeholder="Ex : Les Furieux du Désert"
+            [ngModel]="formName()"
+            (ngModelChange)="formName.set($event)" />
+        </div>
+
+        <!-- Description -->
+        <div class="tep-field">
+          <label class="tep-field__label" for="tep-desc">Description</label>
+          <textarea
+            id="tep-desc"
+            class="tep-field__input tep-field__textarea"
+            rows="3"
+            placeholder="Décrivez votre équipe (optionnel)…"
+            [ngModel]="formDescription()"
+            (ngModelChange)="formDescription.set($event)">
+          </textarea>
+        </div>
+
+        <!-- Budget -->
+        <div class="tep-field">
+          <label class="tep-field__label" for="tep-cans">Budget (Jerricans)</label>
+          <div class="tep-budget-input-row">
+            <input
+              id="tep-cans"
+              class="tep-field__input tep-budget-input"
+              type="number"
+              min="0"
+              [ngModel]="formCans()"
+              (ngModelChange)="formCans.set(+$event)" />
+            <span class="tep-budget-icon" aria-hidden="true">🥫</span>
+          </div>
+          <!-- Barre budget utilisé -->
+          <div class="tep-budget-bar-row">
+            <span class="tep-budget-bar-label">UTILISÉ</span>
+            <div class="tep-budget-track">
+              <div
+                class="tep-budget-fill"
+                [class.tep-budget-fill--over]="budgetRestant() < 0"
+                [style.width.%]="budgetPourcentage()">
+              </div>
+            </div>
+            <span
+              class="tep-budget-rest"
+              [class.tep-budget-rest--over]="budgetRestant() < 0">
+              @if (budgetRestant() >= 0) {
+                {{ budgetRestant() }} rest.
+              } @else {
+                +{{ -budgetRestant() }} dépassé
+              }
+            </span>
+          </div>
+        </div>
+
+        <!-- Divider hazard -->
+        <div class="tep-hazard-divider" aria-hidden="true"></div>
+
+        <!-- SPONSOR -->
+        <div class="tep-section-label">// SPONSOR</div>
+
+        @if (loadingSponsors()) {
+          <div class="tep-sponsors-loading">
+            <span class="tep-sponsors-loading__dot"></span>
+            <span class="tep-sponsors-loading__dot"></span>
+            <span class="tep-sponsors-loading__dot"></span>
+            <span class="tep-sponsors-loading__text">Chargement des sponsors…</span>
+          </div>
+        } @else {
+          <app-sponsor-carousel
+            [selectedSponsor]="formSponsor()"
+            [locked]="hasVehicles()"
+            [sponsors]="sponsors()"
+            (sponsorChange)="formSponsor.set($event)" />
+        }
+
+        <!-- Boutons Annuler / Enregistrer -->
+        <div class="tep-form-actions">
+          <button class="btn-secondary" type="button" (click)="goBack()" [disabled]="saving()">
+            Annuler
+          </button>
+          <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
+            @if (saving()) { Enregistrement… } @else { Enregistrer }
+          </button>
+        </div>
+
       </div>
 
-      @if (vehicles().length === 0) {
-        <p class="tep-vehicles-empty">Aucun véhicule dans cette équipe.</p>
-      } @else {
-        <ul class="tep-vehicles-list">
-          @for (vehicle of vehicles(); track vehicle.id) {
-            <li class="tep-vehicle-item">
-              <span class="tep-vehicle-name">{{ vehicle.nom }}</span>
-              <span class="tep-vehicle-stats">
-                <span class="tep-vehicle-cost">
-                  {{ vehicle.cout }} <img class="tep-icon" src="/icons/dollar.svg" alt="jerricans" />
-                </span>
-                <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
-              </span>
-              <span class="tep-vehicle-actions">
-                <button
-                  class="btn-vehicle-action btn-vehicle-action--edit"
-                  (click)="openVehicleEditor(vehicle.id)"
-                  title="Gérer l'équipement de ce véhicule">
-                  ✏️
-                </button>
-                <button
-                  class="btn-vehicle-action btn-vehicle-action--delete"
-                  (click)="deleteVehicle(vehicle)"
-                  title="Supprimer ce véhicule">
-                  🗑
-                </button>
-              </span>
-            </li>
-          }
-        </ul>
-      }
-    </section>
+      <!-- ════════════════════════════════════════════════════════════
+           PANNEAU DROIT — Véhicules
+      ════════════════════════════════════════════════════════════ -->
+      <div class="tep-panel tep-panel--right">
 
-    <!-- Bouton de suppression de l'équipe -->
-    <section class="tep-section tep-section--danger">
-      <button class="btn-action btn-action--delete" (click)="deleteTeam()">
-        🗑 Supprimer l'équipe
-      </button>
-    </section>
+        <!-- Header véhicules -->
+        <div class="tep-vehicles-header">
+          <div>
+            <div class="tep-section-label">// VÉHICULES</div>
+            <h2 class="tep-vehicles-title">MES VÉHICULES</h2>
+          </div>
+          <button class="tep-btn-add-vehicle" (click)="openVehicleBuilder()">
+            + AJOUTER UN VÉHICULE
+          </button>
+        </div>
+
+        <!-- Barre budget restant contextuel -->
+        @if (vehicles().length > 0) {
+          <div class="tep-budget-context">
+            <span class="tep-budget-context__label">BUDGET RESTANT</span>
+            <div class="tep-budget-track">
+              <div
+                class="tep-budget-fill tep-budget-fill--inverted"
+                [class.tep-budget-fill--over]="budgetRestant() < 0"
+                [style.width.%]="100 - budgetPourcentage()">
+              </div>
+            </div>
+            <span
+              class="tep-budget-context__value"
+              [class.tep-budget-context__value--over]="budgetRestant() < 0">
+              {{ budgetRestant() >= 0 ? budgetRestant() : 0 }} / {{ formCans() }} 🥫
+            </span>
+          </div>
+        }
+
+        <!-- Liste des véhicules -->
+        @if (vehicles().length === 0) {
+          <p class="tep-vehicles-empty">Aucun véhicule dans cette équipe.</p>
+        } @else {
+          <div class="tep-vehicles-list">
+            @for (vehicle of vehicles(); track vehicle.id) {
+              <div class="tep-vehicle-card">
+
+                <!-- En-tête de la carte -->
+                <div class="tep-vehicle-card__header">
+                  <div class="tep-vehicle-card__identity">
+                    <h3 class="tep-vehicle-card__name">{{ vehicle.nom | uppercase }}</h3>
+                    <span class="tep-vehicle-card__type">{{ vehicle.nom | uppercase }}</span>
+                  </div>
+                  <div class="tep-vehicle-card__meta">
+                    <div class="tep-vehicle-card__cost">
+                      {{ vehicle.cout }}
+                      <img class="tep-icon" src="/icons/dollar.svg" alt="jerricans" />
+                    </div>
+                    <div class="tep-vehicle-card__slots">
+                      <span class="tep-vehicle-card__slots-label">EMP.</span>
+                      <app-slot-gauge
+                        [used]="vehicle.emplacementsUtilises"
+                        [total]="vehicle.emplacementsTotal" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tags équipement (armes + améliorations) -->
+                @if (vehicle.equipements.length > 0) {
+                  <div class="tep-vehicle-card__tags">
+                    @for (tag of (vehicle.equipements | slice:0:4); track tag) {
+                      <span class="tep-vehicle-card__tag">{{ tag | uppercase }}</span>
+                    }
+                    @if (vehicle.equipements.length > 4) {
+                      <span class="tep-vehicle-card__tag tep-vehicle-card__tag--overflow">
+                        +{{ vehicle.equipements.length - 4 }} AUTRES
+                      </span>
+                    }
+                  </div>
+                }
+
+                <!-- Actions -->
+                <div class="tep-vehicle-card__actions">
+                  <button
+                    class="tep-btn-manage"
+                    (click)="openVehicleEditor(vehicle.id)"
+                    title="Gérer l'équipement de ce véhicule">
+                    GÉRER L'ÉQUIPEMENT
+                  </button>
+                  <button
+                    class="tep-btn-delete-vehicle"
+                    (click)="deleteVehicle(vehicle)"
+                    title="Supprimer ce véhicule">
+                    🗑
+                  </button>
+                </div>
+
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Bouton suppression équipe -->
+        <div class="tep-danger-zone">
+          <button class="btn-action btn-action--delete" (click)="deleteTeam()">
+            🗑 Supprimer l'équipe
+          </button>
+        </div>
+
+      </div>
+    </div>
 
   }
 
