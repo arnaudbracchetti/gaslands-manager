@@ -43,7 +43,12 @@ Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet 
 
 Lire avant toute modification — mettre à jour après chaque changement :
 
-- @SPECIFICATION.md — fonctionnalités, modèles de données, API endpoints, règles métier Gaslands
+- @docs/SPECIFICATION.md — index des spécifications (contexte général + table des matières vers les sous-documents thématiques)
+  - @docs/spec/AUTH.md — authentification, rôles, compte admin
+  - @docs/spec/TEAMS.md — CRUD équipes, verrouillage sponsor
+  - @docs/spec/VEHICLES.md — catalogue, construction véhicule, règles métier Gaslands
+  - @docs/spec/SEASONS.md — saisons, inscriptions, transitions d'état
+  - @docs/spec/NAVIGATION.md — routes Angular, backlog
 - @ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
 - @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
 
