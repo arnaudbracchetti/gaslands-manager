@@ -25,8 +25,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { UpperCasePipe } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of, map, catchError } from 'rxjs';
 import { Team, CreateTeamDto, SponsorInfo, DEFAULT_CANS } from '../team.model';
@@ -43,7 +43,7 @@ import { VehicleSummaryCard } from '../vehicle-summary-card/vehicle-summary-card
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [FormsModule, ConfirmModal, SponsorCarousel, RouterLink, UpperCasePipe, VehicleSummaryCard],
+  imports: [FormsModule, ConfirmModal, SponsorCarousel, VehicleSummaryCard, Breadcrumb],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })
@@ -100,18 +100,18 @@ export class TeamEditPage implements OnInit {
 
   // ── Navigation / fil d'Ariane ─────────────────────────────────────────────
 
-  private fromParam: WritableSignal<string>         = signal('teams');
+  private fromParam: WritableSignal<string>            = signal('teams');
   private seasonIdParam: WritableSignal<string | null> = signal<string | null>(null);
 
-  backLabel = computed((): string =>
-    this.fromParam() === 'season' ? 'Saisons' : 'Mes Équipes',
-  );
-
-  backRoute = computed((): string[] =>
-    this.fromParam() === 'season' && this.seasonIdParam()
-      ? ['/seasons', this.seasonIdParam()!]
-      : ['/teams'],
-  );
+  breadcrumbs = computed((): BreadcrumbItem[] => {
+    const isFromSeason = this.fromParam() === 'season' && this.seasonIdParam();
+    return [
+      isFromSeason
+        ? { label: 'Saisons', route: ['/seasons', this.seasonIdParam()!] }
+        : { label: 'Mes Équipes', route: ['/teams'] },
+      { label: this.team()?.name ?? '…' },
+    ];
+  });
 
   constructor() {
     /**
@@ -222,7 +222,7 @@ export class TeamEditPage implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(this.backRoute());
+    this.router.navigate(this.breadcrumbs()[0].route!);
   }
 
   // ── Suppression de l'équipe ───────────────────────────────────────────────

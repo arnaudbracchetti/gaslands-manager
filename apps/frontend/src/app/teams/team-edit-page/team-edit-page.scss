@@ -31,47 +31,6 @@
 }
 
 
-.tep-nav {
-  height: 56px;
-  background: var(--tb-bitume-2);
-  border-bottom: 2px solid var(--tb-metal-1);
-  display: flex;
-  align-items: center;
-  padding: 0 32px;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.tep-nav__back {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--tb-sand);
-  letter-spacing: 2px;
-  text-decoration: underline;
-  text-decoration-color: var(--tb-metal-2);
-  text-underline-offset: 3px;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--tb-danger);
-    text-decoration-color: var(--tb-danger);
-  }
-}
-
-.tep-nav__sep {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--tb-metal-2);
-  line-height: 1;
-}
-
-.tep-nav__current {
-  font-family: var(--font-display);
-  font-size: 17px;
-  color: var(--tb-os);
-  letter-spacing: 2px;
-}
-
 
 .tep-panels {
   flex: 1;

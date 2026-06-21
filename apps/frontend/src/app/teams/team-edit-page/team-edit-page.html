@@ -7,12 +7,7 @@
     <p class="tep-status tep-status--error">{{ error() }}</p>
   } @else if (team(); as t) {
 
-    <!-- ── NAVBAR breadcrumb ─────────────────────────────────────────── -->
-    <nav class="tep-nav">
-      <a class="tep-nav__back" [routerLink]="backRoute()">{{ backLabel() | uppercase }}</a>
-      <span class="tep-nav__sep" aria-hidden="true">›</span>
-      <span class="tep-nav__current">{{ t.name | uppercase }}</span>
-    </nav>
+    <app-breadcrumb [crumbs]="breadcrumbs()" />
 
     @if (error()) {
       <div class="tep-error">{{ error() }}</div>
