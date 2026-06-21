@@ -1,0 +1,36 @@
+{
+  // ─── Explorateur : masquer les dossiers générés ───────────────────────────
+  "files.exclude": {
+    "node_modules": true,
+    ".nx":          true,
+    ".angular":     true,
+    "dist":         true,
+    "coverage":     true,
+    "packages":     true
+  },
+
+  // ─── Imbrication des fichiers liés ───────────────────────────────────────
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+
+    // Composants Angular — regroupe html/scss/spec sous le .ts principal
+    // ex: teams.ts englobe teams.html, teams.scss, teams.spec.ts
+    "*.ts": "${capture}.html, ${capture}.scss, ${capture}.spec.ts",
+
+    // Services Angular — regroupe le spec sous le service
+    // ex: auth.service.ts englobe auth.service.spec.ts
+    "*.service.ts": "${capture}.service.spec.ts",
+
+    // Modules NestJS — regroupe controller, service, entity, spec sous le .module.ts
+    // ex: auth.module.ts englobe auth.controller.ts, auth.service.ts, etc.
+    "*.module.ts": "${capture}.controller.ts, ${capture}.controller.spec.ts, ${capture}.service.ts, ${capture}.service.spec.ts, ${capture}.entity.ts, ${capture}.guard.ts, ${capture}.strategy.ts, ${capture}.decorator.ts, dto",
+
+    // Config racine — regroupe les fichiers de configuration dérivés
+    "package.json": "package-lock.json, .npmrc, .nvmrc, .node-version",
+    "nx.json": ".nxignore",
+    "tsconfig.json": "tsconfig.*.json",
+    "docker-compose.yml": "docker-compose.*.yml, .dockerignore",
+    ".env.example": ".env, .env.*"
+  }
+}
