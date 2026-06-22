@@ -23,6 +23,7 @@
 | CRUD Équipes (création, édition, suppression, verrouillage sponsor) | ✅ Implémenté |
 | Construction de véhicule (choix, équipement armes/améliorations, budget) | ✅ Implémenté |
 | Saisons (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
+| Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1) |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
 | Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |

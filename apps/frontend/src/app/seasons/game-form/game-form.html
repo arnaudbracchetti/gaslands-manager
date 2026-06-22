@@ -1,0 +1,38 @@
+<!-- Formulaire d'ajout / édition d'une partie au Programme Télé -->
+<div class="game-form-card">
+
+  <h3>@if (isEdit()) { ✏️ Modifier la partie } @else { ➕ Nouvelle partie }</h3>
+
+  @if (formError()) {
+    <div class="form-error">{{ formError() }}</div>
+  }
+
+  <div class="form-group">
+    <label for="game-scenario">Scénario *</label>
+    @if (scenarios().length > 0) {
+      <select
+        id="game-scenario"
+        [ngModel]="formScenarioId()"
+        (ngModelChange)="formScenarioId.set($event)">
+        <option value="">— Choisir un scénario —</option>
+        @for (scenario of scenarios(); track scenario.nom_interne) {
+          <option [value]="scenario.nom_interne">
+            {{ scenario.nom }} ({{ scenario.type === 'EVENEMENT_TELE' ? 'Événement Télévisé' : 'Escarmouche' }})
+          </option>
+        }
+      </select>
+    } @else {
+      <p class="form-hint">Aucun scénario disponible.</p>
+    }
+  </div>
+
+  <div class="form-actions">
+    <button class="btn-secondary" type="button" (click)="cancelForm()" [disabled]="saving()">
+      Annuler
+    </button>
+    <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
+      @if (saving()) { Enregistrement... } @else { Enregistrer }
+    </button>
+  </div>
+
+</div>

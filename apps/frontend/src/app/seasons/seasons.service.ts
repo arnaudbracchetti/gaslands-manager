@@ -9,6 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Season, CreateSeasonDto, SeasonSummary, JoinSeasonDto, ChangeStateDto } from './season.model';
 import { SeasonParticipant, ValidateParticipantDto } from './season-participant.model';
+import { Game, Scenario, CreateGameDto, UpdateGameDto } from './game.model';
 
 @Injectable({ providedIn: 'root' })
 export class SeasonsService {
@@ -123,5 +124,47 @@ export class SeasonsService {
    */
   remove(seasonId: number): Observable<void> {
     return this.http.delete<void>(`/api/seasons/${seasonId}`);
+  }
+
+  // ── Programme Télé (mode campagne) ──────────────────────────────────────────
+
+  /**
+   * GET /api/catalog/scenarios → liste publique des scénarios du catalogue
+   * (pour le formulaire d'ajout de partie).
+   */
+  getScenarios(): Observable<Scenario[]> {
+    return this.http.get<Scenario[]>('/api/catalog/scenarios');
+  }
+
+  /**
+   * GET /api/seasons/:id/games → programme de la saison, trié
+   * (tout participant VALIDATED).
+   */
+  getGames(seasonId: number): Observable<Game[]> {
+    return this.http.get<Game[]>(`/api/seasons/${seasonId}/games`);
+  }
+
+  /**
+   * POST /api/seasons/:id/games → ajoute une partie au programme
+   * (organisateur, saison EN_COURS).
+   */
+  createGame(seasonId: number, dto: CreateGameDto): Observable<Game> {
+    return this.http.post<Game>(`/api/seasons/${seasonId}/games`, dto);
+  }
+
+  /**
+   * PUT /api/seasons/:id/games/:gameId → modifie une partie PLANIFIE
+   * (organisateur, saison EN_COURS).
+   */
+  updateGame(seasonId: number, gameId: number, dto: UpdateGameDto): Observable<Game> {
+    return this.http.put<Game>(`/api/seasons/${seasonId}/games/${gameId}`, dto);
+  }
+
+  /**
+   * DELETE /api/seasons/:id/games/:gameId → supprime une partie PLANIFIE
+   * (organisateur, saison EN_COURS).
+   */
+  deleteGame(seasonId: number, gameId: number): Observable<void> {
+    return this.http.delete<void>(`/api/seasons/${seasonId}/games/${gameId}`);
   }
 }

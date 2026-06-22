@@ -101,6 +101,17 @@
       }
     </section>
 
+    <!-- Programme Télé — affiché dans tous les états, visible par tous les
+         participants VALIDATED (lecture). La gestion est réservée à
+         l'organisateur et interdite en TERMINEE (géré par SeasonProgram via
+         seasonState). -->
+    <section class="season-detail-section">
+      <app-season-program
+        [seasonId]="seasonId()"
+        [isOrganizer]="isOrganizer()"
+        [seasonState]="season()!.state" />
+    </section>
+
     <!-- Zone dangereuse — organisateur uniquement -->
     @if (isOrganizer()) {
       <section class="season-detail-danger-zone">

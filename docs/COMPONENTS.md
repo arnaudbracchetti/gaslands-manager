@@ -139,6 +139,9 @@ graph TD
         ParticipantList
         InviteLink
         ChangeTeamModal
+        SeasonProgram["SeasonProgram (smart)"]
+        GameList
+        GameForm
     end
 
     subgraph Admin
@@ -175,6 +178,10 @@ graph TD
     SeasonDetail --> ChangeTeamModal
     SeasonDetail --> ConfirmModal
     SeasonDetail --> Breadcrumb
+    SeasonDetail --> SeasonProgram
+    SeasonProgram --> GameList
+    SeasonProgram --> GameForm
+    SeasonProgram --> ConfirmModal
     AdminUsers --> ConfirmModal
 ```
 
@@ -828,6 +835,80 @@ Overlay de sélection d'une autre équipe à engager dans une saison `EN_CONSTRU
 |-----|------|-------------|
 | `confirmed` | `number \| null` | `teamId` sélectionné, ou `null` pour se désengager |
 | `cancelled` | `void` | Annulation |
+
+---
+
+### `SeasonProgram` — `seasons/season-program/` 🧠
+
+Gère le Programme Télé (mode campagne) dans `SeasonDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-season-program` |
+| **Type** | Smart |
+| **Services** | `SeasonsService` |
+| **Compose** | `GameList`, `GameForm`, `ConfirmModal` |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `seasonId` | `number` | — | Saison concernée |
+| `isOrganizer` | `boolean` | `false` | Rôle organisateur (condition de gestion) |
+| `seasonState` | `SeasonState` | — | État de la saison ; `canManage` est faux en `TERMINEE` |
+
+**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && seasonState !== 'TERMINEE'`).
+
+---
+
+### `GameList` — `seasons/game-list/`
+
+Liste ordonnée des parties du programme (numéro, scénario, badges type/statut). Émet les actions Modifier/Supprimer, affichées uniquement pour les parties `PLANIFIE` gérables.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-game-list` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `games` | `Game[]` | — | Parties, déjà triées par le backend |
+| `canManage` | `boolean` | `false` | Organisateur + saison `EN_COURS` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `editGame` | `Game` | Demande d'édition d'une partie |
+| `deleteGame` | `Game` | Demande de suppression d'une partie |
+
+---
+
+### `GameForm` — `seasons/game-form/`
+
+Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type est déduit du scénario. `effect()` pré-remplit en mode édition (`game` non nul).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-game-form` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `scenarios` | `Scenario[]` | `[]` | Catalogue des scénarios pour le sélecteur |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+| `game` | `Game \| null` | `null` | `null` = création, sinon pré-remplit (édition) |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `saved` | `CreateGameDto` | `{ scenarioId }` validé (création ou édition) |
+| `formCancel` | `void` | Annulation |
 
 ---
 

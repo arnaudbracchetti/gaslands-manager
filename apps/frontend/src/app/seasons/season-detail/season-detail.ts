@@ -21,6 +21,7 @@ import { SeasonsService } from '../seasons.service';
 import { Season, SeasonState, ChangeStateDto } from '../season.model';
 import { SeasonParticipant } from '../season-participant.model';
 import { ParticipantList } from '../participant-list/participant-list';
+import { SeasonProgram } from '../season-program/season-program';
 import { InviteLink } from '../invite-link/invite-link';
 import { AuthService } from '../../auth/auth.service';
 import { TeamsService } from '../../teams/teams.service';
@@ -38,7 +39,7 @@ const STATE_LABELS: Record<SeasonState, string> = {
 @Component({
   selector: 'app-season-detail',
   standalone: true,
-  imports: [ParticipantList, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb],
+  imports: [ParticipantList, SeasonProgram, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb],
   templateUrl: './season-detail.html',
   styleUrl: './season-detail.scss',
 })

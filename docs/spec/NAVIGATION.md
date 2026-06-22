@@ -18,7 +18,7 @@
 | `/teams/:teamId/vehicles/:vehicleId` | JWT | Gestion de l'équipement d'un véhicule existant, page dédiée (**implémenté**) |
 | `/seasons` | JWT | Liste des saisons (organisées, participations, demandes en attente) (**implémenté**) |
 | `/seasons/join/:code` | JWT | Rejoindre une saison via son code d'invitation (**implémenté**) |
-| `/seasons/:id` | JWT | Détail d'une saison (**implémenté**) |
+| `/seasons/:id` | JWT | Détail d'une saison — inclut la section **Programme Télé** (visible dans tous les états ; gérable en `EN_CONSTRUCTION`/`EN_COURS`, lecture seule en `TERMINEE`) (mode campagne, **implémenté**) |
 | `/login` | Public | Page de connexion |
 | `/register` | Public | Page d'inscription |
 

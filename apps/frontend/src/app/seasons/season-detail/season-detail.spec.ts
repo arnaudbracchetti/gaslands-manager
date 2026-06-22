@@ -56,6 +56,9 @@ describe('SeasonDetail', () => {
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
+    // Appelés par le composant enfant SeasonProgram (désormais toujours monté).
+    getGames: ReturnType<typeof vi.fn>;
+    getScenarios: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: { currentUser: ReturnType<typeof signal<User | null>> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
@@ -82,6 +85,8 @@ describe('SeasonDetail', () => {
       remove: vi.fn(),
       changeState: vi.fn(),
       promote: vi.fn(),
+      getGames: vi.fn().mockReturnValue(of([])),
+      getScenarios: vi.fn().mockReturnValue(of([])),
     };
     mockAuthService = { currentUser: signal<User | null>(mockCurrentUser) };
     mockRouter = { navigate: vi.fn() };

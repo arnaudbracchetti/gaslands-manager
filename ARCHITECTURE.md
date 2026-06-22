@@ -87,8 +87,18 @@ apps/backend/src/app/
 ├── auth/                ← Authentification (User, JWT, bcrypt)
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
-└── team/                ← Entité Team (CRUD)
+├── team/                ← Entité Team (CRUD)
+├── season/             ← Saisons (ligues) + participants
+└── game/                ← Programme Télé (mode campagne) : entité Game + catalogue de scénarios YAML
 ```
+
+> **`ScenarioCatalogService`** (`game/`) est un **troisième exemple** du pattern
+> singleton-en-mémoire (§3.3) après `CatalogService` et `AdminSeedService` : il
+> charge `database_init/data/scenarios.yml` au démarrage (`OnModuleInit`, Template
+> Method `readFileContent`, conversion Markdown→HTML) et l'indexe par `nom_interne`.
+> L'autorisation des endpoints du Programme est déléguée à
+> `SeasonService.assertOrganizer` / `assertVisibleParticipant` (helpers publics
+> réutilisables, exportés par `SeasonModule`).
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`.
 

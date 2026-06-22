@@ -1,0 +1,129 @@
+// ─── Programme Télé — liste ordonnée des parties ──────────────────────────────
+
+.game-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+
+  &__item {
+    background: var(--tb-bitume-2);
+    border: 2px solid var(--border-hair);
+    border-radius: var(--r-sm);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-stamp);
+
+    // Partie jouée : visuellement atténuée (figée)
+    &--played {
+      opacity: 0.72;
+    }
+  }
+
+  // Numéro d'ordre dans un carré métal (cf. avatar participant-list)
+  &__order {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-sm);
+    background: var(--tb-metal-2);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  &__name {
+    font-family: var(--font-text);
+    font-weight: 600;
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.95rem;
+  }
+
+  &__badge {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border-rust);
+    color: var(--text-dim);
+
+    &--type {
+      color: var(--tb-danger);
+    }
+
+    &--escarmouche {
+      color: var(--text-dim);
+    }
+
+    &--status {
+      color: var(--text-dim);
+    }
+
+    &--played {
+      color: var(--tb-os);
+      border-color: var(--tb-os);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  &__edit,
+  &__delete {
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-os);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: border-color 160ms, color 160ms;
+
+    &:hover {
+      border-color: var(--tb-danger);
+      color: var(--tb-danger);
+    }
+  }
+
+  &__delete:hover {
+    border-color: var(--tb-rouille);
+    color: var(--tb-rouille-lt);
+  }
+
+  &__empty {
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    padding: 16px;
+    text-align: center;
+    border: 1px dashed var(--border-rust);
+    border-radius: var(--r-sm);
+  }
+}

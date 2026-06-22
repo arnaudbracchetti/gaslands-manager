@@ -1,0 +1,35 @@
+<!-- Programme Télé : liste ordonnée des parties -->
+<ol class="game-list">
+  @for (game of games(); track game.id) {
+    <li class="game-list__item" [class.game-list__item--played]="game.status === 'JOUE'">
+
+      <span class="game-list__order">{{ game.order }}</span>
+
+      <div class="game-list__info">
+        <span class="game-list__name">{{ game.scenarioName }}</span>
+        <span class="game-list__badge game-list__badge--type"
+          [class.game-list__badge--escarmouche]="game.type === 'ESCARMOUCHE'">
+          {{ typeLabel(game) }}
+        </span>
+        <span class="game-list__badge game-list__badge--status"
+          [class.game-list__badge--played]="game.status === 'JOUE'">
+          {{ statusLabel(game) }}
+        </span>
+      </div>
+
+      @if (canModify(game)) {
+        <div class="game-list__actions">
+          <button type="button" class="game-list__edit" (click)="editGame.emit(game)">
+            ✏️ Modifier
+          </button>
+          <button type="button" class="game-list__delete" (click)="deleteGame.emit(game)">
+            🗑 Supprimer
+          </button>
+        </div>
+      }
+
+    </li>
+  } @empty {
+    <li class="game-list__empty">Aucune partie planifiée pour l'instant.</li>
+  }
+</ol>
