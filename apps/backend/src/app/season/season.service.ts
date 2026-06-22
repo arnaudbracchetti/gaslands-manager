@@ -293,6 +293,47 @@ export class SeasonService {
     await this.seasonRepo.delete(seasonId);
   }
 
+  // ── Helpers d'autorisation réutilisables par les modules satellites ──────────
+  //
+  // Exposés publiquement (et SeasonService exporté par SeasonModule) pour que le
+  // module Game réutilise la même logique d'accès saison sans dupliquer les
+  // requêtes participant. Tous lèvent NotFoundException (404, jamais 403) pour
+  // ne pas révéler l'existence d'une saison à un non-membre.
+
+  /**
+   * Vérifie que `userId` est organisateur VALIDATED de la saison et retourne
+   * la Season. Lève NotFoundException sinon.
+   */
+  async assertOrganizer(seasonId: number, userId: number): Promise<Season> {
+    const organizer = await this.participantRepo.findOne({
+      where: { seasonId, userId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
+    });
+    if (!organizer) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+    const season = await this.seasonRepo.findOne({ where: { id: seasonId } });
+    if (!season) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+    return season;
+  }
+
+  /**
+   * Vérifie que `userId` est un participant VALIDATED de la saison (accès en
+   * lecture, organisateur ou non) et retourne la Season. Lève NotFoundException
+   * sinon.
+   */
+  async assertVisibleParticipant(seasonId: number, userId: number): Promise<Season> {
+    const participation = await this.participantRepo.findOne({
+      where: { seasonId, userId, status: ParticipantStatus.VALIDATED },
+      relations: { season: true },
+    });
+    if (!participation) {
+      throw new NotFoundException('Saison introuvable.');
+    }
+    return participation.season;
+  }
+
   async requestJoin(seasonId: number, userId: number, dto: JoinSeasonDto): Promise<SeasonParticipant> {
     await this.teamService.findOneForUser(dto.teamId, userId);
 

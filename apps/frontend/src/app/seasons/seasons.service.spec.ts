@@ -246,4 +246,66 @@ describe('SeasonsService', () => {
       expect(done).toBe(true);
     });
   });
+
+  // ── Programme Télé (mode campagne) ─────────────────────────────────────────
+
+  describe('getScenarios()', () => {
+    it('effectue GET /api/catalog/scenarios', () => {
+      service.getScenarios().subscribe();
+
+      const req = httpMock.expectOne('/api/catalog/scenarios');
+      expect(req.request.method).toBe('GET');
+      req.flush([]);
+    });
+  });
+
+  describe('getGames()', () => {
+    it('effectue GET /api/seasons/:id/games', () => {
+      service.getGames(1).subscribe();
+
+      const req = httpMock.expectOne('/api/seasons/1/games');
+      expect(req.request.method).toBe('GET');
+      req.flush([]);
+    });
+  });
+
+  describe('createGame()', () => {
+    it('effectue POST /api/seasons/:id/games avec le DTO', () => {
+      const dto = { scenarioId: 'course_de_la_mort' };
+
+      service.createGame(1, dto).subscribe();
+
+      const req = httpMock.expectOne('/api/seasons/1/games');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(dto);
+      req.flush({});
+    });
+  });
+
+  describe('updateGame()', () => {
+    it('effectue PUT /api/seasons/:id/games/:gameId avec le DTO', () => {
+      const dto = { scenarioId: 'embuscade' };
+
+      service.updateGame(1, 10, dto).subscribe();
+
+      const req = httpMock.expectOne('/api/seasons/1/games/10');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(dto);
+      req.flush({});
+    });
+  });
+
+  describe('deleteGame()', () => {
+    it('effectue DELETE /api/seasons/:id/games/:gameId', () => {
+      let done = false;
+
+      service.deleteGame(1, 10).subscribe(() => { done = true; });
+
+      const req = httpMock.expectOne('/api/seasons/1/games/10');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      expect(done).toBe(true);
+    });
+  });
 });

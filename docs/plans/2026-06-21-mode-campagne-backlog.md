@@ -23,35 +23,56 @@
 Escarmouches) au programme de la saison, **afin de** structurer le calendrier de la campagne.
 
 **Critères d'acceptation**
-- Étant donné une saison `EN_COURS` dont je suis organisateur, quand j'ajoute une partie avec
-  un scénario et un type (`EVENEMENT_TELE` | `ESCARMOUCHE`), alors une partie `PLANIFIE` est
-  créée et apparaît dans le programme, ordonnée.
+- Étant donné une saison `EN_CONSTRUCTION` ou `EN_COURS` dont je suis organisateur, quand
+  j'ajoute une partie avec un scénario et un type (`EVENEMENT_TELE` | `ESCARMOUCHE`), alors une
+  partie `PLANIFIE` est créée et apparaît dans le programme, ordonnée.
 - Étant donné que je ne suis pas organisateur, quand j'appelle l'endpoint de création, alors
   je reçois une erreur d'autorisation (403/404).
 - Étant donné une partie déjà `JOUE`, quand je tente de la modifier, alors la modification est
   refusée.
-- Étant donné une saison `EN_CONSTRUCTION` ou `TERMINEE`, quand je tente d'ajouter une partie,
-  alors c'est refusé (le programme ne se gère qu'`EN_COURS`).
+- Étant donné une saison `TERMINEE`, quand je tente d'ajouter une partie, alors c'est refusé
+  (le programme n'est plus gérable une fois la saison terminée).
 
-### US-A2 — Réordonner / éditer une partie planifiée
-**En tant qu'**organisateur, **je veux** modifier ou réordonner une partie encore planifiée,
+### US-A2 — Éditer / supprimer une partie planifiée
+**En tant qu'**organisateur, **je veux** modifier ou supprimer une partie encore planifiée,
 **afin de** corriger le programme avant qu'elle soit jouée.
 
 **Critères d'acceptation**
-- Étant donné une partie `PLANIFIE`, quand je change son scénario, son type ou son ordre,
-  alors le programme reflète le changement.
-- Étant donné une partie `JOUE`, quand je tente de l'éditer, alors c'est refusé.
+- Étant donné une partie `PLANIFIE`, quand je change son scénario ou son type, alors le
+  programme reflète le changement.
+- Étant donné une partie `PLANIFIE`, quand je la supprime, alors elle disparaît du programme.
+- Étant donné une partie `JOUE`, quand je tente de l'éditer ou de la supprimer, alors c'est
+  refusé.
+- Étant donné une saison `TERMINEE`, quand je tente d'éditer ou de supprimer une partie, alors
+  c'est refusé.
+- Étant donné que je ne suis pas organisateur, quand j'édite ou supprime une partie, alors
+  c'est refusé (403/404).
 
 ### US-A3 — Consulter le Programme Télé
 **En tant que** joueur, **je veux** voir la liste des parties de la saison avec leur statut,
 **afin de** savoir ce qui est planifié et ce qui a été joué.
 
 **Critères d'acceptation**
-- Étant donné une saison où je suis participant `VALIDATED`, quand j'ouvre l'onglet
-  « Programme », alors je vois les parties ordonnées avec scénario, type et statut
-  (`PLANIFIE` / `JOUE`).
-- Étant donné une saison `EN_CONSTRUCTION`, quand je l'ouvre, alors l'onglet « Programme »
-  n'est pas affiché (comportement actuel inchangé).
+- Étant donné une saison où je suis participant `VALIDATED`, quand j'ouvre la page de la
+  saison, alors je vois la section « Programme » avec les parties ordonnées (scénario, type,
+  statut `PLANIFIE` / `JOUE`), **quel que soit l'état** de la saison.
+- Étant donné une saison `TERMINEE`, quand je l'ouvre, alors la section « Programme » est
+  affichée **en lecture seule** (pas de boutons d'ajout/édition/suppression).
+
+### US-A4 — Réordonner les parties du Programme
+**En tant qu'**organisateur, **je veux** changer l'ordre des parties encore planifiées,
+**afin de** réorganiser le calendrier au-delà de l'ajout en fin de liste (auto-append).
+
+> US-A1 ajoute toute nouvelle partie en fin de programme (auto-append). Cette story ajoute
+> le réordonnancement explicite, volontairement séparé pour rester hors du périmètre d'US-A1.
+
+**Critères d'acceptation**
+- Étant donné plusieurs parties `PLANIFIE`, quand je change l'ordre de l'une d'elles, alors le
+  programme est réaffiché dans le nouvel ordre, de façon stable et sans collision d'indices.
+- Étant donné une partie `JOUE`, quand je tente de la déplacer, alors c'est refusé (les
+  parties jouées gardent leur position historique).
+- Étant donné que je ne suis pas organisateur, quand je tente de réordonner, alors c'est
+  refusé (403/404).
 
 ---
 
@@ -253,11 +274,15 @@ incrément cohérent et testable de bout en bout. MoSCoW indicatif entre parenth
 | 4 | US-B3 Finaliser l'enregistrement | Must | B1 |
 | 5 | US-C1 Consulter le classement | Must | B1 |
 | 6 | US-B2 Saisir les exploits | Should | B1 |
-| 7 | US-A2 Réordonner/éditer une partie | Could | A1 |
+| 7 | US-A2 Éditer/supprimer une partie | Should | A1 |
+| 8 | US-A4 Réordonner les parties | Could | A1 |
 
 > Justification : c'est le cœur de valeur. Sans Programme ni classement, il n'y a pas de
 > « campagne » perceptible. US-B2 (exploits) enrichit le calcul mais le classement de base
-> (US-B1) suffit à livrer de la valeur. US-A2 est confort.
+> (US-B1) suffit à livrer de la valeur. US-A2 (édition/suppression) et US-A4
+> (réordonnancement) sont du confort. **Note** : US-A1, telle qu'implémentée, couvre déjà
+> l'ajout, l'édition et la suppression d'une partie planifiée — US-A2 ne reste à faire que
+> si l'on souhaite des cas d'édition supplémentaires ; US-A4 reste entièrement à faire.
 
 ### Phase 2 — Économie (cagnotte & atelier)
 *Objectif : les équipes évoluent en dépensant entre les parties.*

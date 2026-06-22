@@ -1,0 +1,44 @@
+<!-- Programme Télé — section de la page de détail d'une saison -->
+<div class="season-program">
+
+  <div class="season-program__header">
+    <h2>📺 Programme Télé</h2>
+    @if (canManage() && !showForm()) {
+      <button type="button" class="btn-primary season-program__add" (click)="openCreate()">
+        ➕ Ajouter une partie
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="season-detail-error">{{ error() }}</div>
+  }
+
+  @if (showForm()) {
+    <app-game-form
+      [scenarios]="scenarios()"
+      [game]="editingGame()"
+      [saving]="saving()"
+      (saved)="onSaved($event)"
+      (formCancel)="cancelForm()" />
+  }
+
+  @if (loading()) {
+    <p class="season-program__loading">Chargement du programme...</p>
+  } @else {
+    <app-game-list
+      [games]="games()"
+      [canManage]="canManage()"
+      (editGame)="onEdit($event)"
+      (deleteGame)="onDelete($event)" />
+  }
+
+  @if (pendingDeleteGame()) {
+    <app-confirm-modal
+      [message]="'Supprimer la partie &quot;' + pendingDeleteGame()!.scenarioName + '&quot; du programme ?'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDelete()"
+      (cancelled)="pendingDeleteGame.set(null)" />
+  }
+
+</div>
