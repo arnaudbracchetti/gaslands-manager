@@ -38,6 +38,8 @@ describe('SeasonProgram Component', () => {
     createGame: ReturnType<typeof vi.fn>;
     updateGame: ReturnType<typeof vi.fn>;
     deleteGame: ReturnType<typeof vi.fn>;
+    getParticipants: ReturnType<typeof vi.fn>;
+    recordResult: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -47,6 +49,8 @@ describe('SeasonProgram Component', () => {
       createGame: vi.fn().mockReturnValue(of(mockGame)),
       updateGame: vi.fn().mockReturnValue(of(mockGame)),
       deleteGame: vi.fn().mockReturnValue(of(undefined)),
+      getParticipants: vi.fn().mockReturnValue(of([])),
+      recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'JOUE' })),
     };
 
     await TestBed.configureTestingModule({
@@ -153,5 +157,25 @@ describe('SeasonProgram Component', () => {
 
     expect(component.error()).not.toBe('');
     expect(component.loading()).toBe(false);
+  });
+
+  it('affiche GameResultForm quand recordingGame est défini', () => {
+    fixture.detectChanges();
+    component.recordingGame.set({ id: 1, status: 'PLANIFIE', scenarioName: 'Test', type: 'EVENEMENT_TELE', order: 1 } as any);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-game-result-form')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-game-list')).toBeFalsy();
+  });
+
+  it('onRecordGame met à jour recordingGame', () => {
+    const game = { id: 2, status: 'PLANIFIE' } as any;
+    component.onRecordGame(game);
+    expect(component.recordingGame()).toEqual(game);
+  });
+
+  it('onResultCancelled remet recordingGame à null', () => {
+    component.recordingGame.set({ id: 1 } as any);
+    component.onResultCancelled();
+    expect(component.recordingGame()).toBeNull();
   });
 });

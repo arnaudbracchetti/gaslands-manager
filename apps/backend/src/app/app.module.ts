@@ -14,6 +14,7 @@ import { Season } from './season/season.entity';
 import { SeasonParticipant } from './season/season-participant.entity';
 import { GameModule } from './game/game.module';
 import { Game } from './game/game.entity';
+import { GameResult } from './game/game-result.entity';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { Vehicle, VehicleImprovement } from './vehicle/vehicle.entity';
 import { WeaponModule } from './weapon/weapon.module';
@@ -45,7 +46,7 @@ import { Weapon } from './weapon/weapon.entity';
         database: config.get('DATABASE_NAME', 'gaslands'),
         // Toutes les entités TypeORM doivent être listées ici
         // TypeORM crée ou met à jour les tables correspondantes (synchronize: true)
-        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant, Game],
+        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant, Game, GameResult],
         // synchronize: true = TypeORM crée/modifie les tables automatiquement
         // ⚠️ À désactiver en production ! En prod, on utilise des migrations.
         synchronize: true,

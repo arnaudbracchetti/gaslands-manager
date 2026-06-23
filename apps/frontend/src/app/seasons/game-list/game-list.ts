@@ -31,10 +31,14 @@ export class GameList {
   /** Vrai si l'utilisateur peut gérer le programme (organisateur + EN_COURS). */
   canManage: InputSignal<boolean> = input(false);
 
+  /** Vrai si l'utilisateur peut saisir les rangs d'une partie. */
+  canRecord: InputSignal<boolean> = input(false);
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   editGame: OutputEmitterRef<Game> = output<Game>();
   deleteGame: OutputEmitterRef<Game> = output<Game>();
+  recordGame: OutputEmitterRef<Game> = output<Game>();
 
   /** Vrai si la partie peut être éditée/supprimée (gérable et pas encore jouée). */
   canModify(game: Game): boolean {
@@ -49,5 +53,10 @@ export class GameList {
   /** Libellé lisible du statut. */
   statusLabel(game: Game): string {
     return game.status === 'JOUE' ? 'Jouée' : 'Planifiée';
+  }
+
+  /** Émet l'event recordGame avec la partie. */
+  onRecord(game: Game): void {
+    this.recordGame.emit(game);
   }
 }

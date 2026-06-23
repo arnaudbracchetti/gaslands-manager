@@ -93,4 +93,48 @@ describe('GameList', () => {
     expect(component.statusLabel(makeGame({ status: 'PLANIFIE' }))).toBe('Planifiée');
     expect(component.statusLabel(makeGame({ status: 'JOUE' }))).toBe('Jouée');
   });
+
+  it('affiche le bouton "Saisir les rangs" pour une partie PLANIFIE quand canRecord=true', () => {
+    fixture.componentRef.setInput('games', [makeGame()]);
+    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('canRecord', true);
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    const recordBtn = Array.from(buttons).find((b: unknown) =>
+      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+    );
+    expect(recordBtn).toBeTruthy();
+  });
+
+  it('n\'affiche pas le bouton pour une partie JOUE', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'JOUE' })]);
+    fixture.componentRef.setInput('canRecord', true);
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    const recordBtn = Array.from(buttons).find((b: unknown) =>
+      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+    );
+    expect(recordBtn).toBeFalsy();
+  });
+
+  it('recordGame émet la partie au clic', () => {
+    const game = makeGame();
+    fixture.componentRef.setInput('games', [game]);
+    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('canRecord', true);
+    fixture.detectChanges();
+
+    const emitted: Game[] = [];
+    outputToObservable(component.recordGame).subscribe((g) => emitted.push(g));
+
+    const recordBtn = fixture.nativeElement.querySelector('button:not(.game-list__edit):not(.game-list__delete)');
+    if (recordBtn) {
+      recordBtn.click();
+    }
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].id).toBe(game.id);
+  });
 });
