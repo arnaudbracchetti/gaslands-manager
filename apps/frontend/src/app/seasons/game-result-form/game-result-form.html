@@ -1,0 +1,68 @@
+<div class="game-result-form">
+  <h3 class="game-result-form__title">🎯 Saisir le classement</h3>
+
+  <!-- Liste de présence : cocher les équipes ayant participé -->
+  <div class="game-result-form__participants">
+    <p class="game-result-form__hint">Cochez les équipes présentes à la partie :</p>
+    @for (participant of participants(); track participant.id) {
+      <label class="game-result-form__participant-row">
+        <input
+          type="checkbox"
+          [checked]="isPresent(participant)"
+          (change)="togglePresent(participant)"
+          [disabled]="saving()"
+        />
+        <span>{{ participant.teamName }}</span>
+        <span class="game-result-form__user">({{ participant.userName }})</span>
+      </label>
+    }
+  </div>
+
+  <!-- Zone de classement : drag-and-drop des équipes présentes -->
+  @if (presentParticipants().length > 0) {
+    <div class="game-result-form__ranking">
+      <p class="game-result-form__hint">
+        Glissez pour réordonner —
+        {{ classifiedCount() }} équipe(s) classée(s) sur {{ presentParticipants().length }}
+      </p>
+      <ol
+        cdkDropList
+        [cdkDropListData]="presentParticipants()"
+        (cdkDropListDropped)="drop($event)"
+        class="game-result-form__list"
+      >
+        @for (participant of presentParticipants(); track participant.id; let i = $index) {
+          <li cdkDrag class="game-result-form__item">
+            <span class="game-result-form__rank">{{ i + 1 }}</span>
+            <span class="game-result-form__team">{{ participant.teamName }}</span>
+            @if (isClassified(i)) {
+              <span class="game-result-form__badge game-result-form__badge--classified">classé</span>
+            } @else {
+              <span class="game-result-form__badge game-result-form__badge--unclassified">non classé</span>
+            }
+          </li>
+        }
+      </ol>
+    </div>
+  }
+
+  <!-- Actions -->
+  <div class="game-result-form__actions">
+    <button
+      type="submit"
+      class="btn btn--primary"
+      [disabled]="presentParticipants().length === 0 || saving()"
+      (click)="onSubmit()"
+    >
+      {{ saving() ? 'Enregistrement…' : 'Valider le classement' }}
+    </button>
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [disabled]="saving()"
+      (click)="onCancel()"
+    >
+      Annuler
+    </button>
+  </div>
+</div>

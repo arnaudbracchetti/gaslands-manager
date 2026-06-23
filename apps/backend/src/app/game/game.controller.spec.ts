@@ -9,12 +9,14 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { GameResultService } from './game-result.service';
 import { GameType } from './game.enums';
 
 const mockRequest = { user: { id: 42, email: 'test@test.com' } };
 
 describe('GameController', () => {
   let controller: GameController;
+  let gameResultService: GameResultService;
 
   const mockGameService = {
     findAllForSeason: vi.fn(),
@@ -27,16 +29,23 @@ describe('GameController', () => {
     getAll: vi.fn(),
   };
 
+  const mockGameResultService = {
+    recordResult: vi.fn(),
+    getResults: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GameController],
       providers: [
         { provide: GameService, useValue: mockGameService },
         { provide: ScenarioCatalogService, useValue: mockScenarioCatalog },
+        { provide: GameResultService, useValue: mockGameResultService },
       ],
     }).compile();
 
     controller = module.get<GameController>(GameController);
+    gameResultService = module.get<GameResultService>(GameResultService);
     vi.clearAllMocks();
   });
 
@@ -88,6 +97,31 @@ describe('GameController', () => {
       await controller.removeGame(mockRequest as never, 1, 10);
 
       expect(mockGameService.remove).toHaveBeenCalledWith(1, 10, 42);
+    });
+  });
+
+  describe('recordResult()', () => {
+    it('appelle gameResultService.recordResult avec les bons paramètres', async () => {
+      const mockGame = { id: 1, status: 'JOUE', scenarioName: 'Course de la Mort' };
+      gameResultService.recordResult = vi.fn().mockResolvedValue(mockGame);
+
+      const dto = { results: [{ participantId: 1, rank: 1 }] };
+      const result = await controller.recordResult(mockRequest as never, 10, 1, dto as never);
+
+      expect(gameResultService.recordResult).toHaveBeenCalledWith(10, 1, 42, dto);
+      expect(result).toEqual(mockGame);
+    });
+  });
+
+  describe('getResults()', () => {
+    it('appelle gameResultService.getResults avec les bons paramètres', async () => {
+      const mockResults = [{ id: 1, rank: 1, championshipPoints: 10 }];
+      gameResultService.getResults = vi.fn().mockResolvedValue(mockResults);
+
+      const result = await controller.getResults(mockRequest as never, 10, 1);
+
+      expect(gameResultService.getResults).toHaveBeenCalledWith(10, 1, 42);
+      expect(result).toEqual(mockResults);
     });
   });
 });

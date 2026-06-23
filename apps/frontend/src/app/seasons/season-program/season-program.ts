@@ -22,15 +22,18 @@ import {
 } from '@angular/core';
 import { SeasonsService } from '../seasons.service';
 import { SeasonState } from '../season.model';
+import type { SeasonParticipant } from '../season-participant.model';
 import { Game, Scenario, CreateGameDto } from '../game.model';
+import type { RecordResultDto } from '../game.model';
 import { GameList } from '../game-list/game-list';
 import { GameForm } from '../game-form/game-form';
+import { GameResultForm } from '../game-result-form/game-result-form';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 
 @Component({
   selector: 'app-season-program',
   standalone: true,
-  imports: [GameList, GameForm, ConfirmModal],
+  imports: [GameList, GameForm, GameResultForm, ConfirmModal],
   templateUrl: './season-program.html',
   styleUrl: './season-program.scss',
 })
@@ -63,6 +66,13 @@ export class SeasonProgram implements OnInit {
   /** Partie en attente de confirmation de suppression (null = aucune). */
   pendingDeleteGame: WritableSignal<Game | null> = signal<Game | null>(null);
 
+  /** Partie dont on saisit le résultat (null = formulaire de résultat fermé). */
+  recordingGame: WritableSignal<Game | null> = signal<Game | null>(null);
+  /** Participants VALIDATED de la saison — source du formulaire de résultat. */
+  participants: WritableSignal<SeasonParticipant[]> = signal<SeasonParticipant[]>([]);
+  /** Vrai pendant que la requête recordResult est en cours. */
+  savingResult: WritableSignal<boolean> = signal(false);
+
   /**
    * La section Programme est affichée dans tous les états (lecture seule en
    * TERMINEE). La gestion (ajout/édition/suppression) n'est possible que pour
@@ -77,6 +87,10 @@ export class SeasonProgram implements OnInit {
     // Catalogue chargé d'emblée pour que le formulaire soit prêt à l'ouverture.
     this.seasonsService.getScenarios().subscribe({
       next: (scenarios: Scenario[]) => this.scenarios.set(scenarios),
+    });
+    // Participants chargés d'emblée pour le formulaire de saisie des résultats.
+    this.seasonsService.getParticipants(this.seasonId()).subscribe({
+      next: (participants: SeasonParticipant[]) => this.participants.set(participants),
     });
   }
 
@@ -131,6 +145,33 @@ export class SeasonProgram implements OnInit {
         this.error.set('Erreur lors de l\'enregistrement de la partie.');
       },
     });
+  }
+
+  /** Ouvre le formulaire de saisie des résultats pour la partie donnée. */
+  onRecordGame(game: Game): void {
+    this.recordingGame.set(game);
+  }
+
+  /** Appelé quand le formulaire de résultat est soumis. */
+  onResultSaved(dto: RecordResultDto): void {
+    const game = this.recordingGame();
+    if (!game) return;
+    this.savingResult.set(true);
+    this.seasonsService.recordResult(this.seasonId(), game.id, dto).subscribe({
+      next: () => {
+        this.recordingGame.set(null);
+        this.savingResult.set(false);
+        this.loadGames();
+      },
+      error: () => {
+        this.savingResult.set(false);
+      },
+    });
+  }
+
+  /** Ferme le formulaire de résultat sans enregistrer. */
+  onResultCancelled(): void {
+    this.recordingGame.set(null);
   }
 
   onDelete(game: Game): void {

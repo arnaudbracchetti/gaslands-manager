@@ -23,14 +23,24 @@
       (formCancel)="cancelForm()" />
   }
 
-  @if (loading()) {
-    <p class="season-program__loading">Chargement du programme...</p>
+  @if (recordingGame()) {
+    <app-game-result-form
+      [participants]="participants()"
+      [saving]="savingResult()"
+      (saved)="onResultSaved($event)"
+      (formCancel)="onResultCancelled()" />
   } @else {
-    <app-game-list
-      [games]="games()"
-      [canManage]="canManage()"
-      (editGame)="onEdit($event)"
-      (deleteGame)="onDelete($event)" />
+    @if (loading()) {
+      <p class="season-program__loading">Chargement du programme...</p>
+    } @else {
+      <app-game-list
+        [games]="games()"
+        [canManage]="canManage()"
+        [canRecord]="canManage()"
+        (editGame)="onEdit($event)"
+        (deleteGame)="onDelete($event)"
+        (recordGame)="onRecordGame($event)" />
+    }
   }
 
   @if (pendingDeleteGame()) {

@@ -48,3 +48,18 @@ export interface UpdateGameDto {
   scenarioId?: string;
   type?: GameType;
 }
+
+/** Résultat d'une partie enregistré — miroir de GameResultDto (backend) */
+export interface GameResult {
+  id: number;
+  gameId: number;
+  participantId: number;
+  rank: number;
+  championshipPoints: number;
+  createdAt: string;
+}
+
+/** Corps de la requête POST /api/seasons/:id/games/:gameId/results */
+export interface RecordResultDto {
+  results: { participantId: number; rank: number }[];
+}

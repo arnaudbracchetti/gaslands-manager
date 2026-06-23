@@ -9,7 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Season, CreateSeasonDto, SeasonSummary, JoinSeasonDto, ChangeStateDto } from './season.model';
 import { SeasonParticipant, ValidateParticipantDto } from './season-participant.model';
-import { Game, Scenario, CreateGameDto, UpdateGameDto } from './game.model';
+import type { Game, Scenario, CreateGameDto, UpdateGameDto, GameResult, RecordResultDto } from './game.model';
 
 @Injectable({ providedIn: 'root' })
 export class SeasonsService {
@@ -166,5 +166,22 @@ export class SeasonsService {
    */
   deleteGame(seasonId: number, gameId: number): Observable<void> {
     return this.http.delete<void>(`/api/seasons/${seasonId}/games/${gameId}`);
+  }
+
+  /**
+   * POST /api/seasons/:id/games/:gameId/results → enregistre les résultats
+   * d'une partie PLANIFIE et la marque JOUE (organisateur).
+   * Retourne la partie avec statut mis à jour.
+   */
+  recordResult(seasonId: number, gameId: number, dto: RecordResultDto): Observable<Game> {
+    return this.http.post<Game>(`/api/seasons/${seasonId}/games/${gameId}/results`, dto);
+  }
+
+  /**
+   * GET /api/seasons/:id/games/:gameId/results → récupère tous les résultats
+   * enregistrés d'une partie (tout participant VALIDATED).
+   */
+  getGameResults(seasonId: number, gameId: number): Observable<GameResult[]> {
+    return this.http.get<GameResult[]>(`/api/seasons/${seasonId}/games/${gameId}/results`);
   }
 }

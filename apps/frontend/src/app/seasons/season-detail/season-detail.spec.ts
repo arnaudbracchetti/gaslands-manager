@@ -178,7 +178,8 @@ describe('SeasonDetail', () => {
       component.onValidate({ pid: 2, accept: true });
 
       expect(mockSeasonsService.validateParticipant).toHaveBeenCalledWith(1, 2, { accept: true });
-      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(1);
+      // SeasonDetail + SeasonProgram (enfant) appellent tous deux getParticipants au démarrage.
+      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(2);
       expect(component.participants()).toContainEqual(updated);
     });
 
@@ -330,7 +331,8 @@ describe('SeasonDetail', () => {
       component.onConfirmRemoveParticipant();
 
       expect(component.error()).not.toBe('');
-      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(2);
+      // SeasonDetail (init + reload après erreur) + SeasonProgram (init) = 3 appels.
+      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(3);
     });
   });
 

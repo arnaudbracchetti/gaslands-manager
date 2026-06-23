@@ -28,6 +28,12 @@
         </div>
       }
 
+      @if (canRecord() && game.status === 'PLANIFIE') {
+        <button class="btn btn--sm btn--primary" (click)="onRecord(game)">
+          🎯 Saisir les rangs
+        </button>
+      }
+
     </li>
   } @empty {
     <li class="game-list__empty">Aucune partie planifiée pour l'instant.</li>

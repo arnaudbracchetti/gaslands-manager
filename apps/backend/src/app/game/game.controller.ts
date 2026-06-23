@@ -28,10 +28,13 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GameService } from './game.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { GameResultService } from './game-result.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { GameResponseDto } from './dto/game-response.dto';
 import type { Scenario } from './scenario.interfaces';
+import type { RecordResultDto } from './dto/record-result.dto';
+import type { GameResultResponseDto } from './dto/game-result-response.dto';
 
 // Payload injecté par JwtStrategy dans req.user (même forme que season.controller.ts).
 interface AuthenticatedRequest {
@@ -43,6 +46,7 @@ export class GameController {
   constructor(
     private readonly gameService: GameService,
     private readonly scenarioCatalog: ScenarioCatalogService,
+    private readonly gameResultService: GameResultService,
   ) {}
 
   /**
@@ -110,5 +114,35 @@ export class GameController {
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<void> {
     return this.gameService.remove(id, gameId, req.user.id);
+  }
+
+  /**
+   * POST /api/seasons/:id/games/:gameId/results
+   * Enregistre le résultat d'une partie (organisateur, partie PLANIFIE).
+   * Passe la partie en JOUE et calcule les Points de Championnat.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('seasons/:id/games/:gameId/results')
+  recordResult(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RecordResultDto,
+  ): Promise<GameResponseDto> {
+    return this.gameResultService.recordResult(id, gameId, req.user.id, dto);
+  }
+
+  /**
+   * GET /api/seasons/:id/games/:gameId/results
+   * Retourne les résultats d'une partie triés par rang (participant VALIDATED).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('seasons/:id/games/:gameId/results')
+  getResults(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<GameResultResponseDto[]> {
+    return this.gameResultService.getResults(id, gameId, req.user.id);
   }
 }
