@@ -3,6 +3,20 @@
   "configurations": [
     {
       "type": "node",
+      "request": "attach",
+      "name": "Attach to NestJS (dev.sh --debug)",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/backend/dist/main.js"],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/apps/backend/dist/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
       "request": "launch",
       "name": "Debug backend with Nx",
       "runtimeExecutable": "npx",
