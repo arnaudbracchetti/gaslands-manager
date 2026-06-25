@@ -88,7 +88,11 @@ apps/backend/src/app/
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
 ├── team/                ← Entité Team (CRUD)
-├── season/             ← Saisons (ligues) + participants
+├── vehicle/             ← Véhicules d'équipe (DDD — voir §3.4)
+│   ├── domain/          ← Agrégat Vehicle, entités Weapon/Improvement, Value Objects, interfaces repo
+│   ├── application/     ← 11 Use Cases (un par commande métier)
+│   └── infrastructure/  ← VehicleRepository, VehicleMapper, CatalogAdapter, HTTP mapper
+├── season/              ← Saisons (ligues) + participants
 └── game/                ← Programme Télé (mode campagne) : entité Game + catalogue de scénarios YAML
 ```
 
@@ -100,12 +104,7 @@ apps/backend/src/app/
 > `SeasonService.assertOrganizer` / `assertVisibleParticipant` (helpers publics
 > réutilisables, exportés par `SeasonModule`).
 
-Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`.
-
-> 📄 **Lecture recommandée** : [`docs/VEHICLE_SYSTEM.md`](docs/VEHICLE_SYSTEM.md) —
-> document de conception détaillant le cycle de vie des véhicules (création, équipement,
-> Pattern Décorateur, pool d'emplacements partagé, sécurité). À lire si le contexte des
-> modules `vehicle` / `weapon` n'est pas immédiatement clair.
+Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`. Les modules domaine complexes suivent l'architecture DDD décrite en §3.4.
 
 ### 3.2 Flux d'authentification JWT
 
@@ -137,33 +136,63 @@ class TestCatalogService extends CatalogService {
 // beforeEach : service = new TestCatalogService(); service.onModuleInit();
 ```
 
-### 3.4 Hydratation transiente + DTOs — prix des entités
+### 3.4 Architecture DDD — standard du projet
 
-Le catalogue est en mémoire, pas en base : TypeORM ne peut pas résoudre les prix
-automatiquement. `VehicleService.hydrateVehicle()` attache les objets catalogue comme
-**propriétés transientes** (non mappées, non persistées) après chaque chargement DB.
+Le module `vehicle/` introduit l'architecture **Domain-Driven Design** qui s'applique à tout nouveau module domaine complexe. Quatre couches avec responsabilités strictes :
 
-Les **getters TypeScript** (`get prix()`) sur les entités encapsulent la règle métier —
-l'objet sait combien il coûte :
+| Couche | Dossier | Contient | Règle absolue |
+|--------|---------|----------|---------------|
+| **Domaine** | `domain/` | Agrégat, entités enfants, Value Objects, interfaces `IXxxRepository` | 0 dépendance NestJS/TypeORM |
+| **Application** | `application/` | Use Cases (`XxxUseCase`, 1 par commande) | Orchestration uniquement — pas de règle métier |
+| **Infrastructure** | `infrastructure/` | Repository TypeORM, Mapper ORM↔domaine, Adapter, HTTP mapper | Implémente les interfaces du domaine |
+| **Présentation** | `*.controller.ts` | Controllers NestJS | Traduit HTTP → commande, délègue au use case |
+
+**L'agrégat** porte toutes les règles métier. Les mutations valident en interne et lèvent `DomainException` si une règle est violée. La couche application convertit `DomainException` → `BadRequestException` (seul endroit où NestJS rencontre le domaine).
 
 ```typescript
-// VehicleImprovement : 0 si amélioration de profil de base (estDefaut), prix catalogue sinon
-get prix(): number { return this.estDefaut ? 0 : (this.ameliorationCatalogue?.prix as number) ?? 0; }
-
-// Weapon : prix catalogue direct (pas de notion de défaut sur les armes)
-get prix(): number { return (this.armeCatalogue?.prix as number) ?? 0; }
+// domain/vehicle.ts — règle métier dans l'agrégat, nulle part ailleurs
+addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): void {
+  const result = this.canAddWeapon(type, orientation, budget);
+  if (!result.ok) throw new DomainException(result.reason!);
+  this._weapons.push(new Weapon(0, type, orientation));
+}
 ```
 
-⚠️ **Les getters ne sont pas sérialisés** par `JSON.stringify` (prototype, pas instance).
-Les contrôleurs appellent `VehicleService.toVehicleDto(vehicle)` qui lit les getters
-explicitement et retourne un objet plain sérialisable — **jamais retourner l'entité brute
-dans une réponse HTTP**.
+**Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `isTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
+
+**Dependency Inversion** — le domaine définit `IVehicleRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`VehicleRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
+
+**Pattern Use Case** — chaque commande métier a son propre use case. Flux systématique :
+1. Charger l'agrégat (vérifie l'appartenance `userId`)
+2. Valider les Value Objects depuis le catalogue
+3. Calculer le budget restant si nécessaire
+4. Déléguer à l'agrégat → `DomainException` éventuelle
+5. Persister via le repository
+
+**Injection NestJS** — les interfaces TypeScript ne sont pas injectables directement. Tokens string dans `vehicle.tokens.ts` (`VEHICLE_REPOSITORY`, `CATALOG_REPOSITORY`). Use cases et mapper fournis en `useFactory` pour garder le domaine sans décorateurs :
+
+```typescript
+// vehicle.module.ts — pattern à reproduire pour tout nouveau module domaine
+{ provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
+{
+  provide: AddWeaponUseCase,
+  useFactory: (vr: IVehicleRepository, cr: ICatalogRepository) => new AddWeaponUseCase(vr, cr),
+  inject: [VEHICLE_REPOSITORY, CATALOG_REPOSITORY],
+}
+```
+
+**Réponses HTTP** — jamais retourner une entité ORM brute ni un agrégat domaine directement. `vehicleToDto()` (`infrastructure/vehicle-http.mapper.ts`) traduit l'agrégat en DTO sérialisable. Reproduire ce pattern pour tout nouveau module DDD.
+
+**⚠️ Piège TypeORM — `where` sur une relation de collection chargée.** Quand un repository filtre sur une relation `OneToMany`/`ManyToMany` (`where: { weapons: { id } }`) tout en l'hydratant (`relations: { weapons: true }`), TypeORM réutilise la **même jointure** pour la recherche ET pour l'hydratation : la collection chargée ne contient alors **que les lignes satisfaisant le `where`**, pas l'intégralité de l'agrégat. Symptôme observé : `findByWeaponId(weaponId)` reconstituait un véhicule avec une **seule** arme (celle recherchée) au lieu de toutes ses armes — corrompant le calcul de coût/emplacements à la persistance. Ce comportement n'est pas documenté par TypeORM (sujet d'issues ouvertes).
+
+- **Contournement** (`VehicleRepository.findByWeaponId`) : résoudre d'abord l'`id` du parent (`findOne` avec `select: { id: true }`, sans hydrater les collections), puis recharger l'agrégat complet via `findByIdForUser` — qui filtre par `id` **scalaire**, donc n'altère pas l'hydratation des collections.
+- **Règle générale** : tout `findByXxxId` qui localise un agrégat *via un de ses enfants* doit appliquer ce double-find. Filtrer par une colonne scalaire du parent (`id`, `teamId`) est sûr ; filtrer par une collection hydratée ne l'est pas.
 
 ### 3.5 Compte administrateur — `AdminSeedService`
 
 `AdminSeedService` (`apps/backend/src/app/auth/admin-seed.service.ts`) garantit qu'un
-unique utilisateur `role: UserRole.ADMIN` existe en base, via `OnModuleInit` — **second
-exemple** de ce pattern après `CatalogService` (§3.3).
+unique utilisateur `role: UserRole.ADMIN` existe en base, via `OnModuleInit` — même
+pattern singleton-en-mémoire que `CatalogService` (§3.3).
 
 Logique exécutée à chaque démarrage :
 1. Recherche d'un utilisateur avec `role: 'admin'` (jamais par email — garantit l'unicité
@@ -199,6 +228,13 @@ export type TeamWithCount = Team & { vehicleCount: number };
 | `apps/backend/src/app/catalog/` | Catalogue YAML → Map en mémoire |
 | `apps/backend/src/app/content/` | Markdown → HTML via `marked` |
 | `apps/backend/src/app/team/` | Team CRUD, `TeamWithCount` |
+| `apps/backend/src/app/vehicle/domain/vehicle.ts` | Agrégat racine — toutes les règles métier Gaslands |
+| `apps/backend/src/app/vehicle/domain/vehicle.repository.interface.ts` | Contrat persistence (Dependency Inversion) |
+| `apps/backend/src/app/vehicle/domain/catalog.repository.interface.ts` | Contrat catalogue (Dependency Inversion) |
+| `apps/backend/src/app/vehicle/application/` | 11 use cases — un par commande métier |
+| `apps/backend/src/app/vehicle/infrastructure/vehicle.mapper.ts` | Mapping ORM ↔ agrégat domaine |
+| `apps/backend/src/app/vehicle/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
+| `apps/backend/src/app/vehicle/vehicle.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations) |
 
 ---

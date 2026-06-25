@@ -97,9 +97,27 @@ npx nx sync                        # si Nx se plaint de "workspace out of sync"
 
 **TypeScript** : typage explicite strict imposé par ESLint (`explicit-function-return-type`, `no-explicit-any`). Exception : variables locales et `*.spec.ts`. ESLint rejettera le code non conforme.
 
-**NestJS** : `import type` pour les interfaces/types dans les signatures décorées (`emitDecoratorMetadata`).
+**NestJS — `import type`** : `import type` est réservé aux interfaces pures et aux DTOs. Pour toute classe instanciée par le conteneur NestJS (use cases, services, repositories), utiliser `import { X }` — `emitDecoratorMetadata` émet `Object` pour les `import type`, ce qui cause `UnknownDependenciesException` au démarrage.
+
+**NestJS — DDD et tokens d'injection** : les interfaces TypeScript (`IVehicleRepository`, `ICatalogRepository`) ne sont pas injectables directement. Utiliser des tokens string (voir `vehicle.tokens.ts`) et fournir les use cases en `useFactory` dans le module pour garder le domaine sans décorateurs NestJS.
+
+**TypeORM — `where` sur une relation de collection** : un `where` posé sur une relation `OneToMany`/`ManyToMany` qui est aussi hydratée via `relations` **filtre la collection chargée** — elle ne contiendra que les lignes correspondant au critère, pas toutes. Pour récupérer l'agrégat complet à partir d'un de ses enfants, résoudre d'abord l'`id` du parent (`select: { id: true }`) puis recharger via un find par `id` scalaire (qui, lui, n'altère pas l'hydratation). Modèle : `VehicleRepository.findByWeaponId` → `findByIdForUser`.
 
 **CSS — Design tokens** : couleurs, fonds et opacités d'overlay sont centralisés comme propriétés CSS natives (`--clr-*`) dans le bloc `:root` de `apps/frontend/src/styles.scss`. Ne jamais coder une couleur en dur dans un fichier `.scss` de composant — utiliser `var(--clr-nom)`.
+
+---
+
+## Processus obligatoire avant toute nouvelle fonctionnalité backend
+
+Avant d'écrire la moindre ligne de code, **invoquer le skill `brainstorming`** et répondre aux questions suivantes :
+
+- La fonctionnalité introduit-elle un **nouvel agrégat** (entité racine avec son propre cycle de vie et ses propres règles) ?
+- Ou s'agit-il d'une **nouvelle règle métier dans un agrégat existant** (ex : nouvelle contrainte sur `Vehicle`) ?
+- Quelles **entités enfants ou Value Objects** sont créés ou modifiés ?
+- Quelles **interfaces de repository** évoluent (`IVehicleRepository`, etc.) ?
+- Quel **use case** porte la commande ? Y a-t-il plusieurs commandes distinctes ?
+
+Ce brainstorming évite de placer des règles métier au mauvais endroit (controller, repository, service utilitaire). La règle : logique métier → agrégat (`domain/`), orchestration → use case (`application/`), TypeORM/NestJS → infrastructure uniquement.
 
 ---
 
@@ -107,6 +125,7 @@ npx nx sync                        # si Nx se plaint de "workspace out of sync"
 
 Utiliser le skill `nx-generate` pour les générateurs. Points non-évidents :
 
-- **Module NestJS** : importer dans `app.module.ts`, ajouter l'entité dans la liste `entities` de TypeORM.
+- **Module NestJS simple** : importer dans `app.module.ts`, ajouter l'entité dans la liste `entities` de TypeORM.
+- **Module NestJS domaine (DDD)** : créer les dossiers `domain/`, `application/`, `infrastructure/`. Déclarer des tokens d'injection dans `xxx.tokens.ts`. Fournir use cases et mapper en `useFactory` dans le module (voir `vehicle.module.ts` comme modèle).
 - **Composant Angular** : ajouter la route lazy dans [apps/frontend/src/app/app.routes.ts](apps/frontend/src/app/app.routes.ts).
 - **Contenu Markdown** : créer `content/<slug>.md` → disponible sans redémarrage via `GET /api/content/<slug>`.

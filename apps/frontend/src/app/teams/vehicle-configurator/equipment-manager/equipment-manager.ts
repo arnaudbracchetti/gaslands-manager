@@ -193,20 +193,31 @@ export class EquipmentManager {
   armesPourTourelle: Signal<Arme[]> = computed((): Arme[] => {
     const slotsRestants = this.emplacementsTotal() - this.emplacementsUtilises();
     // Si la Tourelle sélectionnée a déjà une arme assignée (re-assignation),
-    // son slot était déjà compté dans emplacementsUtilises — on le libère
-    // temporairement pour évaluer le remplacement correctement.
+    // son slot ET son coût étaient déjà comptés (dans emplacementsUtilises et
+    // budgetRestant) — on les libère temporairement pour évaluer le remplacement
+    // correctement (symétrique de la règle backend Vehicle.assignWeaponToTourelle).
     const tourelleSelectionnee = this.selectedOrphanTourelle();
-    const slotOccupeTourelleCourante = (() => {
-      if (!tourelleSelectionnee?.weaponNomInterne) return 0;
-      const arme = this.sponsorCatalog().armes.find(
+    const armeCourante = (() => {
+      if (!tourelleSelectionnee?.weaponNomInterne) return null;
+      return this.sponsorCatalog().armes.find(
         (a): boolean => a.nom_interne === tourelleSelectionnee.weaponNomInterne,
-      );
-      return arme?.emplacement ?? 0;
+      ) ?? null;
     })();
+    const slotOccupeTourelleCourante = armeCourante?.emplacement ?? 0;
     const slotsDisponibles = slotsRestants + slotOccupeTourelleCourante;
 
+    // Budget disponible pour la NOUVELLE arme : on « rend » le coût ×3 de l'arme
+    // actuellement montée sur la Tourelle sélectionnée (cas ré-assignation).
+    // Le coût d'une arme sur Tourelle = 3 × son prix (cf. backend Improvement.price ;
+    // le ×3 n'est pas pré-résolu par le backend pour une arme non encore montée).
+    const coutCourantTourelle = (armeCourante?.prix ?? 0) * 3;
+    const budgetDisponible = this.budgetRestant() + coutCourantTourelle;
+
     return this.sponsorCatalog().armes.filter(
-      (a): boolean => a.type !== 'équipage' && a.emplacement <= slotsDisponibles,
+      (a): boolean =>
+        a.type !== 'équipage' &&
+        a.emplacement <= slotsDisponibles &&
+        a.prix * 3 <= budgetDisponible,
     );
   });
 
@@ -312,10 +323,11 @@ export class EquipmentManager {
   /**
    * `true` si le coût cumulé dépasse le budget. En principe jamais atteignable via
    * l'ajout d'équipement — la règle "Budget de l'équipe insuffisant" côté backend
-   * (`VehicleService`/`WeaponService.checkCandidate`) marque par avance toute option
-   * trop chère `disponible: false`. Reste un filet de sécurité d'affichage pour le
-   * seul cas non couvert : la Tourelle (`prix: "x3"`, coût dépendant de l'arme
-   * assignée — cf. commentaire de `checkCandidate`, "sujet à reprendre séparément").
+   * marque par avance toute option trop chère `disponible: false`. Le cas Tourelle
+   * (`prix: "x3"`, coût dépendant de l'arme assignée) est désormais lui aussi couvert :
+   * `armesPourTourelle` masque les armes dont le coût ×3 dépasse le budget, et le
+   * backend (`Vehicle.assignWeaponToTourelle`) refuse l'assignation hors budget
+   * (HTTP 400). Ce signal reste un filet de sécurité d'affichage.
    */
   budgetDepasse: Signal<boolean> = computed((): boolean => this.budgetRestant() < 0);
 

@@ -73,18 +73,4 @@ export class Weapon {
   // ── Propriétés transientes — non persistées par TypeORM ────────────────────
   // Même pattern que VehicleImprovement (cf. son en-tête sur l'hydratation).
 
-  /** Entrée catalogue résolue — hydratée par le service, jamais persistée. */
-  armeCatalogue?: Arme;
-
-  /**
-   * Prix de cette arme, lu depuis le catalogue via le graphe d'objet.
-   *
-   * Symétrie avec `VehicleImprovement.prix` (cf. son commentaire) — sans notion
-   * de "défaut" pour les armes : le getter est donc plus simple. Même remarque
-   * sur la sérialisation : c'est `VehicleService.toVehicleDto()` qui expose la
-   * valeur dans la réponse HTTP.
-   */
-  get prix(): number {
-    return (this.armeCatalogue?.prix as number) ?? 0;
-  }
 }

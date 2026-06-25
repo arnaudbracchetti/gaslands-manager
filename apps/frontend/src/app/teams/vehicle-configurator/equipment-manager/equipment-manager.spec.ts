@@ -498,6 +498,63 @@ describe('EquipmentManager', () => {
     });
   });
 
+  // ── Filtre budget de armesPourTourelle (armes hors budget masquées) ─────────
+
+  describe('armesPourTourelle (filtre budget)', () => {
+    // Sponsor avec deux armes : une bon marché (×3 = 12) et une chère (×3 = 60).
+    const catalogueAvecArmeChere: Sponsor = {
+      ...mockSponsorCatalog,
+      armes: [
+        { nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
+        { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 20, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
+      ],
+    };
+
+    const tourelleOrpheline: Vehicle['improvements'][number] = {
+      id: 301, nomInterne: 'tourelle', orientation: null, vehicleId: 100,
+      createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 0, emplacement: 0, weaponNomInterne: null,
+    };
+
+    function setup(cans: number, vehicle: Vehicle = { ...mockVehicle, improvements: [tourelleOrpheline] }): void {
+      fixture = TestBed.createComponent(EquipmentManager);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('vehicle', vehicle);
+      fixture.componentRef.setInput('sponsorCatalog', catalogueAvecArmeChere);
+      fixture.componentRef.setInput('team', { ...mockTeam, cans });
+      fixture.detectChanges();
+      // Sélectionner la Tourelle orpheline → arme cibles = armesPourTourelle.
+      component.selectedOrphanTourelle.set(vehicle.improvements[0]);
+    }
+
+    it('exclut une arme dont le coût ×3 dépasse le budget disponible', () => {
+      // getAllForTeam (mock) ajoute le coût d'un autre véhicule (16). Véhicule
+      // courant nu = 16. Budget 50 → restant = 50 - 32 = 18. BFG ×3 = 60 > 18 → exclue.
+      setup(50);
+      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
+      expect(noms).toContain('mitrailleuse'); // 12 ≤ 18
+      expect(noms).not.toContain('bfg'); // 60 > 18
+    });
+
+    it('inclut une arme finançable', () => {
+      // Budget large : 100 → restant = 100 - 32 = 68. BFG ×3 = 60 ≤ 68 → incluse.
+      setup(100);
+      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
+      expect(noms).toContain('bfg');
+    });
+
+    it('en ré-assignation, « rend » le coût de l\'arme actuellement montée', () => {
+      // Tourelle déjà montée avec BFG (coût ×3 = 60). Véhicule courant = 16 + 60 = 76,
+      // + 16 (autre véhicule) = 92. Budget 100 → restant = 8. Sans reprise, la BFG
+      // (60) serait exclue ; mais on rend son coût (60) → 68 dispo → BFG reste proposée.
+      const tourelleBfg: Vehicle['improvements'][number] = {
+        ...tourelleOrpheline, prix: 60, weaponNomInterne: 'bfg',
+      };
+      setup(100, { ...mockVehicle, improvements: [tourelleBfg] });
+      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
+      expect(noms).toContain('bfg');
+    });
+  });
+
   // ── Ajout d'arme ────────────────────────────────────────────────────────────
 
   it('ajoute une arme et notifie le parent via vehicleChanged avec l\'entité mise à jour', () => {

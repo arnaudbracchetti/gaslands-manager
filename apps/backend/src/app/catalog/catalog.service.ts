@@ -27,9 +27,13 @@ import {
   Sponsor,
   Vehicule,
 } from './catalog.interfaces';
+import type { ICatalogRepository } from '../vehicle/domain/catalog.repository.interface';
+import { VehicleType } from '../vehicle/domain/value-objects/vehicle-type';
+import { WeaponType } from '../vehicle/domain/value-objects/weapon-type';
+import { ImprovementType } from '../vehicle/domain/value-objects/improvement-type';
 
 @Injectable()
-export class CatalogService implements OnModuleInit {
+export class CatalogService implements OnModuleInit, ICatalogRepository {
   // Logger : type explicite pour la propriété membre de classe.
   private readonly logger: Logger = new Logger(CatalogService.name);
 
@@ -227,5 +231,34 @@ export class CatalogService implements OnModuleInit {
   /** Retourne une amélioration du catalogue par son nom_interne, ou undefined si inconnue. */
   getAmeliorationByNomInterne(nomInterne: string): Amelioration | undefined {
     return this.allAmeliorations.find((a: Amelioration) => a.nom_interne === nomInterne);
+  }
+
+  // ── Implémentation ICatalogRepository — retourne des Value Objects du domaine ──
+
+  getVehicleType(nomInterne: string): VehicleType | undefined {
+    const raw = this.getVehiculeByNomInterne(nomInterne);
+    return raw ? VehicleType.from(raw) : undefined;
+  }
+
+  getWeaponType(nomInterne: string): WeaponType | undefined {
+    const raw = this.getArmeByNomInterne(nomInterne);
+    return raw ? WeaponType.from(raw) : undefined;
+  }
+
+  getImprovementType(nomInterne: string): ImprovementType | undefined {
+    const raw = this.getAmeliorationByNomInterne(nomInterne);
+    return raw ? ImprovementType.from(raw) : undefined;
+  }
+
+  getVehicleTypesForSponsor(sponsorNom: string): VehicleType[] {
+    return (this.getSponsor(sponsorNom)?.vehicules ?? []).map(VehicleType.from);
+  }
+
+  getWeaponTypesForSponsor(sponsorNom: string): WeaponType[] {
+    return (this.getSponsor(sponsorNom)?.armes ?? []).map(WeaponType.from);
+  }
+
+  getImprovementTypesForSponsor(sponsorNom: string): ImprovementType[] {
+    return (this.getSponsor(sponsorNom)?.ameliorations ?? []).map(ImprovementType.from);
   }
 }
