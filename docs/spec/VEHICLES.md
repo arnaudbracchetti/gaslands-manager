@@ -30,7 +30,7 @@ Le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:t
 
 **Détail d'un équipement** : toute la carte d'une arme ou d'une amélioration (`equipment-option`) est cliquable et ouvre une popup (`EquipmentDetailModal`) — nom, coût, emplacement, description, règles complètes, et raison de refus éventuelle. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
-**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier de la Tourelle** : son prix catalogue est `"x3"` — elle n'est jamais bloquée par cette règle.
+**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier de la Tourelle** : son prix catalogue est `"x3"`, donc l'**ajout** de la Tourelle orpheline (coût 0) n'est jamais bloqué par cette règle — la garde budget porte sur l'**assignation de l'arme** (coût = 3× le prix de l'arme), cf. §Budget ci-dessous.
 
 ---
 
@@ -71,7 +71,7 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 - Exception : l'amélioration **Tourelle** coûte **3× le prix de l'arme** concernée (coût variable)
 - Le total ne doit pas dépasser le budget
 
-**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est marquée `disponible: false`. **Exception non couverte** : la Tourelle (`prix: "x3"`) n'est jamais bloquée — son coût dépend de l'arme assignée, encore inconnue au moment de l'ajout.
+**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est marquée `disponible: false`. **Cas de la Tourelle** (`prix: "x3"`) : son coût dépend de l'arme assignée, inconnue au moment de l'ajout — l'ajout de la Tourelle orpheline (coût 0) reste donc autorisé. La garde budget s'applique à l'**assignation de l'arme** : l'agrégat `Vehicle.assignWeaponToTourelle` refuse (`DomainException` → HTTP 400) toute arme dont le coût ×3 dépasse le budget restant (en ré-assignation, le coût de l'arme remplacée est « rendu » au budget). Côté frontend, `EquipmentManager.armesPourTourelle` masque par avance les armes hors budget de la modale d'assignation.
 
 ### Véhicules (16 au total)
 

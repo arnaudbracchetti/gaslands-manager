@@ -7,7 +7,9 @@
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "target": "es2021"
+    "target": "es2021",
+    "sourceMap": true,
+    "inlineSources": true
   },
   "include": ["src/**/*.ts"],
   "exclude": []

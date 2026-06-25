@@ -17,7 +17,6 @@ import { Game } from './game/game.entity';
 import { GameResult } from './game/game-result.entity';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { Vehicle, VehicleImprovement } from './vehicle/vehicle.entity';
-import { WeaponModule } from './weapon/weapon.module';
 import { Weapon } from './weapon/weapon.entity';
 
 @Module({
@@ -57,8 +56,7 @@ import { Weapon } from './weapon/weapon.entity';
     // Nos modules métier
     ContentModule, // Lecture des fichiers Markdown
     TeamModule,    // Gestion des équipes Gaslands
-    VehicleModule, // Véhicules d'équipe + améliorations (Pattern Decorator)
-    WeaponModule,  // Armes montées sur les véhicules d'équipe
+    VehicleModule, // Véhicules d'équipe + armes + améliorations (DDD + Pattern Decorator)
     AuthModule,    // Inscription, connexion, JWT
     CatalogModule, // Catalogue de jeu chargé au démarrage (sponsors, véhicules, armes, améliorations)
     SeasonModule,  // Saisons (ligues) regroupant plusieurs équipes et organisateurs
