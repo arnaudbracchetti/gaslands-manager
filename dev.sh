@@ -88,7 +88,7 @@ if [[ "$RESET" == true ]]; then
     # bash -lic : shell de login interactif -- source ~/.bashrc (nvm), pour
     # que `npx`/`nx` resolvent vers le node Linux et non le binaire Windows
     # (/mnt/c/Program Files/nodejs/npx), utilise par defaut dans un shell non interactif.
-    bash -lic "cd '$PROJECT_ROOT' && npx nx reset"
+    bash -c "source '$HOME/.nvm/nvm.sh' && nvm use && cd '$PROJECT_ROOT' && npx nx reset"
     ok "Cache Nx vide -- les serveurs recompileront depuis les sources"
 fi
 
@@ -125,15 +125,16 @@ done
 
 # ── 5. Lancement du backend et du frontend ────────────────────
 # Les deux serveurs sont lances en arriere-plan, avec logs dans /tmp.
-BACKEND_CMD="cd '$PROJECT_ROOT' && npx nx serve backend"
-FRONTEND_CMD="cd '$PROJECT_ROOT' && npx nx serve frontend"
+NVM_INIT="source '$HOME/.nvm/nvm.sh' && nvm use"
+BACKEND_CMD="$NVM_INIT && cd '$PROJECT_ROOT' && npx nx serve backend --verbose"
+FRONTEND_CMD="$NVM_INIT && cd '$PROJECT_ROOT' && npx nx serve frontend --verbose"
 
 step "Demarrage du backend NestJS..."
-nohup bash -lic "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
+nohup bash -c "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
 ok "Backend lance en arriere-plan (logs : tail -f /tmp/gaslands-backend.log)"
 
 step "Demarrage du frontend Angular..."
-nohup bash -lic "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
+nohup bash -c "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
 ok "Frontend lance en arriere-plan (logs : tail -f /tmp/gaslands-frontend.log)"
 
 # ── Resume ────────────────────────────────────────────────────
