@@ -49,7 +49,8 @@ Lire avant toute modification — mettre à jour après chaque changement :
   - @docs/spec/VEHICLES.md — catalogue, construction véhicule, règles métier Gaslands
   - @docs/spec/SEASONS.md — saisons, inscriptions, transitions d'état
   - @docs/spec/NAVIGATION.md — routes Angular, backlog
-- @ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
+- @docs/ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
+- @docs/DOMAIN_MODEL.md — diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global
 - @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
 
 ---
