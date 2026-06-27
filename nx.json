@@ -48,7 +48,6 @@
       }
     }
   ],
-  "nxCloudId": "6a189e378c08d8dd535d583b",
   "analytics": false,
   "targetDefaults": {
     "@angular/build:application": {
