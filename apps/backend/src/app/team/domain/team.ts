@@ -1,0 +1,148 @@
+import type { VehicleType } from './value-objects/vehicle-type';
+import type { WeaponType } from './value-objects/weapon-type';
+import type { ImprovementType } from './value-objects/improvement-type';
+import { Vehicle, DomainException } from './vehicle';
+import { Improvement } from './improvement';
+
+// ── Résultat de validation ────────────────────────────────────────────────────
+
+export type RuleResult = { ok: true } | { ok: false; reason: string };
+
+export function ok(): RuleResult {
+  return { ok: true };
+}
+
+export function fail(reason: string): RuleResult {
+  return { ok: false, reason };
+}
+
+export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
+
+// ── Commande de mise à jour ───────────────────────────────────────────────────
+
+export interface UpdateTeamCommand {
+  name?: string;
+  sponsor?: string;
+  cans?: number;
+  description?: string | null;
+}
+
+// ── Agrégat racine Team ───────────────────────────────────────────────────────
+
+/**
+ * Agrégat racine Team.
+ *
+ * Décision architecturale : Vehicle est une entité enfant de Team, pas un agrégat
+ * racine indépendant. L'invariante principale de Vehicle — coût_total ≤ budget_équipe —
+ * dépend de team.cans et du coût de TOUS les véhicules. Vehicle ne peut donc pas
+ * garantir cet invariant seul.
+ *
+ * Team porte le budget et calcule lui-même `remainingBudget`. Toutes les mutations
+ * sur les véhicules, armes et améliorations transitent par Team, qui dispose du
+ * contexte complet (budget réel, sponsor) pour appliquer les règles correctement.
+ */
+export class Team {
+  constructor(
+    readonly id: number,
+    readonly userId: number,
+    private _name: string,
+    private _sponsor: string,
+    private _cans: number,
+    private _description: string | null,
+    private readonly _vehicles: Vehicle[],
+  ) {}
+
+  get name(): string { return this._name; }
+  get sponsor(): string { return this._sponsor; }
+  get cans(): number { return this._cans; }
+  get description(): string | null { return this._description; }
+  get vehicles(): readonly Vehicle[] { return this._vehicles; }
+
+  /**
+   * Budget restant = budget total - somme des coûts de tous les véhicules.
+   * Calculé en mémoire sur l'agrégat chargé — plus de requête SQL dédiée.
+   */
+  get remainingBudget(): number {
+    return this._cans - this._vehicles.reduce((sum, v) => sum + v.cost, 0);
+  }
+
+  // ── Mutations Team ────────────────────────────────────────────────────────────
+
+  /**
+   * Met à jour les propriétés de l'équipe.
+   * Phase 5 : la règle du verrouillage du sponsor est enforcée côté backend.
+   */
+  update(dto: UpdateTeamCommand): void {
+    if (dto.name !== undefined) this._name = dto.name;
+    if (dto.cans !== undefined) this._cans = dto.cans;
+    if (dto.description !== undefined) this._description = dto.description;
+    if (dto.sponsor !== undefined && dto.sponsor !== this._sponsor) {
+      if (this._vehicles.length > 0) {
+        throw new DomainException('Le sponsor ne peut plus être modifié car l\'équipe possède des véhicules');
+      }
+      this._sponsor = dto.sponsor;
+    }
+  }
+
+  // ── Mutations Vehicle ─────────────────────────────────────────────────────────
+
+  /**
+   * Ajoute un nouveau véhicule "nu" à l'équipe avec ses améliorations par défaut.
+   * La validation d'autorisation sponsor (vehicleType ∈ sponsor.vehicules) est faite
+   * par le use case avant d'appeler cette méthode.
+   */
+  addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[]): Vehicle {
+    const vehicle = new Vehicle(0, this.id, vehicleType, [], defaultImprovements);
+    this._vehicles.push(vehicle);
+    return vehicle;
+  }
+
+  removeVehicle(vehicleId: number): void {
+    const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
+    if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
+    this._vehicles.splice(idx, 1);
+  }
+
+  findVehicle(vehicleId: number): Vehicle {
+    const v = this._vehicles.find((v) => v.id === vehicleId);
+    if (!v) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
+    return v;
+  }
+
+  // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
+
+  addWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: Orientation | null): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.addWeapon(weaponType, orientation, this.remainingBudget);
+  }
+
+  removeWeaponFromVehicle(vehicleId: number, weaponId: number): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.removeWeapon(weaponId);
+  }
+
+  // ── Mutations Improvement (déléguées au Vehicle) ──────────────────────────────
+
+  addImprovementToVehicle(vehicleId: number, improvementType: ImprovementType, orientation: Orientation | null): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.addImprovement(improvementType, orientation, this.remainingBudget);
+  }
+
+  removeImprovementFromVehicle(vehicleId: number, improvementId: number): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.removeImprovement(improvementId);
+  }
+
+  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponType: WeaponType): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.assignWeaponToTourelle(improvementId, weaponType, this.remainingBudget);
+  }
+
+  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): void {
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.unassignWeaponFromTourelle(improvementId);
+  }
+}
+
+// Ré-export pour que les consumers importent depuis team.ts sans connaître vehicle.ts
+export { DomainException } from './vehicle';

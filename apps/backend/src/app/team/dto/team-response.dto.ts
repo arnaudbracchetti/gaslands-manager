@@ -14,7 +14,7 @@
  * sera calculé par un COUNT SQL sur la table vehicles au lieu d'être hardcodé
  * à 0. Le type ici ne changera pas — seul le service sera mis à jour.
  */
-import { Team } from '../team.entity';
+import { Team } from '../infrastructure/entities/team.entity';
 
 export type TeamResponseDto = Team & {
   /**
