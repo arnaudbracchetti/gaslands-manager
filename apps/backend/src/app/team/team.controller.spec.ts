@@ -1,48 +1,50 @@
 /**
  * Tests unitaires pour TeamController.
  *
- * Objectif : vérifier le câblage HTTP — que chaque endpoint appelle
- * la bonne méthode du service avec les bons arguments.
- *
- * On mock TeamService pour tester le controller en isolation totale.
- * On ne teste PAS ici : la logique métier (c'est team.service.spec.ts),
- * ni l'authentification JWT (testée par JwtAuthGuard en intégration).
+ * Le controller délègue maintenant à 4 use cases distincts (architecture DDD).
+ * On mocke chaque use case pour tester le câblage HTTP en isolation.
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TeamController } from './team.controller';
-import { TeamService } from './team.service';
-import { Team } from './team.entity';
+import { GetTeamSummariesUseCase } from './application/get-team-summaries.usecase';
+import { CreateTeamUseCase } from './application/create-team.usecase';
+import { UpdateTeamUseCase } from './application/update-team.usecase';
+import { RemoveTeamUseCase } from './application/remove-team.usecase';
+import type { TeamSummaryDto } from './domain/team.repository.interface';
 
-// Simulacre d'utilisateur connecté (ce que JwtStrategy injecte dans req.user)
 const mockUser = { id: 42, email: 'test@test.com' };
 const mockRequest = { user: mockUser };
 
-// Équipe fictive retournée par le service mocké
-const mockTeam: Partial<Team> = {
+const mockSummary: TeamSummaryDto = {
   id: 1,
   name: 'Les Furieux du Désert',
   sponsor: 'Rutherford',
   cans: 50,
-  userId: 42,
+  description: null,
+  vehicleCount: 0,
+  isEngaged: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
 };
 
 describe('TeamController', () => {
   let controller: TeamController;
 
-  const mockTeamService = {
-    findByUserId: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-  };
+  const mockGetSummaries = { execute: vi.fn() };
+  const mockCreate = { execute: vi.fn() };
+  const mockUpdate = { execute: vi.fn() };
+  const mockRemove = { execute: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TeamController],
       providers: [
-        { provide: TeamService, useValue: mockTeamService },
+        { provide: GetTeamSummariesUseCase, useValue: mockGetSummaries },
+        { provide: CreateTeamUseCase, useValue: mockCreate },
+        { provide: UpdateTeamUseCase, useValue: mockUpdate },
+        { provide: RemoveTeamUseCase, useValue: mockRemove },
       ],
     }).compile();
 
@@ -50,58 +52,48 @@ describe('TeamController', () => {
     vi.clearAllMocks();
   });
 
-  // ── GET /teams ──────────────────────────────────────────────────────────────
-
   describe('getAll()', () => {
-    it('appelle TeamService.findByUserId avec l\'id de l\'utilisateur connecté', async () => {
-      mockTeamService.findByUserId.mockResolvedValue([mockTeam]);
+    it('délègue à GetTeamSummariesUseCase avec userId', async () => {
+      mockGetSummaries.execute.mockResolvedValue([mockSummary]);
 
       const result = await controller.getAll(mockRequest as never);
 
-      // Le controller doit passer req.user.id au service (pas req.user)
-      expect(mockTeamService.findByUserId).toHaveBeenCalledWith(42);
-      expect(result).toEqual([mockTeam]);
+      expect(mockGetSummaries.execute).toHaveBeenCalledWith({ userId: 42 });
+      expect(result).toEqual([mockSummary]);
     });
   });
 
-  // ── POST /teams ─────────────────────────────────────────────────────────────
-
   describe('create()', () => {
-    it('appelle TeamService.create avec l\'id user et le DTO', async () => {
+    it('délègue à CreateTeamUseCase avec userId et les champs du DTO', async () => {
       const dto = { name: 'Nouvelle équipe', sponsor: 'Miyazaki', cans: 60 };
-      mockTeamService.create.mockResolvedValue({ id: 2, ...dto, userId: 42 });
+      mockCreate.execute.mockResolvedValue({ ...mockSummary, ...dto });
 
       const result = await controller.create(mockRequest as never, dto);
 
-      expect(mockTeamService.create).toHaveBeenCalledWith(42, dto);
-      expect(result).toMatchObject({ name: 'Nouvelle équipe', userId: 42 });
+      expect(mockCreate.execute).toHaveBeenCalledWith({ userId: 42, ...dto });
+      expect(result).toMatchObject({ name: 'Nouvelle équipe' });
     });
   });
 
-  // ── PUT /teams/:id ──────────────────────────────────────────────────────────
-
   describe('update()', () => {
-    it('appelle TeamService.update avec id, userId et le DTO', async () => {
+    it('délègue à UpdateTeamUseCase avec teamId, userId et les champs du DTO', async () => {
       const dto = { name: 'Nom modifié', cans: 75 };
-      const updatedTeam = { ...mockTeam, ...dto };
-      mockTeamService.update.mockResolvedValue(updatedTeam);
+      mockUpdate.execute.mockResolvedValue({ ...mockSummary, ...dto });
 
       const result = await controller.update(1, mockRequest as never, dto);
 
-      expect(mockTeamService.update).toHaveBeenCalledWith(1, 42, dto);
+      expect(mockUpdate.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42, ...dto });
       expect(result).toMatchObject({ name: 'Nom modifié' });
     });
   });
 
-  // ── DELETE /teams/:id ───────────────────────────────────────────────────────
-
   describe('remove()', () => {
-    it('appelle TeamService.remove avec id et userId', async () => {
-      mockTeamService.remove.mockResolvedValue(undefined);
+    it('délègue à RemoveTeamUseCase avec teamId et userId', async () => {
+      mockRemove.execute.mockResolvedValue(undefined);
 
       await controller.remove(1, mockRequest as never);
 
-      expect(mockTeamService.remove).toHaveBeenCalledWith(1, 42);
+      expect(mockRemove.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42 });
     });
   });
 });

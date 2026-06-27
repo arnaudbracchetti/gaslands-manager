@@ -1,21 +1,3 @@
-/**
- * TeamController — points d'entrée HTTP pour la gestion des équipes.
- *
- * Ce controller expose une API REST CRUD sur /api/teams.
- * Chaque endpoint est protégé par @UseGuards(JwtAuthGuard) :
- * le token JWT est validé avant d'appeler le handler, et req.user
- * est automatiquement rempli par la JwtStrategy.
- *
- * Architecture REST choisie :
- *   GET    /api/teams       → liste des équipes de l'utilisateur connecté
- *   POST   /api/teams       → créer une nouvelle équipe
- *   PUT    /api/teams/:id   → modifier une équipe existante (remplacement complet)
- *   DELETE /api/teams/:id   → supprimer une équipe
- *
- * Note : on utilise PUT (remplacement) plutôt que PATCH (mise à jour partielle)
- * pour simplifier le frontend. Le service accepte quand même des champs partiels
- * via UpdateTeamDto (tous optionnels).
- */
 import {
   Controller,
   Get,
@@ -27,75 +9,66 @@ import {
   Request,
   UseGuards,
   ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { TeamService } from './team.service';
-import { TeamResponseDto } from './dto/team-response.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
+import type { TeamSummaryDto } from './domain/team.repository.interface';
+import { GetTeamSummariesUseCase } from './application/get-team-summaries.usecase';
+import { CreateTeamUseCase } from './application/create-team.usecase';
+import { UpdateTeamUseCase } from './application/update-team.usecase';
+import { RemoveTeamUseCase } from './application/remove-team.usecase';
 
-// Type du payload injecté par JwtStrategy dans req.user
-// (correspond à ce que retourne jwt.strategy.ts → validate())
 interface AuthenticatedRequest {
   user: { id: number; email: string };
 }
 
-// @UseGuards au niveau du controller : protège TOUS les endpoints de ce controller
-// Plus besoin de le répéter sur chaque méthode
 @UseGuards(JwtAuthGuard)
 @Controller('teams')
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(
+    private readonly getTeamSummaries: GetTeamSummariesUseCase,
+    private readonly createTeamUseCase: CreateTeamUseCase,
+    private readonly updateTeamUseCase: UpdateTeamUseCase,
+    private readonly removeTeamUseCase: RemoveTeamUseCase,
+  ) {}
 
-  /**
-   * GET /api/teams
-   * Retourne toutes les équipes de l'utilisateur connecté.
-   * req.user.id provient du token JWT décodé par JwtStrategy.
-   */
   @Get()
-  // Promise<TeamResponseDto[]> : retourne toutes les équipes avec vehicleCount (0 pour l'instant).
-  getAll(@Request() req: AuthenticatedRequest): Promise<TeamResponseDto[]> {
-    return this.teamService.findByUserId(req.user.id);
+  getAll(@Request() req: AuthenticatedRequest): Promise<TeamSummaryDto[]> {
+    return this.getTeamSummaries.execute({ userId: req.user.id });
   }
 
-  /**
-   * POST /api/teams
-   * Crée une nouvelle équipe pour l'utilisateur connecté.
-   * @Body() dto : NestJS parse automatiquement le corps JSON de la requête.
-   */
   @Post()
-  // Promise<TeamResponseDto> : retourne l'entité persistée avec vehicleCount: 0 (nouvelle équipe).
-  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto): Promise<TeamResponseDto> {
-    return this.teamService.create(req.user.id, dto);
+  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateTeamDto): Promise<TeamSummaryDto> {
+    return this.createTeamUseCase.execute({
+      userId: req.user.id,
+      name: dto.name,
+      sponsor: dto.sponsor,
+      cans: dto.cans,
+      description: dto.description,
+    });
   }
 
-  /**
-   * PUT /api/teams/:id
-   * Met à jour une équipe existante.
-   * @Param('id', ParseIntPipe) : convertit le paramètre string ":id" en number.
-   * Si la conversion échoue (ex: "/teams/abc"), NestJS retourne 400 Bad Request.
-   */
   @Put(':id')
-  // Promise<TeamResponseDto> : retourne l'entité mise à jour avec vehicleCount.
   update(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateTeamDto,
-  ): Promise<TeamResponseDto> {
-    return this.teamService.update(id, req.user.id, dto);
+  ): Promise<TeamSummaryDto> {
+    return this.updateTeamUseCase.execute({
+      teamId: id,
+      userId: req.user.id,
+      name: dto.name,
+      sponsor: dto.sponsor,
+      cans: dto.cans,
+      description: dto.description,
+    });
   }
 
-  /**
-   * DELETE /api/teams/:id
-   * Supprime une équipe.
-   * Le service vérifie que l'équipe appartient bien à req.user.id avant de supprimer.
-   */
   @Delete(':id')
-  // Promise<void> : la suppression ne retourne rien — NestJS envoie 200 avec un corps vide.
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: AuthenticatedRequest,
-  ): Promise<void> {
-    return this.teamService.remove(id, req.user.id);
+  @HttpCode(204)
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest): Promise<void> {
+    return this.removeTeamUseCase.execute({ teamId: id, userId: req.user.id });
   }
 }

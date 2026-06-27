@@ -20,8 +20,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Team } from './team.entity';
-import { Vehicle } from '../vehicle/vehicle.entity';
+import { Team } from './infrastructure/entities/team.entity';
+import { Vehicle } from './infrastructure/entities/vehicle.entity';
 import { SeasonParticipant } from '../season/season-participant.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';

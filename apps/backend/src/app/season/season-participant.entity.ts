@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Season } from './season.entity';
 import { User } from '../auth/user.entity';
-import { Team } from '../team/team.entity';
+import { Team } from '../team/infrastructure/entities/team.entity';
 import { ParticipantStatus } from './season.enums';
 
 // Une ligne par (utilisateur, équipe choisie) inscrit à une saison.

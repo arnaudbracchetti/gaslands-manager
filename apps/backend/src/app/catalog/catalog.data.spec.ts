@@ -29,7 +29,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CatalogService } from './catalog.service';
-import { ImprovementDecoratorFactory } from '../vehicle/improvement-decorator.factory';
+import { ImprovementDecoratorFactory } from '../team/improvement-decorator.factory';
 import type { Sponsor, Vehicule, Arme, Amelioration } from './catalog.interfaces';
 
 // ── Sous-classe avec chemin absolu vers les vrais fichiers ─────────────────────

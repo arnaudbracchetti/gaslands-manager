@@ -27,10 +27,10 @@ import {
   Sponsor,
   Vehicule,
 } from './catalog.interfaces';
-import type { ICatalogRepository } from '../vehicle/domain/catalog.repository.interface';
-import { VehicleType } from '../vehicle/domain/value-objects/vehicle-type';
-import { WeaponType } from '../vehicle/domain/value-objects/weapon-type';
-import { ImprovementType } from '../vehicle/domain/value-objects/improvement-type';
+import type { ICatalogRepository } from '../team/domain/catalog.repository.interface';
+import { VehicleType } from '../team/domain/value-objects/vehicle-type';
+import { WeaponType } from '../team/domain/value-objects/weapon-type';
+import { ImprovementType } from '../team/domain/value-objects/improvement-type';
 
 @Injectable()
 export class CatalogService implements OnModuleInit, ICatalogRepository {
