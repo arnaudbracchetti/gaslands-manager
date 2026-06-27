@@ -6,7 +6,7 @@
 > référence pour démarrer le développement ultérieurement.
 >
 > Spécifications fonctionnelles de rattachement : [../spec/SEASONS.md](../spec/SEASONS.md),
-> [../spec/VEHICLES.md](../spec/VEHICLES.md). Architecture : [../../ARCHITECTURE.md](../../ARCHITECTURE.md).
+> [../spec/VEHICLES.md](../spec/VEHICLES.md). Architecture : [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ---
 

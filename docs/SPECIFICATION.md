@@ -39,3 +39,4 @@
 | [spec/VEHICLES.md](spec/VEHICLES.md) | Catalogue de jeu (sponsors, véhicules, armes, améliorations), construction/équipement d'un véhicule, règles métier Gaslands (budget, emplacements, améliorations par défaut), modèles `Vehicle`/`Weapon`/`VehicleImprovement`, endpoints catalogue et véhicules |
 | [spec/SEASONS.md](spec/SEASONS.md) | Cycle de vie d'une saison, inscriptions, transitions de statut, écran détail, modèles `Season`/`SeasonParticipant`, endpoints `/api/seasons` |
 | [spec/NAVIGATION.md](spec/NAVIGATION.md) | Table des routes Angular, contenu Markdown statique, backlog des fonctionnalités à venir |
+| [DOMAIN_MODEL.md](DOMAIN_MODEL.md) | Diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global |

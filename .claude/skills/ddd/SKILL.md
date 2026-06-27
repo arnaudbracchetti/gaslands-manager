@@ -156,5 +156,5 @@ Suivre le pattern `vehicle.module.ts` exactement :
 | Comment identifier et délimiter un agrégat | [theory/aggregate-design.md](theory/aggregate-design.md) |
 | Patterns NestJS du projet (tokens, useFactory, DomainException) | [project/nestjs-patterns.md](project/nestjs-patterns.md) |
 | CQRS léger — commandes vs requêtes, read models | [project/cqrs-light.md](project/cqrs-light.md) |
-| Architecture DDD existante (module `vehicle/`) | [ARCHITECTURE.md §3.4](../../../../ARCHITECTURE.md) |
+| Architecture DDD existante (module `vehicle/`) | [ARCHITECTURE.md §3.4](../../../../docs/ARCHITECTURE.md) |
 | Modèle de refactoring Team → DDD | [docs/plans/2026-06-27-team-ddd-design.md](../../../../docs/plans/2026-06-27-team-ddd-design.md) |

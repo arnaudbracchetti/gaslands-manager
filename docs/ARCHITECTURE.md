@@ -2,6 +2,7 @@
 
 > Ce fichier documente les choix techniques, la structure du code et les points d'attention.
 > Il doit être mis à jour à chaque changement architectural significatif.
+> Modèle de domaine UML (agrégats, ERD) : [DOMAIN_MODEL.md](DOMAIN_MODEL.md).
 
 ---
 
@@ -87,11 +88,10 @@ apps/backend/src/app/
 ├── auth/                ← Authentification (User, JWT, bcrypt)
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
-├── team/                ← Entité Team (CRUD)
-├── vehicle/             ← Véhicules d'équipe (DDD — voir §3.4)
-│   ├── domain/          ← Agrégat Vehicle, entités Weapon/Improvement, Value Objects, interfaces repo
-│   ├── application/     ← 11 Use Cases (un par commande métier)
-│   └── infrastructure/  ← VehicleRepository, VehicleMapper, CatalogAdapter, HTTP mapper
+├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement
+│   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement, Value Objects, ITeamRepository, ICatalogRepository
+│   ├── application/     ← 15 Use Cases (4 équipe + 2 véhicule + 3 arme + 6 amélioration/tourelle)
+│   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 ├── season/              ← Saisons (ligues) + participants
 └── game/                ← Programme Télé (mode campagne) : entité Game + catalogue de scénarios YAML
 ```
@@ -138,7 +138,7 @@ class TestCatalogService extends CatalogService {
 
 ### 3.4 Architecture DDD — standard du projet
 
-Le module `vehicle/` introduit l'architecture **Domain-Driven Design** qui s'applique à tout nouveau module domaine complexe. Quatre couches avec responsabilités strictes :
+Le module `team/` implémente l'architecture **Domain-Driven Design** — `Team` est l'agrégat racine qui englobe `Vehicle`, `Weapon` et `VehicleImprovement` comme entités enfants. Ce pattern s'applique à tout nouveau module domaine complexe. Quatre couches avec responsabilités strictes :
 
 | Couche | Dossier | Contient | Règle absolue |
 |--------|---------|----------|---------------|
@@ -160,32 +160,32 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 
 **Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `isTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
 
-**Dependency Inversion** — le domaine définit `IVehicleRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`VehicleRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
+**Dependency Inversion** — le domaine définit `ITeamRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`TeamRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
 
-**Pattern Use Case** — chaque commande métier a son propre use case. Flux systématique :
-1. Charger l'agrégat (vérifie l'appartenance `userId`)
-2. Valider les Value Objects depuis le catalogue
-3. Calculer le budget restant si nécessaire
+**Pattern Use Case** — chaque commande métier a son propre use case. Flux systématique pour les mutations :
+1. Charger l'agrégat Team via `teamRepo.findByVehicleId(vehicleId, userId)` (vérifie l'appartenance `userId`)
+2. Accéder au budget restant via `team.remainingBudget` (in-aggregate, pas de requête SQL)
+3. Valider les Value Objects depuis le catalogue via `catalogRepo`
 4. Déléguer à l'agrégat → `DomainException` éventuelle
-5. Persister via le repository
+5. Persister via `teamRepo.save(team)` (cascade TypeORM sur toutes les entités enfants)
 
-**Injection NestJS** — les interfaces TypeScript ne sont pas injectables directement. Tokens string dans `vehicle.tokens.ts` (`VEHICLE_REPOSITORY`, `CATALOG_REPOSITORY`). Use cases et mapper fournis en `useFactory` pour garder le domaine sans décorateurs :
+**Injection NestJS** — les interfaces TypeScript ne sont pas injectables directement. Tokens string dans `team.tokens.ts` (`TEAM_REPOSITORY`, `CATALOG_REPOSITORY`). Use cases et mapper fournis en `useFactory` pour garder le domaine sans décorateurs :
 
 ```typescript
-// vehicle.module.ts — pattern à reproduire pour tout nouveau module domaine
-{ provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
+// team.module.ts — pattern de référence
+{ provide: TEAM_REPOSITORY, useClass: TeamRepository },
 {
   provide: AddWeaponUseCase,
-  useFactory: (vr: IVehicleRepository, cr: ICatalogRepository) => new AddWeaponUseCase(vr, cr),
-  inject: [VEHICLE_REPOSITORY, CATALOG_REPOSITORY],
+  useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new AddWeaponUseCase(tr, cr),
+  inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
 }
 ```
 
-**Réponses HTTP** — jamais retourner une entité ORM brute ni un agrégat domaine directement. `vehicleToDto()` (`infrastructure/vehicle-http.mapper.ts`) traduit l'agrégat en DTO sérialisable. Reproduire ce pattern pour tout nouveau module DDD.
+**Réponses HTTP** — jamais retourner une entité ORM brute ni un agrégat domaine directement. `vehicleDomainToDto()` (`infrastructure/team-http.mapper.ts`) traduit un Vehicle domaine en DTO sérialisable. Reproduire ce pattern pour tout nouveau module DDD.
 
 **⚠️ Piège TypeORM — `where` sur une relation de collection chargée.** Quand un repository filtre sur une relation `OneToMany`/`ManyToMany` (`where: { weapons: { id } }`) tout en l'hydratant (`relations: { weapons: true }`), TypeORM réutilise la **même jointure** pour la recherche ET pour l'hydratation : la collection chargée ne contient alors **que les lignes satisfaisant le `where`**, pas l'intégralité de l'agrégat. Symptôme observé : `findByWeaponId(weaponId)` reconstituait un véhicule avec une **seule** arme (celle recherchée) au lieu de toutes ses armes — corrompant le calcul de coût/emplacements à la persistance. Ce comportement n'est pas documenté par TypeORM (sujet d'issues ouvertes).
 
-- **Contournement** (`VehicleRepository.findByWeaponId`) : résoudre d'abord l'`id` du parent (`findOne` avec `select: { id: true }`, sans hydrater les collections), puis recharger l'agrégat complet via `findByIdForUser` — qui filtre par `id` **scalaire**, donc n'altère pas l'hydratation des collections.
+- **Contournement** (`TeamRepository.findByWeaponId`) : résoudre d'abord le `teamId` parent (`findOne` sur `VehicleOrm` avec `select: { teamId: true }`, sans hydrater les collections), puis recharger l'agrégat complet via `findByIdForUser` — qui filtre par `id` **scalaire**, donc n'altère pas l'hydratation des collections.
 - **Règle générale** : tout `findByXxxId` qui localise un agrégat *via un de ses enfants* doit appliquer ce double-find. Filtrer par une colonne scalaire du parent (`id`, `teamId`) est sûr ; filtrer par une collection hydratée ne l'est pas.
 
 ### 3.5 Compte administrateur — `AdminSeedService`
@@ -210,13 +210,18 @@ secret, même logique que `DATABASE_PASSWORD` dans `app.module.ts`) : absent de 
 `role` (enum `UserRole`, `user.entity.ts`) est exclu de `RegisterDto` : `/api/auth/register`
 ne peut jamais produire un admin, la colonne prend sa valeur `default: UserRole.USER`.
 
-### 3.6 `TeamWithCount` — type enrichi
+### 3.6 `TeamSummaryDto` — read model léger
 
 ```typescript
-export type TeamWithCount = Team & { vehicleCount: number };
+export interface TeamSummaryDto {
+  id: number; name: string; sponsor: string; cans: number; description: string | null;
+  vehicleCount: number; isEngaged: boolean; createdAt: Date; updatedAt: Date;
+}
 ```
 
-`vehicleCount` est calculé (futur : `COUNT` SQL sur `vehicles`) — jamais stocké en colonne pour éviter la désynchronisation.
+`vehicleCount` est calculé via `COUNT` SQL dans `TeamRepository.toSummaryDto()` — jamais stocké en colonne.
+`isEngaged` indique si l'équipe est déjà engagée dans une saison (via `SeasonParticipant`).
+Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 
 ### 3.7 Fichiers clés
 
@@ -227,14 +232,13 @@ export type TeamWithCount = Team & { vehicleCount: number };
 | `apps/backend/src/app/auth/` | Auth complète (entity, service, controller, strategy, guard) |
 | `apps/backend/src/app/catalog/` | Catalogue YAML → Map en mémoire |
 | `apps/backend/src/app/content/` | Markdown → HTML via `marked` |
-| `apps/backend/src/app/team/` | Team CRUD, `TeamWithCount` |
-| `apps/backend/src/app/vehicle/domain/vehicle.ts` | Agrégat racine — toutes les règles métier Gaslands |
-| `apps/backend/src/app/vehicle/domain/vehicle.repository.interface.ts` | Contrat persistence (Dependency Inversion) |
-| `apps/backend/src/app/vehicle/domain/catalog.repository.interface.ts` | Contrat catalogue (Dependency Inversion) |
-| `apps/backend/src/app/vehicle/application/` | 11 use cases — un par commande métier |
-| `apps/backend/src/app/vehicle/infrastructure/vehicle.mapper.ts` | Mapping ORM ↔ agrégat domaine |
-| `apps/backend/src/app/vehicle/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
-| `apps/backend/src/app/vehicle/vehicle.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
+| `apps/backend/src/app/team/domain/team.ts` | Agrégat racine — toutes les règles métier (budget, sponsor lock, mutations) |
+| `apps/backend/src/app/team/domain/team.repository.interface.ts` | Contrat persistence `ITeamRepository` (Dependency Inversion) |
+| `apps/backend/src/app/team/domain/catalog.repository.interface.ts` | Contrat catalogue `ICatalogRepository` (Dependency Inversion) |
+| `apps/backend/src/app/team/application/` | 15 use cases — un par commande métier |
+| `apps/backend/src/app/team/infrastructure/team.mapper.ts` | Mapping ORM ↔ agrégat domaine |
+| `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
+| `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations) |
 
 ---
