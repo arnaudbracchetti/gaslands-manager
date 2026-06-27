@@ -126,10 +126,10 @@ ok "pgAdmin disponible sur http://localhost:5050"
 # prochain `nx serve`.
 if [[ "$RESET" == true ]]; then
     step "Remise a zero du cache Nx (--reset detecte)..."
-    # bash -lic : shell de login interactif -- source ~/.bashrc (nvm), pour
-    # que `npx`/`nx` resolvent vers le node Linux et non le binaire Windows
-    # (/mnt/c/Program Files/nodejs/npx), utilise par defaut dans un shell non interactif.
-    bash -lc "cd '$PROJECT_ROOT' && npx nx reset"
+    # source nvm.sh explicitement (plutot que bash -lc) : resout `npx`/`nx`
+    # vers le node Linux et non le binaire Windows (/mnt/c/Program Files/nodejs/npx),
+    # utilise par defaut dans un shell non interactif.
+    bash -c "source '$HOME/.nvm/nvm.sh' && nvm use && cd '$PROJECT_ROOT' && npx nx reset"
     ok "Cache Nx vide -- les serveurs recompileront depuis les sources"
 fi
 
@@ -168,26 +168,28 @@ done
 # ── 5. Lancement du backend et du frontend ────────────────────
 # Les deux serveurs sont lances en arriere-plan, avec logs dans /tmp.
 #
+# NVM_INIT source nvm.sh explicitement (plutot que bash -lc) : resout
+# npx/node vers les binaires Linux meme en shell non interactif (nohup
+# n'a pas de terminal).
+#
 # Mode --debug : l'executeur @nx/js:node supporte nativement --inspect,
 # qu'il passe uniquement au process Node final (pas a Nx lui-meme).
 # Evite le "address already in use" qu'on obtiendrait avec NODE_OPTIONS
 # (qui contaminerait tous les sous-processus Nx). Le port debogueur
 # est 9229. VSCode s'y attache via "Attach to NestJS" (.vscode/launch.json).
-FRONTEND_CMD="cd '$PROJECT_ROOT' && npx nx serve frontend"
+NVM_INIT="source '$HOME/.nvm/nvm.sh' && nvm use"
+FRONTEND_CMD="$NVM_INIT && cd '$PROJECT_ROOT' && npx nx serve frontend --verbose"
 if [[ "$DEBUG" == true ]]; then
     # --skip-nx-cache : force la recompilation sans servir un build cache
     # qui ne contiendrait pas les flags --inspect. Sans ca, Nx peut servir
     # un build production cache, puis bloquer sur "Waiting for another nx process".
-    BACKEND_CMD="cd '$PROJECT_ROOT' && npx nx serve backend --inspect --skip-nx-cache"
+    BACKEND_CMD="$NVM_INIT && cd '$PROJECT_ROOT' && npx nx serve backend --inspect --skip-nx-cache --verbose"
 else
-    BACKEND_CMD="cd '$PROJECT_ROOT' && npx nx serve backend"
+    BACKEND_CMD="$NVM_INIT && cd '$PROJECT_ROOT' && npx nx serve backend --verbose"
 fi
 
 step "Demarrage du backend NestJS..."
-# bash -lc (login, non-interactif) : source ~/.bashrc pour resoudre npx/node
-# vers les binaires Linux (nvm). Le -i (interactif) est omis -- nohup n'a pas
-# de terminal, bash -lic emettrait "no job control in background".
-nohup bash -lc "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
+nohup bash -c "$BACKEND_CMD" > /tmp/gaslands-backend.log 2>&1 &
 if [[ "$DEBUG" == true ]]; then
     ok "Backend lance en mode DEBUG -- port debogueur : 9229 (logs : tail -f /tmp/gaslands-backend.log)"
 else
@@ -195,7 +197,7 @@ else
 fi
 
 step "Demarrage du frontend Angular..."
-nohup bash -lc "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
+nohup bash -c "$FRONTEND_CMD" > /tmp/gaslands-frontend.log 2>&1 &
 ok "Frontend lance en arriere-plan (logs : tail -f /tmp/gaslands-frontend.log)"
 
 # ── Resume ────────────────────────────────────────────────────
