@@ -237,9 +237,9 @@ describe('GameService', () => {
     });
   });
 
-  // ── findAllForSeason ──────────────────────────────────────────────────────────
+  // ── findAllForCampaign ──────────────────────────────────────────────────────────
 
-  describe('findAllForSeason()', () => {
+  describe('findAllForCampaign()', () => {
     it('retourne le programme trié par ordre, enrichi du libellé de scénario', async () => {
       mockSeasonService.assertVisibleParticipant.mockResolvedValue(enCoursSeason);
       mockGameRepo.find.mockResolvedValue([
@@ -247,7 +247,7 @@ describe('GameService', () => {
       ]);
       mockScenarioCatalog.getByNomInterne.mockReturnValue(scenario);
 
-      const result = await service.findAllForSeason(1, 7);
+      const result = await service.findAllForCampaign(1, 7);
 
       expect(mockSeasonService.assertVisibleParticipant).toHaveBeenCalledWith(1, 7);
       expect(mockGameRepo.find).toHaveBeenCalledWith({
@@ -260,7 +260,7 @@ describe('GameService', () => {
     it('propage NotFoundException si l\'utilisateur n\'est pas participant VALIDATED', async () => {
       mockSeasonService.assertVisibleParticipant.mockRejectedValue(new NotFoundException());
 
-      await expect(service.findAllForSeason(1, 99)).rejects.toThrow(NotFoundException);
+      await expect(service.findAllForCampaign(1, 99)).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -1,0 +1,45 @@
+<!-- Carte d'une saison — cliquable vers le détail, SAUF si PENDING (accès 404) -->
+@if (isPending()) {
+  <div class="campaign-card campaign-card--locked">
+    <ng-container [ngTemplateOutlet]="content" />
+  </div>
+} @else {
+  <a class="campaign-card" [routerLink]="['/campaigns', campaign().id]">
+    <ng-container [ngTemplateOutlet]="content" />
+  </a>
+}
+
+<ng-template #content>
+
+  <span class="campaign-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
+
+  <div class="campaign-card__header">
+    <h2 class="campaign-card__name">{{ campaign().name }}</h2>
+    <span class="campaign-card__state campaign-card__state--{{ campaign().state }}">
+      {{ campaign().state }}
+    </span>
+  </div>
+
+  <div class="campaign-card__info">
+    <!-- Badge de rôle -->
+    @if (campaign().myRole === 'organizer') {
+      <span class="campaign-card__badge campaign-card__badge--organizer">★ Organisateur</span>
+    } @else if (isPending()) {
+      <span class="campaign-card__badge campaign-card__badge--pending">◷ En attente</span>
+    } @else {
+      <span class="campaign-card__badge campaign-card__badge--participant">
+        ▲ Participant@if (campaign().myTeamName) { · {{ campaign().myTeamName }}}
+      </span>
+    }
+
+    <!-- Alerte demandes à valider (organisateur) -->
+    @if (campaign().myRole === 'organizer' && pendingRequestsCount() > 0) {
+      <span class="campaign-card__badge campaign-card__badge--alert">⚠️ {{ pendingRequestsCount() }} à valider</span>
+    }
+
+    <span class="campaign-card__participants">
+      {{ campaign().participantCount }} participant{{ campaign().participantCount > 1 ? 's' : '' }}
+    </span>
+  </div>
+
+</ng-template>

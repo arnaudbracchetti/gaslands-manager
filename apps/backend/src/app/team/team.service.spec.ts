@@ -18,7 +18,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Team } from './infrastructure/entities/team.entity';
 import { Vehicle } from './infrastructure/entities/vehicle.entity';
-import { SeasonParticipant } from '../season/season-participant.entity';
+import { CampaignParticipant } from '../campaign/campaign-participant.entity';
 import { TeamService } from './team.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
@@ -54,7 +54,7 @@ describe('TeamService', () => {
     count: vi.fn(),
   };
 
-  // Mock du Repository<SeasonParticipant> — UNIQUEMENT pour `count` (cf. `isTeamEngaged`).
+  // Mock du Repository<CampaignParticipant> — UNIQUEMENT pour `count` (cf. `isTeamEngaged`).
   const mockParticipantRepo = {
     count: vi.fn(),
   };
@@ -76,7 +76,7 @@ describe('TeamService', () => {
           useValue: mockVehicleRepo,
         },
         {
-          provide: getRepositoryToken(SeasonParticipant),
+          provide: getRepositoryToken(CampaignParticipant),
           useValue: mockParticipantRepo,
         },
       ],

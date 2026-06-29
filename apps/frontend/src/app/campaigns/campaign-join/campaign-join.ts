@@ -1,0 +1,150 @@
+/**
+ * Composant CampaignJoin — page "/campaigns/join/:code".
+ *
+ * Composant "smart" (cf. campaigns.ts) : lit le code d'invitation dans l'URL,
+ * charge le résumé minimal de la saison (GET /api/campaigns/by-code/:code) et
+ * les équipes de l'utilisateur (TeamsService, même pattern que Campaigns), puis
+ * permet de soumettre une demande d'inscription (POST
+ * /api/campaigns/:id/participants).
+ *
+ * CA2 : un code invalide affiche un message d'erreur générique, sans fuite
+ * d'information — le backend renvoie déjà un message neutre (404), repris
+ * tel quel.
+ */
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { CampaignsService } from '../campaigns.service';
+import { CampaignSummary } from '../campaign.model';
+import { TeamsService } from '../../teams/teams.service';
+import { Team, CreateTeamDto } from '../../teams/team.model';
+import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
+
+@Component({
+  selector: 'app-campaign-join',
+  standalone: true,
+  imports: [FormsModule, QuickTeamCreate, RouterLink],
+  templateUrl: './campaign-join.html',
+  styleUrl: './campaign-join.scss',
+})
+export class CampaignJoin implements OnInit {
+  private route: ActivatedRoute = inject(ActivatedRoute);
+  private campaignsService: CampaignsService = inject(CampaignsService);
+  private teamsService: TeamsService = inject(TeamsService);
+
+  /** Code d'invitation lu depuis l'URL */
+  private code: string = this.route.snapshot.params['code'];
+
+  /** Vrai pendant le chargement du résumé de la saison */
+  loading: WritableSignal<boolean> = signal(true);
+
+  /** Message d'erreur générique si le code est invalide (CA2) */
+  error: WritableSignal<string> = signal('');
+
+  /** Résumé minimal de la saison (nom, état, organisateur) — null si non chargé */
+  summary: WritableSignal<CampaignSummary | null> = signal<CampaignSummary | null>(null);
+
+  /** Équipes de l'utilisateur connecté, pour le select */
+  userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
+
+  /** Équipe sélectionnée pour la demande d'inscription */
+  selectedTeamId: WritableSignal<number | null> = signal<number | null>(null);
+
+  /** Vrai pendant l'appel API de demande d'inscription */
+  submitting: WritableSignal<boolean> = signal(false);
+
+  /** Message d'erreur lors de la soumission (CA4/CA5) */
+  submitError: WritableSignal<string> = signal('');
+
+  /** Vrai après une demande d'inscription réussie */
+  submitted: WritableSignal<boolean> = signal(false);
+
+  /** Nom de l'équipe sélectionnée au moment de la soumission — affiché à l'étape 3 */
+  submittedTeamName: WritableSignal<string> = signal('');
+
+  /** Vrai pendant l'appel API de création rapide d'équipe */
+  creatingTeam: WritableSignal<boolean> = signal(false);
+
+  ngOnInit(): void {
+    this.loadSummary();
+    this.loadUserTeams();
+  }
+
+  private loadSummary(): void {
+    this.loading.set(true);
+    this.error.set('');
+
+    this.campaignsService.getByCode(this.code).subscribe({
+      next: (summary: CampaignSummary) => {
+        this.summary.set(summary);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Code d\'invitation invalide ou inexistant.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  private loadUserTeams(): void {
+    this.teamsService.getAll().subscribe({
+      next: (teams: Team[]) => {
+        this.userTeams.set(teams);
+        if (teams.length > 0 && this.selectedTeamId() === null) {
+          this.selectedTeamId.set(teams[0].id);
+        }
+      },
+      error: () => this.userTeams.set([]),
+    });
+  }
+
+  /**
+   * Crée une nouvelle équipe (QuickTeamCreate) et la sélectionne immédiatement
+   * pour la demande d'inscription — l'utilisateur n'a pas besoin de quitter
+   * cette page pour engager une équipe créée pour l'occasion.
+   */
+  onTeamCreated(dto: CreateTeamDto): void {
+    this.creatingTeam.set(true);
+    this.submitError.set('');
+
+    this.teamsService.create(dto).subscribe({
+      next: (team: Team) => {
+        this.userTeams.update((teams) => [...teams, team]);
+        this.selectedTeamId.set(team.id);
+        this.creatingTeam.set(false);
+      },
+      error: () => {
+        this.submitError.set('Erreur lors de la création de l\'équipe. Veuillez réessayer.');
+        this.creatingTeam.set(false);
+      },
+    });
+  }
+
+  /** Soumet la demande d'inscription pour l'équipe sélectionnée. */
+  submitJoinRequest(): void {
+    const summary = this.summary();
+    const teamId = this.selectedTeamId();
+    if (!summary || teamId === null) {
+      return;
+    }
+
+    // Capture le nom de l'équipe avant l'appel API pour l'afficher à l'étape 3
+    const teamName = this.userTeams().find((t) => t.id === teamId)?.name ?? '';
+    this.submittedTeamName.set(teamName);
+
+    this.submitting.set(true);
+    this.submitError.set('');
+
+    this.campaignsService.requestJoin(summary.id, { teamId }).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.submitted.set(true);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.submitError.set(err.error?.message ?? 'Une erreur est survenue. Veuillez réessayer.');
+        this.submitting.set(false);
+      },
+    });
+  }
+}

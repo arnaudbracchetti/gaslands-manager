@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CatalogModule } from '../catalog/catalog.module';
 import { CatalogService } from '../catalog/catalog.service';
-import { SeasonParticipant } from '../season/season-participant.entity';
+import { CampaignParticipant } from '../campaign/campaign-participant.entity';
 
 // ORM entities (nouvelle couche infrastructure)
 import { Team as TeamOrm } from './infrastructure/entities/team.entity';
@@ -59,7 +59,7 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, SeasonParticipant]),
+    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignParticipant]),
     CatalogModule,
   ],
   controllers: [TeamController, VehicleTeamController, VehicleController, WeaponController],
@@ -180,9 +180,9 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
       inject: [TEAM_REPOSITORY],
     },
 
-    // TeamService — conservé temporairement pour SeasonModule (SeasonService.findOneForUser)
+    // TeamService — conservé temporairement pour CampaignModule (CampaignService.findOneForUser)
     TeamService,
   ],
-  exports: [TypeOrmModule, TeamService],
+  exports: [TypeOrmModule, TeamService, TEAM_REPOSITORY],
 })
 export class TeamModule {}

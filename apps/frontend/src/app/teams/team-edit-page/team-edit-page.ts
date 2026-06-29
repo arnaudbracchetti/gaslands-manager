@@ -18,7 +18,7 @@
  * ── Fil d'Ariane ─────────────────────────────────────────────────────────────
  * Le query param `from` détermine le lien de retour :
  *   - `from=teams`               → /teams (liste des équipes)
- *   - `from=season&seasonId=X`   → /seasons/X (détail d'une saison)
+ *   - `from=season&campaignId=X`   → /seasons/X (détail d'une saison)
  *   - absent                     → fallback /teams
  */
 import {
@@ -110,13 +110,13 @@ export class TeamEditPage implements OnInit {
   // ── Navigation / fil d'Ariane ─────────────────────────────────────────────
 
   private fromParam: WritableSignal<string>            = signal('teams');
-  private seasonIdParam: WritableSignal<string | null> = signal<string | null>(null);
+  private campaignIdParam: WritableSignal<string | null> = signal<string | null>(null);
 
   breadcrumbs = computed((): BreadcrumbItem[] => {
-    const isFromSeason = this.fromParam() === 'season' && this.seasonIdParam();
+    const isFromCampaign = this.fromParam() === 'campaign' && this.campaignIdParam();
     return [
-      isFromSeason
-        ? { label: 'Saisons', route: ['/seasons', this.seasonIdParam()!] }
+      isFromCampaign
+        ? { label: 'Saisons', route: ['/seasons', this.campaignIdParam()!] }
         : { label: 'Mes Équipes', route: ['/teams'] },
       { label: this.team()?.name ?? '…' },
     ];
@@ -143,7 +143,7 @@ export class TeamEditPage implements OnInit {
   ngOnInit(): void {
     const teamId = Number(this.route.snapshot.paramMap.get('id'));
     this.fromParam.set(this.route.snapshot.queryParamMap.get('from') ?? 'teams');
-    this.seasonIdParam.set(this.route.snapshot.queryParamMap.get('seasonId'));
+    this.campaignIdParam.set(this.route.snapshot.queryParamMap.get('campaignId'));
 
     this.teamsService.getAll().subscribe({
       next: (teams: Team[]): void => {

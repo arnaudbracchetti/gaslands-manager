@@ -24,6 +24,9 @@
 | Construction de véhicule (choix, équipement armes/améliorations, budget) | ✅ Implémenté |
 | Saisons (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
 | Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1) |
+| Mode campagne — Résultats (classement, PC, cagnotte, résistance) | ✅ Implémenté (US-B/F) |
+| Mode campagne — Atelier (achat/revente équipement, séquelles) | ✅ Implémenté (US-D) |
+| Mode campagne — Table des Épaves (D6 serveur, perte véhicule/arme, chocs) | ✅ Implémenté (US-E) |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
 | Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |

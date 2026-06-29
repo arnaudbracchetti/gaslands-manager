@@ -22,7 +22,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from './infrastructure/entities/team.entity';
 import { Vehicle } from './infrastructure/entities/vehicle.entity';
-import { SeasonParticipant } from '../season/season-participant.entity';
+import { CampaignParticipant } from '../campaign/campaign-participant.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
@@ -41,8 +41,8 @@ export class TeamService {
     // (éviter tout cycle `TeamModule ↔ VehicleModule`).
     @InjectRepository(Vehicle)
     private vehicleRepo: Repository<Vehicle>,
-    @InjectRepository(SeasonParticipant)
-    private participantRepo: Repository<SeasonParticipant>,
+    @InjectRepository(CampaignParticipant)
+    private participantRepo: Repository<CampaignParticipant>,
   ) {}
 
   /**
@@ -56,8 +56,8 @@ export class TeamService {
   }
 
   /**
-   * Vrai si l'équipe est référencée dans au moins un SeasonParticipant,
-   * quelle que soit la saison ou le statut du participant.
+   * Vrai si l'équipe est référencée dans au moins un CampaignParticipant,
+   * quelle que soit la campagne ou le statut du participant.
    * Utilisé pour informer le frontend qu'une équipe ne peut pas être
    * engagée dans une nouvelle saison (règle absolue).
    */

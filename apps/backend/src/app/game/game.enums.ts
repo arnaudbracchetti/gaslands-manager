@@ -5,14 +5,17 @@
 export enum GameType {
   EVENEMENT_TELE = 'EVENEMENT_TELE',
   ESCARMOUCHE = 'ESCARMOUCHE',
+  ATELIER = 'ATELIER',       // Période entre deux parties — achats/reventes en campagne
 }
 
 // Statut d'une partie dans le cycle de vie du Programme.
 // PLANIFIE : inscrite au calendrier, encore modifiable/supprimable par l'organisateur.
 // JOUE     : résultat enregistré — figée (non modifiable, non supprimable).
-//            Non atteignable dans US-A1 (l'enregistrement de résultat viendra plus tard),
-//            mais la garde "JOUE non modifiable" est posée dès maintenant.
+// OUVERT   : AtelierGame actif — accepte les événements d'équipement.
+// CLOTURE  : AtelierGame fermé (après la partie suivante ou en fin de saison).
 export enum GameStatus {
   PLANIFIE = 'PLANIFIE',
   JOUE = 'JOUE',
+  OUVERT = 'OUVERT',
+  CLOTURE = 'CLOTURE',
 }

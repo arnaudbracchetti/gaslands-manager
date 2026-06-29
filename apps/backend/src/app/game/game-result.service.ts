@@ -14,14 +14,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { GameResult } from './game-result.entity';
 import { Game } from './game.entity';
-import { SeasonParticipant } from '../season/season-participant.entity';
-import { SeasonService } from '../season/season.service';
+import { CampaignParticipant } from '../campaign/campaign-participant.entity';
+import { CampaignService } from '../campaign/campaign.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 import type { RecordResultDto } from './dto/record-result.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
 import type { GameResponseDto } from './dto/game-response.dto';
 import { GameStatus, GameType } from './game.enums';
-import { ParticipantStatus } from '../season/season.enums';
+import { ParticipantStatus } from '../campaign/campaign.enums';
 
 // Points de Championnat attribués par rang (index 0 = rang 1).
 // Au-delà de l'index 3 (rang 5+), la valeur est 0.
@@ -31,10 +31,10 @@ const POINTS_TABLE = [10, 5, 2, 1];
 export class GameResultService {
   constructor(
     @InjectRepository(Game) private readonly gameRepo: Repository<Game>,
-    @InjectRepository(SeasonParticipant) private readonly participantRepo: Repository<SeasonParticipant>,
+    @InjectRepository(CampaignParticipant) private readonly participantRepo: Repository<CampaignParticipant>,
     @InjectRepository(GameResult) private readonly gameResultRepo: Repository<GameResult>,
     private readonly dataSource: DataSource,
-    private readonly seasonService: SeasonService,
+    private readonly campaignService: CampaignService,
     private readonly scenarioCatalog: ScenarioCatalogService,
   ) {}
 
@@ -51,14 +51,14 @@ export class GameResultService {
    * Retourne le DTO de la partie mise à jour (avec scenarioName résolu).
    */
   async recordResult(
-    seasonId: number,
+    campaignId: number,
     gameId: number,
     userId: number,
     dto: RecordResultDto,
   ): Promise<GameResponseDto> {
-    await this.seasonService.assertOrganizer(seasonId, userId);
+    await this.campaignService.assertOrganizer(campaignId, userId);
 
-    const game = await this.gameRepo.findOne({ where: { id: gameId, seasonId } });
+    const game = await this.gameRepo.findOne({ where: { id: gameId, campaignId } });
     if (!game) throw new NotFoundException('Partie introuvable');
     if (game.status === GameStatus.JOUE) {
       throw new BadRequestException('Cette partie a déjà été jouée');
@@ -66,7 +66,7 @@ export class GameResultService {
 
     // Charger les participants VALIDATED de la saison pour valider les IDs soumis.
     const validatedParticipants = await this.participantRepo.find({
-      where: { seasonId, status: ParticipantStatus.VALIDATED },
+      where: { campaignId, status: ParticipantStatus.VALIDATED },
     });
     const validIds = new Set(validatedParticipants.map(p => p.id));
 
@@ -117,13 +117,13 @@ export class GameResultService {
    * Accessible à tout participant VALIDATED de la saison.
    */
   async getResults(
-    seasonId: number,
+    campaignId: number,
     gameId: number,
     userId: number,
   ): Promise<GameResultResponseDto[]> {
-    await this.seasonService.assertVisibleParticipant(seasonId, userId);
+    await this.campaignService.assertVisibleParticipant(campaignId, userId);
 
-    const game = await this.gameRepo.findOne({ where: { id: gameId, seasonId } });
+    const game = await this.gameRepo.findOne({ where: { id: gameId, campaignId } });
     if (!game) throw new NotFoundException('Partie introuvable');
 
     return this.gameResultRepo.find({ where: { gameId }, order: { rank: 'ASC' } });

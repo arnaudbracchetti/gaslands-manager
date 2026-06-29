@@ -1,0 +1,54 @@
+<!-- Programme Télé — section de la page de détail d'une saison -->
+<div class="campaign-program">
+
+  <div class="campaign-program__header">
+    <h2>📺 Programme Télé</h2>
+    @if (canManage() && !showForm()) {
+      <button type="button" class="btn-primary campaign-program__add" (click)="openCreate()">
+        ➕ Ajouter une partie
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="campaign-detail-error">{{ error() }}</div>
+  }
+
+  @if (showForm()) {
+    <app-game-form
+      [scenarios]="scenarios()"
+      [game]="editingGame()"
+      [saving]="saving()"
+      (saved)="onSaved($event)"
+      (formCancel)="cancelForm()" />
+  }
+
+  @if (recordingGame()) {
+    <app-game-result-form
+      [participants]="participants()"
+      [saving]="savingResult()"
+      (saved)="onResultSaved($event)"
+      (formCancel)="onResultCancelled()" />
+  } @else {
+    @if (loading()) {
+      <p class="campaign-program__loading">Chargement du programme...</p>
+    } @else {
+      <app-game-list
+        [games]="games()"
+        [canManage]="canManage()"
+        [canRecord]="canManage()"
+        (editGame)="onEdit($event)"
+        (deleteGame)="onDelete($event)"
+        (recordGame)="onRecordGame($event)" />
+    }
+  }
+
+  @if (pendingDeleteGame()) {
+    <app-confirm-modal
+      [message]="'Supprimer la partie &quot;' + pendingDeleteGame()!.scenarioName + '&quot; du programme ?'"
+      confirmLabel="Supprimer"
+      (confirmed)="onConfirmDelete()"
+      (cancelled)="pendingDeleteGame.set(null)" />
+  }
+
+</div>

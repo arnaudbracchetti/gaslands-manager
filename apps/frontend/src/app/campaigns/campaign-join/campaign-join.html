@@ -1,0 +1,79 @@
+<!-- Page "Rejoindre une saison via code" — 3 étapes -->
+<div class="campaign-join-page">
+
+  <!-- Étape 3 : écran de confirmation après soumission réussie -->
+  @if (submitted()) {
+    <div class="campaign-join-success">
+      <div class="campaign-join-success__card">
+        <div class="campaign-join-success__icon">✓</div>
+        <h1>Demande envoyée !</h1>
+        <p class="campaign-join-success__campaign">{{ summary()!.name }}</p>
+        @if (submittedTeamName()) {
+          <p class="campaign-join-success__team">Équipe : <strong>{{ submittedTeamName() }}</strong></p>
+        }
+        <div class="campaign-join-success__preview-badge">◷ En attente de validation</div>
+        <p class="campaign-join-success__hint">L'organisateur va examiner votre demande.</p>
+        <a class="btn-secondary campaign-join-success__back" routerLink="/campaigns">← Retour à mes saisons</a>
+      </div>
+    </div>
+
+  <!-- Étape 1/2 : chargement, erreur ou formulaire -->
+  } @else {
+
+    <h1>🏁 Rejoindre une saison</h1>
+
+    @if (loading()) {
+      <div class="campaign-join-loading">
+        <p>Chargement...</p>
+      </div>
+    } @else if (error()) {
+      <!-- CA2 : message générique, pas de fuite d'info -->
+      <div class="campaign-join-error">{{ error() }}</div>
+    } @else if (summary()) {
+      <div class="campaign-join-card">
+
+        <!-- Étape 2 : informations de la saison -->
+        <h2>{{ summary()!.name }}</h2>
+        <p class="campaign-join-card__state">État : {{ summary()!.state }}</p>
+        <p class="campaign-join-card__organizer">Organisé par {{ summary()!.organizerName }}</p>
+        <p class="campaign-join-card__participants">
+          {{ summary()!.participantCount }} participant{{ summary()!.participantCount > 1 ? 's' : '' }} validé{{ summary()!.participantCount > 1 ? 's' : '' }}
+        </p>
+
+        @if (submitError()) {
+          <div class="campaign-join-error">{{ submitError() }}</div>
+        }
+
+        @if (userTeams().length === 0) {
+          <div class="campaign-join-info">
+            Vous devez d'abord créer une équipe pour rejoindre une saison.
+          </div>
+          <app-quick-team-create [saving]="creatingTeam()" (created)="onTeamCreated($event)" />
+        } @else {
+          <div class="form-group">
+            <label for="join-team">Avec quelle équipe ?</label>
+            <select
+              id="join-team"
+              [ngModel]="selectedTeamId()"
+              (ngModelChange)="selectedTeamId.set(+$event)">
+              @for (team of userTeams(); track team.id) {
+                <option [value]="team.id" [disabled]="team.isEngaged ?? false">
+                  {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <app-quick-team-create [saving]="creatingTeam()" (created)="onTeamCreated($event)" />
+
+          <button class="btn-primary" type="button" (click)="submitJoinRequest()" [disabled]="submitting()">
+            @if (submitting()) { Envoi... } @else { Demander à rejoindre → }
+          </button>
+        }
+
+      </div>
+    }
+
+  }
+
+</div>

@@ -14,12 +14,13 @@ import {
   VehicleImprovement,
 } from './team/infrastructure/entities/vehicle.entity';
 import { Weapon } from './team/infrastructure/entities/weapon.entity';
-import { SeasonModule } from './season/season.module';
-import { Season } from './season/season.entity';
-import { SeasonParticipant } from './season/season-participant.entity';
+import { CampaignModule } from './campaign/campaign.module';
+import { Campaign } from './campaign/campaign.entity';
+import { CampaignParticipant } from './campaign/campaign-participant.entity';
 import { GameModule } from './game/game.module';
 import { Game } from './game/game.entity';
 import { GameResult } from './game/game-result.entity';
+import { GameEventOrm } from './game/infrastructure/entities/game-event.entity';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { GameResult } from './game/game-result.entity';
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant, Game, GameResult],
+        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Campaign, CampaignParticipant, Game, GameResult, GameEventOrm],
         synchronize: true,
         logging: false,
       }),
@@ -48,7 +49,7 @@ import { GameResult } from './game/game-result.entity';
     TeamModule,
     AuthModule,
     CatalogModule,
-    SeasonModule,
+    CampaignModule,
     GameModule,
   ],
   controllers: [AppController],

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Unique } from 'typeorm';
 import { Game } from './game.entity';
-import { SeasonParticipant } from '../season/season-participant.entity';
+import { CampaignParticipant } from '../campaign/campaign-participant.entity';
 
 @Entity('game_results')
 @Unique(['gameId', 'participantId'])
@@ -19,9 +19,9 @@ export class GameResult {
   @Column()
   participantId!: number;
 
-  @ManyToOne(() => SeasonParticipant, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CampaignParticipant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'participantId' })
-  participant!: SeasonParticipant;
+  participant!: CampaignParticipant;
 
   @Column()
   rank!: number;

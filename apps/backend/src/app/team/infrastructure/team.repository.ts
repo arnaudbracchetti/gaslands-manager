@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Team as TeamOrm } from './entities/team.entity';
 import { Vehicle as VehicleOrm } from './entities/vehicle.entity';
-import { SeasonParticipant } from '../../season/season-participant.entity';
+import { CampaignParticipant } from '../../campaign/campaign-participant.entity';
 import type { ITeamRepository, TeamSummaryDto } from '../domain/team.repository.interface';
 import type { Team } from '../domain/team';
 import { TeamMapper } from './team.mapper';
@@ -104,6 +104,15 @@ export class TeamRepository implements ITeamRepository {
     const orm = await this.teamOrmRepo.findOne({ where: { id: teamId, userId } });
     if (!orm) throw new NotFoundException(`Équipe #${teamId} introuvable`);
     await this.teamOrmRepo.remove(orm);
+  }
+
+  async findManyByIds(ids: number[]): Promise<Team[]> {
+    if (ids.length === 0) return [];
+    const orms = await this.teamOrmRepo.find({
+      where: { id: In(ids) },
+      relations: { vehicles: { weapons: true, improvements: true } },
+    });
+    return orms.map((orm) => this.mapper.toDomain(orm));
   }
 
   private async reloadById(id: number, userId: number): Promise<Team> {

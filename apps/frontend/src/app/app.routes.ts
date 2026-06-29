@@ -24,21 +24,21 @@ export const appRoutes: Route[] = [
     canActivate: [authGuard],
   },
   {
-    path: 'seasons',
+    path: 'campaigns',
     loadComponent: () =>
-      import('./seasons/seasons').then((m) => m.Seasons),
+      import('./campaigns/campaigns').then((m) => m.Campaigns),
     canActivate: [authGuard],
   },
   {
-    path: 'seasons/join/:code',
+    path: 'campaigns/join/:code',
     loadComponent: () =>
-      import('./seasons/season-join/season-join').then((m) => m.SeasonJoin),
+      import('./campaigns/campaign-join/campaign-join').then((m) => m.CampaignJoin),
     canActivate: [authGuard],
   },
   {
-    path: 'seasons/:id',
+    path: 'campaigns/:id',
     loadComponent: () =>
-      import('./seasons/season-detail/season-detail').then((m) => m.SeasonDetail),
+      import('./campaigns/campaign-detail/campaign-detail').then((m) => m.CampaignDetail),
     canActivate: [authGuard],
   },
   // ─── Édition d'une équipe (hub : infos + véhicules) ────────────────────────
