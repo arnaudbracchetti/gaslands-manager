@@ -58,4 +58,11 @@ export interface ITeamRepository {
 
   /** Supprime l'équipe et tout son contenu (cascade). */
   remove(teamId: number, userId: number): Promise<void>;
+
+  /**
+   * Charge plusieurs agrégats Team par leurs ids (sans restriction userId).
+   * Utilisé par SeasonCampaignRepository pour charger les équipes engagées en lot
+   * lors du replay de l'agrégat Season (Partie 3).
+   */
+  findManyByIds(ids: number[]): Promise<Team[]>;
 }

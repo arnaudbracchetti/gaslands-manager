@@ -20,6 +20,7 @@ import { SeasonParticipant } from './season/season-participant.entity';
 import { GameModule } from './game/game.module';
 import { Game } from './game/game.entity';
 import { GameResult } from './game/game-result.entity';
+import { GameEventOrm } from './game/infrastructure/entities/game-event.entity';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { GameResult } from './game/game-result.entity';
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant, Game, GameResult],
+        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Season, SeasonParticipant, Game, GameResult, GameEventOrm],
         synchronize: true,
         logging: false,
       }),

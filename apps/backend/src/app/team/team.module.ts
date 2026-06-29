@@ -183,6 +183,6 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     // TeamService — conservé temporairement pour SeasonModule (SeasonService.findOneForUser)
     TeamService,
   ],
-  exports: [TypeOrmModule, TeamService],
+  exports: [TypeOrmModule, TeamService, TEAM_REPOSITORY],
 })
 export class TeamModule {}

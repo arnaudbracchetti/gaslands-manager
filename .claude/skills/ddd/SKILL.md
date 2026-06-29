@@ -3,7 +3,7 @@ name: ddd
 description: "Guide de conception Domain-Driven Design pour Gaslands Manager — théorie DDD + patterns NestJS du projet. Invoquer avant toute nouvelle fonctionnalité backend."
 ---
 
-# Skill — Domain-Driven Design
+# Skill — Domain-Driven Design (mode brainstorming)
 
 ## Quand invoquer ce skill
 
@@ -14,137 +14,202 @@ description: "Guide de conception Domain-Driven Design pour Gaslands Manager —
 
 ---
 
-## Les 7 questions à poser avant de coder
+## Comportement attendu
 
-Ce sont les questions de conception fondamentales. Ne pas sauter d'étape.
+**Ne pas affirmer — explorer.** Ce skill conduit un dialogue de conception avec l'utilisateur. Chaque phase est une conversation, pas un exposé. Utiliser `AskUserQuestion` dès qu'un choix peut être formulé comme options concrètes. Une seule question à la fois.
 
-### 1. Qui garantit l'invariante ?
+---
 
-> Une **invariante** est une règle qui doit **toujours** être vraie, quelle que soit
-> l'opération effectuée. Exemple : "le coût total des véhicules ne dépasse pas le budget".
+## Phase 1 — Comprendre la feature
 
-- Si la règle peut être vérifiée avec les données de l'objet lui-même → **agrégat** (méthode domaine)
-- Si elle nécessite des données extérieures → mauvaise frontière d'agrégat (redesigner)
-- Si c'est une règle de coordination entre entités → **use case** (orchestration)
+Commencer par lire les fichiers du projet liés à la demande (spéc, code existant, ARCHITECTURE.md). Puis poser une première question ouverte pour cadrer :
 
-### 2. Peut-il exister sans son parent ?
+> "Peux-tu décrire en une phrase ce que doit faire cette nouvelle fonctionnalité ?"
 
-> Test du cycle de vie indépendant.
+Ensuite poser, **avec AskUserQuestion** :
 
-- Un `Vehicle` sans `Team` n'a aucun sens métier → **entité enfant** de `Team`
-- Une `Season` sans aucun utilisateur peut être créée → **agrégat racine**
-- Si la suppression du parent supprime l'enfant en cascade → entité enfant
-
-### 3. Y a-t-il un cycle de vie indépendant ?
-
-> Un agrégat racine se crée, évolue et disparaît selon ses propres règles.
-
-- Peut-il être créé sans l'autre entité ?
-- Peut-il persister si l'autre entité est supprimée ?
-- A-t-il son propre flux d'états (`EN_CONSTRUCTION → EN_COURS → TERMINEE`) ?
-
-### 4. Suis-je en train de valider dans un service ou dans le domaine ?
-
-> La règle "le sponsor ne peut pas changer si des véhicules existent" appartient à
-> l'agrégat `Team`, pas au `TeamService`.
-
-- La logique métier (`canAdd`, `validate`, `throw DomainException`) → **`domain/`**
-- L'orchestration (charger, appeler le domaine, sauvegarder) → **`application/`**
-- Si un service contient des `if` métier → mauvais signal
-
-### 5. Le repository charge-t-il assez pour que l'agrégat décide seul ?
-
-> L'agrégat doit avoir toutes ses données pour enforcer ses invariantes.
-
-- Pour toute **mutation**, charger l'agrégat **complet** (tous les enfants)
-- Un `addWeapon` a besoin de `Team` + `Vehicle[]` + leurs `Weapon[]` pour calculer `remainingBudget`
-- Pour une **requête de liste**, pas d'agrégat : requête SQL directe → read model (CQRS léger)
-
-### 6. Est-ce une commande ou une requête ?
-
-> Distinction fondamentale : une commande mute l'état, une requête le lit.
-
-- **Commande** → charge l'agrégat complet → mute → sauvegarde
-- **Requête** → SQL direct → DTO → pas d'agrégat domaine impliqué
-- `GET /api/teams` est une requête → `findSummariesForUser()` retourne un `TeamSummaryDto[]`, aucun agrégat chargé
-- `POST /api/teams/:id/vehicles` est une commande → `findByIdForUser()` → `team.addVehicle(...)` → `save(team)`
-
-### 7. Mon use case orchestre-t-il, ou applique-t-il une règle métier ?
-
-> Un use case ne doit contenir **aucune règle métier**. Il orchestre.
-
-```typescript
-// ✅ Use case qui orchestre
-async execute(teamId, userId, dto) {
-  const team = await this.teamRepo.findByIdForUser(teamId, userId); // charger
-  const vehicleType = this.catalogRepo.getVehicleType(dto.nomInterne); // valider les inputs
-  team.addVehicle(vehicleType); // ← règle métier dans l'AGRÉGAT, pas ici
-  await this.teamRepo.save(team); // persister
-}
-
-// ❌ Use case qui porte une règle métier
-async execute(teamId, userId, dto) {
-  const team = await this.teamRepo.findByIdForUser(teamId, userId);
-  if (team.vehicles.length >= MAX_VEHICLES) throw new Error(...); // ← règle ici = mauvais
-  // ...
-}
+```
+Question : "Cette fonctionnalité introduit-elle quelque chose de nouveau dans le domaine ?"
+Options :
+  - Un nouvel agrégat (entité avec son propre cycle de vie)
+    → ex : Season, Team, Game — peuvent exister indépendamment
+  - Une nouvelle règle dans un agrégat existant
+    → ex : nouvelle contrainte sur Vehicle, nouvelle action sur Team
+  - Une lecture / requête (pas de mutation d'état)
+    → ex : filtrer, calculer un total, agréger des données
+  - Je ne sais pas encore
+    → on va explorer ensemble
 ```
 
 ---
 
-## Workflow de conception en 5 étapes
+## Phase 2 — Identifier les contours du domaine
 
-### Étape 1 — Identifier l'agrégat racine
+Selon la réponse de la Phase 1, poser les questions de conception adaptées **une par une**.
 
-Appliquer les 3 tests :
-- Test cycle de vie : peut-il exister seul ?
-- Test invariantes : peut-il les enforcer avec ses propres données ?
-- Test cascade : est-il supprimé avec son parent ?
+### Si nouvel agrégat potentiel
 
-→ Voir [theory/aggregate-design.md](theory/aggregate-design.md) pour les détails et anti-patterns.
+Poser successivement (une question à la fois) :
 
-### Étape 2 — Lister les invariantes
+**2a. Test du cycle de vie**
 
-Écrire en français les règles qui ne doivent jamais être violées :
-- "Le coût total des véhicules ne dépasse pas `team.cans`"
-- "Le sponsor ne peut pas changer si l'équipe possède des véhicules"
-- "Une arme d'équipage n'a pas d'orientation"
-
-Ces invariantes deviendront des méthodes dans `domain/team.ts` levant `DomainException`.
-
-### Étape 3 — Cartographier commandes et requêtes
-
-| Opération | Type | Charge l'agrégat ? |
-|-----------|------|--------------------|
-| Lister les équipes | Requête | Non — SQL direct |
-| Créer une équipe | Commande | Oui |
-| Ajouter un véhicule | Commande | Oui |
-| Lister les armes disponibles | Requête hybride | Oui (pour les règles) |
-
-### Étape 4 — Définir l'interface de repository
-
-Partir des besoins du domaine (pas de TypeORM dans cette étape) :
-
-```typescript
-interface ITeamRepository {
-  findSummariesForUser(userId: number): Promise<TeamSummaryDto[]>; // requête légère
-  findByIdForUser(teamId: number, userId: number): Promise<Team>;  // commande équipe
-  findByVehicleId(vehicleId: number, userId: number): Promise<Team>; // commande véhicule
-  save(team: Team): Promise<void>;
-  remove(teamId: number, userId: number): Promise<void>;
-}
+```
+Question : "Cette entité peut-elle exister sans être rattachée à une autre ?"
+Options :
+  - Oui — elle a son propre cycle de vie (création, évolution, suppression indépendants)
+    → signe d'un agrégat racine
+  - Non — elle n'a pas de sens sans son parent
+    → signe d'une entité enfant (ex : Vehicle dépend de Team)
+  - Ça dépend d'une relation que je ne maîtrise pas encore
+    → on explore ensemble
 ```
 
-→ Voir [theory/concepts.md](theory/concepts.md) pour les règles de design des repositories.
+**2b. Test des invariantes**
 
-### Étape 5 — Câbler dans NestJS
+Demander à l'utilisateur d'écrire 1 à 3 règles qui ne doivent jamais être violées, en français simple. Exemples à proposer pour guider :
 
-Suivre le pattern `vehicle.module.ts` exactement :
-1. Créer `xxx.tokens.ts` avec les tokens string
-2. Déclarer les repositories en `useClass`
-3. Déclarer les use cases en `useFactory` (domaine sans décorateurs)
+- "Le coût total ne dépasse jamais le budget"
+- "Le statut ne peut progresser que dans un sens"
+- "Un champ X ne peut pas changer une fois Y rempli"
 
-→ Voir [project/nestjs-patterns.md](project/nestjs-patterns.md) pour le code exact.
+Puis poser :
+
+```
+Question : "Qui possède les données nécessaires pour vérifier ces règles ?"
+Options :
+  - L'entité elle-même (ses propres champs suffisent)
+    → les invariantes vont dans domain/ — méthodes de l'agrégat
+  - Elle a besoin de données d'une autre entité
+    → mauvaise frontière, il faut redesigner l'agrégat
+  - C'est une règle de coordination entre entités
+    → ça va dans un use case (orchestration), pas dans le domaine
+```
+
+**2c. Test de cascade**
+
+```
+Question : "Que se passe-t-il si le parent est supprimé ?"
+Options :
+  - L'enfant est supprimé en cascade (OneToMany, CASCADE delete)
+    → confirme que c'est une entité enfant
+  - L'enfant survit indépendamment
+    → confirme que c'est un agrégat racine séparé
+  - La relation est plus complexe (nullable FK, relation optionnelle)
+    → explorer ensemble
+```
+
+### Si nouvelle règle dans un agrégat existant
+
+Poser :
+
+```
+Question : "Dans quel agrégat existant cette règle doit-elle vivre ?"
+Options :
+  - Team (racine — véhicules, armes, budget, sponsor)
+  - Season (saisons, participants, transitions d'état)
+  - Game (parties du programme télé)
+  - Aucun des trois — peut-être un nouvel agrégat
+```
+
+Puis demander : "Peux-tu formuler la règle en une phrase ? Ex : 'On ne peut pas faire X si Y est vrai.'"
+
+### Si requête / lecture
+
+```
+Question : "Quel type de read model faut-il ?"
+Options :
+  - Un DTO simple retourné par une requête SQL directe (pas d'agrégat chargé)
+    → ex : TeamSummaryDto via COUNT SQL
+  - Un calcul dérivé depuis un agrégat déjà chargé
+    → ex : remainingBudget calculé depuis Team chargé en mémoire
+  - Une jointure entre plusieurs entités
+    → requête SQL directe, read model dédié
+```
+
+---
+
+## Phase 3 — Cartographier les opérations
+
+Une fois le domaine identifié, lister ensemble les opérations. Proposer un tableau à compléter collaborativement :
+
+| Opération | Commande ou requête ? | Charge l'agrégat complet ? | Use case ou SQL direct ? |
+|-----------|----------------------|---------------------------|--------------------------|
+| *(exemples à remplir avec l'utilisateur)* | | | |
+
+Poser pour chaque opération ambiguë :
+
+```
+Question : "Cette opération mute-t-elle l'état du domaine ?"
+Options :
+  - Oui (créer, modifier, supprimer, valider, changer un statut)
+    → Commande : charger l'agrégat → muter → sauvegarder
+  - Non (lire, lister, calculer sans effet de bord)
+    → Requête : SQL direct → DTO → pas d'agrégat
+```
+
+---
+
+## Phase 4 — Définir l'interface de repository
+
+Demander :
+
+> "Pour chaque commande identifiée, de quoi le use case a-t-il besoin du repository ?"
+
+Guider vers les méthodes nécessaires :
+- `findByIdForUser(id, userId)` → charge l'agrégat complet (commandes sur l'agrégat)
+- `findByChildId(childId, userId)` → localise l'agrégat via un enfant (double-find — cf. ARCHITECTURE.md §3.4)
+- `findSummariesForUser(userId)` → liste légère (requête directe)
+- `save(aggregate)` → persistance avec cascade TypeORM
+- `remove(id, userId)` → suppression
+
+```
+Question : "Y a-t-il des cas où on accède à l'agrégat via un de ses enfants (ex : 'trouve l'équipe qui contient ce véhicule') ?"
+Options :
+  - Oui — il faudra un double-find (résoudre l'ID parent d'abord, puis recharger)
+    → cf. ARCHITECTURE.md §3.4 — piège TypeORM sur les relations hydratées
+  - Non — on accède toujours par l'ID de la racine
+    → plus simple, findByIdForUser suffit
+```
+
+---
+
+## Phase 5 — Présenter le design et valider
+
+Présenter le design en **petites sections** (200–300 mots), en demandant après chaque section :
+
+> "Est-ce que ça correspond à ce que tu as en tête, ou il y a quelque chose à ajuster ?"
+
+Sections à couvrir :
+1. Structure de l'agrégat (racine + entités enfants + value objects)
+2. Liste des invariantes et où elles vivent
+3. Tableau commandes / requêtes
+4. Interface de repository
+5. Câblage NestJS (tokens, useFactory — cf. [project/nestjs-patterns.md](project/nestjs-patterns.md))
+
+---
+
+## Phase 6 — Documenter
+
+Une fois le design validé :
+
+1. Écrire `docs/plans/YYYY-MM-DD-<feature>-design.md` avec le design complet
+2. Mettre à jour `docs/ARCHITECTURE.md` si un nouveau module est créé
+3. Mettre à jour `docs/DOMAIN_MODEL.md` avec les diagrammes Mermaid
+
+Demander :
+
+> "Je peux écrire le document de conception maintenant. Tu veux qu'on continue directement vers l'implémentation ensuite ?"
+
+---
+
+## Principes à respecter pendant tout le brainstorming
+
+- **Une question à la fois** — ne pas empiler plusieurs questions dans un message
+- **AskUserQuestion quand c'est possible** — formulaire interactif plutôt que texte libre
+- **Proposer des exemples concrets** tirés du projet (Team, Vehicle, Season) pour ancrer les concepts abstraits
+- **Ne pas coder avant validation** — le brainstorming se termine par un design documenté, pas par du code
+- **YAGNI** — éliminer activement ce qui n'est pas nécessaire pour la feature actuelle
+- **Reformuler ce qu'on a compris** après chaque réponse, avant de poser la question suivante
 
 ---
 
@@ -156,5 +221,4 @@ Suivre le pattern `vehicle.module.ts` exactement :
 | Comment identifier et délimiter un agrégat | [theory/aggregate-design.md](theory/aggregate-design.md) |
 | Patterns NestJS du projet (tokens, useFactory, DomainException) | [project/nestjs-patterns.md](project/nestjs-patterns.md) |
 | CQRS léger — commandes vs requêtes, read models | [project/cqrs-light.md](project/cqrs-light.md) |
-| Architecture DDD existante (module `vehicle/`) | [ARCHITECTURE.md §3.4](../../../../docs/ARCHITECTURE.md) |
-| Modèle de refactoring Team → DDD | [docs/plans/2026-06-27-team-ddd-design.md](../../../../docs/plans/2026-06-27-team-ddd-design.md) |
+| Architecture DDD existante (module `team/`) | [ARCHITECTURE.md §3.4](../../../../docs/ARCHITECTURE.md) |

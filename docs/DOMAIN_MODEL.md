@@ -329,11 +329,11 @@ erDiagram
     GAME {
         number id PK
         number seasonId FK
-        string scenarioId "réf. catalogue Scenario"
-        enum type "EVENEMENT_TELE|ESCARMOUCHE"
-        enum status "PLANIFIE|JOUE"
-        number displayOrder "colonne SQL: displayOrder"
-        date playedAt "null si PLANIFIE"
+        string scenarioId "nullable — null pour ATELIER"
+        enum type "EVENEMENT_TELE|ESCARMOUCHE|ATELIER"
+        enum status "PLANIFIE|JOUE|OUVERT|CLOTURE"
+        float displayOrder "double precision — fractionnable (ex. 1.5)"
+        date playedAt "null si PLANIFIE/OUVERT"
         date createdAt
         date updatedAt
     }
@@ -346,11 +346,152 @@ erDiagram
         number championshipPoints
         date createdAt
     }
+
+    GAME_EVENT {
+        number id PK
+        number gameId FK
+        number participantId FK
+        number eventOrder "position dans le journal de la partie"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED"
+        number rank "nullable"
+        number championshipPoints "nullable"
+        number amount "nullable — WalletMovement"
+        string walletReason "nullable — RECOMPENSE|ACHAT|REVENTE"
+        number vehicleId "nullable"
+        number weaponId "nullable"
+        number diceRoll "nullable — WreckResolved"
+        number chocsBefore "nullable"
+        string wreckResult "nullable — CHOCS_GAGNE|ARME_PERDUE|EPAVE"
+        number chocsGained "nullable"
+        string sequellaTypeNom "nullable"
+        number chocsCost "nullable"
+        string operation "nullable — BUY|SELL"
+        string entityType "nullable — VEHICLE|WEAPON"
+        string nomInterne "nullable — EquipmentChanged"
+        number cost "nullable"
+        number targetVehicleId "nullable"
+        number targetEntityId "nullable"
+        string orientation "nullable"
+        date createdAt
+    }
 ```
 
 **Clés logiques (pas de FK SQL)** : `VEHICLE.nomInterne` → `Vehicule.nom_interne`,
 `WEAPON.nomInterne` → `Arme.nom_interne`, `VEHICLE_IMPROVEMENT.nomInterne` →
-`Amelioration.nom_interne`, `GAME.scenarioId` → `Scenario.nom_interne`. Ces références
-pointent vers des données en mémoire, pas des tables SQL.
+`Amelioration.nom_interne`, `GAME.scenarioId` → `Scenario.nom_interne`,
+`GAME_EVENT.sequellaTypeNom` → `SequellaType.nom_interne` (registre en mémoire).
+Ces références pointent vers des données en mémoire, pas des tables SQL.
 
 **Contrainte unique composite** : `(SEASON_PARTICIPANT.seasonId, SEASON_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par saison. `(GAME_RESULT.gameId, GAME_RESULT.rank)` — pas deux équipes au même rang pour une même partie.
+
+**Table plate `GAME_EVENT`** : toutes les colonnes payload sont nullable — seules celles pertinentes au type d'événement (`eventType`) sont renseignées. Ce choix évite la hiérarchie STI TypeORM et ses interactions avec le code existant de `GameService`.
+
+---
+
+## 4. Domaine Campagne — Event Sourcing (`game/domain/`)
+
+L'état campagne n'est jamais persisté directement. Il est **recalculé par replay** du journal `game_events` à chaque lecture. L'agrégat racine est `Season`.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class Season {
+        <<Aggregate Root>>
+        +id : number
+        +participants : readonly SeasonParticipant[]
+        +games : readonly Game[]
+        +replay() void
+        +replayUpTo(gameId) void
+        +finalizeGame(gameId) AtelierGame
+        +closeSeason() void
+        +applyNewEvent(gameId, event) void
+        +standings() StandingsEntry[]
+        +findGame(gameId) Game
+    }
+
+    class SeasonParticipant {
+        <<Receiver GoF>>
+        +id : number
+        +userId : number
+        +teamId : number
+        +isOrganizer : boolean
+        +wallet : number
+        +championshipPoints : number
+        +resistancePoints : number
+        +team : Team
+        +attachTeam(team) void
+        +reset() void
+        +creditWallet(amount) void
+        +addPoints(n) void
+        +addResistance(n) void
+    }
+
+    class Game {
+        <<Invoker GoF — abstract>>
+        +id : number
+        +seasonId : number
+        +order : number
+        +status : GameStatus
+        +events : readonly GameEvent[]
+        +canAccept(event) boolean
+        +addEvent(event) void
+        +apply(participants) void
+        +revert(participants) void
+    }
+
+    class GameEvent {
+        <<Command GoF — abstract>>
+        +id : number
+        +gameId : number
+        +participantId : number
+        +eventOrder : number
+        +execute(participants) void
+        +undo(participants) void
+    }
+
+    class WreckOutcome {
+        <<Value Object>>
+        +vehicleId : number
+        +diceRoll : number
+        +chocsBefore : number
+        +wreckResult : WreckResult
+        +chocsGained : number
+        +weaponLostId : number|null
+        +vehicleIsLost : boolean
+        +weaponIsLost : boolean
+    }
+
+    Season "1" *-- "0..*" SeasonParticipant
+    Season "1" *-- "0..*" Game
+    Game "1" *-- "0..*" GameEvent
+    GameEvent --> SeasonParticipant : mute via execute()
+    SeasonParticipant --> Team : team (état figé)
+```
+
+### Hiérarchie Game (Invoker)
+
+| Classe | Type | Statuts | Événements acceptés |
+|--------|------|---------|---------------------|
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, WreckResolved, SequellaAdded, ResistanceContacted |
+| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → JOUE` | Idem EvenementTele |
+| `AtelierGame` | `ATELIER` | `OUVERT → CLOTURE` | EquipmentChanged, SequellaAdded |
+
+Un `AtelierGame` est intercalé automatiquement après chaque finalisation de partie (`order = partie.order + 0.5`, `double precision` SQL).
+
+### Hiérarchie GameEvent (Command)
+
+| Événement | Effet `execute()` | `undo()` |
+|-----------|-----------------|---------|
+| `RankingAssignedEvent` | `participant.addPoints(+PC)` | `addPoints(-PC)` |
+| `WalletMovementEvent` | `participant.creditWallet(amount)` | `creditWallet(-amount)` |
+| `VehicleLostEvent` | `vehicle.markLost()` | `vehicle.clearLost()` |
+| `WeaponLostEvent` | `weapon.markLost()` | `weapon.clearLost()` |
+| `WreckResolvedEvent` | `vehicle.addChocs(+n)` | `vehicle.addChocs(-n)` |
+| `SequellaAddedEvent` | `vehicle.addChocs(-cost)` + `addSequella` | `removeLastSequella` + `addChocs(+cost)` |
+| `EquipmentChangedEvent` | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon` ; SELL : inverse | Inverse de execute |
+| `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
+
+### Entités transientes (D-S11)
+
+Les véhicules et armes achetés en atelier **n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`, `WEAPON`).

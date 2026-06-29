@@ -88,21 +88,29 @@ apps/backend/src/app/
 ├── auth/                ← Authentification (User, JWT, bcrypt)
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
+├── shared/domain/       ← DomainException partagée entre team/ et game/
 ├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement
 │   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement, Value Objects, ITeamRepository, ICatalogRepository
 │   ├── application/     ← 15 Use Cases (4 équipe + 2 véhicule + 3 arme + 6 amélioration/tourelle)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 ├── season/              ← Saisons (ligues) + participants
-└── game/                ← Programme Télé (mode campagne) : entité Game + catalogue de scénarios YAML
+└── game/                ← Mode campagne DDD event-sourcing (voir §3.8)
+    ├── domain/          ← Season (agrégat), SeasonParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome
+    │   ├── events/      ← 8 événements concrets (GoF Command)
+    │   ├── games/       ← EvenementTeleGame, EscarmoucheGame, AtelierGame (GoF Invoker)
+    │   ├── enums/       ← GameStatus, WalletReason, WreckResult
+    │   └── wreck/       ← WreckOutcome Value Object
+    ├── application/     ← 9 Use Cases campagne
+    └── infrastructure/  ← SeasonCampaignRepository, SeasonCampaignMapper, CampaignReplayService, WreckResolverService
 ```
 
 > **`ScenarioCatalogService`** (`game/`) est un **troisième exemple** du pattern
 > singleton-en-mémoire (§3.3) après `CatalogService` et `AdminSeedService` : il
 > charge `database_init/data/scenarios.yml` au démarrage (`OnModuleInit`, Template
 > Method `readFileContent`, conversion Markdown→HTML) et l'indexe par `nom_interne`.
-> L'autorisation des endpoints du Programme est déléguée à
-> `SeasonService.assertOrganizer` / `assertVisibleParticipant` (helpers publics
-> réutilisables, exportés par `SeasonModule`).
+> L'autorisation des endpoints campagne est assurée directement par les use cases via
+> `assertOrganizer` / `assertParticipant` — helpers qui opèrent sur `season.participants`
+> après replay, sans accès à la base de données.
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`. Les modules domaine complexes suivent l'architecture DDD décrite en §3.4.
 
@@ -239,7 +247,60 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/infrastructure/team.mapper.ts` | Mapping ORM ↔ agrégat domaine |
 | `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
-| `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations) |
+| `apps/backend/src/app/game/domain/season.ts` | Agrégat racine campagne — `replay`, `finalizeGame`, `standings` |
+| `apps/backend/src/app/game/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
+| `apps/backend/src/app/game/infrastructure/season-campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
+| `apps/backend/src/app/game/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
+| `apps/backend/src/app/game/infrastructure/wreck-resolver.service.ts` | D6 serveur + table des épaves → `WreckOutcome` |
+| `apps/backend/src/app/game/application/` | 9 use cases campagne (Parties 4–5) |
+| `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
+
+### 3.8 Mode Campagne — Event Sourcing (`game/`)
+
+Le module `game/` implémente une architecture **event sourcing** stricte pour le mode campagne : aucun état transient n'est jamais stocké en base — seul le **journal des événements** (`game_events`) est persisté. L'état courant est **recalculé à chaque lecture** par replay du journal.
+
+#### Trois patterns GoF imbriqués
+
+| Pattern | Rôle | Classes |
+|---------|------|---------|
+| **Command** | `GameEvent` — encapsule une mutation avec `execute()` / `undo()` | `RankingAssignedEvent`, `WalletMovementEvent`, `VehicleLostEvent`, `WeaponLostEvent`, `WreckResolvedEvent`, `SequellaAddedEvent`, `EquipmentChangedEvent`, `ResistanceContactedEvent` |
+| **Invoker** | `Game` — valide et journalise les événements via `canAccept` / `addEvent` | `EvenementTeleGame`, `EscarmoucheGame`, `AtelierGame` |
+| **Receiver** | `SeasonParticipant` — porte les compteurs transients modifiés par chaque événement | `wallet`, `championshipPoints`, `resistancePoints`, état des véhicules/armes |
+
+#### Flux d'une écriture
+
+```
+Controller → UseCase
+  1. loadAndReplay(seasonId)     → Season reconstituée depuis le journal
+  2. assertOrganizer(season, userId)
+  3. new XxxEvent(id=0, ...)
+  4. game.addEvent(event)        → valide canAccept (type accepté par ce jeu)
+  5. event.execute(participants) → mute les compteurs en mémoire (wallet, PC, chocs…)
+  6. campaignRepo.appendEvents() → INSERT dans game_events (id assigné par DB)
+```
+
+#### Entités transientes et D-S11
+
+Les véhicules et armes achetés **en atelier** n'existent pas en base — ils sont recréés à chaque replay. Leur `id` dans le domaine est `-event.id` (entier négatif, distinct des ids DB positifs). Conséquence : `ChangeEquipmentUseCase` **ne doit pas appeler `event.execute()`** avant la persistance, car `id=0` donnerait `-0 = 0`, qui ne constitue pas un id négatif valide. Le use case persiste d'abord, le client rafraîchit ensuite via `GET /seasons/:id/workshop`.
+
+#### Séquence AtelierGame (D-S7)
+
+```
+FinalizeGameUseCase (partie PLANIFIE → JOUE)
+  └─ season.finalizeGame(gameId)
+       ├─ clôt l'AtelierGame OUVERT précédent (OUVERT → CLOTURE)
+       └─ crée un nouvel AtelierGame (ordre = partie.order + 0.5, OUVERT)
+           └─ persisté via saveSeason(season, newAtelier)
+```
+
+L'ordre fractionnaire (`double precision` en SQL) garantit que l'atelier s'insère *entre* les parties du programme sans modifier les ordres existants.
+
+#### Points d'attention
+
+- **`resistancePoints` secret** — jamais exposé dans `StandingsEntry` ni dans `GET /workshop`. Seul l'organisateur peut appeler `POST .../events/resistance`.
+- **D6 serveur** — `WreckResolverService.rollD6()` est `protected` pour permettre l'injection d'un dé fixe dans les tests (`class TestWreckResolver extends WreckResolverService`).
+- **Autorisation sans base de données** — les use cases campagne vérifient le rôle via `season.participants` (liste en mémoire après replay). Aucun accès SQL supplémentaire pour l'autorisation.
+- **`TEAM_REPOSITORY` exporté par `TeamModule`** — requis par `SeasonCampaignRepository` pour charger l'état figé des équipes au moment du replay.
 
 ---
 

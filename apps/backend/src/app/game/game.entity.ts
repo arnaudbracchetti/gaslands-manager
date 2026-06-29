@@ -26,10 +26,10 @@ export class Game {
   @Column()
   seasonId: number;
 
-  // Référence (clé étrangère logique) vers Scenario.nom_interne du catalogue
-  // chargé par ScenarioCatalogService. Même principe que Vehicle.nomInterne.
-  @Column()
-  scenarioId: string;
+  // Référence (clé étrangère logique) vers Scenario.nom_interne du catalogue.
+  // nullable : null pour AtelierGame (pas de scénario associé).
+  @Column({ nullable: true })
+  scenarioId: string | null;
 
   @Column({ type: 'enum', enum: GameType })
   type: GameType;
@@ -37,10 +37,9 @@ export class Game {
   @Column({ type: 'enum', enum: GameStatus, default: GameStatus.PLANIFIE })
   status: GameStatus;
 
-  // Position de la partie dans le Programme. Auto-append : MAX(order)+1 à la
-  // création (cf. GameService.create). "order" étant un mot réservé SQL, on mappe
-  // explicitement la colonne sur un nom entre guillemets.
-  @Column({ name: 'displayOrder' })
+  // Position de la partie dans le Programme. double precision pour permettre
+  // l'insertion fractionnaire d'un AtelierGame intercalé (order = n + 0.5, D-S7).
+  @Column({ name: 'displayOrder', type: 'double precision' })
   order: number;
 
   // Horodatage du passage à JOUE — null tant que la partie est PLANIFIE.

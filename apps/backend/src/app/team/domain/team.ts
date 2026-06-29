@@ -2,6 +2,7 @@ import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
 import { Vehicle, DomainException } from './vehicle';
+import { Weapon } from './weapon';
 import { Improvement } from './improvement';
 
 // ── Résultat de validation ────────────────────────────────────────────────────
@@ -109,6 +110,19 @@ export class Team {
     return v;
   }
 
+  /**
+   * Recherche une arme par son id dans tous les véhicules de l'équipe.
+   * Nécessaire aux commandes d'événements campagne qui ciblent une arme directement
+   * (ex : WeaponLostEvent) sans connaître le vehicleId.
+   */
+  findWeapon(weaponId: number): Weapon {
+    for (const vehicle of this._vehicles) {
+      const weapon = vehicle.weapons.find((w) => w.id === weaponId);
+      if (weapon) return weapon;
+    }
+    throw new DomainException(`Arme #${weaponId} introuvable dans l'équipe`);
+  }
+
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
 
   addWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: Orientation | null): void {
@@ -142,6 +156,54 @@ export class Team {
     const vehicle = this.findVehicle(vehicleId);
     vehicle.unassignWeaponFromTourelle(improvementId);
   }
+
+  // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
+
+  /**
+   * Remet tous les états transients de campagne à zéro (véhicules + armes).
+   * Appelé par SeasonParticipant.reset() avant chaque replay.
+   */
+  resetCampaignState(): void {
+    for (const vehicle of this._vehicles) {
+      vehicle.clearCampaignState();
+      for (const weapon of vehicle.weapons) {
+        weapon.clearCampaignState();
+      }
+    }
+  }
+
+  /**
+   * Ajoute un véhicule transient avec un id explicite (D-S11).
+   * id négatif = entité campagne identifiée par -eventId (distincte des ids BDD).
+   */
+  addCampaignVehicle(vehicleType: VehicleType, campaignId: number): Vehicle {
+    const vehicle = new Vehicle(campaignId, this.id, vehicleType, [], []);
+    this._vehicles.push(vehicle);
+    return vehicle;
+  }
+
+  /** Retire un véhicule par son id (persisté ou transient campagne). */
+  removeCampaignVehicle(vehicleId: number): void {
+    const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
+    if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable pour suppression campagne`);
+    this._vehicles.splice(idx, 1);
+  }
+
+  /** Ajoute une arme transiente sur un véhicule avec un id explicite (D-S11). */
+  addCampaignWeapon(
+    vehicleId: number,
+    weaponType: WeaponType,
+    orientation: Orientation | null,
+    campaignId: number,
+  ): Weapon {
+    return this.findVehicle(vehicleId).addCampaignWeapon(weaponType, orientation, campaignId);
+  }
+
+  /** Retire une arme par son id d'un véhicule spécifique. */
+  removeCampaignWeapon(vehicleId: number, weaponId: number): void {
+    this.findVehicle(vehicleId).removeWeapon(weaponId);
+  }
+
 }
 
 // Ré-export pour que les consumers importent depuis team.ts sans connaître vehicle.ts

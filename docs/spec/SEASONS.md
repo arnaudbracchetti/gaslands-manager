@@ -147,19 +147,20 @@ saison — modifiable (`teamId`) tant que la saison est `EN_CONSTRUCTION`.
 | `userName` | string | Prénom + nom de l'utilisateur. |
 | `teamName` | string | Nom de l'équipe engagée. |
 
-### `Game` _(mode campagne — Programme Télé)_
+### `Game` _(mode campagne — Programme Télé et Atelier)_
 
-Une partie planifiée du Programme d'une saison. Le scénario est référencé par
-`scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire).
+Une partie ou un atelier du Programme d'une saison. Le scénario est référencé par
+`scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire) — `null`
+pour les ateliers.
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `seasonId` | number | FK → Season (`CASCADE`) |
-| `scenarioId` | string | référence `Scenario.nom_interne` du catalogue |
-| `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` | repris du scénario par défaut |
-| `status` | `'PLANIFIE' \| 'JOUE'` | défaut `PLANIFIE` |
-| `order` | number | position dans le programme (colonne `displayOrder` — `order` réservé SQL). Auto-append = MAX+1 |
+| `scenarioId` | string \| null | référence `Scenario.nom_interne` — `null` pour `ATELIER` |
+| `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE' \| 'ATELIER'` | `ATELIER` créé automatiquement par `FinalizeGameUseCase` |
+| `status` | `'PLANIFIE' \| 'JOUE' \| 'OUVERT' \| 'CLOTURE'` | `OUVERT`/`CLOTURE` réservés aux ateliers |
+| `order` | number | `double precision` — auto-append MAX+1 ; ateliers intercalés à `partie.order + 0.5` |
 | `playedAt` | Date \| null | null tant que `PLANIFIE` |
 | `createdAt` / `updatedAt` | Date | auto |
 
@@ -202,13 +203,36 @@ Chargé depuis `database_init/data/scenarios.yml` au démarrage par
 
 ## API Endpoints — Programme Télé (mode campagne)
 
-Déclarés dans `game/game.controller.ts` (module `GameModule`, distinct du
-`SeasonController`). Le contrôle d'accès est délégué à `SeasonService`.
+Déclarés dans `game/game.controller.ts` (module `GameModule`, distinct du `SeasonController`).
+Le contrôle d'accès est assuré dans chaque use case via `assertOrganizer` / `assertParticipant`
+opérant sur l'état replay (pas d'accès SQL supplémentaire).
+
+### Gestion du Programme (CRUD parties)
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/catalog/scenarios` | Non | Liste publique des scénarios du catalogue |
 | GET | `/api/seasons/:id/games` | JWT | Programme trié (participant `VALIDATED`) |
-| POST | `/api/seasons/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS` ; 400 si `TERMINEE`) |
-| PUT | `/api/seasons/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS` ; 400 si `TERMINEE` ou `JOUE`) |
-| DELETE | `/api/seasons/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS` ; 400 si `TERMINEE` ou `JOUE`) |
+| POST | `/api/seasons/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| PUT | `/api/seasons/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| DELETE | `/api/seasons/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+
+### Résultats et classement (Partie 4)
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| POST | `/api/seasons/:id/games/:gameId/events/ranking` | JWT | Enregistrer le rang et les PC d'un participant (organisateur) — 204 |
+| POST | `/api/seasons/:id/games/:gameId/events/wallet` | JWT | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204 |
+| POST | `/api/seasons/:id/games/:gameId/events/vehicle-lost` | JWT | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
+| POST | `/api/seasons/:id/games/:gameId/events/resistance` | JWT | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204 |
+| POST | `/api/seasons/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) |
+| GET | `/api/seasons/:id/standings` | JWT | Classement après replay complet (tout participant `VALIDATED`) |
+
+### Atelier et épaves (Partie 5)
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| GET | `/api/seasons/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients, chocs, séquelles, wallet) |
+| POST | `/api/seasons/:id/games/:gameId/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` dans un `AtelierGame OUVERT` — 204 |
+| POST | `/api/seasons/:id/games/:gameId/events/wreck` | JWT | Table des Épaves — D6 serveur `{ participantId, vehicleId, weaponIdChoice? }` (organisateur) |
+| POST | `/api/seasons/:id/games/:gameId/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` dans un `AtelierGame OUVERT` — 204 |
