@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService } from '../../catalog/catalog.service';
+import type { CampaignOrm } from './entities/campaign.entity';
 import type { GameOrm } from './entities/game.entity';
 import type { GameEventOrm } from './entities/game-event.entity';
 import type { CampaignParticipantOrm } from './entities/campaign-participant.entity';
@@ -50,7 +51,7 @@ export class CampaignMapper {
    * séparément via `ITeamRepository.findManyByIds`).
    */
   toCampaign(
-    campaignId: number,
+    campaignOrm: CampaignOrm,
     participantOrms: CampaignParticipantOrm[],
     teams: Team[],
     gameOrms: GameOrm[],
@@ -59,7 +60,7 @@ export class CampaignMapper {
     const teamById = new Map(teams.map((t) => [t.id, t]));
 
     const participants = participantOrms.map((p) => {
-      const domParticipant = new CampaignParticipant(p.id, p.userId, p.teamId ?? 0, p.isOrganizer);
+      const domParticipant = new CampaignParticipant(p.id, p.userId, p.teamId, p.isOrganizer, p.status);
       if (p.teamId !== null) {
         const team = teamById.get(p.teamId);
         if (team) domParticipant.attachTeam(team);
@@ -73,7 +74,14 @@ export class CampaignMapper {
       return this.toGame(g, events);
     });
 
-    return new Campaign(campaignId, participants, games);
+    return new Campaign(
+      campaignOrm.id,
+      campaignOrm.name,
+      campaignOrm.state,
+      campaignOrm.inviteCode,
+      participants,
+      games,
+    );
   }
 
   // ── Mapping GameOrm ─────────────────────────────────────────────────────────────

@@ -1,9 +1,13 @@
 import { DomainException } from '../../shared/domain/domain-exception';
-import type { CampaignParticipant } from './campaign-participant';
+import { CampaignParticipant } from './campaign-participant';
 import type { Game } from './games/game';
 import type { GameEvent } from './events/game-event';
 import { GameStatus } from './enums/game-status.enum';
 import { AtelierGame } from './games/atelier-game';
+import { EvenementTeleGame } from './games/evenement-tele-game';
+import { EscarmoucheGame } from './games/escarmouche-game';
+import { RankingAssignedEvent } from './events/ranking-assigned.event';
+import { CampaignState, ParticipantStatus } from '../campaign.enums';
 
 export interface StandingsEntry {
   participantId: number;
@@ -15,32 +19,77 @@ export interface StandingsEntry {
   // resistancePoints délibérément absent — secret (cf. D-S4)
 }
 
+/** Un rang attribué à un participant lors de l'enregistrement d'un résultat. */
+export interface RankingInput {
+  participantId: number;
+  rank: number;
+}
+
+/** Résultat structurel d'un recordResult : événements à journaliser + atelier ouvert. */
+export interface RecordResultOutcome {
+  events: RankingAssignedEvent[];
+  newAtelier: AtelierGame;
+}
+
+// Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
+const POINTS_TABLE = [10, 5, 2, 1];
+
 /**
- * Agrégat racine du domaine campagne — GoF Invoker de haut niveau.
+ * Agrégat racine du domaine campagne.
  *
- * Centralise le replay du journal d'événements et les transitions d'état des parties.
- * Toutes les mutations (finalizeGame, closeCampaign) s'opèrent en mémoire ; le repository
- * se charge de persister l'état résultant.
+ * Porte à la fois l'**état stocké** (name, state, inviteCode ; participants avec
+ * status/isOrganizer/teamId ; parties) et l'**état rejoué** (compteurs des
+ * participants, recalculés par `replay()` depuis le journal `game_events`).
+ *
+ * Toutes les règles métier (CRUD + jeu) sont ici. Les commandes valident les
+ * invariants internes et mutent l'état en mémoire ; le repository persiste. Les
+ * vérifications qui nécessitent des données externes (appartenance d'une équipe à
+ * un utilisateur, unicité d'engagement, existence d'un scénario) restent dans les
+ * use cases.
  */
 export class Campaign {
+  private _name: string;
+  private _state: CampaignState;
+  private readonly _inviteCode: string;
+  private readonly _participants: CampaignParticipant[];
+  private readonly _games: Game[];
+  /** Ids de participants retirés (removeParticipant) — pour la persistance structurelle. */
+  private readonly _removedParticipantIds: number[] = [];
+  /** Ids de parties retirées (removeGame) — pour la persistance structurelle. */
+  private readonly _removedGameIds: number[] = [];
+
   constructor(
     readonly id: number,
-    private readonly _participants: CampaignParticipant[],
-    private readonly _games: Game[],
-  ) {}
+    name: string,
+    state: CampaignState,
+    inviteCode: string,
+    participants: CampaignParticipant[],
+    games: Game[],
+  ) {
+    this._name = name;
+    this._state = state;
+    this._inviteCode = inviteCode;
+    this._participants = participants;
+    this._games = games;
+  }
 
+  get name(): string { return this._name; }
+  get state(): CampaignState { return this._state; }
+  get inviteCode(): string { return this._inviteCode; }
   get participants(): readonly CampaignParticipant[] { return this._participants; }
   get games(): readonly Game[] { return this._games; }
+  get removedParticipantIds(): readonly number[] { return this._removedParticipantIds; }
+  get removedGameIds(): readonly number[] { return this._removedGameIds; }
 
   findGame(gameId: number): Game {
     const g = this._games.find((x) => x.id === gameId);
-    if (!g) throw new DomainException(`Partie #${gameId} introuvable dans la saison`);
+    if (!g) throw new DomainException(`Partie #${gameId} introuvable dans la campagne`);
     return g;
   }
 
   findParticipant(participantId: number): CampaignParticipant {
     const p = this._participants.find((x) => x.id === participantId);
-    if (!p) throw new DomainException(`Participant #${participantId} introuvable dans la saison`);
+    if (!p) throw new DomainException(`Participant #${participantId} introuvable dans la campagne`);
     return p;
   }
 
@@ -62,7 +111,6 @@ export class Campaign {
 
   /**
    * Rejoue jusqu'à la partie dont l'ordre est strictement inférieur à celui de `gameId`.
-   * Utile pour corriger / annuler un événement en cours de saison.
    */
   replayUpTo(gameId: number): void {
     const target = this.findGame(gameId);
@@ -85,28 +133,194 @@ export class Campaign {
    */
   standings(): StandingsEntry[] {
     return [...this._participants]
-      .filter((p) => p.team !== undefined)
+      .filter((p) => p.hasTeam && p.status === ParticipantStatus.VALIDATED)
       .sort((a, b) => b.championshipPoints - a.championshipPoints)
       .map((p) => ({
         participantId: p.id,
         userId: p.userId,
-        teamId: p.teamId,
+        teamId: p.teamId ?? 0,
         teamName: p.team.name,
         championshipPoints: p.championshipPoints,
         wallet: p.wallet,
       }));
   }
 
-  // ── Cycle de vie des parties ─────────────────────────────────────────────────
+  // ── Commandes CRUD — campagne ────────────────────────────────────────────────
+
+  /** Renomme la campagne (organisateur — l'autorisation est vérifiée dans le use case). */
+  rename(name: string): void { this._name = name; }
+
+  /**
+   * Change l'état de la campagne. Transitions bidirectionnelles (décision de design).
+   * En passant à TERMINEE, clôt les ateliers OUVERT restants.
+   */
+  changeState(newState: CampaignState): void {
+    this._state = newState;
+    if (newState === CampaignState.TERMINEE) {
+      this.closeCampaign();
+    }
+  }
+
+  // ── Commandes CRUD — participants ────────────────────────────────────────────
+
+  /**
+   * Enregistre une demande d'inscription (participant PENDING).
+   * L'appartenance de l'équipe et son unicité d'engagement sont vérifiées en amont
+   * (use case). Ici : campagne EN_CONSTRUCTION et pas de demande existante.
+   */
+  requestJoin(userId: number, teamId: number): CampaignParticipant {
+    this.assertConstruction();
+    if (this._participants.some((p) => p.userId === userId)) {
+      throw new DomainException('Vous avez déjà une demande d\'inscription pour cette campagne.');
+    }
+    const participant = new CampaignParticipant(0, userId, teamId, false, ParticipantStatus.PENDING);
+    this._participants.push(participant);
+    return participant;
+  }
+
+  /**
+   * Valide (accept=true) ou refuse (accept=false) un participant.
+   * Refuser un participant déjà VALIDATED n'est possible qu'EN_CONSTRUCTION et
+   * jamais sur le dernier organisateur validé.
+   */
+  validateParticipant(participantId: number, accept: boolean): CampaignParticipant {
+    const participant = this.findParticipant(participantId);
+    if (participant.status === ParticipantStatus.VALIDATED && !accept) {
+      this.assertConstruction('Cette campagne n\'accepte plus de modifications de participants.');
+      this.assertNotLastOrganizer(participant, 'Impossible de refuser le dernier organisateur de la campagne.');
+    }
+    if (accept) participant.validate();
+    else participant.reject();
+    return participant;
+  }
+
+  /** Promeut un participant VALIDATED au rang de co-organisateur. */
+  promoteParticipant(participantId: number): CampaignParticipant {
+    const participant = this.findParticipant(participantId);
+    if (participant.status !== ParticipantStatus.VALIDATED) {
+      throw new DomainException('Seul un participant validé peut être promu.');
+    }
+    if (participant.isOrganizer) {
+      throw new DomainException('Ce participant est déjà organisateur.');
+    }
+    participant.promote();
+    return participant;
+  }
+
+  /**
+   * Retire définitivement un participant. EN_CONSTRUCTION uniquement, et jamais le
+   * dernier organisateur validé.
+   */
+  removeParticipant(participantId: number): void {
+    const participant = this.findParticipant(participantId);
+    this.assertConstruction('Cette campagne n\'accepte plus de modifications de participants.');
+    this.assertNotLastOrganizer(participant, 'Impossible de retirer le dernier organisateur de la campagne.');
+    const idx = this._participants.indexOf(participant);
+    this._participants.splice(idx, 1);
+    if (participant.id > 0) this._removedParticipantIds.push(participant.id);
+  }
+
+  /**
+   * Change l'équipe engagée par un participant VALIDATED. EN_CONSTRUCTION uniquement.
+   * Le désengagement (teamId null) est réservé à l'organisateur. L'appartenance et
+   * l'unicité de l'équipe sont vérifiées en amont (use case).
+   */
+  changeParticipantTeam(userId: number, teamId: number | null): CampaignParticipant {
+    const participant = this._participants.find(
+      (p) => p.userId === userId && p.status === ParticipantStatus.VALIDATED,
+    );
+    if (!participant) throw new DomainException('Participant introuvable dans la campagne.');
+    this.assertConstruction('Cette campagne n\'accepte plus de changement d\'équipe.');
+    if (teamId === null && !participant.isOrganizer) {
+      throw new DomainException('Seul un organisateur peut retirer son équipe sans en choisir une autre.');
+    }
+    participant.changeTeam(teamId);
+    return participant;
+  }
+
+  // ── Commandes CRUD — parties ─────────────────────────────────────────────────
+
+  /**
+   * Ajoute une partie PLANIFIE en fin de programme (order = MAX+1).
+   * L'existence du scénario est vérifiée en amont (use case).
+   */
+  addGame(scenarioId: string, type: string): Game {
+    this.assertManageable();
+    const order = this.nextOrder();
+    const game = this.createGame(0, type, scenarioId, order, GameStatus.PLANIFIE, null, []);
+    this._games.push(game);
+    return game;
+  }
+
+  /** Modifie le scénario / type d'une partie PLANIFIE. */
+  updateGame(gameId: number, scenarioId: string, type: string): Game {
+    this.assertManageable();
+    const game = this.findGame(gameId);
+    this.assertPlanifie(game);
+    // Remplace la partie par une instance du bon sous-type, en conservant id/order.
+    const replaced = this.createGame(game.id, type, scenarioId, game.order, GameStatus.PLANIFIE, null, [...game.events]);
+    const idx = this._games.indexOf(game);
+    this._games.splice(idx, 1, replaced);
+    return replaced;
+  }
+
+  /** Supprime une partie PLANIFIE. */
+  removeGame(gameId: number): void {
+    this.assertManageable();
+    const game = this.findGame(gameId);
+    this.assertPlanifie(game);
+    const idx = this._games.indexOf(game);
+    this._games.splice(idx, 1);
+    if (game.id > 0) this._removedGameIds.push(game.id);
+  }
+
+  /**
+   * Enregistre le résultat d'une partie : calcule les PC, journalise un
+   * RankingAssignedEvent par participant, puis finalise la partie (JOUE + atelier).
+   *
+   * Les événements créés portent id=0 ; le use case les persiste via appendEvents,
+   * et persiste la finalisation via saveCampaign(campaign, newAtelier).
+   */
+  recordResult(gameId: number, rankings: RankingInput[]): RecordResultOutcome {
+    const game = this.findGame(gameId);
+    this.assertPlanifie(game, 'Cette partie a déjà été jouée.');
+
+    // Rangs uniques et consécutifs à partir de 1.
+    const ranks = rankings.map((r) => r.rank).sort((a, b) => a - b);
+    const duplicates = new Set(ranks).size !== ranks.length;
+    const consecutive = ranks.every((r, i) => r === i + 1);
+    if (duplicates || !consecutive) {
+      throw new DomainException('Les rangs doivent être uniques et consécutifs à partir de 1.');
+    }
+
+    // Participants VALIDATED uniquement.
+    const validatedIds = new Set(
+      this._participants.filter((p) => p.status === ParticipantStatus.VALIDATED).map((p) => p.id),
+    );
+    for (const r of rankings) {
+      if (!validatedIds.has(r.participantId)) {
+        throw new DomainException(`Participant ${r.participantId} inconnu ou non validé dans cette campagne.`);
+      }
+    }
+
+    // Calcul des PC selon le type de partie, puis création des événements.
+    const classified = Math.ceil(rankings.length / 2);
+    const events = rankings.map((r) => {
+      const points = this.computePoints(game.type, r.rank, classified);
+      const event = new RankingAssignedEvent(0, game.id, r.participantId, 0, r.rank, points);
+      game.addEvent(event);  // valide canAccept
+      return event;
+    });
+
+    const newAtelier = this.finalizeGame(gameId);
+    return { events, newAtelier };
+  }
+
+  // ── Cycle de vie des parties (event sourcing) ────────────────────────────────
 
   /**
    * Finalise une partie (PLANIFIE → JOUE) et ouvre un AtelierGame intercalé.
-   *
-   * 1. La partie passe à JOUE.
-   * 2. L'AtelierGame OUVERT courant (s'il existe) passe à CLOTURE.
-   * 3. Un nouvel AtelierGame OUVERT est créé à `game.order + 0.5`.
-   *
-   * Le nouvel atelier a id=0 (le repository lui assignera un vrai id à la persistance).
+   * Le nouvel atelier a id=0 (le repository lui assignera un vrai id).
    */
   finalizeGame(gameId: number): AtelierGame {
     const game = this.findGame(gameId);
@@ -114,11 +328,9 @@ export class Campaign {
       throw new DomainException('Seule une partie PLANIFIE peut être finalisée');
     }
 
-    // Muter le statut en mémoire (le mapper lit la propriété au save)
     (game as unknown as { status: GameStatus }).status = GameStatus.JOUE;
     (game as unknown as { playedAt: Date }).playedAt = new Date();
 
-    // Clore l'atelier précédent s'il existe
     const openAtelier = this._games.find(
       (g) => g instanceof AtelierGame && g.status === GameStatus.OUVERT,
     );
@@ -126,15 +338,13 @@ export class Campaign {
       (openAtelier as unknown as { status: GameStatus }).status = GameStatus.CLOTURE;
     }
 
-    // Ouvrir un nouvel atelier intercalé après la partie finalisée
     const newAtelier = new AtelierGame(0, this.id, GameStatus.OUVERT, game.order + 0.5, []);
     this._games.push(newAtelier);
     return newAtelier;
   }
 
   /**
-   * Clôture de saison (EN_COURS → TERMINEE) : ferme le dernier atelier OUVERT.
-   * Appelé par le use case de transition d'état de saison.
+   * Ferme les ateliers OUVERT restants (transition vers TERMINEE).
    */
   closeCampaign(): void {
     for (const game of this._games) {
@@ -144,8 +354,6 @@ export class Campaign {
     }
   }
 
-  // ── Ajout d'un événement (write-time) ────────────────────────────────────────
-
   /**
    * Valide et enregistre un événement dans la partie, puis l'applique immédiatement.
    * Le repository persiste l'événement après cette méthode.
@@ -154,5 +362,59 @@ export class Campaign {
     const game = this.findGame(gameId);
     game.addEvent(event);
     event.execute([...this._participants]);
+  }
+
+  // ── Helpers privés ────────────────────────────────────────────────────────────
+
+  private assertConstruction(message = 'Action réservée à une campagne en construction.'): void {
+    if (this._state !== CampaignState.EN_CONSTRUCTION) throw new DomainException(message);
+  }
+
+  private assertManageable(): void {
+    if (this._state !== CampaignState.EN_CONSTRUCTION && this._state !== CampaignState.EN_COURS) {
+      throw new DomainException('Le programme ne peut être géré que tant que la campagne n\'est pas terminée.');
+    }
+  }
+
+  private assertPlanifie(game: Game, message = 'Une partie déjà jouée ne peut plus être modifiée.'): void {
+    if (game.status !== GameStatus.PLANIFIE) throw new DomainException(message);
+  }
+
+  private assertNotLastOrganizer(participant: CampaignParticipant, message: string): void {
+    if (!participant.isOrganizer) return;
+    const organizers = this._participants.filter(
+      (p) => p.isOrganizer && p.status === ParticipantStatus.VALIDATED,
+    );
+    if (organizers.length <= 1) throw new DomainException(message);
+  }
+
+  private nextOrder(): number {
+    const planned = this._games.filter((g) => !(g instanceof AtelierGame));
+    return planned.reduce((max, g) => Math.max(max, g.order), 0) + 1;
+  }
+
+  private computePoints(gameType: string, rank: number, classified: number): number {
+    if (gameType !== 'EVENEMENT_TELE') return 0;  // ESCARMOUCHE et autres : aucun PC
+    if (rank > classified) return 0;
+    return POINTS_TABLE[rank - 1] ?? 0;
+  }
+
+  private createGame(
+    id: number,
+    type: string,
+    scenarioId: string,
+    order: number,
+    status: GameStatus,
+    playedAt: Date | null,
+    events: GameEvent[],
+  ): Game {
+    switch (type) {
+      case 'EVENEMENT_TELE':
+        return new EvenementTeleGame(id, this.id, status, order, scenarioId, playedAt, events);
+      case 'ESCARMOUCHE':
+        return new EscarmoucheGame(id, this.id, status, order, scenarioId, playedAt, events);
+      default:
+        throw new DomainException(`Type de partie invalide : "${type}"`);
+    }
   }
 }

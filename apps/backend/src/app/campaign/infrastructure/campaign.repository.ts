@@ -1,6 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import { CampaignOrm } from './entities/campaign.entity';
 import { GameOrm } from './entities/game.entity';
 import { GameEventOrm } from './entities/game-event.entity';
 import { CampaignParticipantOrm } from './entities/campaign-participant.entity';
@@ -11,7 +12,6 @@ import type { GameEvent } from '../domain/events/game-event';
 import type { AtelierGame } from '../domain/games/atelier-game';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { TEAM_REPOSITORY } from '../../team/team.tokens';
-import { ParticipantStatus } from '../campaign.enums';
 import { GameType } from '../game.enums';
 import { GameStatus as OrmGameStatus } from '../game.enums';
 import { GameStatus as DomainGameStatus } from '../domain/enums/game-status.enum';
@@ -36,6 +36,8 @@ import type { ResistanceContactedEvent } from '../domain/events/resistance-conta
 @Injectable()
 export class CampaignRepository implements ICampaignRepository {
   constructor(
+    @InjectRepository(CampaignOrm)
+    private readonly campaignOrmRepo: Repository<CampaignOrm>,
     @InjectRepository(GameOrm)
     private readonly gameOrmRepo: Repository<GameOrm>,
     @InjectRepository(GameEventOrm)
@@ -58,8 +60,14 @@ export class CampaignRepository implements ICampaignRepository {
    * 5. Assembly via le mapper
    */
   async findCampaign(campaignId: number): Promise<Campaign> {
+    const campaignOrm = await this.campaignOrmRepo.findOne({ where: { id: campaignId } });
+    if (!campaignOrm) throw new NotFoundException('Campagne introuvable.');
+
+    // Tous les participants (pas seulement VALIDATED) : l'agrégat unifié porte l'état
+    // stocké complet (status/isOrganizer/teamId) pour les commandes CRUD. Le replay et
+    // le classement ne considèrent que les VALIDATED avec équipe (cf. Campaign.standings).
     const participantOrms = await this.participantRepo.find({
-      where: { campaignId, status: ParticipantStatus.VALIDATED },
+      where: { campaignId },
       order: { id: 'ASC' },
     });
 
@@ -88,7 +96,7 @@ export class CampaignRepository implements ICampaignRepository {
       eventsByGameId.set(event.gameId, list);
     }
 
-    return this.mapper.toCampaign(campaignId, participantOrms, teams, gameOrms, eventsByGameId);
+    return this.mapper.toCampaign(campaignOrm, participantOrms, teams, gameOrms, eventsByGameId);
   }
 
   /**
