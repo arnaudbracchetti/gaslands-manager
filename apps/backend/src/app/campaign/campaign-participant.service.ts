@@ -7,7 +7,7 @@
  * pas de fuite d'information sur l'existence d'une saison ou d'un participant.
  *
  * Les contrôles d'accès "participant validé" / "organisateur validé" sont de
- * simples requêtes sur CampaignParticipant — dupliquées ici plutôt que
+ * simples requêtes sur CampaignParticipantOrm — dupliquées ici plutôt que
  * factorisées dans CampaignService pour éviter toute dépendance croisée entre
  * les deux services (cf. season.service.ts pour le contrôle équivalent dans
  * findOne()).
@@ -15,7 +15,7 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { CampaignParticipant } from './campaign-participant.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { ParticipantStatus, CampaignState } from './campaign.enums';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 import { TeamService } from '../team/team.service';
@@ -23,8 +23,8 @@ import { TeamService } from '../team/team.service';
 @Injectable()
 export class CampaignParticipantService {
   constructor(
-    @InjectRepository(CampaignParticipant)
-    private participantRepo: Repository<CampaignParticipant>,
+    @InjectRepository(CampaignParticipantOrm)
+    private participantRepo: Repository<CampaignParticipantOrm>,
     // Réutilisé pour vérifier que `teamId` appartient bien à l'utilisateur
     // dans updateMyTeam() — même principe que CampaignService.requestJoin.
     private teamService: TeamService,
@@ -46,8 +46,8 @@ export class CampaignParticipantService {
     }
   }
 
-  /** Mappe une entité CampaignParticipant (avec relations user/team chargées) vers son DTO de réponse. */
-  private toDto(participant: CampaignParticipant): CampaignParticipantResponseDto {
+  /** Mappe une entité CampaignParticipantOrm (avec relations user/team chargées) vers son DTO de réponse. */
+  private toDto(participant: CampaignParticipantOrm): CampaignParticipantResponseDto {
     return {
       id: participant.id,
       userId: participant.userId,
@@ -60,10 +60,10 @@ export class CampaignParticipantService {
   }
 
   /**
-   * Retourne tous les CampaignParticipant d'une saison (tous statuts), avec
+   * Retourne tous les CampaignParticipantOrm d'une saison (tous statuts), avec
    * noms d'utilisateur et d'équipe résolus.
    *
-   * Accessible uniquement à un utilisateur ayant un CampaignParticipant
+   * Accessible uniquement à un utilisateur ayant un CampaignParticipantOrm
    * VALIDATED pour cette saison — NotFoundException sinon (CA3).
    */
   async findParticipants(campaignId: number, userId: number): Promise<CampaignParticipantResponseDto[]> {
@@ -88,9 +88,9 @@ export class CampaignParticipantService {
    * VALIDATED (l'exclut de la saison sans le supprimer — il apparaît alors
    * dans la section "Refusé" et peut être revalidé).
    *
-   * - `organizerUserId` doit correspondre à un CampaignParticipant VALIDATED
+   * - `organizerUserId` doit correspondre à un CampaignParticipantOrm VALIDATED
    *   avec isOrganizer=true pour cette saison, sinon NotFoundException (CA7).
-   * - `pid` doit désigner un CampaignParticipant de cette saison, sinon
+   * - `pid` doit désigner un CampaignParticipantOrm de cette saison, sinon
    *   NotFoundException.
    * - `accept` true → status passe à VALIDATED, false → REJECTED.
    * - Refuser un participant VALIDATED (transition VALIDATED → REJECTED)
@@ -141,9 +141,9 @@ export class CampaignParticipantService {
   /**
    * Retire un participant (validé ou en attente) d'une saison.
    *
-   * - `organizerUserId` doit correspondre à un CampaignParticipant VALIDATED
+   * - `organizerUserId` doit correspondre à un CampaignParticipantOrm VALIDATED
    *   avec isOrganizer=true pour cette saison, sinon NotFoundException.
-   * - `pid` doit désigner un CampaignParticipant de cette saison, sinon
+   * - `pid` doit désigner un CampaignParticipantOrm de cette saison, sinon
    *   NotFoundException.
    * - La saison doit être EN_CONSTRUCTION, sinon BadRequestException.
    * - Si la cible est organisatrice, il doit rester au moins un autre
@@ -185,7 +185,7 @@ export class CampaignParticipantService {
   /**
    * Change l'équipe que l'utilisateur connecté engage dans la saison.
    *
-   * - L'utilisateur doit avoir un CampaignParticipant VALIDATED pour cette
+   * - L'utilisateur doit avoir un CampaignParticipantOrm VALIDATED pour cette
    *   saison, sinon NotFoundException (CA3, même principe que findOne).
    * - La saison doit être EN_CONSTRUCTION, sinon BadRequestException.
    * - `teamId` doit appartenir à l'utilisateur (TeamService.findOneForUser),
@@ -255,6 +255,6 @@ export class CampaignParticipantService {
       where: { id: participant.id },
       relations: { user: true, team: true },
     });
-    return this.toDto(updated as CampaignParticipant);
+    return this.toDto(updated as CampaignParticipantOrm);
   }
 }

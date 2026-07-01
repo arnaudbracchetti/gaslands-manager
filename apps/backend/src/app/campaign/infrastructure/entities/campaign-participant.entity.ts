@@ -8,40 +8,40 @@ import {
   JoinColumn,
   Unique,
 } from 'typeorm';
-import { Campaign } from './campaign.entity';
-import { User } from '../auth/user.entity';
-import { Team } from '../team/infrastructure/entities/team.entity';
-import { ParticipantStatus } from './campaign.enums';
+import { CampaignOrm } from './campaign.entity';
+import { UserOrm } from '../../../auth/user.entity';
+import { TeamOrm } from '../../../team/infrastructure/entities/team.entity';
+import { ParticipantStatus } from '../../campaign.enums';
 
 // Une ligne par (utilisateur, équipe choisie) inscrit à une campagne.
 // @Unique(['campaignId', 'userId']) : un utilisateur ne peut inscrire qu'UNE
 // seule de ses équipes par campagne — même s'il en possède plusieurs au total.
 @Entity('campaign_participants')
 @Unique(['campaignId', 'userId'])
-export class CampaignParticipant {
+export class CampaignParticipantOrm {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Campaign, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CampaignOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'campaignId' })
-  campaign: Campaign;
+  campaign: CampaignOrm;
 
   @Column()
   campaignId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: UserOrm;
 
   @Column()
   userId: number;
 
   // nullable : l'organisateur peut créer une campagne sans engager d'équipe immédiatement
-  @ManyToOne(() => Team, { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne(() => TeamOrm, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'teamId' })
-  team: Team;
+  team: TeamOrm;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   teamId: number | null;
 
   // PENDING par défaut : passe à VALIDATED dès qu'un organisateur accepte la

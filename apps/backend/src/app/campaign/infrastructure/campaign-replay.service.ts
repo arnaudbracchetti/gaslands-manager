@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { Campaign } from '../domain/campaign';
+import { CAMPAIGN_REPOSITORY } from '../campaign.tokens';
 
 /**
  * Service de lecture campagne — charge l'agrégat `Campaign` et rejoue son journal.
@@ -11,7 +12,9 @@ import type { Campaign } from '../domain/campaign';
  */
 @Injectable()
 export class CampaignReplayService {
-  constructor(private readonly campaignRepo: ICampaignRepository) {}
+  constructor(
+    @Inject(CAMPAIGN_REPOSITORY) private readonly campaignRepo: ICampaignRepository,
+  ) {}
 
   /**
    * Charge la saison depuis la base et rejoue l'intégralité de son journal.

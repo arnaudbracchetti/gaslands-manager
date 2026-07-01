@@ -2,12 +2,12 @@
  * GameController — points d'entrée HTTP du Programme Télé (mode campagne).
  *
  * Deux familles de routes :
- *   - /api/campaigns/:id/games[...] : CRUD des parties d'une saison (JWT requis).
- *   - /api/catalog/scenarios       : liste publique des scénarios (pas de JWT).
+ *   - /api/campaigns/:id/games[...] : CRUD des parties d'une campagne (JWT requis).
+ *   - /api/catalog/scenarios        : liste publique des scénarios (pas de JWT).
  *
  * On déclare des chemins complets explicites (@Controller() sans préfixe) plutôt
- * que de réutiliser @Controller('seasons') : cela évite toute interférence avec
- * l'ordre des routes du SeasonController existant, et permet d'exposer la route
+ * que de réutiliser @Controller('campaigns') : cela évite toute interférence avec
+ * l'ordre des routes du CampaignController, et permet d'exposer la route
  * catalogue publique dans le même contrôleur. Le guard JWT est posé par route,
  * pas au niveau classe, pour laisser /catalog/scenarios public.
  */

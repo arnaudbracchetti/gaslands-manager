@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService } from '../../catalog/catalog.service';
-import type { Game as GameOrm } from '../game.entity';
+import type { GameOrm } from './entities/game.entity';
 import type { GameEventOrm } from './entities/game-event.entity';
-import type { CampaignParticipant as CampaignParticipantOrm } from '../../campaign/campaign-participant.entity';
+import type { CampaignParticipantOrm } from './entities/campaign-participant.entity';
 import type { Team } from '../../team/domain/team';
 
 import { Campaign } from '../domain/campaign';
@@ -76,7 +76,7 @@ export class CampaignMapper {
     return new Campaign(campaignId, participants, games);
   }
 
-  // ── Mapping Game ─────────────────────────────────────────────────────────────
+  // ── Mapping GameOrm ─────────────────────────────────────────────────────────────
 
   private toGame(orm: GameOrm, events: GameEvent[]): Game {
     const status = orm.status as unknown as GameStatus;

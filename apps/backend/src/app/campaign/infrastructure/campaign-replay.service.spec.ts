@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CampaignReplayService } from './campaign-replay.service';
-import { Season } from '../domain/season';
+import { Campaign } from '../domain/campaign';
 import { makeTestParticipant } from '../domain/test-helpers';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
@@ -19,7 +19,7 @@ function makeSeasonWithRepo(participantId: number, points: number): {
 } {
   const { participant } = makeTestParticipant(participantId);
   const game = makeGameWithPoints(participantId, points);
-  const season = new Season(1, [participant], [game]);
+  const season = new Campaign(1, [participant], [game]);
 
   const repo: ICampaignRepository = {
     findCampaign: vi.fn().mockResolvedValue(season),
@@ -39,7 +39,7 @@ describe('CampaignReplayService', () => {
 
     expect(repo.findCampaign).toHaveBeenCalledWith(1);
     expect(participant.championshipPoints).toBe(5);
-    expect(result).toBeInstanceOf(Season);
+    expect(result).toBeInstanceOf(Campaign);
   });
 
   it('load retourne la saison sans rejouer', async () => {
@@ -54,7 +54,7 @@ describe('CampaignReplayService', () => {
   it('loadAndReplay replay idempotent : deux appels → même état', async () => {
     const { participant } = makeTestParticipant(1);
     const game = makeGameWithPoints(1, 7);
-    const season = new Season(1, [participant], [game]);
+    const season = new Campaign(1, [participant], [game]);
 
     const repo: ICampaignRepository = {
       findCampaign: vi.fn()

@@ -4,23 +4,22 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { User } from './auth/user.entity';
+import { UserOrm } from './auth/user.entity';
 import { CatalogModule } from './catalog/catalog.module';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
-import { Team } from './team/infrastructure/entities/team.entity';
+import { TeamOrm } from './team/infrastructure/entities/team.entity';
 import {
-  Vehicle,
-  VehicleImprovement,
+  VehicleOrm,
+  VehicleImprovementOrm,
 } from './team/infrastructure/entities/vehicle.entity';
-import { Weapon } from './team/infrastructure/entities/weapon.entity';
+import { WeaponOrm } from './team/infrastructure/entities/weapon.entity';
 import { CampaignModule } from './campaign/campaign.module';
-import { Campaign } from './campaign/campaign.entity';
-import { CampaignParticipant } from './campaign/campaign-participant.entity';
-import { GameModule } from './game/game.module';
-import { Game } from './game/game.entity';
-import { GameResult } from './game/game-result.entity';
-import { GameEventOrm } from './game/infrastructure/entities/game-event.entity';
+import { CampaignOrm } from './campaign/infrastructure/entities/campaign.entity';
+import { CampaignParticipantOrm } from './campaign/infrastructure/entities/campaign-participant.entity';
+import { GameOrm } from './campaign/infrastructure/entities/game.entity';
+import { GameResultOrm } from './campaign/infrastructure/entities/game-result.entity';
+import { GameEventOrm } from './campaign/infrastructure/entities/game-event.entity';
 
 @Module({
   imports: [
@@ -39,7 +38,7 @@ import { GameEventOrm } from './game/infrastructure/entities/game-event.entity';
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [Team, User, Vehicle, VehicleImprovement, Weapon, Campaign, CampaignParticipant, Game, GameResult, GameEventOrm],
+        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameResultOrm, GameEventOrm],
         synchronize: true,
         logging: false,
       }),
@@ -50,7 +49,6 @@ import { GameEventOrm } from './game/infrastructure/entities/game-event.entity';
     AuthModule,
     CatalogModule,
     CampaignModule,
-    GameModule,
   ],
   controllers: [AppController],
   providers: [AppService],

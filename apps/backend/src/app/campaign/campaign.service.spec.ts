@@ -1,20 +1,20 @@
 /**
  * Tests unitaires pour CampaignService.
  *
- * On mock Repository<Campaign>, Repository<CampaignParticipant> et TeamService
+ * On mock Repository<Campaign>, Repository<CampaignParticipantOrm> et TeamService
  * (cf. team.service.spec.ts pour le pattern de mock de Repository).
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { Campaign } from './campaign.entity';
-import { CampaignParticipant } from './campaign-participant.entity';
+import { CampaignOrm } from './infrastructure/entities/campaign.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { CampaignState, ParticipantStatus } from './campaign.enums';
 import { CampaignService } from './campaign.service';
 import { TeamService } from '../team/team.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 
-const mockCampaign: Campaign = {
+const mockCampaign: CampaignOrm = {
   id: 1,
   name: 'Coupe Verney',
   state: CampaignState.EN_CONSTRUCTION,
@@ -23,7 +23,7 @@ const mockCampaign: Campaign = {
   updatedAt: new Date('2025-01-01'),
 };
 
-const mockParticipant: CampaignParticipant = {
+const mockParticipant: CampaignParticipantOrm = {
   id: 1,
   campaignId: 1,
   campaign: mockCampaign,
@@ -64,8 +64,8 @@ describe('CampaignService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CampaignService,
-        { provide: getRepositoryToken(Campaign), useValue: mockCampaignRepo },
-        { provide: getRepositoryToken(CampaignParticipant), useValue: mockParticipantRepo },
+        { provide: getRepositoryToken(CampaignOrm), useValue: mockCampaignRepo },
+        { provide: getRepositoryToken(CampaignParticipantOrm), useValue: mockParticipantRepo },
         { provide: TeamService, useValue: mockTeamService },
       ],
     }).compile();
@@ -321,7 +321,7 @@ describe('CampaignService', () => {
   describe('requestJoin()', () => {
     const dto = { teamId: 7 };
 
-    it('crée un CampaignParticipant PENDING si tout est valide', async () => {
+    it('crée un CampaignParticipantOrm PENDING si tout est valide', async () => {
       mockTeamService.findOneForUser.mockResolvedValue({ id: 7, userId: 42 });
       mockCampaignRepo.findOne.mockResolvedValue(mockCampaign);
       // 1er findOne : vérif doublon userId+campaignId / 2e findOne : vérif équipe déjà engagée

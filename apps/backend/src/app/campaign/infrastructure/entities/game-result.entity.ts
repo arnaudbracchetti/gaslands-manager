@@ -1,27 +1,27 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Unique } from 'typeorm';
-import { Game } from './game.entity';
-import { CampaignParticipant } from '../campaign/campaign-participant.entity';
+import { GameOrm } from './game.entity';
+import { CampaignParticipantOrm } from './campaign-participant.entity';
 
 @Entity('game_results')
 @Unique(['gameId', 'participantId'])
 @Unique(['gameId', 'rank'])
-export class GameResult {
+export class GameResultOrm {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column()
   gameId!: number;
 
-  @ManyToOne(() => Game, { onDelete: 'CASCADE' })
+  @ManyToOne(() => GameOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'gameId' })
-  game!: Game;
+  game!: GameOrm;
 
   @Column()
   participantId!: number;
 
-  @ManyToOne(() => CampaignParticipant, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CampaignParticipantOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'participantId' })
-  participant!: CampaignParticipant;
+  participant!: CampaignParticipantOrm;
 
   @Column()
   rank!: number;

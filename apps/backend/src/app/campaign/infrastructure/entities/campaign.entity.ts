@@ -5,11 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CampaignState } from './campaign.enums';
+import { CampaignState } from '../../campaign.enums';
 
 // @Entity('campaigns') crée une table "campaigns" dans PostgreSQL
 @Entity('campaigns')
-export class Campaign {
+export class CampaignOrm {
   @PrimaryGeneratedColumn()
   id: number;
 

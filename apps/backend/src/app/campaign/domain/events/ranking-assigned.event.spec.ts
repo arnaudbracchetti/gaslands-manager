@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RankingAssignedEvent } from './ranking-assigned.event';
-import { SeasonParticipant } from '../season-participant';
+import { CampaignParticipant } from '../campaign-participant';
 import { makeTestParticipant } from '../test-helpers';
 
 describe('RankingAssignedEvent — execute / undo', () => {

@@ -6,16 +6,16 @@
  * empêcher un utilisateur de voir les saisons d'un autre.
  *
  * Pour l'US1 (création + liste), une saison n'est visible que via la table
- * CampaignParticipant : `findAll` retourne les saisons où l'utilisateur a une
- * ligne CampaignParticipant (peu importe le statut pour l'instant — affinage
+ * CampaignParticipantOrm : `findAll` retourne les saisons où l'utilisateur a une
+ * ligne CampaignParticipantOrm (peu importe le statut pour l'instant — affinage
  * prévu dans une US ultérieure, cf. doc de conception §3 "findAll").
  */
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
-import { Campaign } from './campaign.entity';
-import { CampaignParticipant } from './campaign-participant.entity';
+import { CampaignOrm } from './infrastructure/entities/campaign.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { CampaignState, ParticipantStatus } from './campaign.enums';
 import { TeamService } from '../team/team.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -26,10 +26,10 @@ import { JoinCampaignDto } from './dto/join-campaign.dto';
 @Injectable()
 export class CampaignService {
   constructor(
-    @InjectRepository(Campaign)
-    private campaignRepo: Repository<Campaign>,
-    @InjectRepository(CampaignParticipant)
-    private participantRepo: Repository<CampaignParticipant>,
+    @InjectRepository(CampaignOrm)
+    private campaignRepo: Repository<CampaignOrm>,
+    @InjectRepository(CampaignParticipantOrm)
+    private participantRepo: Repository<CampaignParticipantOrm>,
     // Réutilisé pour vérifier que `dto.teamId` appartient bien à l'utilisateur
     // avant de créer la saison — TeamModule exporte déjà TeamService.
     private teamService: TeamService,
@@ -58,7 +58,7 @@ export class CampaignService {
   }
 
   /**
-   * Retourne toutes les saisons où l'utilisateur a un CampaignParticipant
+   * Retourne toutes les saisons où l'utilisateur a un CampaignParticipantOrm
    * (tous statuts confondus pour l'instant), enrichies avec participantCount
    * et myRole.
    */
@@ -85,7 +85,7 @@ export class CampaignService {
 
   /**
    * Retourne les saisons où l'utilisateur a une demande d'inscription
-   * (CampaignParticipant.status: PENDING) encore non traitée.
+   * (CampaignParticipantOrm.status: PENDING) encore non traitée.
    *
    * Un participant PENDING n'est jamais organisateur — myRole vaut donc
    * toujours 'participant' (US4, CA1).
@@ -147,7 +147,7 @@ export class CampaignService {
    * 1. Vérifie que `dto.teamId` appartient à l'utilisateur (NotFoundException
    *    sinon, via TeamService.findOneForUser).
    * 2. Crée la Season (state: EN_CONSTRUCTION, inviteCode généré).
-   * 3. Crée le CampaignParticipant du créateur (isOrganizer: true, status: VALIDATED).
+   * 3. Crée le CampaignParticipantOrm du créateur (isOrganizer: true, status: VALIDATED).
    */
   async create(userId: number, dto: CreateCampaignDto): Promise<CampaignResponseDto> {
     if (dto.teamId) {
@@ -160,7 +160,7 @@ export class CampaignService {
       state: CampaignState.EN_CONSTRUCTION,
       inviteCode: this.generateInviteCode(),
     });
-    const savedCampaign = await this.campaignRepo.save(season);
+    const savedCampaign = await this.campaignRepo.save(campaign);
 
     const participant = this.participantRepo.create({
       campaignId: savedCampaign.id,
@@ -185,7 +185,7 @@ export class CampaignService {
    */
   async findByInviteCode(code: string): Promise<CampaignSummaryDto> {
     const campaign = await this.campaignRepo.findOne({ where: { inviteCode: code } });
-    if (!season) {
+    if (!campaign) {
       throw new NotFoundException('Code d\'invitation invalide.');
     }
 
@@ -210,7 +210,7 @@ export class CampaignService {
 
   /**
    * Retourne le détail d'une saison — accessible uniquement aux utilisateurs
-   * ayant un CampaignParticipant VALIDATED pour cette saison.
+   * ayant un CampaignParticipantOrm VALIDATED pour cette saison.
    *
    * Lève NotFoundException (message générique) sinon — pas de fuite
    * d'information sur l'existence de la saison (CA3).
@@ -236,24 +236,24 @@ export class CampaignService {
   }
 
   /**
-   * Crée une demande d'inscription (CampaignParticipant, status: PENDING) pour
+   * Crée une demande d'inscription (CampaignParticipantOrm, status: PENDING) pour
    * l'utilisateur, avec l'équipe choisie.
    *
    * 1. Vérifie que `dto.teamId` appartient à l'utilisateur (NotFoundException
    *    sinon, via TeamService.findOneForUser).
    * 2. Vérifie que la saison existe et est encore EN_CONSTRUCTION (CA4).
-   * 3. Vérifie qu'aucun CampaignParticipant n'existe déjà pour
+   * 3. Vérifie qu'aucun CampaignParticipantOrm n'existe déjà pour
    *    (campaignId, userId) (CA5) — contrôle explicite pour renvoyer un message
    *    clair plutôt que laisser la contrainte unique remonter une erreur SQL.
    */
   /**
    * Supprime définitivement une saison — organisateur uniquement.
    *
-   * - `userId` doit correspondre à un CampaignParticipant VALIDATED avec
+   * - `userId` doit correspondre à un CampaignParticipantOrm VALIDATED avec
    *   isOrganizer=true pour cette saison, sinon NotFoundException (même
    *   principe que validate(), pas de fuite d'information).
-   * - La suppression de la Season cascade sur tous ses CampaignParticipant
-   *   (onDelete: 'CASCADE', cf. season-participant.entity.ts) — les équipes
+   * - La suppression de la Season cascade sur tous ses CampaignParticipantOrm
+   *   (onDelete: 'CASCADE', cf. campaign-participant.entity.ts) — les équipes
    *   des participants ne sont pas affectées (aucune référence Team → Season).
    */
   /**
@@ -271,12 +271,12 @@ export class CampaignService {
     }
 
     const campaign = await this.campaignRepo.findOne({ where: { id: campaignId } });
-    if (!season) {
+    if (!campaign) {
       throw new NotFoundException('Saison introuvable.');
     }
 
     campaign.state = newState;
-    const saved = await this.campaignRepo.save(season);
+    const saved = await this.campaignRepo.save(campaign);
 
     const participantCount = await this.participantRepo.count({ where: { campaignId } });
     return { ...saved, participantCount, myRole: 'organizer' };
@@ -304,7 +304,7 @@ export class CampaignService {
    * Vérifie que `userId` est organisateur VALIDATED de la saison et retourne
    * la Season. Lève NotFoundException sinon.
    */
-  async assertOrganizer(campaignId: number, userId: number): Promise<Campaign> {
+  async assertOrganizer(campaignId: number, userId: number): Promise<CampaignOrm> {
     const organizer = await this.participantRepo.findOne({
       where: { campaignId, userId, status: ParticipantStatus.VALIDATED, isOrganizer: true },
     });
@@ -312,10 +312,10 @@ export class CampaignService {
       throw new NotFoundException('Saison introuvable.');
     }
     const campaign = await this.campaignRepo.findOne({ where: { id: campaignId } });
-    if (!season) {
+    if (!campaign) {
       throw new NotFoundException('Saison introuvable.');
     }
-    return season;
+    return campaign;
   }
 
   /**
@@ -323,7 +323,7 @@ export class CampaignService {
    * lecture, organisateur ou non) et retourne la Season. Lève NotFoundException
    * sinon.
    */
-  async assertVisibleParticipant(campaignId: number, userId: number): Promise<Campaign> {
+  async assertVisibleParticipant(campaignId: number, userId: number): Promise<CampaignOrm> {
     const participation = await this.participantRepo.findOne({
       where: { campaignId, userId, status: ParticipantStatus.VALIDATED },
       relations: { campaign: true },
@@ -334,11 +334,11 @@ export class CampaignService {
     return participation.campaign;
   }
 
-  async requestJoin(campaignId: number, userId: number, dto: JoinCampaignDto): Promise<CampaignParticipant> {
+  async requestJoin(campaignId: number, userId: number, dto: JoinCampaignDto): Promise<CampaignParticipantOrm> {
     await this.teamService.findOneForUser(dto.teamId, userId);
 
     const campaign = await this.campaignRepo.findOne({ where: { id: campaignId } });
-    if (!season) {
+    if (!campaign) {
       throw new NotFoundException('Saison introuvable.');
     }
 

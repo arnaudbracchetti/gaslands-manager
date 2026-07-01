@@ -29,7 +29,7 @@ import { JoinCampaignDto } from './dto/join-campaign.dto';
 import { ValidateParticipantDto } from './dto/validate-participant.dto';
 import { ChangeStateDto } from './dto/change-state.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
-import { CampaignParticipant } from './campaign-participant.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 
 // Type du payload injecté par JwtStrategy dans req.user (même forme que team.controller.ts)
 interface AuthenticatedRequest {
@@ -46,7 +46,7 @@ export class CampaignController {
 
   /**
    * GET /api/campaigns
-   * Retourne toutes les saisons où l'utilisateur connecté a un CampaignParticipant.
+   * Retourne toutes les saisons où l'utilisateur connecté a un CampaignParticipantOrm.
    */
   @Get()
   getAll(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
@@ -108,7 +108,7 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: JoinCampaignDto,
-  ): Promise<CampaignParticipant> {
+  ): Promise<CampaignParticipantOrm> {
     return this.campaignService.requestJoin(id, req.user.id, dto);
   }
 
@@ -219,7 +219,7 @@ export class CampaignController {
   /**
    * DELETE /api/campaigns/:id
    * Supprime définitivement une saison — organisateur uniquement.
-   * Cascade : tous les CampaignParticipant de la saison sont supprimés
+   * Cascade : tous les CampaignParticipantOrm de la saison sont supprimés
    * (onDelete: 'CASCADE'). Les équipes des participants ne sont pas affectées.
    */
   @Delete(':id')

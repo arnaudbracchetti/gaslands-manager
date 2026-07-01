@@ -10,9 +10,9 @@
  *                          saisons organisées retournées par
  *                          GET /api/seasons/organizing/pending-requests (US4)
  */
-import { Campaign } from '../campaign.entity';
+import { CampaignOrm } from '../infrastructure/entities/campaign.entity';
 
-export type CampaignResponseDto = Campaign & {
+export type CampaignResponseDto = CampaignOrm & {
   participantCount: number;
   myRole: 'organizer' | 'participant';
   pendingRequestsCount?: number;

@@ -6,8 +6,8 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { Game } from '../../game.entity';
-import { CampaignParticipant } from '../../../campaign/campaign-participant.entity';
+import { GameOrm } from './game.entity';
+import { CampaignParticipantOrm } from './campaign-participant.entity';
 
 /**
  * Enregistrement d'un événement dans le journal de campagne.
@@ -25,16 +25,16 @@ export class GameEventOrm {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Game, { onDelete: 'CASCADE' })
+  @ManyToOne(() => GameOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'gameId' })
-  game!: Game;
+  game!: GameOrm;
 
   @Column()
   gameId!: number;
 
-  @ManyToOne(() => CampaignParticipant, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CampaignParticipantOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'participantId' })
-  participant!: CampaignParticipant;
+  participant!: CampaignParticipantOrm;
 
   @Column()
   participantId!: number;
@@ -49,66 +49,66 @@ export class GameEventOrm {
   eventType!: string;
 
   // ── Payload : RankingAssignedEvent ─────────────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   rank!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   championshipPoints!: number | null;
 
   // ── Payload : WalletMovementEvent ──────────────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   amount!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   walletReason!: string | null;  // WalletReason enum value
 
   // ── Payload commun : véhicule / arme ciblé ─────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   vehicleId!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   weaponId!: number | null;
 
   // ── Payload : WreckResolvedEvent ───────────────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   diceRoll!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   chocsBefore!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   wreckResult!: string | null;  // WreckResult enum value
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   chocsGained!: number | null;
 
   // ── Payload : SequellaAddedEvent ───────────────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   sequellaTypeNom!: string | null;  // nom_interne de la séquelle
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   chocsCost!: number | null;
 
   // ── Payload : EquipmentChangedEvent ────────────────────────────────────────
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   operation!: string | null;      // 'BUY' | 'SELL'
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   entityType!: string | null;     // 'VEHICLE' | 'WEAPON'
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   nomInterne!: string | null;     // nom_interne du véhicule ou de l'arme
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   cost!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   targetVehicleId!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   targetEntityId!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   orientation!: string | null;    // 'avant' | 'arrière' | 'gauche' | 'droite'
 
   @CreateDateColumn()

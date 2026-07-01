@@ -1,20 +1,20 @@
 /**
  * Tests unitaires pour CampaignParticipantService.
  *
- * On mock Repository<CampaignParticipant> (cf. campaign.service.spec.ts pour le
+ * On mock Repository<CampaignParticipantOrm> (cf. campaign.service.spec.ts pour le
  * pattern de mock de Repository).
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { CampaignParticipant } from './campaign-participant.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { ParticipantStatus, CampaignState } from './campaign.enums';
 import { CampaignParticipantService } from './campaign-participant.service';
 import { TeamService } from '../team/team.service';
 
 const mockCampaignEnConstruction = { id: 1, state: CampaignState.EN_CONSTRUCTION } as never;
 
-const mockOrganizer: CampaignParticipant = {
+const mockOrganizer: CampaignParticipantOrm = {
   id: 1,
   campaignId: 1,
   campaign: mockCampaignEnConstruction,
@@ -29,7 +29,7 @@ const mockOrganizer: CampaignParticipant = {
   updatedAt: new Date('2025-01-01'),
 };
 
-const mockPendingParticipant: CampaignParticipant = {
+const mockPendingParticipant: CampaignParticipantOrm = {
   id: 2,
   campaignId: 1,
   campaign: mockCampaignEnConstruction,
@@ -63,7 +63,7 @@ describe('CampaignParticipantService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CampaignParticipantService,
-        { provide: getRepositoryToken(CampaignParticipant), useValue: mockParticipantRepo },
+        { provide: getRepositoryToken(CampaignParticipantOrm), useValue: mockParticipantRepo },
         { provide: TeamService, useValue: mockTeamService },
       ],
     }).compile();

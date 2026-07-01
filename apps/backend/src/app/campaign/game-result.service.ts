@@ -6,22 +6,22 @@
  * - ESCARMOUCHE    : aucun PC (partie libre, sans enjeu de classement).
  *
  * L'enregistrement est atomique via DataSource.transaction :
- * 1. Insertion des GameResult (un par participant soumis).
+ * 1. Insertion des GameResultOrm (un par participant soumis).
  * 2. Mise à jour du statut de la partie (PLANIFIE → JOUE).
  */
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { GameResult } from './game-result.entity';
-import { Game } from './game.entity';
-import { CampaignParticipant } from '../campaign/campaign-participant.entity';
-import { CampaignService } from '../campaign/campaign.service';
+import { GameResultOrm } from './infrastructure/entities/game-result.entity';
+import { GameOrm } from './infrastructure/entities/game.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
+import { CampaignService } from './campaign.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 import type { RecordResultDto } from './dto/record-result.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
 import type { GameResponseDto } from './dto/game-response.dto';
 import { GameStatus, GameType } from './game.enums';
-import { ParticipantStatus } from '../campaign/campaign.enums';
+import { ParticipantStatus } from './campaign.enums';
 
 // Points de Championnat attribués par rang (index 0 = rang 1).
 // Au-delà de l'index 3 (rang 5+), la valeur est 0.
@@ -30,9 +30,9 @@ const POINTS_TABLE = [10, 5, 2, 1];
 @Injectable()
 export class GameResultService {
   constructor(
-    @InjectRepository(Game) private readonly gameRepo: Repository<Game>,
-    @InjectRepository(CampaignParticipant) private readonly participantRepo: Repository<CampaignParticipant>,
-    @InjectRepository(GameResult) private readonly gameResultRepo: Repository<GameResult>,
+    @InjectRepository(GameOrm) private readonly gameRepo: Repository<GameOrm>,
+    @InjectRepository(CampaignParticipantOrm) private readonly participantRepo: Repository<CampaignParticipantOrm>,
+    @InjectRepository(GameResultOrm) private readonly gameResultRepo: Repository<GameResultOrm>,
     private readonly dataSource: DataSource,
     private readonly campaignService: CampaignService,
     private readonly scenarioCatalog: ScenarioCatalogService,
@@ -92,7 +92,7 @@ export class GameResultService {
     const n = dto.results.length;
     const classified = Math.ceil(n / 2);
 
-    const results: Partial<GameResult>[] = dto.results.map(item => {
+    const results: Partial<GameResultOrm>[] = dto.results.map(item => {
       let championshipPoints = 0;
       if (game.type === GameType.EVENEMENT_TELE && item.rank <= classified) {
         championshipPoints = POINTS_TABLE[item.rank - 1] ?? 0;
@@ -101,8 +101,8 @@ export class GameResultService {
     });
 
     await this.dataSource.transaction(async em => {
-      await em.save(GameResult, results);
-      await em.save(Game, { id: gameId, status: GameStatus.JOUE, playedAt: new Date() });
+      await em.save(GameResultOrm, results);
+      await em.save(GameOrm, { id: gameId, status: GameStatus.JOUE, playedAt: new Date() });
     });
 
     const updatedGame = await this.gameRepo.findOne({ where: { id: gameId } });

@@ -3,19 +3,19 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { GameResultService } from './game-result.service';
-import { GameResult } from './game-result.entity';
-import { Game } from './game.entity';
-import { SeasonParticipant } from '../season/season-participant.entity';
-import { SeasonService } from '../season/season.service';
+import { GameResultOrm } from './infrastructure/entities/game-result.entity';
+import { GameOrm } from './infrastructure/entities/game.entity';
+import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
+import { CampaignService } from './campaign.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 import { GameStatus, GameType } from './game.enums';
-import { ParticipantStatus } from '../season/season.enums';
+import { ParticipantStatus } from './campaign.enums';
 
-const mockGame = (overrides: Partial<Game> = {}): Game =>
-  ({ id: 1, seasonId: 10, type: GameType.EVENEMENT_TELE, status: GameStatus.PLANIFIE, ...overrides } as Game);
+const mockGame = (overrides: Partial<GameOrm> = {}): GameOrm =>
+  ({ id: 1, campaignId: 10, type: GameType.EVENEMENT_TELE, status: GameStatus.PLANIFIE, ...overrides } as GameOrm);
 
-const mockParticipant = (id: number, overrides = {}): SeasonParticipant =>
-  ({ id, seasonId: 10, status: ParticipantStatus.VALIDATED, ...overrides } as SeasonParticipant);
+const mockParticipant = (id: number, overrides = {}): CampaignParticipantOrm =>
+  ({ id, campaignId: 10, status: ParticipantStatus.VALIDATED, ...overrides } as CampaignParticipantOrm);
 
 describe('GameResultService', () => {
   let service: GameResultService;
@@ -23,7 +23,7 @@ describe('GameResultService', () => {
   let participantRepo: { find: ReturnType<typeof vi.fn> };
   let gameResultRepo: { find: ReturnType<typeof vi.fn> };
   let dataSource: { transaction: ReturnType<typeof vi.fn> };
-  let seasonService: { assertOrganizer: ReturnType<typeof vi.fn>; assertVisibleParticipant: ReturnType<typeof vi.fn> };
+  let campaignService: { assertOrganizer: ReturnType<typeof vi.fn>; assertVisibleParticipant: ReturnType<typeof vi.fn> };
   let scenarioCatalog: { getByNomInterne: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -36,17 +36,17 @@ describe('GameResultService', () => {
         return cb(em);
       }),
     };
-    seasonService = { assertOrganizer: vi.fn().mockResolvedValue({ id: 10 }), assertVisibleParticipant: vi.fn().mockResolvedValue({ id: 10 }) };
+    campaignService = { assertOrganizer: vi.fn().mockResolvedValue({ id: 10 }), assertVisibleParticipant: vi.fn().mockResolvedValue({ id: 10 }) };
     scenarioCatalog = { getByNomInterne: vi.fn() };
 
     const module = await Test.createTestingModule({
       providers: [
         GameResultService,
-        { provide: getRepositoryToken(Game), useValue: gameRepo },
-        { provide: getRepositoryToken(SeasonParticipant), useValue: participantRepo },
-        { provide: getRepositoryToken(GameResult), useValue: gameResultRepo },
+        { provide: getRepositoryToken(GameOrm), useValue: gameRepo },
+        { provide: getRepositoryToken(CampaignParticipantOrm), useValue: participantRepo },
+        { provide: getRepositoryToken(GameResultOrm), useValue: gameResultRepo },
         { provide: DataSource, useValue: dataSource },
-        { provide: SeasonService, useValue: seasonService },
+        { provide: CampaignService, useValue: campaignService },
         { provide: ScenarioCatalogService, useValue: scenarioCatalog },
       ],
     }).compile();
@@ -54,12 +54,12 @@ describe('GameResultService', () => {
   });
 
   describe('recordResult', () => {
-    it('crée GameResult avec PC corrects pour EVENEMENT_TELE (4 présents → 2 classés)', async () => {
+    it('crée GameResultOrm avec PC corrects pour EVENEMENT_TELE (4 présents → 2 classés)', async () => {
       gameRepo.findOne.mockResolvedValue(mockGame({ type: GameType.EVENEMENT_TELE }));
       participantRepo.find.mockResolvedValue([mockParticipant(1), mockParticipant(2), mockParticipant(3), mockParticipant(4)]);
-      let savedResults: Partial<GameResult>[] = [];
+      let savedResults: Partial<GameResultOrm>[] = [];
       dataSource.transaction.mockImplementation(async (cb: (em: { save: (entity: unknown, data?: unknown) => Promise<unknown> }) => Promise<unknown>) => {
-        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResult>[]; return Promise.resolve(data ?? _entity); }) };
+        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResultOrm>[]; return Promise.resolve(data ?? _entity); }) };
         return cb(em);
       });
 
@@ -76,9 +76,9 @@ describe('GameResultService', () => {
     it('PC = 0 pour tous si ESCARMOUCHE', async () => {
       gameRepo.findOne.mockResolvedValue(mockGame({ type: GameType.ESCARMOUCHE }));
       participantRepo.find.mockResolvedValue([mockParticipant(1), mockParticipant(2)]);
-      let savedResults: Partial<GameResult>[] = [];
+      let savedResults: Partial<GameResultOrm>[] = [];
       dataSource.transaction.mockImplementation(async (cb: (em: { save: (entity: unknown, data?: unknown) => Promise<unknown> }) => Promise<unknown>) => {
-        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResult>[]; return Promise.resolve(data ?? _entity); }) };
+        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResultOrm>[]; return Promise.resolve(data ?? _entity); }) };
         return cb(em);
       });
 
@@ -92,9 +92,9 @@ describe('GameResultService', () => {
     it('⌈N/2⌉ — 5 présents → 3 classés : rangs 1/2/3 reçoivent PC, rangs 4/5 = 0', async () => {
       gameRepo.findOne.mockResolvedValue(mockGame({ type: GameType.EVENEMENT_TELE }));
       participantRepo.find.mockResolvedValue([1, 2, 3, 4, 5].map(i => mockParticipant(i)));
-      let savedResults: Partial<GameResult>[] = [];
+      let savedResults: Partial<GameResultOrm>[] = [];
       dataSource.transaction.mockImplementation(async (cb: (em: { save: (entity: unknown, data?: unknown) => Promise<unknown> }) => Promise<unknown>) => {
-        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResult>[]; return Promise.resolve(data ?? _entity); }) };
+        const em = { save: vi.fn().mockImplementation((_entity: unknown, data?: unknown) => { if (Array.isArray(data)) savedResults = data as Partial<GameResultOrm>[]; return Promise.resolve(data ?? _entity); }) };
         return cb(em);
       });
 
@@ -138,7 +138,7 @@ describe('GameResultService', () => {
     });
 
     it('404 si non-organisateur', async () => {
-      seasonService.assertOrganizer.mockRejectedValue(new NotFoundException());
+      campaignService.assertOrganizer.mockRejectedValue(new NotFoundException());
       await expect(service.recordResult(10, 1, 99, { results: [{ participantId: 1, rank: 1 }] }))
         .rejects.toThrow(NotFoundException);
     });
@@ -153,7 +153,7 @@ describe('GameResultService', () => {
 
   describe('getResults', () => {
     it('retourne les résultats de la partie', async () => {
-      seasonService.assertVisibleParticipant.mockResolvedValue({ id: 10 });
+      campaignService.assertVisibleParticipant.mockResolvedValue({ id: 10 });
       gameRepo.findOne.mockResolvedValue(mockGame());
       gameResultRepo.find.mockResolvedValue([
         { id: 1, gameId: 1, participantId: 1, rank: 1, championshipPoints: 10, createdAt: new Date() },

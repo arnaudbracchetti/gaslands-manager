@@ -17,10 +17,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Game } from './game.entity';
+import { GameOrm } from './infrastructure/entities/game.entity';
 import { GameStatus } from './game.enums';
-import { CampaignService } from '../campaign/campaign.service';
-import { CampaignState } from '../campaign/campaign.enums';
+import { CampaignService } from './campaign.service';
+import { CampaignState } from './campaign.enums';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
@@ -29,8 +29,8 @@ import { GameResponseDto } from './dto/game-response.dto';
 @Injectable()
 export class GameService {
   constructor(
-    @InjectRepository(Game)
-    private gameRepo: Repository<Game>,
+    @InjectRepository(GameOrm)
+    private gameRepo: Repository<GameOrm>,
     private campaignService: CampaignService,
     private scenarioCatalog: ScenarioCatalogService,
   ) {}
@@ -139,7 +139,7 @@ export class GameService {
   }
 
   /** Charge une partie de la saison ou lève NotFoundException. */
-  private async findGameOrThrow(campaignId: number, gameId: number): Promise<Game> {
+  private async findGameOrThrow(campaignId: number, gameId: number): Promise<GameOrm> {
     const game = await this.gameRepo.findOne({ where: { id: gameId, campaignId } });
     if (!game) {
       throw new NotFoundException('Partie introuvable.');
@@ -157,17 +157,17 @@ export class GameService {
     }
   }
 
-  private assertNotJoue(game: Game): void {
+  private assertNotJoue(game: GameOrm): void {
     if (game.status === GameStatus.JOUE) {
       throw new BadRequestException('Une partie déjà jouée ne peut plus être modifiée.');
     }
   }
 
   /**
-   * Mappe une entité Game vers son DTO de réponse, en résolvant le libellé du
+   * Mappe une entité GameOrm vers son DTO de réponse, en résolvant le libellé du
    * scénario depuis le catalogue (champ calculé, jamais persisté).
    */
-  private toDto(game: Game): GameResponseDto {
+  private toDto(game: GameOrm): GameResponseDto {
     const scenario = this.scenarioCatalog.getByNomInterne(game.scenarioId);
     return {
       ...game,
