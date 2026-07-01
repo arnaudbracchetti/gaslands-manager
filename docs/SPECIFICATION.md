@@ -22,7 +22,7 @@
 | Catalogue de jeu en mémoire (sponsors, véhicules, armes, améliorations) | ✅ Implémenté |
 | CRUD Équipes (création, édition, suppression, verrouillage sponsor) | ✅ Implémenté |
 | Construction de véhicule (choix, équipement armes/améliorations, budget) | ✅ Implémenté |
-| Saisons (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
+| Campagnes (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
 | Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1) |
 | Mode campagne — Résultats (classement, PC, cagnotte, résistance) | ✅ Implémenté (US-B/F) |
 | Mode campagne — Atelier (achat/revente équipement, séquelles) | ✅ Implémenté (US-D) |
@@ -40,6 +40,6 @@
 | [spec/AUTH.md](spec/AUTH.md) | Rôles utilisateur, authentification JWT, compte administrateur, modèle `User`, endpoints `/api/auth` |
 | [spec/TEAMS.md](spec/TEAMS.md) | CRUD équipes, verrouillage du sponsor, résumé véhicules sur la carte, modèle `Team`, endpoints `/api/teams` |
 | [spec/VEHICLES.md](spec/VEHICLES.md) | Catalogue de jeu (sponsors, véhicules, armes, améliorations), construction/équipement d'un véhicule, règles métier Gaslands (budget, emplacements, améliorations par défaut), modèles `Vehicle`/`Weapon`/`VehicleImprovement`, endpoints catalogue et véhicules |
-| [spec/SEASONS.md](spec/SEASONS.md) | Cycle de vie d'une saison, inscriptions, transitions de statut, écran détail, modèles `Season`/`SeasonParticipant`, endpoints `/api/seasons` |
+| [spec/CAMPAIGN.md](spec/CAMPAIGN.md) | Cycle de vie d'une campagne, inscriptions, transitions de statut, écran détail, Programme Télé, modèles `Campaign`/`CampaignParticipant`/`Game`, endpoints `/api/campaigns` |
 | [spec/NAVIGATION.md](spec/NAVIGATION.md) | Table des routes Angular, contenu Markdown statique, backlog des fonctionnalités à venir |
 | [DOMAIN_MODEL.md](DOMAIN_MODEL.md) | Diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global |

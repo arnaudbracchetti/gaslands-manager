@@ -47,7 +47,7 @@ Lire avant toute modification — mettre à jour après chaque changement :
   - @docs/spec/AUTH.md — authentification, rôles, compte admin
   - @docs/spec/TEAMS.md — CRUD équipes, verrouillage sponsor
   - @docs/spec/VEHICLES.md — catalogue, construction véhicule, règles métier Gaslands
-  - @docs/spec/SEASONS.md — saisons, inscriptions, transitions d'état
+  - @docs/spec/CAMPAIGN.md — campagnes, inscriptions, transitions d'état, Programme Télé
   - @docs/spec/NAVIGATION.md — routes Angular, backlog
 - @docs/ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
 - @docs/DOMAIN_MODEL.md — diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global

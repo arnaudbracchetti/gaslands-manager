@@ -251,12 +251,12 @@ erDiagram
     VEHICLE ||--o{ WEAPON : possède
     VEHICLE ||--o{ VEHICLE_IMPROVEMENT : possède
 
-    USER ||--o{ SEASON_PARTICIPANT : participe_via
-    TEAM |o--o{ SEASON_PARTICIPANT : est_engagée_dans
-    SEASON ||--o{ SEASON_PARTICIPANT : accueille
-    SEASON ||--o{ GAME : programme
+    USER ||--o{ CAMPAIGN_PARTICIPANT : participe_via
+    TEAM |o--o{ CAMPAIGN_PARTICIPANT : est_engagée_dans
+    CAMPAIGN ||--o{ CAMPAIGN_PARTICIPANT : accueille
+    CAMPAIGN ||--o{ GAME : programme
     GAME ||--o{ GAME_RESULT : produit
-    SEASON_PARTICIPANT ||--o{ GAME_RESULT : obtient
+    CAMPAIGN_PARTICIPANT ||--o{ GAME_RESULT : obtient
 
     USER {
         number id PK
@@ -305,7 +305,7 @@ erDiagram
         date createdAt
     }
 
-    SEASON {
+    CAMPAIGN {
         number id PK
         string name
         enum state "EN_CONSTRUCTION|EN_COURS|TERMINEE"
@@ -314,9 +314,9 @@ erDiagram
         date updatedAt
     }
 
-    SEASON_PARTICIPANT {
+    CAMPAIGN_PARTICIPANT {
         number id PK
-        number seasonId FK
+        number campaignId FK
         number userId FK
         number teamId FK "nullable"
         enum status "PENDING|VALIDATED|REJECTED"
@@ -328,7 +328,7 @@ erDiagram
 
     GAME {
         number id PK
-        number seasonId FK
+        number campaignId FK
         string scenarioId "nullable — null pour ATELIER"
         enum type "EVENEMENT_TELE|ESCARMOUCHE|ATELIER"
         enum status "PLANIFIE|JOUE|OUVERT|CLOTURE"
@@ -382,7 +382,7 @@ erDiagram
 `GAME_EVENT.sequellaTypeNom` → `SequellaType.nom_interne` (registre en mémoire).
 Ces références pointent vers des données en mémoire, pas des tables SQL.
 
-**Contrainte unique composite** : `(SEASON_PARTICIPANT.seasonId, SEASON_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par saison. `(GAME_RESULT.gameId, GAME_RESULT.rank)` — pas deux équipes au même rang pour une même partie.
+**Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne. `(GAME_RESULT.gameId, GAME_RESULT.rank)` — pas deux équipes au même rang pour une même partie.
 
 **Table plate `GAME_EVENT`** : toutes les colonnes payload sont nullable — seules celles pertinentes au type d'événement (`eventType`) sont renseignées. Ce choix évite la hiérarchie STI TypeORM et ses interactions avec le code existant de `GameService`.
 
@@ -390,27 +390,32 @@ Ces références pointent vers des données en mémoire, pas des tables SQL.
 
 ## 4. Domaine Campagne — Event Sourcing (`game/domain/`)
 
-L'état campagne n'est jamais persisté directement. Il est **recalculé par replay** du journal `game_events` à chaque lecture. L'agrégat racine est `Season`.
+L'état campagne n'est jamais persisté directement. Il est **recalculé par replay** du journal `game_events` à chaque lecture. L'agrégat racine est `Campaign` (ex-`Season`, renommé pour unifier la terminologie du domaine — cf. commit `727d6e3`).
+
+> ⚠️ Ne pas confondre avec `campaign/campaign.entity.ts` — entité TypeORM simple
+> (CRUD ligue/inscriptions, module ex-`season/`). Même nom de classe `Campaign`,
+> fichiers et responsabilités distincts.
 
 ```mermaid
 classDiagram
     direction TB
 
-    class Season {
+    class Campaign {
         <<Aggregate Root>>
         +id : number
-        +participants : readonly SeasonParticipant[]
+        +participants : readonly CampaignParticipant[]
         +games : readonly Game[]
         +replay() void
         +replayUpTo(gameId) void
         +finalizeGame(gameId) AtelierGame
-        +closeSeason() void
+        +closeCampaign() void
         +applyNewEvent(gameId, event) void
         +standings() StandingsEntry[]
         +findGame(gameId) Game
+        +findParticipant(participantId) CampaignParticipant
     }
 
-    class SeasonParticipant {
+    class CampaignParticipant {
         <<Receiver GoF>>
         +id : number
         +userId : number
@@ -430,7 +435,7 @@ classDiagram
     class Game {
         <<Invoker GoF — abstract>>
         +id : number
-        +seasonId : number
+        +campaignId : number
         +order : number
         +status : GameStatus
         +events : readonly GameEvent[]
@@ -462,11 +467,11 @@ classDiagram
         +weaponIsLost : boolean
     }
 
-    Season "1" *-- "0..*" SeasonParticipant
-    Season "1" *-- "0..*" Game
+    Campaign "1" *-- "0..*" CampaignParticipant
+    Campaign "1" *-- "0..*" Game
     Game "1" *-- "0..*" GameEvent
-    GameEvent --> SeasonParticipant : mute via execute()
-    SeasonParticipant --> Team : team (état figé)
+    GameEvent --> CampaignParticipant : mute via execute()
+    CampaignParticipant --> Team : team (état figé)
 ```
 
 ### Hiérarchie Game (Invoker)

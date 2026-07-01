@@ -71,7 +71,7 @@ Dialog de confirmation générique. Le parent contrôle la visibilité via `@if`
 | `confirmed` | `void` | L'utilisateur a confirmé |
 | `cancelled` | `void` | L'utilisateur a annulé |
 
-Utilisé par : `TeamEditPage`, `EquipmentManager`, `SeasonDetail`, `AdminUsers`.
+Utilisé par : `TeamEditPage`, `EquipmentManager`, `CampaignDetail`, `AdminUsers`.
 
 ---
 
@@ -90,7 +90,7 @@ Fil d'ariane de navigation. Les items avec `route` sont des `RouterLink`, les au
 |-----|------|--------|-------------|
 | `crumbs` | `BreadcrumbItem[]` | — | Liste `{ label: string; route?: string[] }` |
 
-Utilisé par : `VehicleConfiguratorPage`, `SeasonDetail`.
+Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`.
 
 ---
 
@@ -130,18 +130,19 @@ graph TD
         end
     end
 
-    subgraph Seasons
-        SeasonsPage["Seasons (smart)"]
-        SeasonCard
-        SeasonForm
-        SeasonDetail["SeasonDetail (smart)"]
-        SeasonJoin["SeasonJoin (smart)"]
+    subgraph Campaigns
+        CampaignsPage["Campaigns (smart)"]
+        CampaignCard
+        CampaignForm
+        CampaignDetail["CampaignDetail (smart)"]
+        CampaignJoin["CampaignJoin (smart)"]
         ParticipantList
         InviteLink
         ChangeTeamModal
-        SeasonProgram["SeasonProgram (smart)"]
+        CampaignProgram["CampaignProgram (smart)"]
         GameList
         GameForm
+        GameResultForm
     end
 
     subgraph Admin
@@ -169,19 +170,20 @@ graph TD
     EquipmentManager --> ConfirmModal
     EquipmentOption --> EquipmentDetailModal
     VehicleCostSummary --> SlotGauge
-    SeasonsPage --> SeasonCard
-    SeasonsPage --> SeasonForm
-    SeasonForm --> QuickTeamCreate
-    SeasonJoin --> QuickTeamCreate
-    SeasonDetail --> ParticipantList
-    SeasonDetail --> InviteLink
-    SeasonDetail --> ChangeTeamModal
-    SeasonDetail --> ConfirmModal
-    SeasonDetail --> Breadcrumb
-    SeasonDetail --> SeasonProgram
-    SeasonProgram --> GameList
-    SeasonProgram --> GameForm
-    SeasonProgram --> ConfirmModal
+    CampaignsPage --> CampaignCard
+    CampaignsPage --> CampaignForm
+    CampaignForm --> QuickTeamCreate
+    CampaignJoin --> QuickTeamCreate
+    CampaignDetail --> ParticipantList
+    CampaignDetail --> InviteLink
+    CampaignDetail --> ChangeTeamModal
+    CampaignDetail --> ConfirmModal
+    CampaignDetail --> Breadcrumb
+    CampaignDetail --> CampaignProgram
+    CampaignProgram --> GameList
+    CampaignProgram --> GameForm
+    CampaignProgram --> GameResultForm
+    CampaignProgram --> ConfirmModal
     AdminUsers --> ConfirmModal
 ```
 
@@ -668,50 +670,51 @@ Récapitulatif du coût du véhicule en cours : nom, jauge d'emplacements, déco
 
 ---
 
-## Domaine Seasons
+## Domaine Campaigns
 
-### `Seasons` — `seasons/` 🧠
+### `Campaigns` — `campaigns/` 🧠
 
-Page principale listant toutes les saisons de l'utilisateur. Gère la création via une modale et affiche les badges de demandes en attente.
+Page principale listant toutes les campagnes de l'utilisateur. Gère la création via une modale et affiche les badges de demandes en attente.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-seasons` |
+| **Sélecteur** | `app-campaigns` |
 | **Type** | Smart |
-| **Route** | `/seasons` |
-| **Services** | `SeasonsService`, `TeamsService`, `Router` |
-| **Compose** | `SeasonCard`, `SeasonForm` |
+| **Route** | `/campaigns` |
+| **Services** | `CampaignsService`, `TeamsService`, `Router` |
+| **Compose** | `CampaignCard`, `CampaignForm` |
 
-**Signals clés** : `seasons`, `loading`, `showForm`, `userTeams`, `pendingSeasonIds`, `organizedPendingCounts`.
+**Signals clés** : `campaigns`, `loading`, `showForm`, `userTeams`, `pendingCampaignIds`, `organizedPendingCounts`.
 
 ---
 
-### `SeasonCard` — `seasons/season-card/`
+### `CampaignCard` — `campaigns/campaign-card/`
 
-Carte d'affichage d'une saison : nom, état, badge de rôle (🏆 Organisateur / ⏳ En attente), alerte de demandes à valider.
+Carte d'affichage d'une campagne : nom, état, badge de rôle (🏆 Organisateur / ⏳ En attente), alerte de demandes à valider.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-season-card` |
+| **Sélecteur** | `app-campaign-card` |
 | **Type** | Dumb |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `season` | `Season` | — | Saison à afficher |
+| `campaign` | `Campaign` | — | Campagne à afficher |
+| `index` | `number` | `1` | Indice pour l'affichage |
 | `isPending` | `boolean` | `false` | Affiche le badge "En attente" |
 | `pendingRequestsCount` | `number` | `0` | Nombre de demandes à valider (badge organisateur) |
 
 ---
 
-### `SeasonForm` — `seasons/season-form/`
+### `CampaignForm` — `campaigns/campaign-form/`
 
-Formulaire de création d'une saison (nom + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`.
+Formulaire de création d'une campagne (nom + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-season-form` |
+| **Sélecteur** | `app-campaign-form` |
 | **Type** | Dumb |
 | **Compose** | `QuickTeamCreate` |
 
@@ -727,47 +730,47 @@ Formulaire de création d'une saison (nom + sélection optionnelle d'une équipe
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `saved` | `CreateSeasonDto` | Données de création soumises `{ name, teamId? }` |
+| `saved` | `CreateCampaignDto` | Données de création soumises `{ name, teamId? }` |
 | `formCancel` | `void` | Annulation |
 | `teamCreated` | `CreateTeamDto` | Relaie la demande de création rapide d'équipe vers le parent |
 
 ---
 
-### `SeasonDetail` — `seasons/season-detail/` 🧠
+### `CampaignDetail` — `campaigns/campaign-detail/` 🧠
 
-Page de détail d'une saison (`/seasons/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs.
+Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-season-detail` |
+| **Sélecteur** | `app-campaign-detail` |
 | **Type** | Smart |
-| **Route** | `/seasons/:id` |
-| **Services** | `ActivatedRoute`, `Router`, `SeasonsService`, `AuthService`, `TeamsService` |
+| **Route** | `/campaigns/:id` |
+| **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
 | **Compose** | `ParticipantList`, `InviteLink`, `ChangeTeamModal`, `ConfirmModal`, `Breadcrumb` |
 
-**Signals clés** : `season`, `participants`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`.
+**Signals clés** : `campaign`, `participants`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`.
 
 ---
 
-### `SeasonJoin` — `seasons/season-join/` 🧠
+### `CampaignJoin` — `campaigns/campaign-join/` 🧠
 
-Page de demande d'inscription à une saison via son code d'invitation (`/seasons/join/:code`). Charge le résumé de la saison, propose la création rapide d'équipe.
+Page de demande d'inscription à une campagne via son code d'invitation (`/campaigns/join/:code`). Charge le résumé de la campagne, propose la création rapide d'équipe.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-season-join` |
+| **Sélecteur** | `app-campaign-join` |
 | **Type** | Smart |
-| **Route** | `/seasons/join/:code` |
-| **Services** | `ActivatedRoute`, `SeasonsService`, `TeamsService` |
+| **Route** | `/campaigns/join/:code` |
+| **Services** | `ActivatedRoute`, `CampaignsService`, `TeamsService` |
 | **Compose** | `QuickTeamCreate` |
 
 **Signals clés** : `loading`, `summary`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`.
 
 ---
 
-### `ParticipantList` — `seasons/participant-list/`
+### `ParticipantList` — `campaigns/participant-list/`
 
-Liste unifiée des participants d'une saison avec boutons d'action adaptés au statut et au rôle. Encapsule toutes les règles de visibilité (organisateur uniquement, pas de self-reject sur le dernier organisateur, etc.).
+Liste unifiée des participants d'une campagne avec boutons d'action adaptés au statut et au rôle. Encapsule toutes les règles de visibilité (organisateur uniquement, pas de self-reject sur le dernier organisateur, etc.).
 
 | | |
 |---|---|
@@ -778,11 +781,11 @@ Liste unifiée des participants d'une saison avec boutons d'action adaptés au s
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `participants` | `SeasonParticipant[]` | — | Tous statuts confondus |
+| `participants` | `CampaignParticipant[]` | — | Tous statuts confondus |
 | `isOrganizer` | `boolean` | `false` | Active les boutons d'action organisateur |
 | `currentUserId` | `number \| undefined` | `undefined` | Pour masquer les actions sur soi-même |
 | `canChangeTeam` | `boolean` | `false` | Affiche le lien "Changer d'équipe" |
-| `seasonId` | `number \| undefined` | `undefined` | Pour construire le lien vers l'édition de l'équipe |
+| `campaignId` | `number \| undefined` | `undefined` | Pour construire le lien vers l'édition de l'équipe |
 
 **Outputs**
 
@@ -795,9 +798,9 @@ Liste unifiée des participants d'une saison avec boutons d'action adaptés au s
 
 ---
 
-### `InviteLink` — `seasons/invite-link/`
+### `InviteLink` — `campaigns/invite-link/`
 
-Affiche le code d'invitation d'une saison avec un bouton "Copier". Feedback visuel temporaire "Copié !" après copie dans le presse-papiers.
+Affiche le code d'invitation d'une campagne avec un bouton "Copier". Feedback visuel temporaire "Copié !" après copie dans le presse-papiers.
 
 | | |
 |---|---|
@@ -812,9 +815,9 @@ Affiche le code d'invitation d'une saison avec un bouton "Copier". Feedback visu
 
 ---
 
-### `ChangeTeamModal` — `seasons/change-team-modal/`
+### `ChangeTeamModal` — `campaigns/change-team-modal/`
 
-Overlay de sélection d'une autre équipe à engager dans une saison `EN_CONSTRUCTION`. Le parent contrôle la visibilité.
+Overlay de sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. Le parent contrôle la visibilité.
 
 | | |
 |---|---|
@@ -838,32 +841,32 @@ Overlay de sélection d'une autre équipe à engager dans une saison `EN_CONSTRU
 
 ---
 
-### `SeasonProgram` — `seasons/season-program/` 🧠
+### `CampaignProgram` — `campaigns/campaign-program/` 🧠
 
-Gère le Programme Télé (mode campagne) dans `SeasonDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
+Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
 
 | | |
 |---|---|
-| **Sélecteur** | `app-season-program` |
+| **Sélecteur** | `app-campaign-program` |
 | **Type** | Smart |
-| **Services** | `SeasonsService` |
-| **Compose** | `GameList`, `GameForm`, `ConfirmModal` |
+| **Services** | `CampaignsService` |
+| **Compose** | `GameList`, `GameForm`, `GameResultForm`, `ConfirmModal` |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `seasonId` | `number` | — | Saison concernée |
+| `campaignId` | `number` | — | Campagne concernée |
 | `isOrganizer` | `boolean` | `false` | Rôle organisateur (condition de gestion) |
-| `seasonState` | `SeasonState` | — | État de la saison ; `canManage` est faux en `TERMINEE` |
+| `campaignState` | `CampaignState` | — | État de la campagne ; `canManage` est faux en `TERMINEE` |
 
-**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && seasonState !== 'TERMINEE'`).
+**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`).
 
 ---
 
-### `GameList` — `seasons/game-list/`
+### `GameList` — `campaigns/game-list/`
 
-Liste ordonnée des parties du programme (numéro, scénario, badges type/statut). Émet les actions Modifier/Supprimer, affichées uniquement pour les parties `PLANIFIE` gérables.
+Liste ordonnée des parties du programme (numéro, scénario, badges type/statut). Émet les actions Modifier/Supprimer/Enregistrer, affichées uniquement pour les parties `PLANIFIE` gérables.
 
 | | |
 |---|---|
@@ -875,7 +878,8 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `games` | `Game[]` | — | Parties, déjà triées par le backend |
-| `canManage` | `boolean` | `false` | Organisateur + saison `EN_COURS` |
+| `canManage` | `boolean` | `false` | Organisateur hors `TERMINEE` — active Modifier/Supprimer |
+| `canRecord` | `boolean` | `false` | Organisateur + campagne `EN_COURS` — active Enregistrer résultat |
 
 **Outputs**
 
@@ -883,10 +887,11 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 |-----|------|-------------|
 | `editGame` | `Game` | Demande d'édition d'une partie |
 | `deleteGame` | `Game` | Demande de suppression d'une partie |
+| `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
 
 ---
 
-### `GameForm` — `seasons/game-form/`
+### `GameForm` — `campaigns/game-form/`
 
 Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type est déduit du scénario. `effect()` pré-remplit en mode édition (`game` non nul).
 
@@ -909,6 +914,17 @@ Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type
 |-----|------|-------------|
 | `saved` | `CreateGameDto` | `{ scenarioId }` validé (création ou édition) |
 | `formCancel` | `void` | Annulation |
+
+---
+
+### `GameResultForm` — `campaigns/game-result-form/`
+
+Formulaire d'enregistrement des résultats d'une partie (rangs, PC, cagnotte). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-game-result-form` |
+| **Type** | Dumb |
 
 ---
 

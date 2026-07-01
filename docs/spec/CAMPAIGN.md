@@ -1,19 +1,19 @@
-# Saisons
+# Campagnes
 
 > Sous-document de [SPECIFICATION.md](../SPECIFICATION.md).
-> Mettre à jour après tout changement du module Season.
-> Document de conception détaillé : [`docs/plans/2026-06-14-saisons-design.md`](../plans/2026-06-14-saisons-design.md).
+> Mettre à jour après tout changement du module Campaign.
+> Document de conception détaillé : [`docs/plans/2026-06-14-saisons-design.md`](../plans/2026-06-14-saisons-design.md) (conception initiale, terminologie "saison" — renommée `Campaign` depuis, cf. commit `727d6e3`).
 
 ---
 
 ## Vue d'ensemble
 
-Une **Saison** est une "ligue" regroupant plusieurs équipes (chacune appartenant à un
+Une **Campagne** est une "ligue" regroupant plusieurs équipes (chacune appartenant à un
 utilisateur différent) qui jouent ensemble plusieurs parties au fil du temps. Un
-utilisateur crée la saison (devenant automatiquement son organisateur), peut y inviter
+utilisateur crée la campagne (devenant automatiquement son organisateur), peut y inviter
 d'autres joueurs via un code partageable, et valide leurs demandes d'inscription.
 
-**Cycle de vie** (`SeasonState`) : `EN_CONSTRUCTION` (état initial — gestion libre des
+**Cycle de vie** (`CampaignState`) : `EN_CONSTRUCTION` (état initial — gestion libre des
 inscriptions) → `EN_COURS` → `TERMINEE` (séquentiel, pas de retour en arrière).
 
 ---
@@ -23,27 +23,27 @@ inscriptions) → `EN_COURS` → `TERMINEE` (séquentiel, pas de retour en arri�
 `ParticipantStatus` : `PENDING` | `VALIDATED` | `REJECTED`
 
 - Toute personne disposant du code d'invitation peut soumettre une demande
-  d'inscription (choix d'une de ses équipes) → crée un `SeasonParticipant` `PENDING`.
+  d'inscription (choix d'une de ses équipes) → crée un `CampaignParticipant` `PENDING`.
 - Un organisateur valide (`PENDING → VALIDATED`) ou refuse (`PENDING → REJECTED`) chaque
   demande.
 - **"Refuser" un participant validé** (`VALIDATED → REJECTED`) : action réversible,
   distincte du retrait définitif (`DELETE`). Réservée aux organisateurs,
   `EN_CONSTRUCTION` uniquement. Un organisateur ne peut pas se refuser lui-même s'il est
-  le dernier organisateur `VALIDATED` de la saison (pas de saison "orpheline").
+  le dernier organisateur `VALIDATED` de la campagne (pas de campagne "orpheline").
 - **"Valider" un participant refusé** (`REJECTED → VALIDATED`) : revalidation, sans
   contrainte d'état supplémentaire.
 - **Retirer un participant** (`DELETE`) : suppression définitive de la ligne
-  `SeasonParticipant`, réservée aux organisateurs, `EN_CONSTRUCTION` uniquement.
+  `CampaignParticipant`, réservée aux organisateurs, `EN_CONSTRUCTION` uniquement.
 
-**Changer l'équipe engagée** : tant que la saison est `EN_CONSTRUCTION`, chaque
+**Changer l'équipe engagée** : tant que la campagne est `EN_CONSTRUCTION`, chaque
 participant `VALIDATED` (organisateur ou non) peut changer l'équipe qu'il engage parmi
-ses propres équipes, via le sélecteur "Votre équipe" de l'écran `/seasons/:id`.
+ses propres équipes, via le sélecteur "Votre équipe" de l'écran `/campaigns/:id`.
 
 ---
 
-## Écran `/seasons/:id` — structure par visibilité
+## Écran `/campaigns/:id` — structure par visibilité
 
-- En-tête : nom, état, badge "🏆 Organisateur" et bouton "🗑 Supprimer la saison"
+- En-tête : nom, état, badge "🏆 Organisateur" et bouton "🗑 Supprimer la campagne"
   (organisateurs uniquement).
 - "Votre équipe" : sélecteur modifiable (`EN_CONSTRUCTION`) ou affichage en lecture
   seule sinon.
@@ -55,7 +55,7 @@ ses propres équipes, via le sélecteur "Votre équipe" de l'écran `/seasons/:i
   seulement masquées. Boutons Valider/Refuser/Retirer (en attente) et Valider
   (refusé) respectivement.
 
-Sécurité : un utilisateur ne peut accéder qu'aux saisons où il est `SeasonParticipant`
+Sécurité : un utilisateur ne peut accéder qu'aux campagnes où il est `CampaignParticipant`
 `VALIDATED` (ou via le code d'invitation pour les infos minimales). Toute autre
 tentative d'accès retourne HTTP 404 (pas de fuite d'information).
 
@@ -63,8 +63,8 @@ tentative d'accès retourne HTTP 404 (pas de fuite d'information).
 
 ## Programme Télé (mode campagne — US-A1)
 
-Une section **Programme Télé** est affichée sur `/seasons/:id` **dans tous les
-états** de la saison. L'organisateur y planifie des **parties** (`Game`) — chacune
+Une section **Programme Télé** est affichée sur `/campaigns/:id` **dans tous les
+états** de la campagne. L'organisateur y planifie des **parties** (`Game`) — chacune
 rattachée à un *scénario* du catalogue (`EVENEMENT_TELE` ou `ESCARMOUCHE`). La
 gestion est possible en `EN_CONSTRUCTION` et `EN_COURS` ; en `TERMINEE`, le
 programme reste **visible en lecture seule**.
@@ -73,7 +73,7 @@ programme reste **visible en lecture seule**.
   `database_init/data/scenarios.yml` par `ScenarioCatalogService` (même mécanisme
   que le catalogue de jeu, cf. ARCHITECTURE.md §3.3). Exposé en lecture publique
   via `GET /api/catalog/scenarios`.
-- **Ajout d'une partie** (`POST /api/seasons/:id/games`) : organisateur, saison
+- **Ajout d'une partie** (`POST /api/campaigns/:id/games`) : organisateur, campagne
   `EN_CONSTRUCTION` ou `EN_COURS` (refusé en `TERMINEE`, HTTP 400). La partie est
   créée `PLANIFIE`, en **fin de programme** (ordre auto-append = MAX+1). Le type
   est repris du scénario par défaut.
@@ -82,16 +82,16 @@ programme reste **visible en lecture seule**.
   `JOUE` est **figée** (HTTP 400 si on tente de la modifier ou supprimer). *Le
   statut `JOUE` n'est pas encore atteignable — l'enregistrement de résultat est
   une story ultérieure ; la garde est posée dès maintenant.*
-- **Consultation** (`GET /api/seasons/:id/games`) : tout participant `VALIDATED`
-  voit le programme trié, en lecture seule, **quel que soit l'état** de la saison.
+- **Consultation** (`GET /api/campaigns/:id/games`) : tout participant `VALIDATED`
+  voit le programme trié, en lecture seule, **quel que soit l'état** de la campagne.
   Les actions de gestion ne s'affichent que pour l'organisateur et hors `TERMINEE`.
 - **Réordonnancement** (changer l'ordre au-delà de l'auto-append) : **hors
   périmètre d'US-A1**, suivi en US-A4 (cf.
   [backlog](../plans/2026-06-21-mode-campagne-backlog.md)).
 
-Sécurité : autorisation déléguée à `SeasonService.assertOrganizer` /
-`SeasonService.assertVisibleParticipant` — toute tentative non autorisée retourne
-HTTP 404 (pas de fuite d'information), même pattern que le reste du module Season.
+Sécurité : autorisation déléguée à `CampaignService.assertOrganizer` /
+`CampaignService.assertVisibleParticipant` — toute tentative non autorisée retourne
+HTTP 404 (pas de fuite d'information), même pattern que le reste du module Campaign.
 
 ---
 
@@ -99,14 +99,14 @@ HTTP 404 (pas de fuite d'information), même pattern que le reste du module Seas
 
 Résultats des parties (`GameResult`, classement, Points de Championnat),
 réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
-`EN_COURS`, visibilité partielle pour un `PENDING`, quitter une saison
+`EN_COURS`, visibilité partielle pour un `PENDING`, quitter une campagne
 volontairement, rotation du code d'invitation.
 
 ---
 
 ## Modèles de données
 
-### `Season`
+### `Campaign`
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
@@ -121,18 +121,18 @@ volontairement, rotation du code d'invitation.
 | Champ (DTO) | Type | Description |
 |-------------|------|-------------|
 | `participantCount` | number | Nombre de participants `VALIDATED`. |
-| `myRole` | `'organizer' \| 'participant'` | Rôle de l'utilisateur connecté dans cette saison. |
+| `myRole` | `'organizer' \| 'participant'` | Rôle de l'utilisateur connecté dans cette campagne. |
 
-### `SeasonParticipant`
+### `CampaignParticipant`
 
-Une ligne par (utilisateur, équipe choisie) inscrit à une saison. Contrainte unique
-`(seasonId, userId)` : un utilisateur ne peut engager qu'une seule de ses équipes par
-saison — modifiable (`teamId`) tant que la saison est `EN_CONSTRUCTION`.
+Une ligne par (utilisateur, équipe choisie) inscrit à une campagne. Contrainte unique
+`(campaignId, userId)` : un utilisateur ne peut engager qu'une seule de ses équipes par
+campagne — modifiable (`teamId`) tant que la campagne est `EN_CONSTRUCTION`.
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
-| `seasonId` | number | FK → Season (`CASCADE`) |
+| `campaignId` | number | FK → Campaign (`CASCADE`) |
 | `userId` | number | FK → User (`CASCADE`) |
 | `teamId` | number | FK → Team (`CASCADE`) |
 | `status` | `'PENDING' \| 'VALIDATED' \| 'REJECTED'` | défaut `PENDING` |
@@ -149,14 +149,14 @@ saison — modifiable (`teamId`) tant que la saison est `EN_CONSTRUCTION`.
 
 ### `Game` _(mode campagne — Programme Télé et Atelier)_
 
-Une partie ou un atelier du Programme d'une saison. Le scénario est référencé par
+Une partie ou un atelier du Programme d'une campagne. Le scénario est référencé par
 `scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire) — `null`
 pour les ateliers.
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
-| `seasonId` | number | FK → Season (`CASCADE`) |
+| `campaignId` | number | FK → Campaign (`CASCADE`) |
 | `scenarioId` | string \| null | référence `Scenario.nom_interne` — `null` pour `ATELIER` |
 | `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE' \| 'ATELIER'` | `ATELIER` créé automatiquement par `FinalizeGameUseCase` |
 | `status` | `'PLANIFIE' \| 'JOUE' \| 'OUVERT' \| 'CLOTURE'` | `OUVERT`/`CLOTURE` réservés aux ateliers |
@@ -178,32 +178,32 @@ Chargé depuis `database_init/data/scenarios.yml` au démarrage par
 
 ---
 
-## API Endpoints — Saisons
+## API Endpoints — Campagnes
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/seasons` | JWT | Mes saisons (participant `VALIDATED`) |
-| POST | `/api/seasons` | JWT | Créer une saison (`name` + `teamId` du créateur, devient organisateur) |
-| GET | `/api/seasons/pending` | JWT | Mes demandes d'inscription en attente |
-| GET | `/api/seasons/organizing/pending-requests` | JWT | Inscriptions en attente dans mes saisons (organisateur) |
-| GET | `/api/seasons/by-code/:code` | JWT | Infos minimales d'une saison par son code d'invitation |
-| GET | `/api/seasons/:id` | JWT | Détail d'une saison (participant `VALIDATED`) |
-| DELETE | `/api/seasons/:id` | JWT | Supprimer la saison (organisateur, cascade sur les participants) |
-| PUT | `/api/seasons/:id/state` | JWT | Transition d'état (organisateur) |
-| GET | `/api/seasons/:id/participants` | JWT | Liste des participants |
-| POST | `/api/seasons/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) |
-| PUT | `/api/seasons/:id/participants/me` | JWT | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) |
-| PUT | `/api/seasons/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) — couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` |
-| PUT | `/api/seasons/:id/participants/:pid/promote` | JWT | Promouvoir co-organisateur (organisateur) |
-| DELETE | `/api/seasons/:id/participants/:pid` | JWT | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement) |
+| GET | `/api/campaigns` | JWT | Mes campagnes (participant `VALIDATED`) |
+| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur) |
+| GET | `/api/campaigns/pending` | JWT | Mes demandes d'inscription en attente |
+| GET | `/api/campaigns/organizing/pending-requests` | JWT | Inscriptions en attente dans mes campagnes (organisateur) |
+| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation |
+| GET | `/api/campaigns/:id` | JWT | Détail d'une campagne (participant `VALIDATED`) |
+| DELETE | `/api/campaigns/:id` | JWT | Supprimer la campagne (organisateur, cascade sur les participants) |
+| PUT | `/api/campaigns/:id/state` | JWT | Transition d'état (organisateur) |
+| GET | `/api/campaigns/:id/participants` | JWT | Liste des participants |
+| POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) |
+| PUT | `/api/campaigns/:id/participants/me` | JWT | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) |
+| PUT | `/api/campaigns/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) — couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` |
+| PUT | `/api/campaigns/:id/participants/:pid/promote` | JWT | Promouvoir co-organisateur (organisateur) |
+| DELETE | `/api/campaigns/:id/participants/:pid` | JWT | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement) |
 
-> Routes participants déclarées dans cet ordre dans `season.controller.ts` : la route
+> Routes participants déclarées dans cet ordre dans `campaign.controller.ts` : la route
 > `PUT :id/participants/me` est définie **avant** `PUT :id/participants/:pid/validate`,
 > pour éviter que NestJS ne capture `me` comme valeur de `:pid`.
 
 ## API Endpoints — Programme Télé (mode campagne)
 
-Déclarés dans `game/game.controller.ts` (module `GameModule`, distinct du `SeasonController`).
+Déclarés dans `game/game.controller.ts` (module `GameModule`, distinct du `CampaignController`).
 Le contrôle d'accès est assuré dans chaque use case via `assertOrganizer` / `assertParticipant`
 opérant sur l'état replay (pas d'accès SQL supplémentaire).
 
@@ -212,27 +212,27 @@ opérant sur l'état replay (pas d'accès SQL supplémentaire).
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/catalog/scenarios` | Non | Liste publique des scénarios du catalogue |
-| GET | `/api/seasons/:id/games` | JWT | Programme trié (participant `VALIDATED`) |
-| POST | `/api/seasons/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| PUT | `/api/seasons/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| DELETE | `/api/seasons/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| GET | `/api/campaigns/:id/games` | JWT | Programme trié (participant `VALIDATED`) |
+| POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 
 ### Résultats et classement (Partie 4)
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| POST | `/api/seasons/:id/games/:gameId/events/ranking` | JWT | Enregistrer le rang et les PC d'un participant (organisateur) — 204 |
-| POST | `/api/seasons/:id/games/:gameId/events/wallet` | JWT | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204 |
-| POST | `/api/seasons/:id/games/:gameId/events/vehicle-lost` | JWT | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
-| POST | `/api/seasons/:id/games/:gameId/events/resistance` | JWT | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204 |
-| POST | `/api/seasons/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) |
-| GET | `/api/seasons/:id/standings` | JWT | Classement après replay complet (tout participant `VALIDATED`) |
+| POST | `/api/campaigns/:id/games/:gameId/events/ranking` | JWT | Enregistrer le rang et les PC d'un participant (organisateur) — 204 |
+| POST | `/api/campaigns/:id/games/:gameId/events/wallet` | JWT | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204 |
+| POST | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | JWT | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
+| POST | `/api/campaigns/:id/games/:gameId/events/resistance` | JWT | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204 |
+| POST | `/api/campaigns/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) |
+| GET | `/api/campaigns/:id/standings` | JWT | Classement après replay complet (tout participant `VALIDATED`) |
 
 ### Atelier et épaves (Partie 5)
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/seasons/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients, chocs, séquelles, wallet) |
-| POST | `/api/seasons/:id/games/:gameId/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` dans un `AtelierGame OUVERT` — 204 |
-| POST | `/api/seasons/:id/games/:gameId/events/wreck` | JWT | Table des Épaves — D6 serveur `{ participantId, vehicleId, weaponIdChoice? }` (organisateur) |
-| POST | `/api/seasons/:id/games/:gameId/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` dans un `AtelierGame OUVERT` — 204 |
+| GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients, chocs, séquelles, wallet) |
+| POST | `/api/campaigns/:id/games/:gameId/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` dans un `AtelierGame OUVERT` — 204 |
+| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves — D6 serveur `{ participantId, vehicleId, weaponIdChoice? }` (organisateur) |
+| POST | `/api/campaigns/:id/games/:gameId/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` dans un `AtelierGame OUVERT` — 204 |
