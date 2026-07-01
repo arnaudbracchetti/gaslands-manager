@@ -7,30 +7,30 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { Team } from './team.entity';
-import { Weapon as WeaponOrm } from './weapon.entity';
+import { TeamOrm } from './team.entity';
+import { WeaponOrm } from './weapon.entity';
 import type { Orientation } from '../../vehicle-build';
 
 @Entity('vehicles')
-export class Vehicle {
+export class VehicleOrm {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ length: 100 })
   nomInterne: string;
 
-  @ManyToOne(() => Team, (team) => team.vehicles, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TeamOrm, (team) => team.vehicles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'teamId' })
-  team: Team;
+  team: TeamOrm;
 
   @Column()
   teamId: number;
 
-  @OneToMany(() => VehicleImprovement, (improvement) => improvement.vehicle, {
+  @OneToMany(() => VehicleImprovementOrm, (improvement) => improvement.vehicle, {
     cascade: true,
     orphanedRowAction: 'delete',
   })
-  improvements: VehicleImprovement[];
+  improvements: VehicleImprovementOrm[];
 
   @OneToMany(() => WeaponOrm, (weapon) => weapon.vehicle, {
     cascade: true,
@@ -43,7 +43,7 @@ export class Vehicle {
 }
 
 @Entity('vehicle_improvements')
-export class VehicleImprovement {
+export class VehicleImprovementOrm {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -59,9 +59,9 @@ export class VehicleImprovement {
   @Column({ type: 'varchar', length: 100, nullable: true, default: null })
   weaponNomInterne: string | null;
 
-  @ManyToOne(() => Vehicle, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
+  @ManyToOne(() => VehicleOrm, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
-  vehicle: Vehicle;
+  vehicle: VehicleOrm;
 
   @Column()
   vehicleId: number;

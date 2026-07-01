@@ -23,18 +23,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register.dto';
-import { User } from './user.entity';
+import { UserOrm } from './user.entity';
 
 // Type utilitaire TypeScript : User sans le champ sensible `password`
-export type SafeUser = Omit<User, 'password'>;
+export type SafeUser = Omit<UserOrm, 'password'>;
 
 @Injectable()
 export class UserService {
-  // @InjectRepository(User) : NestJS fournit le Repository TypeORM
+  // @InjectRepository(UserOrm) : NestJS fournit le Repository TypeORM
   // correspondant à l'entité User (configuré dans auth.module.ts)
   constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    @InjectRepository(UserOrm)
+    private readonly userRepo: Repository<UserOrm>,
   ) {}
 
   /**
@@ -42,7 +42,7 @@ export class UserService {
    * Retourne l'entité complète (avec password hash) car AuthService
    * en a besoin pour comparer avec bcrypt.compare().
    */
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<UserOrm | null> {
     return this.userRepo.findOne({ where: { email } });
   }
 
@@ -149,7 +149,7 @@ export class UserService {
    * Supprime le champ `password` d'un objet User avant de le retourner.
    * La déstructuration `{ password, ...safe }` crée un nouvel objet sans la clé.
    */
-  private sanitize(user: User): SafeUser {
+  private sanitize(user: UserOrm): SafeUser {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...safe } = user;
     return safe;

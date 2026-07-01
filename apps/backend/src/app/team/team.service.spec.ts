@@ -16,15 +16,15 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { Team } from './infrastructure/entities/team.entity';
-import { Vehicle } from './infrastructure/entities/vehicle.entity';
-import { CampaignParticipant } from '../campaign/campaign-participant.entity';
+import { TeamOrm } from './infrastructure/entities/team.entity';
+import { VehicleOrm } from './infrastructure/entities/vehicle.entity';
+import { CampaignParticipantOrm } from '../campaign/infrastructure/entities/campaign-participant.entity';
 import { TeamService } from './team.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
 // Équipe fictive pour les tests
-const mockTeam: Team = {
+const mockTeam: TeamOrm = {
   id: 1,
   name: 'Les Furieux du Désert',
   sponsor: 'Rutherford',
@@ -54,7 +54,7 @@ describe('TeamService', () => {
     count: vi.fn(),
   };
 
-  // Mock du Repository<CampaignParticipant> — UNIQUEMENT pour `count` (cf. `isTeamEngaged`).
+  // Mock du Repository<CampaignParticipantOrm> — UNIQUEMENT pour `count` (cf. `isTeamEngaged`).
   const mockParticipantRepo = {
     count: vi.fn(),
   };
@@ -66,17 +66,17 @@ describe('TeamService', () => {
       providers: [
         TeamService,
         {
-          // getRepositoryToken(Team) retourne le token d'injection de TypeORM
+          // getRepositoryToken(TeamOrm) retourne le token d'injection de TypeORM
           // C'est ce que @InjectRepository(Team) utilise dans le constructeur
-          provide: getRepositoryToken(Team),
+          provide: getRepositoryToken(TeamOrm),
           useValue: mockRepo,
         },
         {
-          provide: getRepositoryToken(Vehicle),
+          provide: getRepositoryToken(VehicleOrm),
           useValue: mockVehicleRepo,
         },
         {
-          provide: getRepositoryToken(CampaignParticipant),
+          provide: getRepositoryToken(CampaignParticipantOrm),
           useValue: mockParticipantRepo,
         },
       ],

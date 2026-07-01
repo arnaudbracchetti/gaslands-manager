@@ -21,15 +21,15 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-import { User, UserRole } from './user.entity';
+import { UserOrm, UserRole } from './user.entity';
 
 @Injectable()
 export class AdminSeedService implements OnModuleInit {
   private readonly logger: Logger = new Logger(AdminSeedService.name);
 
   constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    @InjectRepository(UserOrm)
+    private readonly userRepo: Repository<UserOrm>,
     private readonly config: ConfigService,
   ) {}
 

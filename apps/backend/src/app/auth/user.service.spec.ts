@@ -22,10 +22,10 @@ vi.mock('bcrypt');
 
 // L'import se fait APRÈS vi.mock() — les fonctions importées sont déjà des mocks
 import * as bcrypt from 'bcrypt';
-import { User, UserRole } from './user.entity';
+import { UserOrm, UserRole } from './user.entity';
 import { UserService } from './user.service';
 
-const mockUser: User = {
+const mockUser: UserOrm = {
   id: 1,
   firstName: 'Jean',
   lastName: 'Dupont',
@@ -52,7 +52,7 @@ describe('UserService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
-        { provide: getRepositoryToken(User), useValue: mockRepo },
+        { provide: getRepositoryToken(UserOrm), useValue: mockRepo },
       ],
     }).compile();
 

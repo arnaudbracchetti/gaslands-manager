@@ -20,9 +20,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Team } from './infrastructure/entities/team.entity';
-import { Vehicle } from './infrastructure/entities/vehicle.entity';
-import { CampaignParticipant } from '../campaign/campaign-participant.entity';
+import { TeamOrm } from './infrastructure/entities/team.entity';
+import { VehicleOrm } from './infrastructure/entities/vehicle.entity';
+import { CampaignParticipantOrm } from '../campaign/infrastructure/entities/campaign-participant.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
@@ -30,19 +30,19 @@ import { TeamResponseDto } from './dto/team-response.dto';
 @Injectable()
 export class TeamService {
   constructor(
-    // @InjectRepository(Team) : demande à TypeORM d'injecter le Repository<Team>
+    // @InjectRepository(TeamOrm) : demande à TypeORM d'injecter le Repository<TeamOrm>
     // Le Repository est le DAO (Data Access Object) : il expose find(), save(), etc.
-    @InjectRepository(Team)
-    private teamRepo: Repository<Team>,
-    // Repository<Vehicle> — uniquement pour COMPTER (cf. `countVehicles`), jamais
+    @InjectRepository(TeamOrm)
+    private teamRepo: Repository<TeamOrm>,
+    // Repository<VehicleOrm> — uniquement pour COMPTER (cf. `countVehicles`), jamais
     // pour lire/écrire des véhicules (ce serait le rôle de `VehicleService`).
     // Enregistré directement via `forFeature([Team, Vehicle])` dans `TeamModule`
     // plutôt qu'en important `VehicleModule` — voir son en-tête pour la raison
     // (éviter tout cycle `TeamModule ↔ VehicleModule`).
-    @InjectRepository(Vehicle)
-    private vehicleRepo: Repository<Vehicle>,
-    @InjectRepository(CampaignParticipant)
-    private participantRepo: Repository<CampaignParticipant>,
+    @InjectRepository(VehicleOrm)
+    private vehicleRepo: Repository<VehicleOrm>,
+    @InjectRepository(CampaignParticipantOrm)
+    private participantRepo: Repository<CampaignParticipantOrm>,
   ) {}
 
   /**
@@ -56,7 +56,7 @@ export class TeamService {
   }
 
   /**
-   * Vrai si l'équipe est référencée dans au moins un CampaignParticipant,
+   * Vrai si l'équipe est référencée dans au moins un CampaignParticipantOrm,
    * quelle que soit la campagne ou le statut du participant.
    * Utilisé pour informer le frontend qu'une équipe ne peut pas être
    * engagée dans une nouvelle saison (règle absolue).
@@ -82,7 +82,7 @@ export class TeamService {
     const teams = await this.teamRepo.find({ where: { userId } });
     return Promise.all(
       teams.map(
-        async (team: Team): Promise<TeamResponseDto> => ({
+        async (team: TeamOrm): Promise<TeamResponseDto> => ({
           ...team,
           vehicleCount: await this.countVehicles(team.id),
           isEngaged: await this.isTeamEngaged(team.id),
@@ -102,7 +102,7 @@ export class TeamService {
    * Note : retourne l'entité brute (sans vehicleCount) — utilisé en interne
    * pour les opérations de mise à jour / suppression.
    */
-  async findOneForUser(id: number, userId: number): Promise<Team> {
+  async findOneForUser(id: number, userId: number): Promise<TeamOrm> {
     const team = await this.teamRepo.findOne({ where: { id, userId } });
     if (!team) {
       throw new NotFoundException(`Équipe #${id} introuvable`);

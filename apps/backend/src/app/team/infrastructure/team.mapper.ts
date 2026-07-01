@@ -1,6 +1,6 @@
-import { Team as TeamOrm } from './entities/team.entity';
-import { Vehicle as VehicleOrm, VehicleImprovement as VehicleImprovementOrm } from './entities/vehicle.entity';
-import { Weapon as WeaponOrm } from './entities/weapon.entity';
+import { TeamOrm } from './entities/team.entity';
+import { VehicleOrm, VehicleImprovementOrm } from './entities/vehicle.entity';
+import { WeaponOrm } from './entities/weapon.entity';
 import { Team } from '../domain/team';
 import { Vehicle } from '../domain/vehicle';
 import { Weapon } from '../domain/weapon';

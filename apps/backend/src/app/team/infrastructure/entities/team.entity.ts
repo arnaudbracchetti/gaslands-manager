@@ -8,8 +8,8 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../../auth/user.entity';
-import { Vehicle as VehicleOrm } from './vehicle.entity';
+import { UserOrm } from '../../../auth/user.entity';
+import { VehicleOrm } from './vehicle.entity';
 
 /**
  * Entité ORM de l'agrégat Team.
@@ -19,7 +19,7 @@ import { Vehicle as VehicleOrm } from './vehicle.entity';
  * weapons, improvements) en un seul save().
  */
 @Entity('teams')
-export class Team {
+export class TeamOrm {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -35,9 +35,9 @@ export class Team {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserOrm, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: UserOrm;
 
   @Column()
   userId: number;

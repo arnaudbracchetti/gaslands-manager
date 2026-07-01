@@ -11,7 +11,7 @@ vi.mock('bcrypt');
 
 import * as bcrypt from 'bcrypt';
 import { AdminSeedService } from './admin-seed.service';
-import { User, UserRole } from './user.entity';
+import { UserOrm, UserRole } from './user.entity';
 
 describe('AdminSeedService', () => {
   let service: AdminSeedService;
@@ -62,7 +62,7 @@ describe('AdminSeedService', () => {
       email: 'admin@gaslands.local',
       password: '$2b$10$currentHash',
       role: UserRole.ADMIN,
-    } as User;
+    } as UserOrm;
     mockRepo.findOne.mockResolvedValue(existingAdmin);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
@@ -78,7 +78,7 @@ describe('AdminSeedService', () => {
       email: 'admin@gaslands.local',
       password: '$2b$10$oldHash',
       role: UserRole.ADMIN,
-    } as User;
+    } as UserOrm;
     mockRepo.findOne.mockResolvedValue(existingAdmin);
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
     vi.mocked(bcrypt.hash).mockResolvedValue('$2b$10$newHash' as never);
@@ -98,7 +98,7 @@ describe('AdminSeedService', () => {
       email: 'autre-admin@gaslands.local',
       password: '$2b$10$currentHash',
       role: UserRole.ADMIN,
-    } as User;
+    } as UserOrm;
     mockRepo.findOne.mockResolvedValue(existingAdmin);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 

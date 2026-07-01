@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Team as TeamOrm } from './entities/team.entity';
-import { Vehicle as VehicleOrm } from './entities/vehicle.entity';
-import { CampaignParticipant } from '../../campaign/campaign-participant.entity';
+import { TeamOrm } from './entities/team.entity';
+import { VehicleOrm } from './entities/vehicle.entity';
+import { CampaignParticipantOrm } from '../../campaign/infrastructure/entities/campaign-participant.entity';
 import type { ITeamRepository, TeamSummaryDto } from '../domain/team.repository.interface';
 import type { Team } from '../domain/team';
 import { TeamMapper } from './team.mapper';
@@ -24,8 +24,8 @@ export class TeamRepository implements ITeamRepository {
     private readonly teamOrmRepo: Repository<TeamOrm>,
     @InjectRepository(VehicleOrm)
     private readonly vehicleOrmRepo: Repository<VehicleOrm>,
-    @InjectRepository(SeasonParticipant)
-    private readonly participantRepo: Repository<SeasonParticipant>,
+    @InjectRepository(CampaignParticipantOrm)
+    private readonly participantRepo: Repository<CampaignParticipantOrm>,
     private readonly mapper: TeamMapper,
   ) {}
 

@@ -5,7 +5,7 @@
  * et déclare ce qui est disponible à l'extérieur via `exports`.
  *
  * Ce module configure :
- * 1. TypeOrmModule.forFeature([User]) → Repository<User> disponible via injection
+ * 1. TypeOrmModule.forFeature([UserOrm]) → Repository<UserOrm> disponible via injection
  * 2. PassportModule → infrastructure Passport (strategies)
  * 3. JwtModule → JwtService configuré avec la clé secrète et l'expiration
  *
@@ -24,14 +24,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './roles.guard';
-import { User } from './user.entity';
+import { UserOrm } from './user.entity';
 import { UserService } from './user.service';
 import { UsersController } from './users.controller';
 
 @Module({
   imports: [
-    // Rend Repository<User> injectable via @InjectRepository(User)
-    TypeOrmModule.forFeature([User]),
+    // Rend Repository<UserOrm> injectable via @InjectRepository(User)
+    TypeOrmModule.forFeature([UserOrm]),
 
     // PassportModule enregistre l'infrastructure Passport dans NestJS
     PassportModule,

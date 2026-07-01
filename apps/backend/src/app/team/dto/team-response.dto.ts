@@ -14,9 +14,9 @@
  * sera calculé par un COUNT SQL sur la table vehicles au lieu d'être hardcodé
  * à 0. Le type ici ne changera pas — seul le service sera mis à jour.
  */
-import { Team } from '../infrastructure/entities/team.entity';
+import { TeamOrm } from '../infrastructure/entities/team.entity';
 
-export type TeamResponseDto = Team & {
+export type TeamResponseDto = TeamOrm & {
   /**
    * Nombre de véhicules créés dans cette équipe.
    * Toujours 0 tant que le module Véhicules n'est pas implémenté.

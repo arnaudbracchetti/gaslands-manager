@@ -28,7 +28,7 @@ export enum UserRole {
 }
 
 @Entity('users')
-export class User {
+export class UserOrm {
   // Clé primaire auto-incrémentée (SERIAL en PostgreSQL)
   @PrimaryGeneratedColumn()
   id: number;

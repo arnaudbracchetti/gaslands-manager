@@ -161,7 +161,7 @@ export class Team {
 
   /**
    * Remet tous les états transients de campagne à zéro (véhicules + armes).
-   * Appelé par SeasonParticipant.reset() avant chaque replay.
+   * Appelé par CampaignParticipant.reset() avant chaque replay.
    */
   resetCampaignState(): void {
     for (const vehicle of this._vehicles) {

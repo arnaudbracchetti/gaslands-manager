@@ -6,11 +6,11 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Vehicle } from './vehicle.entity';
+import { VehicleOrm } from './vehicle.entity';
 import type { Orientation } from '../../vehicle-build';
 
 @Entity('weapons')
-export class Weapon {
+export class WeaponOrm {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -21,9 +21,9 @@ export class Weapon {
   orientation: Orientation | null;
 
   // Résolveur paresseux pour éviter les cycles de fichiers entre vehicle.entity.ts et weapon.entity.ts
-  @ManyToOne(() => Vehicle, (vehicle) => vehicle.weapons, { onDelete: 'CASCADE' })
+  @ManyToOne(() => VehicleOrm, (vehicle) => vehicle.weapons, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
-  vehicle: Vehicle;
+  vehicle: VehicleOrm;
 
   @Column()
   vehicleId: number;

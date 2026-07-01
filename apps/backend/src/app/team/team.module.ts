@@ -2,15 +2,15 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CatalogModule } from '../catalog/catalog.module';
 import { CatalogService } from '../catalog/catalog.service';
-import { CampaignParticipant } from '../campaign/campaign-participant.entity';
+import { CampaignParticipantOrm } from '../campaign/infrastructure/entities/campaign-participant.entity';
 
 // ORM entities (nouvelle couche infrastructure)
-import { Team as TeamOrm } from './infrastructure/entities/team.entity';
+import { TeamOrm } from './infrastructure/entities/team.entity';
 import {
-  Vehicle as VehicleOrm,
-  VehicleImprovement as VehicleImprovementOrm,
+  VehicleOrm,
+  VehicleImprovementOrm,
 } from './infrastructure/entities/vehicle.entity';
-import { Weapon as WeaponOrm } from './infrastructure/entities/weapon.entity';
+import { WeaponOrm } from './infrastructure/entities/weapon.entity';
 
 // Infrastructure
 import { CatalogAdapter } from './infrastructure/catalog.adapter';
@@ -59,7 +59,7 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignParticipant]),
+    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignParticipantOrm]),
     CatalogModule,
   ],
   controllers: [TeamController, VehicleTeamController, VehicleController, WeaponController],
