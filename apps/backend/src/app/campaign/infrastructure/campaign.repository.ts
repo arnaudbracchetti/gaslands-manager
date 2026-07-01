@@ -12,6 +12,7 @@ import type { GameEvent } from '../domain/events/game-event';
 import type { AtelierGame } from '../domain/games/atelier-game';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { TEAM_REPOSITORY } from '../../team/team.tokens';
+import { CampaignState, ParticipantStatus } from '../campaign.enums';
 import { GameType } from '../game.enums';
 import { GameStatus as OrmGameStatus } from '../game.enums';
 import { GameStatus as DomainGameStatus } from '../domain/enums/game-status.enum';
@@ -137,6 +138,102 @@ export class CampaignRepository implements ICampaignRepository {
       // des événements dans ce nouvel atelier dans la même transaction.
       (newAtelier as unknown as { id: number }).id = saved.id;
     }
+  }
+
+  // ── Persistance CRUD (Phase 2) ────────────────────────────────────────────────
+
+  async createCampaign(
+    name: string,
+    inviteCode: string,
+    organizerUserId: number,
+    teamId: number | null,
+  ): Promise<number> {
+    const campaign = this.campaignOrmRepo.create({
+      name,
+      state: CampaignState.EN_CONSTRUCTION,
+      inviteCode,
+    });
+    const saved = await this.campaignOrmRepo.save(campaign);
+
+    const organizer = this.participantRepo.create({
+      campaignId: saved.id,
+      userId: organizerUserId,
+      teamId,
+      status: ParticipantStatus.VALIDATED,
+      isOrganizer: true,
+    });
+    await this.participantRepo.save(organizer);
+    return saved.id;
+  }
+
+  async saveStructural(campaign: Campaign): Promise<void> {
+    // 1. Campagne : name/state (inviteCode immuable, non mis à jour).
+    await this.campaignOrmRepo.update(campaign.id, {
+      name: campaign.name,
+      state: campaign.state as unknown as CampaignState,
+    });
+
+    // 2. Participants retirés.
+    if (campaign.removedParticipantIds.length > 0) {
+      await this.participantRepo.delete([...campaign.removedParticipantIds]);
+    }
+
+    // 3. Participants : upsert. id<=0 → INSERT (id rétro-alimenté), id>0 → UPDATE.
+    for (const p of campaign.participants) {
+      if (p.id > 0) {
+        await this.participantRepo.update(p.id, {
+          status: p.status,
+          isOrganizer: p.isOrganizer,
+          teamId: p.teamId,
+        });
+      } else {
+        const orm = this.participantRepo.create({
+          campaignId: campaign.id,
+          userId: p.userId,
+          teamId: p.teamId,
+          status: p.status,
+          isOrganizer: p.isOrganizer,
+        });
+        const saved = await this.participantRepo.save(orm);
+        (p as unknown as { id: number }).id = saved.id;
+      }
+    }
+
+    // 4. Parties retirées.
+    if (campaign.removedGameIds.length > 0) {
+      await this.gameOrmRepo.delete([...campaign.removedGameIds]);
+    }
+
+    // 5. Parties : upsert. Le scenarioId n'existe que sur les sous-types joués
+    //    (EvenementTele/Escarmouche) — null pour AtelierGame.
+    for (const game of campaign.games) {
+      const scenarioId = (game as unknown as { scenarioId?: string }).scenarioId ?? null;
+      const status = game.status as unknown as OrmGameStatus;
+      if (game.id > 0) {
+        await this.gameOrmRepo.update(game.id, {
+          scenarioId,
+          type: game.type as GameType,
+          status,
+          order: game.order,
+          playedAt: game.playedAt,
+        });
+      } else {
+        const orm = this.gameOrmRepo.create({
+          campaignId: campaign.id,
+          scenarioId,
+          type: game.type as GameType,
+          status,
+          order: game.order,
+          playedAt: game.playedAt,
+        });
+        const saved = await this.gameOrmRepo.save(orm);
+        (game as unknown as { id: number }).id = saved.id;
+      }
+    }
+  }
+
+  async deleteCampaign(campaignId: number): Promise<void> {
+    await this.campaignOrmRepo.delete(campaignId);
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────

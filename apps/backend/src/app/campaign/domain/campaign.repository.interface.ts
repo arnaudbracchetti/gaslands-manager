@@ -17,4 +17,25 @@ export interface ICampaignRepository {
   findCampaign(campaignId: number): Promise<Campaign>;
   appendEvents(gameId: number, events: GameEvent[]): Promise<void>;
   saveCampaign(campaign: Campaign, newAtelier?: AtelierGame): Promise<void>;
+
+  /**
+   * Crée une campagne et son participant organisateur (VALIDATED). Retourne l'id
+   * de la campagne créée. Cas particulier : aucun agrégat n'existe encore.
+   */
+  createCampaign(
+    name: string,
+    inviteCode: string,
+    organizerUserId: number,
+    teamId: number | null,
+  ): Promise<number>;
+
+  /**
+   * Persiste les mutations CRUD de l'agrégat : campagne (name/state), participants
+   * (upsert + suppression via `removedParticipantIds`), parties (upsert +
+   * suppression via `removedGameIds`). Rétro-alimente les ids des entités créées.
+   */
+  saveStructural(campaign: Campaign): Promise<void>;
+
+  /** Supprime définitivement une campagne (cascade sur participants/parties). */
+  deleteCampaign(campaignId: number): Promise<void>;
 }
