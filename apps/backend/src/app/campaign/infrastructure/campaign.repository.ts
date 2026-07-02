@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Not } from 'typeorm';
 import { CampaignOrm } from './entities/campaign.entity';
 import { GameOrm } from './entities/game.entity';
 import { GameEventOrm } from './entities/game-event.entity';
@@ -234,6 +234,14 @@ export class CampaignRepository implements ICampaignRepository {
 
   async deleteCampaign(campaignId: number): Promise<void> {
     await this.campaignOrmRepo.delete(campaignId);
+  }
+
+  async isTeamEngaged(teamId: number, excludeCampaignId?: number): Promise<boolean> {
+    const where = excludeCampaignId
+      ? { teamId, campaignId: Not(excludeCampaignId) }
+      : { teamId };
+    const existing = await this.participantRepo.findOne({ where });
+    return existing !== null;
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────

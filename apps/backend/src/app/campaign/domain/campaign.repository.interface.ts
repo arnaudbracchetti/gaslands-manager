@@ -38,4 +38,12 @@ export interface ICampaignRepository {
 
   /** Supprime définitivement une campagne (cascade sur participants/parties). */
   deleteCampaign(campaignId: number): Promise<void>;
+
+  /**
+   * Indique si l'équipe est déjà engagée dans une campagne — invariant d'unicité
+   * *global* (au-delà de l'agrégat courant), donc porté par le repository et non
+   * par l'agrégat. `excludeCampaignId` exclut la campagne courante (changement
+   * d'équipe au sein d'une même campagne).
+   */
+  isTeamEngaged(teamId: number, excludeCampaignId?: number): Promise<boolean>;
 }

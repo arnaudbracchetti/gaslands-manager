@@ -1,30 +1,27 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-// Entités ORM (toutes regroupées dans infrastructure/entities/)
+// Entités ORM (regroupées dans infrastructure/entities/)
 import { CampaignOrm } from './infrastructure/entities/campaign.entity';
 import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { GameOrm } from './infrastructure/entities/game.entity';
-import { GameResultOrm } from './infrastructure/entities/game-result.entity';
 import { GameEventOrm } from './infrastructure/entities/game-event.entity';
 
-// Controllers
+// Controller unique (fusion campaign + game)
 import { CampaignController } from './campaign.controller';
-import { GameController } from './game.controller';
 
-// Services (CRUD anémique + Programme — migrés vers DDD en Phase 2)
-import { CampaignService } from './campaign.service';
-import { CampaignParticipantService } from './campaign-participant.service';
-import { GameService } from './game.service';
-import { GameResultService } from './game-result.service';
+// Lecture (CQRS) + catalogue
+import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 
 // Modules externes
 import { CatalogModule } from '../catalog/catalog.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { TeamModule } from '../team/team.module';
+import { TEAM_REPOSITORY } from '../team/team.tokens';
+import type { ITeamRepository } from '../team/domain/team.repository.interface';
 
-// Infrastructure campagne (event sourcing)
+// Infrastructure campagne (event sourcing + CRUD)
 import { CampaignMapper } from './infrastructure/campaign.mapper';
 import { CampaignRepository } from './infrastructure/campaign.repository';
 import { CampaignReplayService } from './infrastructure/campaign-replay.service';
@@ -32,25 +29,40 @@ import { WreckResolverService } from './infrastructure/wreck-resolver.service';
 import { CAMPAIGN_REPOSITORY } from './campaign.tokens';
 import type { ICampaignRepository } from './domain/campaign.repository.interface';
 
-// Use cases campagne (Partie 4)
+// Use cases CRUD (Phase 2)
+import { CreateCampaignUseCase } from './application/create-campaign.usecase';
+import { ChangeStateUseCase } from './application/change-state.usecase';
+import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
+import { RequestJoinUseCase } from './application/request-join.usecase';
+import { ValidateParticipantUseCase } from './application/validate-participant.usecase';
+import { PromoteParticipantUseCase } from './application/promote-participant.usecase';
+import { RemoveParticipantUseCase } from './application/remove-participant.usecase';
+import { ChangeMyTeamUseCase } from './application/change-my-team.usecase';
+import { AddGameUseCase } from './application/add-game.usecase';
+import { UpdateGameUseCase } from './application/update-game.usecase';
+import { RemoveGameUseCase } from './application/remove-game.usecase';
+import { RecordResultUseCase } from './application/record-result.usecase';
+
+// Use cases event sourcing (Parties 4-5)
 import { RecordRankingUseCase } from './application/record-ranking.usecase';
 import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
 import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
 import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
 import { FinalizeGameUseCase } from './application/finalize-game.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
-
-// Use cases campagne (Partie 5)
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { AddSequellaUseCase } from './application/add-sequella.usecase';
+import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 
 /**
- * Module Campagne unifié — fusion des anciens modules `campaign/` (CRUD) et `game/`
- * (event sourcing DDD). Un seul agrégat racine `Campaign` (domain/campaign.ts).
+ * Module Campagne unifié (DDD). Agrégat racine `Campaign` (domain/campaign.ts) ;
+ * un seul CampaignController mince déléguant aux use cases (écritures) et au
+ * CampaignQueryService (lectures). Les services anémiques ont été supprimés en
+ * Phase 2 ; les résultats de partie sont dérivés du journal `game_events`.
  *
- * TeamModule fournit TeamService (vérification d'appartenance d'équipe) et exporte
- * TEAM_REPOSITORY, requis par CampaignRepository pour charger l'état figé des équipes.
+ * TeamModule exporte TEAM_REPOSITORY (chargement des équipes engagées + contrôle
+ * d'appartenance dans les use cases CRUD).
  */
 @Module({
   imports: [
@@ -58,19 +70,15 @@ import { AddSequellaUseCase } from './application/add-sequella.usecase';
       CampaignOrm,
       CampaignParticipantOrm,
       GameOrm,
-      GameResultOrm,
       GameEventOrm,
     ]),
     CatalogModule,
     TeamModule,
   ],
-  controllers: [CampaignController, GameController],
+  controllers: [CampaignController],
   providers: [
-    // Services (anémiques — migrés vers use cases en Phase 2)
-    CampaignService,
-    CampaignParticipantService,
-    GameService,
-    GameResultService,
+    // Lecture + catalogue
+    CampaignQueryService,
     ScenarioCatalogService,
 
     // Infrastructure campagne
@@ -79,7 +87,81 @@ import { AddSequellaUseCase } from './application/add-sequella.usecase';
     CampaignReplayService,
     WreckResolverService,
 
-    // Use cases campagne — useFactory pour garder les classes sans décorateurs NestJS
+    // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────
+    {
+      provide: CreateCampaignUseCase,
+      useFactory: (repo: ICampaignRepository, team: ITeamRepository) =>
+        new CreateCampaignUseCase(repo, team),
+      inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY],
+    },
+    {
+      provide: ChangeStateUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new ChangeStateUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: DeleteCampaignUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new DeleteCampaignUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: RequestJoinUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, team: ITeamRepository) =>
+        new RequestJoinUseCase(repo, replay, team),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, TEAM_REPOSITORY],
+    },
+    {
+      provide: ValidateParticipantUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new ValidateParticipantUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: PromoteParticipantUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new PromoteParticipantUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: RemoveParticipantUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new RemoveParticipantUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: ChangeMyTeamUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, team: ITeamRepository) =>
+        new ChangeMyTeamUseCase(repo, replay, team),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, TEAM_REPOSITORY],
+    },
+    {
+      provide: AddGameUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, scenarios: ScenarioCatalogService) =>
+        new AddGameUseCase(repo, replay, scenarios),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, ScenarioCatalogService],
+    },
+    {
+      provide: UpdateGameUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, scenarios: ScenarioCatalogService) =>
+        new UpdateGameUseCase(repo, replay, scenarios),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, ScenarioCatalogService],
+    },
+    {
+      provide: RemoveGameUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new RemoveGameUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: RecordResultUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new RecordResultUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+
+    // ── Use cases event sourcing (Parties 4-5) ─────────────────────────────────
     {
       provide: RecordRankingUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
@@ -116,8 +198,6 @@ import { AddSequellaUseCase } from './application/add-sequella.usecase';
         new GetStandingsUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
-
-    // Use cases campagne (Partie 5)
     {
       provide: ChangeEquipmentUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, catalog: CatalogService) =>
@@ -136,7 +216,12 @@ import { AddSequellaUseCase } from './application/add-sequella.usecase';
         new AddSequellaUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
+    {
+      provide: GetWorkshopUseCase,
+      useFactory: (replay: CampaignReplayService) => new GetWorkshopUseCase(replay),
+      inject: [CampaignReplayService],
+    },
   ],
-  exports: [TypeOrmModule, CampaignService, ScenarioCatalogService, CampaignReplayService, CAMPAIGN_REPOSITORY],
+  exports: [TypeOrmModule, ScenarioCatalogService, CampaignReplayService, CAMPAIGN_REPOSITORY],
 })
 export class CampaignModule {}

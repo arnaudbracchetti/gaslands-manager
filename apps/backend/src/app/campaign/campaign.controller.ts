@@ -1,9 +1,15 @@
 /**
- * CampaignController — points d'entrée HTTP pour la gestion des saisons.
+ * CampaignController — point d'entrée HTTP unique du module campagne.
  *
- * Architecture REST (US1 uniquement) :
- *   GET  /api/campaigns → liste des saisons de l'utilisateur connecté
- *   POST /api/campaigns → créer une nouvelle saison
+ * Fusion des anciens CampaignController (CRUD ligue/participants) et GameController
+ * (Programme Télé + endpoints event-sourcing). Controller *mince* : chaque route
+ * traduit HTTP → commande et délègue à un use case (écritures) ou au
+ * CampaignQueryService (lectures). Aucune règle métier ici.
+ *
+ * On déclare des chemins complets explicites (@Controller() sans préfixe) afin
+ * d'héberger la route publique `catalog/scenarios` dans le même controller, et de
+ * maîtriser l'ordre des routes. Le guard JWT est posé par route (pas au niveau
+ * classe) pour laisser `catalog/scenarios` public.
  */
 import {
   Controller,
@@ -20,8 +26,38 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CampaignService } from './campaign.service';
-import { CampaignParticipantService } from './campaign-participant.service';
+
+// Lecture (CQRS)
+import { CampaignQueryService } from './campaign-query.service';
+import { ScenarioCatalogService } from './scenario-catalog.service';
+
+// Use cases CRUD (Phase 2)
+import { CreateCampaignUseCase } from './application/create-campaign.usecase';
+import { ChangeStateUseCase } from './application/change-state.usecase';
+import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
+import { RequestJoinUseCase } from './application/request-join.usecase';
+import { ValidateParticipantUseCase } from './application/validate-participant.usecase';
+import { PromoteParticipantUseCase } from './application/promote-participant.usecase';
+import { RemoveParticipantUseCase } from './application/remove-participant.usecase';
+import { ChangeMyTeamUseCase } from './application/change-my-team.usecase';
+import { AddGameUseCase } from './application/add-game.usecase';
+import { UpdateGameUseCase } from './application/update-game.usecase';
+import { RemoveGameUseCase } from './application/remove-game.usecase';
+import { RecordResultUseCase } from './application/record-result.usecase';
+
+// Use cases event-sourcing (Parties 4-5, inchangés)
+import { RecordRankingUseCase } from './application/record-ranking.usecase';
+import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
+import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
+import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
+import { FinalizeGameUseCase } from './application/finalize-game.usecase';
+import { GetStandingsUseCase } from './application/get-standings.usecase';
+import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
+import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
+import { AddSequellaUseCase } from './application/add-sequella.usecase';
+import { GetWorkshopUseCase } from './application/get-workshop.usecase';
+
+// DTOs
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { CampaignResponseDto } from './dto/campaign-response.dto';
 import { CampaignSummaryDto } from './dto/campaign-summary.dto';
@@ -29,205 +65,495 @@ import { JoinCampaignDto } from './dto/join-campaign.dto';
 import { ValidateParticipantDto } from './dto/validate-participant.dto';
 import { ChangeStateDto } from './dto/change-state.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
-import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
+import { CreateGameDto } from './dto/create-game.dto';
+import { UpdateGameDto } from './dto/update-game.dto';
+import { GameResponseDto } from './dto/game-response.dto';
+import type { GameResultResponseDto } from './dto/game-result-response.dto';
+import type { RecordResultDto } from './dto/record-result.dto';
+import type { RecordRankingDto } from './dto/record-ranking.dto';
+import type { RecordWalletDto } from './dto/record-wallet.dto';
+import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
+import type { ContactResistanceDto } from './dto/contact-resistance.dto';
+import type { ChangeEquipmentDto } from './dto/change-equipment.dto';
+import type { WreckResolveDto } from './dto/wreck-resolve.dto';
+import type { AddSequellaDto } from './dto/add-sequella.dto';
+import type { StandingsResponseDto } from './dto/standings-response.dto';
+import type { WorkshopStateDto } from './dto/workshop-state.dto';
+import type { Scenario } from './scenario.interfaces';
+import type { FinalizeGameResult } from './application/finalize-game.usecase';
+import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
-// Type du payload injecté par JwtStrategy dans req.user (même forme que team.controller.ts)
+// Payload injecté par JwtStrategy dans req.user.
 interface AuthenticatedRequest {
   user: { id: number; email: string };
 }
 
-@UseGuards(JwtAuthGuard)
-@Controller('campaigns')
+@Controller()
 export class CampaignController {
   constructor(
-    private readonly campaignService: CampaignService,
-    private readonly campaignParticipantService: CampaignParticipantService,
+    private readonly query: CampaignQueryService,
+    private readonly scenarioCatalog: ScenarioCatalogService,
+    // CRUD
+    private readonly createCampaignUseCase: CreateCampaignUseCase,
+    private readonly changeStateUseCase: ChangeStateUseCase,
+    private readonly deleteCampaignUseCase: DeleteCampaignUseCase,
+    private readonly requestJoinUseCase: RequestJoinUseCase,
+    private readonly validateParticipantUseCase: ValidateParticipantUseCase,
+    private readonly promoteParticipantUseCase: PromoteParticipantUseCase,
+    private readonly removeParticipantUseCase: RemoveParticipantUseCase,
+    private readonly changeMyTeamUseCase: ChangeMyTeamUseCase,
+    private readonly addGameUseCase: AddGameUseCase,
+    private readonly updateGameUseCase: UpdateGameUseCase,
+    private readonly removeGameUseCase: RemoveGameUseCase,
+    private readonly recordResultUseCase: RecordResultUseCase,
+    // Event sourcing
+    private readonly recordRankingUseCase: RecordRankingUseCase,
+    private readonly recordWalletUseCase: RecordWalletMovementUseCase,
+    private readonly recordVehicleLostUseCase: RecordVehicleLostUseCase,
+    private readonly contactResistanceUseCase: ContactResistanceUseCase,
+    private readonly finalizeGameUseCase: FinalizeGameUseCase,
+    private readonly getStandingsUseCase: GetStandingsUseCase,
+    private readonly changeEquipmentUseCase: ChangeEquipmentUseCase,
+    private readonly wreckResolveUseCase: WreckResolveUseCase,
+    private readonly addSequellaUseCase: AddSequellaUseCase,
+    private readonly getWorkshopUseCase: GetWorkshopUseCase,
   ) {}
 
-  /**
-   * GET /api/campaigns
-   * Retourne toutes les saisons où l'utilisateur connecté a un CampaignParticipantOrm.
-   */
-  @Get()
+  // ── Catalogue (public) ──────────────────────────────────────────────────────
+
+  /** GET /api/catalog/scenarios — liste publique des scénarios (pas de JWT). */
+  @Get('catalog/scenarios')
+  getScenarios(): Scenario[] {
+    return this.scenarioCatalog.getAll();
+  }
+
+  // ── Campagnes (CRUD + lectures) ─────────────────────────────────────────────
+
+  /** GET /api/campaigns — campagnes de l'utilisateur (tous statuts). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns')
   getAll(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
-    return this.campaignService.findAll(req.user.id);
+    return this.query.findAll(req.user.id);
   }
 
-  /**
-   * POST /api/campaigns
-   * Crée une nouvelle saison ; l'équipe choisie doit appartenir à l'utilisateur connecté.
-   */
-  @Post()
-  create(@Request() req: AuthenticatedRequest, @Body() dto: CreateCampaignDto): Promise<CampaignResponseDto> {
-    return this.campaignService.create(req.user.id, dto);
+  /** POST /api/campaigns — crée une campagne (l'utilisateur devient organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns')
+  async create(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateCampaignDto,
+  ): Promise<CampaignResponseDto> {
+    const id = await this.createCampaignUseCase.execute({
+      userId: req.user.id,
+      name: dto.name,
+      teamId: dto.teamId ?? null,
+    });
+    return this.query.findOne(id, req.user.id);
   }
 
-  /**
-   * GET /api/campaigns/by-code/:code
-   * Retourne les informations minimales d'une saison à partir de son code
-   * d'invitation — accessible à tout utilisateur connecté.
-   */
-  @Get('by-code/:code')
+  /** GET /api/campaigns/by-code/:code — infos minimales via code d'invitation. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/by-code/:code')
   getByCode(@Param('code') code: string): Promise<CampaignSummaryDto> {
-    return this.campaignService.findByInviteCode(code);
+    return this.query.findByInviteCode(code);
   }
 
-  /**
-   * GET /api/campaigns/pending
-   * Retourne les saisons où l'utilisateur connecté a une demande
-   * d'inscription en attente de validation.
-   *
-   * Déclarée avant @Get(':id') pour que 'pending' ne soit pas capturé par
-   * le paramètre :id.
-   */
-  @Get('pending')
+  /** GET /api/campaigns/pending — mes demandes d'inscription en attente. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/pending')
   getPending(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
-    return this.campaignService.findPendingForUser(req.user.id);
+    return this.query.findPendingForUser(req.user.id);
   }
 
-  /**
-   * GET /api/campaigns/organizing/pending-requests
-   * Retourne les saisons organisées par l'utilisateur connecté ayant au
-   * moins une demande d'inscription en attente, avec leur nombre.
-   *
-   * Déclarée avant @Get(':id') pour que 'organizing' ne soit pas capturé par
-   * le paramètre :id.
-   */
-  @Get('organizing/pending-requests')
+  /** GET /api/campaigns/organizing/pending-requests — mes campagnes avec demandes à traiter. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/organizing/pending-requests')
   getOrganizingPendingRequests(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
-    return this.campaignService.findOrganizedWithPendingRequests(req.user.id);
+    return this.query.findOrganizedWithPendingRequests(req.user.id);
   }
 
-  /**
-   * POST /api/campaigns/:id/participants
-   * Crée une demande d'inscription (status: PENDING) pour l'utilisateur connecté,
-   * avec l'équipe choisie.
-   */
-  @Post(':id/participants')
-  requestJoin(
+  // ── Programme Télé & résultats ──────────────────────────────────────────────
+
+  /** GET /api/campaigns/:id/standings — classement (participant VALIDATED). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/standings')
+  getStandings(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<StandingsResponseDto[]> {
+    return this.getStandingsUseCase.execute({ campaignId, userId: req.user.id });
+  }
+
+  /** GET /api/campaigns/:id/workshop — état atelier du participant connecté. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/workshop')
+  getWorkshop(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<WorkshopStateDto> {
+    return this.getWorkshopUseCase.execute({ campaignId, userId: req.user.id });
+  }
+
+  /** GET /api/campaigns/:id/games/:gameId/results — résultats triés (dérivés du journal). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/games/:gameId/results')
+  getResults(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<GameResultResponseDto[]> {
+    return this.query.getResults(id, gameId, req.user.id);
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/results — enregistre le résultat (PLANIFIE → JOUE). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/results')
+  async recordResult(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RecordResultDto,
+  ): Promise<GameResponseDto> {
+    await this.recordResultUseCase.execute({
+      campaignId: id,
+      gameId,
+      userId: req.user.id,
+      results: dto.results,
+    });
+    return this.query.getGame(id, gameId);
+  }
+
+  /** GET /api/campaigns/:id/games — programme trié (participant VALIDATED). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/games')
+  getGames(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<GameResponseDto[]> {
+    return this.query.findGames(id, req.user.id);
+  }
+
+  /** POST /api/campaigns/:id/games — ajoute une partie (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games')
+  async createGame(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateGameDto,
+  ): Promise<GameResponseDto> {
+    const gameId = await this.addGameUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      scenarioId: dto.scenarioId,
+      type: dto.type,
+    });
+    return this.query.getGame(id, gameId);
+  }
+
+  /** PUT /api/campaigns/:id/games/:gameId — édite une partie PLANIFIE (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/games/:gameId')
+  async updateGame(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: UpdateGameDto,
+  ): Promise<GameResponseDto> {
+    await this.updateGameUseCase.execute({
+      campaignId: id,
+      gameId,
+      userId: req.user.id,
+      scenarioId: dto.scenarioId,
+      type: dto.type,
+    });
+    return this.query.getGame(id, gameId);
+  }
+
+  /** DELETE /api/campaigns/:id/games/:gameId — supprime une partie PLANIFIE (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Delete('campaigns/:id/games/:gameId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeGame(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<void> {
+    return this.removeGameUseCase.execute({ campaignId: id, gameId, userId: req.user.id });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/finalize — finalise (JOUE) + ouvre un atelier. */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/finalize')
+  finalizeGame(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<FinalizeGameResult> {
+    return this.finalizeGameUseCase.execute({ campaignId, gameId, userId: req.user.id });
+  }
+
+  // ── Événements de partie (event sourcing) ───────────────────────────────────
+
+  /** POST /api/campaigns/:id/games/:gameId/events/ranking — rang + PC (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/ranking')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  recordRanking(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RecordRankingDto,
+  ): Promise<void> {
+    return this.recordRankingUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
+      rank: dto.rank,
+      championshipPoints: dto.championshipPoints,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/wallet — mouvement de cagnotte (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/wallet')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  recordWallet(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RecordWalletDto,
+  ): Promise<void> {
+    return this.recordWalletUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
+      amount: dto.amount,
+      reason: dto.reason,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/vehicle-lost — perte de véhicule (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/vehicle-lost')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  recordVehicleLost(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RecordVehicleLostDto,
+  ): Promise<void> {
+    return this.recordVehicleLostUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
+      vehicleId: dto.vehicleId,
+      weaponIds: dto.weaponIds,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/resistance — contact Résistance (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/resistance')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  contactResistance(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: ContactResistanceDto,
+  ): Promise<void> {
+    return this.contactResistanceUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/equipment — achat/revente atelier. */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/equipment')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changeEquipment(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: ChangeEquipmentDto,
+  ): Promise<void> {
+    return this.changeEquipmentUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      operation: dto.operation,
+      entityType: dto.entityType,
+      nomInterne: dto.nomInterne,
+      targetVehicleId: dto.targetVehicleId,
+      targetEntityId: dto.targetEntityId,
+      orientation: dto.orientation,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/wreck — Table des Épaves (D6 serveur, organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/wreck')
+  resolveWreck(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: WreckResolveDto,
+  ): Promise<WreckResolveResult> {
+    return this.wreckResolveUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
+      vehicleId: dto.vehicleId,
+      weaponIdChoice: dto.weaponIdChoice,
+    });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/events/sequella — séquelle permanente (atelier OUVERT). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/sequella')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  addSequella(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: AddSequellaDto,
+  ): Promise<void> {
+    return this.addSequellaUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      vehicleId: dto.vehicleId,
+      sequellaTypeNom: dto.sequellaTypeNom,
+    });
+  }
+
+  // ── Participants ────────────────────────────────────────────────────────────
+
+  /** POST /api/campaigns/:id/participants — demande d'inscription (PENDING). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/participants')
+  async requestJoin(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: JoinCampaignDto,
-  ): Promise<CampaignParticipantOrm> {
-    return this.campaignService.requestJoin(id, req.user.id, dto);
+  ): Promise<CampaignParticipantResponseDto> {
+    const pid = await this.requestJoinUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      teamId: dto.teamId,
+    });
+    return this.query.getParticipant(id, pid);
   }
 
-  /**
-   * GET /api/campaigns/:id/participants
-   * Liste tous les participants (tous statuts) de la saison — accessible
-   * uniquement à un participant VALIDATED.
-   */
-  @Get(':id/participants')
+  /** GET /api/campaigns/:id/participants — liste des participants (participant VALIDATED). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/participants')
   getParticipants(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<CampaignParticipantResponseDto[]> {
-    return this.campaignParticipantService.findParticipants(id, req.user.id);
+    return this.query.findParticipants(id, req.user.id);
   }
 
-  /**
-   * PUT /api/campaigns/:id/state
-   * Change l'état de la saison — organisateur uniquement. Transitions bidirectionnelles.
-   */
-  @Put(':id/state')
-  changeState(
+  /** PUT /api/campaigns/:id/state — transition d'état (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/state')
+  async changeState(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeStateDto,
   ): Promise<CampaignResponseDto> {
-    return this.campaignService.changeState(id, req.user.id, dto.state);
+    await this.changeStateUseCase.execute({ campaignId: id, userId: req.user.id, state: dto.state });
+    return this.query.findOne(id, req.user.id);
   }
 
   /**
-   * PUT /api/campaigns/:id/participants/me
-   * Change l'équipe engagée par l'utilisateur connecté — uniquement tant que
-   * la saison est EN_CONSTRUCTION.
-   *
-   * Déclarée avant ':id/participants/:pid/validate' pour que 'me' ne soit
-   * pas capturé par le paramètre :pid.
+   * PUT /api/campaigns/:id/participants/me — change l'équipe engagée par l'utilisateur.
+   * Déclarée avant ':pid/...' pour éviter que NestJS ne capture 'me' comme :pid.
    */
-  @Put(':id/participants/me')
-  updateMyTeam(
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/participants/me')
+  async updateMyTeam(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: JoinCampaignDto,
   ): Promise<CampaignParticipantResponseDto> {
-    return this.campaignParticipantService.updateMyTeam(id, req.user.id, dto.teamId ?? null);
+    const pid = await this.changeMyTeamUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      teamId: dto.teamId ?? null,
+    });
+    return this.query.getParticipant(id, pid);
   }
 
-  /**
-   * PUT /api/campaigns/:id/participants/:pid/promote
-   * Promeut un participant VALIDATED en co-organisateur — organisateur uniquement.
-   *
-   * Déclaré avant ':pid/validate' pour éviter toute ambiguïté de routage NestJS.
-   */
-  @Put(':id/participants/:pid/promote')
-  promoteParticipant(
+  /** PUT /api/campaigns/:id/participants/:pid/promote — promotion co-organisateur (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/participants/:pid/promote')
+  async promoteParticipant(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<CampaignParticipantResponseDto> {
-    return this.campaignParticipantService.promote(id, pid, req.user.id);
+    await this.promoteParticipantUseCase.execute({ campaignId: id, pid, userId: req.user.id });
+    return this.query.getParticipant(id, pid);
   }
 
-  /**
-   * PUT /api/campaigns/:id/participants/:pid/validate
-   * Valide ou refuse une demande d'inscription PENDING, repasse un
-   * participant REJECTED en VALIDATED, ou refuse un participant déjà
-   * VALIDATED — organisateur uniquement.
-   */
-  @Put(':id/participants/:pid/validate')
-  validateParticipant(
+  /** PUT /api/campaigns/:id/participants/:pid/validate — valider/refuser (organisateur). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/participants/:pid/validate')
+  async validateParticipant(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
     @Body() dto: ValidateParticipantDto,
   ): Promise<CampaignParticipantResponseDto> {
-    return this.campaignParticipantService.validate(id, pid, req.user.id, dto.accept);
+    await this.validateParticipantUseCase.execute({
+      campaignId: id,
+      pid,
+      userId: req.user.id,
+      accept: dto.accept,
+    });
+    return this.query.getParticipant(id, pid);
   }
 
-  /**
-   * DELETE /api/campaigns/:id/participants/:pid
-   * Retire un participant (validé ou en attente) — organisateur uniquement,
-   * saison EN_CONSTRUCTION uniquement.
-   */
-  @Delete(':id/participants/:pid')
+  /** DELETE /api/campaigns/:id/participants/:pid — retrait définitif (organisateur, EN_CONSTRUCTION). */
+  @UseGuards(JwtAuthGuard)
+  @Delete('campaigns/:id/participants/:pid')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeParticipant(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<void> {
-    return this.campaignParticipantService.remove(id, pid, req.user.id);
+    return this.removeParticipantUseCase.execute({ campaignId: id, pid, userId: req.user.id });
   }
 
-  /**
-   * GET /api/campaigns/:id
-   * Détail d'une saison — accessible uniquement à un participant VALIDATED.
-   *
-   * Déclarée APRÈS 'by-code/:code' et les routes ':id/...' pour ne pas
-   * capturer ces segments littéraux dans le paramètre :id.
-   */
-  @Get(':id')
+  // ── Détail / suppression campagne (routes :id génériques en dernier) ─────────
+
+  /** GET /api/campaigns/:id — détail (participant VALIDATED). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id')
   getOne(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<CampaignResponseDto> {
-    return this.campaignService.findOne(id, req.user.id);
+    return this.query.findOne(id, req.user.id);
   }
 
-  /**
-   * DELETE /api/campaigns/:id
-   * Supprime définitivement une saison — organisateur uniquement.
-   * Cascade : tous les CampaignParticipantOrm de la saison sont supprimés
-   * (onDelete: 'CASCADE'). Les équipes des participants ne sont pas affectées.
-   */
-  @Delete(':id')
+  /** DELETE /api/campaigns/:id — suppression (organisateur, cascade). */
+  @UseGuards(JwtAuthGuard)
+  @Delete('campaigns/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
-    return this.campaignService.remove(id, req.user.id);
+    return this.deleteCampaignUseCase.execute({ campaignId: id, userId: req.user.id });
   }
 }

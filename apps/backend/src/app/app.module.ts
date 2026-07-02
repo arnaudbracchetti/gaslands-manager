@@ -18,7 +18,6 @@ import { CampaignModule } from './campaign/campaign.module';
 import { CampaignOrm } from './campaign/infrastructure/entities/campaign.entity';
 import { CampaignParticipantOrm } from './campaign/infrastructure/entities/campaign-participant.entity';
 import { GameOrm } from './campaign/infrastructure/entities/game.entity';
-import { GameResultOrm } from './campaign/infrastructure/entities/game-result.entity';
 import { GameEventOrm } from './campaign/infrastructure/entities/game-event.entity';
 
 @Module({
@@ -38,7 +37,7 @@ import { GameEventOrm } from './campaign/infrastructure/entities/game-event.enti
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameResultOrm, GameEventOrm],
+        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameEventOrm],
         synchronize: true,
         logging: false,
       }),
