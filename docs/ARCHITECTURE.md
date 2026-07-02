@@ -88,36 +88,38 @@ apps/backend/src/app/
 ├── auth/                ← Authentification (User, JWT, bcrypt)
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
-├── shared/domain/       ← DomainException partagée entre team/ et game/
+├── shared/domain/       ← DomainException partagée entre team/ et campaign/
 ├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement
 │   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement, Value Objects, ITeamRepository, ICatalogRepository
 │   ├── application/     ← 15 Use Cases (4 équipe + 2 véhicule + 3 arme + 6 amélioration/tourelle)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
-├── campaign/            ← Campagnes (ligues) + participants — CRUD simple, ex-`season/`
-└── game/                ← Mode campagne DDD event-sourcing (voir §3.8)
-    ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant (ex-SeasonParticipant), GameEvent hierarchy, Game hierarchy, WreckOutcome
+└── campaign/            ← Module campagne unifié (DDD event-sourcing — voir §3.8), ex-`season/` + ex-`game/`
+    ├── campaign.controller.ts       ← Controller HTTP unique (28 routes : CRUD ligue/participants + Programme + event-sourcing)
+    ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
+    ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
+    ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome
     │   ├── events/      ← 8 événements concrets (GoF Command)
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame, AtelierGame (GoF Invoker)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckOutcome Value Object
-    ├── application/     ← 9 Use Cases campagne
-    └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, WreckResolverService
+    ├── application/     ← 22 Use Cases (12 CRUD + GetWorkshop + 9 event-sourcing)
+    └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, WreckResolverService, entités ORM
 ```
 
-> ⚠️ **Collision de nom `Campaign`** — deux classes distinctes portent ce nom :
-> `campaign/campaign.entity.ts` (entité TypeORM simple : nom, état, code d'invitation —
-> module CRUD ex-`season/`) et `game/domain/campaign.ts` (agrégat racine DDD
-> event-sourcing, §3.8). Elles ne sont **jamais importées dans le même fichier** en
-> l'état actuel du code, mais vérifier les imports (`./campaign/campaign.entity` vs
-> `./domain/campaign`) en cas d'ambiguïté.
+> ⚠️ **Collision de nom `Campaign`** — deux classes distinctes portent ce nom dans le
+> module `campaign/` : `infrastructure/entities/campaign.entity.ts` (**`CampaignOrm`** —
+> entité TypeORM : nom, état, code d'invitation) et `domain/campaign.ts` (**`Campaign`** —
+> agrégat racine DDD event-sourcing, §3.8). Le suffixe `Orm` lève l'ambiguïté ; vérifier
+> néanmoins les imports (`./infrastructure/entities/campaign.entity` vs `./domain/campaign`).
 
-> **`ScenarioCatalogService`** (`game/`) est un **troisième exemple** du pattern
+> **`ScenarioCatalogService`** (`campaign/`) est un **troisième exemple** du pattern
 > singleton-en-mémoire (§3.3) après `CatalogService` et `AdminSeedService` : il
 > charge `database_init/data/scenarios.yml` au démarrage (`OnModuleInit`, Template
 > Method `readFileContent`, conversion Markdown→HTML) et l'indexe par `nom_interne`.
-> L'autorisation des endpoints campagne est assurée directement par les use cases via
-> `assertOrganizer` / `assertParticipant` — helpers qui opèrent sur `campaign.participants`
-> après replay, sans accès à la base de données.
+> L'autorisation des endpoints en **écriture** est assurée directement par les use cases via
+> `assertOrganizer` / `assertParticipant` (`application/record-ranking.usecase.ts`) — helpers
+> qui opèrent sur `campaign.participants` après replay, sans accès à la base. Les endpoints
+> en **lecture** délèguent à `CampaignQueryService` (accès ORM direct, CQRS).
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`. Les modules domaine complexes suivent l'architecture DDD décrite en §3.4.
 
@@ -254,18 +256,22 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/infrastructure/team.mapper.ts` | Mapping ORM ↔ agrégat domaine |
 | `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
-| `apps/backend/src/app/game/domain/campaign.ts` | Agrégat racine campagne — `replay`, `finalizeGame`, `closeCampaign`, `standings` |
-| `apps/backend/src/app/game/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
-| `apps/backend/src/app/game/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
-| `apps/backend/src/app/game/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
-| `apps/backend/src/app/game/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
-| `apps/backend/src/app/game/infrastructure/wreck-resolver.service.ts` | D6 serveur + table des épaves → `WreckOutcome` |
-| `apps/backend/src/app/game/application/` | 9 use cases campagne (Parties 4–5) |
+| `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (28 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
+| `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
+| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `recordResult`, `finalizeGame`, `closeCampaign`, `standings` |
+| `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
+| `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
+| `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
+| `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
+| `apps/backend/src/app/campaign/infrastructure/wreck-resolver.service.ts` | D6 serveur + table des épaves → `WreckOutcome` |
+| `apps/backend/src/app/campaign/application/` | 22 use cases (12 CRUD + GetWorkshop + 9 event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
-### 3.8 Mode Campagne — Event Sourcing (`game/`)
+### 3.8 Mode Campagne — Event Sourcing (`campaign/`)
 
-Le module `game/` implémente une architecture **event sourcing** stricte pour le mode campagne : aucun état transient n'est jamais stocké en base — seul le **journal des événements** (`game_events`) est persisté. L'état courant est **recalculé à chaque lecture** par replay du journal.
+Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente une architecture **event sourcing** stricte pour le mode campagne : aucun état transient n'est jamais stocké en base — seul le **journal des événements** (`game_events`) est persisté. L'état courant est **recalculé à chaque lecture** par replay du journal.
+
+**Basculement DDD (Phase 2)** : les services anémiques (`CampaignService`, `CampaignParticipantService`, `GameService`, `GameResultService`) et le second controller (`game.controller.ts`) ont été supprimés. Les 28 endpoints passent par un **`CampaignController` unique** délégant aux **use cases** (écritures, via l'agrégat) et au **`CampaignQueryService`** (lectures, CQRS). Les résultats de partie **convergent vers l'event-sourcing** : `POST .../results` crée des `RankingAssignedEvent` via `Campaign.recordResult` (finalisation JOUE + atelier), et `GET .../results` est **dérivé du journal** (`game_events`, `eventType = RANKING_ASSIGNED`) — la table `game_results` / entité `GameResultOrm` n'existent plus.
 
 #### Trois patterns GoF imbriqués
 
@@ -289,7 +295,7 @@ Controller → UseCase
 
 #### Entités transientes et D-S11
 
-Les véhicules et armes achetés **en atelier** n'existent pas en base — ils sont recréés à chaque replay. Leur `id` dans le domaine est `-event.id` (entier négatif, distinct des ids DB positifs). Conséquence : `ChangeEquipmentUseCase` **ne doit pas appeler `event.execute()`** avant la persistance, car `id=0` donnerait `-0 = 0`, qui ne constitue pas un id négatif valide. Le use case persiste d'abord, le client rafraîchit ensuite via `GET /seasons/:id/workshop`.
+Les véhicules et armes achetés **en atelier** n'existent pas en base — ils sont recréés à chaque replay. Leur `id` dans le domaine est `-event.id` (entier négatif, distinct des ids DB positifs). Conséquence : `ChangeEquipmentUseCase` **ne doit pas appeler `event.execute()`** avant la persistance, car `id=0` donnerait `-0 = 0`, qui ne constitue pas un id négatif valide. Le use case persiste d'abord, le client rafraîchit ensuite via `GET /campaigns/:id/workshop`.
 
 #### Séquence AtelierGame (D-S7)
 

@@ -89,18 +89,23 @@ programme reste **visible en lecture seule**.
   périmètre d'US-A1**, suivi en US-A4 (cf.
   [backlog](../plans/2026-06-21-mode-campagne-backlog.md)).
 
-Sécurité : autorisation déléguée à `CampaignService.assertOrganizer` /
-`CampaignService.assertVisibleParticipant` — toute tentative non autorisée retourne
-HTTP 404 (pas de fuite d'information), même pattern que le reste du module Campaign.
+Sécurité : autorisation assurée dans chaque use case (écritures) via les helpers
+`assertOrganizer` / `assertParticipant` opérant sur l'état replay, et dans
+`CampaignQueryService` (lectures) via `assertVisibleParticipant` — toute tentative
+non autorisée retourne HTTP 404 (pas de fuite d'information), même pattern que le
+reste du module Campaign.
 
 ---
 
 ## Hors scope de l'itération actuelle
 
-Résultats des parties (`GameResult`, classement, Points de Championnat),
-réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
+Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
 `EN_COURS`, visibilité partielle pour un `PENDING`, quitter une campagne
 volontairement, rotation du code d'invitation.
+
+> Les résultats de parties (classement, Points de Championnat), l'Atelier et la Table
+> des Épaves sont désormais **implémentés** (cf. tables d'endpoints ci-dessous et
+> l'event-sourcing du module `campaign/`).
 
 ---
 
@@ -203,9 +208,10 @@ Chargé depuis `database_init/data/scenarios.yml` au démarrage par
 
 ## API Endpoints — Programme Télé (mode campagne)
 
-Déclarés dans `game/game.controller.ts` (module `GameModule`, distinct du `CampaignController`).
-Le contrôle d'accès est assuré dans chaque use case via `assertOrganizer` / `assertParticipant`
-opérant sur l'état replay (pas d'accès SQL supplémentaire).
+Tous déclarés dans le **`campaign.controller.ts` unique** (le second controller `game.controller.ts`
+a été supprimé au basculement Phase 2). Le contrôle d'accès en écriture est assuré dans chaque
+use case via `assertOrganizer` / `assertParticipant` opérant sur l'état replay (pas d'accès SQL
+supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant`.
 
 ### Gestion du Programme (CRUD parties)
 
@@ -216,8 +222,16 @@ opérant sur l'état replay (pas d'accès SQL supplémentaire).
 | POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank }] }`, organisateur) → partie `JOUE` + atelier `OUVERT`. Crée des `RankingAssignedEvent` via `Campaign.recordResult` (convergence event-sourcing) |
+| GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 
-### Résultats et classement (Partie 4)
+> Ce sont ces deux routes `/results` (et non les endpoints `/events/*`) que consomme le
+> frontend Angular. Leur forme de réponse (`Game` pour le POST, `GameResult[]` pour le GET)
+> est **inchangée** malgré la bascule vers l'event-sourcing.
+
+### Résultats et classement — endpoints event-sourcing (Partie 4)
+
+> Endpoints granulaires du système event-sourcing, **non consommés par le frontend** (usage API direct).
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|

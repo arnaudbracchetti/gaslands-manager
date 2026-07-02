@@ -255,8 +255,8 @@ erDiagram
     TEAM |o--o{ CAMPAIGN_PARTICIPANT : est_engagée_dans
     CAMPAIGN ||--o{ CAMPAIGN_PARTICIPANT : accueille
     CAMPAIGN ||--o{ GAME : programme
-    GAME ||--o{ GAME_RESULT : produit
-    CAMPAIGN_PARTICIPANT ||--o{ GAME_RESULT : obtient
+    GAME ||--o{ GAME_EVENT : journalise
+    CAMPAIGN_PARTICIPANT ||--o{ GAME_EVENT : affecte
 
     USER {
         number id PK
@@ -338,15 +338,6 @@ erDiagram
         date updatedAt
     }
 
-    GAME_RESULT {
-        number id PK
-        number gameId FK
-        number participantId FK
-        number rank UK "unique par partie"
-        number championshipPoints
-        date createdAt
-    }
-
     GAME_EVENT {
         number id PK
         number gameId FK
@@ -382,9 +373,11 @@ erDiagram
 `GAME_EVENT.sequellaTypeNom` → `SequellaType.nom_interne` (registre en mémoire).
 Ces références pointent vers des données en mémoire, pas des tables SQL.
 
-**Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne. `(GAME_RESULT.gameId, GAME_RESULT.rank)` — pas deux équipes au même rang pour une même partie.
+**Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne.
 
-**Table plate `GAME_EVENT`** : toutes les colonnes payload sont nullable — seules celles pertinentes au type d'événement (`eventType`) sont renseignées. Ce choix évite la hiérarchie STI TypeORM et ses interactions avec le code existant de `GameService`.
+**Résultats dérivés du journal** : il n'existe plus de table `GAME_RESULT` (ni d'entité `GameResultOrm`). Le classement d'une partie est **reconstruit à la lecture** depuis les `GAME_EVENT` de type `RANKING_ASSIGNED` (rang + PC figés à l'enregistrement) — convergence event-sourcing du basculement Phase 2. `GET /api/campaigns/:id/games/:gameId/results` produit la même forme de réponse qu'auparavant.
+
+**Table plate `GAME_EVENT`** : toutes les colonnes payload sont nullable — seules celles pertinentes au type d'événement (`eventType`) sont renseignées. Ce choix évite la hiérarchie STI TypeORM.
 
 ---
 
