@@ -5,11 +5,25 @@ import { makeTestParticipant } from '../domain/test-helpers';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
 import { GameStatus } from '../domain/enums/game-status.enum';
+import { CampaignState } from '../campaign.enums';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 
 function makeGameWithPoints(participantId: number, points: number): EvenementTeleGame {
   const event = new RankingAssignedEvent(1, 10, participantId, 1, 1, points);
   return new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [event]);
+}
+
+/** Repo minimal : seul `findCampaign` est exercé par le replay service. */
+function makeRepo(campaign: Campaign): ICampaignRepository {
+  return {
+    findCampaign: vi.fn().mockResolvedValue(campaign),
+    appendEvents: vi.fn(),
+    saveCampaign: vi.fn(),
+    createCampaign: vi.fn(),
+    saveStructural: vi.fn(),
+    deleteCampaign: vi.fn(),
+    isTeamEngaged: vi.fn(),
+  } as unknown as ICampaignRepository;
 }
 
 function makeSeasonWithRepo(participantId: number, points: number): {
@@ -19,14 +33,9 @@ function makeSeasonWithRepo(participantId: number, points: number): {
 } {
   const { participant } = makeTestParticipant(participantId);
   const game = makeGameWithPoints(participantId, points);
-  const season = new Campaign(1, [participant], [game]);
+  const campaign = new Campaign(1, 'Campagne', CampaignState.EN_CONSTRUCTION, 'code', [participant], [game]);
 
-  const repo: ICampaignRepository = {
-    findCampaign: vi.fn().mockResolvedValue(season),
-    appendEvents: vi.fn(),
-    saveSeason: vi.fn(),
-  };
-
+  const repo = makeRepo(campaign);
   const service = new CampaignReplayService(repo);
   return { repo, service, participant };
 }
@@ -54,16 +63,9 @@ describe('CampaignReplayService', () => {
   it('loadAndReplay replay idempotent : deux appels → même état', async () => {
     const { participant } = makeTestParticipant(1);
     const game = makeGameWithPoints(1, 7);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = new Campaign(1, 'Campagne', CampaignState.EN_CONSTRUCTION, 'code', [participant], [game]);
 
-    const repo: ICampaignRepository = {
-      findCampaign: vi.fn()
-        .mockResolvedValueOnce(season)
-        .mockResolvedValueOnce(season),
-      appendEvents: vi.fn(),
-      saveSeason: vi.fn(),
-    };
-
+    const repo = makeRepo(campaign);
     const service = new CampaignReplayService(repo);
 
     await service.loadAndReplay(1);   // PC = 7

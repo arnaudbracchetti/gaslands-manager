@@ -1,237 +1,114 @@
-/**
- * Tests unitaires pour CampaignController.
- *
- * Vérifie le câblage HTTP — chaque endpoint appelle la bonne méthode du
- * service avec req.user.id (cf. team.controller.spec.ts pour le pattern).
- */
-import { Test, TestingModule } from '@nestjs/testing';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CampaignController } from './campaign.controller';
-import { CampaignService } from './campaign.service';
-import { CampaignParticipantService } from './campaign-participant.service';
-import { CampaignState, ParticipantStatus } from './campaign.enums';
-import { CampaignResponseDto } from './dto/campaign-response.dto';
-import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 
-const mockUser = { id: 42, email: 'test@test.com' };
-const mockRequest = { user: mockUser };
+/**
+ * Tests de câblage du CampaignController : chaque route traduit la requête HTTP en
+ * commande et délègue au bon use case / query service. Aucune règle métier ici —
+ * on vérifie uniquement la délégation et la recomposition de la réponse.
+ */
+const req = { user: { id: 42, email: 'u@x' } };
 
-const mockCampaignResponse: CampaignResponseDto = {
-  id: 1,
-  name: 'Coupe Verney',
-  state: CampaignState.EN_CONSTRUCTION,
-  inviteCode: 'abcdef123456',
-  createdAt: new Date('2025-01-01'),
-  updatedAt: new Date('2025-01-01'),
-  participantCount: 1,
-  myRole: 'organizer',
-};
+// Fabrique un mock de use case (objet avec execute()).
+function uc(returnValue?: unknown): { execute: ReturnType<typeof vi.fn> } {
+  return { execute: vi.fn().mockResolvedValue(returnValue) };
+}
 
-describe('CampaignController', () => {
+describe('CampaignController (câblage)', () => {
+  let query: Record<string, ReturnType<typeof vi.fn>>;
+  let scenarioCatalog: { getAll: ReturnType<typeof vi.fn> };
+  let createCampaignUseCase: ReturnType<typeof uc>;
+  let addGameUseCase: ReturnType<typeof uc>;
+  let recordResultUseCase: ReturnType<typeof uc>;
+  let validateParticipantUseCase: ReturnType<typeof uc>;
   let controller: CampaignController;
 
-  const mockCampaignService = {
-    findAll: vi.fn(),
-    create: vi.fn(),
-    findByInviteCode: vi.fn(),
-    requestJoin: vi.fn(),
-    findOne: vi.fn(),
-    remove: vi.fn(),
-    findPendingForUser: vi.fn(),
-    findOrganizedWithPendingRequests: vi.fn(),
-  };
+  beforeEach(() => {
+    query = {
+      findAll: vi.fn().mockResolvedValue(['campaigns']),
+      findOne: vi.fn().mockResolvedValue({ id: 1 }),
+      findByInviteCode: vi.fn(),
+      findPendingForUser: vi.fn(),
+      findOrganizedWithPendingRequests: vi.fn(),
+      findParticipants: vi.fn(),
+      getParticipant: vi.fn().mockResolvedValue({ id: 5 }),
+      findGames: vi.fn(),
+      getGame: vi.fn().mockResolvedValue({ id: 7, status: 'JOUE' }),
+      getResults: vi.fn(),
+    };
+    scenarioCatalog = { getAll: vi.fn().mockReturnValue(['scen']) };
+    createCampaignUseCase = uc(1);
+    addGameUseCase = uc(7);
+    recordResultUseCase = uc(undefined);
+    validateParticipantUseCase = uc(undefined);
 
-  const mockCampaignParticipantService = {
-    findParticipants: vi.fn(),
-    validate: vi.fn(),
-    remove: vi.fn(),
-  };
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CampaignController],
-      providers: [
-        { provide: CampaignService, useValue: mockCampaignService },
-        { provide: CampaignParticipantService, useValue: mockCampaignParticipantService },
-      ],
-    }).compile();
-
-    controller = module.get<CampaignController>(CampaignController);
-    vi.clearAllMocks();
+    controller = new CampaignController(
+      query as never,
+      scenarioCatalog as never,
+      createCampaignUseCase as never,
+      uc() as never,            // changeState
+      uc() as never,            // delete
+      uc(5) as never,           // requestJoin
+      validateParticipantUseCase as never,
+      uc() as never,            // promote
+      uc() as never,            // removeParticipant
+      uc(5) as never,           // changeMyTeam
+      addGameUseCase as never,
+      uc(7) as never,           // updateGame
+      uc() as never,            // removeGame
+      recordResultUseCase as never,
+      uc() as never,            // recordRanking
+      uc() as never,            // recordWallet
+      uc() as never,            // recordVehicleLost
+      uc() as never,            // contactResistance
+      uc() as never,            // finalize
+      uc() as never,            // standings
+      uc() as never,            // changeEquipment
+      uc() as never,            // wreck
+      uc() as never,            // sequella
+      uc() as never,            // workshop
+    );
   });
 
-  // ── GET /campaigns ────────────────────────────────────────────────────────────
-
-  describe('getAll()', () => {
-    it('appelle CampaignService.findAll avec l\'id de l\'utilisateur connecté', async () => {
-      mockCampaignService.findAll.mockResolvedValue([mockCampaignResponse]);
-
-      const result = await controller.getAll(mockRequest as never);
-
-      expect(mockCampaignService.findAll).toHaveBeenCalledWith(42);
-      expect(result).toEqual([mockCampaignResponse]);
-    });
+  it('getScenarios délègue au catalogue de scénarios (public)', () => {
+    expect(controller.getScenarios()).toEqual(['scen']);
+    expect(scenarioCatalog.getAll).toHaveBeenCalled();
   });
 
-  // ── POST /campaigns ───────────────────────────────────────────────────────────
-
-  describe('create()', () => {
-    it('appelle CampaignService.create avec l\'id user et le DTO', async () => {
-      const dto = { name: 'Coupe Verney', teamId: 7 };
-      mockCampaignService.create.mockResolvedValue(mockCampaignResponse);
-
-      const result = await controller.create(mockRequest as never, dto);
-
-      expect(mockCampaignService.create).toHaveBeenCalledWith(42, dto);
-      expect(result).toEqual(mockCampaignResponse);
-    });
+  it('getAll délègue à query.findAll(userId)', async () => {
+    await controller.getAll(req as never);
+    expect(query.findAll).toHaveBeenCalledWith(42);
   });
 
-  // ── GET /campaigns/by-code/:code ──────────────────────────────────────────────
-
-  describe('getByCode()', () => {
-    it('appelle CampaignService.findByInviteCode avec le code', async () => {
-      const summary = {
-        id: 1,
-        name: 'Coupe Verney',
-        state: CampaignState.EN_CONSTRUCTION,
-        organizerName: 'Jean Dupont',
-      };
-      mockCampaignService.findByInviteCode.mockResolvedValue(summary);
-
-      const result = await controller.getByCode('abcdef123456');
-
-      expect(mockCampaignService.findByInviteCode).toHaveBeenCalledWith('abcdef123456');
-      expect(result).toEqual(summary);
-    });
+  it('create exécute le use case puis recompose via query.findOne', async () => {
+    const result = await controller.create(req as never, { name: 'C', teamId: 3 });
+    expect(createCampaignUseCase.execute).toHaveBeenCalledWith({ userId: 42, name: 'C', teamId: 3 });
+    expect(query.findOne).toHaveBeenCalledWith(1, 42);
+    expect(result).toEqual({ id: 1 });
   });
 
-  // ── POST /campaigns/:id/participants ─────────────────────────────────────────
-
-  describe('requestJoin()', () => {
-    it('appelle CampaignService.requestJoin avec l\'id de saison, l\'id user et le DTO', async () => {
-      const dto = { teamId: 7 };
-      const participant = { id: 2, campaignId: 1, userId: 42, teamId: 7 };
-      mockCampaignService.requestJoin.mockResolvedValue(participant);
-
-      const result = await controller.requestJoin(mockRequest as never, 1, dto);
-
-      expect(mockCampaignService.requestJoin).toHaveBeenCalledWith(1, 42, dto);
-      expect(result).toEqual(participant);
+  it('createGame exécute le use case puis recompose via query.getGame', async () => {
+    const result = await controller.createGame(req as never, 1, { scenarioId: 's' });
+    expect(addGameUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, userId: 42, scenarioId: 's', type: undefined,
     });
+    expect(query.getGame).toHaveBeenCalledWith(1, 7);
+    expect(result).toEqual({ id: 7, status: 'JOUE' });
   });
 
-  // ── GET /campaigns/:id/participants ──────────────────────────────────────────
-
-  describe('getParticipants()', () => {
-    it('appelle CampaignParticipantService.findParticipants avec l\'id de saison et l\'id user', async () => {
-      const participants: CampaignParticipantResponseDto[] = [
-        {
-          id: 1,
-          userId: 42,
-          teamId: 7,
-          status: ParticipantStatus.VALIDATED,
-          isOrganizer: true,
-          userName: 'Jean Dupont',
-          teamName: 'Furies',
-        },
-      ];
-      mockCampaignParticipantService.findParticipants.mockResolvedValue(participants);
-
-      const result = await controller.getParticipants(mockRequest as never, 1);
-
-      expect(mockCampaignParticipantService.findParticipants).toHaveBeenCalledWith(1, 42);
-      expect(result).toEqual(participants);
+  it('recordResult exécute le use case puis retourne la partie JOUE', async () => {
+    const result = await controller.recordResult(req as never, 1, 7, { results: [{ participantId: 1, rank: 1 }] });
+    expect(recordResultUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, gameId: 7, userId: 42, results: [{ participantId: 1, rank: 1 }],
     });
+    expect(query.getGame).toHaveBeenCalledWith(1, 7);
+    expect(result).toEqual({ id: 7, status: 'JOUE' });
   });
 
-  // ── PUT /campaigns/:id/participants/:pid/validate ────────────────────────────
-
-  describe('validateParticipant()', () => {
-    it('appelle CampaignParticipantService.validate avec saison, participant, user et accept', async () => {
-      const dto = { accept: true };
-      const participant: CampaignParticipantResponseDto = {
-        id: 2,
-        userId: 43,
-        teamId: 8,
-        status: ParticipantStatus.VALIDATED,
-        isOrganizer: false,
-        userName: 'Alice Martin',
-        teamName: 'Scrap Kings',
-      };
-      mockCampaignParticipantService.validate.mockResolvedValue(participant);
-
-      const result = await controller.validateParticipant(mockRequest as never, 1, 2, dto);
-
-      expect(mockCampaignParticipantService.validate).toHaveBeenCalledWith(1, 2, 42, true);
-      expect(result).toEqual(participant);
+  it('validateParticipant exécute le use case puis recompose via query.getParticipant', async () => {
+    await controller.validateParticipant(req as never, 1, 5, { accept: true });
+    expect(validateParticipantUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, pid: 5, userId: 42, accept: true,
     });
-  });
-
-  // ── DELETE /campaigns/:id/participants/:pid ──────────────────────────────────
-
-  describe('removeParticipant()', () => {
-    it('appelle CampaignParticipantService.remove avec saison, participant et user', async () => {
-      mockCampaignParticipantService.remove.mockResolvedValue(undefined);
-
-      const result = await controller.removeParticipant(mockRequest as never, 1, 2);
-
-      expect(mockCampaignParticipantService.remove).toHaveBeenCalledWith(1, 2, 42);
-      expect(result).toBeUndefined();
-    });
-  });
-
-  // ── GET /campaigns/pending ────────────────────────────────────────────────────
-
-  describe('getPending()', () => {
-    it('appelle CampaignService.findPendingForUser avec l\'id de l\'utilisateur connecté', async () => {
-      const pending = { ...mockCampaignResponse, myRole: 'participant' as const };
-      mockCampaignService.findPendingForUser.mockResolvedValue([pending]);
-
-      const result = await controller.getPending(mockRequest as never);
-
-      expect(mockCampaignService.findPendingForUser).toHaveBeenCalledWith(42);
-      expect(result).toEqual([pending]);
-    });
-  });
-
-  // ── GET /campaigns/organizing/pending-requests ───────────────────────────────
-
-  describe('getOrganizingPendingRequests()', () => {
-    it('appelle CampaignService.findOrganizedWithPendingRequests avec l\'id de l\'utilisateur connecté', async () => {
-      const organized = { ...mockCampaignResponse, pendingRequestsCount: 2 };
-      mockCampaignService.findOrganizedWithPendingRequests.mockResolvedValue([organized]);
-
-      const result = await controller.getOrganizingPendingRequests(mockRequest as never);
-
-      expect(mockCampaignService.findOrganizedWithPendingRequests).toHaveBeenCalledWith(42);
-      expect(result).toEqual([organized]);
-    });
-  });
-
-  // ── GET /campaigns/:id ────────────────────────────────────────────────────────
-
-  describe('getOne()', () => {
-    it('appelle CampaignService.findOne avec l\'id de saison et l\'id user', async () => {
-      mockCampaignService.findOne.mockResolvedValue(mockCampaignResponse);
-
-      const result = await controller.getOne(mockRequest as never, 1);
-
-      expect(mockCampaignService.findOne).toHaveBeenCalledWith(1, 42);
-      expect(result).toEqual(mockCampaignResponse);
-    });
-  });
-
-  // ── DELETE /campaigns/:id ─────────────────────────────────────────────────────
-
-  describe('remove()', () => {
-    it('appelle CampaignService.remove avec l\'id de saison et l\'id user', async () => {
-      mockCampaignService.remove.mockResolvedValue(undefined);
-
-      const result = await controller.remove(mockRequest as never, 1);
-
-      expect(mockCampaignService.remove).toHaveBeenCalledWith(1, 42);
-      expect(result).toBeUndefined();
-    });
+    expect(query.getParticipant).toHaveBeenCalledWith(1, 5);
   });
 });

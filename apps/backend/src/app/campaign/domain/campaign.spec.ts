@@ -1,14 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Campaign } from './campaign';
 import { CampaignParticipant } from './campaign-participant';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { AtelierGame } from './games/atelier-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
-import { WalletMovementEvent } from './events/wallet-movement.event';
 import { GameStatus } from './enums/game-status.enum';
-import { WalletReason } from './enums/wallet-reason.enum';
+import { CampaignState, ParticipantStatus } from '../campaign.enums';
 import { makeTestParticipant } from './test-helpers';
-import { DomainException } from '../../team/domain/vehicle';
+
+/** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
+function makeCampaign(
+  participants: CampaignParticipant[],
+  games: EvenementTeleGame[] | AtelierGame[] | (EvenementTeleGame | AtelierGame)[],
+  state: CampaignState = CampaignState.EN_CONSTRUCTION,
+): Campaign {
+  return new Campaign(1, 'Campagne Test', state, 'invite-code', participants, games as never);
+}
 
 function makeGame(id: number, order: number, events = [] as RankingAssignedEvent[]): EvenementTeleGame {
   return new EvenementTeleGame(id, 1, GameStatus.PLANIFIE, order, `scen_${id}`, null, events);
@@ -18,44 +25,40 @@ function makeRankingEvent(participantId: number, points: number, gameId: number,
   return new RankingAssignedEvent(order * 100 + participantId, gameId, participantId, order, 1, points);
 }
 
-function makeWalletEvent(participantId: number, amount: number, gameId: number): WalletMovementEvent {
-  return new WalletMovementEvent(999, gameId, participantId, 2, amount, WalletReason.RECOMPENSE);
-}
-
 describe('Campaign — findGame', () => {
   it('retourne la partie par id', () => {
     const { participant } = makeTestParticipant();
     const game = makeGame(1, 1);
-    const season = new Campaign(1, [participant], [game]);
-    expect(season.findGame(1)).toBe(game);
+    const campaign = makeCampaign([participant], [game]);
+    expect(campaign.findGame(1)).toBe(game);
   });
 
   it('lève DomainException si la partie est introuvable', () => {
     const { participant } = makeTestParticipant();
-    const season = new Campaign(1, [participant], []);
-    expect(() => season.findGame(999)).toThrow('introuvable');
+    const campaign = makeCampaign([participant], []);
+    expect(() => campaign.findGame(999)).toThrow('introuvable');
   });
 });
 
 describe('Campaign — replay', () => {
   it('replay complet réinitialise les compteurs avant d\'appliquer', () => {
-    const { participant, participants } = makeTestParticipant();
+    const { participant } = makeTestParticipant();
     const event1 = makeRankingEvent(participant.id, 5, 10);
     const game = makeGame(10, 1, [event1]);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = makeCampaign([participant], [game]);
 
-    season.replay();
+    campaign.replay();
     expect(participant.championshipPoints).toBe(5);
   });
 
   it('replay remet les compteurs à zéro avant de rejouer', () => {
-    const { participant, participants } = makeTestParticipant();
+    const { participant } = makeTestParticipant();
     const event1 = makeRankingEvent(participant.id, 5, 10);
     const game = makeGame(10, 1, [event1]);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = makeCampaign([participant], [game]);
 
-    season.replay();  // PC = 5
-    season.replay();  // reset puis rejoue → PC = 5, pas 10
+    campaign.replay();  // PC = 5
+    campaign.replay();  // reset puis rejoue → PC = 5, pas 10
     expect(participant.championshipPoints).toBe(5);
   });
 
@@ -65,17 +68,16 @@ describe('Campaign — replay', () => {
     const e2 = makeRankingEvent(participant.id, 7, 10);
     const game1 = makeGame(20, 2, [e1]);  // order=2
     const game2 = makeGame(10, 1, [e2]);  // order=1 — doit être joué en premier
-    const season = new Campaign(1, [participant], [game1, game2]);
+    const campaign = makeCampaign([participant], [game1, game2]);
 
-    season.replay();
-    // Les deux événements cumulent : 3 + 7 = 10
-    expect(participant.championshipPoints).toBe(10);
+    campaign.replay();
+    expect(participant.championshipPoints).toBe(10);  // 3 + 7
   });
 
   it('wallet initial = team.cans après reset', () => {
     const { participant } = makeTestParticipant();  // team.cans = 50
-    const season = new Campaign(1, [participant], []);
-    season.replay();
+    const campaign = makeCampaign([participant], []);
+    campaign.replay();
     expect(participant.wallet).toBe(50);
   });
 });
@@ -87,16 +89,16 @@ describe('Campaign — replayUpTo', () => {
     const e2 = makeRankingEvent(participant.id, 6, 20);
     const game1 = makeGame(10, 1, [e1]);  // order=1
     const game2 = makeGame(20, 2, [e2]);  // order=2
-    const season = new Campaign(1, [participant], [game1, game2]);
+    const campaign = makeCampaign([participant], [game1, game2]);
 
-    season.replayUpTo(20);  // rejoue uniquement game1
+    campaign.replayUpTo(20);  // rejoue uniquement game1
     expect(participant.championshipPoints).toBe(4);
   });
 
   it('lève si gameId cible est introuvable', () => {
     const { participant } = makeTestParticipant();
-    const season = new Campaign(1, [participant], []);
-    expect(() => season.replayUpTo(999)).toThrow('introuvable');
+    const campaign = makeCampaign([participant], []);
+    expect(() => campaign.replayUpTo(999)).toThrow('introuvable');
   });
 });
 
@@ -107,21 +109,20 @@ describe('Campaign — standings', () => {
     const e1 = makeRankingEvent(1, 10, 10);
     const e2 = makeRankingEvent(2, 15, 10);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e1, e2]);
-    const season = new Campaign(1, [p1, p2], [game]);
-    season.replay();
+    const campaign = makeCampaign([p1, p2], [game]);
+    campaign.replay();
 
-    const standings = season.standings();
+    const standings = campaign.standings();
     expect(standings[0].participantId).toBe(2);   // p2 = 15 PC
     expect(standings[1].participantId).toBe(1);   // p1 = 10 PC
   });
 
   it('n\'expose pas resistancePoints dans le classement', () => {
     const { participant } = makeTestParticipant();
-    const season = new Campaign(1, [participant], []);
-    season.replay();
+    const campaign = makeCampaign([participant], []);
+    campaign.replay();
 
-    const standings = season.standings();
-    for (const entry of standings) {
+    for (const entry of campaign.standings()) {
       expect(entry).not.toHaveProperty('resistancePoints');
     }
   });
@@ -131,9 +132,9 @@ describe('Campaign — finalizeGame', () => {
   it('passe la partie à JOUE et crée un AtelierGame OUVERT', () => {
     const { participant } = makeTestParticipant();
     const game = makeGame(10, 1);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = makeCampaign([participant], [game]);
 
-    const atelier = season.finalizeGame(10);
+    const atelier = campaign.finalizeGame(10);
 
     expect(game.status).toBe(GameStatus.JOUE);
     expect(game.playedAt).not.toBeNull();
@@ -144,9 +145,9 @@ describe('Campaign — finalizeGame', () => {
   it('l\'atelier créé a order = game.order + 0.5', () => {
     const { participant } = makeTestParticipant();
     const game = makeGame(10, 2);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = makeCampaign([participant], [game]);
 
-    const atelier = season.finalizeGame(10);
+    const atelier = campaign.finalizeGame(10);
     expect(atelier.order).toBe(2.5);
   });
 
@@ -155,9 +156,9 @@ describe('Campaign — finalizeGame', () => {
     const game1 = makeGame(10, 1);
     const openAtelier = new AtelierGame(5, 1, GameStatus.OUVERT, 0.5, []);
     const game2 = makeGame(20, 2);
-    const season = new Campaign(1, [participant], [game1, openAtelier, game2]);
+    const campaign = makeCampaign([participant], [game1, openAtelier, game2]);
 
-    season.finalizeGame(20);
+    campaign.finalizeGame(20);
 
     expect(openAtelier.status).toBe(GameStatus.CLOTURE);
   });
@@ -165,19 +166,19 @@ describe('Campaign — finalizeGame', () => {
   it('lève si la partie n\'est pas PLANIFIE', () => {
     const { participant } = makeTestParticipant();
     const game = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
-    const season = new Campaign(1, [participant], [game]);
+    const campaign = makeCampaign([participant], [game]);
 
-    expect(() => season.finalizeGame(10)).toThrow('PLANIFIE');
+    expect(() => campaign.finalizeGame(10)).toThrow('PLANIFIE');
   });
 });
 
-describe('Campaign — closeSeason', () => {
+describe('Campaign — closeCampaign', () => {
   it('clôt tous les ateliers OUVERT restants', () => {
     const { participant } = makeTestParticipant();
     const atelier = new AtelierGame(5, 1, GameStatus.OUVERT, 1.5, []);
-    const season = new Campaign(1, [participant], [atelier]);
+    const campaign = makeCampaign([participant], [atelier]);
 
-    season.closeSeason();
+    campaign.closeCampaign();
 
     expect(atelier.status).toBe(GameStatus.CLOTURE);
   });
@@ -185,10 +186,181 @@ describe('Campaign — closeSeason', () => {
   it('ne touche pas aux ateliers déjà CLOTURE', () => {
     const { participant } = makeTestParticipant();
     const atelier = new AtelierGame(5, 1, GameStatus.CLOTURE, 0.5, []);
-    const season = new Campaign(1, [participant], [atelier]);
+    const campaign = makeCampaign([participant], [atelier]);
 
-    season.closeSeason();
+    campaign.closeCampaign();
 
     expect(atelier.status).toBe(GameStatus.CLOTURE);  // inchangé
+  });
+});
+
+// ── Commandes CRUD (Phase 2 — basculement DDD) ─────────────────────────────────
+
+describe('Campaign — requestJoin', () => {
+  it('ajoute un participant PENDING', () => {
+    const { participant } = makeTestParticipant();  // userId 42
+    const campaign = makeCampaign([participant], []);
+
+    const p = campaign.requestJoin(7, 3);
+
+    expect(p.status).toBe(ParticipantStatus.PENDING);
+    expect(p.userId).toBe(7);
+    expect(campaign.participants).toContain(p);
+  });
+
+  it('refuse une seconde demande du même utilisateur', () => {
+    const { participant } = makeTestParticipant();  // userId 42
+    const campaign = makeCampaign([participant], []);
+    expect(() => campaign.requestJoin(42, 3)).toThrow('déjà');
+  });
+
+  it('refuse une inscription hors EN_CONSTRUCTION', () => {
+    const { participant } = makeTestParticipant();
+    const campaign = makeCampaign([participant], [], CampaignState.EN_COURS);
+    expect(() => campaign.requestJoin(7, 3)).toThrow();
+  });
+});
+
+describe('Campaign — validateParticipant', () => {
+  it('valide une demande PENDING', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const pending = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.PENDING);
+    const campaign = makeCampaign([organizer, pending], []);
+
+    campaign.validateParticipant(2, true);
+
+    expect(pending.status).toBe(ParticipantStatus.VALIDATED);
+  });
+
+  it('empêche de refuser le dernier organisateur validé', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([organizer], []);
+    expect(() => campaign.validateParticipant(1, false)).toThrow('dernier organisateur');
+  });
+});
+
+describe('Campaign — promoteParticipant', () => {
+  it('promeut un participant VALIDATED en organisateur', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([organizer, member], []);
+
+    campaign.promoteParticipant(2);
+
+    expect(member.isOrganizer).toBe(true);
+  });
+
+  it('refuse la promotion d\'un participant non validé', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const pending = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.PENDING);
+    const campaign = makeCampaign([organizer, pending], []);
+    expect(() => campaign.promoteParticipant(2)).toThrow('validé');
+  });
+});
+
+describe('Campaign — removeParticipant', () => {
+  it('retire un participant et mémorise son id pour la persistance', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([organizer, member], []);
+
+    campaign.removeParticipant(2);
+
+    expect(campaign.participants.find((p) => p.id === 2)).toBeUndefined();
+    expect(campaign.removedParticipantIds).toContain(2);
+  });
+
+  it('empêche de retirer le dernier organisateur', () => {
+    const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([organizer], []);
+    expect(() => campaign.removeParticipant(1)).toThrow('dernier organisateur');
+  });
+});
+
+describe('Campaign — changeParticipantTeam', () => {
+  it('change l\'équipe engagée d\'un participant VALIDATED', () => {
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([member], []);
+
+    campaign.changeParticipantTeam(7, 9);
+
+    expect(member.teamId).toBe(9);
+  });
+
+  it('interdit le désengagement (null) à un non-organisateur', () => {
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const campaign = makeCampaign([member], []);
+    expect(() => campaign.changeParticipantTeam(7, null)).toThrow('organisateur');
+  });
+});
+
+describe('Campaign — addGame / updateGame / removeGame', () => {
+  it('ajoute une partie PLANIFIE en fin de programme (order MAX+1)', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const campaign = makeCampaign([participant], [g1]);
+
+    const g = campaign.addGame('scen', 'EVENEMENT_TELE');
+
+    expect(g.order).toBe(2);
+    expect(g.status).toBe(GameStatus.PLANIFIE);
+  });
+
+  it('met à jour le scénario d\'une partie PLANIFIE en conservant id/order', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 3);
+    const campaign = makeCampaign([participant], [g1]);
+
+    const updated = campaign.updateGame(10, 'nouveau_scen', 'ESCARMOUCHE');
+
+    expect(updated.id).toBe(10);
+    expect(updated.order).toBe(3);
+    expect(updated.type).toBe('ESCARMOUCHE');
+  });
+
+  it('supprime une partie PLANIFIE et mémorise son id', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const campaign = makeCampaign([participant], [g1]);
+
+    campaign.removeGame(10);
+
+    expect(campaign.games.find((g) => g.id === 10)).toBeUndefined();
+    expect(campaign.removedGameIds).toContain(10);
+  });
+});
+
+describe('Campaign — recordResult', () => {
+  it('crée un RankingAssignedEvent par participant et finalise la partie', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1, p2], [game]);
+
+    const { events, newAtelier } = campaign.recordResult(10, [
+      { participantId: 1, rank: 1 },
+      { participantId: 2, rank: 2 },
+    ]);
+
+    expect(events).toHaveLength(2);
+    expect(game.status).toBe(GameStatus.JOUE);
+    expect(newAtelier.status).toBe(GameStatus.OUVERT);
+    // EVENEMENT_TELE, classified = ceil(2/2) = 1 → rang 1 = 10 PC, rang 2 = 0.
+    expect(events.find((e) => e.participantId === 1)?.championshipPoints).toBe(10);
+    expect(events.find((e) => e.participantId === 2)?.championshipPoints).toBe(0);
+  });
+
+  it('refuse des rangs non consécutifs', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+    expect(() => campaign.recordResult(10, [{ participantId: 1, rank: 2 }])).toThrow('consécutifs');
+  });
+
+  it('refuse un participant non validé', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+    expect(() => campaign.recordResult(10, [{ participantId: 99, rank: 1 }])).toThrow();
   });
 });
