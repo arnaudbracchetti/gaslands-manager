@@ -1,9 +1,9 @@
 /**
  * DTO pour la demande d'inscription à une saison.
  *
- * `teamId` désigne l'équipe du demandeur — le service vérifie qu'elle lui
- * appartient avant de créer le CampaignParticipant (cf. CampaignService.requestJoin,
- * réutilise TeamService.findOneForUser, même principe que CreateCampaignDto).
+ * `teamId` désigne l'équipe du demandeur — le use case vérifie qu'elle lui
+ * appartient avant de créer le CampaignParticipant (RequestJoinUseCase,
+ * ITeamRepository.findByIdForUser, même principe que CreateCampaignDto).
  */
 export class JoinCampaignDto {
   // nullable : l'organisateur peut se désengager d'une saison en passant null

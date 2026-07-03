@@ -1,5 +1,7 @@
+import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import type { CampaignParticipant } from '../domain/campaign-participant';
@@ -29,9 +31,14 @@ export class RecordWalletMovementUseCase {
     assertOrganizer(campaign, cmd.userId);
 
     const event = new WalletMovementEvent(0, cmd.gameId, cmd.participantId, 0, cmd.amount, cmd.reason);
-    const game = campaign.findGame(cmd.gameId);
-    game.addEvent(event);
-    event.execute([...campaign.participants] as CampaignParticipant[]);
+    try {
+      const game = campaign.findGame(cmd.gameId);
+      game.addEvent(event);
+      event.execute([...campaign.participants] as CampaignParticipant[]);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
 
     await this.campaignRepo.appendEvents(cmd.gameId, [event]);
   }

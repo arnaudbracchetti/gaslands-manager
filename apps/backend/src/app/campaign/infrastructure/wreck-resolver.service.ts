@@ -1,23 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { WreckOutcome } from '../domain/wreck/wreck-outcome';
-import { WreckResult } from '../domain/enums/wreck-result.enum';
 import type { Vehicle } from '../../team/domain/vehicle';
 
 /**
  * Service de résolution de la Table des Épaves (Gaslands, p.168).
  *
- * Lance le D6 côté serveur (D-S9 — déterminisme du replay) et consulte la table
- * pour produire un `WreckOutcome`. Le use case `WreckResolveUseCase` convertit ce
- * résultat en `WreckResolvedEvent` + éventuellement `WeaponLostEvent`/`VehicleLostEvent`.
- *
- * Table des Épaves :
- *   Tirage modifié = D6 + Chocs actuels + modificateur de poids (Léger +1, Lourd -1)
- *
- *   ≤ 3 : Épargné       — CHOCS_GAGNE(0)
- *   4–5  : +1 Choc       — CHOCS_GAGNE(1)
- *   6–7  : +2 Chocs      — CHOCS_GAGNE(2)
- *   8–9  : Arme arrachée — ARME_PERDUE
- *   10+  : Épave         — EPAVE (véhicule perdu)
+ * Responsabilité d'infrastructure réduite au strict aléa : lancer le D6 côté serveur
+ * (D-S9 — déterminisme du replay), puis déléguer la RÈGLE de la Table des Épaves au
+ * domaine (`WreckOutcome.fromRoll`). Le use case `WreckResolveUseCase` convertit ensuite
+ * le `WreckOutcome` en `WreckResolvedEvent` (+ éventuellement `WeaponLostEvent` /
+ * `VehicleLostEvent`).
  */
 @Injectable()
 export class WreckResolverService {
@@ -31,30 +23,7 @@ export class WreckResolverService {
    */
   resolve(vehicle: Vehicle, weaponIdChoice: number | null = null): WreckOutcome {
     const diceRoll = this.rollD6();
-    const weightModifier = this.weightModifier(vehicle.type.poids);
-    const modifiedRoll = diceRoll + vehicle.chocs + weightModifier;
-
-    const { result, chocsGained } = this.lookupTable(modifiedRoll);
-
-    const weaponLostId = result === WreckResult.ARME_PERDUE ? weaponIdChoice : null;
-
-    return new WreckOutcome(vehicle.id, diceRoll, vehicle.chocs, result, chocsGained, weaponLostId);
-  }
-
-  // ── Table et helpers ──────────────────────────────────────────────────────────
-
-  private lookupTable(modifiedRoll: number): { result: WreckResult; chocsGained: number } {
-    if (modifiedRoll <= 3) return { result: WreckResult.CHOCS_GAGNE, chocsGained: 0 };
-    if (modifiedRoll <= 5) return { result: WreckResult.CHOCS_GAGNE, chocsGained: 1 };
-    if (modifiedRoll <= 7) return { result: WreckResult.CHOCS_GAGNE, chocsGained: 2 };
-    if (modifiedRoll <= 9) return { result: WreckResult.ARME_PERDUE, chocsGained: 0 };
-    return { result: WreckResult.EPAVE, chocsGained: 0 };
-  }
-
-  private weightModifier(poids: string): number {
-    if (poids === 'Léger') return 1;
-    if (poids === 'Lourd') return -1;
-    return 0; // Moyen
+    return WreckOutcome.fromRoll(vehicle.id, vehicle.type.poids, vehicle.chocs, diceRoll, weaponIdChoice);
   }
 
   /** Lancer de dé D6 côté serveur — garantit le déterminisme du replay (D-S9). */

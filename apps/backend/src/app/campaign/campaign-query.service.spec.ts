@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CampaignQueryService } from './campaign-query.service';
-import { CampaignState } from './campaign.enums';
+import { CampaignState } from './domain/enums/campaign.enums';
 
 /**
  * Tests du côté lecture (CQRS). Les repositories TypeORM sont mockés — on vérifie

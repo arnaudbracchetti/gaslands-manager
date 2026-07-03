@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { assertOrganizer } from './record-ranking.usecase';
@@ -28,7 +29,8 @@ export class ValidateParticipantUseCase {
     try {
       campaign.validateParticipant(cmd.pid, cmd.accept);
     } catch (e: unknown) {
-      throw new BadRequestException((e as Error).message);
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
     }
 
     await this.campaignRepo.saveStructural(campaign);

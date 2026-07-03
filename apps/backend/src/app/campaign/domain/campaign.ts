@@ -7,7 +7,7 @@ import { AtelierGame } from './games/atelier-game';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
-import { CampaignState, ParticipantStatus } from '../campaign.enums';
+import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 
 export interface StandingsEntry {
   participantId: number;
@@ -328,14 +328,13 @@ export class Campaign {
       throw new DomainException('Seule une partie PLANIFIE peut être finalisée');
     }
 
-    (game as unknown as { status: GameStatus }).status = GameStatus.JOUE;
-    (game as unknown as { playedAt: Date }).playedAt = new Date();
+    game.markPlayed();
 
     const openAtelier = this._games.find(
       (g) => g instanceof AtelierGame && g.status === GameStatus.OUVERT,
     );
     if (openAtelier) {
-      (openAtelier as unknown as { status: GameStatus }).status = GameStatus.CLOTURE;
+      openAtelier.close();
     }
 
     const newAtelier = new AtelierGame(0, this.id, GameStatus.OUVERT, game.order + 0.5, []);
@@ -349,7 +348,7 @@ export class Campaign {
   closeCampaign(): void {
     for (const game of this._games) {
       if (game instanceof AtelierGame && game.status === GameStatus.OUVERT) {
-        (game as unknown as { status: GameStatus }).status = GameStatus.CLOTURE;
+        game.close();
       }
     }
   }

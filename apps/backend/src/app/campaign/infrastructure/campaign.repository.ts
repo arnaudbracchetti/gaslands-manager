@@ -12,7 +12,7 @@ import type { GameEvent } from '../domain/events/game-event';
 import type { AtelierGame } from '../domain/games/atelier-game';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { TEAM_REPOSITORY } from '../../team/team.tokens';
-import { CampaignState, ParticipantStatus } from '../campaign.enums';
+import { CampaignState, ParticipantStatus } from '../domain/enums/campaign.enums';
 import { GameType } from '../game.enums';
 import { GameStatus as OrmGameStatus } from '../game.enums';
 import { GameStatus as DomainGameStatus } from '../domain/enums/game-status.enum';

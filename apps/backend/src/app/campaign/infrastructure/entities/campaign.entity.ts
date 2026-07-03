@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CampaignState } from '../../campaign.enums';
+import { CampaignState } from '../../domain/enums/campaign.enums';
 
 // @Entity('campaigns') crée une table "campaigns" dans PostgreSQL
 @Entity('campaigns')

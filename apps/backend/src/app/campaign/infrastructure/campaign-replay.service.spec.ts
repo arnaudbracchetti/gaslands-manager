@@ -5,7 +5,7 @@ import { makeTestParticipant } from '../domain/test-helpers';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
 import { GameStatus } from '../domain/enums/game-status.enum';
-import { CampaignState } from '../campaign.enums';
+import { CampaignState } from '../domain/enums/campaign.enums';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 
 function makeGameWithPoints(participantId: number, points: number): EvenementTeleGame {

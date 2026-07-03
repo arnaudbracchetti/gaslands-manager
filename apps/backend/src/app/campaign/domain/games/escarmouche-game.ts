@@ -28,6 +28,8 @@ export class EscarmoucheGame extends Game {
 
   override get type(): string { return 'ESCARMOUCHE'; }
 
+  protected override get mutableStatus(): GameStatus { return GameStatus.PLANIFIE; }
+
   override canAccept(event: GameEvent): boolean {
     return (
       event instanceof RankingAssignedEvent ||

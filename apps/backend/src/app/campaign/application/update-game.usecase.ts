@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { ScenarioCatalogService } from '../scenario-catalog.service';
@@ -41,7 +42,8 @@ export class UpdateGameUseCase {
       const type = cmd.type ?? (game.type as GameType);
       campaign.updateGame(cmd.gameId, scenarioId, type);
     } catch (e: unknown) {
-      throw new BadRequestException((e as Error).message);
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
     }
 
     await this.campaignRepo.saveStructural(campaign);

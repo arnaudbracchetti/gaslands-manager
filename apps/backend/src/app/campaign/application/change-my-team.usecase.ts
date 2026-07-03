@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
@@ -37,7 +38,8 @@ export class ChangeMyTeamUseCase {
       const participant = campaign.changeParticipantTeam(cmd.userId, cmd.teamId);
       participantId = participant.id;
     } catch (e: unknown) {
-      throw new BadRequestException((e as Error).message);
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
     }
 
     await this.campaignRepo.saveStructural(campaign);

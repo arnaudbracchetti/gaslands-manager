@@ -1,11 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
-import { SEQUELLA_REGISTRY } from '../../team/sequella-decorators';
+import { SEQUELLA_REGISTRY } from '../../team/domain/sequella-decorators';
 import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertParticipant } from './record-ranking.usecase';
-import { GameStatus } from '../domain/enums/game-status.enum';
 import { GameType } from '../game.enums';
 
 export interface AddSequellaCommand {
@@ -35,29 +35,28 @@ export class AddSequellaUseCase {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     const me = assertParticipant(campaign, cmd.userId);
 
-    // L'atelier doit être OUVERT
+    // Les séquelles se gèrent en atelier. Le statut OUVERT et la suffisance des Chocs sont
+    // désormais des gardes de DOMAINE (Game.addEvent + SequellaAddedEvent.execute →
+    // vehicle.addChocs) : on ne les redouble plus ici.
     const game = campaign.findGame(cmd.gameId);
-    if ((game as { type?: string }).type !== GameType.ATELIER || (game as { status?: string }).status !== GameStatus.OUVERT) {
-      throw new BadRequestException('Cet atelier n\'est pas ouvert.');
+    if (game.type !== GameType.ATELIER) {
+      throw new BadRequestException('Les séquelles se gèrent en atelier.');
     }
 
-    // Résoudre le coût en Chocs
     const entry = SEQUELLA_REGISTRY.get(cmd.sequellaTypeNom);
     if (!entry) throw new BadRequestException(`Séquelle inconnue : "${cmd.sequellaTypeNom}".`);
-
-    const vehicle = me.team.findVehicle(cmd.vehicleId);
-    if (vehicle.chocs < entry.type.chocsCost) {
-      throw new BadRequestException(
-        `Chocs insuffisants : ${vehicle.chocs} disponibles, ${entry.type.chocsCost} requis pour "${entry.type.nom}".`,
-      );
-    }
 
     const event = new SequellaAddedEvent(
       0, cmd.gameId, me.id, 0,
       cmd.vehicleId, cmd.sequellaTypeNom, entry.type.chocsCost,
     );
-    game.addEvent(event);                                     // valide canAccept
-    event.execute([...campaign.participants] as CampaignParticipant[]);
+    try {
+      game.addEvent(event);                                     // valide canAccept + statut OUVERT
+      event.execute([...campaign.participants] as CampaignParticipant[]);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
 
     await this.campaignRepo.appendEvents(cmd.gameId, [event]);
   }

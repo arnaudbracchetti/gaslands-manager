@@ -1,5 +1,6 @@
 import type { Team } from '../../team/domain/team';
-import { ParticipantStatus } from '../campaign.enums';
+import { ParticipantStatus } from './enums/campaign.enums';
+import { DomainException } from '../../shared/domain/domain-exception';
 
 /**
  * Participant à une campagne.
@@ -89,4 +90,16 @@ export class CampaignParticipant {
   creditWallet(amount: number): void { this._wallet += amount; }
   addPoints(n: number): void { this._championshipPoints += n; }
   addResistance(n: number): void { this._resistancePoints += n; }
+
+  /**
+   * Garde de domaine : le participant a-t-il assez de cagnotte pour une dépense de `cost` ?
+   * Lève `DomainException` sinon. Vérifiée AVANT de journaliser un achat d'atelier — le use
+   * case n'exécute pas l'événement avant la persistance (D-S11), l'affordability ne peut donc
+   * pas s'appuyer sur `creditWallet`, elle est portée par cette garde explicite.
+   */
+  assertCanAfford(cost: number): void {
+    if (this._wallet < cost) {
+      throw new DomainException(`Cagnotte insuffisante (${this._wallet} jerricans, coût : ${cost}).`);
+    }
+  }
 }

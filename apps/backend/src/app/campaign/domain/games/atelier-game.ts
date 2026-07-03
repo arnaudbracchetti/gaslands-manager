@@ -22,6 +22,8 @@ export class AtelierGame extends Game {
 
   override get type(): string { return 'ATELIER'; }
 
+  protected override get mutableStatus(): GameStatus { return GameStatus.OUVERT; }
+
   override canAccept(event: GameEvent): boolean {
     return event instanceof EquipmentChangedEvent || event instanceof SequellaAddedEvent;
   }

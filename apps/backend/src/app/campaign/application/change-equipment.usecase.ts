@@ -1,13 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
 import type { Orientation } from '../../team/domain/team';
 import type { CatalogService } from '../../catalog/catalog.service';
 import { assertParticipant } from './record-ranking.usecase';
-import { GameStatus } from '../domain/enums/game-status.enum';
-import { GameType } from '../game.enums';
 
 export interface ChangeEquipmentCommand {
   campaignId: number;
@@ -50,12 +49,6 @@ export class ChangeEquipmentUseCase {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     const me = assertParticipant(campaign, cmd.userId);
 
-    // L'atelier doit exister et être OUVERT
-    const game = campaign.findGame(cmd.gameId);
-    if ((game as { type?: string }).type !== GameType.ATELIER || (game as { status?: string }).status !== GameStatus.OUVERT) {
-      throw new BadRequestException('Cet atelier n\'est pas ouvert.');
-    }
-
     const resolvedVehicleType = cmd.entityType === 'VEHICLE'
       ? (this.catalog.getVehicleType(cmd.nomInterne) ?? null)
       : null;
@@ -70,13 +63,6 @@ export class ChangeEquipmentUseCase {
       }
       if (cmd.entityType === 'WEAPON' && !resolvedWeaponType) {
         throw new BadRequestException(`Arme inconnue du catalogue : "${cmd.nomInterne}".`);
-      }
-      const cost = cmd.entityType === 'VEHICLE'
-        ? resolvedVehicleType!.price
-        : resolvedWeaponType!.price;
-
-      if (me.wallet < cost) {
-        throw new BadRequestException(`Cagnotte insuffisante (${me.wallet} jerricans, coût : ${cost}).`);
       }
     } else {
       // SELL — vérifier que l'entité existe dans le team transient
@@ -115,8 +101,17 @@ export class ChangeEquipmentUseCase {
       resolvedWeaponType,
     );
 
-    // canAccept — ne pas appliquer (D-S11 : id=0 serait incorrect)
-    game.addEvent(event);
+    try {
+      const game = campaign.findGame(cmd.gameId);
+      // Affordability (BUY), « atelier OUVERT » (statut) et type d'événement sont désormais
+      // des gardes de domaine (assertCanAfford, Game.addEvent). Ne PAS exécuter l'événement
+      // ici (D-S11 : id=0 donnerait un id transient invalide) — le client rafraîchit via /workshop.
+      if (cmd.operation === 'BUY') me.assertCanAfford(cost);
+      game.addEvent(event);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
 
     await this.campaignRepo.appendEvents(cmd.gameId, [event]);
   }

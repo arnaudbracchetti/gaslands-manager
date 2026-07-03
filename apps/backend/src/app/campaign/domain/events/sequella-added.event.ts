@@ -1,6 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
-import { SEQUELLA_REGISTRY } from '../../../team/sequella-decorators';
+import { SEQUELLA_REGISTRY } from '../../../team/domain/sequella-decorators';
 import { DomainException } from '../../../shared/domain/domain-exception';
 
 /**

@@ -1,5 +1,7 @@
+import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { WreckResolverService } from '../infrastructure/wreck-resolver.service';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
@@ -48,37 +50,42 @@ export class WreckResolveUseCase {
     const participant = campaign.participants.find(p => p.id === cmd.participantId) as CampaignParticipant | undefined;
     if (!participant) throw new Error(`Participant ${cmd.participantId} introuvable.`);
 
-    const vehicle = participant.team.findVehicle(cmd.vehicleId);
-    const outcome = this.wreckResolver.resolve(vehicle, cmd.weaponIdChoice ?? null);
+    try {
+      const vehicle = participant.team.findVehicle(cmd.vehicleId);
+      const outcome = this.wreckResolver.resolve(vehicle, cmd.weaponIdChoice ?? null);
 
-    const participants = [...campaign.participants] as CampaignParticipant[];
-    const game = campaign.findGame(cmd.gameId);
-    const events: GameEvent[] = [];
+      const participants = [...campaign.participants] as CampaignParticipant[];
+      const game = campaign.findGame(cmd.gameId);
+      const events: GameEvent[] = [];
 
-    const wreckEvent = new WreckResolvedEvent(
-      0, cmd.gameId, cmd.participantId, 0,
-      outcome.vehicleId, outcome.diceRoll, outcome.chocsBefore,
-      outcome.wreckResult, outcome.chocsGained, outcome.weaponLostId,
-    );
-    game.addEvent(wreckEvent);
-    wreckEvent.execute(participants);
-    events.push(wreckEvent);
+      const wreckEvent = new WreckResolvedEvent(
+        0, cmd.gameId, cmd.participantId, 0,
+        outcome.vehicleId, outcome.diceRoll, outcome.chocsBefore,
+        outcome.wreckResult, outcome.chocsGained, outcome.weaponLostId,
+      );
+      game.addEvent(wreckEvent);
+      wreckEvent.execute(participants);
+      events.push(wreckEvent);
 
-    if (outcome.wreckResult === WreckResult.EPAVE) {
-      const vehicleLostEvent = new VehicleLostEvent(0, cmd.gameId, cmd.participantId, 0, cmd.vehicleId);
-      game.addEvent(vehicleLostEvent);
-      vehicleLostEvent.execute(participants);
-      events.push(vehicleLostEvent);
+      if (outcome.wreckResult === WreckResult.EPAVE) {
+        const vehicleLostEvent = new VehicleLostEvent(0, cmd.gameId, cmd.participantId, 0, cmd.vehicleId);
+        game.addEvent(vehicleLostEvent);
+        vehicleLostEvent.execute(participants);
+        events.push(vehicleLostEvent);
+      }
+
+      if (outcome.wreckResult === WreckResult.ARME_PERDUE && outcome.weaponLostId !== null) {
+        const weaponLostEvent = new WeaponLostEvent(0, cmd.gameId, cmd.participantId, 0, outcome.weaponLostId);
+        game.addEvent(weaponLostEvent);
+        weaponLostEvent.execute(participants);
+        events.push(weaponLostEvent);
+      }
+
+      await this.campaignRepo.appendEvents(cmd.gameId, events);
+      return { outcome };
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
     }
-
-    if (outcome.wreckResult === WreckResult.ARME_PERDUE && outcome.weaponLostId !== null) {
-      const weaponLostEvent = new WeaponLostEvent(0, cmd.gameId, cmd.participantId, 0, outcome.weaponLostId);
-      game.addEvent(weaponLostEvent);
-      weaponLostEvent.execute(participants);
-      events.push(weaponLostEvent);
-    }
-
-    await this.campaignRepo.appendEvents(cmd.gameId, events);
-    return { outcome };
   }
 }

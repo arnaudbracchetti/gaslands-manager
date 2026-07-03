@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
 import type { Campaign } from '../domain/campaign';
 import type { CampaignParticipant } from '../domain/campaign-participant';
@@ -34,9 +35,14 @@ export class RecordRankingUseCase {
     if (cmd.championshipPoints < 0) throw new BadRequestException('Les PC ne peuvent pas être négatifs.');
 
     const event = new RankingAssignedEvent(0, cmd.gameId, cmd.participantId, 0, cmd.rank, cmd.championshipPoints);
-    const game = campaign.findGame(cmd.gameId);
-    game.addEvent(event);                                // valide canAccept
-    event.execute([...campaign.participants] as CampaignParticipant[]);
+    try {
+      const game = campaign.findGame(cmd.gameId);
+      game.addEvent(event);                                // valide canAccept
+      event.execute([...campaign.participants] as CampaignParticipant[]);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
 
     await this.campaignRepo.appendEvents(cmd.gameId, [event]);
   }

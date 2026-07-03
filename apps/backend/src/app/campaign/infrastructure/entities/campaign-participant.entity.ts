@@ -11,7 +11,7 @@ import {
 import { CampaignOrm } from './campaign.entity';
 import { UserOrm } from '../../../auth/user.entity';
 import { TeamOrm } from '../../../team/infrastructure/entities/team.entity';
-import { ParticipantStatus } from '../../campaign.enums';
+import { ParticipantStatus } from '../../domain/enums/campaign.enums';
 
 // Une ligne par (utilisateur, équipe choisie) inscrit à une campagne.
 // @Unique(['campaignId', 'userId']) : un utilisateur ne peut inscrire qu'UNE

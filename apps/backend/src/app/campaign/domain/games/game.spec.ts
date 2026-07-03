@@ -96,6 +96,31 @@ describe('Game — addEvent / DomainException', () => {
     expect(() => atelier.addEvent(ranking)).toThrow('pas autorisé');
   });
 
+  it('refuse tout événement sur un atelier figé (CLOTURE)', () => {
+    const atelier = new AtelierGame(10, 1, GameStatus.CLOTURE, 1.5, []);
+    expect(() => atelier.addEvent(makeEquipmentEvent())).toThrow('figée');
+  });
+
+  it('refuse tout événement sur une partie déjà jouée (JOUE)', () => {
+    const partie = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
+    expect(() => partie.addEvent(makeRankingEvent())).toThrow('figée');
+  });
+
+  it('markPlayed fige la partie (PLANIFIE → JOUE, horodatée)', () => {
+    const partie = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    partie.markPlayed();
+    expect(partie.status).toBe(GameStatus.JOUE);
+    expect(partie.playedAt).toBeInstanceOf(Date);
+    expect(() => partie.addEvent(makeRankingEvent())).toThrow('figée');
+  });
+
+  it('close fige l\'atelier (OUVERT → CLOTURE)', () => {
+    const atelier = new AtelierGame(10, 1, GameStatus.OUVERT, 1.5, []);
+    atelier.close();
+    expect(atelier.status).toBe(GameStatus.CLOTURE);
+    expect(() => atelier.addEvent(makeEquipmentEvent())).toThrow('figée');
+  });
+
   it('_events triés par eventOrder dans apply', () => {
     const applied: number[] = [];
     class SpyEvent extends RankingAssignedEvent {

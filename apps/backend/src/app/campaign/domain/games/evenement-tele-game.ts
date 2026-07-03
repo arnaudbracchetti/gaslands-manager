@@ -24,6 +24,8 @@ export class EvenementTeleGame extends Game {
 
   override get type(): string { return 'EVENEMENT_TELE'; }
 
+  protected override get mutableStatus(): GameStatus { return GameStatus.PLANIFIE; }
+
   override canAccept(event: GameEvent): boolean {
     return (
       event instanceof RankingAssignedEvent ||

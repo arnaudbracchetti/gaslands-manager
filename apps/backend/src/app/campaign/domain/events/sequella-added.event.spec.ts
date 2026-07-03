@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SequellaAddedEvent } from './sequella-added.event';
 import { makeTestParticipant } from '../test-helpers';
-import { SEQUELLA_MOTEUR_ENDOMMAGE } from '../../../team/sequella-decorators';
+import { SEQUELLA_MOTEUR_ENDOMMAGE } from '../../../team/domain/sequella-decorators';
 
 describe('SequellaAddedEvent — execute / undo', () => {
   it('execute ajoute la séquelle et dépense des Chocs', () => {

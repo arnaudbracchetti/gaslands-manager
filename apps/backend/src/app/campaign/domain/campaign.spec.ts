@@ -5,7 +5,7 @@ import { EvenementTeleGame } from './games/evenement-tele-game';
 import { AtelierGame } from './games/atelier-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GameStatus } from './enums/game-status.enum';
-import { CampaignState, ParticipantStatus } from '../campaign.enums';
+import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 import { makeTestParticipant } from './test-helpers';
 
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */

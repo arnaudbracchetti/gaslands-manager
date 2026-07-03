@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import type { AtelierGame } from '../domain/games/atelier-game';
@@ -41,7 +42,8 @@ export class FinalizeGameUseCase {
       newAtelier = campaign.finalizeGame(cmd.gameId);
     } catch (e: unknown) {
       // DomainException → 400
-      throw new BadRequestException((e as Error).message);
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
     }
 
     await this.campaignRepo.saveCampaign(campaign, newAtelier);

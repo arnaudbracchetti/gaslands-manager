@@ -7,7 +7,7 @@
  * (POST /api/seasons/:id/participants) — un identifiant numérique de saison
  * n'est pas une donnée sensible (contrairement à `inviteCode`).
  */
-import { CampaignState } from '../campaign.enums';
+import { CampaignState } from '../domain/enums/campaign.enums';
 
 export class CampaignSummaryDto {
   id: number;

@@ -1,5 +1,7 @@
+import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { DomainException } from '../../shared/domain/domain-exception';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertOrganizer } from './record-ranking.usecase';
@@ -28,9 +30,14 @@ export class ContactResistanceUseCase {
     assertOrganizer(campaign, cmd.userId);
 
     const event = new ResistanceContactedEvent(0, cmd.gameId, cmd.participantId, 0);
-    const game = campaign.findGame(cmd.gameId);
-    game.addEvent(event);
-    event.execute([...campaign.participants] as CampaignParticipant[]);
+    try {
+      const game = campaign.findGame(cmd.gameId);
+      game.addEvent(event);
+      event.execute([...campaign.participants] as CampaignParticipant[]);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
 
     await this.campaignRepo.appendEvents(cmd.gameId, [event]);
   }

@@ -6,7 +6,7 @@
  * (résolus via les relations `user`/`team`), pour affichage direct côté
  * frontend sans appel supplémentaire.
  */
-import { ParticipantStatus } from '../campaign.enums';
+import { ParticipantStatus } from '../domain/enums/campaign.enums';
 
 export interface CampaignParticipantResponseDto {
   id: number;

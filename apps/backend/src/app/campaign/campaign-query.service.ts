@@ -18,7 +18,7 @@ import { CampaignOrm } from './infrastructure/entities/campaign.entity';
 import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { GameOrm } from './infrastructure/entities/game.entity';
 import { GameEventOrm } from './infrastructure/entities/game-event.entity';
-import { ParticipantStatus } from './campaign.enums';
+import { ParticipantStatus } from './domain/enums/campaign.enums';
 import { ScenarioCatalogService } from './scenario-catalog.service';
 import { CampaignResponseDto } from './dto/campaign-response.dto';
 import { CampaignSummaryDto } from './dto/campaign-summary.dto';
