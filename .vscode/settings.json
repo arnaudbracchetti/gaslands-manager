@@ -10,6 +10,7 @@
     ".codex":       true,
     ".cursor":      true,
     ".gemini":      true,
+    "**/*.spec.ts" :   true  
   },
 
   // ─── Imbrication des fichiers liés ───────────────────────────────────────
