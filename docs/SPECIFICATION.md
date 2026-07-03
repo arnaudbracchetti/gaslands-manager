@@ -23,10 +23,12 @@
 | CRUD Équipes (création, édition, suppression, verrouillage sponsor) | ✅ Implémenté |
 | Construction de véhicule (choix, équipement armes/améliorations, budget) | ✅ Implémenté |
 | Campagnes (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
-| Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1) |
-| Mode campagne — Résultats (classement, PC, cagnotte, résistance) | ✅ Implémenté (US-B/F) |
-| Mode campagne — Atelier (achat/revente équipement, séquelles) | ✅ Implémenté (US-D) |
-| Mode campagne — Table des Épaves (D6 serveur, perte véhicule/arme, chocs) | ✅ Implémenté (US-E) |
+| Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1/A2/A3) |
+| Mode campagne — Résultats & classement (rang, PC de classement 10/5/2/1) | ✅ Implémenté (US-B1/B3/C1) |
+| Mode campagne — Exploits de partie (portes franchies, véhicules ennemis détruits) | 🔲 Backlog (US-B2 — mécanique absente du code) |
+| Mode campagne — Atelier (cagnotte, achat/revente d'équipement) | 🟡 Partiel — logique backend seule, aucune UI, plusieurs gardes métier absentes (US-D1–D4, cf. cartes kanban) |
+| Mode campagne — Table des Épaves (D6 serveur, chocs, pertes) | 🟡 Partiel — tirage D6 et chocs dérivés corrects ; table de résultats simplifiée à 3 issues, séquelles spéciales absentes (US-E1–E4) |
+| Mode campagne — Points de Résistance (mécanique secrète) | 🟡 Partiel — condition d'éligibilité (0 PC) non vérifiée, aucune lecture possible par le joueur lui-même (US-F1) |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
 | Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |

@@ -103,9 +103,45 @@ Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
 `EN_COURS`, visibilité partielle pour un `PENDING`, quitter une campagne
 volontairement, rotation du code d'invitation.
 
-> Les résultats de parties (classement, Points de Championnat), l'Atelier et la Table
-> des Épaves sont désormais **implémentés** (cf. tables d'endpoints ci-dessous et
-> l'event-sourcing du module `campaign/`).
+Le classement (rang + Points de Championnat 10/5/2/1, US-B1/B3/C1) est
+**implémenté** — cf. tables d'endpoints ci-dessous. L'Atelier, la Table des Épaves
+et les Points de Résistance existent au niveau des endpoints/event-sourcing mais
+comportent des lacunes significatives par rapport aux User Stories d'origine —
+voir « Limitations connues » ci-dessous.
+
+---
+
+## Limitations connues (vérifiées dans le code le 2026-07-03)
+
+Cette section documente l'écart entre les User Stories du
+[backlog mode-campagne](../plans/2026-06-21-mode-campagne-backlog.md) et
+l'implémentation réelle, constaté en relisant le code (pas seulement la doc — la
+doc avait dérivé du code sur ces points). Détail complet par story et par critère
+d'acceptation dans les cartes kanban `.devtool/features/*.md`.
+
+- **Exploits de partie (US-B2)** — n'existe pas : ni portes franchies, ni PC pour
+  véhicules ennemis détruits par poids. Seul le classement (US-B1) attribue des PC.
+- **Atelier (US-D1–D4)** — logique de cagnotte/achat/revente présente côté backend
+  (`GetWorkshopUseCase`, `ChangeEquipmentUseCase`), mais **aucune page frontend** ne
+  l'expose (« Mon Atelier » n'existe pas dans `apps/frontend`). Gardes métier
+  manquantes : pas de vérification du sponsor à l'achat, pas de limite de 8
+  véhicules ; la revente crédite le **prix plein** au lieu de la moitié arrondie à
+  l'inférieur (bug, p.170 du livre de règles).
+- **Table des Épaves (US-E1–E4)** — le tirage D6 serveur et les Chocs dérivés sont
+  corrects, mais la table de résultats réelle est réduite à 3 issues génériques
+  (`CHOCS_GAGNE`/`ARME_PERDUE`/`EPAVE`) : pas de « Siège irrécupérable » (pas de
+  notion d'équipage mutable sur `Vehicle`), pas de « Véhicule détruit, pilote
+  mort » distinct (un véhicule perdu reste visible dans l'Atelier, seulement
+  flaggé `isLost`). Seules les armes peuvent être perdues, jamais les
+  améliorations. Les modificateurs de séquelle spéciaux (« Maintenu par la
+  Rouille » double lancer, « Légende Vivante » résultat forcé à 1) n'existent pas ;
+  aucune garde anti-doublon sur les séquelles.
+- **Points de Résistance (US-F1)** — le crédit de +3 PR fonctionne mais sans
+  vérifier que l'équipe n'a marqué aucun PC lors de la partie (condition
+  d'éligibilité absente de `ContactResistanceUseCase`). Le secret vis-à-vis des
+  autres joueurs est bien respecté, mais appliqué trop largement : un participant
+  ne peut pas non plus lire **ses propres** Points de Résistance (aucun endpoint
+  ne les expose, y compris au propriétaire).
 
 ---
 
@@ -232,6 +268,10 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 ### Résultats et classement — endpoints event-sourcing (Partie 4)
 
 > Endpoints granulaires du système event-sourcing, **non consommés par le frontend** (usage API direct).
+> ⚠️ `events/ranking` accepte `championshipPoints` comme valeur numérique fournie par
+> l'appelant, **sans appliquer le barème 10/5/2/1** (contrairement à `POST .../results`,
+> qui le calcule via `Campaign.recordResult`) — un appelant direct de cette route peut
+> attribuer des PC arbitraires.
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
