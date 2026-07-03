@@ -84,10 +84,10 @@ npx nx sync                        # si Nx se plaint de "workspace out of sync"
 - **Ne jamais créer de branche sans demande explicite** de l'utilisateur.
 - Si plusieurs types de modifications distincts sont présents dans les fichiers modifiés, **proposer de les répartir en plusieurs commits**.
 
-### Branches du mode campagne
+### Branches
 
-- **Branche `mode-campagne`** : tout ce qui concerne l'implémentation du mode campagne Gaslands (cf. les User Stories de [docs/plans/2026-06-21-mode-campagne-backlog.md](docs/plans/2026-06-21-mode-campagne-backlog.md) et la conception [docs/plans/2026-06-21-mode-campagne-design.md](docs/plans/2026-06-21-mode-campagne-design.md)) doit être commité sur cette branche.
-- **Branche `main`** : tout ce qui ne concerne **pas** le mode campagne doit être commité sur `main`.
+- Le mode campagne (event-sourcing, agrégat `Campaign`, refonte DDD `Team`/`Vehicle`) a été développé sur la branche `rdm-game`, fusionnée dans `main` le 2026-07-03 (fast-forward). Tout le développement, mode campagne inclus, se fait désormais directement sur `main`.
+- La branche `mode-campagne` est **obsolète** : son contenu a été repris puis dépassé par `rdm-game` avant la fusion — ne plus y committer.
 - **Toujours confirmer la branche cible avant de commiter** : ne jamais commiter sans que l'utilisateur ait validé que le commit part sur la bonne branche.
 
 ---
