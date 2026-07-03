@@ -4,7 +4,6 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { SEQUELLA_REGISTRY } from '../../team/domain/sequella-decorators';
-import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertParticipant } from './record-ranking.usecase';
 import { GameType } from '../game.enums';
 
@@ -51,8 +50,7 @@ export class AddSequellaUseCase {
       cmd.vehicleId, cmd.sequellaTypeNom, entry.type.chocsCost,
     );
     try {
-      game.addEvent(event);                                     // valide canAccept + statut OUVERT
-      event.execute([...campaign.participants] as CampaignParticipant[]);
+      campaign.applyNewEvent(cmd.gameId, event);                // valide canAccept + statut OUVERT
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

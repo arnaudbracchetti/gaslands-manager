@@ -5,7 +5,6 @@ import { DomainException } from '../../shared/domain/domain-exception';
 import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
 import type { GameEvent } from '../domain/events/game-event';
-import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertOrganizer } from './record-ranking.usecase';
 
 export interface RecordVehicleLostCommand {
@@ -33,21 +32,16 @@ export class RecordVehicleLostUseCase {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
 
-    const participants = [...campaign.participants] as CampaignParticipant[];
     const events: GameEvent[] = [];
 
     try {
-      const game = campaign.findGame(cmd.gameId);
-
       const vehicleEvent = new VehicleLostEvent(0, cmd.gameId, cmd.participantId, 0, cmd.vehicleId);
-      game.addEvent(vehicleEvent);
-      vehicleEvent.execute(participants);
+      campaign.applyNewEvent(cmd.gameId, vehicleEvent);
       events.push(vehicleEvent);
 
       for (const weaponId of cmd.weaponIds ?? []) {
         const weaponEvent = new WeaponLostEvent(0, cmd.gameId, cmd.participantId, 0, weaponId);
-        game.addEvent(weaponEvent);
-        weaponEvent.execute(participants);
+        campaign.applyNewEvent(cmd.gameId, weaponEvent);
         events.push(weaponEvent);
       }
     } catch (e) {

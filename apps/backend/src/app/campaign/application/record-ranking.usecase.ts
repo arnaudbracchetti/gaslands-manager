@@ -36,9 +36,7 @@ export class RecordRankingUseCase {
 
     const event = new RankingAssignedEvent(0, cmd.gameId, cmd.participantId, 0, cmd.rank, cmd.championshipPoints);
     try {
-      const game = campaign.findGame(cmd.gameId);
-      game.addEvent(event);                                // valide canAccept
-      event.execute([...campaign.participants] as CampaignParticipant[]);
+      campaign.applyNewEvent(cmd.gameId, event);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

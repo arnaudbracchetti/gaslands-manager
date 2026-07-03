@@ -4,7 +4,6 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
-import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertOrganizer } from './record-ranking.usecase';
 
 export interface RecordWalletMovementCommand {
@@ -32,9 +31,7 @@ export class RecordWalletMovementUseCase {
 
     const event = new WalletMovementEvent(0, cmd.gameId, cmd.participantId, 0, cmd.amount, cmd.reason);
     try {
-      const game = campaign.findGame(cmd.gameId);
-      game.addEvent(event);
-      event.execute([...campaign.participants] as CampaignParticipant[]);
+      campaign.applyNewEvent(cmd.gameId, event);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

@@ -3,7 +3,6 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
-import type { CampaignParticipant } from '../domain/campaign-participant';
 import { assertOrganizer } from './record-ranking.usecase';
 
 export interface ContactResistanceCommand {
@@ -31,9 +30,7 @@ export class ContactResistanceUseCase {
 
     const event = new ResistanceContactedEvent(0, cmd.gameId, cmd.participantId, 0);
     try {
-      const game = campaign.findGame(cmd.gameId);
-      game.addEvent(event);
-      event.execute([...campaign.participants] as CampaignParticipant[]);
+      campaign.applyNewEvent(cmd.gameId, event);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

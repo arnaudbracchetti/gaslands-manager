@@ -54,8 +54,6 @@ export class WreckResolveUseCase {
       const vehicle = participant.team.findVehicle(cmd.vehicleId);
       const outcome = this.wreckResolver.resolve(vehicle, cmd.weaponIdChoice ?? null);
 
-      const participants = [...campaign.participants] as CampaignParticipant[];
-      const game = campaign.findGame(cmd.gameId);
       const events: GameEvent[] = [];
 
       const wreckEvent = new WreckResolvedEvent(
@@ -63,21 +61,18 @@ export class WreckResolveUseCase {
         outcome.vehicleId, outcome.diceRoll, outcome.chocsBefore,
         outcome.wreckResult, outcome.chocsGained, outcome.weaponLostId,
       );
-      game.addEvent(wreckEvent);
-      wreckEvent.execute(participants);
+      campaign.applyNewEvent(cmd.gameId, wreckEvent);
       events.push(wreckEvent);
 
       if (outcome.wreckResult === WreckResult.EPAVE) {
         const vehicleLostEvent = new VehicleLostEvent(0, cmd.gameId, cmd.participantId, 0, cmd.vehicleId);
-        game.addEvent(vehicleLostEvent);
-        vehicleLostEvent.execute(participants);
+        campaign.applyNewEvent(cmd.gameId, vehicleLostEvent);
         events.push(vehicleLostEvent);
       }
 
       if (outcome.wreckResult === WreckResult.ARME_PERDUE && outcome.weaponLostId !== null) {
         const weaponLostEvent = new WeaponLostEvent(0, cmd.gameId, cmd.participantId, 0, outcome.weaponLostId);
-        game.addEvent(weaponLostEvent);
-        weaponLostEvent.execute(participants);
+        campaign.applyNewEvent(cmd.gameId, weaponLostEvent);
         events.push(weaponLostEvent);
       }
 
