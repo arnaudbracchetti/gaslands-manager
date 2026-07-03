@@ -9,7 +9,7 @@ import {
   SEQUELLA_BLINDAGE_ARRACHE,
 } from './sequella-decorators';
 import { CatalogVehicleBuild } from './vehicle-build';
-import type { Vehicule } from '../catalog/catalog.interfaces';
+import type { Vehicule } from '../../catalog/catalog.interfaces';
 
 /** Fabrique un Vehicule catalogue avec des stats contrôlées pour les tests. */
 function makeVehicule(overrides: Partial<Vehicule> = {}): Vehicule {

@@ -1,15 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { Vehicule } from '../catalog/catalog.interfaces';
 import { CatalogService } from '../catalog/catalog.service';
-import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
-import { CatalogVehicleBuild, type InstalledImprovement, type VehicleBuild } from './vehicle-build';
+import { ImprovementDecoratorFactory } from './domain/improvement-decorator.factory';
+import { CatalogVehicleBuild, type InstalledImprovement, type VehicleBuild } from './domain/vehicle-build';
 
 @Injectable()
 export class VehicleBuildFactory {
-  constructor(
-    private readonly catalogService: CatalogService,
-    private readonly decoratorFactory: ImprovementDecoratorFactory,
-  ) {}
+  constructor(private readonly catalogService: CatalogService) {}
 
   create(catalogVehicule: Vehicule, improvements: readonly InstalledImprovement[]): VehicleBuild {
     let build: VehicleBuild = new CatalogVehicleBuild(catalogVehicule);
@@ -22,7 +19,7 @@ export class VehicleBuildFactory {
             `(installée sur le véhicule "${catalogVehicule.nom}")`,
         );
       }
-      build = this.decoratorFactory.wrap(build, amelioration, installed);
+      build = ImprovementDecoratorFactory.wrap(build, amelioration, installed);
     }
 
     return build;

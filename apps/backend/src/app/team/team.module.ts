@@ -17,12 +17,9 @@ import { CatalogAdapter } from './infrastructure/catalog.adapter';
 import { TeamMapper } from './infrastructure/team.mapper';
 import { TeamRepository } from './infrastructure/team.repository';
 
-// Factories (Pattern Decorator pour les stats de véhicule)
-import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
+// Factory (Pattern Decorator pour les stats de véhicule)
 import { VehicleBuildFactory } from './vehicle-build.factory';
 
-// TeamService — conservé pour SeasonModule (findOneForUser)
-import { TeamService } from './team.service';
 
 // Controllers
 import { TeamController } from './team.controller';
@@ -79,13 +76,13 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     // TeamRepository implémente ITeamRepository (decoré @Injectable, injecté via token)
     { provide: TEAM_REPOSITORY, useClass: TeamRepository },
 
-    // Factories pour le Pattern Decorator (stats véhicule accumulées)
-    ImprovementDecoratorFactory,
+    // Factory des stats "véhicule monté" (Pattern Decorator). La fabrique de décorateurs
+    // (ImprovementDecoratorFactory) est désormais une classe pure du domaine à `wrap`
+    // statique — plus besoin de la fournir au conteneur.
     {
       provide: VehicleBuildFactory,
-      useFactory: (cs: CatalogService, df: ImprovementDecoratorFactory) =>
-        new VehicleBuildFactory(cs, df),
-      inject: [CatalogService, ImprovementDecoratorFactory],
+      useFactory: (cs: CatalogService) => new VehicleBuildFactory(cs),
+      inject: [CatalogService],
     },
 
     // ── Use cases — équipe ────────────────────────────────────────────────────
@@ -179,10 +176,9 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
       useFactory: (tr: ITeamRepository) => new UnassignWeaponFromTourelleUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
-
-    // TeamService — conservé temporairement pour CampaignModule (CampaignService.findOneForUser)
-    TeamService,
   ],
-  exports: [TypeOrmModule, TeamService, TEAM_REPOSITORY],
+  // TEAM_REPOSITORY est exporté pour CampaignModule (chargement de l'état figé des équipes
+  // au replay, via ITeamRepository). TypeOrmModule est réexporté pour les entités partagées.
+  exports: [TypeOrmModule, TEAM_REPOSITORY],
 })
 export class TeamModule {}

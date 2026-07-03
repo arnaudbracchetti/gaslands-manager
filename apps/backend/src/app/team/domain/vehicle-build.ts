@@ -24,7 +24,7 @@
  * pour le détail du raisonnement et la correction d'un bug structurel de conception.
  */
 
-import type { Amelioration, Vehicule } from '../catalog/catalog.interfaces';
+import type { Amelioration, Vehicule } from '../../catalog/catalog.interfaces';
 
 // ── Résultat de validation ────────────────────────────────────────────────────
 

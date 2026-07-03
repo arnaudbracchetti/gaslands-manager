@@ -7,7 +7,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { VehicleOrm } from './vehicle.entity';
-import type { Orientation } from '../../vehicle-build';
+import type { Orientation } from '../../domain/vehicle-build';
 
 @Entity('weapons')
 export class WeaponOrm {

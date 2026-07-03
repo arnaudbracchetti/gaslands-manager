@@ -1,4 +1,4 @@
-import type { VehicleStats, VehicleStatsSummary } from '../vehicle-build';
+import type { VehicleStats, VehicleStatsSummary } from '../domain/vehicle-build';
 
 export interface VehicleDetailDto {
   id: number;

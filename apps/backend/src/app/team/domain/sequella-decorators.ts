@@ -18,8 +18,8 @@
  */
 
 import { ImprovementDecorator, type VehicleBuild, type VehicleStats } from './vehicle-build';
-import { SequellaType } from './domain/value-objects/sequella-type';
-import type { Amelioration } from '../catalog/catalog.interfaces';
+import { SequellaType } from './value-objects/sequella-type';
+import type { Amelioration } from '../../catalog/catalog.interfaces';
 
 // ── Base commune ──────────────────────────────────────────────────────────────
 

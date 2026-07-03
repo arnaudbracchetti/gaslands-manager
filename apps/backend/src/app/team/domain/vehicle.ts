@@ -7,6 +7,10 @@ import { Weapon } from './weapon';
 import { Improvement } from './improvement';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { SequellaType } from './value-objects/sequella-type';
+import { CatalogVehicleBuild } from './vehicle-build';
+import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
+import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
+import type { Amelioration } from '../../catalog/catalog.interfaces';
 
 /**
  * Un véhicule appartenant à une équipe — entité enfant de l'agrégat Team.
@@ -120,10 +124,44 @@ export class Vehicle {
     if (!type.hasVariablePrice && type.price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
     }
+    // Contrôle d'emplacements *global* (armes + améliorations) — la chaîne de décorateurs
+    // ci-dessous ne connaît que les améliorations, donc ce garde reste porté par l'agrégat.
     if (type.slots > this.availableSlots) {
       return fail('Emplacements insuffisants sur ce véhicule');
     }
+    // Règles de pose spécifiques à l'amélioration (incompatibilités véhicule, unicité,
+    // orientation exclusive, équipage max…), portées par la chaîne de décorateurs Gaslands.
+    const placement = this.buildChain({ type, orientation }).validate();
+    if (!placement.ok) return fail(placement.reason);
     return ok();
+  }
+
+  /**
+   * Reconstruit la chaîne de décorateurs "véhicule monté" à partir de l'état de
+   * l'agrégat, afin de valider les règles de pose des améliorations. Les améliorations
+   * par défaut (`estDefaut`) sont exclues : hors pool d'emplacements (slots = 0 dans
+   * l'agrégat) et ne portant aucune de ces règles, les inclure fausserait le contrôle
+   * d'emplacements interne de la chaîne (`validateGenerique`, qui lit le prix catalogue brut).
+   */
+  private buildChain(candidate: { type: ImprovementType; orientation: Orientation | null }): VehicleBuild {
+    const installed: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
+      ...this._improvements
+        .filter((i) => !i.estDefaut)
+        .map((i) => ({
+          raw: i.type.toRaw(),
+          instance: { nom_interne: i.type.nomInterne, orientation: i.orientation ?? undefined },
+        })),
+      {
+        raw: candidate.type.toRaw(),
+        instance: { nom_interne: candidate.type.nomInterne, orientation: candidate.orientation ?? undefined },
+      },
+    ];
+
+    let build: VehicleBuild = new CatalogVehicleBuild(this.type.toRaw());
+    for (const { raw, instance } of installed) {
+      build = ImprovementDecoratorFactory.wrap(build, raw, instance);
+    }
+    return build;
   }
 
   // ── Mutations ─────────────────────────────────────────────────────────────────

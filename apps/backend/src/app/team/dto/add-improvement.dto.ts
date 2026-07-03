@@ -1,4 +1,4 @@
-import type { Orientation } from '../vehicle-build';
+import type { Orientation } from '../domain/vehicle-build';
 
 export class AddImprovementDto {
   nomInterne: string;

@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { TeamOrm } from './team.entity';
 import { WeaponOrm } from './weapon.entity';
-import type { Orientation } from '../../vehicle-build';
+import type { Orientation } from '../../domain/vehicle-build';
 
 @Entity('vehicles')
 export class VehicleOrm {

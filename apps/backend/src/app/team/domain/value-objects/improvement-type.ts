@@ -46,4 +46,13 @@ export class ImprovementType {
   equals(other: ImprovementType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
   }
+
+  /**
+   * Expose la donnée catalogue brute (`Amelioration`) — nécessaire pour reconstruire
+   * la chaîne de décorateurs de règles de pose depuis l'agrégat (`Vehicle.canAddImprovement`).
+   * Miroir de `VehicleType.toRaw()`.
+   */
+  toRaw(): Amelioration {
+    return this.raw;
+  }
 }
