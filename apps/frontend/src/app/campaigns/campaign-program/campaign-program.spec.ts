@@ -1,5 +1,5 @@
 /**
- * Tests unitaires pour SeasonProgram (composant smart).
+ * Tests unitaires pour CampaignProgram (composant smart).
  *
  * On teste l'orchestration : chargement des parties + scénarios, ouverture du
  * formulaire (création/édition), création/mise à jour, suppression confirmée,
@@ -8,8 +8,8 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { SeasonProgram } from './season-program';
-import { SeasonsService } from '../seasons.service';
+import { CampaignProgram } from './campaign-program';
+import { CampaignsService } from '../campaigns.service';
 import { Game, Scenario } from '../game.model';
 
 const mockScenarios: Scenario[] = [
@@ -18,7 +18,7 @@ const mockScenarios: Scenario[] = [
 
 const mockGame: Game = {
   id: 10,
-  seasonId: 1,
+  campaignId: 1,
   scenarioId: 'course_de_la_mort',
   scenarioName: 'La Course de la Mort',
   type: 'EVENEMENT_TELE',
@@ -29,9 +29,9 @@ const mockGame: Game = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
-describe('SeasonProgram Component', () => {
-  let component: SeasonProgram;
-  let fixture: ComponentFixture<SeasonProgram>;
+describe('CampaignProgram Component', () => {
+  let component: CampaignProgram;
+  let fixture: ComponentFixture<CampaignProgram>;
   let mockService: {
     getGames: ReturnType<typeof vi.fn>;
     getScenarios: ReturnType<typeof vi.fn>;
@@ -54,15 +54,15 @@ describe('SeasonProgram Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [SeasonProgram],
-      providers: [{ provide: SeasonsService, useValue: mockService }],
+      imports: [CampaignProgram],
+      providers: [{ provide: CampaignsService, useValue: mockService }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SeasonProgram);
+    fixture = TestBed.createComponent(CampaignProgram);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('seasonId', 1);
+    fixture.componentRef.setInput('campaignId', 1);
     fixture.componentRef.setInput('isOrganizer', true);
-    fixture.componentRef.setInput('seasonState', 'EN_CONSTRUCTION');
+    fixture.componentRef.setInput('campaignState', 'EN_CONSTRUCTION');
   });
 
   it('charge les parties et les scénarios à l\'initialisation', () => {
@@ -86,12 +86,12 @@ describe('SeasonProgram Component', () => {
     fixture.detectChanges();
     expect(component.canManage()).toBe(true);
 
-    fixture.componentRef.setInput('seasonState', 'TERMINEE');
+    fixture.componentRef.setInput('campaignState', 'TERMINEE');
     expect(component.canManage()).toBe(false);
   });
 
   it('canManage reste vrai en EN_COURS pour l\'organisateur', () => {
-    fixture.componentRef.setInput('seasonState', 'EN_COURS');
+    fixture.componentRef.setInput('campaignState', 'EN_COURS');
     fixture.detectChanges();
     expect(component.canManage()).toBe(true);
   });

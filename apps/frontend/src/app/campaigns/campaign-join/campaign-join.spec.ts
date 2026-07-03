@@ -1,19 +1,19 @@
 /**
- * Tests unitaires pour SeasonJoin.
+ * Tests unitaires pour CampaignJoin.
  *
- * Composant "smart" : on mocke SeasonsService et TeamsService (cf.
- * seasons.spec.ts), et ActivatedRoute pour fournir le paramètre `code`.
+ * Composant "smart" : on mocke CampaignsService et TeamsService (cf.
+ * campaigns.spec.ts), et ActivatedRoute pour fournir le paramètre `code`.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { SeasonJoin } from './season-join';
-import { SeasonsService } from '../seasons.service';
+import { CampaignJoin } from './campaign-join';
+import { CampaignsService } from '../campaigns.service';
 import { TeamsService } from '../../teams/teams.service';
-import { SeasonSummary } from '../season.model';
+import { CampaignSummary } from '../campaign.model';
 import { Team, CreateTeamDto } from '../../teams/team.model';
 
-const mockSummary: SeasonSummary = {
+const mockSummary: CampaignSummary = {
   id: 1,
   name: 'Coupe Verney',
   state: 'EN_CONSTRUCTION',
@@ -33,10 +33,10 @@ const mockTeams: Team[] = [
   },
 ];
 
-describe('SeasonJoin Component', () => {
-  let component: SeasonJoin;
-  let fixture: ComponentFixture<SeasonJoin>;
-  let mockSeasonsService: {
+describe('CampaignJoin Component', () => {
+  let component: CampaignJoin;
+  let fixture: ComponentFixture<CampaignJoin>;
+  let mockCampaignsService: {
     getByCode: ReturnType<typeof vi.fn>;
     requestJoin: ReturnType<typeof vi.fn>;
   };
@@ -46,7 +46,7 @@ describe('SeasonJoin Component', () => {
   };
 
   beforeEach(async () => {
-    mockSeasonsService = {
+    mockCampaignsService = {
       getByCode: vi.fn().mockReturnValue(of(mockSummary)),
       requestJoin: vi.fn(),
     };
@@ -57,9 +57,9 @@ describe('SeasonJoin Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [SeasonJoin],
+      imports: [CampaignJoin],
       providers: [
-        { provide: SeasonsService, useValue: mockSeasonsService },
+        { provide: CampaignsService, useValue: mockCampaignsService },
         { provide: TeamsService, useValue: mockTeamsService },
         {
           provide: ActivatedRoute,
@@ -68,7 +68,7 @@ describe('SeasonJoin Component', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SeasonJoin);
+    fixture = TestBed.createComponent(CampaignJoin);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -78,7 +78,7 @@ describe('SeasonJoin Component', () => {
   // ── Chargement initial ───────────────────────────────────────────────────
 
   it('charge le résumé de la saison et les équipes au démarrage', () => {
-    expect(mockSeasonsService.getByCode).toHaveBeenCalledWith('abcdef123456');
+    expect(mockCampaignsService.getByCode).toHaveBeenCalledWith('abcdef123456');
     expect(component.summary()).toEqual(mockSummary);
     expect(component.userTeams()).toEqual(mockTeams);
     expect(component.selectedTeamId()).toBe(7);
@@ -86,13 +86,13 @@ describe('SeasonJoin Component', () => {
   });
 
   it('affiche un message d\'erreur générique si le code est invalide (CA2)', async () => {
-    mockSeasonsService.getByCode.mockReturnValue(throwError(() => new Error('404')));
+    mockCampaignsService.getByCode.mockReturnValue(throwError(() => new Error('404')));
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
-      imports: [SeasonJoin],
+      imports: [CampaignJoin],
       providers: [
-        { provide: SeasonsService, useValue: mockSeasonsService },
+        { provide: CampaignsService, useValue: mockCampaignsService },
         { provide: TeamsService, useValue: mockTeamsService },
         {
           provide: ActivatedRoute,
@@ -101,7 +101,7 @@ describe('SeasonJoin Component', () => {
       ],
     }).compileComponents();
 
-    const errorFixture = TestBed.createComponent(SeasonJoin);
+    const errorFixture = TestBed.createComponent(CampaignJoin);
     const errorComponent = errorFixture.componentInstance;
     errorFixture.detectChanges();
 
@@ -114,17 +114,17 @@ describe('SeasonJoin Component', () => {
 
   describe('submitJoinRequest()', () => {
     it('envoie la demande puis affiche un message de confirmation', () => {
-      mockSeasonsService.requestJoin.mockReturnValue(of({}));
+      mockCampaignsService.requestJoin.mockReturnValue(of({}));
 
       component.submitJoinRequest();
 
-      expect(mockSeasonsService.requestJoin).toHaveBeenCalledWith(mockSummary.id, { teamId: 7 });
+      expect(mockCampaignsService.requestJoin).toHaveBeenCalledWith(mockSummary.id, { teamId: 7 });
       expect(component.submitted()).toBe(true);
       expect(component.submitting()).toBe(false);
     });
 
     it('affiche le message d\'erreur du backend en cas de rejet (CA4/CA5)', () => {
-      mockSeasonsService.requestJoin.mockReturnValue(
+      mockCampaignsService.requestJoin.mockReturnValue(
         throwError(() => ({ error: { message: 'Vous avez déjà une demande d\'inscription pour cette saison.' } })),
       );
 
@@ -140,7 +140,7 @@ describe('SeasonJoin Component', () => {
 
       component.submitJoinRequest();
 
-      expect(mockSeasonsService.requestJoin).not.toHaveBeenCalled();
+      expect(mockCampaignsService.requestJoin).not.toHaveBeenCalled();
     });
   });
 

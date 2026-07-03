@@ -1,5 +1,5 @@
 /**
- * Tests unitaires pour SeasonForm.
+ * Tests unitaires pour CampaignForm.
  *
  * Composant "dumb" : on vérifie
  * - la validation locale (nom obligatoire)
@@ -9,9 +9,9 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
-import { SeasonForm } from './season-form';
+import { CampaignForm } from './campaign-form';
 import { Team, CreateTeamDto } from '../../teams/team.model';
-import { CreateSeasonDto } from '../season.model';
+import { CreateCampaignDto } from '../campaign.model';
 
 const mockTeams: Team[] = [
   {
@@ -34,16 +34,16 @@ const mockTeams: Team[] = [
   },
 ];
 
-describe('SeasonForm', () => {
-  let component: SeasonForm;
-  let fixture: ComponentFixture<SeasonForm>;
+describe('CampaignForm', () => {
+  let component: CampaignForm;
+  let fixture: ComponentFixture<CampaignForm>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SeasonForm],
+      imports: [CampaignForm],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SeasonForm);
+    fixture = TestBed.createComponent(CampaignForm);
     component = fixture.componentInstance;
   });
 
@@ -62,7 +62,7 @@ describe('SeasonForm', () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
-    const emitted: CreateSeasonDto[] = [];
+    const emitted: CreateCampaignDto[] = [];
     outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
 
     component.formName.set('   ');
@@ -78,7 +78,7 @@ describe('SeasonForm', () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
-    const emitted: CreateSeasonDto[] = [];
+    const emitted: CreateCampaignDto[] = [];
     outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
 
     component.formName.set('Coupe Verney');

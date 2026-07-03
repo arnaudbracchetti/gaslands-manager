@@ -1,26 +1,26 @@
 /**
- * Tests unitaires pour le composant orchestrateur Seasons.
+ * Tests unitaires pour le composant orchestrateur Campaigns.
  *
- * Seasons est un composant "smart" qui délègue l'affichage à SeasonCard et
- * SeasonForm. On teste ici uniquement son rôle d'orchestration :
- * - Chargement initial des saisons (SeasonsService) et des équipes (TeamsService)
+ * Campaigns est un composant "smart" qui délègue l'affichage à CampaignCard et
+ * CampaignForm. On teste ici uniquement son rôle d'orchestration :
+ * - Chargement initial des saisons (CampaignsService) et des équipes (TeamsService)
  * - Ouverture/fermeture du formulaire de création
  * - Appel à create() puis rechargement de la liste
  * - Gestion des erreurs API
  *
- * Pas de provideRouter nécessaire : Seasons ne navigue pas (cf. teams.spec.ts
+ * Pas de provideRouter nécessaire : Campaigns ne navigue pas (cf. teams.spec.ts
  * qui en a besoin pour VehicleConfigurator).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { Seasons } from './seasons';
-import { SeasonsService } from './seasons.service';
+import { Campaigns } from './campaigns';
+import { CampaignsService } from './campaigns.service';
 import { TeamsService } from '../teams/teams.service';
-import { Season, CreateSeasonDto } from './season.model';
+import { Campaign, CreateCampaignDto } from './campaign.model';
 import { Team, CreateTeamDto } from '../teams/team.model';
 
-const mockSeasons: Season[] = [
+const mockCampaigns: Campaign[] = [
   {
     id: 1,
     name: 'Coupe Verney',
@@ -45,10 +45,10 @@ const mockTeams: Team[] = [
   },
 ];
 
-describe('Seasons Component', () => {
-  let component: Seasons;
-  let fixture: ComponentFixture<Seasons>;
-  let mockSeasonsService: {
+describe('Campaigns Component', () => {
+  let component: Campaigns;
+  let fixture: ComponentFixture<Campaigns>;
+  let mockCampaignsService: {
     getAll: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     getPending: ReturnType<typeof vi.fn>;
@@ -60,8 +60,8 @@ describe('Seasons Component', () => {
   };
 
   beforeEach(async () => {
-    mockSeasonsService = {
-      getAll: vi.fn().mockReturnValue(of(mockSeasons)),
+    mockCampaignsService = {
+      getAll: vi.fn().mockReturnValue(of(mockCampaigns)),
       create: vi.fn(),
       getPending: vi.fn().mockReturnValue(of([])),
       getOrganizingPendingRequests: vi.fn().mockReturnValue(of([])),
@@ -73,15 +73,15 @@ describe('Seasons Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [Seasons],
+      imports: [Campaigns],
       providers: [
-        { provide: SeasonsService, useValue: mockSeasonsService },
+        { provide: CampaignsService, useValue: mockCampaignsService },
         { provide: TeamsService, useValue: mockTeamsService },
         provideRouter([]),
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Seasons);
+    fixture = TestBed.createComponent(Campaigns);
     component = fixture.componentInstance;
     // detectChanges() déclenche ngOnInit → charge saisons + équipes
     fixture.detectChanges();
@@ -92,9 +92,9 @@ describe('Seasons Component', () => {
   // ── Chargement initial ───────────────────────────────────────────────────
 
   it('charge les saisons et les équipes au démarrage', () => {
-    expect(mockSeasonsService.getAll).toHaveBeenCalledTimes(1);
+    expect(mockCampaignsService.getAll).toHaveBeenCalledTimes(1);
     expect(mockTeamsService.getAll).toHaveBeenCalledTimes(1);
-    expect(component.seasons()).toEqual(mockSeasons);
+    expect(component.campaigns()).toEqual(mockCampaigns);
     expect(component.userTeams()).toEqual(mockTeams);
     expect(component.loading()).toBe(false);
   });
@@ -102,29 +102,29 @@ describe('Seasons Component', () => {
   // ── Saisons en attente (US4) ────────────────────────────────────────────
 
   it('charge les ids des saisons en attente de validation au démarrage', () => {
-    expect(mockSeasonsService.getPending).toHaveBeenCalledTimes(1);
-    expect(component.pendingSeasonIds()).toEqual(new Set());
+    expect(mockCampaignsService.getPending).toHaveBeenCalledTimes(1);
+    expect(component.pendingCampaignIds()).toEqual(new Set());
   });
 
   it('expose les ids des saisons retournées par getPending()', async () => {
-    mockSeasonsService.getPending.mockReturnValue(of([{ ...mockSeasons[0], id: 5 }]));
+    mockCampaignsService.getPending.mockReturnValue(of([{ ...mockCampaigns[0], id: 5 }]));
 
     component['loadPendingRequests']();
 
-    expect(component.pendingSeasonIds()).toEqual(new Set([5]));
+    expect(component.pendingCampaignIds()).toEqual(new Set([5]));
   });
 
   it('ignore l\'erreur de getPending() (badge secondaire)', () => {
-    mockSeasonsService.getPending.mockReturnValue(throwError(() => new Error('fail')));
+    mockCampaignsService.getPending.mockReturnValue(throwError(() => new Error('fail')));
 
     component['loadPendingRequests']();
 
-    expect(component.pendingSeasonIds()).toEqual(new Set());
+    expect(component.pendingCampaignIds()).toEqual(new Set());
   });
 
   it('expose les pendingRequestsCount des saisons organisées', () => {
-    mockSeasonsService.getOrganizingPendingRequests.mockReturnValue(
-      of([{ ...mockSeasons[0], id: 1, pendingRequestsCount: 2 }]),
+    mockCampaignsService.getOrganizingPendingRequests.mockReturnValue(
+      of([{ ...mockCampaigns[0], id: 1, pendingRequestsCount: 2 }]),
     );
 
     component['loadOrganizedPendingCounts']();
@@ -133,7 +133,7 @@ describe('Seasons Component', () => {
   });
 
   it('ignore l\'erreur de getOrganizingPendingRequests() (badge secondaire)', () => {
-    mockSeasonsService.getOrganizingPendingRequests.mockReturnValue(throwError(() => new Error('fail')));
+    mockCampaignsService.getOrganizingPendingRequests.mockReturnValue(throwError(() => new Error('fail')));
 
     component['loadOrganizedPendingCounts']();
 
@@ -141,9 +141,9 @@ describe('Seasons Component', () => {
   });
 
   it('affiche un message d\'erreur si le chargement des saisons échoue', () => {
-    mockSeasonsService.getAll.mockReturnValue(throwError(() => new Error('fail')));
+    mockCampaignsService.getAll.mockReturnValue(throwError(() => new Error('fail')));
 
-    component.loadSeasons();
+    component.loadCampaigns();
 
     expect(component.error()).toContain('Impossible de charger');
     expect(component.loading()).toBe(false);
@@ -164,25 +164,25 @@ describe('Seasons Component', () => {
   // ── Création d'une saison ────────────────────────────────────────────────
 
   it('crée une saison puis navigue vers le détail et ferme le formulaire', () => {
-    const newSeason: Season = { ...mockSeasons[0], id: 2, name: 'Coupe Slime' };
-    mockSeasonsService.create.mockReturnValue(of(newSeason));
+    const newCampaign: Campaign = { ...mockCampaigns[0], id: 2, name: 'Coupe Slime' };
+    mockCampaignsService.create.mockReturnValue(of(newCampaign));
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate');
     component.openCreate();
 
-    const dto: CreateSeasonDto = { name: 'Coupe Slime', teamId: 7 };
+    const dto: CreateCampaignDto = { name: 'Coupe Slime', teamId: 7 };
     component.onSaved(dto);
 
-    expect(mockSeasonsService.create).toHaveBeenCalledWith(dto);
+    expect(mockCampaignsService.create).toHaveBeenCalledWith(dto);
     expect(component.showForm()).toBe(false);
     expect(component.saving()).toBe(false);
-    expect(navigateSpy).toHaveBeenCalledWith(['/seasons', 2]);
+    expect(navigateSpy).toHaveBeenCalledWith(['/campaigns', 2]);
     // getAll n'est appelé qu'une seule fois (chargement initial)
-    expect(mockSeasonsService.getAll).toHaveBeenCalledTimes(1);
+    expect(mockCampaignsService.getAll).toHaveBeenCalledTimes(1);
   });
 
   it('affiche un message d\'erreur si la création échoue', () => {
-    mockSeasonsService.create.mockReturnValue(throwError(() => new Error('fail')));
+    mockCampaignsService.create.mockReturnValue(throwError(() => new Error('fail')));
     component.openCreate();
 
     component.onSaved({ name: 'Coupe Slime', teamId: 7 });
@@ -192,7 +192,7 @@ describe('Seasons Component', () => {
     expect(component.showForm()).toBe(true);
   });
 
-  // ── Création rapide d'équipe (QuickTeamCreate, depuis SeasonForm) ────────
+  // ── Création rapide d'équipe (QuickTeamCreate, depuis CampaignForm) ────────
 
   describe('onTeamCreated()', () => {
     it('ajoute la nouvelle équipe à userTeams', () => {
@@ -228,14 +228,14 @@ describe('Seasons Component', () => {
   // ── Rejoindre via code ────────────────────────────────────────────────────
 
   describe('goToJoin()', () => {
-    it('navigue vers /seasons/join/:code avec le code saisi', () => {
+    it('navigue vers /campaigns/join/:code avec le code saisi', () => {
       const router = TestBed.inject(Router);
       const navigateSpy = vi.spyOn(router, 'navigate');
 
       component.joinCode.set('abcdef123456');
       component.goToJoin();
 
-      expect(navigateSpy).toHaveBeenCalledWith(['/seasons/join', 'abcdef123456']);
+      expect(navigateSpy).toHaveBeenCalledWith(['/campaigns/join', 'abcdef123456']);
     });
 
     it('ne navigue pas si le code est vide', () => {

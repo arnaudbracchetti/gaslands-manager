@@ -8,9 +8,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { ParticipantList } from './participant-list';
-import { SeasonParticipant } from '../season-participant.model';
+import { CampaignParticipant } from '../campaign-participant.model';
 
-const mockParticipants: SeasonParticipant[] = [
+const mockParticipants: CampaignParticipant[] = [
   { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
   { id: 2, userId: 43, teamId: 8, status: 'PENDING', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
 ];
@@ -146,7 +146,7 @@ describe('ParticipantList', () => {
   });
 
   it('affiche le bouton Retirer pour un organisateur s\'il en reste un autre (CA5)', () => {
-    const twoOrganizers: SeasonParticipant[] = [
+    const twoOrganizers: CampaignParticipant[] = [
       { ...mockParticipants[0] },
       { ...mockParticipants[1], isOrganizer: true, status: 'VALIDATED' },
     ];

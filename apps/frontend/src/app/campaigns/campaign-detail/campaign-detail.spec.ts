@@ -1,7 +1,7 @@
 /**
- * Tests unitaires pour SeasonDetail.
+ * Tests unitaires pour CampaignDetail.
  *
- * Composant "smart" : on mocke SeasonsService.
+ * Composant "smart" : on mocke CampaignsService.
  * Le composant utilise désormais une liste de participants unifiée (tous statuts)
  * et une carte d'état pour les transitions de saison.
  */
@@ -9,14 +9,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
-import { SeasonDetail } from './season-detail';
-import { SeasonsService } from '../seasons.service';
-import { Season } from '../season.model';
-import { SeasonParticipant } from '../season-participant.model';
+import { CampaignDetail } from './campaign-detail';
+import { CampaignsService } from '../campaigns.service';
+import { Campaign } from '../campaign.model';
+import { CampaignParticipant } from '../campaign-participant.model';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
 
-const mockSeason: Season = {
+const mockCampaign: Campaign = {
   id: 1,
   name: 'Coupe Verney',
   state: 'EN_CONSTRUCTION',
@@ -38,17 +38,17 @@ const mockCurrentUser: User = {
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
 
-const mockParticipants: SeasonParticipant[] = [
+const mockParticipants: CampaignParticipant[] = [
   { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
   { id: 2, userId: 43, teamId: 8, status: 'PENDING', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
   { id: 3, userId: 44, teamId: 10, status: 'VALIDATED', isOrganizer: false, userName: 'Bob Martin', teamName: 'Bandits' },
   { id: 4, userId: 45, teamId: 11, status: 'REJECTED', isOrganizer: false, userName: 'Dan Fury', teamName: 'Outlaws' },
 ];
 
-describe('SeasonDetail', () => {
-  let component: SeasonDetail;
-  let fixture: ComponentFixture<SeasonDetail>;
-  let mockSeasonsService: {
+describe('CampaignDetail', () => {
+  let component: CampaignDetail;
+  let fixture: ComponentFixture<CampaignDetail>;
+  let mockCampaignsService: {
     getOne: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
     validateParticipant: ReturnType<typeof vi.fn>;
@@ -56,29 +56,29 @@ describe('SeasonDetail', () => {
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
-    // Appelés par le composant enfant SeasonProgram (désormais toujours monté).
+    // Appelés par le composant enfant CampaignProgram (désormais toujours monté).
     getGames: ReturnType<typeof vi.fn>;
     getScenarios: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: { currentUser: ReturnType<typeof signal<User | null>> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
 
-  function configure(seasonId = '1'): void {
+  function configure(campaignId = '1'): void {
     TestBed.configureTestingModule({
-      imports: [SeasonDetail],
+      imports: [CampaignDetail],
       providers: [
         provideRouter([]),
-        { provide: SeasonsService, useValue: mockSeasonsService },
+        { provide: CampaignsService, useValue: mockCampaignsService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: Router, useValue: mockRouter },
-        { provide: ActivatedRoute, useValue: { snapshot: { params: { id: seasonId } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { params: { id: campaignId } } } },
       ],
     });
   }
 
   beforeEach(() => {
-    mockSeasonsService = {
-      getOne: vi.fn().mockReturnValue(of(mockSeason)),
+    mockCampaignsService = {
+      getOne: vi.fn().mockReturnValue(of(mockCampaign)),
       getParticipants: vi.fn().mockReturnValue(of(mockParticipants)),
       validateParticipant: vi.fn(),
       removeParticipant: vi.fn(),
@@ -98,20 +98,20 @@ describe('SeasonDetail', () => {
 
   it('charge la saison et ses participants au démarrage', () => {
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
-    expect(mockSeasonsService.getOne).toHaveBeenCalledWith(1);
-    expect(mockSeasonsService.getParticipants).toHaveBeenCalledWith(1);
-    expect(component.season()).toEqual(mockSeason);
+    expect(mockCampaignsService.getOne).toHaveBeenCalledWith(1);
+    expect(mockCampaignsService.getParticipants).toHaveBeenCalledWith(1);
+    expect(component.campaign()).toEqual(mockCampaign);
     expect(component.loading()).toBe(false);
     expect(component.participants()).toEqual(mockParticipants);
   });
 
   it('myParticipant correspond au participant de l\'utilisateur connecté', () => {
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
@@ -120,7 +120,7 @@ describe('SeasonDetail', () => {
 
   it('validatedCount et pendingCount reflètent les statuts des participants', () => {
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
@@ -129,15 +129,15 @@ describe('SeasonDetail', () => {
   });
 
   it('affiche un message d\'erreur générique si la saison est introuvable (CA3)', () => {
-    mockSeasonsService.getOne.mockReturnValue(throwError(() => new Error('404')));
+    mockCampaignsService.getOne.mockReturnValue(throwError(() => new Error('404')));
 
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
     expect(component.error()).not.toBe('');
-    expect(component.season()).toBeNull();
+    expect(component.campaign()).toBeNull();
     expect(component.loading()).toBe(false);
   });
 
@@ -145,7 +145,7 @@ describe('SeasonDetail', () => {
 
   it('isOrganizer est vrai quand myRole === "organizer"', () => {
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
@@ -153,10 +153,10 @@ describe('SeasonDetail', () => {
   });
 
   it('isOrganizer est faux quand myRole === "participant"', () => {
-    mockSeasonsService.getOne.mockReturnValue(of({ ...mockSeason, myRole: 'participant' }));
+    mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
 
     configure();
-    fixture = TestBed.createComponent(SeasonDetail);
+    fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
     fixture.detectChanges();
 
@@ -167,28 +167,28 @@ describe('SeasonDetail', () => {
 
   describe('onValidate()', () => {
     it('met à jour le participant localement sans recharger la liste', () => {
-      const updated: SeasonParticipant = { ...mockParticipants[1], status: 'VALIDATED' };
-      mockSeasonsService.validateParticipant.mockReturnValue(of(updated));
+      const updated: CampaignParticipant = { ...mockParticipants[1], status: 'VALIDATED' };
+      mockCampaignsService.validateParticipant.mockReturnValue(of(updated));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onValidate({ pid: 2, accept: true });
 
-      expect(mockSeasonsService.validateParticipant).toHaveBeenCalledWith(1, 2, { accept: true });
-      // SeasonDetail + SeasonProgram (enfant) appellent tous deux getParticipants au démarrage.
-      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(2);
+      expect(mockCampaignsService.validateParticipant).toHaveBeenCalledWith(1, 2, { accept: true });
+      // CampaignDetail + CampaignProgram (enfant) appellent tous deux getParticipants au démarrage.
+      expect(mockCampaignsService.getParticipants).toHaveBeenCalledTimes(2);
       expect(component.participants()).toContainEqual(updated);
     });
 
     it('refuse une demande — son statut passe à REJECTED dans la liste', () => {
-      const updated: SeasonParticipant = { ...mockParticipants[1], status: 'REJECTED' };
-      mockSeasonsService.validateParticipant.mockReturnValue(of(updated));
+      const updated: CampaignParticipant = { ...mockParticipants[1], status: 'REJECTED' };
+      mockCampaignsService.validateParticipant.mockReturnValue(of(updated));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
@@ -203,34 +203,34 @@ describe('SeasonDetail', () => {
 
   describe('onPromote()', () => {
     it('promeut un participant et met à jour la liste localement', () => {
-      const updated: SeasonParticipant = { ...mockParticipants[2], isOrganizer: true };
-      mockSeasonsService.promote.mockReturnValue(of(updated));
+      const updated: CampaignParticipant = { ...mockParticipants[2], isOrganizer: true };
+      mockCampaignsService.promote.mockReturnValue(of(updated));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onPromote(3);
       expect(component.pendingPromote()).toEqual(mockParticipants[2]);
-      expect(mockSeasonsService.promote).not.toHaveBeenCalled();
+      expect(mockCampaignsService.promote).not.toHaveBeenCalled();
 
       component.onConfirmPromote();
 
-      expect(mockSeasonsService.promote).toHaveBeenCalledWith(1, 3);
+      expect(mockCampaignsService.promote).toHaveBeenCalledWith(1, 3);
       expect(component.participants()).toContainEqual(updated);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onPromote(3);
       component.pendingPromote.set(null);
 
-      expect(mockSeasonsService.promote).not.toHaveBeenCalled();
+      expect(mockCampaignsService.promote).not.toHaveBeenCalled();
     });
   });
 
@@ -238,42 +238,42 @@ describe('SeasonDetail', () => {
 
   describe('onChangeState()', () => {
     it('change l\'état de la saison après confirmation', () => {
-      const updated: Season = { ...mockSeason, state: 'EN_COURS' };
-      mockSeasonsService.changeState.mockReturnValue(of(updated));
+      const updated: Campaign = { ...mockCampaign, state: 'EN_COURS' };
+      mockCampaignsService.changeState.mockReturnValue(of(updated));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onChangeState('EN_COURS');
       expect(component.pendingState()).toBe('EN_COURS');
-      expect(mockSeasonsService.changeState).not.toHaveBeenCalled();
+      expect(mockCampaignsService.changeState).not.toHaveBeenCalled();
 
       component.onConfirmChangeState();
 
-      expect(mockSeasonsService.changeState).toHaveBeenCalledWith(1, { state: 'EN_COURS' });
-      expect(component.season()?.state).toBe('EN_COURS');
+      expect(mockCampaignsService.changeState).toHaveBeenCalledWith(1, { state: 'EN_COURS' });
+      expect(component.campaign()?.state).toBe('EN_COURS');
       expect(component.stateTransitioning()).toBe(false);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onChangeState('EN_COURS');
       component.pendingState.set(null);
 
-      expect(mockSeasonsService.changeState).not.toHaveBeenCalled();
+      expect(mockCampaignsService.changeState).not.toHaveBeenCalled();
     });
 
     it('affiche une erreur si le changement d\'état échoue', () => {
-      mockSeasonsService.changeState.mockReturnValue(throwError(() => new Error('500')));
+      mockCampaignsService.changeState.mockReturnValue(throwError(() => new Error('500')));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
@@ -289,41 +289,41 @@ describe('SeasonDetail', () => {
 
   describe('onRemoveParticipant()', () => {
     it('retire le participant localement après confirmation', () => {
-      mockSeasonsService.removeParticipant.mockReturnValue(of(undefined));
+      mockCampaignsService.removeParticipant.mockReturnValue(of(undefined));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onRemoveParticipant(2);
       expect(component.pendingRemoveParticipant()).toEqual(mockParticipants[1]);
-      expect(mockSeasonsService.removeParticipant).not.toHaveBeenCalled();
+      expect(mockCampaignsService.removeParticipant).not.toHaveBeenCalled();
 
       component.onConfirmRemoveParticipant();
 
-      expect(mockSeasonsService.removeParticipant).toHaveBeenCalledWith(1, 2);
+      expect(mockCampaignsService.removeParticipant).toHaveBeenCalledWith(1, 2);
       expect(component.participants()).toEqual([mockParticipants[0], mockParticipants[2], mockParticipants[3]]);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       component.onRemoveParticipant(2);
       component.pendingRemoveParticipant.set(null);
 
-      expect(mockSeasonsService.removeParticipant).not.toHaveBeenCalled();
+      expect(mockCampaignsService.removeParticipant).not.toHaveBeenCalled();
       expect(component.participants()).toEqual(mockParticipants);
     });
 
     it('affiche une erreur et recharge la liste si le retrait échoue', () => {
-      mockSeasonsService.removeParticipant.mockReturnValue(throwError(() => new Error('400')));
+      mockCampaignsService.removeParticipant.mockReturnValue(throwError(() => new Error('400')));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
@@ -331,54 +331,54 @@ describe('SeasonDetail', () => {
       component.onConfirmRemoveParticipant();
 
       expect(component.error()).not.toBe('');
-      // SeasonDetail (init + reload après erreur) + SeasonProgram (init) = 3 appels.
-      expect(mockSeasonsService.getParticipants).toHaveBeenCalledTimes(3);
+      // CampaignDetail (init + reload après erreur) + CampaignProgram (init) = 3 appels.
+      expect(mockCampaignsService.getParticipants).toHaveBeenCalledTimes(3);
     });
   });
 
-  // ── deleteSeason() ───────────────────────────────────────────────────────
+  // ── deleteCampaign() ───────────────────────────────────────────────────────
 
-  describe('deleteSeason()', () => {
-    it('supprime la saison et navigue vers /seasons après confirmation', () => {
-      mockSeasonsService.remove.mockReturnValue(of(undefined));
+  describe('deleteCampaign()', () => {
+    it('supprime la saison et navigue vers /campaigns après confirmation', () => {
+      mockCampaignsService.remove.mockReturnValue(of(undefined));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.deleteSeason();
-      expect(component.showDeleteSeasonConfirm()).toBe(true);
-      expect(mockSeasonsService.remove).not.toHaveBeenCalled();
+      component.deleteCampaign();
+      expect(component.showDeleteCampaignConfirm()).toBe(true);
+      expect(mockCampaignsService.remove).not.toHaveBeenCalled();
 
-      component.onConfirmDeleteSeason();
+      component.onConfirmDeleteCampaign();
 
-      expect(mockSeasonsService.remove).toHaveBeenCalledWith(1);
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/seasons']);
+      expect(mockCampaignsService.remove).toHaveBeenCalledWith(1);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/campaigns']);
     });
 
     it('n\'appelle pas l\'API si la confirmation est refusée', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.deleteSeason();
-      component.showDeleteSeasonConfirm.set(false);
+      component.deleteCampaign();
+      component.showDeleteCampaignConfirm.set(false);
 
-      expect(mockSeasonsService.remove).not.toHaveBeenCalled();
+      expect(mockCampaignsService.remove).not.toHaveBeenCalled();
     });
 
     it('affiche un message d\'erreur si la suppression échoue', () => {
-      mockSeasonsService.remove.mockReturnValue(throwError(() => new Error('500')));
+      mockCampaignsService.remove.mockReturnValue(throwError(() => new Error('500')));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.deleteSeason();
-      component.onConfirmDeleteSeason();
+      component.deleteCampaign();
+      component.onConfirmDeleteCampaign();
 
       expect(component.error()).not.toBe('');
       expect(mockRouter.navigate).not.toHaveBeenCalled();
@@ -390,7 +390,7 @@ describe('SeasonDetail', () => {
   describe('affichage', () => {
     it('affiche un libellé humain pour l\'état de la saison', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
@@ -399,9 +399,9 @@ describe('SeasonDetail', () => {
       expect(el.textContent).toContain('En construction');
     });
 
-    it('affiche un fil d\'ariane avec un lien vers /seasons', () => {
+    it('affiche un fil d\'ariane avec un lien vers /campaigns', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
@@ -412,47 +412,47 @@ describe('SeasonDetail', () => {
 
     it('affiche la zone dangereuse pour l\'organisateur', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('.season-detail-danger-zone')).not.toBeNull();
-      expect(el.querySelector('.season-detail-delete')).not.toBeNull();
+      expect(el.querySelector('.campaign-detail-danger-zone')).not.toBeNull();
+      expect(el.querySelector('.campaign-detail-delete')).not.toBeNull();
     });
 
     it('masque la zone dangereuse pour un non-organisateur', () => {
-      mockSeasonsService.getOne.mockReturnValue(of({ ...mockSeason, myRole: 'participant' }));
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('.season-detail-danger-zone')).toBeNull();
+      expect(el.querySelector('.campaign-detail-danger-zone')).toBeNull();
     });
 
     it('affiche la carte d\'état pour l\'organisateur', () => {
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('.season-state-card')).not.toBeNull();
+      expect(el.querySelector('.campaign-state-card')).not.toBeNull();
     });
 
     it('masque la carte d\'état pour un non-organisateur', () => {
-      mockSeasonsService.getOne.mockReturnValue(of({ ...mockSeason, myRole: 'participant' }));
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
 
       configure();
-      fixture = TestBed.createComponent(SeasonDetail);
+      fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
       const el = fixture.nativeElement as HTMLElement;
-      expect(el.querySelector('.season-state-card')).toBeNull();
+      expect(el.querySelector('.campaign-state-card')).toBeNull();
     });
   });
 });

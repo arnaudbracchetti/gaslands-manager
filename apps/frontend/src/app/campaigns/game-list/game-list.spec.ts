@@ -12,7 +12,7 @@ import { Game } from '../game.model';
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
     id: 1,
-    seasonId: 1,
+    campaignId: 1,
     scenarioId: 'course_de_la_mort',
     scenarioName: 'La Course de la Mort',
     type: 'EVENEMENT_TELE',

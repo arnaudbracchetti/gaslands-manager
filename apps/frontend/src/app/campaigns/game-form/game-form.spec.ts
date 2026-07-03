@@ -16,7 +16,7 @@ const mockScenarios: Scenario[] = [
 
 const mockGame: Game = {
   id: 10,
-  seasonId: 1,
+  campaignId: 1,
   scenarioId: 'embuscade',
   scenarioName: 'Embuscade',
   type: 'ESCARMOUCHE',
