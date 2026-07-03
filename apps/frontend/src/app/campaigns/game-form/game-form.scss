@@ -1,10 +1,20 @@
-.game-form-card {
+.gf-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.gf-modal {
   background: var(--tb-bitume-2);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-stamp);
+  width: min(460px, 92vw);
+  box-shadow: var(--shadow-stamp-lg);
 
   h3 {
     font-family: var(--font-display);
