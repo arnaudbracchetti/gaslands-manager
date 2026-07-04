@@ -1,4 +1,5 @@
 // ─── Liste de participants — style "standings" (BoardScreen TB) ───────────────
+@use '../../shared/styles/breakpoints' as bp;
 
 .participant-list {
   list-style: none;
@@ -110,6 +111,12 @@
     margin-left: auto;
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+
+    @include bp.mobile {
+      margin-left: 0;
+      width: 100%;
+    }
   }
 
   // Boutons Valider / Refuser / Promouvoir / Retirer / Modifier l'équipe

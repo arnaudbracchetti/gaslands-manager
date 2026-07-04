@@ -39,22 +39,28 @@
             @let points = pointsForRank(i + 1);
             <li cdkDrag class="grf-modal__item grf-modal__item--column">
               <div class="grf-modal__item-row">
-                <span class="grf-modal__handle" cdkDragHandle aria-hidden="true">⠿</span>
-                <span class="grf-modal__rank">{{ i + 1 }}</span>
-                <span class="grf-modal__team">{{ participant.teamName }}</span>
-                @if (isClassified(i)) {
-                  <span class="grf-modal__badge grf-modal__badge--classified">classé</span>
-                } @else {
-                  <span class="grf-modal__badge grf-modal__badge--unclassified">non classé</span>
-                }
-                @if (game().type === 'EVENEMENT_TELE') {
-                  <span
-                    class="grf-modal__points"
-                    [class.grf-modal__points--zero]="points === 0"
-                  >
-                    {{ points }} pts
-                  </span>
-                }
+                <div class="grf-modal__item-row-content">
+                  <div class="grf-modal__item-row-main">
+                    <span class="grf-modal__handle" cdkDragHandle aria-hidden="true">⠿</span>
+                    <span class="grf-modal__rank">{{ i + 1 }}</span>
+                    <span class="grf-modal__team">{{ participant.teamName }}</span>
+                  </div>
+                  <div class="grf-modal__item-row-meta">
+                    @if (isClassified(i)) {
+                      <span class="grf-modal__badge grf-modal__badge--classified">classé</span>
+                    } @else {
+                      <span class="grf-modal__badge grf-modal__badge--unclassified">non classé</span>
+                    }
+                    @if (game().type === 'EVENEMENT_TELE') {
+                      <span
+                        class="grf-modal__points"
+                        [class.grf-modal__points--zero]="points === 0"
+                      >
+                        {{ points }} pts
+                      </span>
+                    }
+                  </div>
+                </div>
                 <span class="grf-modal__reorder">
                   <button
                     type="button"

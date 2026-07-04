@@ -1,7 +1,13 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 .campaign-join-page {
   max-width: 600px;
   margin: 0 auto;
   padding: 40px 24px;
+
+  @include bp.mobile {
+    padding: 16px;
+  }
 
   h1 {
     font-family: var(--font-display);
@@ -54,6 +60,10 @@
   border-radius: var(--r-sm);
   padding: 28px;
   box-shadow: var(--shadow-stamp);
+
+  @include bp.mobile {
+    padding: 18px;
+  }
 
   h2 {
     font-family: var(--font-display);
@@ -124,6 +134,11 @@
     max-width: 420px;
     width: 100%;
     box-shadow: var(--shadow-stamp-lg);
+
+    @include bp.mobile {
+      padding: 20px;
+      max-width: 100%;
+    }
   }
 
   &__icon {

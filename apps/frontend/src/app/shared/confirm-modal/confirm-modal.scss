@@ -1,5 +1,6 @@
 // ConfirmModal — design system Terres Brûlées
 // Panel métal + coins d'enregistrement + HazardTape + boutons Button DS
+@use '../styles/breakpoints' as bp;
 
 // ── Overlay ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,10 @@
   position: relative;
   overflow: hidden;
   width: min(440px, 92vw);
+
+  @include bp.mobile {
+    width: min(480px, 96vw);
+  }
 
   // Panel "metal" — dégradé métal, bordure discrète
   background-image: var(--metal-sheen);
@@ -75,6 +80,10 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+
+  @include bp.mobile {
+    padding: 20px;
+  }
 }
 
 .cm-modal__message {

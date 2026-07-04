@@ -1,7 +1,13 @@
+@use '../shared/styles/breakpoints' as bp;
+
 .campaigns-page {
   max-width: 1000px;
   margin: 0 auto;
   padding: 40px 24px;
+
+  @include bp.mobile {
+    padding: 16px;
+  }
 }
 
 .campaigns-header {
@@ -11,6 +17,11 @@
   margin-bottom: 32px;
   padding-bottom: 16px;
   border-bottom: 2px solid var(--border-rust);
+
+  @include bp.mobile {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 
   h1 {
     font-family: var(--font-display);
@@ -168,4 +179,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+
+  @include bp.mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

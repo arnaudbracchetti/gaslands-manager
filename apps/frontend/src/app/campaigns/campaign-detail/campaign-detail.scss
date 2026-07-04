@@ -1,7 +1,13 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 .campaign-detail-page {
   max-width: 1100px;
   margin: 0 auto;
   padding: 40px 24px;
+
+  @include bp.mobile {
+    padding: 16px;
+  }
 
   h1 {
     font-family: var(--font-display);
@@ -41,6 +47,10 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+
+  @include bp.mobile {
+    flex-wrap: wrap;
+  }
 }
 
 .campaign-detail-delete {

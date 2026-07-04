@@ -1,3 +1,5 @@
+@use './app/shared/styles/breakpoints' as bp;
+
 // ─── Polices — Terres Brûlées ────────────────────────────────────────────────
 // Anton (display), Oswald (titres + corps), Space Mono (données / tags)
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
@@ -199,6 +201,9 @@ body {
   background: var(--tb-bitume);
   color: var(--tb-os);
   min-height: 100vh;
+  // Garde-fou : un débordement horizontal isolé (ex. navbar trop dense sur
+  // petit écran) ne doit jamais rendre toute la page scrollable/zoomable.
+  overflow-x: hidden;
 }
 
 // ─── Navbar ──────────────────────────────────────────────────────────────────
@@ -215,6 +220,13 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-stamp);
+
+  @include bp.mobile {
+    flex-wrap: wrap;
+    height: auto;
+    row-gap: 8px;
+    padding: 10px 16px;
+  }
 }
 
 .navbar-brand {
@@ -231,12 +243,23 @@ body {
   &:hover {
     opacity: 0.8;
   }
+
+  @include bp.mobile {
+    font-size: 1.25rem;
+  }
 }
 
 .navbar-links {
   display: flex;
   gap: 2rem;
   list-style: none;
+
+  @include bp.mobile {
+    gap: 1rem 1.25rem;
+    flex-wrap: wrap;
+    order: 3;
+    width: 100%;
+  }
 
   a {
     font-family: var(--font-mono);

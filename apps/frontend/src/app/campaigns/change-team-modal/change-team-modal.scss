@@ -1,4 +1,5 @@
 // Styles calqués sur TourelleAssignmentModal (.tam-*) pour cohérence visuelle.
+@use '../../shared/styles/breakpoints' as bp;
 
 .ctm-overlay {
   position: fixed;
@@ -8,6 +9,10 @@
   align-items: center;
   justify-content: center;
   z-index: 200;
+
+  @include bp.mobile {
+    align-items: flex-end;
+  }
 }
 
 .ctm-modal {
@@ -20,6 +25,16 @@
   flex-direction: column;
   gap: 20px;
   box-shadow: var(--shadow-stamp-lg);
+
+  @include bp.mobile {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    border-radius: var(--r-sm) var(--r-sm) 0 0;
+  }
 }
 
 .ctm-modal__title {
@@ -53,6 +68,12 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
+  @include bp.mobile {
+    position: sticky;
+    bottom: 0;
+    background: var(--metal-sheen);
+  }
 }
 
 .ctm-modal__confirm {
