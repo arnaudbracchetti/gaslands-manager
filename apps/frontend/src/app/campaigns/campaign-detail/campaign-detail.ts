@@ -19,7 +19,7 @@ import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } f
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { Campaign, CampaignState, ChangeStateDto } from '../campaign.model';
-import { CampaignParticipant } from '../campaign-participant.model';
+import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { ParticipantList } from '../participant-list/participant-list';
 import { CampaignProgram } from '../campaign-program/campaign-program';
 import { InviteLink } from '../invite-link/invite-link';
@@ -56,6 +56,7 @@ export class CampaignDetail implements OnInit {
   error: WritableSignal<string> = signal('');
   campaign: WritableSignal<Campaign | null> = signal<Campaign | null>(null);
   participants: WritableSignal<CampaignParticipant[]> = signal<CampaignParticipant[]>([]);
+  standings: WritableSignal<StandingsEntry[]> = signal<StandingsEntry[]>([]);
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
 
@@ -109,6 +110,15 @@ export class CampaignDetail implements OnInit {
     () => this.participants().filter((p) => p.status === 'PENDING').length,
   );
 
+  /**
+   * PC par participantId — construit depuis les standings (participants
+   * VALIDATED avec équipe uniquement). Absence de clé = 0 PC (participant
+   * PENDING/REJECTED, ou VALIDATED n'ayant encore joué aucune partie).
+   */
+  championshipPoints: Signal<ReadonlyMap<number, number>> = computed(
+    () => new Map(this.standings().map((s) => [s.participantId, s.championshipPoints])),
+  );
+
   ngOnInit(): void {
     this.loading.set(true);
     this.error.set('');
@@ -140,6 +150,28 @@ export class CampaignDetail implements OnInit {
         this.loading.set(false);
       },
     });
+
+    this.loadStandings();
+  }
+
+  /**
+   * Chargement indépendant des participants : si /standings échoue, la
+   * liste s'affiche quand même, simplement sans PC. Rappelé par
+   * onResultRecorded() pour rafraîchir le classement après la saisie d'un
+   * résultat dans CampaignProgram (composant frère de ParticipantList).
+   */
+  private loadStandings(): void {
+    this.campaignsService.getStandings(this.campaignId()).subscribe({
+      next: (standings: StandingsEntry[]) => this.standings.set(standings),
+      error: () => {
+        // Non bloquant : la liste des participants reste utilisable sans PC.
+      },
+    });
+  }
+
+  /** CampaignProgram émet cet événement après l'enregistrement d'un résultat. */
+  onResultRecorded(): void {
+    this.loadStandings();
   }
 
   onValidate(event: { pid: number; accept: boolean }): void {

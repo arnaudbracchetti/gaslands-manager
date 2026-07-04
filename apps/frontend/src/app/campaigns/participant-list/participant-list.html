@@ -1,6 +1,6 @@
 <!-- Liste unifiée de tous les participants (tous statuts) -->
 <ul class="participant-list">
-  @for (participant of participants(); track participant.id) {
+  @for (participant of sortedParticipants(); track participant.id) {
     <li class="participant-list__item">
 
       <!-- Avatar initiales -->
@@ -26,6 +26,9 @@
             ▲ Participant
           }
         </span>
+        @if (participant.status === 'VALIDATED') {
+          <span class="participant-list__points">🏆 {{ pointsFor(participant) }} PC</span>
+        }
       </div>
 
       <!-- Actions sur sa propre ligne -->

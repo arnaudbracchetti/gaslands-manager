@@ -738,7 +738,7 @@ Formulaire de création d'une campagne (nom + sélection optionnelle d'une équi
 
 ### `CampaignDetail` — `campaigns/campaign-detail/` 🧠
 
-Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs.
+Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs. Charge également le classement (`GET .../standings`) pour transmettre les Points de Championnat à `ParticipantList` — chargement indépendant et non bloquant : si `/standings` échoue, la liste des participants reste affichée sans PC. Rechargé aussi via `onResultRecorded()`, appelé quand `CampaignProgram` émet `resultRecorded` après l'enregistrement d'un résultat de partie — sans ce pont, le classement resterait figé jusqu'au prochain rechargement de page.
 
 | | |
 |---|---|
@@ -748,7 +748,7 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
 | **Compose** | `ParticipantList`, `InviteLink`, `ChangeTeamModal`, `ConfirmModal`, `Breadcrumb` |
 
-**Signals clés** : `campaign`, `participants`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`.
+**Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`.
 
 ---
 
@@ -772,6 +772,8 @@ Page de demande d'inscription à une campagne via son code d'invitation (`/campa
 
 Liste unifiée des participants d'une campagne avec boutons d'action adaptés au statut et au rôle. Encapsule toutes les règles de visibilité (organisateur uniquement, pas de self-reject sur le dernier organisateur, etc.).
 
+**Classement (PC)** : la liste est triée par Points de Championnat décroissants (tri stable — tant qu'aucun point n'existe pour aucun participant, l'ordre affiché reste celui d'origine). Le badge "🏆 X PC" n'est affiché que pour les participants `VALIDATED` ; les `PENDING`/`REJECTED` comptent pour 0 PC dans le tri sans afficher de badge. Les PC proviennent de `GET /api/campaigns/:id/standings` (calculé côté backend, cf. [CAMPAIGN.md](spec/CAMPAIGN.md)), chargé par `CampaignDetail` et transmis sous forme de map.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-participant-list` |
@@ -782,6 +784,7 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `participants` | `CampaignParticipant[]` | — | Tous statuts confondus |
+| `championshipPoints` | `ReadonlyMap<number, number>` | `new Map()` | PC par `participantId` — absent = 0 (aucune partie jouée) |
 | `isOrganizer` | `boolean` | `false` | Active les boutons d'action organisateur |
 | `currentUserId` | `number \| undefined` | `undefined` | Pour masquer les actions sur soi-même |
 | `canChangeTeam` | `boolean` | `false` | Affiche le lien "Changer d'équipe" |
@@ -859,6 +862,12 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 | `campaignId` | `number` | — | Campagne concernée |
 | `isOrganizer` | `boolean` | `false` | Rôle organisateur (condition de gestion) |
 | `campaignState` | `CampaignState` | — | État de la campagne ; `canManage` est faux en `TERMINEE` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `resultRecorded` | `void` | Émis après l'enregistrement réussi d'un résultat de partie — signale au parent que les PC ont changé, pour rafraîchir le classement affiché par `ParticipantList` (composant frère, sans lien direct) |
 
 **Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`).
 

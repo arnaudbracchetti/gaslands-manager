@@ -22,3 +22,18 @@ export interface CampaignParticipant {
 export interface ValidateParticipantDto {
   accept: boolean;
 }
+
+/**
+ * Une ligne du classement — miroir de StandingsEntry (backend). La clé de
+ * correspondance avec CampaignParticipant est `participantId === CampaignParticipant.id`.
+ * Pas de champ `rank` : dérivé côté frontend de l'ordre après tri. `resistancePoints`
+ * est volontairement absent — mécanique secrète (cf. docs/spec/CAMPAIGN.md, US-F1).
+ */
+export interface StandingsEntry {
+  participantId: number;
+  userId: number;
+  teamId: number;
+  teamName: string;
+  championshipPoints: number;
+  wallet: number;
+}

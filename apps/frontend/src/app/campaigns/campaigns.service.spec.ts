@@ -13,7 +13,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { CampaignsService } from './campaigns.service';
 import { Campaign, CampaignSummary } from './campaign.model';
-import { CampaignParticipant } from './campaign-participant.model';
+import { CampaignParticipant, StandingsEntry } from './campaign-participant.model';
 
 const mockCampaign: Campaign = {
   id: 1,
@@ -306,6 +306,26 @@ describe('CampaignsService', () => {
       req.flush(null);
 
       expect(done).toBe(true);
+    });
+  });
+
+  // ── getStandings() ───────────────────────────────────────────────────────
+
+  describe('getStandings()', () => {
+    it('effectue GET /api/campaigns/:id/standings et retourne le classement', () => {
+      const standings: StandingsEntry[] = [
+        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
+      ];
+      let result: StandingsEntry[] | undefined;
+
+      service.getStandings(1).subscribe((s) => { result = s; });
+
+      const req = httpMock.expectOne('/api/campaigns/1/standings');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(standings);
+
+      expect(result).toEqual(standings);
     });
   });
 });

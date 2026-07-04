@@ -8,7 +8,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto } from './campaign.model';
-import { CampaignParticipant, ValidateParticipantDto } from './campaign-participant.model';
+import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
 import type { Game, Scenario, CreateGameDto, UpdateGameDto, GameResult, RecordResultDto } from './game.model';
 
 @Injectable({ providedIn: 'root' })
@@ -183,5 +183,13 @@ export class CampaignsService {
    */
   getGameResults(campaignId: number, gameId: number): Observable<GameResult[]> {
     return this.http.get<GameResult[]>(`/api/campaigns/${campaignId}/games/${gameId}/results`);
+  }
+
+  /**
+   * GET /api/campaigns/:id/standings → classement des participants VALIDATED
+   * avec équipe, trié par Points de Championnat décroissants.
+   */
+  getStandings(campaignId: number): Observable<StandingsEntry[]> {
+    return this.http.get<StandingsEntry[]>(`/api/campaigns/${campaignId}/standings`);
   }
 }

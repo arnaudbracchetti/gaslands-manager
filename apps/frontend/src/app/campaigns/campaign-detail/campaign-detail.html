@@ -82,6 +82,7 @@
       <h2>Participants ({{ validatedCount() }} validé{{ validatedCount() > 1 ? 's' : '' }} · {{ pendingCount() }} en attente)</h2>
       <app-participant-list
         [participants]="participants()"
+        [championshipPoints]="championshipPoints()"
         [isOrganizer]="isOrganizer()"
         [currentUserId]="currentUserId()"
         [canChangeTeam]="canChangeTeam()"
@@ -109,7 +110,8 @@
       <app-campaign-program
         [campaignId]="campaignId()"
         [isOrganizer]="isOrganizer()"
-        [campaignState]="campaign()!.state" />
+        [campaignState]="campaign()!.state"
+        (resultRecorded)="onResultRecorded()" />
     </section>
 
     <!-- Zone dangereuse — organisateur uniquement -->

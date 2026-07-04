@@ -177,4 +177,51 @@ describe('ParticipantList', () => {
     // items[1] est PENDING → pas de bouton promouvoir
     expect(items[1].querySelector('.participant-list__promote')).toBeNull();
   });
+
+  // ── Classement (Points de Championnat) ───────────────────────────────────
+
+  it('conserve l\'ordre d\'origine tant qu\'aucun PC n\'est fourni (tri stable, tout à 0)', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    expect(items[0].textContent).toContain('Jean Dupont');
+    expect(items[1].textContent).toContain('Alice Martin');
+  });
+
+  it('trie les participants par PC décroissants quand des scores diffèrent', () => {
+    const twoValidated: CampaignParticipant[] = [
+      { ...mockParticipants[0] },
+      { ...mockParticipants[1], status: 'VALIDATED' },
+    ];
+    fixture.componentRef.setInput('participants', twoValidated);
+    fixture.componentRef.setInput(
+      'championshipPoints',
+      new Map([
+        [1, 5],
+        [2, 10],
+      ]),
+    );
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    // Alice (10 PC) doit désormais passer devant Jean (5 PC)
+    expect(items[0].textContent).toContain('Alice Martin');
+    expect(items[1].textContent).toContain('Jean Dupont');
+  });
+
+  it('n\'affiche le badge PC que pour les participants VALIDATED', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('championshipPoints', new Map([[1, 5], [2, 5]]));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    // items[0] = Jean (VALIDATED) → badge PC présent
+    expect(items[0].querySelector('.participant-list__points')?.textContent).toContain('5 PC');
+    // items[1] = Alice (PENDING) → pas de badge PC
+    expect(items[1].querySelector('.participant-list__points')).toBeNull();
+  });
 });

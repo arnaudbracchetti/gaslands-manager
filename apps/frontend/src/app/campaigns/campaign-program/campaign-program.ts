@@ -13,11 +13,13 @@ import {
   Component,
   InputSignal,
   OnInit,
+  OutputEmitterRef,
   Signal,
   WritableSignal,
   computed,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { CampaignsService } from '../campaigns.service';
@@ -49,6 +51,16 @@ export class CampaignProgram implements OnInit {
 
   /** État courant de la saison — la gestion est interdite en TERMINEE. */
   campaignState: InputSignal<CampaignState> = input.required<CampaignState>();
+
+  // ── Outputs ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Émis après l'enregistrement réussi d'un résultat de partie — les Points
+   * de Championnat ont changé. Le parent (CampaignDetail) écoute cet
+   * événement pour rafraîchir le classement affiché dans ParticipantList,
+   * composant frère qui n'a sinon aucun moyen d'être notifié.
+   */
+  resultRecorded: OutputEmitterRef<void> = output<void>();
 
   // ── État ──────────────────────────────────────────────────────────────────────
 
@@ -173,6 +185,7 @@ export class CampaignProgram implements OnInit {
         this.recordingGame.set(null);
         this.savingResult.set(false);
         this.loadGames();
+        this.resultRecorded.emit();
       },
       error: () => {
         this.savingResult.set(false);

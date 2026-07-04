@@ -12,7 +12,7 @@ import { of, throwError } from 'rxjs';
 import { CampaignDetail } from './campaign-detail';
 import { CampaignsService } from '../campaigns.service';
 import { Campaign } from '../campaign.model';
-import { CampaignParticipant } from '../campaign-participant.model';
+import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
 
@@ -51,6 +51,7 @@ describe('CampaignDetail', () => {
   let mockCampaignsService: {
     getOne: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
+    getStandings: ReturnType<typeof vi.fn>;
     validateParticipant: ReturnType<typeof vi.fn>;
     removeParticipant: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
@@ -80,6 +81,7 @@ describe('CampaignDetail', () => {
     mockCampaignsService = {
       getOne: vi.fn().mockReturnValue(of(mockCampaign)),
       getParticipants: vi.fn().mockReturnValue(of(mockParticipants)),
+      getStandings: vi.fn().mockReturnValue(of([])),
       validateParticipant: vi.fn(),
       removeParticipant: vi.fn(),
       remove: vi.fn(),
@@ -139,6 +141,69 @@ describe('CampaignDetail', () => {
     expect(component.error()).not.toBe('');
     expect(component.campaign()).toBeNull();
     expect(component.loading()).toBe(false);
+  });
+
+  // ── Classement (Points de Championnat) ───────────────────────────────────
+
+  describe('championshipPoints', () => {
+    it('charge les standings au démarrage et construit la map par participantId', () => {
+      const standings: StandingsEntry[] = [
+        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
+        { participantId: 3, userId: 44, teamId: 10, teamName: 'Bandits', championshipPoints: 5, wallet: 2 },
+      ];
+      mockCampaignsService.getStandings.mockReturnValue(of(standings));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockCampaignsService.getStandings).toHaveBeenCalledWith(1);
+      expect(component.championshipPoints().get(1)).toBe(10);
+      expect(component.championshipPoints().get(3)).toBe(5);
+      // Alice (id 2, PENDING) n'apparaît pas dans les standings → absente de la map.
+      expect(component.championshipPoints().has(2)).toBe(false);
+    });
+
+    it('la map de PC reste vide si aucune partie n\'a été jouée', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.championshipPoints().size).toBe(0);
+    });
+
+    it('n\'empêche pas l\'affichage des participants si /standings échoue', () => {
+      mockCampaignsService.getStandings.mockReturnValue(throwError(() => new Error('500')));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.participants()).toEqual(mockParticipants);
+      expect(component.error()).toBe('');
+    });
+
+    it('onResultRecorded() recharge les standings (déclenché par CampaignProgram)', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(mockCampaignsService.getStandings).toHaveBeenCalledTimes(1);
+
+      const updated: StandingsEntry[] = [
+        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
+      ];
+      mockCampaignsService.getStandings.mockReturnValue(of(updated));
+
+      component.onResultRecorded();
+
+      expect(mockCampaignsService.getStandings).toHaveBeenCalledTimes(2);
+      expect(component.championshipPoints().get(1)).toBe(10);
+    });
   });
 
   // ── isOrganizer ──────────────────────────────────────────────────────────

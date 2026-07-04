@@ -104,10 +104,14 @@ Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
 volontairement, rotation du code d'invitation.
 
 Le classement (rang + Points de Championnat 10/5/2/1, US-B1/B3/C1) est
-**implémenté** — cf. tables d'endpoints ci-dessous. L'Atelier, la Table des Épaves
-et les Points de Résistance existent au niveau des endpoints/event-sourcing mais
-comportent des lacunes significatives par rapport aux User Stories d'origine —
-voir « Limitations connues » ci-dessous.
+**implémenté et consommé par le frontend** — cf. tables d'endpoints ci-dessous.
+Pas de vue séparée : `GET .../standings` alimente directement la liste unifiée
+des participants (`ParticipantList`, cf. [COMPONENTS.md](../COMPONENTS.md)),
+triée par PC décroissants (tri stable — ordre inchangé tant qu'aucun point
+n'existe). L'Atelier, la Table des Épaves et les Points de Résistance existent
+au niveau des endpoints/event-sourcing mais comportent des lacunes
+significatives par rapport aux User Stories d'origine — voir
+« Limitations connues » ci-dessous.
 
 ---
 
@@ -267,7 +271,10 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 
 ### Résultats et classement — endpoints event-sourcing (Partie 4)
 
-> Endpoints granulaires du système event-sourcing, **non consommés par le frontend** (usage API direct).
+> Endpoints granulaires du système event-sourcing, **non consommés par le frontend**
+> (usage API direct) — **à l'exception de `GET .../standings`** (dernière ligne de la
+> table ci-dessous), qui alimente `ParticipantList` sur `/campaigns/:id` (cf.
+> [COMPONENTS.md](../COMPONENTS.md)).
 > ⚠️ `events/ranking` accepte `championshipPoints` comme valeur numérique fournie par
 > l'appelant, **sans appliquer le barème 10/5/2/1** (contrairement à `POST .../results`,
 > qui le calcule via `Campaign.recordResult`) — un appelant direct de cette route peut

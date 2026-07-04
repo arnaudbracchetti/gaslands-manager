@@ -93,6 +93,19 @@
     }
   }
 
+  // Points de Championnat — classement
+  &__points {
+    background: transparent;
+    border: 1px solid var(--border-hair);
+    color: var(--tb-toxic);
+    padding: 2px 10px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+  }
+
   &__actions {
     margin-left: auto;
     display: flex;

@@ -11,6 +11,10 @@
  *   - VALIDATED non-orga : Promouvoir / Retirer
  *   - Orga (autre que soi) : Retirer (sauf dernier organisateur)
  *   - REJECTED : Valider
+ *
+ * Classement : la liste est triée par Points de Championnat décroissants
+ * (tri stable — tant qu'aucun point n'existe, l'ordre reste celui d'origine).
+ * Les PC ne sont affichés que pour les participants VALIDATED.
  */
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -26,6 +30,11 @@ import { CampaignParticipant } from '../campaign-participant.model';
 export class ParticipantList {
   /** Tous les participants de la saison (tous statuts). */
   participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
+
+  /** PC par participantId — absent = 0 (aucune partie jouée pour ce participant). */
+  championshipPoints: InputSignal<ReadonlyMap<number, number>> = input<ReadonlyMap<number, number>>(
+    new Map(),
+  );
 
   /** Vrai si l'utilisateur connecté est organisateur de cette saison. */
   isOrganizer: InputSignal<boolean> = input(false);
@@ -54,6 +63,22 @@ export class ParticipantList {
   private organizerCount: Signal<number> = computed(
     () => this.participants().filter((p) => p.isOrganizer && p.status === 'VALIDATED').length,
   );
+
+  /**
+   * Tri stable décroissant par PC (défaut 0). Tant qu'aucun point n'a été
+   * marqué, tous les PC sont égaux (0) donc l'ordre affiché reste celui
+   * d'origine — aucun cas particulier à gérer pour "aucune partie jouée".
+   */
+  sortedParticipants: Signal<CampaignParticipant[]> = computed(() => {
+    const points = this.championshipPoints();
+    return [...this.participants()].sort(
+      (a, b) => (points.get(b.id) ?? 0) - (points.get(a.id) ?? 0),
+    );
+  });
+
+  pointsFor(participant: CampaignParticipant): number {
+    return this.championshipPoints().get(participant.id) ?? 0;
+  }
 
   onValidate(pid: number, accept: boolean): void {
     this.validate.emit({ pid, accept });

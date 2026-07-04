@@ -7,6 +7,7 @@
  * que lorsque la saison est EN_COURS).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { outputToObservable } from '@angular/core/rxjs-interop';
 import { of, throwError } from 'rxjs';
 import { CampaignProgram } from './campaign-program';
 import { CampaignsService } from '../campaigns.service';
@@ -177,6 +178,32 @@ describe('CampaignProgram Component', () => {
     component.recordingGame.set({ id: 1 } as any);
     component.onResultCancelled();
     expect(component.recordingGame()).toBeNull();
+  });
+
+  it('émet resultRecorded après l\'enregistrement réussi d\'un résultat', () => {
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    let emittedCount = 0;
+    outputToObservable(component.resultRecorded).subscribe(() => { emittedCount++; });
+
+    component.onResultSaved({ results: [] });
+
+    expect(mockService.recordResult).toHaveBeenCalledWith(1, 10, { results: [] });
+    expect(emittedCount).toBe(1);
+  });
+
+  it('n\'émet pas resultRecorded si l\'enregistrement du résultat échoue', () => {
+    mockService.recordResult.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    let emittedCount = 0;
+    outputToObservable(component.resultRecorded).subscribe(() => { emittedCount++; });
+
+    component.onResultSaved({ results: [] });
+
+    expect(emittedCount).toBe(0);
   });
 
   it('anyModalOpen désactive les actions de GameList tant qu\'une pop-up est ouverte', () => {
