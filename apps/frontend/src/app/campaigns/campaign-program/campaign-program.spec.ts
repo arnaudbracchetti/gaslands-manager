@@ -159,12 +159,12 @@ describe('CampaignProgram Component', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('affiche GameResultForm quand recordingGame est défini', () => {
+  it('affiche GameResultForm en popup, sans masquer GameList', () => {
     fixture.detectChanges();
-    component.recordingGame.set({ id: 1, status: 'PLANIFIE', scenarioName: 'Test', type: 'EVENEMENT_TELE', order: 1 } as any);
+    component.recordingGame.set(mockGame);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-game-result-form')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('app-game-list')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('app-game-list')).toBeTruthy();
   });
 
   it('onRecordGame met à jour recordingGame', () => {
@@ -177,5 +177,22 @@ describe('CampaignProgram Component', () => {
     component.recordingGame.set({ id: 1 } as any);
     component.onResultCancelled();
     expect(component.recordingGame()).toBeNull();
+  });
+
+  it('anyModalOpen désactive les actions de GameList tant qu\'une pop-up est ouverte', () => {
+    fixture.detectChanges();
+    expect(component.anyModalOpen()).toBe(false);
+
+    component.recordingGame.set(mockGame);
+    fixture.detectChanges();
+    expect(component.anyModalOpen()).toBe(true);
+    const gameList = fixture.nativeElement.querySelector('app-game-list button');
+    expect(gameList).toBeNull();
+
+    component.onResultCancelled();
+    component.openCreate();
+    fixture.detectChanges();
+    expect(component.anyModalOpen()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.campaign-program__add')).toBeNull();
   });
 });

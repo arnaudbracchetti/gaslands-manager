@@ -82,6 +82,17 @@ export class CampaignProgram implements OnInit {
     () => this.isOrganizer() && this.campaignState() !== 'TERMINEE',
   );
 
+  /**
+   * Vrai si une pop-up de gestion (ajout/édition de partie ou saisie de
+   * résultat) est ouverte. Sert à désactiver les actions de GameList pendant
+   * qu'une pop-up est ouverte : sans ça, la liste reste cliquable derrière
+   * l'overlay et on peut par exemple supprimer la partie dont on est en train
+   * de saisir le résultat, ou ouvrir une seconde pop-up par-dessus la première.
+   */
+  anyModalOpen: Signal<boolean> = computed(
+    () => this.showForm() || this.recordingGame() !== null,
+  );
+
   ngOnInit(): void {
     this.loadGames();
     // Catalogue chargé d'emblée pour que le formulaire soit prêt à l'ouverture.

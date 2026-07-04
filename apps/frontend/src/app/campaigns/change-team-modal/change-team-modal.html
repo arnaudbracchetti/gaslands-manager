@@ -30,11 +30,11 @@
     </select>
 
     <div class="ctm-modal__actions">
-      <button class="ctm-modal__confirm" type="button" (click)="onConfirm()">
-        Valider
-      </button>
       <button class="ctm-modal__cancel" type="button" (click)="cancelled.emit()">
         Annuler
+      </button>
+      <button class="ctm-modal__confirm" type="button" (click)="onConfirm()">
+        Valider
       </button>
     </div>
   </div>

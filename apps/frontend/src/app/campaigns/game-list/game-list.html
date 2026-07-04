@@ -29,7 +29,7 @@
       }
 
       @if (canRecord() && game.status === 'PLANIFIE') {
-        <button class="btn btn--sm btn--primary" (click)="onRecord(game)">
+        <button type="button" class="game-list__record" (click)="onRecord(game)">
           🎯 Saisir les rangs
         </button>
       }

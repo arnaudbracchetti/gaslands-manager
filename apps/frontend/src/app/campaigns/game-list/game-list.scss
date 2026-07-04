@@ -117,6 +117,27 @@
     color: var(--tb-rouille-lt);
   }
 
+  &__record {
+    background: var(--tb-danger);
+    border: 1px solid var(--tb-danger);
+    color: var(--tb-bitume);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    margin-left: auto;
+    transition: opacity 160ms, transform 90ms;
+
+    &:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+  }
+
   &__empty {
     color: var(--text-dim);
     font-family: var(--font-mono);

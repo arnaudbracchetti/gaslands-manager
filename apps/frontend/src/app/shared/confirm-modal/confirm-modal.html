@@ -19,6 +19,12 @@
 
       <div class="cm-modal__actions">
         <button
+          class="cm-modal__cancel"
+          type="button"
+          (click)="cancelled.emit()">
+          {{ cancelLabel() }}
+        </button>
+        <button
           class="cm-modal__confirm"
           type="button"
           (click)="confirmed.emit()"
@@ -26,12 +32,6 @@
           (mouseup)="$any($event.currentTarget).style.transform=''; $any($event.currentTarget).style.boxShadow=''"
           (mouseleave)="$any($event.currentTarget).style.transform=''; $any($event.currentTarget).style.boxShadow=''; $any($event.currentTarget).style.filter=''">
           {{ confirmLabel() }}
-        </button>
-        <button
-          class="cm-modal__cancel"
-          type="button"
-          (click)="cancelled.emit()">
-          {{ cancelLabel() }}
         </button>
       </div>
     </div>

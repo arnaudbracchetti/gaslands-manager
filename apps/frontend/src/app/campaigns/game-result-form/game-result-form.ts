@@ -20,7 +20,15 @@ import {
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import type { CampaignParticipant } from '../campaign-participant.model';
-import type { RecordResultDto } from '../game.model';
+import type { Game, RecordResultDto } from '../game.model';
+
+/**
+ * Barème des points de championnat par rang - miroir de POINTS_TABLE côté backend
+ * (apps/backend/src/app/campaign/domain/campaign.ts). Le backend ne renvoie pas les
+ * points calculés dans la réponse d'enregistrement : recalculé ici uniquement pour
+ * l'aperçu avant validation.
+ */
+const POINTS_TABLE = [10, 5, 2, 1];
 
 @Component({
   selector: 'app-game-result-form',
@@ -31,6 +39,9 @@ import type { RecordResultDto } from '../game.model';
 })
 export class GameResultForm {
   // ── Inputs ──────────────────────────────────────────────────────────────────
+
+  /** Partie dont on saisit le résultat - fournit le type (barème PC) et le scénario. */
+  game = input.required<Game>();
 
   /** Participants VALIDATED de la saison — source de la liste de présence. */
   participants = input.required<CampaignParticipant[]>();
@@ -97,6 +108,33 @@ export class GameResultForm {
   /** Vrai si le participant à l'index donné est parmi les "classés". */
   isClassified(index: number): boolean {
     return index + 1 <= this.classifiedCount();
+  }
+
+  /**
+   * Points de championnat attribués à un rang donné (aperçu avant validation).
+   * L'Escarmouche n'attribue jamais de PC ; seuls les "classés" (cf. classifiedCount)
+   * touchent des points, selon le barème 10/5/2/1.
+   */
+  pointsForRank(rank: number): number {
+    if (this.game().type !== 'EVENEMENT_TELE') return 0;
+    if (rank > this.classifiedCount()) return 0;
+    return POINTS_TABLE[rank - 1] ?? 0;
+  }
+
+  /** Fait remonter d'un rang le participant à l'index donné (no-op en tête de liste). */
+  moveUp(index: number): void {
+    if (index <= 0) return;
+    const list = [...this.presentParticipants()];
+    moveItemInArray(list, index, index - 1);
+    this.presentParticipants.set(list);
+  }
+
+  /** Fait descendre d'un rang le participant à l'index donné (no-op en fin de liste). */
+  moveDown(index: number): void {
+    if (index >= this.presentParticipants().length - 1) return;
+    const list = [...this.presentParticipants()];
+    moveItemInArray(list, index, index + 1);
+    this.presentParticipants.set(list);
   }
 
   /** Construit et émet le DTO de classement. */

@@ -1,4 +1,23 @@
-.game-result-form {
+.grf-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.grf-modal {
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-stamp-lg);
+
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -7,14 +26,16 @@
     font-family: var(--font-display);
     color: var(--tb-os);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
+    font-size: 1.05rem;
+    font-weight: 400;
     margin: 0;
   }
 
   &__hint {
     font-family: var(--font-mono);
     font-size: 0.8rem;
-    color: var(--tb-metal-2);
+    color: var(--text-dim);
     margin: 0 0 0.5rem;
   }
 
@@ -31,11 +52,18 @@
     cursor: pointer;
     font-family: var(--font-text);
     color: var(--tb-os);
+
+    input[type='checkbox'] {
+      accent-color: var(--tb-danger);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
   }
 
   &__user {
     font-size: 0.85rem;
-    color: var(--tb-metal-2);
+    color: var(--text-dim);
   }
 
   &__list {
@@ -55,7 +83,14 @@
     background: var(--tb-bitume-2);
     border: 1px solid var(--tb-metal-2);
     border-radius: var(--r-sm);
+  }
+
+  &__handle {
     cursor: grab;
+    color: var(--tb-sand);
+    font-size: 1rem;
+    line-height: 1;
+    user-select: none;
 
     &:active {
       cursor: grabbing;
@@ -90,12 +125,62 @@
 
     &--unclassified {
       background: var(--tb-metal-2);
-      color: var(--tb-bitume);
+      color: var(--tb-os);
+    }
+  }
+
+  &__points {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--r-sm);
+    background: var(--tb-bitume-4);
+    color: var(--tb-danger);
+    white-space: nowrap;
+
+    &--zero {
+      color: var(--text-dim);
+    }
+  }
+
+  &__reorder {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__move {
+    background: transparent;
+    border: 1px solid var(--tb-sand);
+    color: var(--tb-os);
+    border-radius: var(--r-sm);
+    font-size: 0.65rem;
+    line-height: 1;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition:
+      background 160ms,
+      border-color 160ms;
+
+    &:hover:not(:disabled) {
+      background: var(--tb-bitume-4);
+      border-color: var(--tb-danger);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
   }
 
   &__actions {
     display: flex;
+    justify-content: flex-end;
     gap: 0.75rem;
+
+    button {
+      width: auto;
+      padding: 10px 24px;
+    }
   }
 }

@@ -1,15 +1,15 @@
 ---
 id: "us-b1-saisir-le-classement-dune-partie-2026-07-03"
-status: "in-progress"
+status: "done"
 priority: "high"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-03T19:47:50.872Z"
-completedAt: null
+modified: "2026-07-04T06:08:04.726Z"
+completedAt: "2026-07-04T06:08:04.726Z"
 labels: ["mode-campagne", "enregistrement-partie"]
-order: "a0"
+order: "a7"
 ---
 # Saisir le classement d'une partie
 

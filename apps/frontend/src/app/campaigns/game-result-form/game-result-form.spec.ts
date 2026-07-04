@@ -2,12 +2,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { GameResultForm } from './game-result-form';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { Game } from '../game.model';
 
 const mockParticipants = [
   { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
   { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
   { id: 3, teamName: 'Équipe Gamma', userName: 'Carol', status: 'VALIDATED', isOrganizer: false } as any,
 ];
+
+const mockGame: Game = {
+  id: 10,
+  campaignId: 1,
+  scenarioId: 'course_de_la_mort',
+  scenarioName: 'La Course de la Mort',
+  type: 'EVENEMENT_TELE',
+  status: 'PLANIFIE',
+  order: 1,
+  playedAt: null,
+  createdAt: '2025-01-01T00:00:00.000Z',
+  updatedAt: '2025-01-01T00:00:00.000Z',
+};
 
 describe('GameResultForm', () => {
   let fixture: ComponentFixture<GameResultForm>;
@@ -20,6 +34,7 @@ describe('GameResultForm', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(GameResultForm);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('game', mockGame);
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('saving', false);
     fixture.detectChanges();
@@ -80,7 +95,7 @@ describe('GameResultForm', () => {
   it('formCancel émet void au clic Annuler', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.formCancel).subscribe(() => emitted.push(true));
-    fixture.nativeElement.querySelector('button[type="button"]').click();
+    fixture.nativeElement.querySelector('.grf-modal__actions button[type="button"]').click();
     expect(emitted).toHaveLength(1);
   });
 
@@ -89,5 +104,61 @@ describe('GameResultForm', () => {
     [0, 1, 2].forEach(i => { checkboxes[i].click(); });
     fixture.detectChanges();
     expect(component.classifiedCount()).toBe(2);
+  });
+
+  it('pointsForRank applique le barème 10/5/2/1 pour un Événement Télé', () => {
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
+    fixture.detectChanges();
+    expect(component.pointsForRank(1)).toBe(10);
+    expect(component.pointsForRank(2)).toBe(5);
+    expect(component.pointsForRank(3)).toBe(0); // 3 présents → 2 classés seulement
+  });
+
+  it('pointsForRank est toujours 0 pour une Escarmouche', () => {
+    fixture.componentRef.setInput('game', { ...mockGame, type: 'ESCARMOUCHE' });
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    fixture.detectChanges();
+    expect(component.pointsForRank(1)).toBe(0);
+  });
+
+  it('le badge de points est masqué pour une Escarmouche', () => {
+    fixture.componentRef.setInput('game', { ...mockGame, type: 'ESCARMOUCHE' });
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.grf-modal__points')).toBeNull();
+  });
+
+  it('le badge de points est affiché pour un Événement Télé', () => {
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.grf-modal__points')).not.toBeNull();
+  });
+
+  it('moveUp/moveDown permutent les entrées adjacentes', () => {
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
+    fixture.detectChanges();
+
+    component.moveDown(0);
+    expect(component.presentParticipants().map(p => p.id)).toEqual([2, 1, 3]);
+
+    component.moveUp(1);
+    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
+  });
+
+  it('moveUp/moveDown sont des no-op aux bornes de la liste', () => {
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
+    fixture.detectChanges();
+
+    component.moveUp(0);
+    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
+
+    component.moveDown(2);
+    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
   });
 });

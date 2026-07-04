@@ -3,7 +3,7 @@
 
   <div class="campaign-program__header">
     <h2>📺 Programme Télé</h2>
-    @if (canManage() && !showForm()) {
+    @if (canManage() && !anyModalOpen()) {
       <button type="button" class="btn-primary campaign-program__add" (click)="openCreate()">
         ➕ Ajouter une partie
       </button>
@@ -25,22 +25,23 @@
 
   @if (recordingGame()) {
     <app-game-result-form
+      [game]="recordingGame()!"
       [participants]="participants()"
       [saving]="savingResult()"
       (saved)="onResultSaved($event)"
       (formCancel)="onResultCancelled()" />
+  }
+
+  @if (loading()) {
+    <p class="campaign-program__loading">Chargement du programme...</p>
   } @else {
-    @if (loading()) {
-      <p class="campaign-program__loading">Chargement du programme...</p>
-    } @else {
-      <app-game-list
-        [games]="games()"
-        [canManage]="canManage()"
-        [canRecord]="canManage()"
-        (editGame)="onEdit($event)"
-        (deleteGame)="onDelete($event)"
-        (recordGame)="onRecordGame($event)" />
-    }
+    <app-game-list
+      [games]="games()"
+      [canManage]="canManage() && !anyModalOpen()"
+      [canRecord]="canManage() && !anyModalOpen()"
+      (editGame)="onEdit($event)"
+      (deleteGame)="onDelete($event)"
+      (recordGame)="onRecordGame($event)" />
   }
 
   @if (pendingDeleteGame()) {

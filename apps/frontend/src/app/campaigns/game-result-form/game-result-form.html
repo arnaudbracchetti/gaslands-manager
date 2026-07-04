@@ -1,68 +1,99 @@
-<div class="game-result-form">
-  <h3 class="game-result-form__title">🎯 Saisir le classement</h3>
+<!-- Formulaire de saisie du classement d'une partie, en popup -->
+@let scenarioName = game().scenarioName;
+<div class="grf-overlay" role="dialog" aria-modal="true"
+     [attr.aria-label]="'Saisir le classement - ' + scenarioName">
+  <div class="grf-modal">
+    <h3 class="grf-modal__title">🎯 Saisir le classement - {{ scenarioName }}</h3>
 
-  <!-- Liste de présence : cocher les équipes ayant participé -->
-  <div class="game-result-form__participants">
-    <p class="game-result-form__hint">Cochez les équipes présentes à la partie :</p>
-    @for (participant of participants(); track participant.id) {
-      <label class="game-result-form__participant-row">
-        <input
-          type="checkbox"
-          [checked]="isPresent(participant)"
-          (change)="togglePresent(participant)"
-          [disabled]="saving()"
-        />
-        <span>{{ participant.teamName }}</span>
-        <span class="game-result-form__user">({{ participant.userName }})</span>
-      </label>
-    }
-  </div>
-
-  <!-- Zone de classement : drag-and-drop des équipes présentes -->
-  @if (presentParticipants().length > 0) {
-    <div class="game-result-form__ranking">
-      <p class="game-result-form__hint">
-        Glissez pour réordonner —
-        {{ classifiedCount() }} équipe(s) classée(s) sur {{ presentParticipants().length }}
-      </p>
-      <ol
-        cdkDropList
-        [cdkDropListData]="presentParticipants()"
-        (cdkDropListDropped)="drop($event)"
-        class="game-result-form__list"
-      >
-        @for (participant of presentParticipants(); track participant.id; let i = $index) {
-          <li cdkDrag class="game-result-form__item">
-            <span class="game-result-form__rank">{{ i + 1 }}</span>
-            <span class="game-result-form__team">{{ participant.teamName }}</span>
-            @if (isClassified(i)) {
-              <span class="game-result-form__badge game-result-form__badge--classified">classé</span>
-            } @else {
-              <span class="game-result-form__badge game-result-form__badge--unclassified">non classé</span>
-            }
-          </li>
-        }
-      </ol>
+    <!-- Liste de présence : cocher les équipes ayant participé -->
+    <div class="grf-modal__participants">
+      <p class="grf-modal__hint">Cochez les équipes présentes à la partie :</p>
+      @for (participant of participants(); track participant.id) {
+        <label class="grf-modal__participant-row">
+          <input
+            type="checkbox"
+            [checked]="isPresent(participant)"
+            (change)="togglePresent(participant)"
+            [disabled]="saving()"
+          />
+          <span>{{ participant.teamName }}</span>
+          <span class="grf-modal__user">({{ participant.userName }})</span>
+        </label>
+      }
     </div>
-  }
 
-  <!-- Actions -->
-  <div class="game-result-form__actions">
-    <button
-      type="submit"
-      class="btn btn--primary"
-      [disabled]="presentParticipants().length === 0 || saving()"
-      (click)="onSubmit()"
-    >
-      {{ saving() ? 'Enregistrement…' : 'Valider le classement' }}
-    </button>
-    <button
-      type="button"
-      class="btn btn--secondary"
-      [disabled]="saving()"
-      (click)="onCancel()"
-    >
-      Annuler
-    </button>
+    <!-- Zone de classement : glisser-déposer (poignée dédiée) ou boutons ▲/▼ -->
+    @if (presentParticipants().length > 0) {
+      <div class="grf-modal__ranking">
+        <p class="grf-modal__hint">
+          Glissez la poignée ⠿ ou utilisez les flèches pour réordonner -
+          {{ classifiedCount() }} équipe(s) classée(s) sur {{ presentParticipants().length }}
+        </p>
+        <ol
+          cdkDropList
+          [cdkDropListData]="presentParticipants()"
+          (cdkDropListDropped)="drop($event)"
+          class="grf-modal__list"
+        >
+          @for (participant of presentParticipants(); track participant.id; let i = $index; let last = $last) {
+            @let points = pointsForRank(i + 1);
+            <li cdkDrag class="grf-modal__item">
+              <span class="grf-modal__handle" cdkDragHandle aria-hidden="true">⠿</span>
+              <span class="grf-modal__rank">{{ i + 1 }}</span>
+              <span class="grf-modal__team">{{ participant.teamName }}</span>
+              @if (isClassified(i)) {
+                <span class="grf-modal__badge grf-modal__badge--classified">classé</span>
+              } @else {
+                <span class="grf-modal__badge grf-modal__badge--unclassified">non classé</span>
+              }
+              @if (game().type === 'EVENEMENT_TELE') {
+                <span
+                  class="grf-modal__points"
+                  [class.grf-modal__points--zero]="points === 0"
+                >
+                  {{ points }} pts
+                </span>
+              }
+              <span class="grf-modal__reorder">
+                <button
+                  type="button"
+                  class="grf-modal__move"
+                  [disabled]="i === 0 || saving()"
+                  (click)="moveUp(i)"
+                  aria-label="Monter {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                >▲</button>
+                <button
+                  type="button"
+                  class="grf-modal__move"
+                  [disabled]="last || saving()"
+                  (click)="moveDown(i)"
+                  aria-label="Descendre {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                >▼</button>
+              </span>
+            </li>
+          }
+        </ol>
+      </div>
+    }
+
+    <!-- Actions -->
+    <div class="grf-modal__actions">
+      <button
+        type="button"
+        class="btn-secondary"
+        [disabled]="saving()"
+        (click)="onCancel()"
+      >
+        Annuler
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="presentParticipants().length === 0 || saving()"
+        (click)="onSubmit()"
+      >
+        {{ saving() ? 'Enregistrement…' : 'Valider le classement' }}
+      </button>
+    </div>
   </div>
 </div>
