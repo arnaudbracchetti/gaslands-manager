@@ -3,12 +3,22 @@ import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { assertOrganizer } from './record-ranking.usecase';
+import { WeightClass } from '../domain/enums/weight-class.enum';
+
+export interface RecordResultCommandItem {
+  participantId: number;
+  rank: number;
+  /** Portes franchies (exploit, US-B2) — optionnel, 0/absent si aucune. */
+  gatesCrossed?: number;
+  /** Véhicules ennemis détruits par poids (exploit, US-B2) — optionnel. */
+  destroyedVehicles?: { vehicleId: number; weightClass: string }[];
+}
 
 export interface RecordResultCommand {
   campaignId: number;
   gameId: number;
   userId: number;
-  results: { participantId: number; rank: number }[];
+  results: RecordResultCommandItem[];
 }
 
 /**
@@ -33,7 +43,15 @@ export class RecordResultUseCase {
     try {
       outcome = campaign.recordResult(
         cmd.gameId,
-        cmd.results.map((r) => ({ participantId: r.participantId, rank: r.rank })),
+        cmd.results.map((r) => ({
+          participantId: r.participantId,
+          rank: r.rank,
+          gatesCrossed: r.gatesCrossed,
+          destroyedVehicles: r.destroyedVehicles?.map((d) => ({
+            vehicleId: d.vehicleId,
+            weightClass: this.parseWeightClass(d.weightClass),
+          })),
+        })),
       );
     } catch (e: unknown) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
@@ -42,5 +60,12 @@ export class RecordResultUseCase {
 
     await this.campaignRepo.appendEvents(cmd.gameId, outcome.events);
     await this.campaignRepo.saveCampaign(campaign, outcome.newAtelier);
+  }
+
+  private parseWeightClass(value: string): WeightClass {
+    if (!Object.values(WeightClass).includes(value as WeightClass)) {
+      throw new BadRequestException(`Poids de véhicule invalide : "${value}".`);
+    }
+    return value as WeightClass;
   }
 }

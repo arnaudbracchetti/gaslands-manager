@@ -59,7 +59,44 @@ export interface GameResult {
   createdAt: string;
 }
 
+/**
+ * Poids d'un véhicule détruit (exploit, US-B2) — miroir de WeightClass (backend).
+ * FORTERESSE n'existe pas encore dans le catalogue (aucun véhicule n'y est
+ * classé) mais la valeur est posée pour ne rien avoir à changer le jour où le
+ * catalogue en gagnera.
+ */
+export type WeightClass = 'LEGER' | 'MOYEN' | 'LOURD' | 'FORTERESSE';
+
+/** Un véhicule ennemi détruit, saisi dans le formulaire de résultat (exploit, US-B2). */
+export interface DestroyedVehicleDto {
+  vehicleId: number;
+  weightClass: WeightClass;
+}
+
 /** Corps de la requête POST /api/campaigns/:id/games/:gameId/results */
 export interface RecordResultDto {
-  results: { participantId: number; rank: number }[];
+  results: {
+    participantId: number;
+    rank: number;
+    /** Portes franchies (exploit, US-B2) — omis/0 si aucune. */
+    gatesCrossed?: number;
+    /** Véhicules ennemis détruits par poids (exploit, US-B2) — omis si aucun. */
+    destroyedVehicles?: DestroyedVehicleDto[];
+  }[];
+}
+
+/**
+ * Véhicule courant d'un participant, retourné par
+ * GET /api/campaigns/:id/games/:gameId/participant-vehicles — alimente le
+ * picker "véhicules ennemis détruits" du formulaire de résultat.
+ */
+export interface ParticipantVehicleDto {
+  vehicleId: number;
+  nom: string;
+  weightClass: WeightClass;
+}
+
+export interface ParticipantVehiclesDto {
+  participantId: number;
+  vehicles: ParticipantVehicleDto[];
 }

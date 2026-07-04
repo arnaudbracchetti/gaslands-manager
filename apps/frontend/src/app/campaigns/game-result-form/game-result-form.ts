@@ -14,13 +14,20 @@
  */
 import { Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   CdkDragDrop,
   DragDropModule,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import type { CampaignParticipant } from '../campaign-participant.model';
-import type { Game, RecordResultDto } from '../game.model';
+import type {
+  DestroyedVehicleDto,
+  Game,
+  ParticipantVehicleDto,
+  RecordResultDto,
+  WeightClass,
+} from '../game.model';
 
 /**
  * Barème des points de championnat par rang - miroir de POINTS_TABLE côté backend
@@ -33,7 +40,7 @@ const POINTS_TABLE = [10, 5, 2, 1];
 @Component({
   selector: 'app-game-result-form',
   standalone: true,
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, FormsModule, DragDropModule],
   templateUrl: './game-result-form.html',
   styleUrl: './game-result-form.scss',
 })
@@ -49,6 +56,14 @@ export class GameResultForm {
   /** Vrai pendant que le parent attend la réponse de l'API. */
   saving = input<boolean>(false);
 
+  /**
+   * Véhicules courants par participant (clé = participantId) — alimente le
+   * picker "véhicules ennemis détruits". Le parent (CampaignProgram) peuple
+   * cette map en réponse à `presentParticipantsChanged`, car le roster de
+   * chaque participant n'est nécessaire que pour les présents.
+   */
+  participantVehicles = input<ReadonlyMap<number, ParticipantVehicleDto[]>>(new Map());
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   /** Émis avec le DTO de classement une fois le formulaire soumis. */
@@ -57,6 +72,13 @@ export class GameResultForm {
   /** Émis quand l'utilisateur annule sans soumettre. */
   formCancel = output<void>();
 
+  /**
+   * Émis à chaque changement de la liste des présents — permet au parent de
+   * récupérer leurs véhicules courants (picker "véhicules détruits") sans que
+   * ce composant ait à connaître de service HTTP.
+   */
+  presentParticipantsChanged = output<number[]>();
+
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /**
@@ -64,6 +86,15 @@ export class GameResultForm {
    * L'index dans ce tableau détermine le rang (index 0 = rang 1).
    */
   presentParticipants = signal<CampaignParticipant[]>([]);
+
+  /** Portes franchies par participant (exploit, US-B2) — clé = participantId. */
+  gatesCrossed = signal<Map<number, number>>(new Map());
+
+  /** Véhicules ennemis détruits par participant (exploit, US-B2) — clé = participantId. */
+  destroyedVehicles = signal<Map<number, DestroyedVehicleDto[]>>(new Map());
+
+  /** Sélection courante du picker "véhicule détruit", par participant destructeur. */
+  private pickerSelection = signal<Map<number, number | null>>(new Map());
 
   /**
    * Nombre d'équipes "classées" : ceil(n/2) des présents.
@@ -92,6 +123,7 @@ export class GameResultForm {
     } else {
       this.presentParticipants.set([...current, participant]);
     }
+    this.presentParticipantsChanged.emit(this.presentParticipants().map((p) => p.id));
   }
 
   /**
@@ -137,13 +169,115 @@ export class GameResultForm {
     this.presentParticipants.set(list);
   }
 
-  /** Construit et émet le DTO de classement. */
+  /** Construit et émet le DTO de classement, enrichi des exploits saisis. */
   onSubmit(): void {
-    const results = this.presentParticipants().map((p, i) => ({
-      participantId: p.id,
-      rank: i + 1,
-    }));
+    const results = this.presentParticipants().map((p, i) => {
+      const gates = this.gatesCrossedFor(p.id);
+      const destroyed = this.destroyedVehiclesFor(p.id);
+      return {
+        participantId: p.id,
+        rank: i + 1,
+        gatesCrossed: gates > 0 ? gates : undefined,
+        destroyedVehicles: destroyed.length > 0 ? destroyed : undefined,
+      };
+    });
     this.saved.emit({ results });
+  }
+
+  // ── Exploits (US-B2) ─────────────────────────────────────────────────────────
+
+  /** Portes franchies saisies pour un participant (0 si non renseigné). */
+  gatesCrossedFor(participantId: number): number {
+    return this.gatesCrossed().get(participantId) ?? 0;
+  }
+
+  /** Met à jour le nombre de portes franchies d'un participant. */
+  setGatesCrossed(participantId: number, value: string): void {
+    const parsed = Math.max(0, Number(value) || 0);
+    const map = new Map(this.gatesCrossed());
+    map.set(participantId, parsed);
+    this.gatesCrossed.set(map);
+  }
+
+  /** Véhicules ennemis déjà ajoutés à la liste des destructions d'un participant. */
+  destroyedVehiclesFor(participantId: number): DestroyedVehicleDto[] {
+    return this.destroyedVehicles().get(participantId) ?? [];
+  }
+
+  /**
+   * Véhicules candidats pour le picker d'un destructeur : véhicules courants
+   * des AUTRES participants présents (jamais sa propre équipe).
+   */
+  candidateVehiclesFor(participantId: number): { ownerTeamName: string; vehicle: ParticipantVehicleDto }[] {
+    const candidates: { ownerTeamName: string; vehicle: ParticipantVehicleDto }[] = [];
+    for (const other of this.presentParticipants()) {
+      if (other.id === participantId) continue;
+      const vehicles = this.participantVehicles().get(other.id) ?? [];
+      for (const vehicle of vehicles) {
+        candidates.push({ ownerTeamName: other.teamName, vehicle });
+      }
+    }
+    return candidates;
+  }
+
+  /** Sélection courante du picker (id véhicule) pour un participant destructeur. */
+  pickerSelectionFor(participantId: number): number | null {
+    return this.pickerSelection().get(participantId) ?? null;
+  }
+
+  /** Met à jour la sélection du picker (menu déroulant) pour un participant destructeur. */
+  setPickerSelection(participantId: number, vehicleIdStr: string): void {
+    const vehicleId = vehicleIdStr === '' ? null : Number(vehicleIdStr);
+    const map = new Map(this.pickerSelection());
+    map.set(participantId, vehicleId);
+    this.pickerSelection.set(map);
+  }
+
+  /** Ajoute le véhicule sélectionné dans le picker à la liste des destructions. */
+  addDestroyedVehicle(participantId: number): void {
+    const vehicleId = this.pickerSelectionFor(participantId);
+    if (vehicleId === null) return;
+    if (this.destroyedVehiclesFor(participantId).some((d) => d.vehicleId === vehicleId)) return;
+
+    const candidate = this.candidateVehiclesFor(participantId).find((c) => c.vehicle.vehicleId === vehicleId);
+    if (!candidate) return;
+
+    const map = new Map(this.destroyedVehicles());
+    map.set(participantId, [
+      ...this.destroyedVehiclesFor(participantId),
+      { vehicleId, weightClass: candidate.vehicle.weightClass },
+    ]);
+    this.destroyedVehicles.set(map);
+    this.setPickerSelection(participantId, '');
+  }
+
+  /** Retire un véhicule de la liste des destructions d'un participant. */
+  removeDestroyedVehicle(participantId: number, vehicleId: number): void {
+    const map = new Map(this.destroyedVehicles());
+    map.set(participantId, this.destroyedVehiclesFor(participantId).filter((d) => d.vehicleId !== vehicleId));
+    this.destroyedVehicles.set(map);
+  }
+
+  /** Libellé lisible d'un véhicule détruit — recherché dans participantVehicles(). */
+  vehicleLabel(destroyed: DestroyedVehicleDto): string {
+    for (const [participantId, vehicles] of this.participantVehicles()) {
+      const vehicle = vehicles.find((v) => v.vehicleId === destroyed.vehicleId);
+      if (vehicle) {
+        const owner = this.participants().find((p) => p.id === participantId);
+        return `${vehicle.nom} (${owner?.teamName ?? '?'})`;
+      }
+    }
+    return `Véhicule #${destroyed.vehicleId}`;
+  }
+
+  /** Libellé français d'un poids de véhicule. */
+  weightLabel(weightClass: WeightClass): string {
+    switch (weightClass) {
+      case 'LEGER': return 'Léger';
+      case 'MOYEN': return 'Moyen';
+      case 'LOURD': return 'Lourd';
+      case 'FORTERESSE': return 'Forteresse';
+    }
   }
 
   /** Émet l'événement d'annulation. */

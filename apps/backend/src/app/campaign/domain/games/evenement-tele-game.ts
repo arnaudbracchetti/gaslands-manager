@@ -8,6 +8,8 @@ import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
+import { GatesCrossedEvent } from '../events/gates-crossed.event';
+import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 
 export class EvenementTeleGame extends Game {
   constructor(
@@ -34,7 +36,9 @@ export class EvenementTeleGame extends Game {
       event instanceof WeaponLostEvent ||
       event instanceof WreckResolvedEvent ||
       event instanceof SequellaAddedEvent ||
-      event instanceof ResistanceContactedEvent
+      event instanceof ResistanceContactedEvent ||
+      event instanceof GatesCrossedEvent ||
+      event instanceof VehicleDestroyedEvent
     );
   }
 }

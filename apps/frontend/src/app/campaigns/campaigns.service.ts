@@ -9,7 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto } from './campaign.model';
 import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
-import type { Game, Scenario, CreateGameDto, UpdateGameDto, GameResult, RecordResultDto } from './game.model';
+import type { Game, Scenario, CreateGameDto, UpdateGameDto, GameResult, RecordResultDto, ParticipantVehiclesDto } from './game.model';
 
 @Injectable({ providedIn: 'root' })
 export class CampaignsService {
@@ -191,5 +191,21 @@ export class CampaignsService {
    */
   getStandings(campaignId: number): Observable<StandingsEntry[]> {
     return this.http.get<StandingsEntry[]>(`/api/campaigns/${campaignId}/standings`);
+  }
+
+  /**
+   * GET /api/campaigns/:id/games/:gameId/participant-vehicles → véhicules
+   * courants (hors perdus) des participants indiqués (organisateur), pour le
+   * picker "véhicules ennemis détruits" du formulaire de résultat (exploit, US-B2).
+   */
+  getParticipantVehicles(
+    campaignId: number,
+    gameId: number,
+    participantIds: number[],
+  ): Observable<ParticipantVehiclesDto[]> {
+    return this.http.get<ParticipantVehiclesDto[]>(
+      `/api/campaigns/${campaignId}/games/${gameId}/participant-vehicles`,
+      { params: { participantIds: participantIds.join(',') } },
+    );
   }
 }

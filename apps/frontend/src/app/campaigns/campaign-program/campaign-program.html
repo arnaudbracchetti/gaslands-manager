@@ -28,8 +28,10 @@
       [game]="recordingGame()!"
       [participants]="participants()"
       [saving]="savingResult()"
+      [participantVehicles]="participantVehicles()"
       (saved)="onResultSaved($event)"
-      (formCancel)="onResultCancelled()" />
+      (formCancel)="onResultCancelled()"
+      (presentParticipantsChanged)="onPresentParticipantsChanged($event)" />
   }
 
   @if (loading()) {

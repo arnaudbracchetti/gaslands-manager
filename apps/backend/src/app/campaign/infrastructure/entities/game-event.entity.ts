@@ -44,16 +44,25 @@ export class GameEventOrm {
   eventOrder!: number;
 
   /** Discriminant — valeurs : 'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' |
-   *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'SEQUELLA_ADDED' | 'EQUIPMENT_CHANGED' | 'RESISTANCE_CONTACTED' */
+   *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'SEQUELLA_ADDED' | 'EQUIPMENT_CHANGED' |
+   *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' */
   @Column()
   eventType!: string;
 
-  // ── Payload : RankingAssignedEvent ─────────────────────────────────────────
+  // ── Payload : RankingAssignedEvent / GatesCrossedEvent / VehicleDestroyedEvent ──
   @Column({ type: 'int', nullable: true })
   rank!: number | null;
 
   @Column({ type: 'int', nullable: true })
   championshipPoints!: number | null;
+
+  // ── Payload : GatesCrossedEvent ────────────────────────────────────────────
+  @Column({ type: 'int', nullable: true })
+  gatesCrossed!: number | null;
+
+  // ── Payload : VehicleDestroyedEvent ────────────────────────────────────────
+  @Column({ type: 'varchar', nullable: true })
+  weightClass!: string | null;  // WeightClass enum value
 
   // ── Payload : WalletMovementEvent ──────────────────────────────────────────
   @Column({ type: 'int', nullable: true })

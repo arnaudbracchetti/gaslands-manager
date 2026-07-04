@@ -343,13 +343,15 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED"
         number rank "nullable"
-        number championshipPoints "nullable"
+        number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed"
         number amount "nullable — WalletMovement"
         string walletReason "nullable — RECOMPENSE|ACHAT|REVENTE"
         number vehicleId "nullable"
         number weaponId "nullable"
+        number gatesCrossed "nullable — GatesCrossedEvent (US-B2)"
+        string weightClass "nullable — VehicleDestroyedEvent : LEGER|MOYEN|LOURD|FORTERESSE (US-B2)"
         number diceRoll "nullable — WreckResolved"
         number chocsBefore "nullable"
         string wreckResult "nullable — CHOCS_GAGNE|ARME_PERDUE|EPAVE"
@@ -471,8 +473,8 @@ classDiagram
 
 | Classe | Type | Statuts | Événements acceptés |
 |--------|------|---------|---------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, WreckResolved, SequellaAdded, ResistanceContacted |
-| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → JOUE` | Idem EvenementTele |
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed |
+| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) |
 | `AtelierGame` | `ATELIER` | `OUVERT → CLOTURE` | EquipmentChanged, SequellaAdded |
 
 Un `AtelierGame` est intercalé automatiquement après chaque finalisation de partie (`order = partie.order + 0.5`, `double precision` SQL).
@@ -489,6 +491,8 @@ Un `AtelierGame` est intercalé automatiquement après chaque finalisation de pa
 | `SequellaAddedEvent` | `vehicle.addChocs(-cost)` + `addSequella` | `removeLastSequella` + `addChocs(+cost)` |
 | `EquipmentChangedEvent` | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon` ; SELL : inverse | Inverse de execute |
 | `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
+| `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
+| `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
 
 ### Entités transientes (D-S11)
 

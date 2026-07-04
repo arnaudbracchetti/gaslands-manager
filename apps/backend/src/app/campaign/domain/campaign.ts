@@ -7,6 +7,9 @@ import { AtelierGame } from './games/atelier-game';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
+import { GatesCrossedEvent } from './events/gates-crossed.event';
+import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
+import { WeightClass, EXPLOIT_POINTS_BY_WEIGHT } from './enums/weight-class.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 
 export interface StandingsEntry {
@@ -19,15 +22,25 @@ export interface StandingsEntry {
   // resistancePoints délibérément absent — secret (cf. D-S4)
 }
 
+/** Un véhicule ennemi détruit par un participant (exploit, US-B2). */
+export interface DestroyedVehicleInput {
+  vehicleId: number;
+  weightClass: WeightClass;
+}
+
 /** Un rang attribué à un participant lors de l'enregistrement d'un résultat. */
 export interface RankingInput {
   participantId: number;
   rank: number;
+  /** Portes franchies (exploit, US-B2) — 0/absent si aucune. */
+  gatesCrossed?: number;
+  /** Véhicules ennemis détruits par poids (exploit, US-B2) — vide/absent si aucun. */
+  destroyedVehicles?: DestroyedVehicleInput[];
 }
 
 /** Résultat structurel d'un recordResult : événements à journaliser + atelier ouvert. */
 export interface RecordResultOutcome {
-  events: RankingAssignedEvent[];
+  events: GameEvent[];
   newAtelier: AtelierGame;
 }
 
@@ -303,14 +316,31 @@ export class Campaign {
       }
     }
 
-    // Calcul des PC selon le type de partie, puis création des événements.
+    // Calcul des PC de classement selon le type de partie, puis événements de rang.
     const classified = Math.ceil(rankings.length / 2);
-    const events = rankings.map((r) => {
+    const events: GameEvent[] = [];
+    for (const r of rankings) {
       const points = this.computePoints(game.type, r.rank, classified);
-      const event = new RankingAssignedEvent(0, game.id, r.participantId, 0, r.rank, points);
-      game.addEvent(event);  // valide canAccept
-      return event;
-    });
+      const rankingEvent = new RankingAssignedEvent(0, game.id, r.participantId, 0, r.rank, points);
+      game.addEvent(rankingEvent);  // valide canAccept
+      events.push(rankingEvent);
+
+      // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
+      // PC figés à l'écriture (D-S8), comme pour le classement.
+      if (r.gatesCrossed && r.gatesCrossed > 0) {
+        const gatesEvent = new GatesCrossedEvent(0, game.id, r.participantId, 0, r.gatesCrossed, r.gatesCrossed);
+        game.addEvent(gatesEvent);
+        events.push(gatesEvent);
+      }
+      for (const destroyed of r.destroyedVehicles ?? []) {
+        const exploitPoints = EXPLOIT_POINTS_BY_WEIGHT[destroyed.weightClass];
+        const destroyedEvent = new VehicleDestroyedEvent(
+          0, game.id, r.participantId, 0, destroyed.vehicleId, destroyed.weightClass, exploitPoints,
+        );
+        game.addEvent(destroyedEvent);
+        events.push(destroyedEvent);
+      }
+    }
 
     const newAtelier = this.finalizeGame(gameId);
     return { events, newAtelier };

@@ -42,6 +42,7 @@ import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
+import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event sourcing (Parties 4-5)
 import { RecordRankingUseCase } from './application/record-ranking.usecase';
@@ -159,6 +160,11 @@ import { GetWorkshopUseCase } from './application/get-workshop.usecase';
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
         new RecordResultUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: GetParticipantVehiclesUseCase,
+      useFactory: (replay: CampaignReplayService) => new GetParticipantVehiclesUseCase(replay),
+      inject: [CampaignReplayService],
     },
 
     // ── Use cases event sourcing (Parties 4-5) ─────────────────────────────────

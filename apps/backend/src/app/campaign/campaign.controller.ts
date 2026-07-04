@@ -19,6 +19,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   ParseIntPipe,
   Request,
   UseGuards,
@@ -44,6 +45,7 @@ import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
+import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event-sourcing (Parties 4-5, inchangés)
 import { RecordRankingUseCase } from './application/record-ranking.usecase';
@@ -79,6 +81,7 @@ import type { WreckResolveDto } from './dto/wreck-resolve.dto';
 import type { AddSequellaDto } from './dto/add-sequella.dto';
 import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
+import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
 import type { FinalizeGameResult } from './application/finalize-game.usecase';
 import type { WreckResolveResult } from './application/wreck-resolve.usecase';
@@ -106,6 +109,7 @@ export class CampaignController {
     private readonly updateGameUseCase: UpdateGameUseCase,
     private readonly removeGameUseCase: RemoveGameUseCase,
     private readonly recordResultUseCase: RecordResultUseCase,
+    private readonly getParticipantVehiclesUseCase: GetParticipantVehiclesUseCase,
     // Event sourcing
     private readonly recordRankingUseCase: RecordRankingUseCase,
     private readonly recordWalletUseCase: RecordWalletMovementUseCase,
@@ -170,6 +174,31 @@ export class CampaignController {
   @Get('campaigns/organizing/pending-requests')
   getOrganizingPendingRequests(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
     return this.query.findOrganizedWithPendingRequests(req.user.id);
+  }
+
+  /**
+   * GET /api/campaigns/:id/games/:gameId/participant-vehicles — véhicules
+   * courants (hors perdus) des participants indiqués (organisateur), pour le
+   * picker "véhicules ennemis détruits" de la saisie d'exploits (US-B2).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/games/:gameId/participant-vehicles')
+  getParticipantVehicles(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Query('participantIds') participantIds: string,
+  ): Promise<ParticipantVehiclesDto[]> {
+    const ids = (participantIds ?? '')
+      .split(',')
+      .map((s) => Number(s))
+      .filter((n) => Number.isInteger(n));
+    return this.getParticipantVehiclesUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantIds: ids,
+    });
   }
 
   // ── Programme Télé & résultats ──────────────────────────────────────────────

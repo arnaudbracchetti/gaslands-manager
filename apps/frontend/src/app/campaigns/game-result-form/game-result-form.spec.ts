@@ -161,4 +161,120 @@ describe('GameResultForm', () => {
     component.moveDown(2);
     expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
   });
+
+  it('cocher/décocher un participant émet presentParticipantsChanged avec les ids présents', () => {
+    const emitted: number[][] = [];
+    outputToObservable(component.presentParticipantsChanged).subscribe(v => emitted.push(v));
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    checkboxes[1].click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([[1], [1, 2]]);
+  });
+
+  it('saved inclut gatesCrossed quand renseigné', () => {
+    const emitted: any[] = [];
+    outputToObservable(component.saved).subscribe(v => emitted.push(v));
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    fixture.detectChanges();
+
+    component.setGatesCrossed(1, '3');
+    fixture.nativeElement.querySelector('button[type="submit"]').click();
+    fixture.detectChanges();
+
+    expect(emitted[0].results[0]).toMatchObject({ participantId: 1, gatesCrossed: 3 });
+  });
+
+  it('saved omet gatesCrossed quand à 0', () => {
+    const emitted: any[] = [];
+    outputToObservable(component.saved).subscribe(v => emitted.push(v));
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('button[type="submit"]').click();
+    fixture.detectChanges();
+
+    expect(emitted[0].results[0].gatesCrossed).toBeUndefined();
+  });
+
+  it('candidateVehiclesFor exclut la propre équipe du destructeur', () => {
+    const vehicles = new Map([
+      [1, [{ vehicleId: 100, nom: 'Voiture Alpha', weightClass: 'MOYEN' as const }]],
+      [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+    ]);
+    fixture.componentRef.setInput('participantVehicles', vehicles);
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    checkboxes[1].click();
+    fixture.detectChanges();
+
+    const candidates = component.candidateVehiclesFor(1);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].vehicle.vehicleId).toBe(200);
+  });
+
+  it('addDestroyedVehicle ajoute le véhicule choisi avec son poids déduit', () => {
+    const vehicles = new Map([
+      [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+    ]);
+    fixture.componentRef.setInput('participantVehicles', vehicles);
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    checkboxes[1].click();
+    fixture.detectChanges();
+
+    component.setPickerSelection(1, '200');
+    component.addDestroyedVehicle(1);
+
+    expect(component.destroyedVehiclesFor(1)).toEqual([{ vehicleId: 200, weightClass: 'LEGER' }]);
+  });
+
+  it('removeDestroyedVehicle retire un véhicule de la liste', () => {
+    const vehicles = new Map([
+      [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+    ]);
+    fixture.componentRef.setInput('participantVehicles', vehicles);
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    checkboxes[1].click();
+    fixture.detectChanges();
+
+    component.setPickerSelection(1, '200');
+    component.addDestroyedVehicle(1);
+    component.removeDestroyedVehicle(1, 200);
+
+    expect(component.destroyedVehiclesFor(1)).toEqual([]);
+  });
+
+  it('saved inclut destroyedVehicles quand renseigné', () => {
+    const vehicles = new Map([
+      [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+    ]);
+    fixture.componentRef.setInput('participantVehicles', vehicles);
+
+    const emitted: any[] = [];
+    outputToObservable(component.saved).subscribe(v => emitted.push(v));
+
+    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
+    checkboxes[0].click();
+    checkboxes[1].click();
+    fixture.detectChanges();
+
+    component.setPickerSelection(1, '200');
+    component.addDestroyedVehicle(1);
+
+    fixture.nativeElement.querySelector('button[type="submit"]').click();
+    fixture.detectChanges();
+
+    expect(emitted[0].results[0].destroyedVehicles).toEqual([{ vehicleId: 200, weightClass: 'LEGER' }]);
+  });
 });

@@ -24,9 +24,12 @@ import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
+import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
+import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
 
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
+import { WeightClass } from '../domain/enums/weight-class.enum';
 import type { Orientation } from '../../team/domain/team';
 
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
@@ -135,6 +138,15 @@ export class CampaignMapper {
 
       case 'RESISTANCE_CONTACTED':
         return new ResistanceContactedEvent(id, gameId, participantId, eventOrder);
+
+      case 'GATES_CROSSED':
+        return new GatesCrossedEvent(id, gameId, participantId, eventOrder, orm.gatesCrossed!, orm.championshipPoints!);
+
+      case 'VEHICLE_DESTROYED':
+        return new VehicleDestroyedEvent(
+          id, gameId, participantId, eventOrder,
+          orm.vehicleId!, orm.weightClass as WeightClass, orm.championshipPoints!,
+        );
 
       default:
         throw new DomainException(`Type d'événement inconnu : "${orm.eventType}"`);

@@ -41,6 +41,7 @@ describe('CampaignProgram Component', () => {
     deleteGame: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
     recordResult: ReturnType<typeof vi.fn>;
+    getParticipantVehicles: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -52,6 +53,9 @@ describe('CampaignProgram Component', () => {
       deleteGame: vi.fn().mockReturnValue(of(undefined)),
       getParticipants: vi.fn().mockReturnValue(of([])),
       recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'JOUE' })),
+      getParticipantVehicles: vi.fn().mockReturnValue(of([
+        { participantId: 1, vehicles: [{ vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' }] },
+      ])),
     };
 
     await TestBed.configureTestingModule({
@@ -178,6 +182,24 @@ describe('CampaignProgram Component', () => {
     component.recordingGame.set({ id: 1 } as any);
     component.onResultCancelled();
     expect(component.recordingGame()).toBeNull();
+  });
+
+  it('onPresentParticipantsChanged charge les véhicules des participants indiqués', () => {
+    component.recordingGame.set(mockGame);
+    component.onPresentParticipantsChanged([1]);
+
+    expect(mockService.getParticipantVehicles).toHaveBeenCalledWith(1, 10, [1]);
+    expect(component.participantVehicles().get(1)).toEqual([
+      { vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' },
+    ]);
+  });
+
+  it('onPresentParticipantsChanged vide la map si aucun participant présent', () => {
+    component.recordingGame.set(mockGame);
+    component.onPresentParticipantsChanged([1]);
+    component.onPresentParticipantsChanged([]);
+
+    expect(component.participantVehicles().size).toBe(0);
   });
 
   it('émet resultRecorded après l\'enregistrement réussi d\'un résultat', () => {

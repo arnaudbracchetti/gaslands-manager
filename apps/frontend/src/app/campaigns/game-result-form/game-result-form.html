@@ -37,39 +37,94 @@
         >
           @for (participant of presentParticipants(); track participant.id; let i = $index; let last = $last) {
             @let points = pointsForRank(i + 1);
-            <li cdkDrag class="grf-modal__item">
-              <span class="grf-modal__handle" cdkDragHandle aria-hidden="true">⠿</span>
-              <span class="grf-modal__rank">{{ i + 1 }}</span>
-              <span class="grf-modal__team">{{ participant.teamName }}</span>
-              @if (isClassified(i)) {
-                <span class="grf-modal__badge grf-modal__badge--classified">classé</span>
-              } @else {
-                <span class="grf-modal__badge grf-modal__badge--unclassified">non classé</span>
-              }
-              @if (game().type === 'EVENEMENT_TELE') {
-                <span
-                  class="grf-modal__points"
-                  [class.grf-modal__points--zero]="points === 0"
-                >
-                  {{ points }} pts
+            <li cdkDrag class="grf-modal__item grf-modal__item--column">
+              <div class="grf-modal__item-row">
+                <span class="grf-modal__handle" cdkDragHandle aria-hidden="true">⠿</span>
+                <span class="grf-modal__rank">{{ i + 1 }}</span>
+                <span class="grf-modal__team">{{ participant.teamName }}</span>
+                @if (isClassified(i)) {
+                  <span class="grf-modal__badge grf-modal__badge--classified">classé</span>
+                } @else {
+                  <span class="grf-modal__badge grf-modal__badge--unclassified">non classé</span>
+                }
+                @if (game().type === 'EVENEMENT_TELE') {
+                  <span
+                    class="grf-modal__points"
+                    [class.grf-modal__points--zero]="points === 0"
+                  >
+                    {{ points }} pts
+                  </span>
+                }
+                <span class="grf-modal__reorder">
+                  <button
+                    type="button"
+                    class="grf-modal__move"
+                    [disabled]="i === 0 || saving()"
+                    (click)="moveUp(i)"
+                    aria-label="Monter {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                  >▲</button>
+                  <button
+                    type="button"
+                    class="grf-modal__move"
+                    [disabled]="last || saving()"
+                    (click)="moveDown(i)"
+                    aria-label="Descendre {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                  >▼</button>
                 </span>
-              }
-              <span class="grf-modal__reorder">
-                <button
-                  type="button"
-                  class="grf-modal__move"
-                  [disabled]="i === 0 || saving()"
-                  (click)="moveUp(i)"
-                  aria-label="Monter {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
-                >▲</button>
-                <button
-                  type="button"
-                  class="grf-modal__move"
-                  [disabled]="last || saving()"
-                  (click)="moveDown(i)"
-                  aria-label="Descendre {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
-                >▼</button>
-              </span>
+              </div>
+
+              <!-- Exploits (US-B2) : portes franchies + véhicules ennemis détruits -->
+              <div class="grf-modal__exploits">
+                <label class="grf-modal__exploit-field">
+                  Portes franchies
+                  <input
+                    type="number"
+                    min="0"
+                    [value]="gatesCrossedFor(participant.id)"
+                    (change)="setGatesCrossed(participant.id, $any($event.target).value)"
+                    [disabled]="saving()"
+                  />
+                </label>
+
+                <div class="grf-modal__exploit-field">
+                  <span>Véhicules ennemis détruits</span>
+                  <div class="grf-modal__destroyed-picker">
+                    <select
+                      [ngModel]="pickerSelectionFor(participant.id)"
+                      (ngModelChange)="setPickerSelection(participant.id, $any($event))"
+                      [disabled]="saving() || candidateVehiclesFor(participant.id).length === 0"
+                    >
+                      <option [ngValue]="null">— Choisir un véhicule —</option>
+                      @for (candidate of candidateVehiclesFor(participant.id); track candidate.vehicle.vehicleId) {
+                        <option [ngValue]="candidate.vehicle.vehicleId">
+                          {{ candidate.vehicle.nom }} ({{ candidate.ownerTeamName }}) — {{ weightLabel(candidate.vehicle.weightClass) }}
+                        </option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      class="btn-secondary grf-modal__add-destroyed"
+                      [disabled]="saving() || pickerSelectionFor(participant.id) === null"
+                      (click)="addDestroyedVehicle(participant.id)"
+                    >+ Ajouter</button>
+                  </div>
+                  @if (destroyedVehiclesFor(participant.id).length > 0) {
+                    <ul class="grf-modal__destroyed-list">
+                      @for (destroyed of destroyedVehiclesFor(participant.id); track destroyed.vehicleId) {
+                        <li class="grf-modal__destroyed-chip">
+                          {{ vehicleLabel(destroyed) }} ({{ weightLabel(destroyed.weightClass) }})
+                          <button
+                            type="button"
+                            [disabled]="saving()"
+                            (click)="removeDestroyedVehicle(participant.id, destroyed.vehicleId)"
+                            aria-label="Retirer {{ vehicleLabel(destroyed) }} des destructions"
+                          >✕</button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              </div>
             </li>
           }
         </ol>

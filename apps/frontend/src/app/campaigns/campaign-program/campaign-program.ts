@@ -26,7 +26,7 @@ import { CampaignsService } from '../campaigns.service';
 import { CampaignState } from '../campaign.model';
 import type { CampaignParticipant } from '../campaign-participant.model';
 import { Game, Scenario, CreateGameDto } from '../game.model';
-import type { RecordResultDto } from '../game.model';
+import type { ParticipantVehiclesDto, RecordResultDto } from '../game.model';
 import { GameList } from '../game-list/game-list';
 import { GameForm } from '../game-form/game-form';
 import { GameResultForm } from '../game-result-form/game-result-form';
@@ -84,6 +84,14 @@ export class CampaignProgram implements OnInit {
   participants: WritableSignal<CampaignParticipant[]> = signal<CampaignParticipant[]>([]);
   /** Vrai pendant que la requête recordResult est en cours. */
   savingResult: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Véhicules courants des participants présents à la partie en cours de
+   * saisie (exploit "véhicules détruits", US-B2) — clé = participantId.
+   * Repeuplé à chaque changement de présence (`onPresentParticipantsChanged`).
+   */
+  participantVehicles: WritableSignal<ReadonlyMap<number, ParticipantVehiclesDto['vehicles']>> =
+    signal(new Map());
 
   /**
    * La section Programme est affichée dans tous les états (lecture seule en
@@ -173,6 +181,29 @@ export class CampaignProgram implements OnInit {
   /** Ouvre le formulaire de saisie des résultats pour la partie donnée. */
   onRecordGame(game: Game): void {
     this.recordingGame.set(game);
+    this.participantVehicles.set(new Map());
+  }
+
+  /**
+   * La liste des présents a changé dans GameResultForm — recharge leurs
+   * véhicules courants pour alimenter le picker "véhicules détruits" (US-B2).
+   */
+  onPresentParticipantsChanged(participantIds: number[]): void {
+    const game = this.recordingGame();
+    if (!game || participantIds.length === 0) {
+      this.participantVehicles.set(new Map());
+      return;
+    }
+    this.campaignsService.getParticipantVehicles(this.campaignId(), game.id, participantIds).subscribe({
+      next: (result: ParticipantVehiclesDto[]) => {
+        this.participantVehicles.set(new Map(result.map((r) => [r.participantId, r.vehicles])));
+      },
+      error: () => {
+        // Le picker "véhicules détruits" reste vide/désactivé — pas bloquant pour
+        // la saisie du classement, mais on log pour ne pas échouer en silence.
+        console.error('Impossible de charger les véhicules des participants pour la saisie des exploits.');
+      },
+    });
   }
 
   /** Appelé quand le formulaire de résultat est soumis. */
@@ -183,6 +214,7 @@ export class CampaignProgram implements OnInit {
     this.campaignsService.recordResult(this.campaignId(), game.id, dto).subscribe({
       next: () => {
         this.recordingGame.set(null);
+        this.participantVehicles.set(new Map());
         this.savingResult.set(false);
         this.loadGames();
         this.resultRecorded.emit();
@@ -196,6 +228,7 @@ export class CampaignProgram implements OnInit {
   /** Ferme le formulaire de résultat sans enregistrer. */
   onResultCancelled(): void {
     this.recordingGame.set(null);
+    this.participantVehicles.set(new Map());
   }
 
   onDelete(game: Game): void {

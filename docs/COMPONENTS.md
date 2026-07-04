@@ -928,12 +928,31 @@ Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type
 
 ### `GameResultForm` — `campaigns/game-result-form/`
 
-Formulaire d'enregistrement des résultats d'une partie (rangs, PC, cagnotte). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`.
+Formulaire d'enregistrement des résultats d'une partie (rangs, PC) et des exploits (US-B2 — portes franchies, véhicules ennemis détruits par poids). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-game-result-form` |
 | **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `game` | `Game` | — | Partie dont on saisit le résultat |
+| `participants` | `CampaignParticipant[]` | — | Participants `VALIDATED` de la campagne |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour le picker "véhicules détruits" — peuplé par le parent |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `saved` | `RecordResultDto` | Classement + exploits validés |
+| `formCancel` | `void` | Annulation |
+| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement — le parent recharge `participantVehicles` en réponse |
+
+Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : le picker "véhicules détruits" a besoin du roster des autres participants présents, mais ce roster est chargé par `CampaignProgram` (smart) en réponse à `presentParticipantsChanged`, pas par ce composant.
 
 ---
 

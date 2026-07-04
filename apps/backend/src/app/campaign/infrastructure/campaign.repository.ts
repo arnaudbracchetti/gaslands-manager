@@ -26,6 +26,8 @@ import type { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import type { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import type { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
+import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
+import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
 
 /**
  * Persistence du journal de campagne.
@@ -261,6 +263,18 @@ export class CampaignRepository implements ICampaignRepository {
       participantId: event.participantId,
       eventOrder,
     };
+
+    // GatesCrossedEvent et VehicleDestroyedEvent sont dispatchés par `instanceof`
+    // (pas par duck-typing) car leurs propriétés (`championshipPoints`, `vehicleId`)
+    // collisionneraient sinon avec les branches duck-typées ci-dessous
+    // (RANKING_ASSIGNED teste aussi `championshipPoints`, VEHICLE_LOST teste aussi
+    // `vehicleId`) — d'où la nécessité de les traiter en premier, sans ambiguïté.
+    if (event instanceof GatesCrossedEvent) {
+      return { ...base, eventType: 'GATES_CROSSED', gatesCrossed: event.gatesCrossed, championshipPoints: event.championshipPoints };
+    }
+    if (event instanceof VehicleDestroyedEvent) {
+      return { ...base, eventType: 'VEHICLE_DESTROYED', vehicleId: event.vehicleId, weightClass: event.weightClass, championshipPoints: event.championshipPoints };
+    }
 
     // Dispatche selon le type concret via duck-typing sur les propriétés de l'événement.
     // On caste d'abord en `unknown` pour accéder aux propriétés spécifiques sans erreur TS.

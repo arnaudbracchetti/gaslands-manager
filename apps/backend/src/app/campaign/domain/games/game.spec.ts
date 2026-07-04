@@ -7,7 +7,10 @@ import { RankingAssignedEvent } from '../events/ranking-assigned.event';
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { SequellaAddedEvent } from '../events/sequella-added.event';
+import { GatesCrossedEvent } from '../events/gates-crossed.event';
+import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
+import { WeightClass } from '../enums/weight-class.enum';
 
 function makeRankingEvent(id = 1): RankingAssignedEvent {
   return new RankingAssignedEvent(id, 10, 1, id, 1, 5);
@@ -23,6 +26,14 @@ function makeEquipmentEvent(id = 3): EquipmentChangedEvent {
 
 function makeSequellaEvent(id = 4): SequellaAddedEvent {
   return new SequellaAddedEvent(id, 10, 1, id, 1, 'moteur_endommage', 2);
+}
+
+function makeGatesCrossedEvent(id = 5): GatesCrossedEvent {
+  return new GatesCrossedEvent(id, 10, 1, id, 3, 3);
+}
+
+function makeVehicleDestroyedEvent(id = 6): VehicleDestroyedEvent {
+  return new VehicleDestroyedEvent(id, 10, 1, id, 2, WeightClass.LOURD, 3);
 }
 
 describe('EvenementTeleGame — canAccept', () => {
@@ -44,6 +55,14 @@ describe('EvenementTeleGame — canAccept', () => {
     expect(game.canAccept(makeSequellaEvent())).toBe(true);
   });
 
+  it('accepte GatesCrossedEvent', () => {
+    expect(game.canAccept(makeGatesCrossedEvent())).toBe(true);
+  });
+
+  it('accepte VehicleDestroyedEvent', () => {
+    expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(true);
+  });
+
   it('type est EVENEMENT_TELE', () => {
     expect(game.type).toBe('EVENEMENT_TELE');
   });
@@ -58,6 +77,14 @@ describe('EscarmoucheGame — canAccept', () => {
 
   it('refuse EquipmentChangedEvent', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(false);
+  });
+
+  it('accepte GatesCrossedEvent', () => {
+    expect(game.canAccept(makeGatesCrossedEvent())).toBe(true);
+  });
+
+  it('accepte VehicleDestroyedEvent', () => {
+    expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(true);
   });
 
   it('type est ESCARMOUCHE', () => {
@@ -82,6 +109,14 @@ describe('AtelierGame — canAccept', () => {
 
   it('refuse WalletMovementEvent', () => {
     expect(game.canAccept(makeWalletEvent())).toBe(false);
+  });
+
+  it('refuse GatesCrossedEvent', () => {
+    expect(game.canAccept(makeGatesCrossedEvent())).toBe(false);
+  });
+
+  it('refuse VehicleDestroyedEvent', () => {
+    expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(false);
   });
 
   it('type est ATELIER', () => {

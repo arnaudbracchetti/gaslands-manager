@@ -4,8 +4,11 @@ import { CampaignParticipant } from './campaign-participant';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { AtelierGame } from './games/atelier-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
+import { GatesCrossedEvent } from './events/gates-crossed.event';
+import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
 import { GameStatus } from './enums/game-status.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
+import { WeightClass } from './enums/weight-class.enum';
 import { makeTestParticipant } from './test-helpers';
 
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
@@ -362,5 +365,54 @@ describe('Campaign — recordResult', () => {
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
     const campaign = makeCampaign([p1], [game]);
     expect(() => campaign.recordResult(10, [{ participantId: 99, rank: 1 }])).toThrow();
+  });
+
+  it('crée un GatesCrossedEvent quand gatesCrossed > 0 (+1 PC par porte)', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+
+    const { events } = campaign.recordResult(10, [{ participantId: 1, rank: 1, gatesCrossed: 3 }]);
+
+    const gatesEvent = events.find((e) => e instanceof GatesCrossedEvent) as GatesCrossedEvent;
+    expect(gatesEvent).toBeDefined();
+    expect(gatesEvent.gatesCrossed).toBe(3);
+    expect(gatesEvent.championshipPoints).toBe(3);
+  });
+
+  it('ignore gatesCrossed=0 ou absent (aucun GatesCrossedEvent créé)', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+
+    const { events } = campaign.recordResult(10, [{ participantId: 1, rank: 1, gatesCrossed: 0 }]);
+
+    expect(events.some((e) => e instanceof GatesCrossedEvent)).toBe(false);
+  });
+
+  it('crée un VehicleDestroyedEvent par véhicule ennemi détruit, PC selon le poids', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1, p2], [game]);
+
+    const { events } = campaign.recordResult(10, [
+      {
+        participantId: 1,
+        rank: 1,
+        destroyedVehicles: [
+          { vehicleId: 55, weightClass: WeightClass.LEGER },
+          { vehicleId: 56, weightClass: WeightClass.FORTERESSE },
+        ],
+      },
+      { participantId: 2, rank: 2 },
+    ]);
+
+    const destroyedEvents = events.filter((e) => e instanceof VehicleDestroyedEvent) as VehicleDestroyedEvent[];
+    expect(destroyedEvents).toHaveLength(2);
+    // Le destructeur (participant 1) est crédité, pas le propriétaire du véhicule détruit.
+    expect(destroyedEvents.every((e) => e.participantId === 1)).toBe(true);
+    expect(destroyedEvents.find((e) => e.vehicleId === 55)?.championshipPoints).toBe(1);   // Léger
+    expect(destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints).toBe(5);   // Forteresse
   });
 });
