@@ -72,9 +72,18 @@ npx nx serve frontend             # frontend seul → http://localhost:4200
 npx nx test backend               # tests unitaires backend (Vitest)
 npx nx test frontend               # tests unitaires frontend (Vitest)
 npx nx e2e backend-e2e             # tests E2E backend (axios)
+npx nx e2e frontend-e2e            # tests E2E frontend (Playwright) — arrêter dev.sh avant (port 3000)
 npx nx run frontend:build          # build production
 npx nx sync                        # si Nx se plaint de "workspace out of sync"
 ```
+
+**Tests E2E frontend (`frontend-e2e`)** : `global-setup.ts` démarre automatiquement un
+backend dédié sur une base `gaslands_test` distincte de la base de dev (même conteneur
+Postgres) — la base est créée puis vidée à chaque run, aucune action manuelle requise
+sur la DB. En revanche, **le backend de dev doit être arrêté au préalable** (`./dev.sh
+--kill` ou `Ctrl+C`) : le backend de test réutilise le port 3000, cible du proxy
+Angular (`apps/frontend/proxy.conf.json`), donc les deux ne peuvent pas cohabiter.
+Détail : @docs/ARCHITECTURE.md §8.
 
 ---
 

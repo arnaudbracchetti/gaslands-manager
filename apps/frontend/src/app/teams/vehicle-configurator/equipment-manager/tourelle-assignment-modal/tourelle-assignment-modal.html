@@ -30,6 +30,7 @@
           <button
             class="tam-modal__option"
             type="button"
+            [attr.data-testid]="'tam-weapon-' + arme.nom_interne"
             (click)="weaponChosen.emit(arme.nom_interne)">
             <span class="tam-modal__option-name">{{ arme.nom }}</span>
             <span class="tam-modal__option-stats">

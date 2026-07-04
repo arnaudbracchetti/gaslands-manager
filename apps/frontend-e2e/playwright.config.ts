@@ -22,6 +22,16 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
+  /*
+   * globalSetup/globalTeardown : préparent la base "gaslands_test" (créée +
+   * vidée) puis démarrent/arrêtent un backend dédié pointé dessus. Ce backend
+   * n'est volontairement PAS déclaré via `webServer` ci-dessous : l'ordre
+   * entre `globalSetup` et `webServer` n'est pas garanti, alors que la base
+   * de test doit impérativement exister avant que ce backend ne s'y connecte
+   * (cf. src/support/global-setup.ts).
+   */
+  globalSetup: require.resolve('./src/support/global-setup'),
+  globalTeardown: require.resolve('./src/support/global-teardown'),
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npx nx run frontend:serve',

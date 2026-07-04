@@ -1,4 +1,4 @@
-<div class="tep-vehicle-card">
+<div class="tep-vehicle-card" [attr.data-testid]="'vehicle-card-' + vehicle().id">
 
   <span class="tep-vehicle-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
 
@@ -40,12 +40,14 @@
   <div class="tep-vehicle-card__actions">
     <button
       class="tep-btn-manage"
+      data-testid="vehicle-card-manage"
       (click)="manageClicked.emit(vehicle().id)"
       title="Gérer l'équipement de ce véhicule">
       GÉRER L'ÉQUIPEMENT
     </button>
     <button
       class="tep-btn-delete-vehicle"
+      data-testid="vehicle-card-delete"
       (click)="deleteClicked.emit(vehicle())"
       title="Supprimer ce véhicule">
       🗑

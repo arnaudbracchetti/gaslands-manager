@@ -1,16 +1,16 @@
 ---
 id: "us-e2-resoudre-le-tableau-des-epaves-d6-serveur-2026-07-03"
-status: "backlog"
+status: "in-progress"
 priority: "high"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-03T19:41:13.716Z"
+modified: "2026-07-04T10:16:40.793Z"
 completedAt: null
 labels: ["mode-campagne", "degats-sequelles"]
-order: "a7"
+order: "a3"
 ---
-
 # Résoudre le Tableau des Épaves (D6 serveur)
 
 En tant que joueur, je veux que l'appli lance le D6 du Tableau des Épaves et
