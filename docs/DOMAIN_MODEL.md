@@ -388,9 +388,9 @@ Ces références pointent vers des données en mémoire, pas des tables SQL.
 
 L'état campagne n'est jamais persisté directement. Il est **recalculé par replay** du journal `game_events` à chaque lecture. L'agrégat racine est `Campaign` (ex-`Season`, renommé pour unifier la terminologie du domaine — cf. commit `727d6e3`).
 
-> ⚠️ Ne pas confondre avec `campaign/campaign.entity.ts` — entité TypeORM simple
-> (CRUD ligue/inscriptions, module ex-`season/`). Même nom de classe `Campaign`,
-> fichiers et responsabilités distincts.
+> ⚠️ Ne pas confondre avec l'entité TypeORM `CampaignOrm` — cf.
+> [ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-structure-des-modules) pour le détail
+> de cette collision de nom.
 
 ```mermaid
 classDiagram

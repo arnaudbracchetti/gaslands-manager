@@ -41,7 +41,7 @@ Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet 
 
 ## Documentation de référence
 
-Lire avant toute modification — mettre à jour après chaque changement :
+Lire si nécéssaire avant toute modification — mettre à jour après chaque changement :
 
 - @docs/SPECIFICATION.md — index des spécifications (contexte général + table des matières vers les sous-documents thématiques)
   - @docs/spec/AUTH.md — authentification, rôles, compte admin
@@ -83,7 +83,7 @@ Postgres) — la base est créée puis vidée à chaque run, aucune action manue
 sur la DB. En revanche, **le backend de dev doit être arrêté au préalable** (`./dev.sh
 --kill` ou `Ctrl+C`) : le backend de test réutilise le port 3000, cible du proxy
 Angular (`apps/frontend/proxy.conf.json`), donc les deux ne peuvent pas cohabiter.
-Détail : @docs/ARCHITECTURE.md §8.
+Détail : @docs/TESTING.md.
 
 ---
 
@@ -119,13 +119,10 @@ Détail : @docs/ARCHITECTURE.md §8.
 
 ## Processus obligatoire avant toute nouvelle fonctionnalité backend
 
-Avant d'écrire la moindre ligne de code, **invoquer le skill `brainstorming`** et répondre aux questions suivantes :
-
-- La fonctionnalité introduit-elle un **nouvel agrégat** (entité racine avec son propre cycle de vie et ses propres règles) ?
-- Ou s'agit-il d'une **nouvelle règle métier dans un agrégat existant** (ex : nouvelle contrainte sur `Vehicle`) ?
-- Quelles **entités enfants ou Value Objects** sont créés ou modifiés ?
-- Quelles **interfaces de repository** évoluent (`IVehicleRepository`, etc.) ?
-- Quel **use case** porte la commande ? Y a-t-il plusieurs commandes distinctes ?
+Avant d'écrire la moindre ligne de code, **invoquer le skill `ddd`** (théorie DDD,
+brainstorming de conception, questions de cadrage détaillées dans le skill —
+nouvel agrégat vs nouvelle règle métier, entités enfants/Value Objects, interfaces
+de repository, use case).
 
 Ce brainstorming évite de placer des règles métier au mauvais endroit (controller, repository, service utilitaire). La règle : logique métier → agrégat (`domain/`), orchestration → use case (`application/`), TypeORM/NestJS → infrastructure uniquement.
 
