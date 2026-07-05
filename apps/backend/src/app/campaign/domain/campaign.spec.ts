@@ -7,10 +7,18 @@ import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
 import { ResistanceContactedEvent } from './events/resistance-contacted.event';
+import { WeaponLostEvent } from './events/weapon-lost.event';
+import { ImprovementLostEvent } from './events/improvement-lost.event';
+import { SequellaAddedEvent } from './events/sequella-added.event';
+import { VehicleLostEvent } from './events/vehicle-lost.event';
+import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event';
+import { EquipmentChangedEvent } from './events/equipment-changed.event';
 import { GameStatus } from './enums/game-status.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 import { WeightClass } from './enums/weight-class.enum';
-import { makeTestParticipant } from './test-helpers';
+import { WreckResult } from './enums/wreck-result.enum';
+import { WreckOutcome } from './wreck/wreck-outcome';
+import { makeTestParticipant, makeVehicleType, makeWeaponType } from './test-helpers';
 
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
 function makeCampaign(
@@ -129,6 +137,41 @@ describe('Campaign — standings', () => {
     for (const entry of campaign.standings()) {
       expect(entry).not.toHaveProperty('resistancePoints');
     }
+  });
+});
+
+describe('Campaign — gameJournal', () => {
+  it('retourne les événements dans l\'ordre chronologique avec leur description', () => {
+    const { participant } = makeTestParticipant();
+    const e1 = makeRankingEvent(participant.id, 10, 10, 1);
+    const e2 = new GatesCrossedEvent(200, 10, participant.id, 2, 3, 3);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e2, e1]); // volontairement désordonné en entrée
+    const campaign = makeCampaign([participant], [game]);
+
+    const journal = campaign.gameJournal(10);
+
+    expect(journal.map((j) => j.eventId)).toEqual([e1.id, e2.id]); // trié par eventOrder
+    expect(journal[0].participantId).toBe(participant.id);
+    expect(journal[0].description).toContain('Classé');
+    expect(journal[1].description).toContain('porte');
+  });
+
+  it('inclut tous les types d\'événements, y compris ResistanceContactedEvent', () => {
+    const { participant } = makeTestParticipant();
+    const resistanceEvent = new ResistanceContactedEvent(300, 10, participant.id, 1);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [resistanceEvent]);
+    const campaign = makeCampaign([participant], [game]);
+
+    const journal = campaign.gameJournal(10);
+
+    expect(journal).toHaveLength(1);
+    expect(journal[0].eventId).toBe(300);
+  });
+
+  it('lève DomainException si la partie est introuvable', () => {
+    const { participant } = makeTestParticipant();
+    const campaign = makeCampaign([participant], []);
+    expect(() => campaign.gameJournal(999)).toThrow('introuvable');
   });
 });
 
@@ -455,5 +498,169 @@ describe('Campaign — recordResult', () => {
     expect(destroyedEvents.every((e) => e.participantId === 1)).toBe(true);
     expect(destroyedEvents.find((e) => e.vehicleId === 55)?.championshipPoints).toBe(1);   // Léger
     expect(destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints).toBe(5);   // Forteresse
+  });
+});
+
+describe('Campaign — resolveWreck', () => {
+  it('ARRACHEE avec une arme perdue : WreckResolvedEvent + WeaponLostEvent', () => {
+    const { participant, vehicle, weapon } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(vehicle.id, 5, 0, WreckResult.ARRACHEE, 1, { kind: 'weapon', id: weapon.id });
+
+    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+
+    expect(events).toHaveLength(2);
+    expect(events[1]).toBeInstanceOf(WeaponLostEvent);
+    expect((events[1] as WeaponLostEvent).weaponId).toBe(weapon.id);
+  });
+
+  it('ARRACHEE avec une amélioration perdue : WreckResolvedEvent + ImprovementLostEvent', () => {
+    const { participant, vehicle, improvement } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(vehicle.id, 5, 0, WreckResult.ARRACHEE, 1, { kind: 'improvement', id: improvement.id });
+
+    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+
+    expect(events).toHaveLength(2);
+    expect(events[1]).toBeInstanceOf(ImprovementLostEvent);
+  });
+
+  it('SIEGE_IRRECUPERABLE : WreckResolvedEvent + SequellaAddedEvent (coût 0)', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(vehicle.id, 7, 0, WreckResult.SIEGE_IRRECUPERABLE, 2, null);
+
+    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+
+    expect(events).toHaveLength(2);
+    const sequella = events[1] as SequellaAddedEvent;
+    expect(sequella).toBeInstanceOf(SequellaAddedEvent);
+    expect(sequella.chocsCost).toBe(0);
+  });
+
+  it('VEHICULE_DETRUIT : WreckResolvedEvent + VehicleLostEvent, jamais de bonus Favori du public', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(vehicle.id, 6, 6, WreckResult.VEHICULE_DETRUIT, 0, null);
+
+    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+
+    expect(events).toHaveLength(2);
+    expect(events[1]).toBeInstanceOf(VehicleLostEvent);
+    expect(events.some((e) => e instanceof FavoriDuPublicBonusEvent)).toBe(false);
+  });
+
+  it('INDEMNE : uniquement WreckResolvedEvent', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(vehicle.id, 2, 0, WreckResult.INDEMNE, 0, null);
+
+    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+
+    expect(events).toHaveLength(1);
+  });
+});
+
+describe('Campaign — creditFavoriDuPublicBonus', () => {
+  it('crédite +5 PC quand le véhicule vient d\'être détruit', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+
+    const bonus = campaign.creditFavoriDuPublicBonus(10, participant.id, vehicle.id, true);
+
+    expect(bonus).toBeInstanceOf(FavoriDuPublicBonusEvent);
+    expect((bonus as FavoriDuPublicBonusEvent).championshipPoints).toBe(5);
+  });
+
+  it('ne crédite rien si le véhicule n\'a pas été détruit — règle indépendante du tirage', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+
+    const bonus = campaign.creditFavoriDuPublicBonus(10, participant.id, vehicle.id, false);
+
+    expect(bonus).toBeNull();
+  });
+});
+
+describe('Campaign — changeEquipment', () => {
+  it('refuse si aucun atelier n\'est ouvert', () => {
+    const { participant } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+
+    expect(() => campaign.changeEquipment(participant.id, {
+      operation: 'BUY', entityType: 'WEAPON', nomInterne: 'mitrailleuse',
+      resolvedVehicleType: null, resolvedWeaponType: makeWeaponType(),
+    })).toThrow('atelier');
+  });
+
+  it('BUY : calcule le coût depuis le catalogue et débite la cagnotte (garde assertCanAfford)', () => {
+    const { participant } = makeTestParticipant();  // wallet = 50
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    const { events } = campaign.changeEquipment(participant.id, {
+      operation: 'BUY', entityType: 'VEHICLE', nomInterne: 'voiture',
+      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null,
+    });
+
+    const event = events[0] as EquipmentChangedEvent;
+    expect(event.cost).toBe(12);  // prix catalogue de makeVehicleType()
+  });
+
+  it('BUY : refuse si la cagnotte est insuffisante', () => {
+    const { participant } = makeTestParticipant();
+    participant.creditWallet(-45);  // wallet = 5, véhicule coûte 12
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    expect(() => campaign.changeEquipment(participant.id, {
+      operation: 'BUY', entityType: 'VEHICLE', nomInterne: 'voiture',
+      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null,
+    })).toThrow('Cagnotte insuffisante');
+  });
+
+  it('BUY : refuse un nomInterne inconnu du catalogue', () => {
+    const { participant } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    expect(() => campaign.changeEquipment(participant.id, {
+      operation: 'BUY', entityType: 'WEAPON', nomInterne: 'inconnue',
+      resolvedVehicleType: null, resolvedWeaponType: null,
+    })).toThrow('inconnu');
+  });
+
+  it('SELL : calcule le coût depuis l\'arme existante du véhicule', () => {
+    const { participant, vehicle, weapon } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    const { events } = campaign.changeEquipment(participant.id, {
+      operation: 'SELL', entityType: 'WEAPON', nomInterne: 'mitrailleuse',
+      targetVehicleId: vehicle.id, targetEntityId: weapon.id,
+      resolvedVehicleType: null, resolvedWeaponType: null,
+    });
+
+    expect((events[0] as EquipmentChangedEvent).cost).toBe(5);  // prix catalogue de makeWeaponType()
+  });
+
+  it('SELL : refuse une arme introuvable sur le véhicule visé', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    expect(() => campaign.changeEquipment(participant.id, {
+      operation: 'SELL', entityType: 'WEAPON', nomInterne: 'mitrailleuse',
+      targetVehicleId: vehicle.id, targetEntityId: 999,
+      resolvedVehicleType: null, resolvedWeaponType: null,
+    })).toThrow('introuvable');
   });
 });

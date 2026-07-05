@@ -44,6 +44,7 @@ describe('CampaignProgram Component', () => {
     getParticipantVehicles: ReturnType<typeof vi.fn>;
     resolveWreck: ReturnType<typeof vi.fn>;
     enterAtelier: ReturnType<typeof vi.fn>;
+    getGameJournal: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -63,6 +64,9 @@ describe('CampaignProgram Component', () => {
         descriptions: ['Table des Épaves : S\'en sort indemne (D6=3+0 chocs)'],
       })),
       enterAtelier: vi.fn().mockReturnValue(of({ autoClosedGameId: null })),
+      getGameJournal: vi.fn().mockReturnValue(of([
+        { participantId: 1, userName: 'Ada Lovelace', teamName: 'Les Furieux', description: 'Classé 1 (+10 PC)', createdAt: '2026-07-01T00:00:00.000Z' },
+      ])),
     };
 
     await TestBed.configureTestingModule({
@@ -279,6 +283,40 @@ describe('CampaignProgram Component', () => {
     expect(component.error()).not.toBe('');
     expect(component.recordingGame()).toBe(mockGame);
     expect(component.finalizingGame()).toBe(false);
+  });
+
+  it('onOpenJournal charge le journal de la partie', () => {
+    fixture.detectChanges();
+
+    component.onOpenJournal(mockGame);
+
+    expect(mockService.getGameJournal).toHaveBeenCalledWith(1, 10);
+    expect(component.journalGame()).toEqual(mockGame);
+    expect(component.journalEntries()).toEqual([
+      { participantId: 1, userName: 'Ada Lovelace', teamName: 'Les Furieux', description: 'Classé 1 (+10 PC)', createdAt: '2026-07-01T00:00:00.000Z' },
+    ]);
+    expect(component.loadingJournal()).toBe(false);
+  });
+
+  it('onOpenJournal affiche une erreur si le chargement échoue', () => {
+    mockService.getGameJournal.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+
+    component.onOpenJournal(mockGame);
+
+    expect(component.error()).not.toBe('');
+    expect(component.loadingJournal()).toBe(false);
+  });
+
+  it('onJournalClosed réinitialise l\'état du journal', () => {
+    fixture.detectChanges();
+    component.onOpenJournal(mockGame);
+
+    component.onJournalClosed();
+
+    expect(component.journalGame()).toBeNull();
+    expect(component.journalEntries()).toEqual([]);
+    expect(component.loadingJournal()).toBe(false);
   });
 
   it('anyModalOpen désactive les actions de GameList tant qu\'une pop-up est ouverte', () => {

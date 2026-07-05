@@ -20,6 +20,7 @@ import type {
   WreckResolveRequestDto,
   WreckResolveResultDto,
   EnterAtelierResultDto,
+  GameJournalEntryDto,
 } from './game.model';
 
 @Injectable({ providedIn: 'root' })
@@ -248,6 +249,18 @@ export class CampaignsService {
     return this.http.post<EnterAtelierResultDto>(
       `/api/campaigns/${campaignId}/games/${gameId}/enter-atelier`,
       {},
+    );
+  }
+
+  /**
+   * GET /api/campaigns/:id/games/:gameId/journal → journal complet d'une
+   * partie (tous types d'événements, y compris atelier), accessible à tout
+   * participant VALIDATED même absent de la partie. Retourné à plat, non
+   * groupé — le regroupement par participant est fait côté frontend.
+   */
+  getGameJournal(campaignId: number, gameId: number): Observable<GameJournalEntryDto[]> {
+    return this.http.get<GameJournalEntryDto[]>(
+      `/api/campaigns/${campaignId}/games/${gameId}/journal`,
     );
   }
 }

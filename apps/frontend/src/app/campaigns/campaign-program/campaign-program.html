@@ -50,7 +50,16 @@
       [canRecord]="canManage() && !anyModalOpen()"
       (editGame)="onEdit($event)"
       (deleteGame)="onDelete($event)"
-      (recordGame)="onRecordGame($event)" />
+      (recordGame)="onRecordGame($event)"
+      (openJournal)="onOpenJournal($event)" />
+  }
+
+  @if (journalGame()) {
+    <app-game-journal-modal
+      [game]="journalGame()!"
+      [entries]="journalEntries()"
+      [loading]="loadingJournal()"
+      (closed)="onJournalClosed()" />
   }
 
   @if (pendingDeleteGame()) {

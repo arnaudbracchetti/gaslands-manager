@@ -146,6 +146,7 @@ graph TD
         RankingStep
         WreckDesignationStep
         WreckResolutionStep
+        GameJournalModal
     end
 
     subgraph Admin
@@ -186,6 +187,7 @@ graph TD
     CampaignProgram --> GameList
     CampaignProgram --> GameForm
     CampaignProgram --> GameResultWizard
+    CampaignProgram --> GameJournalModal
     CampaignProgram --> ConfirmModal
     GameResultWizard --> RankingStep
     GameResultWizard --> WreckDesignationStep
@@ -859,7 +861,7 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 | **Sélecteur** | `app-campaign-program` |
 | **Type** | Smart |
 | **Services** | `CampaignsService` |
-| **Compose** | `GameList`, `GameForm`, `GameResultWizard`, `ConfirmModal` |
+| **Compose** | `GameList`, `GameForm`, `GameResultWizard`, `GameJournalModal`, `ConfirmModal` |
 
 **Inputs**
 
@@ -875,7 +877,7 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 |-----|------|-------------|
 | `resultRecorded` | `void` | Émis après l'enregistrement réussi d'un résultat de partie — signale au parent que les PC ont changé, pour rafraîchir le classement affiché par `ParticipantList` (composant frère, sans lien direct) |
 
-**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`).
+**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`), `journalGame`, `journalEntries`, `loadingJournal` (état du journal d'une partie, cf. `GameJournalModal`).
 
 ---
 
@@ -903,6 +905,7 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | `editGame` | `Game` | Demande d'édition d'une partie |
 | `deleteGame` | `Game` | Demande de suppression d'une partie |
 | `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
+| `openJournal` | `Game` | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
 
 ---
 
@@ -1055,6 +1058,37 @@ déclenche l'entrée en atelier de la partie côté parent (`enterAtelier()`).
 | Nom | Type | Description |
 |-----|------|-------------|
 | `completed` | `void` | Clic sur "Terminer" (uniquement si tous les véhicules ont un résultat) |
+
+---
+
+### `GameJournalModal` — `campaigns/game-journal-modal/`
+
+Modale listant tous les événements journalisés sur une partie `ATELIER` ou
+`JOUE` — classement, exploits, table des épaves, atelier, contact Résistance —
+traduits en texte lisible par `GameEvent.describe()` (backend). Regroupe les
+entrées reçues à plat par participant, en préservant l'ordre d'apparition (le
+premier événement chronologique d'un participant détermine la position de son
+groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
+"📜 Journal" de `GameList`, visible par tout participant `VALIDATED`.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-game-journal-modal` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `game` | `Game` | — | Partie dont on consulte le journal |
+| `entries` | `GameJournalEntryDto[]` | `[]` | Événements à plat, tels que reçus de l'API |
+| `loading` | `boolean` | `false` | Affiche l'état de chargement |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `closed` | `void` | Fermeture de la modale |
 
 ---
 

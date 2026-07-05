@@ -39,10 +39,20 @@ export class GameList {
   editGame: OutputEmitterRef<Game> = output<Game>();
   deleteGame: OutputEmitterRef<Game> = output<Game>();
   recordGame: OutputEmitterRef<Game> = output<Game>();
+  openJournal: OutputEmitterRef<Game> = output<Game>();
 
   /** Vrai si la partie peut être éditée/supprimée (gérable et pas encore jouée). */
   canModify(game: Game): boolean {
     return this.canManage() && game.status === 'PLANIFIE';
+  }
+
+  /**
+   * Vrai si le journal de la partie peut être consulté — dès que la partie a
+   * commencé à générer des événements (ATELIER ou JOUE), visible par tout
+   * participant (pas conditionné par canManage/canRecord).
+   */
+  hasJournal(game: Game): boolean {
+    return game.status === 'ATELIER' || game.status === 'JOUE';
   }
 
   /** Libellé lisible du type de partie. */

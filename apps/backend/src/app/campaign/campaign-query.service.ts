@@ -25,6 +25,8 @@ import { CampaignSummaryDto } from './dto/campaign-summary.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 import { GameResponseDto } from './dto/game-response.dto';
 import { GameResultResponseDto } from './dto/game-result-response.dto';
+import { GameJournalEntryDto } from './dto/game-journal-response.dto';
+import { CampaignReplayService } from './infrastructure/campaign-replay.service';
 
 @Injectable()
 export class CampaignQueryService {
@@ -38,6 +40,7 @@ export class CampaignQueryService {
     @InjectRepository(GameEventOrm)
     private readonly gameEventRepo: Repository<GameEventOrm>,
     private readonly scenarioCatalog: ScenarioCatalogService,
+    private readonly replayService: CampaignReplayService,
   ) {}
 
   // ── Campagnes ─────────────────────────────────────────────────────────────────
@@ -222,6 +225,37 @@ export class CampaignQueryService {
       championshipPoints: e.championshipPoints as number,
       createdAt: e.createdAt,
     }));
+  }
+
+  /**
+   * Journal complet d'une partie (tous types d'événements confondus), pour
+   * affichage — accessible à tout participant VALIDATED de la campagne, même
+   * absent de cette partie. Les descriptions viennent de l'agrégat
+   * (`Campaign.gameJournal`, `GameEvent.describe()`) ; userName/teamName/
+   * createdAt sont résolus ici, hors du domaine (préoccupation de lecture).
+   */
+  async getJournal(campaignId: number, gameId: number, userId: number): Promise<GameJournalEntryDto[]> {
+    await this.assertVisibleParticipant(campaignId, userId);
+
+    const campaign = await this.replayService.load(campaignId);
+    const entries = campaign.gameJournal(gameId);
+
+    const [participants, eventRows] = await Promise.all([
+      this.participantRepo.find({ where: { campaignId }, relations: { user: true, team: true } }),
+      this.gameEventRepo.find({ where: { gameId } }),
+    ]);
+    const participantById = new Map(participants.map((p) => [p.id, p]));
+    const createdAtByEventId = new Map(eventRows.map((e) => [e.id, e.createdAt]));
+
+    return entries.map((entry) => {
+      const participant = participantById.get(entry.participantId);
+      return {
+        ...entry,
+        userName: participant ? `${participant.user.firstName} ${participant.user.lastName}` : '',
+        teamName: participant?.team?.name ?? '',
+        createdAt: createdAtByEventId.get(entry.eventId) as Date,
+      };
+    });
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────

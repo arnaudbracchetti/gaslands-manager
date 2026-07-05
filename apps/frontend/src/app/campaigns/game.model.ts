@@ -184,3 +184,16 @@ export interface WreckDesignationResult {
   /** Toutes les désignations (détruit par X ou seul) — pilote l'écran 3. */
   wreckedVehicles: WreckedVehicleEntry[];
 }
+
+/**
+ * Une ligne du journal d'une partie — miroir de GameJournalEntryDto (backend).
+ * Retourné à plat (non groupé) par GET .../journal ; le regroupement par
+ * participant est fait côté frontend (GameJournalModal).
+ */
+export interface GameJournalEntryDto {
+  participantId: number;
+  userName: string;
+  teamName: string;
+  description: string;
+  createdAt: string;
+}

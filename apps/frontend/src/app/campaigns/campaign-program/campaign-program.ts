@@ -31,16 +31,18 @@ import type {
   RecordResultDto,
   WreckOutcomeDto,
   WreckResolveRequestDto,
+  GameJournalEntryDto,
 } from '../game.model';
 import { GameList } from '../game-list/game-list';
 import { GameForm } from '../game-form/game-form';
 import { GameResultWizard } from '../game-result-wizard/game-result-wizard';
+import { GameJournalModal } from '../game-journal-modal/game-journal-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 
 @Component({
   selector: 'app-campaign-program',
   standalone: true,
-  imports: [GameList, GameForm, GameResultWizard, ConfirmModal],
+  imports: [GameList, GameForm, GameResultWizard, GameJournalModal, ConfirmModal],
   templateUrl: './campaign-program.html',
   styleUrl: './campaign-program.scss',
 })
@@ -109,6 +111,13 @@ export class CampaignProgram implements OnInit {
   rollingWreck: WritableSignal<boolean> = signal(false);
   /** Vrai pendant que la finalisation (fin du wizard) est en cours. */
   finalizingGame: WritableSignal<boolean> = signal(false);
+
+  /** Partie dont le journal est consulté (null = modale fermée). */
+  journalGame: WritableSignal<Game | null> = signal<Game | null>(null);
+  /** Événements du journal de la partie consultée, à plat. */
+  journalEntries: WritableSignal<GameJournalEntryDto[]> = signal<GameJournalEntryDto[]>([]);
+  /** Vrai pendant le chargement du journal. */
+  loadingJournal: WritableSignal<boolean> = signal(false);
 
   /**
    * La section Programme est affichée dans tous les états (lecture seule en
@@ -300,6 +309,29 @@ export class CampaignProgram implements OnInit {
   onWizardCancelled(): void {
     this.recordingGame.set(null);
     this.participantVehicles.set(new Map());
+  }
+
+  /** Ouvre le journal d'une partie (ATELIER ou JOUE) — accessible à tout participant. */
+  onOpenJournal(game: Game): void {
+    this.journalGame.set(game);
+    this.journalEntries.set([]);
+    this.loadingJournal.set(true);
+    this.campaignsService.getGameJournal(this.campaignId(), game.id).subscribe({
+      next: (entries: GameJournalEntryDto[]) => {
+        this.journalEntries.set(entries);
+        this.loadingJournal.set(false);
+      },
+      error: () => {
+        this.error.set('Erreur lors du chargement du journal de la partie.');
+        this.loadingJournal.set(false);
+      },
+    });
+  }
+
+  onJournalClosed(): void {
+    this.journalGame.set(null);
+    this.journalEntries.set([]);
+    this.loadingJournal.set(false);
   }
 
   onDelete(game: Game): void {

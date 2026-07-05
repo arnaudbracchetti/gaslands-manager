@@ -1,0 +1,137 @@
+// Styles calqués sur ChangeTeamModal (.ctm-*) pour cohérence visuelle.
+@use '../../shared/styles/breakpoints' as bp;
+
+.gjm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+
+  @include bp.mobile {
+    align-items: flex-end;
+  }
+}
+
+.gjm-modal {
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-stamp-lg);
+
+  @include bp.mobile {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    border-radius: var(--r-sm) var(--r-sm) 0 0;
+  }
+}
+
+.gjm-modal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gjm-modal__status {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.gjm-modal__loading,
+.gjm-modal__empty {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.gjm-modal__groups {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gjm-group__title {
+  margin: 0 0 6px;
+  font-family: var(--font-text);
+  font-weight: 600;
+  color: var(--tb-os);
+  font-size: 0.9rem;
+}
+
+.gjm-group__entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gjm-group__entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-main);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-hair);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.gjm-group__time {
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.gjm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+
+  @include bp.mobile {
+    position: sticky;
+    bottom: 0;
+    background: var(--metal-sheen);
+  }
+}
+
+.gjm-modal__close {
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 7px 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-os);
+    color: var(--tb-os);
+  }
+}

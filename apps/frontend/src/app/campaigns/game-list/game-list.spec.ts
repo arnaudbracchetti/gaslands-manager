@@ -140,6 +140,51 @@ describe('GameList', () => {
     expect(recordBtn).toBeFalsy();
   });
 
+  it('affiche le bouton "Journal" pour une partie en ATELIER ou JOUE', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'ATELIER' })]);
+    fixture.detectChanges();
+
+    let journalBtn = fixture.nativeElement.querySelector('.game-list__journal');
+    expect(journalBtn).toBeTruthy();
+
+    fixture.componentRef.setInput('games', [makeGame({ status: 'JOUE' })]);
+    fixture.detectChanges();
+
+    journalBtn = fixture.nativeElement.querySelector('.game-list__journal');
+    expect(journalBtn).toBeTruthy();
+  });
+
+  it('n\'affiche pas le bouton "Journal" pour une partie PLANIFIE', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'PLANIFIE' })]);
+    fixture.detectChanges();
+
+    const journalBtn = fixture.nativeElement.querySelector('.game-list__journal');
+    expect(journalBtn).toBeFalsy();
+  });
+
+  it('le bouton "Journal" est visible même sans canManage ni canRecord', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'JOUE' })]);
+    fixture.componentRef.setInput('canManage', false);
+    fixture.componentRef.setInput('canRecord', false);
+    fixture.detectChanges();
+
+    const journalBtn = fixture.nativeElement.querySelector('.game-list__journal');
+    expect(journalBtn).toBeTruthy();
+  });
+
+  it('émet openJournal avec la partie au clic', () => {
+    const game = makeGame({ id: 9, status: 'JOUE' });
+    fixture.componentRef.setInput('games', [game]);
+    fixture.detectChanges();
+
+    const emitted: Game[] = [];
+    outputToObservable(component.openJournal).subscribe((g) => emitted.push(g));
+
+    fixture.nativeElement.querySelector('.game-list__journal').click();
+
+    expect(emitted).toEqual([game]);
+  });
+
   it('recordGame émet la partie au clic', () => {
     const game = makeGame();
     fixture.componentRef.setInput('games', [game]);

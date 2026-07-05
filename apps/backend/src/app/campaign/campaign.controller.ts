@@ -72,6 +72,7 @@ import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { GameResponseDto } from './dto/game-response.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
+import type { GameJournalEntryDto } from './dto/game-journal-response.dto';
 import type { RecordResultDto } from './dto/record-result.dto';
 import type { RecordRankingDto } from './dto/record-ranking.dto';
 import type { RecordWalletDto } from './dto/record-wallet.dto';
@@ -234,6 +235,17 @@ export class CampaignController {
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<GameResultResponseDto[]> {
     return this.query.getResults(id, gameId, req.user.id);
+  }
+
+  /** GET /api/campaigns/:id/games/:gameId/journal — journal complet, tout participant VALIDATED. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/games/:gameId/journal')
+  getJournal(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<GameJournalEntryDto[]> {
+    return this.query.getJournal(id, gameId, req.user.id);
   }
 
   /** POST /api/campaigns/:id/games/:gameId/results — enregistre le résultat (PLANIFIE → JOUE). */

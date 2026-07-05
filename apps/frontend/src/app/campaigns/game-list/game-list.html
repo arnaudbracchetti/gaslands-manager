@@ -35,6 +35,12 @@
         </button>
       }
 
+      @if (hasJournal(game)) {
+        <button type="button" class="game-list__journal" (click)="openJournal.emit(game)">
+          📜 Journal
+        </button>
+      }
+
     </li>
   } @empty {
     <li class="game-list__empty">Aucune partie planifiée pour l'instant.</li>

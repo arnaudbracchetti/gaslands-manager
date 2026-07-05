@@ -19,6 +19,7 @@ describe('CampaignQueryService', () => {
   let gameRepo: Repo;
   let gameEventRepo: Repo;
   let scenarioCatalog: { getByNomInterne: ReturnType<typeof vi.fn>; getAll: ReturnType<typeof vi.fn> };
+  let replayService: { load: ReturnType<typeof vi.fn>; loadAndReplay: ReturnType<typeof vi.fn> };
   let service: CampaignQueryService;
 
   beforeEach(() => {
@@ -27,12 +28,14 @@ describe('CampaignQueryService', () => {
     gameRepo = makeRepo();
     gameEventRepo = makeRepo();
     scenarioCatalog = { getByNomInterne: vi.fn(), getAll: vi.fn() };
+    replayService = { load: vi.fn(), loadAndReplay: vi.fn() };
     service = new CampaignQueryService(
       campaignRepo as never,
       participantRepo as never,
       gameRepo as never,
       gameEventRepo as never,
       scenarioCatalog as never,
+      replayService as never,
     );
   });
 
@@ -102,6 +105,36 @@ describe('CampaignQueryService', () => {
     it('lève NotFound si l\'appelant n\'est pas participant VALIDATED', async () => {
       participantRepo.findOne.mockResolvedValue(null);
       await expect(service.getResults(1, 7, 42)).rejects.toThrow('introuvable');
+    });
+  });
+
+  describe('getJournal', () => {
+    it('enrichit le journal de l\'agrégat avec userName/teamName/createdAt', async () => {
+      participantRepo.findOne.mockResolvedValue({ id: 99 });  // assertVisibleParticipant OK
+      replayService.load.mockResolvedValue({
+        gameJournal: vi.fn().mockReturnValue([
+          { eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)' },
+        ]),
+      });
+      const createdAt = new Date('2026-07-01T00:00:00Z');
+      participantRepo.find.mockResolvedValue([
+        { id: 1, user: { firstName: 'Ada', lastName: 'Lovelace' }, team: { name: 'Les Furieux' } },
+      ]);
+      gameEventRepo.find.mockResolvedValue([{ id: 100, createdAt }]);
+
+      const journal = await service.getJournal(1, 7, 42);
+
+      expect(journal).toEqual([
+        {
+          eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)',
+          userName: 'Ada Lovelace', teamName: 'Les Furieux', createdAt,
+        },
+      ]);
+    });
+
+    it('lève NotFound si l\'appelant n\'est pas participant VALIDATED', async () => {
+      participantRepo.findOne.mockResolvedValue(null);
+      await expect(service.getJournal(1, 7, 42)).rejects.toThrow('introuvable');
     });
   });
 

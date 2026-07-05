@@ -196,6 +196,37 @@ avec les autres lacunes déjà documentées de ce module, ex. séquelles).
 
 ---
 
+## Journal d'une partie
+
+Pour toute partie en statut `ATELIER` ou `JOUE`, un bouton "📜 Journal"
+(`GameList`) ouvre une modale listant **tous** les événements journalisés sur
+cette partie — classement, exploits, table des épaves, atelier (achats/
+reventes, séquelles), contact Résistance — traduits en une ligne de texte
+lisible (`GameEvent.describe()`). Accessible à **tout participant `VALIDATED`**
+de la campagne, même absent de cette partie précise — cohérent avec le
+Programme Télé déjà visible par tous.
+
+**Organisation** : groupé par participant, dans l'ordre d'apparition (le
+participant dont le premier événement chronologique vient en premier). À
+l'intérieur d'un groupe, les événements restent triés chronologiquement.
+
+**Contact Résistance inclus** : l'événement `ResistanceContactedEvent`
+apparaît dans le journal. La mécanique elle-même n'est pas secrète — seul le
+**total cumulé** de Points de Résistance d'un joueur doit rester caché (cf.
+[Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03)
+et `standings()`, qui continue de l'exclure). Voir un contact ponctuel dans le
+journal ne révèle pas ce total.
+
+`Campaign.gameJournal(gameId)` (agrégat) transforme le journal brut d'une
+partie en `{ eventId, participantId, description }[]`, dans l'ordre déjà
+garanti par `Game.events` (trié par `eventOrder`) — c'est l'agrégat, pas la
+couche lecture, qui sait traduire ses événements en texte. `CampaignQueryService.
+getJournal` enrichit ensuite ce résultat avec `userName`/`teamName` (jointure
+user/team) et `createdAt` (résolu depuis `GameEventOrm`, l'horodatage n'existant
+pas sur le domaine `GameEvent`).
+
+---
+
 ## Cycle de vie d'une partie et phase Atelier
 
 Une partie (`Game`) traverse trois statuts : `PLANIFIE → ATELIER → JOUE`. Il
@@ -423,6 +454,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) |
 | POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
 | POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
+| GET | `/api/campaigns/:id/games/:gameId/journal` | JWT | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie) |
 
 > Ce sont ces trois routes (`/results`, `/participant-vehicles`, `/enter-atelier`) — plus
 > `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) — que consomme le frontend

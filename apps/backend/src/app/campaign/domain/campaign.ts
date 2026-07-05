@@ -11,6 +11,19 @@ import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
 import { ResistanceContactedEvent } from './events/resistance-contacted.event';
 import { WeightClass, EXPLOIT_POINTS_BY_WEIGHT } from './enums/weight-class.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
+import { WreckResolvedEvent } from './events/wreck-resolved.event';
+import { WeaponLostEvent } from './events/weapon-lost.event';
+import { ImprovementLostEvent } from './events/improvement-lost.event';
+import { SequellaAddedEvent } from './events/sequella-added.event';
+import { VehicleLostEvent } from './events/vehicle-lost.event';
+import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event';
+import { WreckResult } from './enums/wreck-result.enum';
+import type { WreckOutcome } from './wreck/wreck-outcome';
+import { EquipmentChangedEvent } from './events/equipment-changed.event';
+import type { EquipmentOperation, EquipmentEntityType } from './events/equipment-changed.event';
+import type { VehicleType } from '../../team/domain/value-objects/vehicle-type';
+import type { WeaponType } from '../../team/domain/value-objects/weapon-type';
+import type { Orientation } from '../../team/domain/team';
 
 export interface StandingsEntry {
   participantId: number;
@@ -43,8 +56,38 @@ export interface RecordResultOutcome {
   events: GameEvent[];
 }
 
+/** Une ligne du journal d'une partie — événement traduit en texte lisible. */
+export interface GameJournalEntry {
+  eventId: number;
+  participantId: number;
+  description: string;
+}
+
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
 const POINTS_TABLE = [10, 5, 2, 1];
+
+/** +5 PC — Table des Épaves, ligne 9 (Favori du public), effet différé confirmé ligne 10+. */
+const FAVORI_DU_PUBLIC_BONUS_POINTS = 5;
+
+/** Résultat structurel d'une résolution de la Table des Épaves : événements à journaliser. */
+export interface WreckResolveOutcome {
+  events: GameEvent[];
+}
+
+/** Commande d'achat/revente d'équipement en atelier — VO catalogue déjà résolus par le use case. */
+export interface ChangeEquipmentInput {
+  operation: EquipmentOperation;
+  entityType: EquipmentEntityType;
+  /** Nom interne du catalogue — requis pour BUY, optionnel pour SELL. */
+  nomInterne: string;
+  /** Véhicule hôte — requis pour BUY_WEAPON, SELL_WEAPON ; id de la cible pour SELL_VEHICLE. */
+  targetVehicleId?: number | null;
+  /** Id de l'entité à vendre — requis pour SELL. */
+  targetEntityId?: number | null;
+  orientation?: Orientation | null;
+  resolvedVehicleType: VehicleType | null;
+  resolvedWeaponType: WeaponType | null;
+}
 
 /**
  * Agrégat racine du domaine campagne.
@@ -155,6 +198,18 @@ export class Campaign {
         championshipPoints: p.championshipPoints,
         wallet: p.wallet,
       }));
+  }
+
+  // ── Journal ──────────────────────────────────────────────────────────────────
+
+  /** Journal complet d'une partie — chaque événement traduit en texte lisible. */
+  gameJournal(gameId: number): GameJournalEntry[] {
+    const game = this.findGame(gameId);
+    return game.events.map((e) => ({
+      eventId: e.id,
+      participantId: e.participantId,
+      description: e.describe(),
+    }));
   }
 
   // ── Commandes CRUD — campagne ────────────────────────────────────────────────
@@ -357,6 +412,73 @@ export class Campaign {
     return { events };
   }
 
+  /**
+   * Interprète les 9 lignes de la Table des Épaves (Gaslands, p.170) : chocs, perte
+   * d'équipement (ARRACHEE), séquelle (SIEGE_IRRECUPERABLE) ou perte du véhicule
+   * (VEHICULE_DETRUIT). Ne connaît PAS la Faveur du Public — c'est une règle
+   * indépendante, cf. `creditFavoriDuPublicBonus()`. Les événements créés portent
+   * id=0 ; le use case les persiste via appendEvents.
+   */
+  resolveWreck(gameId: number, participantId: number, outcome: WreckOutcome): WreckResolveOutcome {
+    const game = this.findGame(gameId);
+    const events: GameEvent[] = [];
+
+    const wreckEvent = new WreckResolvedEvent(
+      0, gameId, participantId, 0,
+      outcome.vehicleId, outcome.diceRoll, outcome.chocsBefore,
+      outcome.wreckResult, outcome.chocsGained,
+    );
+    game.addEvent(wreckEvent);
+    events.push(wreckEvent);
+
+    if (outcome.wreckResult === WreckResult.ARRACHEE && outcome.weaponLostId !== null) {
+      const weaponLostEvent = new WeaponLostEvent(0, gameId, participantId, 0, outcome.weaponLostId);
+      game.addEvent(weaponLostEvent);
+      events.push(weaponLostEvent);
+    }
+
+    if (outcome.wreckResult === WreckResult.ARRACHEE && outcome.improvementLostId !== null) {
+      const improvementLostEvent = new ImprovementLostEvent(0, gameId, participantId, 0, outcome.improvementLostId);
+      game.addEvent(improvementLostEvent);
+      events.push(improvementLostEvent);
+    }
+
+    if (outcome.wreckResult === WreckResult.SIEGE_IRRECUPERABLE) {
+      const sequellaEvent = new SequellaAddedEvent(0, gameId, participantId, 0, outcome.vehicleId, 'siege_irrecuperable', 0);
+      game.addEvent(sequellaEvent);
+      events.push(sequellaEvent);
+    }
+
+    if (outcome.wreckResult === WreckResult.VEHICULE_DETRUIT) {
+      const vehicleLostEvent = new VehicleLostEvent(0, gameId, participantId, 0, outcome.vehicleId);
+      game.addEvent(vehicleLostEvent);
+      events.push(vehicleLostEvent);
+    }
+
+    return { events };
+  }
+
+  /**
+   * Règle indépendante du tirage de la Table des Épaves : crédite +5 PC au
+   * propriétaire d'un véhicule attesté "Favori du public" (par l'organisateur,
+   * lors d'une partie précédente) lorsque ce véhicule vient d'être détruit.
+   * `vehicleWasDestroyed` est un fait déjà établi par l'appelant (résultat de
+   * `resolveWreck` ci-dessus) — cette méthode ne réinterprète pas la table, elle
+   * applique une règle séparée sur ce fait.
+   */
+  creditFavoriDuPublicBonus(
+    gameId: number,
+    participantId: number,
+    vehicleId: number,
+    vehicleWasDestroyed: boolean,
+  ): GameEvent | null {
+    if (!vehicleWasDestroyed) return null;
+    const game = this.findGame(gameId);
+    const bonusEvent = new FavoriDuPublicBonusEvent(0, gameId, participantId, 0, vehicleId, FAVORI_DU_PUBLIC_BONUS_POINTS);
+    game.addEvent(bonusEvent);
+    return bonusEvent;
+  }
+
   // ── Cycle de vie des parties (event sourcing) ────────────────────────────────
 
   /**
@@ -392,6 +514,54 @@ export class Campaign {
       throw new DomainException("Cette partie n'est pas en atelier.");
     }
     game.closeAtelier();
+  }
+
+  /**
+   * Achat ou revente d'équipement en atelier (D1-D3). Localise lui-même l'unique
+   * partie en ATELIER (un seul atelier actif à la fois par campagne — l'appelant
+   * n'a pas à le préciser), calcule le coût selon opération × type d'entité, et
+   * vérifie la cagnotte (BUY uniquement — la revente crédite toujours).
+   *
+   * Ne fait PAS `event.execute()` (D-S11) : l'id de l'entité transiente créée par
+   * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
+   * persiste l'événement puis recharge via replay, qui l'applique avec son vrai id.
+   */
+  changeEquipment(participantId: number, cmd: ChangeEquipmentInput): WreckResolveOutcome {
+    const game = this._games.find((g) => g.status === GameStatus.ATELIER);
+    if (!game) {
+      throw new DomainException('Aucun atelier ouvert actuellement.');
+    }
+
+    const me = this.findParticipant(participantId);
+
+    let cost: number;
+    if (cmd.operation === 'BUY') {
+      const resolved = cmd.entityType === 'VEHICLE' ? cmd.resolvedVehicleType : cmd.resolvedWeaponType;
+      if (!resolved) {
+        const label = cmd.entityType === 'VEHICLE' ? 'Véhicule' : 'Arme';
+        throw new DomainException(`${label} inconnu(e) du catalogue : "${cmd.nomInterne}".`);
+      }
+      cost = resolved.price;
+    } else if (cmd.entityType === 'VEHICLE') {
+      cost = me.team.findVehicle(cmd.targetEntityId!).type.price;
+    } else {
+      const vehicle = me.team.findVehicle(cmd.targetVehicleId!);
+      const weapon = vehicle.weapons.find((w) => w.id === cmd.targetEntityId);
+      if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
+      cost = weapon.type.price;
+    }
+
+    const event = new EquipmentChangedEvent(
+      0, game.id, me.id, 0,
+      cmd.operation, cmd.entityType, cmd.nomInterne, cost,
+      cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, cmd.orientation ?? null,
+      cmd.resolvedVehicleType, cmd.resolvedWeaponType,
+    );
+
+    if (cmd.operation === 'BUY') me.assertCanAfford(cost);
+    game.addEvent(event);
+
+    return { events: [event] };
   }
 
   /**
