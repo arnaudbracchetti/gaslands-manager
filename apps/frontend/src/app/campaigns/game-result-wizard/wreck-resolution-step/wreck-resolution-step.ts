@@ -1,0 +1,121 @@
+/**
+ * Composant WreckResolutionStep — écran 3 du wizard de fin de partie : synthèse
+ * automatique de la Table des Épaves pour chaque véhicule désigné à l'écran 2.
+ *
+ * Composant "dumb" : aucun appel HTTP ici (convention du projet, cf. COMPONENTS.md).
+ * Le tirage D6 est entièrement serveur et entièrement automatique — aucun bouton,
+ * aucun sélecteur. `GameResultWizard` (parent) déclenche un tirage par véhicule via
+ * un `effect()` dès l'arrivée sur cet écran ; ce composant se contente d'afficher,
+ * pour chaque véhicule, un indicateur "en cours" tant qu'aucun résultat n'est reçu,
+ * puis la synthèse des événements survenus (`outcome` + `descriptions`) une fois
+ * reçue via les inputs `outcomes`/`descriptions`, alimentés par le parent en retour
+ * de `CampaignsService.resolveWreck()`.
+ */
+import { Component, computed, input, output } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import type {
+  WreckOutcomeDto,
+  WreckResult,
+  WreckedVehicleEntry,
+} from '../../game.model';
+
+@Component({
+  selector: 'app-wreck-resolution-step',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './wreck-resolution-step.html',
+  styleUrl: './wreck-resolution-step.scss',
+})
+export class WreckResolutionStep {
+  // ── Inputs ──────────────────────────────────────────────────────────────────
+
+  /** Véhicules désignés à l'écran 2 — un bloc de synthèse par entrée. */
+  wreckedVehicles = input.required<WreckedVehicleEntry[]>();
+
+  /** Libellé affiché par véhicule (nom + équipe), résolu par le parent. */
+  vehicleLabels = input<ReadonlyMap<number, string>>(new Map());
+
+  /** Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent. */
+  destroyedBy = input<ReadonlyMap<number, string>>(new Map());
+
+  /** Résultats reçus, clé = vehicleId — alimenté par le parent après chaque tirage. */
+  outcomes = input<ReadonlyMap<number, WreckOutcomeDto>>(new Map());
+
+  /** Lignes de texte décrivant les événements de chaque tirage, clé = vehicleId. */
+  descriptions = input<ReadonlyMap<number, string[]>>(new Map());
+
+  /** Vrai pendant que la finalisation (clic "Terminer") est en cours. */
+  finalizing = input<boolean>(false);
+
+  // ── Outputs ─────────────────────────────────────────────────────────────────
+
+  completed = output<void>();
+
+  // ── Calculs ──────────────────────────────────────────────────────────────────
+
+  /** Vrai quand tous les véhicules désignés ont un résultat. */
+  allResolved = computed<boolean>(() =>
+    this.wreckedVehicles().every((v) => this.outcomes().has(v.vehicleId)),
+  );
+
+  // ── Méthodes publiques ───────────────────────────────────────────────────────
+
+  vehicleLabel(vehicleId: number): string {
+    return this.vehicleLabels().get(vehicleId) ?? `Véhicule #${vehicleId}`;
+  }
+
+  destroyerLabel(vehicleId: number): string | null {
+    return this.destroyedBy().get(vehicleId) ?? null;
+  }
+
+  outcomeFor(vehicleId: number): WreckOutcomeDto | undefined {
+    return this.outcomes().get(vehicleId);
+  }
+
+  descriptionsFor(vehicleId: number): string[] {
+    return this.descriptions().get(vehicleId) ?? [];
+  }
+
+  /** Libellé français d'une ligne de la Table des Épaves. */
+  resultLabel(result: WreckResult): string {
+    switch (result) {
+      case 'DEBOSSELE': return 'Débosselé !';
+      case 'INDEMNE': return 'S\'en sort indemne';
+      case 'ROUE_CABOSSEE': return 'Passage de roue cabossé';
+      case 'ARRACHEE': return 'Arrachée';
+      case 'PIGNON_ENDOMMAGE': return 'Pignon endommagé';
+      case 'SIEGE_IRRECUPERABLE': return 'Siège irrécupérable';
+      case 'CHASSIS_FRAGILISE': return 'Châssis fragilisé';
+      case 'FAVORI_DU_PUBLIC': return 'Favori du public';
+      case 'VEHICULE_DETRUIT': return 'Véhicule détruit, pilote mort';
+    }
+  }
+
+  /** Rappel textuel pour les lignes sans effet numérique interprété par le moteur. */
+  reminderFor(result: WreckResult): string | null {
+    switch (result) {
+      case 'CHASSIS_FRAGILISE':
+        return '+1 Jeton Danger si ce véhicule est impliqué dans une Collision.';
+      case 'FAVORI_DU_PUBLIC':
+        return 'Cochez « Favori du public » à la prochaine désignation de ce véhicule '
+          + 'si le tirage suivant le détruit — +5 PC seront alors crédités.';
+      case 'PIGNON_ENDOMMAGE':
+        return 'Perte d\'une amélioration au hasard — non implémenté (aucune amélioration perdue).';
+      default:
+        return null;
+    }
+  }
+
+  /** Libellé de l'équipement perdu (ligne ARRACHEE), s'il y en a un. */
+  lostEquipmentLabel(outcome: WreckOutcomeDto): string | null {
+    if (!outcome.lostEquipment) return null;
+    return outcome.lostEquipment.kind === 'weapon'
+      ? `Arme #${outcome.lostEquipment.id} perdue`
+      : `Amélioration #${outcome.lostEquipment.id} perdue`;
+  }
+
+  onComplete(): void {
+    if (!this.allResolved()) return;
+    this.completed.emit();
+  }
+}

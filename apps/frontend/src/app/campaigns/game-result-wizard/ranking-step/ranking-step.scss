@@ -1,55 +1,9 @@
-@use '../../shared/styles/breakpoints' as bp;
+@use '../../../shared/styles/breakpoints' as bp;
 
-.grf-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--clr-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-
-  @include bp.mobile {
-    align-items: flex-end;
-  }
-}
-
-.grf-modal {
-  background: var(--tb-bitume-2);
-  border: 2px solid var(--border-rust);
-  border-radius: var(--r-sm);
-  padding: 24px;
-  width: min(560px, 92vw);
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-stamp-lg);
-
+.rst {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-
-  @include bp.mobile {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    max-width: none;
-    max-height: 92vh;
-    padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    border-radius: var(--r-sm) var(--r-sm) 0 0;
-  }
-
-  &__title {
-    font-family: var(--font-display);
-    color: var(--tb-os);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 1.05rem;
-    font-weight: 400;
-    margin: 0;
-  }
 
   &__hint {
     font-family: var(--font-mono);
@@ -96,17 +50,13 @@
 
   &__item {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.75rem;
     padding: 0.6rem 1rem;
     background: var(--tb-bitume-2);
     border: 1px solid var(--tb-metal-2);
     border-radius: var(--r-sm);
-
-    &--column {
-      flex-direction: column;
-      align-items: stretch;
-    }
   }
 
   &__item-row {
@@ -120,8 +70,6 @@
     }
   }
 
-  // Desktop : simple regroupement transparent, main+meta restent des enfants
-  // directs de la ligne flex (rendu identique à un seul niveau de flex).
   &__item-row-content {
     display: contents;
 
@@ -142,48 +90,21 @@
     gap: 0.75rem;
   }
 
-  @include bp.mobile {
-    &__item-row-main {
-      justify-content: flex-start;
-    }
-
-    &__item-row-meta {
-      justify-content: flex-start;
-    }
-  }
-
-  &__exploits {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--tb-metal-2);
-    font-family: var(--font-text);
-    font-size: 0.85rem;
-    color: var(--tb-os);
-  }
-
   &__exploit-field {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
     width: 100%;
-
-    > span {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--tb-metal-2);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 
     input[type='number'] {
       width: 6rem;
-
-      @include bp.mobile {
-        width: 100%;
-      }
-
       background: var(--tb-bitume);
       border: 1px solid var(--border-rust);
       color: var(--tb-os);
@@ -191,7 +112,12 @@
       border-radius: var(--r-sm);
       font-family: var(--font-text);
       font-size: 0.9rem;
-      transition: border-color 160ms;
+      text-transform: none;
+      letter-spacing: normal;
+
+      @include bp.mobile {
+        width: 100%;
+      }
 
       &:focus {
         outline: none;
@@ -203,80 +129,6 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
-    }
-  }
-
-  &__destroyed-picker {
-    display: flex;
-    gap: 0.5rem;
-
-    @include bp.mobile {
-      flex-direction: column;
-    }
-
-    select {
-      flex: 1;
-      min-width: 0;
-      background: var(--tb-bitume);
-      border: 1px solid var(--border-rust);
-      color: var(--tb-os);
-      padding: 8px 12px;
-      border-radius: var(--r-sm);
-      font-family: var(--font-text);
-      font-size: 0.85rem;
-      transition: border-color 160ms;
-
-      &:focus {
-        outline: none;
-        border-color: var(--tb-danger);
-        box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.15);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-  }
-
-  &__add-destroyed {
-    flex-shrink: 0;
-    width: auto;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-
-    @include bp.mobile {
-      width: 100%;
-    }
-  }
-
-  &__destroyed-list {
-    list-style: none;
-    padding: 0;
-    margin: 0.4rem 0 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  &__destroyed-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    background: var(--tb-bitume-4);
-    border-radius: var(--r-sm);
-    padding: 0.2rem 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-
-    button {
-      background: transparent;
-      border: none;
-      color: var(--tb-danger);
-      cursor: pointer;
-      padding: 0;
-      font-size: 0.75rem;
     }
   }
 
@@ -343,10 +195,6 @@
     flex-direction: column;
     gap: 2px;
 
-    // Mobile : le bloc ▲/▼ s'étire sur toute la hauteur des 2 lignes
-    // (main + meta) grâce à align-items:stretch du parent — chaque bouton
-    // se partage cette hauteur via flex:1, sans imposer sa propre taille
-    // qui forcerait les 2 lignes de texte à s'écarter.
     @include bp.mobile {
       align-self: stretch;
       gap: 3px;
@@ -395,12 +243,6 @@
     }
 
     @include bp.mobile {
-      position: sticky;
-      bottom: 0;
-      background: var(--tb-bitume-2);
-      padding-top: 12px;
-      margin-top: -4px;
-
       button {
         flex: 1;
       }

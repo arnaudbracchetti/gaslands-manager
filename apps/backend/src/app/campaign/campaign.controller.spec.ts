@@ -95,7 +95,7 @@ describe('CampaignController (câblage)', () => {
     expect(result).toEqual({ id: 7, status: 'JOUE' });
   });
 
-  it('recordResult exécute le use case puis retourne la partie JOUE', async () => {
+  it('recordResult exécute le use case puis recompose via query.getGame (ne finalise plus la partie elle-même)', async () => {
     const result = await controller.recordResult(req as never, 1, 7, { results: [{ participantId: 1, rank: 1 }] });
     expect(recordResultUseCase.execute).toHaveBeenCalledWith({
       campaignId: 1, gameId: 7, userId: 42, results: [{ participantId: 1, rank: 1 }],

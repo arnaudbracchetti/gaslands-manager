@@ -31,4 +31,9 @@ describe('VehicleDestroyedEvent — execute / undo', () => {
     const event = new VehicleDestroyedEvent(1, 10, 999, 1, 1, WeightClass.MOYEN, 2);
     expect(() => event.execute(participants)).toThrow('introuvable');
   });
+
+  it('describe() résume le poids et les PC gagnés', () => {
+    const event = new VehicleDestroyedEvent(1, 10, 1, 1, 999, WeightClass.LOURD, 3);
+    expect(event.describe()).toBe('Véhicule ennemi détruit (LOURD) (+3 PC)');
+  });
 });

@@ -5,8 +5,10 @@
 import { Team } from '../../team/domain/team';
 import { Vehicle } from '../../team/domain/vehicle';
 import { Weapon } from '../../team/domain/weapon';
+import { Improvement } from '../../team/domain/improvement';
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
+import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 import { CampaignParticipant } from './campaign-participant';
 
 export function makeVehicleType(): VehicleType {
@@ -25,25 +27,34 @@ export function makeWeaponType(): WeaponType {
   });
 }
 
+export function makeImprovementType(): ImprovementType {
+  return ImprovementType.from({
+    nom: 'Blindage', nom_interne: 'blindage',
+    prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
+  });
+}
+
 export interface TestContext {
   team: Team;
   vehicle: Vehicle;
   weapon: Weapon;
+  improvement: Improvement;
   participant: CampaignParticipant;
   participants: CampaignParticipant[];
 }
 
 /**
- * Construit un participant avec une équipe, un véhicule et une arme attachés.
- * La cagnotte initiale du participant est 50 (cans de l'équipe).
+ * Construit un participant avec une équipe, un véhicule, une arme et une amélioration
+ * attachés. La cagnotte initiale du participant est 50 (cans de l'équipe).
  */
 export function makeTestParticipant(participantId = 1): TestContext {
   const weapon = new Weapon(10, makeWeaponType(), 'avant');
-  const vehicle = new Vehicle(1, 1, makeVehicleType(), [weapon], []);
+  const improvement = new Improvement(20, makeImprovementType(), null, false);
+  const vehicle = new Vehicle(1, 1, makeVehicleType(), [weapon], [improvement]);
   const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
 
   const participant = new CampaignParticipant(participantId, 42, 1, false);
   participant.attachTeam(team);
 
-  return { team, vehicle, weapon, participant, participants: [participant] };
+  return { team, vehicle, weapon, improvement, participant, participants: [participant] };
 }

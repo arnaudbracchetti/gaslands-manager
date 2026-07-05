@@ -27,8 +27,9 @@
 | Mode campagne — Résultats & classement (rang, PC de classement 10/5/2/1) | ✅ Implémenté (US-B1/B3/C1) |
 | Mode campagne — Exploits de partie (portes franchies, véhicules ennemis détruits) | ✅ Implémenté (US-B2) |
 | Mode campagne — Atelier (cagnotte, achat/revente d'équipement) | 🟡 Partiel — logique backend seule, aucune UI, plusieurs gardes métier absentes (US-D1–D4, cf. cartes kanban) |
-| Mode campagne — Table des Épaves (D6 serveur, chocs, pertes) | 🟡 Partiel — tirage D6 et chocs dérivés corrects ; table de résultats simplifiée à 3 issues, séquelles spéciales absentes (US-E1–E4) |
-| Mode campagne — Points de Résistance (mécanique secrète) | 🟡 Partiel — condition d'éligibilité (0 PC) non vérifiée, aucune lecture possible par le joueur lui-même (US-F1) |
+| Mode campagne — Table des Épaves (D6 serveur, 9 lignes, pertes aléatoires) | ✅ Implémenté (US-E1–E3) — 🟡 séquelles spéciales absentes (Maintenu par la Rouille, Légende Vivante) |
+| Mode campagne — Points de Résistance (mécanique secrète) | 🟡 Partiel — crédit automatique implémenté (US-F1), aucune lecture possible par le joueur lui-même |
+| Mode campagne — Wizard de fin de partie (classement → épaves → Table des Épaves) | ✅ Implémenté — remplace l'ancienne modale unique |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
 | Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |

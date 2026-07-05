@@ -9,6 +9,7 @@ import { EscarmoucheGame } from './games/escarmouche-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
+import { ResistanceContactedEvent } from './events/resistance-contacted.event';
 import { WeightClass, EXPLOIT_POINTS_BY_WEIGHT } from './enums/weight-class.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 
@@ -38,10 +39,9 @@ export interface RankingInput {
   destroyedVehicles?: DestroyedVehicleInput[];
 }
 
-/** Résultat structurel d'un recordResult : événements à journaliser + atelier ouvert. */
+/** Résultat structurel d'un recordResult : événements à journaliser. */
 export interface RecordResultOutcome {
   events: GameEvent[];
-  newAtelier: AtelierGame;
 }
 
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
@@ -289,10 +289,14 @@ export class Campaign {
 
   /**
    * Enregistre le résultat d'une partie : calcule les PC, journalise un
-   * RankingAssignedEvent par participant, puis finalise la partie (JOUE + atelier).
+   * RankingAssignedEvent par participant (+ exploits/résistance). Ne finalise
+   * PAS la partie — celle-ci reste PLANIFIE tant que le wizard de fin de partie
+   * n'est pas entièrement terminé (écran 3, résolution de la Table des Épaves),
+   * pour que les événements de cet écran restent acceptés par `Game.addEvent`
+   * (garde de statut). La finalisation (PLANIFIE → JOUE + atelier) est une
+   * action explicite et séparée, cf. `finalizeGame()`.
    *
-   * Les événements créés portent id=0 ; le use case les persiste via appendEvents,
-   * et persiste la finalisation via saveCampaign(campaign, newAtelier).
+   * Les événements créés portent id=0 ; le use case les persiste via appendEvents.
    */
   recordResult(gameId: number, rankings: RankingInput[]): RecordResultOutcome {
     const game = this.findGame(gameId);
@@ -325,6 +329,15 @@ export class Campaign {
       game.addEvent(rankingEvent);  // valide canAccept
       events.push(rankingEvent);
 
+      // Points de Résistance automatiques (US-F1) : tout participant non classé (hors du
+      // top `classified`) reçoit +3 PR secrets, même s'il a marqué des PC d'exploit —
+      // aucune saisie manuelle, l'organisateur n'a pas d'écran dédié pour cette étape.
+      if (r.rank > classified) {
+        const resistanceEvent = new ResistanceContactedEvent(0, game.id, r.participantId, 0);
+        game.addEvent(resistanceEvent);
+        events.push(resistanceEvent);
+      }
+
       // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
       // PC figés à l'écriture (D-S8), comme pour le classement.
       if (r.gatesCrossed && r.gatesCrossed > 0) {
@@ -342,8 +355,7 @@ export class Campaign {
       }
     }
 
-    const newAtelier = this.finalizeGame(gameId);
-    return { events, newAtelier };
+    return { events };
   }
 
   // ── Cycle de vie des parties (event sourcing) ────────────────────────────────

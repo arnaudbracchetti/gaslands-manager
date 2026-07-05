@@ -142,7 +142,10 @@ graph TD
         CampaignProgram["CampaignProgram (smart)"]
         GameList
         GameForm
-        GameResultForm
+        GameResultWizard
+        RankingStep
+        WreckDesignationStep
+        WreckResolutionStep
     end
 
     subgraph Admin
@@ -182,8 +185,11 @@ graph TD
     CampaignDetail --> CampaignProgram
     CampaignProgram --> GameList
     CampaignProgram --> GameForm
-    CampaignProgram --> GameResultForm
+    CampaignProgram --> GameResultWizard
     CampaignProgram --> ConfirmModal
+    GameResultWizard --> RankingStep
+    GameResultWizard --> WreckDesignationStep
+    GameResultWizard --> WreckResolutionStep
     AdminUsers --> ConfirmModal
 ```
 
@@ -853,7 +859,7 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 | **Sélecteur** | `app-campaign-program` |
 | **Type** | Smart |
 | **Services** | `CampaignsService` |
-| **Compose** | `GameList`, `GameForm`, `GameResultForm`, `ConfirmModal` |
+| **Compose** | `GameList`, `GameForm`, `GameResultWizard`, `ConfirmModal` |
 
 **Inputs**
 
@@ -926,14 +932,15 @@ Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type
 
 ---
 
-### `GameResultForm` — `campaigns/game-result-form/`
+### `GameResultWizard` — `campaigns/game-result-wizard/`
 
-Formulaire d'enregistrement des résultats d'une partie (rangs, PC) et des exploits (US-B2 — portes franchies, véhicules ennemis détruits par poids). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`.
+Orchestrateur du wizard de fin de partie (remplace l'ancienne modale unique `GameResultForm`) — 3 écrans séquentiels : classement (`RankingStep`) → désignation des épaves (`WreckDesignationStep`) → résolution de la Table des Épaves (`WreckResolutionStep`). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`. Document de conception : [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md).
 
 | | |
 |---|---|
-| **Sélecteur** | `app-game-result-form` |
+| **Sélecteur** | `app-game-result-wizard` |
 | **Type** | Dumb |
+| **Compose** | `RankingStep`, `WreckDesignationStep`, `WreckResolutionStep` |
 
 **Inputs**
 
@@ -941,18 +948,113 @@ Formulaire d'enregistrement des résultats d'une partie (rangs, PC) et des explo
 |-----|------|--------|-------------|
 | `game` | `Game` | — | Partie dont on saisit le résultat |
 | `participants` | `CampaignParticipant[]` | — | Participants `VALIDATED` de la campagne |
-| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
-| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour le picker "véhicules détruits" — peuplé par le parent |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant `recordResult()` |
+| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour l'écran 2 |
+| `resultRecorded` | `Game \| null` | `null` | Non-null une fois `recordResult()` résolu — fait avancer le wizard vers l'écran 3 (`effect()`). La partie reste `PLANIFIE` à ce stade — la finalisation JOUE n'a lieu qu'à `wizardCompleted` |
+| `wreckOutcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats de tirage reçus, clé = `vehicleId` |
+| `wreckDescriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`), clé = `vehicleId` |
+| `rollingWreck` | `boolean` | `false` | Verrou "un tirage à la fois" — consommé par l'`effect()` de déclenchement automatique de l'écran 3, plus par aucun bouton (il n'y en a plus) |
+| `finalizingGame` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `finalizeGame()` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `saved` | `RecordResultDto` | Classement + exploits validés |
-| `formCancel` | `void` | Annulation |
-| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement — le parent recharge `participantVehicles` en réponse |
+| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement (écran 1) — le parent recharge `participantVehicles` en réponse |
+| `rankingSubmitted` | `RecordResultDto` | Classement + exploits validés, émis à la transition écran 2 → 3 |
+| `wreckRollRequested` | `WreckResolveRequestDto` | Demande de tirage automatique, un véhicule à la fois (écran 3) — émis par un `effect()` interne, plus par un clic utilisateur |
+| `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran 3, "Terminer") — le parent appelle `finalizeGame()` à ce signal, **c'est le seul moment où la partie passe JOUE** |
+| `formCancel` | `void` | Annulation (uniquement possible avant la soumission du classement) |
 
-Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : le picker "véhicules détruits" a besoin du roster des autres participants présents, mais ce roster est chargé par `CampaignProgram` (smart) en réponse à `presentParticipantsChanged`, pas par ce composant.
+Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `resolveWreck()` et `finalizeGame()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran 2) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]".
+
+---
+
+### `RankingStep` — `campaigns/game-result-wizard/ranking-step/`
+
+Écran 1 du wizard : présence, ordre par glisser-déposer (CDK), portes franchies (exploit, US-B2). Inchangé dans son fonctionnement par rapport à l'ancien `GameResultForm`, simplement extrait en sous-composant dédié.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-ranking-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `game` | `Game` | — | Fournit le type (barème PC) et le scénario |
+| `participants` | `CampaignParticipant[]` | — | Source de la liste de présence |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `RankingEntry[]` | Classement + portes franchies, une fois l'étape validée |
+| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement |
+| `formCancel` | `void` | Annulation |
+
+---
+
+### `WreckDesignationStep` — `campaigns/game-result-wizard/wreck-designation-step/`
+
+Écran 2 du wizard : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul) et si un bonus "Favori du public" est en attente. C'est ici que se fait désormais la saisie "véhicules ennemis détruits" (US-B2), auparavant sur l'écran de classement.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-wreck-designation-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `presentParticipants` | `CampaignParticipant[]` | — | Participants retenus à l'écran 1 |
+| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant présent |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant `recordResult()` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `WreckDesignationResult` | `{ destroyedVehicles, wreckedVehicles }` — le premier alimente `RecordResultDto` (PC d'exploit), le second pilote l'écran 3 |
+| `back` | `void` | Retour à l'écran 1 (rien n'est encore persisté) |
+| `formCancel` | `void` | Annulation |
+
+---
+
+### `WreckResolutionStep` — `campaigns/game-result-wizard/wreck-resolution-step/`
+
+Écran 3 du wizard : **synthèse automatique**, sans bouton ni sélecteur. Les tirages D6
+sont déclenchés par `GameResultWizard` (un `effect()`, un véhicule à la fois) dès
+l'arrivée sur cet écran ; ce composant se contente d'afficher, pour chaque véhicule
+désigné à l'écran 2, un indicateur "en cours" puis le résultat reçu (Chocs, perte
+d'équipement, lignes `descriptions`, "Détruit par [participant]" le cas échéant).
+"Terminer" n'est actif que lorsque tous les véhicules ont un résultat ; son clic
+déclenche la finalisation de la partie côté parent (`finalizeGame()`).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-wreck-resolution-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `wreckedVehicles` | `WreckedVehicleEntry[]` | — | Véhicules désignés à l'écran 2 |
+| `vehicleLabels` | `ReadonlyMap<number, string>` | `new Map()` | Libellé "nom (équipe)" par véhicule, résolu par le parent |
+| `destroyedBy` | `ReadonlyMap<number, string>` | `new Map()` | Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent |
+| `outcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats reçus, clé = `vehicleId` |
+| `descriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`) |
+| `finalizing` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `finalizeGame()` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `completed` | `void` | Clic sur "Terminer" (uniquement si tous les véhicules ont un résultat) |
 
 ---
 

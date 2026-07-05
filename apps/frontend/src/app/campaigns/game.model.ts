@@ -73,6 +73,17 @@ export interface DestroyedVehicleDto {
   weightClass: WeightClass;
 }
 
+/**
+ * Classement d'un participant saisi à l'écran 1 du wizard de fin de partie —
+ * état purement client, avant fusion avec les épaves infligées (écran 2) pour
+ * former le `RecordResultDto` final.
+ */
+export interface RankingEntry {
+  participantId: number;
+  rank: number;
+  gatesCrossed?: number;
+}
+
 /** Corps de la requête POST /api/campaigns/:id/games/:gameId/results */
 export interface RecordResultDto {
   results: {
@@ -99,4 +110,77 @@ export interface ParticipantVehicleDto {
 export interface ParticipantVehiclesDto {
   participantId: number;
   vehicles: ParticipantVehicleDto[];
+}
+
+/**
+ * Résultat d'un tirage sur la Table des Épaves (9 lignes) — miroir de WreckResult
+ * (backend). Toute perte d'équipement est tirée au hasard côté serveur — jamais un
+ * choix de l'utilisateur.
+ */
+export type WreckResult =
+  | 'DEBOSSELE'
+  | 'INDEMNE'
+  | 'ROUE_CABOSSEE'
+  | 'ARRACHEE'
+  | 'PIGNON_ENDOMMAGE'
+  | 'SIEGE_IRRECUPERABLE'
+  | 'CHASSIS_FRAGILISE'
+  | 'FAVORI_DU_PUBLIC'
+  | 'VEHICULE_DETRUIT';
+
+/** Équipement perdu à la ligne ARRACHEE — miroir de LostEquipment (backend). */
+export interface LostEquipmentDto {
+  kind: 'weapon' | 'improvement';
+  id: number;
+}
+
+/** Corps de la requête POST /api/campaigns/:id/games/:gameId/events/wreck */
+export interface WreckResolveRequestDto {
+  participantId: number;
+  vehicleId: number;
+  /** Attestation manuelle : ce véhicule porte déjà un bonus "Favori du public" en attente. */
+  pendingFavoriDuPublic?: boolean;
+}
+
+/** Snapshot du tirage — miroir de WreckOutcome (backend). */
+export interface WreckOutcomeDto {
+  vehicleId: number;
+  diceRoll: number;
+  chocsBefore: number;
+  wreckResult: WreckResult;
+  chocsGained: number;
+  lostEquipment: LostEquipmentDto | null;
+}
+
+export interface WreckResolveResultDto {
+  outcome: WreckOutcomeDto;
+  /** Une ligne de texte par événement créé par ce tirage (cf. `GameEvent.describe()` backend). */
+  descriptions: string[];
+}
+
+/** Résultat de POST .../finalize — miroir de FinalizeGameResult (backend). */
+export interface FinalizeGameResultDto {
+  newAtelierId: number;
+  newAtelierOrder: number;
+}
+
+/**
+ * Désignation d'un véhicule mis en épave (écran 2 du wizard de fin de partie) —
+ * état purement client, ne correspond à aucun contrat backend direct : les entrées
+ * avec un vrai destructeur alimentent `destroyedVehicles` (RecordResultDto), la
+ * liste complète pilote l'écran 3 (résolution de la Table des Épaves).
+ */
+export interface WreckedVehicleEntry {
+  /** Propriétaire du véhicule mis en épave. */
+  participantId: number;
+  vehicleId: number;
+  pendingFavoriDuPublic: boolean;
+}
+
+/** Résultat de l'écran 2 (désignation des épaves), transmis à l'orchestrateur du wizard. */
+export interface WreckDesignationResult {
+  /** Uniquement les entrées avec un vrai destructeur — alimente RecordResultDto. */
+  destroyedVehicles: Map<number, DestroyedVehicleDto[]>;
+  /** Toutes les désignations (détruit par X ou seul) — pilote l'écran 3. */
+  wreckedVehicles: WreckedVehicleEntry[];
 }

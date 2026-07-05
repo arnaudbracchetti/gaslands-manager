@@ -3,10 +3,12 @@ import {
   MoteurEndommageDecorator,
   DirectionEndommageDecorator,
   BlindageArrachéDecorator,
+  SiegeIrrecuperableDecorator,
   SEQUELLA_REGISTRY,
   SEQUELLA_MOTEUR_ENDOMMAGE,
   SEQUELLA_DIRECTION_ENDOMMAGE,
   SEQUELLA_BLINDAGE_ARRACHE,
+  SEQUELLA_SIEGE_IRRECUPERABLE,
 } from './sequella-decorators';
 import { CatalogVehicleBuild } from './vehicle-build';
 import type { Vehicule } from '../../catalog/catalog.interfaces';
@@ -92,11 +94,30 @@ describe('BlindageArrachéDecorator', () => {
   });
 });
 
+describe('SiegeIrrecuperableDecorator', () => {
+  it('réduit equipage de 1', () => {
+    const base = new CatalogVehicleBuild(makeVehicule({ equipage: 2 }));
+    const decorated = new SiegeIrrecuperableDecorator(base);
+    expect(decorated.stats.equipage).toBe(1);
+  });
+
+  it('ne descend pas sous 1', () => {
+    const base = new CatalogVehicleBuild(makeVehicule({ equipage: 1 }));
+    const decorated = new SiegeIrrecuperableDecorator(base);
+    expect(decorated.stats.equipage).toBe(1);
+  });
+
+  it('coût en Chocs de 0 — imposé par la Table des Épaves, jamais acheté en Atelier', () => {
+    expect(SEQUELLA_SIEGE_IRRECUPERABLE.chocsCost).toBe(0);
+  });
+});
+
 describe('SEQUELLA_REGISTRY', () => {
-  it('contient les 3 entrées', () => {
+  it('contient les 4 entrées', () => {
     expect(SEQUELLA_REGISTRY.has('moteur_endommage')).toBe(true);
     expect(SEQUELLA_REGISTRY.has('direction_endommage')).toBe(true);
     expect(SEQUELLA_REGISTRY.has('blindage_arrache')).toBe(true);
+    expect(SEQUELLA_REGISTRY.has('siege_irrecuperable')).toBe(true);
   });
 
   it('chaque entrée expose le SequellaType correspondant', () => {

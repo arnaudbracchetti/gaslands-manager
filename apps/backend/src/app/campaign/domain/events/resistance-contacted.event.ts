@@ -24,4 +24,8 @@ export class ResistanceContactedEvent extends GameEvent {
   undo(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).addResistance(-ResistanceContactedEvent.PR_BONUS);
   }
+
+  describe(): string {
+    return `Contact avec la Résistance (+${ResistanceContactedEvent.PR_BONUS} PR, secret)`;
+  }
 }

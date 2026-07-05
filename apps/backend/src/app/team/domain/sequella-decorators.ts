@@ -78,6 +78,18 @@ export const SEQUELLA_BLINDAGE_ARRACHE = SequellaType.from({
   chocs_cost: 3,
 });
 
+/**
+ * Imposée par la Table des Épaves (ligne 7, `SIEGE_IRRECUPERABLE`), jamais achetée en
+ * Atelier — `WreckResolveUseCase` construit toujours son `SequellaAddedEvent` avec un
+ * coût de 0 (le tirage l'impose gratuitement, contrairement à un échange volontaire).
+ */
+export const SEQUELLA_SIEGE_IRRECUPERABLE = SequellaType.from({
+  nom: 'Siège irrécupérable',
+  nom_interne: 'siege_irrecuperable',
+  description: "Valeur d'Équipage réduite de 1 (minimum 1).",
+  chocs_cost: 0,
+});
+
 // ── Décorateurs concrets ──────────────────────────────────────────────────────
 
 /** Moteur endommagé : vitesse maximale réduite de 1. */
@@ -116,6 +128,18 @@ export class BlindageArrachéDecorator extends SequellaDecorator {
   }
 }
 
+/** Siège irrécupérable : Équipage réduit de 1 (minimum 1). */
+export class SiegeIrrecuperableDecorator extends SequellaDecorator {
+  constructor(inner: VehicleBuild) {
+    super(inner, SEQUELLA_SIEGE_IRRECUPERABLE);
+  }
+
+  override get stats(): VehicleStats {
+    const s = this.inner.stats;
+    return { ...s, equipage: Math.max(1, s.equipage - 1) };
+  }
+}
+
 // ── Registre ──────────────────────────────────────────────────────────────────
 
 export type SequellaFactory = (inner: VehicleBuild) => SequellaDecorator;
@@ -132,4 +156,5 @@ export const SEQUELLA_REGISTRY = new Map<string, { type: SequellaType; factory: 
   ['moteur_endommage', { type: SEQUELLA_MOTEUR_ENDOMMAGE, factory: (inner) => new MoteurEndommageDecorator(inner) }],
   ['direction_endommage', { type: SEQUELLA_DIRECTION_ENDOMMAGE, factory: (inner) => new DirectionEndommageDecorator(inner) }],
   ['blindage_arrache', { type: SEQUELLA_BLINDAGE_ARRACHE, factory: (inner) => new BlindageArrachéDecorator(inner) }],
+  ['siege_irrecuperable', { type: SEQUELLA_SIEGE_IRRECUPERABLE, factory: (inner) => new SiegeIrrecuperableDecorator(inner) }],
 ]);

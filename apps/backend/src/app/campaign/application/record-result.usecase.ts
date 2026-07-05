@@ -25,9 +25,12 @@ export interface RecordResultCommand {
  * Enregistre le résultat d'une partie (organisateur, partie PLANIFIE).
  *
  * Convergence event-sourcing : l'agrégat crée un `RankingAssignedEvent` par
- * participant (PC calculés selon le type de partie) puis finalise la partie
- * (PLANIFIE → JOUE) et ouvre un AtelierGame intercalé. On persiste les
- * événements (`appendEvents`) puis la transition structurelle (`saveCampaign`).
+ * participant (PC calculés selon le type de partie), plus les événements
+ * d'exploits/résistance. Ne finalise PAS la partie (pas de transition JOUE ni
+ * d'ouverture d'atelier) — la partie reste PLANIFIE pour que la suite du
+ * wizard de fin de partie (résolution de la Table des Épaves) puisse encore y
+ * journaliser des événements. La finalisation est déclenchée séparément par
+ * `FinalizeGameUseCase`, à la toute fin du wizard.
  */
 export class RecordResultUseCase {
   constructor(
@@ -59,7 +62,6 @@ export class RecordResultUseCase {
     }
 
     await this.campaignRepo.appendEvents(cmd.gameId, outcome.events);
-    await this.campaignRepo.saveCampaign(campaign, outcome.newAtelier);
   }
 
   private parseWeightClass(value: string): WeightClass {

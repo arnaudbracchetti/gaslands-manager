@@ -28,4 +28,8 @@ export class GatesCrossedEvent extends GameEvent {
   undo(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
+
+  describe(): string {
+    return `${this.gatesCrossed} porte(s) franchie(s) (+${this.championshipPoints} PC)`;
+  }
 }

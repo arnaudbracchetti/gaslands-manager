@@ -42,4 +42,8 @@ export class SequellaAddedEvent extends GameEvent {
     vehicle.removeLastSequella();
     vehicle.addChocs(this.chocsCost);
   }
+
+  describe(): string {
+    return `Séquelle acquise : ${this.sequellaTypeNom} (-${this.chocsCost} chocs)`;
+  }
 }

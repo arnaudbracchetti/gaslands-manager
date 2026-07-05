@@ -1,0 +1,62 @@
+<!-- Écran 3 du wizard de fin de partie : synthèse automatique de la Table des Épaves -->
+<div class="wrs">
+  <p class="wrs__hint">
+    Résolution automatique — le serveur lance le D6 et tire l'équipement perdu le cas
+    échéant pour chaque véhicule mis en épave. Aucune action requise.
+  </p>
+
+  <ul class="wrs__list">
+    @for (entry of wreckedVehicles(); track entry.vehicleId) {
+      @let outcome = outcomeFor(entry.vehicleId);
+      <li class="wrs__item">
+        <div class="wrs__item-header">
+          <span class="wrs__vehicle-name">{{ vehicleLabel(entry.vehicleId) }}</span>
+          @if (destroyerLabel(entry.vehicleId); as destroyer) {
+            <span class="wrs__destroyer-badge">💥 Détruit par {{ destroyer }}</span>
+          }
+          @if (entry.pendingFavoriDuPublic) {
+            <span class="wrs__favori-badge">⭐ Favori du public en attente</span>
+          }
+        </div>
+
+        @if (!outcome) {
+          <p class="wrs__pending">🎲 Résolution en cours…</p>
+        } @else {
+          <div class="wrs__outcome" [class.wrs__outcome--destroyed]="outcome.wreckResult === 'VEHICULE_DETRUIT'">
+            <span class="wrs__outcome-roll">D6 = {{ outcome.diceRoll }} + {{ outcome.chocsBefore }} chocs</span>
+            <span class="wrs__outcome-result">{{ resultLabel(outcome.wreckResult) }}</span>
+            @if (outcome.chocsGained !== 0) {
+              <span class="wrs__outcome-chocs" [class.wrs__outcome-chocs--negative]="outcome.chocsGained < 0">
+                {{ outcome.chocsGained > 0 ? '+' : '' }}{{ outcome.chocsGained }} choc(s)
+              </span>
+            }
+            @if (lostEquipmentLabel(outcome); as lost) {
+              <span class="wrs__outcome-lost">{{ lost }}</span>
+            }
+            @if (reminderFor(outcome.wreckResult); as reminder) {
+              <p class="wrs__outcome-reminder">{{ reminder }}</p>
+            }
+            @if (descriptionsFor(entry.vehicleId); as descriptions) {
+              <ul class="wrs__outcome-events">
+                @for (line of descriptions; track line) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  <div class="wrs__actions">
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="!allResolved() || finalizing()"
+      (click)="onComplete()"
+    >
+      {{ finalizing() ? 'Finalisation…' : 'Terminer' }}
+    </button>
+  </div>
+</div>

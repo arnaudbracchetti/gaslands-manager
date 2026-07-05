@@ -1,0 +1,34 @@
+import { GameEvent } from './game-event';
+import type { CampaignParticipant } from '../campaign-participant';
+
+/**
+ * Une amélioration est détruite pendant la campagne (Table des Épaves, ligne ARRACHEE).
+ * Pose un flag transient sur l'amélioration — emplacement libéré (improvement.slots → 0).
+ * Le coût de l'amélioration n'est pas remboursé (price inchangé). Mirroir exact de
+ * `WeaponLostEvent`.
+ */
+export class ImprovementLostEvent extends GameEvent {
+  constructor(
+    id: number,
+    gameId: number,
+    participantId: number,
+    eventOrder: number,
+    readonly improvementId: number,
+  ) {
+    super(id, gameId, participantId, eventOrder);
+  }
+
+  execute(participants: CampaignParticipant[]): void {
+    const p = this.findParticipant(participants);
+    p.team.findImprovement(this.improvementId).markLost();
+  }
+
+  undo(participants: CampaignParticipant[]): void {
+    const p = this.findParticipant(participants);
+    p.team.findImprovement(this.improvementId).clearLost();
+  }
+
+  describe(): string {
+    return 'Amélioration perdue';
+  }
+}

@@ -343,19 +343,20 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
         number rank "nullable"
-        number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed"
+        number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
         string walletReason "nullable — RECOMPENSE|ACHAT|REVENTE"
         number vehicleId "nullable"
         number weaponId "nullable"
+        number improvementId "nullable — ImprovementLostEvent"
         number gatesCrossed "nullable — GatesCrossedEvent (US-B2)"
         string weightClass "nullable — VehicleDestroyedEvent : LEGER|MOYEN|LOURD|FORTERESSE (US-B2)"
         number diceRoll "nullable — WreckResolved"
         number chocsBefore "nullable"
-        string wreckResult "nullable — CHOCS_GAGNE|ARME_PERDUE|EPAVE"
-        number chocsGained "nullable"
+        string wreckResult "nullable — DEBOSSELE|INDEMNE|ROUE_CABOSSEE|ARRACHEE|PIGNON_ENDOMMAGE|SIEGE_IRRECUPERABLE|CHASSIS_FRAGILISE|FAVORI_DU_PUBLIC|VEHICULE_DETRUIT"
+        number chocsGained "nullable — peut être négatif (ligne DEBOSSELE)"
         string sequellaTypeNom "nullable"
         number chocsCost "nullable"
         string operation "nullable — BUY|SELL"
@@ -448,6 +449,7 @@ classDiagram
         +eventOrder : number
         +execute(participants) void
         +undo(participants) void
+        +describe() string
     }
 
     class WreckOutcome {
@@ -457,9 +459,10 @@ classDiagram
         +chocsBefore : number
         +wreckResult : WreckResult
         +chocsGained : number
-        +weaponLostId : number|null
+        +lostEquipment : LostEquipment|null
         +vehicleIsLost : boolean
-        +weaponIsLost : boolean
+        +weaponLostId : number|null
+        +improvementLostId : number|null
     }
 
     Campaign "1" *-- "0..*" CampaignParticipant
@@ -473,7 +476,7 @@ classDiagram
 
 | Classe | Type | Statuts | Événements acceptés |
 |--------|------|---------|---------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed |
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus |
 | `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) |
 | `AtelierGame` | `ATELIER` | `OUVERT → CLOTURE` | EquipmentChanged, SequellaAdded |
 
@@ -481,18 +484,27 @@ Un `AtelierGame` est intercalé automatiquement après chaque finalisation de pa
 
 ### Hiérarchie GameEvent (Command)
 
+Chaque `GameEvent` implémente aussi `describe(): string` — une ligne de texte en
+français résumant l'événement (ex. `"Classé 1 (+10 PC)"`,
+`"Table des Épaves : Arrachée (D6=5+0 chocs, +1 choc(s))"`). Utilisée par la
+synthèse de l'écran 3 du wizard de fin de partie (cf.
+[`docs/spec/CAMPAIGN.md`](spec/CAMPAIGN.md#wizard-de-fin-de-partie)) : `WreckResolveUseCase`
+renvoie `descriptions: string[]` (une par événement créé par un tirage).
+
 | Événement | Effet `execute()` | `undo()` |
 |-----------|-----------------|---------|
 | `RankingAssignedEvent` | `participant.addPoints(+PC)` | `addPoints(-PC)` |
 | `WalletMovementEvent` | `participant.creditWallet(amount)` | `creditWallet(-amount)` |
 | `VehicleLostEvent` | `vehicle.markLost()` | `vehicle.clearLost()` |
 | `WeaponLostEvent` | `weapon.markLost()` | `weapon.clearLost()` |
-| `WreckResolvedEvent` | `vehicle.addChocs(+n)` | `vehicle.addChocs(-n)` |
+| `ImprovementLostEvent` | `improvement.markLost()` (mirroir `WeaponLostEvent`) | `improvement.clearLost()` |
+| `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) | `vehicle.addChocs(-n)` |
 | `SequellaAddedEvent` | `vehicle.addChocs(-cost)` + `addSequella` | `removeLastSequella` + `addChocs(+cost)` |
 | `EquipmentChangedEvent` | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon` ; SELL : inverse | Inverse de execute |
 | `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
+| `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` — effet différé confirmé par attestation manuelle de l'organisateur (aucun état mémorisé automatiquement d'une partie à l'autre) | `addPoints(-5)` |
 
 ### Entités transientes (D-S11)
 

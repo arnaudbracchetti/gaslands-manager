@@ -6,6 +6,7 @@ import { AtelierGame } from './games/atelier-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
+import { ResistanceContactedEvent } from './events/resistance-contacted.event';
 import { GameStatus } from './enums/game-status.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 import { WeightClass } from './enums/weight-class.enum';
@@ -334,23 +335,52 @@ describe('Campaign — addGame / updateGame / removeGame', () => {
 });
 
 describe('Campaign — recordResult', () => {
-  it('crée un RankingAssignedEvent par participant et finalise la partie', () => {
+  it('crée un RankingAssignedEvent par participant sans finaliser la partie', () => {
     const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
     const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
     const campaign = makeCampaign([p1, p2], [game]);
 
-    const { events, newAtelier } = campaign.recordResult(10, [
+    const { events } = campaign.recordResult(10, [
       { participantId: 1, rank: 1 },
       { participantId: 2, rank: 2 },
     ]);
 
-    expect(events).toHaveLength(2);
-    expect(game.status).toBe(GameStatus.JOUE);
-    expect(newAtelier.status).toBe(GameStatus.OUVERT);
+    // 2 RankingAssignedEvent + 1 ResistanceContactedEvent automatique (p2 non classé).
+    expect(events).toHaveLength(3);
+    // La partie reste PLANIFIE — la finalisation (JOUE + atelier) n'a lieu qu'à la
+    // fin complète du wizard, via un appel explicite à finalizeGame().
+    expect(game.status).toBe(GameStatus.PLANIFIE);
     // EVENEMENT_TELE, classified = ceil(2/2) = 1 → rang 1 = 10 PC, rang 2 = 0.
-    expect(events.find((e) => e.participantId === 1)?.championshipPoints).toBe(10);
-    expect(events.find((e) => e.participantId === 2)?.championshipPoints).toBe(0);
+    const rankingEvents = events.filter((e) => e instanceof RankingAssignedEvent) as RankingAssignedEvent[];
+    expect(rankingEvents.find((e) => e.participantId === 1)?.championshipPoints).toBe(10);
+    expect(rankingEvents.find((e) => e.participantId === 2)?.championshipPoints).toBe(0);
+  });
+
+  it('crédite automatiquement +3 PR au participant non classé, même sans exploit', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1, p2], [game]);
+
+    const { events } = campaign.recordResult(10, [
+      { participantId: 1, rank: 1 },
+      { participantId: 2, rank: 2 },
+    ]);
+
+    const resistanceEvents = events.filter((e) => e instanceof ResistanceContactedEvent);
+    expect(resistanceEvents).toHaveLength(1);
+    expect(resistanceEvents[0].participantId).toBe(2);
+  });
+
+  it('ne crédite aucune PR automatique quand tout le monde est classé', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+
+    const { events } = campaign.recordResult(10, [{ participantId: 1, rank: 1 }]);
+
+    expect(events.some((e) => e instanceof ResistanceContactedEvent)).toBe(false);
   });
 
   it('refuse des rangs non consécutifs', () => {

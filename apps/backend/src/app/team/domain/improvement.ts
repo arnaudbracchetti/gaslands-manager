@@ -12,6 +12,7 @@ import type { Orientation } from './team';
  */
 export class Improvement {
   private _weaponAssignee: WeaponType | null = null;
+  private _isLost = false;
 
   constructor(
     readonly id: number,
@@ -32,9 +33,32 @@ export class Improvement {
     return this.type.price;
   }
 
+  /**
+   * Emplacements occupés par cette amélioration.
+   * Retourne 0 si l'amélioration est perdue (Table des Épaves, ligne ARRACHEE) — même
+   * raisonnement que `Weapon.slots` : l'emplacement est libéré, le coût n'est pas remboursé.
+   */
   get slots(): number {
-    if (this.estDefaut) return 0;
+    if (this.estDefaut || this._isLost) return 0;
     return this.type.slots;
+  }
+
+  get isLost(): boolean {
+    return this._isLost;
+  }
+
+  /** Idempotent : marquer une amélioration déjà perdue n'a pas d'effet supplémentaire. */
+  markLost(): void {
+    this._isLost = true;
+  }
+
+  clearLost(): void {
+    this._isLost = false;
+  }
+
+  /** Remet l'état campagne à zéro — appelé par Vehicle/Team.clearCampaignState() au début du replay. */
+  clearCampaignState(): void {
+    this._isLost = false;
   }
 
   assignWeapon(weaponType: WeaponType): void {

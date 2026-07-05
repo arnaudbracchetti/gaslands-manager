@@ -25,4 +25,9 @@ export class WalletMovementEvent extends GameEvent {
   undo(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).creditWallet(-this.amount);
   }
+
+  describe(): string {
+    const sign = this.amount >= 0 ? '+' : '';
+    return `${sign}${this.amount} jerricans (${this.reason})`;
+  }
 }

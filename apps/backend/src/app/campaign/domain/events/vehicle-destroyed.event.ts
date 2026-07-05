@@ -32,4 +32,8 @@ export class VehicleDestroyedEvent extends GameEvent {
   undo(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
+
+  describe(): string {
+    return `Véhicule ennemi détruit (${this.weightClass}) (+${this.championshipPoints} PC)`;
+  }
 }

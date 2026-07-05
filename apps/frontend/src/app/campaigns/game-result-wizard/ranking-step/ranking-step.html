@@ -1,0 +1,101 @@
+<!-- Écran 1 du wizard de fin de partie : classement + portes franchies -->
+<div class="rst">
+  <p class="rst__hint">Cochez les équipes présentes à la partie :</p>
+  <div class="rst__participants">
+    @for (participant of participants(); track participant.id) {
+      <label class="rst__participant-row">
+        <input
+          type="checkbox"
+          [checked]="isPresent(participant)"
+          (change)="togglePresent(participant)"
+          [disabled]="saving()"
+        />
+        <span>{{ participant.teamName }}</span>
+        <span class="rst__user">({{ participant.userName }})</span>
+      </label>
+    }
+  </div>
+
+  @if (presentParticipants().length > 0) {
+    <div class="rst__ranking">
+      <p class="rst__hint">
+        Glissez la poignée ⠿ ou utilisez les flèches pour réordonner -
+        {{ classifiedCount() }} équipe(s) classée(s) sur {{ presentParticipants().length }}
+      </p>
+      <ol
+        cdkDropList
+        [cdkDropListData]="presentParticipants()"
+        (cdkDropListDropped)="drop($event)"
+        class="rst__list"
+      >
+        @for (participant of presentParticipants(); track participant.id; let i = $index; let last = $last) {
+          @let points = pointsForRank(i + 1);
+          <li cdkDrag class="rst__item">
+            <div class="rst__item-row">
+              <div class="rst__item-row-content">
+                <div class="rst__item-row-main">
+                  <span class="rst__handle" cdkDragHandle aria-hidden="true">⠿</span>
+                  <span class="rst__rank">{{ i + 1 }}</span>
+                  <span class="rst__team">{{ participant.teamName }}</span>
+                </div>
+                <div class="rst__item-row-meta">
+                  @if (isClassified(i)) {
+                    <span class="rst__badge rst__badge--classified">classé</span>
+                  } @else {
+                    <span class="rst__badge rst__badge--unclassified">non classé</span>
+                  }
+                  @if (game().type === 'EVENEMENT_TELE') {
+                    <span class="rst__points" [class.rst__points--zero]="points === 0">
+                      {{ points }} pts
+                    </span>
+                  }
+                </div>
+              </div>
+              <span class="rst__reorder">
+                <button
+                  type="button"
+                  class="rst__move"
+                  [disabled]="i === 0 || saving()"
+                  (click)="moveUp(i)"
+                  aria-label="Monter {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                >▲</button>
+                <button
+                  type="button"
+                  class="rst__move"
+                  [disabled]="last || saving()"
+                  (click)="moveDown(i)"
+                  aria-label="Descendre {{ participant.teamName }} ({{ participant.userName }}) d'un rang"
+                >▼</button>
+              </span>
+            </div>
+
+            <label class="rst__exploit-field">
+              Portes franchies
+              <input
+                type="number"
+                min="0"
+                [value]="gatesCrossedFor(participant.id)"
+                (change)="setGatesCrossed(participant.id, $any($event.target).value)"
+                [disabled]="saving()"
+              />
+            </label>
+          </li>
+        }
+      </ol>
+    </div>
+  }
+
+  <div class="rst__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button
+      type="submit"
+      class="btn-primary"
+      [disabled]="presentParticipants().length === 0 || saving()"
+      (click)="onNext()"
+    >
+      Suivant — désigner les épaves
+    </button>
+  </div>
+</div>

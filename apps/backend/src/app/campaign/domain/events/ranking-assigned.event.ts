@@ -26,4 +26,8 @@ export class RankingAssignedEvent extends GameEvent {
   undo(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
+
+  describe(): string {
+    return `Classé ${this.rank} (+${this.championshipPoints} PC)`;
+  }
 }

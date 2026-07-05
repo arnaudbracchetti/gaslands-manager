@@ -32,4 +32,9 @@ describe('GatesCrossedEvent — execute / undo', () => {
     const event = new GatesCrossedEvent(1, 10, 999, 1, 3, 3);
     expect(() => event.execute(participants)).toThrow('introuvable');
   });
+
+  it('describe() résume les portes franchies et les PC', () => {
+    const event = new GatesCrossedEvent(1, 10, 1, 1, 3, 3);
+    expect(event.describe()).toBe('3 porte(s) franchie(s) (+3 PC)');
+  });
 });

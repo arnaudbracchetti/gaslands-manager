@@ -136,6 +136,65 @@ du journal** : `Campaign.standings()` ne change pas, elle lit déjà
 
 ---
 
+## Wizard de fin de partie
+
+L'enregistrement du résultat d'une partie (`EN_COURS`) est un **wizard à 3
+écrans séquentiels** (`GameResultWizard`, remplace l'ancienne modale unique),
+document de conception : [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md).
+
+1. **Classement** (`RankingStep`) — inchangé : présence, ordre par
+   glisser-déposer, portes franchies (US-B2).
+2. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
+   des équipes présentes : *Intact* / *Détruit par [participant]* / *Mis en
+   épave seul*, plus une case "Favori du public (partie précédente)". C'est ici
+   (et non plus à l'écran classement) que le picker "véhicules ennemis
+   détruits" de l'US-B2 est saisi — le contrat backend (`destroyedVehicles`
+   dans `RecordResultDto`) est inchangé, seul son point d'entrée UI a bougé.
+   Cet écran soumet aussi le classement (`POST .../results`) : les événements
+   de classement/exploits/résistance (US-F1) sont journalisés à cette étape,
+   **mais la partie reste `PLANIFIE`** — voir ci-dessous.
+3. **Résolution de la Table des Épaves** (`WreckResolutionStep`) — **synthèse
+   automatique**, sans aucun bouton ni sélecteur : dès l'arrivée sur cet écran,
+   un tirage D6 serveur est déclenché automatiquement pour chaque véhicule
+   désigné à l'écran 2 (`POST .../events/wreck`), un par un. Pour chaque
+   véhicule, l'écran affiche le résultat (Chocs, perte d'équipement, etc.) dès
+   qu'il est reçu, plus la ligne "Détruit par [participant]" si applicable
+   (donnée capturée à l'écran 2). Si un véhicule est confirmé "Favori du
+   public" et que le tirage donne `VEHICULE_DETRUIT`, +5 PC sont crédités à son
+   propriétaire (`FavoriDuPublicBonusEvent`). Le bouton "Terminer" (actif une
+   fois tous les tirages reçus) appelle `POST .../finalize` — **c'est à ce
+   moment, et seulement à ce moment, que la partie passe `PLANIFIE → JOUE`**
+   et qu'un `AtelierGame` est ouvert.
+
+**Pourquoi la finalisation est déplacée en fin de wizard** : marquer la partie
+`JOUE` dès l'écran 2 rendait l'écran 3 structurellement impossible — une fois
+JOUE, `Game.addEvent()` refuse tout nouvel événement (y compris les tirages de
+la Table des Épaves), et rien ne permettait de sortir du wizard bloqué. La
+finalisation est donc désormais une action explicite et séparée
+(`FinalizeGameUseCase`, endpoint déjà existant mais jusque-là non consommé par
+le frontend), déclenchée uniquement à la fin complète du wizard — cohérent
+avec l'intention du document de conception d'origine.
+
+Retour en arrière possible entre écrans 1 et 2 (rien n'est encore persisté) ;
+plus au-delà de l'écran 2 une fois le classement soumis avec succès (choix de
+conception conservé, l'écran 3 n'ayant plus d'action manuelle à annuler).
+
+**Description textuelle des événements** : chaque `GameEvent` expose une
+méthode `describe(): string` (une ligne de texte en français résumant
+l'événement — ex. `"Classé 1 (+10 PC)"`, `"Table des Épaves : Arrachée
+(D6=5+0 chocs, +1 choc(s))"`). `POST .../events/wreck` renvoie ces lignes
+(`descriptions: string[]`, une par événement généré par ce tirage) et
+`WreckResolutionStep` les affiche telles quelles sous chaque véhicule.
+
+**Limitation connue** : si l'utilisateur quitte le wizard (ou recharge la
+page) entre la soumission de l'écran 2 et le clic "Terminer" de l'écran 3, la
+partie reste `PLANIFIE` (par design) et réapparaît comme "à enregistrer" —
+mais rouvrir le wizard et resoumettre le classement créerait des événements
+`RankingAssignedEvent`/etc. en double (aucune garde d'idempotence, cohérent
+avec les autres lacunes déjà documentées de ce module, ex. séquelles).
+
+---
+
 ## Hors scope de l'itération actuelle
 
 Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
@@ -168,18 +227,25 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   manquantes : pas de vérification du sponsor à l'achat, pas de limite de 8
   véhicules ; la revente crédite le **prix plein** au lieu de la moitié arrondie à
   l'inférieur (bug, p.170 du livre de règles).
-- **Table des Épaves (US-E1–E4)** — le tirage D6 serveur et les Chocs dérivés sont
-  corrects, mais la table de résultats réelle est réduite à 3 issues génériques
-  (`CHOCS_GAGNE`/`ARME_PERDUE`/`EPAVE`) : pas de « Siège irrécupérable » (pas de
-  notion d'équipage mutable sur `Vehicle`), pas de « Véhicule détruit, pilote
-  mort » distinct (un véhicule perdu reste visible dans l'Atelier, seulement
-  flaggé `isLost`). Seules les armes peuvent être perdues, jamais les
-  améliorations. Les modificateurs de séquelle spéciaux (« Maintenu par la
-  Rouille » double lancer, « Légende Vivante » résultat forcé à 1) n'existent pas ;
-  aucune garde anti-doublon sur les séquelles.
-- **Points de Résistance (US-F1)** — le crédit de +3 PR fonctionne mais sans
-  vérifier que l'équipe n'a marqué aucun PC lors de la partie (condition
-  d'éligibilité absente de `ContactResistanceUseCase`). Le secret vis-à-vis des
+- **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
+  (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
+  `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
+  `VEHICULE_DETRUIT`), avec le tirage D6 serveur et les Chocs dérivés (cf.
+  [wizard de fin de partie](#wizard-de-fin-de-partie) ci-dessous). Toute perte
+  d'équipement (`ARRACHEE`) est tirée aléatoirement dans le pool armes +
+  améliorations montées (jamais un choix de l'organisateur), et peut désormais
+  cibler une amélioration (`ImprovementLostEvent`, mirroir de `WeaponLostEvent`),
+  pas seulement une arme. « Siège irrécupérable » réutilise le pattern Décorateur
+  existant (`SiegeIrrecuperableDecorator`, réduit l'Équipage). Restent hors
+  périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (TODO
+  explicite dans le code — nécessiterait de distinguer les deux lignes du livre),
+  les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double
+  lancer, « Légende Vivante » résultat forcé à 1), et toute garde anti-doublon
+  sur les séquelles.
+- **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
+  **automatique** : `Campaign.recordResult()` crédite tout participant hors du
+  top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
+  dédié — cohérent avec le secret de cette mécanique. Le secret vis-à-vis des
   autres joueurs est bien respecté, mais appliqué trop largement : un participant
   ne peut pas non plus lire **ses propres** Points de Résistance (aucun endpoint
   ne les expose, y compris au propriétaire).
@@ -299,20 +365,23 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId, weightClass }] }] }`, organisateur) → partie `JOUE` + atelier `OUVERT`. Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Campaign.recordResult` (convergence event-sourcing) |
+| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId, weightClass }] }] }`, organisateur) — **ne finalise plus la partie** (reste `PLANIFIE`, cf. §Wizard de fin de partie). Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Campaign.recordResult` (convergence event-sourcing) |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) |
+| POST | `/api/campaigns/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ newAtelierId, newAtelierOrder }` |
 
-> Ce sont ces deux routes `/results` (et non les endpoints `/events/*`) que consomme le
-> frontend Angular. Leur forme de réponse (`Game` pour le POST, `GameResult[]` pour le GET)
-> est **inchangée** malgré la bascule vers l'event-sourcing.
+> Ce sont ces trois routes (`/results`, `/participant-vehicles`, `/finalize`) — plus
+> `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) — que consomme le frontend
+> Angular pour le wizard de fin de partie. La forme de réponse de `/results` (`Game`,
+> statut désormais `PLANIFIE`) est inchangée malgré la bascule vers l'event-sourcing.
 
 ### Résultats et classement — endpoints event-sourcing (Partie 4)
 
 > Endpoints granulaires du système event-sourcing, **non consommés par le frontend**
-> (usage API direct) — **à l'exception de `GET .../standings`** (dernière ligne de la
-> table ci-dessous), qui alimente `ParticipantList` sur `/campaigns/:id` (cf.
-> [COMPONENTS.md](../COMPONENTS.md)).
+> (usage API direct) — à l'exception de `GET .../standings` (dernière ligne de la table
+> ci-dessous), qui alimente `ParticipantList` sur `/campaigns/:id` (cf.
+> [COMPONENTS.md](../COMPONENTS.md)). `POST .../finalize` (consommé par le frontend) est
+> listé dans le tableau précédent, avec les autres routes du wizard de fin de partie.
 > ⚠️ `events/ranking` accepte `championshipPoints` comme valeur numérique fournie par
 > l'appelant, **sans appliquer le barème 10/5/2/1** (contrairement à `POST .../results`,
 > qui le calcule via `Campaign.recordResult`) — un appelant direct de cette route peut
@@ -324,7 +393,6 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | POST | `/api/campaigns/:id/games/:gameId/events/wallet` | JWT | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204 |
 | POST | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | JWT | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
 | POST | `/api/campaigns/:id/games/:gameId/events/resistance` | JWT | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204 |
-| POST | `/api/campaigns/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) |
 | GET | `/api/campaigns/:id/standings` | JWT | Classement après replay complet (tout participant `VALIDATED`) |
 
 ### Atelier et épaves (Partie 5)
@@ -333,5 +401,5 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients, chocs, séquelles, wallet) |
 | POST | `/api/campaigns/:id/games/:gameId/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` dans un `AtelierGame OUVERT` — 204 |
-| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves — D6 serveur `{ participantId, vehicleId, weaponIdChoice? }` (organisateur) |
+| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
 | POST | `/api/campaigns/:id/games/:gameId/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` dans un `AtelierGame OUVERT` — 204 |

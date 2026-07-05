@@ -42,6 +42,8 @@ describe('CampaignProgram Component', () => {
     getParticipants: ReturnType<typeof vi.fn>;
     recordResult: ReturnType<typeof vi.fn>;
     getParticipantVehicles: ReturnType<typeof vi.fn>;
+    resolveWreck: ReturnType<typeof vi.fn>;
+    finalizeGame: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -52,10 +54,15 @@ describe('CampaignProgram Component', () => {
       updateGame: vi.fn().mockReturnValue(of(mockGame)),
       deleteGame: vi.fn().mockReturnValue(of(undefined)),
       getParticipants: vi.fn().mockReturnValue(of([])),
-      recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'JOUE' })),
+      recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'PLANIFIE' })),
       getParticipantVehicles: vi.fn().mockReturnValue(of([
         { participantId: 1, vehicles: [{ vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' }] },
       ])),
+      resolveWreck: vi.fn().mockReturnValue(of({
+        outcome: { vehicleId: 100, diceRoll: 3, chocsBefore: 0, wreckResult: 'INDEMNE', chocsGained: 0, lostEquipment: null },
+        descriptions: ['Table des Épaves : S\'en sort indemne (D6=3+0 chocs)'],
+      })),
+      finalizeGame: vi.fn().mockReturnValue(of({ newAtelierId: 99, newAtelierOrder: 1.5 })),
     };
 
     await TestBed.configureTestingModule({
@@ -164,11 +171,11 @@ describe('CampaignProgram Component', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('affiche GameResultForm en popup, sans masquer GameList', () => {
+  it('affiche GameResultWizard en popup, sans masquer GameList', () => {
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('app-game-result-form')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-game-result-wizard')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('app-game-list')).toBeTruthy();
   });
 
@@ -178,9 +185,9 @@ describe('CampaignProgram Component', () => {
     expect(component.recordingGame()).toEqual(game);
   });
 
-  it('onResultCancelled remet recordingGame à null', () => {
+  it('onWizardCancelled remet recordingGame à null', () => {
     component.recordingGame.set({ id: 1 } as any);
-    component.onResultCancelled();
+    component.onWizardCancelled();
     expect(component.recordingGame()).toBeNull();
   });
 
@@ -202,30 +209,76 @@ describe('CampaignProgram Component', () => {
     expect(component.participantVehicles().size).toBe(0);
   });
 
-  it('émet resultRecorded après l\'enregistrement réussi d\'un résultat', () => {
+  it('onRankingSubmitted enregistre le classement et alimente wizardResultRecorded (sans émettre resultRecorded)', () => {
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 
     let emittedCount = 0;
     outputToObservable(component.resultRecorded).subscribe(() => { emittedCount++; });
 
-    component.onResultSaved({ results: [] });
+    component.onRankingSubmitted({ results: [] });
 
     expect(mockService.recordResult).toHaveBeenCalledWith(1, 10, { results: [] });
-    expect(emittedCount).toBe(1);
+    expect(component.wizardResultRecorded()).toEqual({ ...mockGame, status: 'PLANIFIE' });
+    expect(emittedCount).toBe(0);
   });
 
-  it('n\'émet pas resultRecorded si l\'enregistrement du résultat échoue', () => {
+  it('n\'alimente pas wizardResultRecorded si l\'enregistrement du résultat échoue', () => {
     mockService.recordResult.mockReturnValue(throwError(() => new Error('boom')));
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 
+    component.onRankingSubmitted({ results: [] });
+
+    expect(component.wizardResultRecorded()).toBeNull();
+  });
+
+  it('onWreckRollRequested appelle resolveWreck et alimente wreckOutcomes/wreckDescriptions', () => {
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    component.onWreckRollRequested({ participantId: 1, vehicleId: 100, pendingFavoriDuPublic: false });
+
+    expect(mockService.resolveWreck).toHaveBeenCalledWith(1, 10, { participantId: 1, vehicleId: 100, pendingFavoriDuPublic: false });
+    expect(component.wreckOutcomes().get(100)).toMatchObject({ wreckResult: 'INDEMNE' });
+    expect(component.wreckDescriptions().get(100)).toEqual(['Table des Épaves : S\'en sort indemne (D6=3+0 chocs)']);
+  });
+
+  it('onWreckRollRequested affiche une erreur visible en cas d\'échec (au lieu de l\'avaler en silence)', () => {
+    mockService.resolveWreck.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    component.onWreckRollRequested({ participantId: 1, vehicleId: 100, pendingFavoriDuPublic: false });
+
+    expect(component.error()).not.toBe('');
+    expect(component.rollingWreck()).toBe(false);
+  });
+
+  it('onWizardCompleted finalise la partie puis émet resultRecorded et ferme le wizard', () => {
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
     let emittedCount = 0;
     outputToObservable(component.resultRecorded).subscribe(() => { emittedCount++; });
 
-    component.onResultSaved({ results: [] });
+    component.onWizardCompleted();
 
-    expect(emittedCount).toBe(0);
+    expect(mockService.finalizeGame).toHaveBeenCalledWith(1, 10);
+    expect(component.recordingGame()).toBeNull();
+    expect(emittedCount).toBe(1);
+  });
+
+  it('onWizardCompleted affiche une erreur et laisse le wizard ouvert si finalizeGame échoue', () => {
+    mockService.finalizeGame.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    component.onWizardCompleted();
+
+    expect(component.error()).not.toBe('');
+    expect(component.recordingGame()).toBe(mockGame);
+    expect(component.finalizingGame()).toBe(false);
   });
 
   it('anyModalOpen désactive les actions de GameList tant qu\'une pop-up est ouverte', () => {
@@ -238,7 +291,7 @@ describe('CampaignProgram Component', () => {
     const gameList = fixture.nativeElement.querySelector('app-game-list button');
     expect(gameList).toBeNull();
 
-    component.onResultCancelled();
+    component.onWizardCancelled();
     component.openCreate();
     fixture.detectChanges();
     expect(component.anyModalOpen()).toBe(true);

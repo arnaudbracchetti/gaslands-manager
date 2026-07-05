@@ -33,4 +33,24 @@ export class WreckResolvedEvent extends GameEvent {
     const p = this.findParticipant(participants);
     p.team.findVehicle(this.vehicleId).addChocs(-this.chocsGained);
   }
+
+  describe(): string {
+    const chocs = this.chocsGained !== 0
+      ? `, ${this.chocsGained > 0 ? '+' : ''}${this.chocsGained} choc(s)`
+      : '';
+    return `Table des Épaves : ${WRECK_RESULT_LABELS[this.wreckResult]} `
+      + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${chocs})`;
+  }
 }
+
+const WRECK_RESULT_LABELS: Record<WreckResult, string> = {
+  [WreckResult.DEBOSSELE]: 'Débosselé !',
+  [WreckResult.INDEMNE]: 'S\'en sort indemne',
+  [WreckResult.ROUE_CABOSSEE]: 'Passage de roue cabossé',
+  [WreckResult.ARRACHEE]: 'Arrachée',
+  [WreckResult.PIGNON_ENDOMMAGE]: 'Pignon endommagé',
+  [WreckResult.SIEGE_IRRECUPERABLE]: 'Siège irrécupérable',
+  [WreckResult.CHASSIS_FRAGILISE]: 'Châssis fragilisé',
+  [WreckResult.FAVORI_DU_PUBLIC]: 'Favori du public',
+  [WreckResult.VEHICULE_DETRUIT]: 'Véhicule détruit, pilote mort',
+};

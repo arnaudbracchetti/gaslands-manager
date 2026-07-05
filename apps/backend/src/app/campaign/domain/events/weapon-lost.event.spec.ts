@@ -26,4 +26,9 @@ describe('WeaponLostEvent — execute / undo', () => {
     event.undo(participants);
     expect(weapon.isLost).toBe(before);
   });
+
+  it('describe() décrit la perte de l\'arme', () => {
+    const event = new WeaponLostEvent(1, 10, 1, 1, 1);
+    expect(event.describe()).toBe('Arme perdue');
+  });
 });

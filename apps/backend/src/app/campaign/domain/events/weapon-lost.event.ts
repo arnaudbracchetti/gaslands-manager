@@ -26,4 +26,8 @@ export class WeaponLostEvent extends GameEvent {
     const p = this.findParticipant(participants);
     p.team.findWeapon(this.weaponId).clearLost();
   }
+
+  describe(): string {
+    return 'Arme perdue';
+  }
 }

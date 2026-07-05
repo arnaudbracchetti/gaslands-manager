@@ -24,13 +24,20 @@
   }
 
   @if (recordingGame()) {
-    <app-game-result-form
+    <app-game-result-wizard
       [game]="recordingGame()!"
       [participants]="participants()"
       [saving]="savingResult()"
       [participantVehicles]="participantVehicles()"
-      (saved)="onResultSaved($event)"
-      (formCancel)="onResultCancelled()"
+      [resultRecorded]="wizardResultRecorded()"
+      [wreckOutcomes]="wreckOutcomes()"
+      [wreckDescriptions]="wreckDescriptions()"
+      [rollingWreck]="rollingWreck()"
+      [finalizingGame]="finalizingGame()"
+      (rankingSubmitted)="onRankingSubmitted($event)"
+      (wreckRollRequested)="onWreckRollRequested($event)"
+      (wizardCompleted)="onWizardCompleted()"
+      (formCancel)="onWizardCancelled()"
       (presentParticipantsChanged)="onPresentParticipantsChanged($event)" />
   }
 

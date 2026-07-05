@@ -28,4 +28,14 @@ describe('WalletMovementEvent — execute / undo', () => {
     event.undo(participants);
     expect(participant.wallet).toBe(before);
   });
+
+  it('describe() résume un gain', () => {
+    const event = new WalletMovementEvent(1, 10, 1, 1, 10, WalletReason.RECOMPENSE);
+    expect(event.describe()).toBe('+10 jerricans (RECOMPENSE)');
+  });
+
+  it('describe() résume une dépense', () => {
+    const event = new WalletMovementEvent(1, 10, 1, 1, -5, WalletReason.ACHAT);
+    expect(event.describe()).toBe('-5 jerricans (ACHAT)');
+  });
 });

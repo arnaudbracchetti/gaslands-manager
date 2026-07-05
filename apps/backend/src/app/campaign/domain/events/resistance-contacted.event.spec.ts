@@ -26,4 +26,9 @@ describe('ResistanceContactedEvent — execute / undo', () => {
     event.undo(participants);
     expect(participant.resistancePoints).toBe(before);
   });
+
+  it('describe() décrit le contact (secret)', () => {
+    const event = new ResistanceContactedEvent(1, 10, 1, 1);
+    expect(event.describe()).toBe('Contact avec la Résistance (+3 PR, secret)');
+  });
 });

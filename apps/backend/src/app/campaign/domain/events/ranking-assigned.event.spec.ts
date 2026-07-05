@@ -33,4 +33,9 @@ describe('RankingAssignedEvent — execute / undo', () => {
     const event = new RankingAssignedEvent(1, 10, 999, 1, 1, 5);
     expect(() => event.execute(participants)).toThrow('introuvable');
   });
+
+  it('describe() résume le classement et les PC', () => {
+    const event = new RankingAssignedEvent(1, 10, 1, 1, 2, 5);
+    expect(event.describe()).toBe('Classé 2 (+5 PC)');
+  });
 });

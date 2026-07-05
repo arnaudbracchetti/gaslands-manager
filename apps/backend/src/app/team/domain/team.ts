@@ -123,6 +123,19 @@ export class Team {
     throw new DomainException(`Arme #${weaponId} introuvable dans l'équipe`);
   }
 
+  /**
+   * Recherche une amélioration par son id dans tous les véhicules de l'équipe.
+   * Mirroir de `findWeapon` — nécessaire aux commandes d'événements campagne qui
+   * ciblent une amélioration directement (ex : ImprovementLostEvent).
+   */
+  findImprovement(improvementId: number): Improvement {
+    for (const vehicle of this._vehicles) {
+      const improvement = vehicle.improvements.find((i) => i.id === improvementId);
+      if (improvement) return improvement;
+    }
+    throw new DomainException(`Amélioration #${improvementId} introuvable dans l'équipe`);
+  }
+
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
 
   addWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: Orientation | null): void {
@@ -168,6 +181,9 @@ export class Team {
       vehicle.clearCampaignState();
       for (const weapon of vehicle.weapons) {
         weapon.clearCampaignState();
+      }
+      for (const improvement of vehicle.improvements) {
+        improvement.clearCampaignState();
       }
     }
   }

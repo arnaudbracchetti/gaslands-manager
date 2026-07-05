@@ -26,16 +26,21 @@ import { CampaignsService } from '../campaigns.service';
 import { CampaignState } from '../campaign.model';
 import type { CampaignParticipant } from '../campaign-participant.model';
 import { Game, Scenario, CreateGameDto } from '../game.model';
-import type { ParticipantVehiclesDto, RecordResultDto } from '../game.model';
+import type {
+  ParticipantVehiclesDto,
+  RecordResultDto,
+  WreckOutcomeDto,
+  WreckResolveRequestDto,
+} from '../game.model';
 import { GameList } from '../game-list/game-list';
 import { GameForm } from '../game-form/game-form';
-import { GameResultForm } from '../game-result-form/game-result-form';
+import { GameResultWizard } from '../game-result-wizard/game-result-wizard';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 
 @Component({
   selector: 'app-campaign-program',
   standalone: true,
-  imports: [GameList, GameForm, GameResultForm, ConfirmModal],
+  imports: [GameList, GameForm, GameResultWizard, ConfirmModal],
   templateUrl: './campaign-program.html',
   styleUrl: './campaign-program.scss',
 })
@@ -78,20 +83,32 @@ export class CampaignProgram implements OnInit {
   /** Partie en attente de confirmation de suppression (null = aucune). */
   pendingDeleteGame: WritableSignal<Game | null> = signal<Game | null>(null);
 
-  /** Partie dont on saisit le résultat (null = formulaire de résultat fermé). */
+  /** Partie dont on saisit le résultat (null = wizard fermé). */
   recordingGame: WritableSignal<Game | null> = signal<Game | null>(null);
-  /** Participants VALIDATED de la saison — source du formulaire de résultat. */
+  /** Participants VALIDATED de la saison — source du wizard de fin de partie. */
   participants: WritableSignal<CampaignParticipant[]> = signal<CampaignParticipant[]>([]);
   /** Vrai pendant que la requête recordResult est en cours. */
   savingResult: WritableSignal<boolean> = signal(false);
+  /** Non-null une fois recordResult() résolu — fait avancer le wizard vers l'écran 3. */
+  wizardResultRecorded: WritableSignal<Game | null> = signal<Game | null>(null);
 
   /**
    * Véhicules courants des participants présents à la partie en cours de
-   * saisie (exploit "véhicules détruits", US-B2) — clé = participantId.
-   * Repeuplé à chaque changement de présence (`onPresentParticipantsChanged`).
+   * saisie (exploit "véhicules détruits", US-B2, et désignation des épaves) —
+   * clé = participantId. Repeuplé à chaque changement de présence
+   * (`onPresentParticipantsChanged`).
    */
   participantVehicles: WritableSignal<ReadonlyMap<number, ParticipantVehiclesDto['vehicles']>> =
     signal(new Map());
+
+  /** Résultats de tirage de la Table des Épaves reçus, clé = vehicleId. */
+  wreckOutcomes: WritableSignal<ReadonlyMap<number, WreckOutcomeDto>> = signal(new Map());
+  /** Lignes de texte décrivant les événements de chaque tirage, clé = vehicleId. */
+  wreckDescriptions: WritableSignal<ReadonlyMap<number, string[]>> = signal(new Map());
+  /** Vrai pendant qu'une requête resolveWreck est en cours. */
+  rollingWreck: WritableSignal<boolean> = signal(false);
+  /** Vrai pendant que la finalisation (fin du wizard) est en cours. */
+  finalizingGame: WritableSignal<boolean> = signal(false);
 
   /**
    * La section Programme est affichée dans tous les états (lecture seule en
@@ -178,15 +195,18 @@ export class CampaignProgram implements OnInit {
     });
   }
 
-  /** Ouvre le formulaire de saisie des résultats pour la partie donnée. */
+  /** Ouvre le wizard de fin de partie pour la partie donnée. */
   onRecordGame(game: Game): void {
     this.recordingGame.set(game);
     this.participantVehicles.set(new Map());
+    this.wizardResultRecorded.set(null);
+    this.wreckOutcomes.set(new Map());
+    this.wreckDescriptions.set(new Map());
   }
 
   /**
-   * La liste des présents a changé dans GameResultForm — recharge leurs
-   * véhicules courants pour alimenter le picker "véhicules détruits" (US-B2).
+   * La liste des présents a changé dans le wizard (écran 1) — recharge leurs
+   * véhicules courants pour alimenter l'écran 2 (désignation des épaves, US-B2).
    */
   onPresentParticipantsChanged(participantIds: number[]): void {
     const game = this.recordingGame();
@@ -199,25 +219,23 @@ export class CampaignProgram implements OnInit {
         this.participantVehicles.set(new Map(result.map((r) => [r.participantId, r.vehicles])));
       },
       error: () => {
-        // Le picker "véhicules détruits" reste vide/désactivé — pas bloquant pour
-        // la saisie du classement, mais on log pour ne pas échouer en silence.
-        console.error('Impossible de charger les véhicules des participants pour la saisie des exploits.');
+        // L'écran 2 reste vide/désactivé — pas bloquant pour la saisie du
+        // classement, mais on log pour ne pas échouer en silence.
+        console.error('Impossible de charger les véhicules des participants pour la désignation des épaves.');
       },
     });
   }
 
-  /** Appelé quand le formulaire de résultat est soumis. */
-  onResultSaved(dto: RecordResultDto): void {
+  /** Appelé quand l'écran 2 (désignation des épaves) est soumis — enregistre le classement. */
+  onRankingSubmitted(dto: RecordResultDto): void {
     const game = this.recordingGame();
     if (!game) return;
     this.savingResult.set(true);
     this.campaignsService.recordResult(this.campaignId(), game.id, dto).subscribe({
-      next: () => {
-        this.recordingGame.set(null);
-        this.participantVehicles.set(new Map());
+      next: (updatedGame: Game) => {
         this.savingResult.set(false);
+        this.wizardResultRecorded.set(updatedGame);
         this.loadGames();
-        this.resultRecorded.emit();
       },
       error: () => {
         this.savingResult.set(false);
@@ -225,8 +243,61 @@ export class CampaignProgram implements OnInit {
     });
   }
 
-  /** Ferme le formulaire de résultat sans enregistrer. */
-  onResultCancelled(): void {
+  /** Déclenché automatiquement par le wizard (écran 3) pour chaque véhicule désigné en épave. */
+  onWreckRollRequested(dto: WreckResolveRequestDto): void {
+    const game = this.recordingGame();
+    if (!game) return;
+    this.rollingWreck.set(true);
+    this.campaignsService.resolveWreck(this.campaignId(), game.id, dto).subscribe({
+      next: (result) => {
+        const outcomes = new Map(this.wreckOutcomes());
+        outcomes.set(result.outcome.vehicleId, result.outcome);
+        this.wreckOutcomes.set(outcomes);
+        const descriptions = new Map(this.wreckDescriptions());
+        descriptions.set(result.outcome.vehicleId, result.descriptions);
+        this.wreckDescriptions.set(descriptions);
+        this.rollingWreck.set(false);
+      },
+      error: () => {
+        console.error('Échec du tirage sur la Table des Épaves.');
+        this.error.set('Erreur lors du tirage sur la Table des Épaves.');
+        this.rollingWreck.set(false);
+      },
+    });
+  }
+
+  /**
+   * Le wizard est entièrement terminé (écran 3, "Terminer") — finalise la partie
+   * (PLANIFIE → JOUE + ouverture d'un atelier) avant de fermer la pop-up. En cas
+   * d'échec, le wizard reste ouvert : tous les tirages sont déjà persistés, seule
+   * la transition de statut doit être refaite (l'utilisateur peut recliquer
+   * "Terminer").
+   */
+  onWizardCompleted(): void {
+    const game = this.recordingGame();
+    if (!game) return;
+    this.finalizingGame.set(true);
+    this.campaignsService.finalizeGame(this.campaignId(), game.id).subscribe({
+      next: () => {
+        this.finalizingGame.set(false);
+        this.recordingGame.set(null);
+        this.participantVehicles.set(new Map());
+        this.wizardResultRecorded.set(null);
+        this.wreckOutcomes.set(new Map());
+        this.wreckDescriptions.set(new Map());
+        this.loadGames();
+        this.resultRecorded.emit();
+      },
+      error: () => {
+        console.error('Échec de la finalisation de la partie.');
+        this.error.set('Erreur lors de la finalisation de la partie.');
+        this.finalizingGame.set(false);
+      },
+    });
+  }
+
+  /** Ferme le wizard sans enregistrer (uniquement possible avant la soumission du classement). */
+  onWizardCancelled(): void {
     this.recordingGame.set(null);
     this.participantVehicles.set(new Map());
   }

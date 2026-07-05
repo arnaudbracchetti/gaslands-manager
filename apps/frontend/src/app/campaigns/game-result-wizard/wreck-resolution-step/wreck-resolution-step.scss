@@ -1,0 +1,136 @@
+@use '../../../shared/styles/breakpoints' as bp;
+
+.wrs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  &__hint {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    background: var(--tb-bitume-2);
+    border: 1px solid var(--tb-metal-2);
+    border-radius: var(--r-sm);
+  }
+
+  &__item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: var(--font-text);
+    color: var(--tb-os);
+  }
+
+  &__vehicle-name {
+    font-weight: 600;
+  }
+
+  &__favori-badge,
+  &__destroyer-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--r-sm);
+    background: var(--tb-bitume-4);
+    color: var(--tb-sand);
+  }
+
+  &__pending {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  &__outcome {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-family: var(--font-text);
+    font-size: 0.85rem;
+    color: var(--tb-os);
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--tb-metal-2);
+
+    &--destroyed {
+      color: var(--tb-danger);
+    }
+  }
+
+  &__outcome-roll {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  &__outcome-result {
+    font-weight: 600;
+  }
+
+  &__outcome-chocs {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--tb-danger);
+
+    &--negative {
+      color: var(--tb-sand);
+    }
+  }
+
+  &__outcome-lost {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--tb-danger);
+  }
+
+  &__outcome-reminder {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  &__outcome-events {
+    list-style: disc;
+    margin: 0;
+    padding-left: 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+
+    button {
+      width: auto;
+      padding: 10px 24px;
+    }
+
+    @include bp.mobile {
+      button {
+        flex: 1;
+      }
+    }
+  }
+}

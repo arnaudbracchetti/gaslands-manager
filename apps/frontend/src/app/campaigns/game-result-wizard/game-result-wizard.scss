@@ -1,0 +1,88 @@
+@use '../../shared/styles/breakpoints' as bp;
+
+.grw-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+
+  @include bp.mobile {
+    align-items: flex-end;
+  }
+}
+
+.grw-modal {
+  background: var(--tb-bitume-2);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-stamp-lg);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  @include bp.mobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: 92vh;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    border-radius: var(--r-sm) var(--r-sm) 0 0;
+  }
+
+  &__title {
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 1.05rem;
+    font-weight: 400;
+    margin: 0;
+  }
+
+  &__steps {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 0.5rem;
+
+    li {
+      flex: 1;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      padding: 0.4rem 0.25rem;
+      border-radius: var(--r-sm);
+      background: var(--tb-bitume-4);
+    }
+  }
+
+  &__step--active {
+    color: var(--tb-bitume);
+    background: var(--tb-danger) !important;
+  }
+
+  &__step--done {
+    color: var(--tb-os);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+  }
+}

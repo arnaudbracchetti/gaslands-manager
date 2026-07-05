@@ -9,7 +9,18 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto } from './campaign.model';
 import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
-import type { Game, Scenario, CreateGameDto, UpdateGameDto, GameResult, RecordResultDto, ParticipantVehiclesDto } from './game.model';
+import type {
+  Game,
+  Scenario,
+  CreateGameDto,
+  UpdateGameDto,
+  GameResult,
+  RecordResultDto,
+  ParticipantVehiclesDto,
+  WreckResolveRequestDto,
+  WreckResolveResultDto,
+  FinalizeGameResultDto,
+} from './game.model';
 
 @Injectable({ providedIn: 'root' })
 export class CampaignsService {
@@ -170,8 +181,9 @@ export class CampaignsService {
 
   /**
    * POST /api/campaigns/:id/games/:gameId/results → enregistre les résultats
-   * d'une partie PLANIFIE et la marque JOUE (organisateur).
-   * Retourne la partie avec statut mis à jour.
+   * d'une partie PLANIFIE (classement + exploits, organisateur). Ne finalise
+   * PAS la partie — elle reste PLANIFIE jusqu'à l'appel explicite de
+   * `finalizeGame()` en fin de wizard (écran 3).
    */
   recordResult(campaignId: number, gameId: number, dto: RecordResultDto): Observable<Game> {
     return this.http.post<Game>(`/api/campaigns/${campaignId}/games/${gameId}/results`, dto);
@@ -206,6 +218,34 @@ export class CampaignsService {
     return this.http.get<ParticipantVehiclesDto[]>(
       `/api/campaigns/${campaignId}/games/${gameId}/participant-vehicles`,
       { params: { participantIds: participantIds.join(',') } },
+    );
+  }
+
+  /**
+   * POST /api/campaigns/:id/games/:gameId/events/wreck → résout la Table des
+   * Épaves pour un véhicule (D6 serveur, organisateur). Toute perte d'équipement
+   * est tirée au hasard côté serveur — aucun choix à transmettre.
+   */
+  resolveWreck(
+    campaignId: number,
+    gameId: number,
+    dto: WreckResolveRequestDto,
+  ): Observable<WreckResolveResultDto> {
+    return this.http.post<WreckResolveResultDto>(
+      `/api/campaigns/${campaignId}/games/${gameId}/events/wreck`,
+      dto,
+    );
+  }
+
+  /**
+   * POST /api/campaigns/:id/games/:gameId/finalize → finalise la partie (PLANIFIE →
+   * JOUE) et ouvre un atelier. Déclenché à la toute fin du wizard de fin de partie
+   * (écran 3), pas à la soumission du classement (cf. `recordResult`).
+   */
+  finalizeGame(campaignId: number, gameId: number): Observable<FinalizeGameResultDto> {
+    return this.http.post<FinalizeGameResultDto>(
+      `/api/campaigns/${campaignId}/games/${gameId}/finalize`,
+      {},
     );
   }
 }

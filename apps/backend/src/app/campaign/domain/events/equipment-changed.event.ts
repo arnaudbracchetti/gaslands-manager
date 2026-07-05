@@ -80,4 +80,9 @@ export class EquipmentChangedEvent extends GameEvent {
       }
     }
   }
+
+  describe(): string {
+    const verb = this.operation === 'BUY' ? 'Achat' : 'Vente';
+    return `${verb} : ${this.nomInterne} (${this.cost} jerricans)`;
+  }
 }

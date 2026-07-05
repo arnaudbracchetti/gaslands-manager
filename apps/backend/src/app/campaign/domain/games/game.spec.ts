@@ -9,6 +9,8 @@ import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
+import { ImprovementLostEvent } from '../events/improvement-lost.event';
+import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { WeightClass } from '../enums/weight-class.enum';
 
@@ -34,6 +36,14 @@ function makeGatesCrossedEvent(id = 5): GatesCrossedEvent {
 
 function makeVehicleDestroyedEvent(id = 6): VehicleDestroyedEvent {
   return new VehicleDestroyedEvent(id, 10, 1, id, 2, WeightClass.LOURD, 3);
+}
+
+function makeImprovementLostEvent(id = 7): ImprovementLostEvent {
+  return new ImprovementLostEvent(id, 10, 1, id, 2);
+}
+
+function makeFavoriDuPublicBonusEvent(id = 8): FavoriDuPublicBonusEvent {
+  return new FavoriDuPublicBonusEvent(id, 10, 1, id, 2, 5);
 }
 
 describe('EvenementTeleGame — canAccept', () => {
@@ -63,6 +73,14 @@ describe('EvenementTeleGame — canAccept', () => {
     expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(true);
   });
 
+  it('accepte ImprovementLostEvent', () => {
+    expect(game.canAccept(makeImprovementLostEvent())).toBe(true);
+  });
+
+  it('accepte FavoriDuPublicBonusEvent', () => {
+    expect(game.canAccept(makeFavoriDuPublicBonusEvent())).toBe(true);
+  });
+
   it('type est EVENEMENT_TELE', () => {
     expect(game.type).toBe('EVENEMENT_TELE');
   });
@@ -85,6 +103,14 @@ describe('EscarmoucheGame — canAccept', () => {
 
   it('accepte VehicleDestroyedEvent', () => {
     expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(true);
+  });
+
+  it('accepte ImprovementLostEvent', () => {
+    expect(game.canAccept(makeImprovementLostEvent())).toBe(true);
+  });
+
+  it('accepte FavoriDuPublicBonusEvent', () => {
+    expect(game.canAccept(makeFavoriDuPublicBonusEvent())).toBe(true);
   });
 
   it('type est ESCARMOUCHE', () => {
@@ -117,6 +143,14 @@ describe('AtelierGame — canAccept', () => {
 
   it('refuse VehicleDestroyedEvent', () => {
     expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(false);
+  });
+
+  it('refuse ImprovementLostEvent', () => {
+    expect(game.canAccept(makeImprovementLostEvent())).toBe(false);
+  });
+
+  it('refuse FavoriDuPublicBonusEvent', () => {
+    expect(game.canAccept(makeFavoriDuPublicBonusEvent())).toBe(false);
   });
 
   it('type est ATELIER', () => {

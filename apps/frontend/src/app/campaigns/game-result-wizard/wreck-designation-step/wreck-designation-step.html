@@ -1,0 +1,96 @@
+<!-- Écran 2 du wizard de fin de partie : désignation des véhicules mis en épave -->
+<div class="wds">
+  <p class="wds__hint">
+    Pour chaque véhicule, indiquez s'il a été mis en épave — par un adversaire ou seul
+    (foncé dans un mur). Cochez « Favori du public » s'il porte déjà ce bonus en attente
+    d'une partie précédente.
+  </p>
+
+  @if (allVehicles().length === 0) {
+    <p class="wds__empty">Aucun véhicule parmi les équipes présentes.</p>
+  }
+
+  <ul class="wds__list">
+    @for (row of allVehicles(); track row.vehicle.vehicleId) {
+      @let state = stateFor(row.vehicle.vehicleId);
+      <li class="wds__item">
+        <div class="wds__item-header">
+          <span class="wds__vehicle-name">{{ row.vehicle.nom }}</span>
+          <span class="wds__vehicle-owner">{{ row.ownerTeamName }}</span>
+          <span class="wds__vehicle-weight">{{ weightLabel(row.vehicle.weightClass) }}</span>
+        </div>
+
+        <div class="wds__status-choice">
+          <label>
+            <input
+              type="radio"
+              [name]="'status-' + row.vehicle.vehicleId"
+              [checked]="state.status === 'intact'"
+              (change)="setStatus(row.vehicle.vehicleId, 'intact')"
+              [disabled]="saving()"
+            />
+            Intact
+          </label>
+          <label>
+            <input
+              type="radio"
+              [name]="'status-' + row.vehicle.vehicleId"
+              [checked]="state.status === 'destroyed'"
+              (change)="setStatus(row.vehicle.vehicleId, 'destroyed')"
+              [disabled]="saving()"
+            />
+            Détruit par…
+          </label>
+          <label>
+            <input
+              type="radio"
+              [name]="'status-' + row.vehicle.vehicleId"
+              [checked]="state.status === 'alone'"
+              (change)="setStatus(row.vehicle.vehicleId, 'alone')"
+              [disabled]="saving()"
+            />
+            Mis en épave seul
+          </label>
+        </div>
+
+        @if (state.status === 'destroyed') {
+          <select
+            class="wds__destroyer-select"
+            [ngModel]="state.destroyerParticipantId"
+            (ngModelChange)="setDestroyer(row.vehicle.vehicleId, $any($event))"
+            [disabled]="saving()"
+          >
+            <option [ngValue]="null">— Choisir le destructeur —</option>
+            @for (candidate of destroyerCandidatesFor(row.ownerParticipantId); track candidate.id) {
+              <option [ngValue]="candidate.id">{{ candidate.teamName }}</option>
+            }
+          </select>
+        }
+
+        @if (state.status !== 'intact') {
+          <label class="wds__favori-checkbox">
+            <input
+              type="checkbox"
+              [checked]="state.pendingFavoriDuPublic"
+              (change)="togglePendingFavoriDuPublic(row.vehicle.vehicleId)"
+              [disabled]="saving()"
+            />
+            ⭐ Favori du public (partie précédente)
+          </label>
+        }
+      </li>
+    }
+  </ul>
+
+  <div class="wds__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onBack()">
+      Retour
+    </button>
+    <button type="button" class="btn-primary" [disabled]="saving()" (click)="onNext()">
+      {{ saving() ? 'Enregistrement…' : 'Suivant — résoudre les épaves' }}
+    </button>
+  </div>
+</div>

@@ -5,11 +5,13 @@ import { RankingAssignedEvent } from '../events/ranking-assigned.event';
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
+import { ImprovementLostEvent } from '../events/improvement-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
+import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 
 /**
  * Escarmouche — mêmes événements acceptés qu'un EvenementTeleGame.
@@ -38,11 +40,13 @@ export class EscarmoucheGame extends Game {
       event instanceof WalletMovementEvent ||
       event instanceof VehicleLostEvent ||
       event instanceof WeaponLostEvent ||
+      event instanceof ImprovementLostEvent ||
       event instanceof WreckResolvedEvent ||
       event instanceof SequellaAddedEvent ||
       event instanceof ResistanceContactedEvent ||
       event instanceof GatesCrossedEvent ||
-      event instanceof VehicleDestroyedEvent
+      event instanceof VehicleDestroyedEvent ||
+      event instanceof FavoriDuPublicBonusEvent
     );
   }
 }

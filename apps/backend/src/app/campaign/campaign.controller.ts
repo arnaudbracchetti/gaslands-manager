@@ -439,7 +439,7 @@ export class CampaignController {
       userId: req.user.id,
       participantId: dto.participantId,
       vehicleId: dto.vehicleId,
-      weaponIdChoice: dto.weaponIdChoice,
+      pendingFavoriDuPublic: dto.pendingFavoriDuPublic,
     });
   }
 

@@ -22,6 +22,9 @@ export abstract class GameEvent {
   abstract execute(participants: CampaignParticipant[]): void;
   abstract undo(participants: CampaignParticipant[]): void;
 
+  /** Ligne de texte (français) décrivant cet événement — utilisée par la synthèse de fin de partie. */
+  abstract describe(): string;
+
   protected findParticipant(participants: CampaignParticipant[]): CampaignParticipant {
     const p = participants.find((x) => x.id === this.participantId);
     if (!p) throw new DomainException(`Participant #${this.participantId} introuvable dans la saison`);

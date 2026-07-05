@@ -26,4 +26,9 @@ describe('VehicleLostEvent — execute / undo', () => {
     event.undo(participants);
     expect(vehicle.isLost).toBe(before);
   });
+
+  it('describe() décrit la perte du véhicule', () => {
+    const event = new VehicleLostEvent(1, 10, 1, 1, 1);
+    expect(event.describe()).toBe('Véhicule détruit');
+  });
 });
