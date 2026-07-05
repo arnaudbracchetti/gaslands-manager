@@ -27,7 +27,6 @@ export class GameOrm {
   campaignId: number;
 
   // Référence (clé étrangère logique) vers Scenario.nom_interne du catalogue.
-  // nullable : null pour AtelierGame (pas de scénario associé).
   // type explicite obligatoire : l'union `string | null` émet `Object` en
   // métadonnée de réflexion, que TypeORM ne sait pas convertir en type SQL.
   @Column({ type: 'varchar', length: 100, nullable: true })
@@ -36,15 +35,16 @@ export class GameOrm {
   @Column({ type: 'enum', enum: GameType })
   type: GameType;
 
+  // PLANIFIE → ATELIER (résultat enregistré, phase garage post-partie ouverte)
+  // → JOUE (atelier clôturé, figée).
   @Column({ type: 'enum', enum: GameStatus, default: GameStatus.PLANIFIE })
   status: GameStatus;
 
-  // Position de la partie dans le Programme. double precision pour permettre
-  // l'insertion fractionnaire d'un AtelierGame intercalé (order = n + 0.5, D-S7).
+  // Position de la partie dans le Programme.
   @Column({ name: 'displayOrder', type: 'double precision' })
   order: number;
 
-  // Horodatage du passage à JOUE — null tant que la partie est PLANIFIE.
+  // Horodatage du passage à ATELIER — null tant que la partie est PLANIFIE.
   @Column({ type: 'timestamp', nullable: true })
   playedAt: Date | null;
 

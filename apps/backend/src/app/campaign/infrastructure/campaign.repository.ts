@@ -9,7 +9,6 @@ import { CampaignMapper } from './campaign.mapper';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { Campaign } from '../domain/campaign';
 import type { GameEvent } from '../domain/events/game-event';
-import type { AtelierGame } from '../domain/games/atelier-game';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { TEAM_REPOSITORY } from '../../team/team.tokens';
 import { CampaignState, ParticipantStatus } from '../domain/enums/campaign.enums';
@@ -114,31 +113,16 @@ export class CampaignRepository implements ICampaignRepository {
   }
 
   /**
-   * Persiste les transitions structurelles : statut des parties (PLANIFIE→JOUE,
-   * OUVERT→CLOTURE) et création d'un nouvel AtelierGame.
+   * Persiste les transitions structurelles de statut des parties
+   * (PLANIFIE→ATELIER→JOUE), déclenchées par EnterAtelier/CloseAtelier/CloseCampaign.
    */
-  async saveCampaign(campaign: Campaign, newAtelier?: AtelierGame): Promise<void> {
+  async saveCampaign(campaign: Campaign): Promise<void> {
     for (const game of campaign.games) {
       const ormStatus = game.status as unknown as OrmGameStatus;
       await this.gameOrmRepo.update(game.id, {
         status: ormStatus,
         ...(game.playedAt ? { playedAt: game.playedAt } : {}),
       });
-    }
-
-    if (newAtelier) {
-      const orm = this.gameOrmRepo.create({
-        campaignId: newAtelier.campaignId,
-        scenarioId: null,
-        type: GameType.ATELIER,
-        status: OrmGameStatus.OUVERT,
-        order: newAtelier.order,
-        playedAt: null,
-      });
-      const saved = await this.gameOrmRepo.save(orm);
-      // Rétro-alimentation de l'id pour les use cases qui persistraient
-      // des événements dans ce nouvel atelier dans la même transaction.
-      (newAtelier as unknown as { id: number }).id = saved.id;
     }
   }
 
@@ -206,8 +190,7 @@ export class CampaignRepository implements ICampaignRepository {
       await this.gameOrmRepo.delete([...campaign.removedGameIds]);
     }
 
-    // 5. Parties : upsert. Le scenarioId n'existe que sur les sous-types joués
-    //    (EvenementTele/Escarmouche) — null pour AtelierGame.
+    // 5. Parties : upsert.
     for (const game of campaign.games) {
       const scenarioId = (game as unknown as { scenarioId?: string }).scenarioId ?? null;
       const status = game.status as unknown as OrmGameStatus;

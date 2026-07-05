@@ -162,18 +162,19 @@ document de conception : [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](.
    (donnée capturée à l'écran 2). Si un véhicule est confirmé "Favori du
    public" et que le tirage donne `VEHICULE_DETRUIT`, +5 PC sont crédités à son
    propriétaire (`FavoriDuPublicBonusEvent`). Le bouton "Terminer" (actif une
-   fois tous les tirages reçus) appelle `POST .../finalize` — **c'est à ce
-   moment, et seulement à ce moment, que la partie passe `PLANIFIE → JOUE`**
-   et qu'un `AtelierGame` est ouvert.
+   fois tous les tirages reçus) appelle `POST .../enter-atelier` — **c'est à
+   ce moment, et seulement à ce moment, que la partie passe `PLANIFIE →
+   ATELIER`**, ouvrant la phase garage post-partie *sur cette même partie*
+   (plus d'entité séparée, cf. §Cycle de vie ci-dessous).
 
-**Pourquoi la finalisation est déplacée en fin de wizard** : marquer la partie
-`JOUE` dès l'écran 2 rendait l'écran 3 structurellement impossible — une fois
-JOUE, `Game.addEvent()` refuse tout nouvel événement (y compris les tirages de
-la Table des Épaves), et rien ne permettait de sortir du wizard bloqué. La
-finalisation est donc désormais une action explicite et séparée
-(`FinalizeGameUseCase`, endpoint déjà existant mais jusque-là non consommé par
-le frontend), déclenchée uniquement à la fin complète du wizard — cohérent
-avec l'intention du document de conception d'origine.
+**Pourquoi l'entrée en atelier est déplacée en fin de wizard** : faire entrer
+la partie en atelier dès l'écran 2 rendait l'écran 3 structurellement
+impossible — une fois la partie hors `PLANIFIE`, `Game.addEvent()` refuse tout
+événement de classement/épaves (y compris les tirages de la Table des
+Épaves), et rien ne permettait de sortir du wizard bloqué. L'entrée en atelier
+est donc désormais une action explicite et séparée (`EnterAtelierUseCase`),
+déclenchée uniquement à la fin complète du wizard — cohérent avec l'intention
+du document de conception d'origine.
 
 Retour en arrière possible entre écrans 1 et 2 (rien n'est encore persisté) ;
 plus au-delà de l'écran 2 une fois le classement soumis avec succès (choix de
@@ -192,6 +193,54 @@ partie reste `PLANIFIE` (par design) et réapparaît comme "à enregistrer" —
 mais rouvrir le wizard et resoumettre le classement créerait des événements
 `RankingAssignedEvent`/etc. en double (aucune garde d'idempotence, cohérent
 avec les autres lacunes déjà documentées de ce module, ex. séquelles).
+
+---
+
+## Cycle de vie d'une partie et phase Atelier
+
+Une partie (`Game`) traverse trois statuts : `PLANIFIE → ATELIER → JOUE`. Il
+n'existe **pas d'entité "atelier" séparée** — la phase garage post-partie
+(achats/reventes d'équipement, échange de Chocs contre une séquelle)
+appartient à la partie elle-même, comme un statut supplémentaire de son
+propre cycle de vie, plutôt qu'à une fausse partie intercalée entre deux
+vraies parties (ancien design `AtelierGame`, abandonné — cf.
+[design doc](../plans/2026-07-05-atelier-lifecycle-design.md)).
+
+- **`PLANIFIE → ATELIER`** (`POST .../games/:gameId/enter-atelier`,
+  organisateur) : déclenché à la toute fin du wizard de fin de partie
+  (écran 3, "Terminer"). Le résultat est enregistré, la phase garage
+  s'ouvre. Événements acceptés dès lors : `EquipmentChangedEvent`,
+  `SequellaAddedEvent` (achat volontaire, via `POST .../events/sequella`).
+- **Un seul atelier actif à la fois** par campagne : si une partie entre en
+  atelier alors qu'une autre y est encore, **l'ancienne est automatiquement
+  clôturée** (`ATELIER → JOUE`) — pas de blocage dur. La réponse
+  d'`enter-atelier` inclut `autoClosedGameId` (id de la partie auto-clôturée,
+  ou `null`) pour que le frontend puisse en avertir l'organisateur.
+- **`ATELIER → JOUE`** (`POST .../games/:gameId/close-atelier`,
+  organisateur) : clôture manuelle explicite, verrouille définitivement la
+  phase garage de cette partie. Également déclenchée automatiquement au
+  passage de la campagne en `TERMINEE` (`closeCampaign()`), pour ne jamais
+  laisser un atelier ouvert sur une campagne terminée.
+- Une partie `JOUE` est figée : `Game.addEvent()` refuse tout événement, quel
+  qu'il soit.
+
+Comme les événements d'atelier (`EquipmentChangedEvent`, `SequellaAddedEvent`)
+sont journalisés avec le `gameId` de la partie qui vient d'être jouée, le
+replay (`Campaign.replay()`, tri par `Game.order` puis par `eventOrder` interne
+à la partie) les reconstitue dans le bon ordre chronologique sans aucun
+mécanisme supplémentaire — contrairement à l'ancien design, qui nécessitait un
+`order` fractionnaire (`partie.order + 0.5`) pour positionner la fausse partie
+atelier entre deux vraies parties.
+
+`SequellaAddedEvent` est accepté à la fois en `PLANIFIE` (séquelle imposée
+par la Table des Épaves, ligne "Siège irrécupérable" — coût 0, pas un achat)
+et en `ATELIER` (échange volontaire de Chocs contre une séquelle, via
+`AddSequellaUseCase`, coût variable selon le type de séquelle).
+
+Les endpoints `POST .../events/equipment` et `POST .../events/sequella` ne
+prennent plus de `:gameId` en paramètre de route : le use case retrouve
+lui-même l'unique partie actuellement en `ATELIER` dans la campagne (erreur
+400 "Aucun atelier ouvert actuellement" si aucune).
 
 ---
 
@@ -223,10 +272,13 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
 
 - **Atelier (US-D1–D4)** — logique de cagnotte/achat/revente présente côté backend
   (`GetWorkshopUseCase`, `ChangeEquipmentUseCase`), mais **aucune page frontend** ne
-  l'expose (« Mon Atelier » n'existe pas dans `apps/frontend`). Gardes métier
-  manquantes : pas de vérification du sponsor à l'achat, pas de limite de 8
-  véhicules ; la revente crédite le **prix plein** au lieu de la moitié arrondie à
-  l'inférieur (bug, p.170 du livre de règles).
+  l'expose (« Mon Atelier » n'existe pas dans `apps/frontend`). La phase atelier
+  est un statut du cycle de vie de la partie (`PLANIFIE → ATELIER → JOUE`, cf.
+  [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier))
+  plutôt qu'une entité séparée. Gardes métier manquantes : pas de vérification
+  du sponsor à l'achat, pas de limite de 8 véhicules ; la revente crédite le
+  **prix plein** au lieu de la moitié arrondie à l'inférieur (bug, p.170 du
+  livre de règles).
 - **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
   (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
   `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
@@ -295,21 +347,22 @@ campagne — modifiable (`teamId`) tant que la campagne est `EN_CONSTRUCTION`.
 | `userName` | string | Prénom + nom de l'utilisateur. |
 | `teamName` | string | Nom de l'équipe engagée. |
 
-### `Game` _(mode campagne — Programme Télé et Atelier)_
+### `Game` _(mode campagne — Programme Télé)_
 
-Une partie ou un atelier du Programme d'une campagne. Le scénario est référencé par
-`scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire) — `null`
-pour les ateliers.
+Une partie du Programme d'une campagne. Le scénario est référencé par
+`scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire).
+Le statut porte aussi la phase garage post-partie (`ATELIER`) — cf.
+[Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier).
 
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `campaignId` | number | FK → Campaign (`CASCADE`) |
-| `scenarioId` | string \| null | référence `Scenario.nom_interne` — `null` pour `ATELIER` |
-| `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE' \| 'ATELIER'` | `ATELIER` créé automatiquement par `FinalizeGameUseCase` |
-| `status` | `'PLANIFIE' \| 'JOUE' \| 'OUVERT' \| 'CLOTURE'` | `OUVERT`/`CLOTURE` réservés aux ateliers |
-| `order` | number | `double precision` — auto-append MAX+1 ; ateliers intercalés à `partie.order + 0.5` |
-| `playedAt` | Date \| null | null tant que `PLANIFIE` |
+| `scenarioId` | string \| null | référence `Scenario.nom_interne` |
+| `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` | |
+| `status` | `'PLANIFIE' \| 'ATELIER' \| 'JOUE'` | `PLANIFIE → ATELIER` (`enter-atelier`) `→ JOUE` (`close-atelier`, manuel ou auto) |
+| `order` | number | `double precision` — auto-append MAX+1 |
+| `playedAt` | Date \| null | horodatage du passage à `ATELIER` — null tant que `PLANIFIE` |
 | `createdAt` / `updatedAt` | Date | auto |
 
 **Champ calculé dans la réponse API** (non stocké en base) :
@@ -368,9 +421,10 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId, weightClass }] }] }`, organisateur) — **ne finalise plus la partie** (reste `PLANIFIE`, cf. §Wizard de fin de partie). Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Campaign.recordResult` (convergence event-sourcing) |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) |
-| POST | `/api/campaigns/:id/games/:gameId/finalize` | JWT | Finalise la partie `PLANIFIE → JOUE` ; crée un `AtelierGame OUVERT` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ newAtelierId, newAtelierOrder }` |
+| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
+| POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
 
-> Ce sont ces trois routes (`/results`, `/participant-vehicles`, `/finalize`) — plus
+> Ce sont ces trois routes (`/results`, `/participant-vehicles`, `/enter-atelier`) — plus
 > `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) — que consomme le frontend
 > Angular pour le wizard de fin de partie. La forme de réponse de `/results` (`Game`,
 > statut désormais `PLANIFIE`) est inchangée malgré la bascule vers l'event-sourcing.
@@ -380,8 +434,8 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 > Endpoints granulaires du système event-sourcing, **non consommés par le frontend**
 > (usage API direct) — à l'exception de `GET .../standings` (dernière ligne de la table
 > ci-dessous), qui alimente `ParticipantList` sur `/campaigns/:id` (cf.
-> [COMPONENTS.md](../COMPONENTS.md)). `POST .../finalize` (consommé par le frontend) est
-> listé dans le tableau précédent, avec les autres routes du wizard de fin de partie.
+> [COMPONENTS.md](../COMPONENTS.md)). `POST .../enter-atelier` (consommé par le frontend)
+> est listé dans le tableau précédent, avec les autres routes du wizard de fin de partie.
 > ⚠️ `events/ranking` accepte `championshipPoints` comme valeur numérique fournie par
 > l'appelant, **sans appliquer le barème 10/5/2/1** (contrairement à `POST .../results`,
 > qui le calcule via `Campaign.recordResult`) — un appelant direct de cette route peut
@@ -400,6 +454,6 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients, chocs, séquelles, wallet) |
-| POST | `/api/campaigns/:id/games/:gameId/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` dans un `AtelierGame OUVERT` — 204 |
+| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` — 204. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
-| POST | `/api/campaigns/:id/games/:gameId/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` dans un `AtelierGame OUVERT` — 204 |
+| POST | `/api/campaigns/:id/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` — 204. Même résolution automatique de l'atelier courant que `/events/equipment` |

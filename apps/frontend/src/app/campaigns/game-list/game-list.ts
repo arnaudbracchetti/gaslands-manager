@@ -52,7 +52,11 @@ export class GameList {
 
   /** Libellé lisible du statut. */
   statusLabel(game: Game): string {
-    return game.status === 'JOUE' ? 'Jouée' : 'Planifiée';
+    switch (game.status) {
+      case 'JOUE': return 'Jouée';
+      case 'ATELIER': return 'Atelier';
+      default: return 'Planifiée';
+    }
   }
 
   /** Émet l'event recordGame avec la partie. */

@@ -99,7 +99,7 @@ apps/backend/src/app/
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
     ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome
     │   ├── events/      ← 8 événements concrets (GoF Command)
-    │   ├── games/       ← EvenementTeleGame, EscarmoucheGame, AtelierGame (GoF Invoker)
+    │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckOutcome Value Object
     ├── application/     ← 22 Use Cases (12 CRUD + GetWorkshop + 9 event-sourcing)
@@ -258,7 +258,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (28 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
-| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `recordResult`, `finalizeGame`, `closeCampaign`, `standings` |
+| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `recordResult`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings` |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -278,7 +278,7 @@ Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente u
 | Pattern | Rôle | Classes |
 |---------|------|---------|
 | **Command** | `GameEvent` — encapsule une mutation avec `execute()` / `undo()` | `RankingAssignedEvent`, `WalletMovementEvent`, `VehicleLostEvent`, `WeaponLostEvent`, `WreckResolvedEvent`, `SequellaAddedEvent`, `EquipmentChangedEvent`, `ResistanceContactedEvent` |
-| **Invoker** | `Game` — valide et journalise les événements via `canAccept` / `addEvent` | `EvenementTeleGame`, `EscarmoucheGame`, `AtelierGame` |
+| **Invoker** | `Game` — valide et journalise les événements via `canAccept` / `addEvent`, sensible à son statut courant (`PLANIFIE` vs `ATELIER`) | `EvenementTeleGame`, `EscarmoucheGame` |
 | **Receiver** | `CampaignParticipant` — porte les compteurs transients modifiés par chaque événement | `wallet`, `championshipPoints`, `resistancePoints`, état des véhicules/armes |
 
 #### Flux d'une écriture
@@ -297,17 +297,31 @@ Controller → UseCase
 
 Les véhicules et armes achetés **en atelier** n'existent pas en base — ils sont recréés à chaque replay. Leur `id` dans le domaine est `-event.id` (entier négatif, distinct des ids DB positifs). Conséquence : `ChangeEquipmentUseCase` **ne doit pas appeler `event.execute()`** avant la persistance, car `id=0` donnerait `-0 = 0`, qui ne constitue pas un id négatif valide. Le use case persiste d'abord, le client rafraîchit ensuite via `GET /campaigns/:id/workshop`.
 
-#### Séquence AtelierGame (D-S7)
+#### Cycle de vie Atelier (D-S7, refonte)
+
+La phase atelier n'est plus une entité séparée (`AtelierGame`, abandonnée —
+cf. [design doc](plans/2026-07-05-atelier-lifecycle-design.md)) mais un
+statut supplémentaire du cycle de vie de la partie elle-même :
+`PLANIFIE → ATELIER → JOUE`.
 
 ```
-FinalizeGameUseCase (partie PLANIFIE → JOUE)
-  └─ campaign.finalizeGame(gameId)
-       ├─ clôt l'AtelierGame OUVERT précédent (OUVERT → CLOTURE)
-       └─ crée un nouvel AtelierGame (ordre = partie.order + 0.5, OUVERT)
-           └─ persisté via saveCampaign(campaign, newAtelier)
+EnterAtelierUseCase (partie PLANIFIE → ATELIER)
+  └─ campaign.enterAtelier(gameId)
+       ├─ clôt automatiquement une autre partie encore en ATELIER, s'il y en a une
+       │   (ATELIER → JOUE, id retourné via autoClosedGameId pour avertissement)
+       └─ game.enterAtelier() — statut ATELIER, playedAt horodaté
+           └─ persisté via saveCampaign(campaign)
+
+CloseAtelierUseCase (partie ATELIER → JOUE, organisateur, manuel)
+  └─ campaign.closeAtelier(gameId)
+       └─ persisté via saveCampaign(campaign)
 ```
 
-L'ordre fractionnaire (`double precision` en SQL) garantit que l'atelier s'insère *entre* les parties du programme sans modifier les ordres existants.
+Les événements d'atelier (`EquipmentChangedEvent`, `SequellaAddedEvent`) sont
+journalisés avec le `gameId` de cette même partie — plus besoin d'ordre
+fractionnaire (`order + 0.5`) : le tri existant (`Game.order` puis
+`eventOrder` interne à la partie) les replace déjà correctement dans la
+chronologie, puisqu'ils appartiennent à la partie qui vient d'être jouée.
 
 #### Points d'attention
 

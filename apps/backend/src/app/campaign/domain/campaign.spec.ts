@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Campaign } from './campaign';
 import { CampaignParticipant } from './campaign-participant';
+import type { Game } from './games/game';
 import { EvenementTeleGame } from './games/evenement-tele-game';
-import { AtelierGame } from './games/atelier-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
@@ -15,10 +15,10 @@ import { makeTestParticipant } from './test-helpers';
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
 function makeCampaign(
   participants: CampaignParticipant[],
-  games: EvenementTeleGame[] | AtelierGame[] | (EvenementTeleGame | AtelierGame)[],
+  games: Game[],
   state: CampaignState = CampaignState.EN_CONSTRUCTION,
 ): Campaign {
-  return new Campaign(1, 'Campagne Test', state, 'invite-code', participants, games as never);
+  return new Campaign(1, 'Campagne Test', state, 'invite-code', participants, games);
 }
 
 function makeGame(id: number, order: number, events = [] as RankingAssignedEvent[]): EvenementTeleGame {
@@ -132,39 +132,30 @@ describe('Campaign — standings', () => {
   });
 });
 
-describe('Campaign — finalizeGame', () => {
-  it('passe la partie à JOUE et crée un AtelierGame OUVERT', () => {
+describe('Campaign — enterAtelier', () => {
+  it('passe la partie à ATELIER et l\'horodate', () => {
     const { participant } = makeTestParticipant();
     const game = makeGame(10, 1);
     const campaign = makeCampaign([participant], [game]);
 
-    const atelier = campaign.finalizeGame(10);
+    const result = campaign.enterAtelier(10);
 
-    expect(game.status).toBe(GameStatus.JOUE);
+    expect(game.status).toBe(GameStatus.ATELIER);
     expect(game.playedAt).not.toBeNull();
-    expect(atelier.status).toBe(GameStatus.OUVERT);
-    expect(atelier.type).toBe('ATELIER');
+    expect(result.autoClosedGameId).toBeNull();
   });
 
-  it('l\'atelier créé a order = game.order + 0.5', () => {
+  it('clôt automatiquement une autre partie encore en ATELIER (avec avertissement)', () => {
     const { participant } = makeTestParticipant();
-    const game = makeGame(10, 2);
-    const campaign = makeCampaign([participant], [game]);
-
-    const atelier = campaign.finalizeGame(10);
-    expect(atelier.order).toBe(2.5);
-  });
-
-  it('clôt l\'atelier OUVERT précédent s\'il existe', () => {
-    const { participant } = makeTestParticipant();
-    const game1 = makeGame(10, 1);
-    const openAtelier = new AtelierGame(5, 1, GameStatus.OUVERT, 0.5, []);
+    const game1 = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen_10', new Date(), []);
     const game2 = makeGame(20, 2);
-    const campaign = makeCampaign([participant], [game1, openAtelier, game2]);
+    const campaign = makeCampaign([participant], [game1, game2]);
 
-    campaign.finalizeGame(20);
+    const result = campaign.enterAtelier(20);
 
-    expect(openAtelier.status).toBe(GameStatus.CLOTURE);
+    expect(game1.status).toBe(GameStatus.JOUE);
+    expect(game2.status).toBe(GameStatus.ATELIER);
+    expect(result.autoClosedGameId).toBe(10);
   });
 
   it('lève si la partie n\'est pas PLANIFIE', () => {
@@ -172,29 +163,49 @@ describe('Campaign — finalizeGame', () => {
     const game = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
     const campaign = makeCampaign([participant], [game]);
 
-    expect(() => campaign.finalizeGame(10)).toThrow('PLANIFIE');
+    expect(() => campaign.enterAtelier(10)).toThrow('PLANIFIE');
+  });
+});
+
+describe('Campaign — closeAtelier', () => {
+  it('clôture manuelle : ATELIER → JOUE', () => {
+    const { participant } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    campaign.closeAtelier(10);
+
+    expect(game.status).toBe(GameStatus.JOUE);
+  });
+
+  it('lève si la partie n\'est pas en ATELIER', () => {
+    const { participant } = makeTestParticipant();
+    const game = makeGame(10, 1);
+    const campaign = makeCampaign([participant], [game]);
+
+    expect(() => campaign.closeAtelier(10)).toThrow('atelier');
   });
 });
 
 describe('Campaign — closeCampaign', () => {
-  it('clôt tous les ateliers OUVERT restants', () => {
+  it('clôt toute partie encore en ATELIER', () => {
     const { participant } = makeTestParticipant();
-    const atelier = new AtelierGame(5, 1, GameStatus.OUVERT, 1.5, []);
-    const campaign = makeCampaign([participant], [atelier]);
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
 
     campaign.closeCampaign();
 
-    expect(atelier.status).toBe(GameStatus.CLOTURE);
+    expect(game.status).toBe(GameStatus.JOUE);
   });
 
-  it('ne touche pas aux ateliers déjà CLOTURE', () => {
+  it('ne touche pas aux parties déjà JOUE', () => {
     const { participant } = makeTestParticipant();
-    const atelier = new AtelierGame(5, 1, GameStatus.CLOTURE, 0.5, []);
-    const campaign = makeCampaign([participant], [atelier]);
+    const game = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
 
     campaign.closeCampaign();
 
-    expect(atelier.status).toBe(GameStatus.CLOTURE);  // inchangé
+    expect(game.status).toBe(GameStatus.JOUE);  // inchangé
   });
 });
 
@@ -349,7 +360,7 @@ describe('Campaign — recordResult', () => {
     // 2 RankingAssignedEvent + 1 ResistanceContactedEvent automatique (p2 non classé).
     expect(events).toHaveLength(3);
     // La partie reste PLANIFIE — la finalisation (JOUE + atelier) n'a lieu qu'à la
-    // fin complète du wizard, via un appel explicite à finalizeGame().
+    // fin complète du wizard, via un appel explicite à enterAtelier().
     expect(game.status).toBe(GameStatus.PLANIFIE);
     // EVENEMENT_TELE, classified = ceil(2/2) = 1 → rang 1 = 10 PC, rang 2 = 0.
     const rankingEvents = events.filter((e) => e instanceof RankingAssignedEvent) as RankingAssignedEvent[];

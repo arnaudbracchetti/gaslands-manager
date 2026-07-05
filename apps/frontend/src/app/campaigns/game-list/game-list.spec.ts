@@ -51,6 +51,14 @@ describe('GameList', () => {
     expect(component.canModify(makeGame({ status: 'JOUE' }))).toBe(false);
   });
 
+  it('interdit la modification d\'une partie en ATELIER même si gérable', () => {
+    fixture.componentRef.setInput('games', [makeGame()]);
+    fixture.componentRef.setInput('canManage', true);
+    fixture.detectChanges();
+
+    expect(component.canModify(makeGame({ status: 'ATELIER' }))).toBe(false);
+  });
+
   it('interdit la modification quand non gérable', () => {
     fixture.componentRef.setInput('games', [makeGame()]);
     fixture.componentRef.setInput('canManage', false);
@@ -91,6 +99,7 @@ describe('GameList', () => {
     expect(component.typeLabel(makeGame({ type: 'EVENEMENT_TELE' }))).toBe('Événement Télévisé');
     expect(component.typeLabel(makeGame({ type: 'ESCARMOUCHE' }))).toBe('Escarmouche');
     expect(component.statusLabel(makeGame({ status: 'PLANIFIE' }))).toBe('Planifiée');
+    expect(component.statusLabel(makeGame({ status: 'ATELIER' }))).toBe('Atelier');
     expect(component.statusLabel(makeGame({ status: 'JOUE' }))).toBe('Jouée');
   });
 
@@ -109,6 +118,18 @@ describe('GameList', () => {
 
   it('n\'affiche pas le bouton pour une partie JOUE', () => {
     fixture.componentRef.setInput('games', [makeGame({ status: 'JOUE' })]);
+    fixture.componentRef.setInput('canRecord', true);
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('button');
+    const recordBtn = Array.from(buttons).find((b: unknown) =>
+      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+    );
+    expect(recordBtn).toBeFalsy();
+  });
+
+  it('n\'affiche pas le bouton pour une partie en ATELIER', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'ATELIER' })]);
     fixture.componentRef.setInput('canRecord', true);
     fixture.detectChanges();
 

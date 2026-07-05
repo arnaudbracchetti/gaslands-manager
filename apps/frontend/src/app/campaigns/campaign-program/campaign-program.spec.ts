@@ -43,7 +43,7 @@ describe('CampaignProgram Component', () => {
     recordResult: ReturnType<typeof vi.fn>;
     getParticipantVehicles: ReturnType<typeof vi.fn>;
     resolveWreck: ReturnType<typeof vi.fn>;
-    finalizeGame: ReturnType<typeof vi.fn>;
+    enterAtelier: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -62,7 +62,7 @@ describe('CampaignProgram Component', () => {
         outcome: { vehicleId: 100, diceRoll: 3, chocsBefore: 0, wreckResult: 'INDEMNE', chocsGained: 0, lostEquipment: null },
         descriptions: ['Table des Épaves : S\'en sort indemne (D6=3+0 chocs)'],
       })),
-      finalizeGame: vi.fn().mockReturnValue(of({ newAtelierId: 99, newAtelierOrder: 1.5 })),
+      enterAtelier: vi.fn().mockReturnValue(of({ autoClosedGameId: null })),
     };
 
     await TestBed.configureTestingModule({
@@ -255,7 +255,7 @@ describe('CampaignProgram Component', () => {
     expect(component.rollingWreck()).toBe(false);
   });
 
-  it('onWizardCompleted finalise la partie puis émet resultRecorded et ferme le wizard', () => {
+  it('onWizardCompleted fait entrer la partie en atelier puis émet resultRecorded et ferme le wizard', () => {
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 
@@ -264,13 +264,13 @@ describe('CampaignProgram Component', () => {
 
     component.onWizardCompleted();
 
-    expect(mockService.finalizeGame).toHaveBeenCalledWith(1, 10);
+    expect(mockService.enterAtelier).toHaveBeenCalledWith(1, 10);
     expect(component.recordingGame()).toBeNull();
     expect(emittedCount).toBe(1);
   });
 
-  it('onWizardCompleted affiche une erreur et laisse le wizard ouvert si finalizeGame échoue', () => {
-    mockService.finalizeGame.mockReturnValue(throwError(() => new Error('boom')));
+  it('onWizardCompleted affiche une erreur et laisse le wizard ouvert si enterAtelier échoue', () => {
+    mockService.enterAtelier.mockReturnValue(throwError(() => new Error('boom')));
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { GameStatus } from '../enums/game-status.enum';
 import { EvenementTeleGame } from './evenement-tele-game';
 import { EscarmoucheGame } from './escarmouche-game';
-import { AtelierGame } from './atelier-game';
 import { RankingAssignedEvent } from '../events/ranking-assigned.event';
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
@@ -46,7 +45,7 @@ function makeFavoriDuPublicBonusEvent(id = 8): FavoriDuPublicBonusEvent {
   return new FavoriDuPublicBonusEvent(id, 10, 1, id, 2, 5);
 }
 
-describe('EvenementTeleGame — canAccept', () => {
+describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
   const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen_1', null, []);
 
   it('accepte RankingAssignedEvent', () => {
@@ -61,7 +60,7 @@ describe('EvenementTeleGame — canAccept', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(false);
   });
 
-  it('accepte SequellaAddedEvent', () => {
+  it('accepte SequellaAddedEvent (séquelle imposée par la Table des Épaves)', () => {
     expect(game.canAccept(makeSequellaEvent())).toBe(true);
   });
 
@@ -86,7 +85,27 @@ describe('EvenementTeleGame — canAccept', () => {
   });
 });
 
-describe('EscarmoucheGame — canAccept', () => {
+describe('EvenementTeleGame — canAccept en ATELIER', () => {
+  const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen_1', new Date(), []);
+
+  it('accepte EquipmentChangedEvent', () => {
+    expect(game.canAccept(makeEquipmentEvent())).toBe(true);
+  });
+
+  it('accepte SequellaAddedEvent', () => {
+    expect(game.canAccept(makeSequellaEvent())).toBe(true);
+  });
+
+  it('refuse RankingAssignedEvent', () => {
+    expect(game.canAccept(makeRankingEvent())).toBe(false);
+  });
+
+  it('refuse GatesCrossedEvent', () => {
+    expect(game.canAccept(makeGatesCrossedEvent())).toBe(false);
+  });
+});
+
+describe('EscarmoucheGame — canAccept en PLANIFIE', () => {
   const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 2, 'scen_2', null, []);
 
   it('accepte RankingAssignedEvent (contrainte PC=0 est write-time, pas ici)', () => {
@@ -118,76 +137,43 @@ describe('EscarmoucheGame — canAccept', () => {
   });
 });
 
-describe('AtelierGame — canAccept', () => {
-  const game = new AtelierGame(10, 1, GameStatus.OUVERT, 1.5, []);
-
-  it('accepte EquipmentChangedEvent', () => {
-    expect(game.canAccept(makeEquipmentEvent())).toBe(true);
-  });
-
-  it('accepte SequellaAddedEvent', () => {
-    expect(game.canAccept(makeSequellaEvent())).toBe(true);
-  });
-
-  it('refuse RankingAssignedEvent', () => {
-    expect(game.canAccept(makeRankingEvent())).toBe(false);
-  });
-
-  it('refuse WalletMovementEvent', () => {
-    expect(game.canAccept(makeWalletEvent())).toBe(false);
-  });
-
-  it('refuse GatesCrossedEvent', () => {
-    expect(game.canAccept(makeGatesCrossedEvent())).toBe(false);
-  });
-
-  it('refuse VehicleDestroyedEvent', () => {
-    expect(game.canAccept(makeVehicleDestroyedEvent())).toBe(false);
-  });
-
-  it('refuse ImprovementLostEvent', () => {
-    expect(game.canAccept(makeImprovementLostEvent())).toBe(false);
-  });
-
-  it('refuse FavoriDuPublicBonusEvent', () => {
-    expect(game.canAccept(makeFavoriDuPublicBonusEvent())).toBe(false);
-  });
-
-  it('type est ATELIER', () => {
-    expect(game.type).toBe('ATELIER');
-  });
-});
-
 describe('Game — addEvent / DomainException', () => {
   it('lève si canAccept retourne false', () => {
-    const atelier = new AtelierGame(10, 1, GameStatus.OUVERT, 1.5, []);
+    const atelier = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
     const ranking = makeRankingEvent();
     expect(() => atelier.addEvent(ranking)).toThrow('pas autorisé');
   });
 
-  it('refuse tout événement sur un atelier figé (CLOTURE)', () => {
-    const atelier = new AtelierGame(10, 1, GameStatus.CLOTURE, 1.5, []);
-    expect(() => atelier.addEvent(makeEquipmentEvent())).toThrow('figée');
-  });
-
-  it('refuse tout événement sur une partie déjà jouée (JOUE)', () => {
+  it('refuse tout événement sur une partie figée (JOUE)', () => {
     const partie = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
     expect(() => partie.addEvent(makeRankingEvent())).toThrow('figée');
+    expect(() => partie.addEvent(makeEquipmentEvent())).toThrow('figée');
   });
 
-  it('markPlayed fige la partie (PLANIFIE → JOUE, horodatée)', () => {
+  it('enterAtelier fait passer PLANIFIE → ATELIER, horodate', () => {
     const partie = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    partie.markPlayed();
-    expect(partie.status).toBe(GameStatus.JOUE);
+    partie.enterAtelier();
+    expect(partie.status).toBe(GameStatus.ATELIER);
     expect(partie.playedAt).toBeInstanceOf(Date);
-    expect(() => partie.addEvent(makeRankingEvent())).toThrow('figée');
+    expect(() => partie.addEvent(makeRankingEvent())).toThrow('pas autorisé');
+    expect(partie.canAccept(makeEquipmentEvent())).toBe(true);
   });
 
-  it('close fige l\'atelier (OUVERT → CLOTURE)', () => {
-    const atelier = new AtelierGame(10, 1, GameStatus.OUVERT, 1.5, []);
-    atelier.close();
-    expect(atelier.status).toBe(GameStatus.CLOTURE);
-    expect(() => atelier.addEvent(makeEquipmentEvent())).toThrow('figée');
+  it('enterAtelier refuse si la partie n\'est pas PLANIFIE', () => {
+    const partie = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    expect(() => partie.enterAtelier()).toThrow('PLANIFIE');
+  });
+
+  it('closeAtelier fige la partie (ATELIER → JOUE)', () => {
+    const partie = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    partie.closeAtelier();
+    expect(partie.status).toBe(GameStatus.JOUE);
+    expect(() => partie.addEvent(makeEquipmentEvent())).toThrow('figée');
+  });
+
+  it('closeAtelier refuse si la partie n\'est pas en ATELIER', () => {
+    const partie = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    expect(() => partie.closeAtelier()).toThrow('atelier');
   });
 
   it('_events triés par eventOrder dans apply', () => {

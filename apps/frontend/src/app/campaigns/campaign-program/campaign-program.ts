@@ -267,8 +267,8 @@ export class CampaignProgram implements OnInit {
   }
 
   /**
-   * Le wizard est entièrement terminé (écran 3, "Terminer") — finalise la partie
-   * (PLANIFIE → JOUE + ouverture d'un atelier) avant de fermer la pop-up. En cas
+   * Le wizard est entièrement terminé (écran 3, "Terminer") — fait entrer la
+   * partie en atelier (PLANIFIE → ATELIER) avant de fermer la pop-up. En cas
    * d'échec, le wizard reste ouvert : tous les tirages sont déjà persistés, seule
    * la transition de statut doit être refaite (l'utilisateur peut recliquer
    * "Terminer").
@@ -277,7 +277,7 @@ export class CampaignProgram implements OnInit {
     const game = this.recordingGame();
     if (!game) return;
     this.finalizingGame.set(true);
-    this.campaignsService.finalizeGame(this.campaignId(), game.id).subscribe({
+    this.campaignsService.enterAtelier(this.campaignId(), game.id).subscribe({
       next: () => {
         this.finalizingGame.set(false);
         this.recordingGame.set(null);
@@ -289,8 +289,8 @@ export class CampaignProgram implements OnInit {
         this.resultRecorded.emit();
       },
       error: () => {
-        console.error('Échec de la finalisation de la partie.');
-        this.error.set('Erreur lors de la finalisation de la partie.');
+        console.error('Échec de l\'entrée en atelier de la partie.');
+        this.error.set('Erreur lors du passage en atelier de la partie.');
         this.finalizingGame.set(false);
       },
     });

@@ -329,11 +329,11 @@ erDiagram
     GAME {
         number id PK
         number campaignId FK
-        string scenarioId "nullable — null pour ATELIER"
-        enum type "EVENEMENT_TELE|ESCARMOUCHE|ATELIER"
-        enum status "PLANIFIE|JOUE|OUVERT|CLOTURE"
-        float displayOrder "double precision — fractionnable (ex. 1.5)"
-        date playedAt "null si PLANIFIE/OUVERT"
+        string scenarioId "nullable"
+        enum type "EVENEMENT_TELE|ESCARMOUCHE"
+        enum status "PLANIFIE|ATELIER|JOUE"
+        float displayOrder "double precision"
+        date playedAt "horodatage du passage à ATELIER — null si PLANIFIE"
         date createdAt
         date updatedAt
     }
@@ -403,7 +403,8 @@ classDiagram
         +games : readonly Game[]
         +replay() void
         +replayUpTo(gameId) void
-        +finalizeGame(gameId) AtelierGame
+        +enterAtelier(gameId) autoClosedGameId
+        +closeAtelier(gameId) void
         +closeCampaign() void
         +applyNewEvent(gameId, event) void
         +standings() StandingsEntry[]
@@ -474,13 +475,25 @@ classDiagram
 
 ### Hiérarchie Game (Invoker)
 
-| Classe | Type | Statuts | Événements acceptés |
-|--------|------|---------|---------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus |
-| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) |
-| `AtelierGame` | `ATELIER` | `OUVERT → CLOTURE` | EquipmentChanged, SequellaAdded |
+Pas de sous-type dédié à l'atelier : la phase garage post-partie est un
+statut du cycle de vie de la partie elle-même (`PLANIFIE → ATELIER → JOUE`),
+pas une entité séparée (cf.
+[design doc](plans/2026-07-05-atelier-lifecycle-design.md) et
+[CAMPAIGN.md](spec/CAMPAIGN.md#cycle-de-vie-dune-partie-et-phase-atelier)).
+`canAccept(event)` dépend donc du statut courant, pas seulement du sous-type :
 
-Un `AtelierGame` est intercalé automatiquement après chaque finalisation de partie (`order = partie.order + 0.5`, `double precision` SQL).
+| Classe | Type | Statuts | Événements acceptés en PLANIFIE | Événements acceptés en ATELIER |
+|--------|------|---------|----------------------------------|----------------------------------|
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged, SequellaAdded |
+| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged, SequellaAdded |
+
+`SequellaAdded` est accepté dans les deux statuts : imposé par la Table des
+Épaves (ligne "Siège irrécupérable") en `PLANIFIE`, ou acheté volontairement
+contre des Chocs en `ATELIER`.
+
+Un seul `Game` en statut `ATELIER` à la fois par campagne : `enterAtelier`
+clôture automatiquement (`ATELIER → JOUE`) toute autre partie encore en
+atelier.
 
 ### Hiérarchie GameEvent (Command)
 

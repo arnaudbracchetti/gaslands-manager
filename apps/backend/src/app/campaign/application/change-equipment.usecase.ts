@@ -4,13 +4,13 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
+import { GameStatus } from '../domain/enums/game-status.enum';
 import type { Orientation } from '../../team/domain/team';
 import type { CatalogService } from '../../catalog/catalog.service';
 import { assertParticipant } from './record-ranking.usecase';
 
 export interface ChangeEquipmentCommand {
   campaignId: number;
-  gameId: number;
   userId: number;
   operation: EquipmentOperation;
   entityType: EquipmentEntityType;
@@ -48,6 +48,13 @@ export class ChangeEquipmentUseCase {
   async execute(cmd: ChangeEquipmentCommand): Promise<void> {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     const me = assertParticipant(campaign, cmd.userId);
+
+    // Un seul atelier actif à la fois par campagne (Campaign.enterAtelier) — pas besoin
+    // que l'appelant précise sur quelle partie l'événement doit être journalisé.
+    const game = campaign.games.find((g) => g.status === GameStatus.ATELIER);
+    if (!game) {
+      throw new BadRequestException('Aucun atelier ouvert actuellement.');
+    }
 
     const resolvedVehicleType = cmd.entityType === 'VEHICLE'
       ? (this.catalog.getVehicleType(cmd.nomInterne) ?? null)
@@ -87,7 +94,7 @@ export class ChangeEquipmentUseCase {
 
     const event = new EquipmentChangedEvent(
       0,
-      cmd.gameId,
+      game.id,
       me.id,
       0,
       cmd.operation,
@@ -102,10 +109,9 @@ export class ChangeEquipmentUseCase {
     );
 
     try {
-      const game = campaign.findGame(cmd.gameId);
-      // Affordability (BUY), « atelier OUVERT » (statut) et type d'événement sont désormais
-      // des gardes de domaine (assertCanAfford, Game.addEvent). Ne PAS exécuter l'événement
-      // ici (D-S11 : id=0 donnerait un id transient invalide) — le client rafraîchit via /workshop.
+      // Affordability (BUY) et type d'événement sont désormais des gardes de domaine
+      // (assertCanAfford, Game.addEvent). Ne PAS exécuter l'événement ici (D-S11 :
+      // id=0 donnerait un id transient invalide) — le client rafraîchit via /workshop.
       if (cmd.operation === 'BUY') me.assertCanAfford(cost);
       game.addEvent(event);
     } catch (e) {
@@ -113,6 +119,6 @@ export class ChangeEquipmentUseCase {
       throw e;
     }
 
-    await this.campaignRepo.appendEvents(cmd.gameId, [event]);
+    await this.campaignRepo.appendEvents(game.id, [event]);
   }
 }

@@ -6,17 +6,18 @@ import { GameStatus } from '../enums/game-status.enum';
 /**
  * Partie de campagne — GoF Invoker.
  *
- * Classe abstraite commune à EvenementTeleGame, EscarmoucheGame et AtelierGame.
- * Maintient son propre journal d'événements et délègue l'exécution à chaque commande.
+ * Classe abstraite commune à EvenementTeleGame et EscarmoucheGame. Maintient son
+ * propre journal d'événements et délègue l'exécution à chaque commande.
  *
- * `canAccept(event)` est la règle métier du type de partie : seuls certains types
- * d'événements peuvent être ajoutés à chaque sous-type (ex. EquipmentChangedEvent
- * uniquement dans un AtelierGame).
+ * `canAccept(event)` est la règle métier du statut courant : les événements de
+ * classement/exploits/épaves ne sont acceptés qu'en PLANIFIE, les événements
+ * d'atelier (achat/revente/séquelle) uniquement en ATELIER — la phase garage
+ * post-partie appartient à la partie elle-même, pas à une entité séparée.
  */
 export abstract class Game {
   protected readonly _events: GameEvent[];
-  // status / playedAt sont mutés par les transitions markPlayed()/close() — privés
-  // pour que ces changements passent par des méthodes de domaine (plus de cast readonly).
+  // status / playedAt sont mutés par les transitions enterAtelier()/closeAtelier() —
+  // privés pour que ces changements passent par des méthodes de domaine (plus de cast readonly).
   private _status: GameStatus;
   private _playedAt: Date | null;
 
@@ -24,7 +25,7 @@ export abstract class Game {
     readonly id: number,
     readonly campaignId: number,
     status: GameStatus,
-    readonly order: number,         // decimal — atelier intercalé à n + 0.5
+    readonly order: number,
     playedAt: Date | null,
     events: GameEvent[],
   ) {
@@ -41,46 +42,45 @@ export abstract class Game {
   abstract get type(): string;
 
   /**
-   * Peut-on ajouter cet événement à cette partie ?
-   * Implémenté par chaque sous-type. `addEvent` appelle cette méthode avant d'ajouter.
+   * Peut-on ajouter cet événement à cette partie, compte tenu de son statut
+   * courant ? Implémenté par chaque sous-type. `addEvent` appelle cette
+   * méthode avant d'ajouter.
    */
   abstract canAccept(event: GameEvent): boolean;
-
-  /**
-   * Statut dans lequel cette partie accepte de NOUVEAUX événements (write-time) :
-   * PLANIFIE pour une partie jouable, OUVERT pour un atelier. Une fois figée
-   * (JOUE / CLOTURE), la partie n'accepte plus rien — c'est la garde qui remplace
-   * les contrôles « atelier ouvert » qui vivaient auparavant dans les use cases.
-   */
-  protected abstract get mutableStatus(): GameStatus;
 
   /**
    * Valide et ajoute un événement au journal.
    * Le use case doit ensuite appeler `event.execute(participants)` lui-même.
    */
   addEvent(event: GameEvent): void {
-    if (this._status !== this.mutableStatus) {
+    if (this._status === GameStatus.JOUE) {
       throw new DomainException(
-        `Cette partie (${this.type}) est figée (${this._status}) et n'accepte plus d'événements.`,
+        `Cette partie (${this.type}) est figée et n'accepte plus d'événements.`,
       );
     }
     if (!this.canAccept(event)) {
       throw new DomainException(
-        `Cet événement n'est pas autorisé pour une partie de type ${this.type}`,
+        `Cet événement n'est pas autorisé pour une partie de type ${this.type} en statut ${this._status}.`,
       );
     }
     this._events.push(event);
   }
 
-  /** Transition PLANIFIE → JOUE : la partie est jouée et figée, horodatée. */
-  markPlayed(): void {
-    this._status = GameStatus.JOUE;
+  /** Transition PLANIFIE → ATELIER : résultat enregistré, phase garage ouverte. */
+  enterAtelier(): void {
+    if (this._status !== GameStatus.PLANIFIE) {
+      throw new DomainException('Seule une partie PLANIFIE peut entrer en atelier.');
+    }
+    this._status = GameStatus.ATELIER;
     this._playedAt = new Date();
   }
 
-  /** Transition OUVERT → CLOTURE : l'atelier est figé. */
-  close(): void {
-    this._status = GameStatus.CLOTURE;
+  /** Transition ATELIER → JOUE : phase garage clôturée, la partie est figée. */
+  closeAtelier(): void {
+    if (this._status !== GameStatus.ATELIER) {
+      throw new DomainException("Cette partie n'est pas en atelier.");
+    }
+    this._status = GameStatus.JOUE;
   }
 
   /**

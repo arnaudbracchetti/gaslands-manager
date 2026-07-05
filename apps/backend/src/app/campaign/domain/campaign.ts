@@ -3,7 +3,6 @@ import { CampaignParticipant } from './campaign-participant';
 import type { Game } from './games/game';
 import type { GameEvent } from './events/game-event';
 import { GameStatus } from './enums/game-status.enum';
-import { AtelierGame } from './games/atelier-game';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
@@ -289,12 +288,12 @@ export class Campaign {
 
   /**
    * Enregistre le résultat d'une partie : calcule les PC, journalise un
-   * RankingAssignedEvent par participant (+ exploits/résistance). Ne finalise
-   * PAS la partie — celle-ci reste PLANIFIE tant que le wizard de fin de partie
-   * n'est pas entièrement terminé (écran 3, résolution de la Table des Épaves),
-   * pour que les événements de cet écran restent acceptés par `Game.addEvent`
-   * (garde de statut). La finalisation (PLANIFIE → JOUE + atelier) est une
-   * action explicite et séparée, cf. `finalizeGame()`.
+   * RankingAssignedEvent par participant (+ exploits/résistance). Ne fait PAS
+   * entrer la partie en atelier — celle-ci reste PLANIFIE tant que le wizard de
+   * fin de partie n'est pas entièrement terminé (écran 3, résolution de la
+   * Table des Épaves), pour que les événements de cet écran restent acceptés
+   * par `Game.addEvent` (garde de statut). L'entrée en atelier
+   * (PLANIFIE → ATELIER) est une action explicite et séparée, cf. `enterAtelier()`.
    *
    * Les événements créés portent id=0 ; le use case les persiste via appendEvents.
    */
@@ -361,36 +360,47 @@ export class Campaign {
   // ── Cycle de vie des parties (event sourcing) ────────────────────────────────
 
   /**
-   * Finalise une partie (PLANIFIE → JOUE) et ouvre un AtelierGame intercalé.
-   * Le nouvel atelier a id=0 (le repository lui assignera un vrai id).
+   * Fait entrer une partie en atelier (PLANIFIE → ATELIER) : résultat enregistré,
+   * phase garage post-partie ouverte. Si une autre partie est encore en ATELIER,
+   * elle est automatiquement clôturée (ATELIER → JOUE) — un seul atelier actif à
+   * la fois par campagne. L'id de cette partie auto-clôturée est retourné pour
+   * que l'appelant puisse en avertir l'organisateur.
    */
-  finalizeGame(gameId: number): AtelierGame {
+  enterAtelier(gameId: number): { autoClosedGameId: number | null } {
     const game = this.findGame(gameId);
     if (game.status !== GameStatus.PLANIFIE) {
-      throw new DomainException('Seule une partie PLANIFIE peut être finalisée');
+      throw new DomainException('Seule une partie PLANIFIE peut entrer en atelier.');
     }
-
-    game.markPlayed();
 
     const openAtelier = this._games.find(
-      (g) => g instanceof AtelierGame && g.status === GameStatus.OUVERT,
+      (g) => g.id !== gameId && g.status === GameStatus.ATELIER,
     );
+    let autoClosedGameId: number | null = null;
     if (openAtelier) {
-      openAtelier.close();
+      openAtelier.closeAtelier();
+      autoClosedGameId = openAtelier.id;
     }
 
-    const newAtelier = new AtelierGame(0, this.id, GameStatus.OUVERT, game.order + 0.5, []);
-    this._games.push(newAtelier);
-    return newAtelier;
+    game.enterAtelier();
+    return { autoClosedGameId };
+  }
+
+  /** Clôture manuelle de l'atelier d'une partie (ATELIER → JOUE), par l'organisateur. */
+  closeAtelier(gameId: number): void {
+    const game = this.findGame(gameId);
+    if (game.status !== GameStatus.ATELIER) {
+      throw new DomainException("Cette partie n'est pas en atelier.");
+    }
+    game.closeAtelier();
   }
 
   /**
-   * Ferme les ateliers OUVERT restants (transition vers TERMINEE).
+   * Clôture toute partie encore en ATELIER (transition de la campagne vers TERMINEE).
    */
   closeCampaign(): void {
     for (const game of this._games) {
-      if (game instanceof AtelierGame && game.status === GameStatus.OUVERT) {
-        game.close();
+      if (game.status === GameStatus.ATELIER) {
+        game.closeAtelier();
       }
     }
   }
@@ -430,8 +440,7 @@ export class Campaign {
   }
 
   private nextOrder(): number {
-    const planned = this._games.filter((g) => !(g instanceof AtelierGame));
-    return planned.reduce((max, g) => Math.max(max, g.order), 0) + 1;
+    return this._games.reduce((max, g) => Math.max(max, g.order), 0) + 1;
   }
 
   private computePoints(gameType: string, rank: number, classified: number): number {

@@ -19,7 +19,7 @@ import type {
   ParticipantVehiclesDto,
   WreckResolveRequestDto,
   WreckResolveResultDto,
-  FinalizeGameResultDto,
+  EnterAtelierResultDto,
 } from './game.model';
 
 @Injectable({ providedIn: 'root' })
@@ -181,9 +181,9 @@ export class CampaignsService {
 
   /**
    * POST /api/campaigns/:id/games/:gameId/results → enregistre les résultats
-   * d'une partie PLANIFIE (classement + exploits, organisateur). Ne finalise
-   * PAS la partie — elle reste PLANIFIE jusqu'à l'appel explicite de
-   * `finalizeGame()` en fin de wizard (écran 3).
+   * d'une partie PLANIFIE (classement + exploits, organisateur). Ne fait PAS
+   * entrer la partie en atelier — elle reste PLANIFIE jusqu'à l'appel explicite
+   * de `enterAtelier()` en fin de wizard (écran 3).
    */
   recordResult(campaignId: number, gameId: number, dto: RecordResultDto): Observable<Game> {
     return this.http.post<Game>(`/api/campaigns/${campaignId}/games/${gameId}/results`, dto);
@@ -238,13 +238,15 @@ export class CampaignsService {
   }
 
   /**
-   * POST /api/campaigns/:id/games/:gameId/finalize → finalise la partie (PLANIFIE →
-   * JOUE) et ouvre un atelier. Déclenché à la toute fin du wizard de fin de partie
-   * (écran 3), pas à la soumission du classement (cf. `recordResult`).
+   * POST /api/campaigns/:id/games/:gameId/enter-atelier → fait entrer la partie
+   * en atelier (PLANIFIE → ATELIER). Déclenché à la toute fin du wizard de fin
+   * de partie (écran 3), pas à la soumission du classement (cf. `recordResult`).
+   * `autoClosedGameId` signale qu'une autre partie encore en atelier a été
+   * automatiquement clôturée (ATELIER → JOUE) par cet appel.
    */
-  finalizeGame(campaignId: number, gameId: number): Observable<FinalizeGameResultDto> {
-    return this.http.post<FinalizeGameResultDto>(
-      `/api/campaigns/${campaignId}/games/${gameId}/finalize`,
+  enterAtelier(campaignId: number, gameId: number): Observable<EnterAtelierResultDto> {
+    return this.http.post<EnterAtelierResultDto>(
+      `/api/campaigns/${campaignId}/games/${gameId}/enter-atelier`,
       {},
     );
   }

@@ -49,7 +49,8 @@ import { RecordRankingUseCase } from './application/record-ranking.usecase';
 import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
 import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
 import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
-import { FinalizeGameUseCase } from './application/finalize-game.usecase';
+import { EnterAtelierUseCase } from './application/enter-atelier.usecase';
+import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
@@ -193,9 +194,15 @@ import { GetWorkshopUseCase } from './application/get-workshop.usecase';
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
-      provide: FinalizeGameUseCase,
+      provide: EnterAtelierUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new FinalizeGameUseCase(repo, replay),
+        new EnterAtelierUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: CloseAtelierUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new CloseAtelierUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {

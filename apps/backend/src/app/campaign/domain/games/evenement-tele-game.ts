@@ -12,6 +12,7 @@ import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
+import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 
 export class EvenementTeleGame extends Game {
   constructor(
@@ -28,21 +29,25 @@ export class EvenementTeleGame extends Game {
 
   override get type(): string { return 'EVENEMENT_TELE'; }
 
-  protected override get mutableStatus(): GameStatus { return GameStatus.PLANIFIE; }
-
   override canAccept(event: GameEvent): boolean {
-    return (
-      event instanceof RankingAssignedEvent ||
-      event instanceof WalletMovementEvent ||
-      event instanceof VehicleLostEvent ||
-      event instanceof WeaponLostEvent ||
-      event instanceof ImprovementLostEvent ||
-      event instanceof WreckResolvedEvent ||
-      event instanceof SequellaAddedEvent ||
-      event instanceof ResistanceContactedEvent ||
-      event instanceof GatesCrossedEvent ||
-      event instanceof VehicleDestroyedEvent ||
-      event instanceof FavoriDuPublicBonusEvent
-    );
+    if (this.status === GameStatus.PLANIFIE) {
+      return (
+        event instanceof RankingAssignedEvent ||
+        event instanceof WalletMovementEvent ||
+        event instanceof VehicleLostEvent ||
+        event instanceof WeaponLostEvent ||
+        event instanceof ImprovementLostEvent ||
+        event instanceof WreckResolvedEvent ||
+        event instanceof SequellaAddedEvent || // séquelle imposée par la Table des Épaves (Siège irrécupérable)
+        event instanceof ResistanceContactedEvent ||
+        event instanceof GatesCrossedEvent ||
+        event instanceof VehicleDestroyedEvent ||
+        event instanceof FavoriDuPublicBonusEvent
+      );
+    }
+    if (this.status === GameStatus.ATELIER) {
+      return event instanceof EquipmentChangedEvent || event instanceof SequellaAddedEvent;
+    }
+    return false;
   }
 }

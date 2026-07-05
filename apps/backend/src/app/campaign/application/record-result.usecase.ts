@@ -26,11 +26,11 @@ export interface RecordResultCommand {
  *
  * Convergence event-sourcing : l'agrégat crée un `RankingAssignedEvent` par
  * participant (PC calculés selon le type de partie), plus les événements
- * d'exploits/résistance. Ne finalise PAS la partie (pas de transition JOUE ni
- * d'ouverture d'atelier) — la partie reste PLANIFIE pour que la suite du
- * wizard de fin de partie (résolution de la Table des Épaves) puisse encore y
- * journaliser des événements. La finalisation est déclenchée séparément par
- * `FinalizeGameUseCase`, à la toute fin du wizard.
+ * d'exploits/résistance. Ne fait PAS entrer la partie en atelier — elle reste
+ * PLANIFIE pour que la suite du wizard de fin de partie (résolution de la
+ * Table des Épaves) puisse encore y journaliser des événements. L'entrée en
+ * atelier (PLANIFIE → ATELIER) est déclenchée séparément par
+ * `EnterAtelierUseCase`, à la toute fin du wizard.
  */
 export class RecordResultUseCase {
   constructor(

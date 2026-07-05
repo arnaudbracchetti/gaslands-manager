@@ -11,7 +11,6 @@ import { CampaignParticipant } from '../domain/campaign-participant';
 import { Game } from '../domain/games/game';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import { EscarmoucheGame } from '../domain/games/escarmouche-game';
-import { AtelierGame } from '../domain/games/atelier-game';
 import { GameStatus } from '../domain/enums/game-status.enum';
 
 import { GameEvent } from '../domain/events/game-event';
@@ -98,8 +97,6 @@ export class CampaignMapper {
         return new EvenementTeleGame(orm.id, orm.campaignId, status, orm.order, orm.scenarioId ?? '', playedAt, events);
       case 'ESCARMOUCHE':
         return new EscarmoucheGame(orm.id, orm.campaignId, status, orm.order, orm.scenarioId ?? '', playedAt, events);
-      case 'ATELIER':
-        return new AtelierGame(orm.id, orm.campaignId, status, orm.order, events);
       default:
         throw new DomainException(`Type de partie inconnu : "${orm.type}"`);
     }

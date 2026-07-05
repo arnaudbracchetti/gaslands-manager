@@ -8,7 +8,7 @@
 export type GameType = 'EVENEMENT_TELE' | 'ESCARMOUCHE';
 
 /** Statut d'une partie — miroir de GameStatus (backend) */
-export type GameStatus = 'PLANIFIE' | 'JOUE';
+export type GameStatus = 'PLANIFIE' | 'ATELIER' | 'JOUE';
 
 /** Une partie du Programme telle que retournée par l'API */
 export interface Game {
@@ -158,10 +158,10 @@ export interface WreckResolveResultDto {
   descriptions: string[];
 }
 
-/** Résultat de POST .../finalize — miroir de FinalizeGameResult (backend). */
-export interface FinalizeGameResultDto {
-  newAtelierId: number;
-  newAtelierOrder: number;
+/** Résultat de POST .../enter-atelier — miroir de EnterAtelierResult (backend). */
+export interface EnterAtelierResultDto {
+  /** Id de la partie dont l'atelier a été auto-clôturé, s'il y en avait un ; sinon null. */
+  autoClosedGameId: number | null;
 }
 
 /**

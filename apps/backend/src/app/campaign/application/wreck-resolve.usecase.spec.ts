@@ -14,10 +14,10 @@ import { makeTestParticipant } from '../domain/test-helpers';
 
 /**
  * Régression du bug "écran 3 du wizard bloqué" : la partie doit rester PLANIFIE au
- * moment où l'organisateur résout la Table des Épaves (la finalisation JOUE n'a lieu
- * qu'à la toute fin du wizard, via FinalizeGameUseCase — cf. Campaign.recordResult qui
- * ne finalise plus). Ces tests exercent donc le use case avec une partie PLANIFIE,
- * exactement le scénario réel du wizard.
+ * moment où l'organisateur résout la Table des Épaves (l'entrée en atelier n'a lieu
+ * qu'à la toute fin du wizard, via EnterAtelierUseCase — cf. Campaign.recordResult qui
+ * ne fait pas entrer la partie en atelier). Ces tests exercent donc le use case avec
+ * une partie PLANIFIE, exactement le scénario réel du wizard.
  */
 function makeFixture(wreckResult: WreckResult, outcomeOverrides: Partial<WreckOutcome> = {}) {
   const { participant, vehicle } = makeTestParticipant(1);

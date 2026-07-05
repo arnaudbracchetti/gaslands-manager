@@ -954,7 +954,7 @@ Orchestrateur du wizard de fin de partie (remplace l'ancienne modale unique `Gam
 | `wreckOutcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats de tirage reçus, clé = `vehicleId` |
 | `wreckDescriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`), clé = `vehicleId` |
 | `rollingWreck` | `boolean` | `false` | Verrou "un tirage à la fois" — consommé par l'`effect()` de déclenchement automatique de l'écran 3, plus par aucun bouton (il n'y en a plus) |
-| `finalizingGame` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `finalizeGame()` |
+| `finalizingGame` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `enterAtelier()` |
 
 **Outputs**
 
@@ -963,10 +963,10 @@ Orchestrateur du wizard de fin de partie (remplace l'ancienne modale unique `Gam
 | `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement (écran 1) — le parent recharge `participantVehicles` en réponse |
 | `rankingSubmitted` | `RecordResultDto` | Classement + exploits validés, émis à la transition écran 2 → 3 |
 | `wreckRollRequested` | `WreckResolveRequestDto` | Demande de tirage automatique, un véhicule à la fois (écran 3) — émis par un `effect()` interne, plus par un clic utilisateur |
-| `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran 3, "Terminer") — le parent appelle `finalizeGame()` à ce signal, **c'est le seul moment où la partie passe JOUE** |
+| `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran 3, "Terminer") — le parent appelle `enterAtelier()` à ce signal, **c'est le seul moment où la partie passe PLANIFIE → ATELIER** |
 | `formCancel` | `void` | Annulation (uniquement possible avant la soumission du classement) |
 
-Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `resolveWreck()` et `finalizeGame()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran 2) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]".
+Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `resolveWreck()` et `enterAtelier()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran 2) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]".
 
 ---
 
@@ -1032,7 +1032,7 @@ l'arrivée sur cet écran ; ce composant se contente d'afficher, pour chaque vé
 désigné à l'écran 2, un indicateur "en cours" puis le résultat reçu (Chocs, perte
 d'équipement, lignes `descriptions`, "Détruit par [participant]" le cas échéant).
 "Terminer" n'est actif que lorsque tous les véhicules ont un résultat ; son clic
-déclenche la finalisation de la partie côté parent (`finalizeGame()`).
+déclenche l'entrée en atelier de la partie côté parent (`enterAtelier()`).
 
 | | |
 |---|---|
@@ -1048,7 +1048,7 @@ déclenche la finalisation de la partie côté parent (`finalizeGame()`).
 | `destroyedBy` | `ReadonlyMap<number, string>` | `new Map()` | Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent |
 | `outcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats reçus, clé = `vehicleId` |
 | `descriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`) |
-| `finalizing` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `finalizeGame()` |
+| `finalizing` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `enterAtelier()` |
 
 **Outputs**
 

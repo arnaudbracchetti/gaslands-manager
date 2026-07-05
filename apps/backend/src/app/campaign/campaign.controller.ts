@@ -52,7 +52,8 @@ import { RecordRankingUseCase } from './application/record-ranking.usecase';
 import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
 import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
 import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
-import { FinalizeGameUseCase } from './application/finalize-game.usecase';
+import { EnterAtelierUseCase } from './application/enter-atelier.usecase';
+import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
@@ -83,7 +84,7 @@ import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
-import type { FinalizeGameResult } from './application/finalize-game.usecase';
+import type { EnterAtelierResult } from './application/enter-atelier.usecase';
 import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
 // Payload injecté par JwtStrategy dans req.user.
@@ -115,7 +116,8 @@ export class CampaignController {
     private readonly recordWalletUseCase: RecordWalletMovementUseCase,
     private readonly recordVehicleLostUseCase: RecordVehicleLostUseCase,
     private readonly contactResistanceUseCase: ContactResistanceUseCase,
-    private readonly finalizeGameUseCase: FinalizeGameUseCase,
+    private readonly enterAtelierUseCase: EnterAtelierUseCase,
+    private readonly closeAtelierUseCase: CloseAtelierUseCase,
     private readonly getStandingsUseCase: GetStandingsUseCase,
     private readonly changeEquipmentUseCase: ChangeEquipmentUseCase,
     private readonly wreckResolveUseCase: WreckResolveUseCase,
@@ -310,15 +312,27 @@ export class CampaignController {
     return this.removeGameUseCase.execute({ campaignId: id, gameId, userId: req.user.id });
   }
 
-  /** POST /api/campaigns/:id/games/:gameId/finalize — finalise (JOUE) + ouvre un atelier. */
+  /** POST /api/campaigns/:id/games/:gameId/enter-atelier — PLANIFIE → ATELIER (résultat enregistré). */
   @UseGuards(JwtAuthGuard)
-  @Post('campaigns/:id/games/:gameId/finalize')
-  finalizeGame(
+  @Post('campaigns/:id/games/:gameId/enter-atelier')
+  enterAtelier(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('gameId', ParseIntPipe) gameId: number,
-  ): Promise<FinalizeGameResult> {
-    return this.finalizeGameUseCase.execute({ campaignId, gameId, userId: req.user.id });
+  ): Promise<EnterAtelierResult> {
+    return this.enterAtelierUseCase.execute({ campaignId, gameId, userId: req.user.id });
+  }
+
+  /** POST /api/campaigns/:id/games/:gameId/close-atelier — clôture manuelle (ATELIER → JOUE). */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/close-atelier')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  closeAtelier(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<void> {
+    return this.closeAtelierUseCase.execute({ campaignId, gameId, userId: req.user.id });
   }
 
   // ── Événements de partie (event sourcing) ───────────────────────────────────
@@ -401,19 +415,17 @@ export class CampaignController {
     });
   }
 
-  /** POST /api/campaigns/:id/games/:gameId/events/equipment — achat/revente atelier. */
+  /** POST /api/campaigns/:id/events/equipment — achat/revente atelier (partie en cours en ATELIER). */
   @UseGuards(JwtAuthGuard)
-  @Post('campaigns/:id/games/:gameId/events/equipment')
+  @Post('campaigns/:id/events/equipment')
   @HttpCode(HttpStatus.NO_CONTENT)
   changeEquipment(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
-    @Param('gameId', ParseIntPipe) gameId: number,
     @Body() dto: ChangeEquipmentDto,
   ): Promise<void> {
     return this.changeEquipmentUseCase.execute({
       campaignId,
-      gameId,
       userId: req.user.id,
       operation: dto.operation,
       entityType: dto.entityType,
@@ -443,19 +455,17 @@ export class CampaignController {
     });
   }
 
-  /** POST /api/campaigns/:id/games/:gameId/events/sequella — séquelle permanente (atelier OUVERT). */
+  /** POST /api/campaigns/:id/events/sequella — séquelle permanente (partie en cours en ATELIER). */
   @UseGuards(JwtAuthGuard)
-  @Post('campaigns/:id/games/:gameId/events/sequella')
+  @Post('campaigns/:id/events/sequella')
   @HttpCode(HttpStatus.NO_CONTENT)
   addSequella(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
-    @Param('gameId', ParseIntPipe) gameId: number,
     @Body() dto: AddSequellaDto,
   ): Promise<void> {
     return this.addSequellaUseCase.execute({
       campaignId,
-      gameId,
       userId: req.user.id,
       vehicleId: dto.vehicleId,
       sequellaTypeNom: dto.sequellaTypeNom,

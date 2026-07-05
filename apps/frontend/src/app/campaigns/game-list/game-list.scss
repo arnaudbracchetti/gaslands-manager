@@ -85,6 +85,11 @@
       color: var(--tb-os);
       border-color: var(--tb-os);
     }
+
+    &--atelier {
+      color: var(--tb-danger);
+      border-color: var(--tb-danger);
+    }
   }
 
   &__actions {

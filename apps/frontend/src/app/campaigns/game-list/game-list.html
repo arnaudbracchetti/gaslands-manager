@@ -12,7 +12,8 @@
           {{ typeLabel(game) }}
         </span>
         <span class="game-list__badge game-list__badge--status"
-          [class.game-list__badge--played]="game.status === 'JOUE'">
+          [class.game-list__badge--played]="game.status === 'JOUE'"
+          [class.game-list__badge--atelier]="game.status === 'ATELIER'">
           {{ statusLabel(game) }}
         </span>
       </div>
