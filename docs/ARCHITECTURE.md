@@ -475,6 +475,18 @@ d'écriture). Deux `data-testid` ajoutés pour fiabiliser des sélecteurs autrem
 ambigus : `tam-weapon-{nomInterne}` (`tourelle-assignment-modal.html`) et
 `vehicle-card-manage`/`vehicle-card-delete` (`vehicle-summary-card.html`).
 
+**Couverture Campaigns** : `campaign-program.spec.ts` — spec pilote couvrant la
+création d'une saison (équipe engagée dès la création), l'ajout d'une partie au
+Programme Télé, et le wizard de fin de partie en bout en bout (classement →
+désignation des épaves → résolution automatique de la Table des Épaves →
+"Terminer"), avec vérification que la partie passe bien `PLANIFIE → ATELIER`
+(badge de statut, cf. refonte du cycle de vie Atelier,
+[design doc](plans/2026-07-05-atelier-lifecycle-design.md)). Aucun `data-testid`
+dans les templates Campaigns : sélecteurs par rôle/label/texte français exact
+(cf. commentaires du spec pour les pièges — ex. bouton "Enregistrer" nécessitant
+`exact: true` pour ne pas matcher "Enregistrement...").
+
 **Hors périmètre actuel** : intégration CI (`backend-e2e` n'y est pas non plus
-aujourd'hui), et couverture Campagnes — aucun spec e2e dédié pour l'instant, le pattern
-`support/teams.ts` est réutilisable tel quel pour amorcer un futur spec Campaigns.
+aujourd'hui), inscriptions multi-utilisateurs (organisateur + participants
+invités via code) et Atelier (achats/reventes d'équipement — aucune UI
+frontend n'existe encore, cf. docs/spec/CAMPAIGN.md).
