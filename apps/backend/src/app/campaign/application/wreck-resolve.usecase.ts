@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
-import { WreckResolverService } from '../infrastructure/wreck-resolver.service';
+import { WreckTable } from '../domain/wreck/wreck-table';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
 import type { WreckOutcome } from '../domain/wreck/wreck-outcome';
 import { assertOrganizer } from './record-ranking.usecase';
@@ -42,7 +42,7 @@ export class WreckResolveUseCase {
   constructor(
     private readonly campaignRepo: ICampaignRepository,
     private readonly replayService: CampaignReplayService,
-    private readonly wreckResolver: WreckResolverService,
+    private readonly wreckTable: WreckTable,
   ) {}
 
   async execute(cmd: WreckResolveCommand): Promise<WreckResolveResult> {
@@ -50,11 +50,9 @@ export class WreckResolveUseCase {
     assertOrganizer(campaign, cmd.userId);
 
     try {
-      const participant = campaign.findParticipant(cmd.participantId);
-      const vehicle = participant.team.findVehicle(cmd.vehicleId);
-      const outcome = this.wreckResolver.resolve(vehicle);
-
-      const { events } = campaign.resolveWreck(cmd.gameId, cmd.participantId, outcome);
+      const { events, outcome } = campaign.resolveWreck(
+        cmd.gameId, cmd.participantId, cmd.vehicleId, this.wreckTable,
+      );
 
       const bonusEvent = campaign.creditFavoriDuPublicBonus(
         cmd.gameId, cmd.participantId, outcome.vehicleId,

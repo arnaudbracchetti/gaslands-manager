@@ -8,9 +8,6 @@ import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
 import { ResistanceContactedEvent } from './events/resistance-contacted.event';
 import { WeaponLostEvent } from './events/weapon-lost.event';
-import { ImprovementLostEvent } from './events/improvement-lost.event';
-import { SequellaAddedEvent } from './events/sequella-added.event';
-import { VehicleLostEvent } from './events/vehicle-lost.event';
 import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event';
 import { EquipmentChangedEvent } from './events/equipment-changed.event';
 import { GameStatus } from './enums/game-status.enum';
@@ -18,7 +15,27 @@ import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 import { WeightClass } from './enums/weight-class.enum';
 import { WreckResult } from './enums/wreck-result.enum';
 import { WreckOutcome } from './wreck/wreck-outcome';
+import { WreckTable, type WreckTableResult } from './wreck/wreck-table';
+import { WreckResolvedEvent } from './events/wreck-resolved.event';
 import { makeTestParticipant, makeVehicleType, makeWeaponType } from './test-helpers';
+
+/** Stub de WreckTable qui retourne un outcome et des événements pré-construits.
+ * Isole Campaign.resolveWreck() de la logique de WreckTable (testée dans wreck-table.spec.ts). */
+class FixedWreckTable extends WreckTable {
+  constructor(
+    private readonly fixedOutcome: WreckOutcome,
+    private readonly fixedEvents: WreckTableResult['events'],
+  ) {
+    super({ roll: (): number => 1, pick: <T>(pool: T[]): T => pool[0] });
+  }
+  override resolve(
+    _v: Parameters<WreckTable['resolve']>[0],
+    _gameId: number,
+    _participantId: number,
+  ): WreckTableResult {
+    return { outcome: this.fixedOutcome, events: this.fixedEvents };
+  }
+}
 
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
 function makeCampaign(
@@ -502,67 +519,31 @@ describe('Campaign — recordResult', () => {
 });
 
 describe('Campaign — resolveWreck', () => {
-  it('ARRACHEE avec une arme perdue : WreckResolvedEvent + WeaponLostEvent', () => {
-    const { participant, vehicle, weapon } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const campaign = makeCampaign([participant], [game]);
-    const outcome = new WreckOutcome(vehicle.id, 5, 0, WreckResult.ARRACHEE, 1, { kind: 'weapon', id: weapon.id });
-
-    const { events } = campaign.resolveWreck(10, participant.id, outcome);
-
-    expect(events).toHaveLength(2);
-    expect(events[1]).toBeInstanceOf(WeaponLostEvent);
-    expect((events[1] as WeaponLostEvent).weaponId).toBe(weapon.id);
-  });
-
-  it('ARRACHEE avec une amélioration perdue : WreckResolvedEvent + ImprovementLostEvent', () => {
-    const { participant, vehicle, improvement } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const campaign = makeCampaign([participant], [game]);
-    const outcome = new WreckOutcome(vehicle.id, 5, 0, WreckResult.ARRACHEE, 1, { kind: 'improvement', id: improvement.id });
-
-    const { events } = campaign.resolveWreck(10, participant.id, outcome);
-
-    expect(events).toHaveLength(2);
-    expect(events[1]).toBeInstanceOf(ImprovementLostEvent);
-  });
-
-  it('SIEGE_IRRECUPERABLE : WreckResolvedEvent + SequellaAddedEvent (coût 0)', () => {
-    const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const campaign = makeCampaign([participant], [game]);
-    const outcome = new WreckOutcome(vehicle.id, 7, 0, WreckResult.SIEGE_IRRECUPERABLE, 2, null);
-
-    const { events } = campaign.resolveWreck(10, participant.id, outcome);
-
-    expect(events).toHaveLength(2);
-    const sequella = events[1] as SequellaAddedEvent;
-    expect(sequella).toBeInstanceOf(SequellaAddedEvent);
-    expect(sequella.chocsCost).toBe(0);
-  });
-
-  it('VEHICULE_DETRUIT : WreckResolvedEvent + VehicleLostEvent, jamais de bonus Favori du public', () => {
-    const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const campaign = makeCampaign([participant], [game]);
-    const outcome = new WreckOutcome(vehicle.id, 6, 6, WreckResult.VEHICULE_DETRUIT, 0, null);
-
-    const { events } = campaign.resolveWreck(10, participant.id, outcome);
-
-    expect(events).toHaveLength(2);
-    expect(events[1]).toBeInstanceOf(VehicleLostEvent);
-    expect(events.some((e) => e instanceof FavoriDuPublicBonusEvent)).toBe(false);
-  });
-
-  it('INDEMNE : uniquement WreckResolvedEvent', () => {
+  it('passe les événements de WreckTable à la partie et les retourne', () => {
     const { participant, vehicle } = makeTestParticipant();
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
     const campaign = makeCampaign([participant], [game]);
     const outcome = new WreckOutcome(vehicle.id, 2, 0, WreckResult.INDEMNE, 0, null);
+    const wreckEvent = new WreckResolvedEvent(0, 10, participant.id, 0, vehicle.id, 2, 0, WreckResult.INDEMNE, 0);
+    const weaponEvent = new WeaponLostEvent(0, 10, participant.id, 0, 10);
 
-    const { events } = campaign.resolveWreck(10, participant.id, outcome);
+    const result = campaign.resolveWreck(10, participant.id, vehicle.id, new FixedWreckTable(outcome, [wreckEvent, weaponEvent]));
 
-    expect(events).toHaveLength(1);
+    expect(result.outcome).toBe(outcome);
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0]).toBe(wreckEvent);
+    expect(result.events[1]).toBe(weaponEvent);
+    expect(game.events).toHaveLength(2);
+  });
+
+  it('lève DomainException si le véhicule est introuvable dans l\'équipe', () => {
+    const { participant } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([participant], [game]);
+    const outcome = new WreckOutcome(999, 2, 0, WreckResult.INDEMNE, 0, null);
+
+    expect(() => campaign.resolveWreck(10, participant.id, 999, new FixedWreckTable(outcome, [])))
+      .toThrow('introuvable');
   });
 });
 

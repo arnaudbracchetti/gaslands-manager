@@ -25,9 +25,11 @@ import type { ITeamRepository } from '../team/domain/team.repository.interface';
 import { CampaignMapper } from './infrastructure/campaign.mapper';
 import { CampaignRepository } from './infrastructure/campaign.repository';
 import { CampaignReplayService } from './infrastructure/campaign-replay.service';
-import { WreckResolverService } from './infrastructure/wreck-resolver.service';
-import { CAMPAIGN_REPOSITORY } from './campaign.tokens';
+import { RandomProvider } from './infrastructure/random-provider';
+import { WreckTable } from './domain/wreck/wreck-table';
+import { CAMPAIGN_REPOSITORY, RANDOMIZER } from './campaign.tokens';
 import type { ICampaignRepository } from './domain/campaign.repository.interface';
+import type { IRandomizer } from './domain/randomizer.interface';
 
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
@@ -87,7 +89,12 @@ import { GetWorkshopUseCase } from './application/get-workshop.usecase';
     CampaignMapper,
     { provide: CAMPAIGN_REPOSITORY, useClass: CampaignRepository },
     CampaignReplayService,
-    WreckResolverService,
+    { provide: RANDOMIZER, useClass: RandomProvider },
+    {
+      provide: WreckTable,
+      useFactory: (r: IRandomizer) => new WreckTable(r),
+      inject: [RANDOMIZER],
+    },
 
     // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────
     {
@@ -219,9 +226,9 @@ import { GetWorkshopUseCase } from './application/get-workshop.usecase';
     },
     {
       provide: WreckResolveUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, wreck: WreckResolverService) =>
-        new WreckResolveUseCase(repo, replay, wreck),
-      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, WreckResolverService],
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, wreckTable: WreckTable) =>
+        new WreckResolveUseCase(repo, replay, wreckTable),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, WreckTable],
     },
     {
       provide: AddSequellaUseCase,

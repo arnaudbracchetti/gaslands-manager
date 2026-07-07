@@ -97,13 +97,13 @@ apps/backend/src/app/
     ├── campaign.controller.ts       ← Controller HTTP unique (28 routes : CRUD ligue/participants + Programme + event-sourcing)
     ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
-    ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome
+    ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome, WreckTable, IRandomizer
     │   ├── events/      ← 8 événements concrets (GoF Command)
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
-    │   └── wreck/       ← WreckOutcome Value Object
+    │   └── wreck/       ← WreckTable (domain service, 9 lignes + événements), WreckOutcome (Value Object), IRandomizer (port hexagonal)
     ├── application/     ← 22 Use Cases (12 CRUD + GetWorkshop + 9 event-sourcing)
-    └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, WreckResolverService, entités ORM
+    └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, RandomProvider, entités ORM
 ```
 
 > ⚠️ **Collision de nom `Campaign`** — deux classes distinctes portent ce nom dans le
@@ -261,7 +261,8 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
-| `apps/backend/src/app/campaign/infrastructure/wreck-resolver.service.ts` | D6 serveur + table des épaves → `WreckOutcome` |
+| `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
+| `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine |
 | `apps/backend/src/app/campaign/application/` | 22 use cases (12 CRUD + GetWorkshop + 9 event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
@@ -329,7 +330,7 @@ sans mécanisme supplémentaire (`order` fractionnaire) : voir
 #### Points d'attention
 
 - **`resistancePoints` secret** — jamais exposé dans `StandingsEntry` ni dans `GET /workshop`. Seul l'organisateur peut appeler `POST .../events/resistance`.
-- **D6 serveur** — `WreckResolverService.rollD6()` est `protected` pour permettre l'injection d'un dé fixe dans les tests (`class TestWreckResolver extends WreckResolverService`).
+- **D6 serveur** — l'aléatoire est isolé derrière l'interface `IRandomizer` (port hexagonal, `domain/randomizer.interface.ts`). L'adaptateur production est `RandomProvider` (`infrastructure/`). Dans les tests, on passe un `FixedRandomizer implements IRandomizer` directement au constructeur de `WreckTable` — aucun `protected`/sous-classe requis.
 - **Autorisation sans base de données** — les use cases campagne vérifient le rôle via `campaign.participants` (liste en mémoire après replay). Aucun accès SQL supplémentaire pour l'autorisation.
 - **`TEAM_REPOSITORY` exporté par `TeamModule`** — requis par `CampaignRepository` (infrastructure) pour charger l'état figé des équipes au moment du replay.
 
