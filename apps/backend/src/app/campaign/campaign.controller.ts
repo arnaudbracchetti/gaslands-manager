@@ -59,6 +59,8 @@ import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { AddSequellaUseCase } from './application/add-sequella.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
+import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
+import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 
 // DTOs
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -83,6 +85,8 @@ import type { WreckResolveDto } from './dto/wreck-resolve.dto';
 import type { AddSequellaDto } from './dto/add-sequella.dto';
 import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
+import type { AvailableWeaponDto } from '../team/dto/available-weapon.dto';
+import type { AvailableImprovementDto } from '../team/dto/available-improvement.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
@@ -124,6 +128,8 @@ export class CampaignController {
     private readonly wreckResolveUseCase: WreckResolveUseCase,
     private readonly addSequellaUseCase: AddSequellaUseCase,
     private readonly getWorkshopUseCase: GetWorkshopUseCase,
+    private readonly getWorkshopAvailableWeaponsUseCase: GetWorkshopAvailableWeaponsUseCase,
+    private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
   ) {}
 
   // ── Catalogue (public) ──────────────────────────────────────────────────────
@@ -224,6 +230,34 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<WorkshopStateDto> {
     return this.getWorkshopUseCase.execute({ campaignId, userId: req.user.id });
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons — verdict de
+   * disponibilité des armes du sponsor pour un véhicule d'atelier (R1, budget = cagnotte).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/workshop/vehicles/:vehicleId/available-weapons')
+  getWorkshopAvailableWeapons(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('vehicleId', ParseIntPipe) vehicleId: number,
+  ): Promise<AvailableWeaponDto[]> {
+    return this.getWorkshopAvailableWeaponsUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements — verdict de
+   * disponibilité des améliorations (Tourelle exclue au Temps 1, budget = cagnotte).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/workshop/vehicles/:vehicleId/available-improvements')
+  getWorkshopAvailableImprovements(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('vehicleId', ParseIntPipe) vehicleId: number,
+  ): Promise<AvailableImprovementDto[]> {
+    return this.getWorkshopAvailableImprovementsUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
   }
 
   /** GET /api/campaigns/:id/games/:gameId/results — résultats triés (dérivés du journal). */

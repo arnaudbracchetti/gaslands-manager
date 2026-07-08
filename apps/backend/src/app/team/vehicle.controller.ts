@@ -113,13 +113,13 @@ export class VehicleController {
   }
 
   @Delete(':id/improvements/:improvementId')
-  @HttpCode(204)
   async removeImprovement(
     @Param('id', ParseIntPipe) id: number,
     @Param('improvementId', ParseIntPipe) improvementId: number,
     @Request() req: AuthenticatedRequest,
-  ): Promise<void> {
-    await this.removeImprovementUseCase.execute({ vehicleId: id, improvementId, userId: req.user.id });
+  ): Promise<VehicleDto> {
+    const vehicle = await this.removeImprovementUseCase.execute({ vehicleId: id, improvementId, userId: req.user.id });
+    return vehicleDomainToDto(vehicle);
   }
 
   @Delete(':id')

@@ -22,6 +22,11 @@ import type {
   EnterAtelierResultDto,
   GameJournalEntryDto,
 } from './game.model';
+import type { WorkshopStateDto, ChangeEquipmentDto } from './workshop.model';
+import type {
+  AvailableWeaponDto,
+  AvailableImprovementDto,
+} from '../teams/vehicle-configurator/vehicle-builder.model';
 
 @Injectable({ providedIn: 'root' })
 export class CampaignsService {
@@ -262,5 +267,46 @@ export class CampaignsService {
     return this.http.get<GameJournalEntryDto[]>(
       `/api/campaigns/${campaignId}/games/${gameId}/journal`,
     );
+  }
+
+  // ── Atelier (mode campagne) ─────────────────────────────────────────────────
+
+  /**
+   * GET /api/campaigns/:id/workshop → état campagne de l'équipe du participant
+   * connecté : cagnotte, véhicules (avec chocs/séquelles/entités transientes),
+   * armes et améliorations. Alimente la page Atelier.
+   */
+  getWorkshop(campaignId: number): Observable<WorkshopStateDto> {
+    return this.http.get<WorkshopStateDto>(`/api/campaigns/${campaignId}/workshop`);
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vId/available-weapons → armes du
+   * sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget =
+   * cagnotte du participant). Même forme que le verdict "construction d'équipe".
+   */
+  getWorkshopAvailableWeapons(campaignId: number, vehicleId: number): Observable<AvailableWeaponDto[]> {
+    return this.http.get<AvailableWeaponDto[]>(
+      `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-weapons`,
+    );
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vId/available-improvements →
+   * améliorations du sponsor avec verdict (Tourelle exclue au Temps 1, côté backend).
+   */
+  getWorkshopAvailableImprovements(campaignId: number, vehicleId: number): Observable<AvailableImprovementDto[]> {
+    return this.http.get<AvailableImprovementDto[]>(
+      `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-improvements`,
+    );
+  }
+
+  /**
+   * POST /api/campaigns/:id/events/equipment → achat/revente d'équipement en
+   * atelier (204 No Content). Le use case retrouve lui-même l'unique partie en
+   * ATELIER de la campagne. L'appelant relit l'état via `getWorkshop` après coup.
+   */
+  changeEquipment(campaignId: number, dto: ChangeEquipmentDto): Observable<void> {
+    return this.http.post<void>(`/api/campaigns/${campaignId}/events/equipment`, dto);
   }
 }

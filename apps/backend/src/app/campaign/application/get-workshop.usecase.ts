@@ -41,10 +41,19 @@ export class GetWorkshopUseCase {
         price: w.type.price,
         isLost: w.isLost,
       })),
+      improvements: v.improvements.map((imp) => ({
+        id: imp.id,
+        nomInterne: imp.type.nomInterne,
+        orientation: imp.orientation,
+        price: imp.price,
+        estDefaut: imp.estDefaut,
+        isLost: imp.isLost,
+      })),
     }));
 
     return {
       participantId: me.id,
+      sponsor: me.team.sponsor,
       wallet: me.wallet,
       championshipPoints: me.championshipPoints,
       vehicles,

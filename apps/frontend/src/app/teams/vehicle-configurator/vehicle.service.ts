@@ -124,9 +124,12 @@ export class VehicleService {
    * Route "à plat" sous `/weapons` (pas `/vehicles/:id/weapons/:weaponId`) —
    * reflet exact de la route backend (cf. `WeaponController`, en-tête) : `Weapon`
    * porte son propre id, inutile de faire transiter `vehicleId` dans l'URL.
+   *
+   * Retourne le véhicule mis à jour (F4 — la route renvoie désormais le véhicule,
+   * plus `204`) : le composant rafraîchit sans relire toute l'équipe.
    */
-  removeWeapon(weaponId: number): Observable<void> {
-    return this.http.delete<void>(`/api/weapons/${weaponId}`);
+  removeWeapon(weaponId: number): Observable<Vehicle> {
+    return this.http.delete<Vehicle>(`/api/weapons/${weaponId}`);
   }
 
   /**
@@ -135,10 +138,10 @@ export class VehicleService {
    *
    * Route nichée sous `/vehicles/:id` — reflet exact de la route backend
    * (cf. `VehicleController.removeImprovement`, en-tête : symétrique de
-   * `POST :id/improvements`, contrairement à `Weapon` qui a sa propre route "à plat").
+   * `POST :id/improvements`). Retourne le véhicule mis à jour (F4).
    */
-  removeImprovement(vehicleId: number, improvementId: number): Observable<void> {
-    return this.http.delete<void>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
+  removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle> {
+    return this.http.delete<Vehicle>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
   }
 
   /**

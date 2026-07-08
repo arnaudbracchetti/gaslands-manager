@@ -76,12 +76,13 @@ export class CampaignParticipant {
 
   /**
    * Remet les compteurs à leur état de départ.
-   * Wallet initialisé à team.cans (budget d'équipe figé). Sans équipe attachée,
-   * le participant ne joue pas — les compteurs restent nuls.
+   * Wallet initialisé au budget NON dépensé après construction de l'équipe
+   * (team.remainingBudget) : la cagnotte de campagne part du reliquat de build, pas
+   * du budget total. Sans équipe attachée, le participant ne joue pas — compteurs nuls.
    */
   reset(): void {
     if (this._team === undefined) return;
-    this._wallet = this._team.cans;
+    this._wallet = this._team.remainingBudget;
     this._championshipPoints = 0;
     this._resistancePoints = 0;
     this._team.resetCampaignState();

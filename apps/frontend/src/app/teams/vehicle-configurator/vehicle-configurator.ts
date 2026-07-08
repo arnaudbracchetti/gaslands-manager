@@ -56,6 +56,9 @@ import { CatalogService } from '../../catalog/catalog.service';
 import { Sponsor, Vehicule } from '../../catalog/catalog.model';
 import { VehicleService } from './vehicle.service';
 import { Vehicle } from './vehicle-builder.model';
+import { buildVehicleSummary } from '../vehicle-summary';
+import { EQUIPMENT_DATA_SOURCE, BudgetView } from './equipment-data-source';
+import { TeamEquipmentDataSource } from './team-equipment.datasource';
 import { VehicleChoiceCard } from './vehicle-choice-card/vehicle-choice-card';
 import { EquipmentManager } from './equipment-manager/equipment-manager';
 
@@ -63,6 +66,13 @@ import { EquipmentManager } from './equipment-manager/equipment-manager';
   selector: 'app-vehicle-configurator',
   standalone: true,
   imports: [VehicleChoiceCard, EquipmentManager],
+  // Câblage de l'abstraction pour ce contexte : le configurateur d'équipe fournit
+  // l'implémentation "construction d'équipe" de la source de données ; `EquipmentManager`
+  // (enfant) la reçoit via le token, sans savoir laquelle (cf. `EquipmentDataSource`).
+  providers: [
+    TeamEquipmentDataSource,
+    { provide: EQUIPMENT_DATA_SOURCE, useExisting: TeamEquipmentDataSource },
+  ],
   templateUrl: './vehicle-configurator.html',
   styleUrl: './vehicle-configurator.scss',
 })
@@ -120,6 +130,32 @@ export class VehicleConfigurator implements OnInit {
   creatingVehicle: WritableSignal<boolean> = signal(false);
   error: WritableSignal<string> = signal('');
 
+  /**
+   * Tous les véhicules de l'équipe — chargés une fois pour calculer le budget
+   * transmis à `EquipmentManager` (coût des AUTRES véhicules). En mode édition, sert
+   * aussi à isoler le véhicule visé (`vehicle`). Échec silencieux en création (le
+   * budget est informatif, ne bloque pas la construction).
+   */
+  allTeamVehicles: WritableSignal<Vehicle[]> = signal<Vehicle[]>([]);
+
+  /**
+   * Budget passé à `EquipmentManager` (cf. `BudgetView`) : total = jerricans de
+   * l'équipe ; usedByOthers = coût cumulé des autres véhicules (tous sauf celui en
+   * cours). Le coût du véhicule courant est ajouté par `EquipmentManager` lui-même
+   * (`coutTotal`) — on l'EXCLUT donc ici via `v.id !== currentId`. Calcul repris de
+   * l'ancien `EquipmentManager.loadCoutAutresVehicules` (même `buildVehicleSummary`).
+   */
+  budget: Signal<BudgetView> = computed((): BudgetView => {
+    const catalog = this.sponsorCatalog();
+    const currentId = this.vehicle()?.id ?? null;
+    const usedByOthers = catalog
+      ? this.allTeamVehicles()
+          .filter((v: Vehicle): boolean => v.id !== currentId)
+          .reduce((sum: number, v: Vehicle): number => sum + buildVehicleSummary(v, catalog).cout, 0)
+      : 0;
+    return { total: this.team().cans, usedByOthers };
+  });
+
   // ── Affichage du véhicule choisi/géré (computed, partagé par les deux modes) ─
 
   /**
@@ -135,15 +171,9 @@ export class VehicleConfigurator implements OnInit {
 
   ngOnInit(): void {
     this.loadSponsorCatalog();
-
-    const id = this.vehicleId();
-    if (id !== null) {
-      // Mode édition : on charge directement le véhicule visé — `vehicle` reste
-      // `null` jusque-là (template : indicateur de chargement dédié, cf. `loadingVehicle`).
-      this.loadExistingVehicle(id);
-    }
-    // Sinon (mode création) : `vehicle` reste `null`, le template affiche la
-    // grille de choix dès que le catalogue est prêt.
+    // Toujours charger les véhicules de l'équipe : nécessaires au budget dans les DEUX
+    // modes (coût des autres véhicules), et en édition à isoler le véhicule visé.
+    this.loadTeamVehicles();
   }
 
   // ── Chargement du catalogue (sert aux deux modes) ───────────────────────────
@@ -193,40 +223,47 @@ export class VehicleConfigurator implements OnInit {
     });
   }
 
-  // ── Mode édition : chargement direct d'un véhicule existant ──────────────────
+  // ── Chargement des véhicules de l'équipe (budget + isolation en édition) ──────
 
   /**
-   * Charge les véhicules bruts de l'équipe et isole celui visé par `id` —
-   * mirroir de l'ex-`VehicleEditor.loadVehicleAndCatalog` (cf. son en-tête,
-   * "Différence structurelle" : aucun endpoint ne renvoie directement un
-   * `Vehicle` brut par id, `GET /api/vehicles/:id` renvoyant un DTO "monté" sans
-   * `improvements[]`/`weapons[]` bruts — on réutilise donc `getAllForTeam` +
-   * `.find()`, exactement comme `Teams.loadVehicleSummaries`).
+   * Charge TOUS les véhicules bruts de l'équipe (`getAllForTeam` — aucun endpoint
+   * ne renvoie un `Vehicle` brut par id ; `GET /api/vehicles/:id` est un DTO "monté").
+   * Sert à deux fins :
+   *  - calculer le budget transmis à `EquipmentManager` (coût des autres véhicules),
+   *    dans les DEUX modes (`allTeamVehicles` → `budget`) ;
+   *  - en mode édition, isoler le véhicule visé par `.find()` (`vehicle`).
    *
-   * Chargement INDÉPENDANT du catalogue (contrairement à l'ex-éditeur qui les
-   * combinait via `forkJoin`) : ce composant a de toute façon besoin du
-   * catalogue pour le MODE CRÉATION aussi — `loadSponsorCatalog` est donc déjà
-   * lancé inconditionnellement par `ngOnInit`, pas la peine de le dupliquer ici.
+   * Chargement INDÉPENDANT du catalogue (déjà lancé par `loadSponsorCatalog` en
+   * `ngOnInit`, requis aussi pour le mode création).
    */
-  private loadExistingVehicle(id: number): void {
-    this.loadingVehicle.set(true);
+  private loadTeamVehicles(): void {
+    const editId = this.vehicleId();
+    if (editId !== null) this.loadingVehicle.set(true);
     this.error.set('');
 
     this.vehicleService.getAllForTeam(this.team().id).subscribe({
       next: (vehicles: Vehicle[]): void => {
-        const found = vehicles.find((v: Vehicle): boolean => v.id === id) ?? null;
-        this.vehicle.set(found);
-        this.loadingVehicle.set(false);
+        this.allTeamVehicles.set(vehicles);
 
-        if (!found) {
-          // Incohérence (id obsolète — véhicule supprimé entre-temps par exemple) :
-          // on signale plutôt que d'afficher un composant vide et silencieux.
-          this.error.set('Ce véhicule est introuvable — il a peut-être été supprimé entre-temps.');
+        if (editId !== null) {
+          const found = vehicles.find((v: Vehicle): boolean => v.id === editId) ?? null;
+          this.vehicle.set(found);
+          this.loadingVehicle.set(false);
+          if (!found) {
+            // Incohérence (id obsolète — véhicule supprimé entre-temps par exemple) :
+            // on signale plutôt que d'afficher un composant vide et silencieux.
+            this.error.set('Ce véhicule est introuvable — il a peut-être été supprimé entre-temps.');
+          }
         }
       },
       error: (): void => {
-        this.error.set('Impossible de charger ce véhicule. Réessayez.');
-        this.loadingVehicle.set(false);
+        if (editId !== null) {
+          // Mode édition : le chargement du véhicule est bloquant, on signale l'échec.
+          this.error.set('Impossible de charger ce véhicule. Réessayez.');
+          this.loadingVehicle.set(false);
+        }
+        // Mode création : échec silencieux — le budget (informatif) restera optimiste
+        // (usedByOthers = 0), sans empêcher la construction.
       },
     });
   }

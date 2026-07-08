@@ -40,6 +40,7 @@ export class GameList {
   deleteGame: OutputEmitterRef<Game> = output<Game>();
   recordGame: OutputEmitterRef<Game> = output<Game>();
   openJournal: OutputEmitterRef<Game> = output<Game>();
+  openAtelier: OutputEmitterRef<Game> = output<Game>();
 
   /** Vrai si la partie peut être éditée/supprimée (gérable et pas encore jouée). */
   canModify(game: Game): boolean {
@@ -53,6 +54,14 @@ export class GameList {
    */
   hasJournal(game: Game): boolean {
     return game.status === 'ATELIER' || game.status === 'JOUE';
+  }
+
+  /**
+   * Vrai si la partie est en phase atelier — un atelier est ouvert, tout
+   * participant peut aller gérer l'équipement de son équipe (sa propre cagnotte).
+   */
+  isAtelier(game: Game): boolean {
+    return game.status === 'ATELIER';
   }
 
   /** Libellé lisible du type de partie. */

@@ -12,6 +12,9 @@ import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
 import type { Amelioration } from '../../catalog/catalog.interfaces';
 
+/** Les 4 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
+const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
+
 /**
  * Un véhicule appartenant à une équipe — entité enfant de l'agrégat Team.
  *
@@ -134,6 +137,33 @@ export class Vehicle {
     const placement = this.buildChain({ type, orientation }).validate();
     if (!placement.ok) return fail(placement.reason);
     return ok();
+  }
+
+  /**
+   * Verdict de disponibilité d'une amélioration ORIENTABLE, tolérant à l'arc précis :
+   * on tente d'abord sans orientation (`null`), puis — si ça échoue potentiellement à
+   * cause du seul "orientation requise" (Bélier…) — chaque arc à tour de rôle.
+   * Disponible dès qu'AU MOINS un arc passe ; les autres règles de pose (incompatibilité
+   * véhicule, unicité, équipage max…) grisent bien l'option puisqu'elles échouent quel
+   * que soit l'arc testé.
+   *
+   * Règle de LECTURE (verdict "cette amélioration est-elle proposable ?"), distincte de
+   * `canAddImprovement` (règle d'ÉCRITURE pour un arc déjà choisi par l'appelant) — les
+   * deux composent, cette méthode ne fait que sonder la première pour construire un
+   * verdict agrégé. Utilisée par les use cases de listing (équipe ET atelier) : ne pas
+   * dupliquer `ORIENTATIONS_A_SONDER` ni cette boucle côté application.
+   */
+  canAddImprovementInAnyOrientation(type: ImprovementType, remainingBudget: number): RuleResult {
+    const direct = this.canAddImprovement(type, null, remainingBudget);
+    if (direct.ok) return direct;
+
+    let last: RuleResult = direct;
+    for (const orientation of ORIENTATIONS_A_SONDER) {
+      const result = this.canAddImprovement(type, orientation, remainingBudget);
+      if (result.ok) return result;
+      last = result;
+    }
+    return last;
   }
 
   /**
@@ -289,6 +319,17 @@ export class Vehicle {
     const weapon = new Weapon(campaignId, weaponType, orientation);
     this._weapons.push(weapon);
     return weapon;
+  }
+
+  /**
+   * Ajoute une amélioration avec un id explicite (D-S11 : id négatif = entité transiente
+   * campagne). Miroir d'addCampaignWeapon : ne passe PAS par les règles (canAddImprovement).
+   * `estDefaut: false` — une amélioration achetée en atelier n'est jamais intégrée au profil.
+   */
+  addCampaignImprovement(type: ImprovementType, orientation: Orientation | null, campaignId: number): Improvement {
+    const improvement = new Improvement(campaignId, type, orientation, false);
+    this._improvements.push(improvement);
+    return improvement;
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────

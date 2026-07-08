@@ -44,10 +44,8 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
-import { Team } from '../../team.model';
-import { buildVehicleSummary } from '../../vehicle-summary';
 import { Sponsor, Vehicule } from '../../../catalog/catalog.model';
-import { VehicleService } from '../vehicle.service';
+import { EQUIPMENT_DATA_SOURCE, BudgetView, EquipmentDataSource } from '../equipment-data-source';
 import {
   AvailableImprovementDto,
   AvailableWeaponDto,
@@ -72,7 +70,11 @@ import { ConfirmModal } from '../../../shared/confirm-modal/confirm-modal';
   styleUrl: './equipment-manager.scss',
 })
 export class EquipmentManager {
-  private vehicleService: VehicleService = inject(VehicleService);
+  /**
+   * Source de données INJECTÉE par la route (token, cf. `EquipmentDataSource`) — le
+   * composant ignore s'il parle au backend équipe (CRUD) ou atelier (event-sourcing).
+   */
+  private dataSource: EquipmentDataSource = inject(EQUIPMENT_DATA_SOURCE);
 
   // ── Inputs / Outputs ────────────────────────────────────────────────────────
 
@@ -87,14 +89,19 @@ export class EquipmentManager {
   /** Catalogue déjà chargé par le parent — pas de second chargement ici. */
   sponsorCatalog: InputSignal<Sponsor> = input.required<Sponsor>();
 
-  /** Nécessaire à `reloadVehicle` après un retrait (cf. sa doc, `getAllForTeam(team().id)`). */
-  team: InputSignal<Team> = input.required<Team>();
+  /**
+   * Budget fourni par le parent (cf. `BudgetView`) — `{ total, usedByOthers }`.
+   * Remplace l'ancien couplage `team.cans` + `getAllForTeam` (F3) : le composant ne
+   * connaît plus la notion d'équipe, juste un budget total et un coût "déjà consommé
+   * ailleurs". Le parent choisit la sémantique (équipe : jerricans / atelier : cagnotte).
+   */
+  budget: InputSignal<BudgetView> = input.required<BudgetView>();
 
   /**
-   * Émis avec l'entité FRAÎCHE après CHAQUE mutation réussie (ajout : entité
-   * directement renvoyée par le backend ; retrait : rechargée via `getAllForTeam`,
-   * cf. `reloadVehicle`). Le parent met à jour son `vehicle` et le re-fournit en
-   * input — flux unidirectionnel, ce composant ne mute jamais sa propre entrée.
+   * Émis avec l'entité FRAÎCHE après CHAQUE mutation réussie — TOUTES les opérations
+   * de la `EquipmentDataSource` (ajout ET retrait, tourelle incluse) renvoient le
+   * véhicule mis à jour. Le parent met à jour son `vehicle` et le re-fournit en input —
+   * flux unidirectionnel, ce composant ne mute jamais sa propre entrée.
    */
   vehicleChanged: OutputEmitterRef<Vehicle> = output<Vehicle>();
 
@@ -302,20 +309,15 @@ export class EquipmentManager {
   // `availableImprovements` ci-dessus) est déjà assurée par le backend — ce bloc est
   // purement INFORMATIF, pour situer le coût de CE véhicule dans le budget global.
 
+  /** Budget total disponible — `budget().total` (jerricans d'équipe OU cagnotte d'atelier). */
+  budgetEquipe: Signal<number> = computed((): number => this.budget().total);
+
   /**
-   * Coût cumulé des AUTRES véhicules de l'équipe (tout sauf celui en cours
-   * d'édition) — chargé via `getAllForTeam` et résolu par `buildVehicleSummary`
-   * (même fonction pure que `TeamCard`, cf. son en-tête). Rechargé à chaque
-   * changement de `vehicle()` par l'`effect()` du constructeur, à côté de
-   * `loadAvailableEquipment()`.
+   * Coût cumulé de TOUS les véhicules du budget, CE véhicule inclus : le coût "déjà
+   * consommé ailleurs" (`budget().usedByOthers`, fourni par le parent) plus celui du
+   * véhicule courant (`coutTotal`).
    */
-  coutAutresVehicules: WritableSignal<number> = signal(0);
-
-  /** Budget total de l'équipe (jerricans) — `Team.cans`, tel que reçu en input. */
-  budgetEquipe: Signal<number> = computed((): number => this.team().cans);
-
-  /** Coût cumulé de TOUS les véhicules de l'équipe, CE véhicule inclus (`coutTotal`). */
-  coutEquipeTotal: Signal<number> = computed((): number => this.coutAutresVehicules() + this.coutTotal());
+  coutEquipeTotal: Signal<number> = computed((): number => this.budget().usedByOthers + this.coutTotal());
 
   /** Solde restant — peut être négatif (cf. `budgetDepasse`, filet de sécurité d'affichage). */
   budgetRestant: Signal<number> = computed((): number => this.budgetEquipe() - this.coutEquipeTotal());
@@ -354,7 +356,6 @@ export class EquipmentManager {
       // parent → nouvel input) redéclenche le chargement.
       this.vehicle();
       this.loadAvailableEquipment();
-      this.loadCoutAutresVehicules();
     });
   }
 
@@ -372,8 +373,8 @@ export class EquipmentManager {
     this.equipmentError.set('');
 
     forkJoin({
-      weapons: this.vehicleService.getAvailableWeapons(vehicle.id),
-      improvements: this.vehicleService.getAvailableImprovements(vehicle.id),
+      weapons: this.dataSource.getAvailableWeapons(vehicle.id),
+      improvements: this.dataSource.getAvailableImprovements(vehicle.id),
     }).subscribe({
       next: ({ weapons, improvements }): void => {
         this.availableWeapons.set(weapons);
@@ -383,59 +384,6 @@ export class EquipmentManager {
       error: (): void => {
         this.equipmentError.set('Impossible de charger les équipements disponibles. Réessayez.');
         this.loadingEquipment.set(false);
-      },
-    });
-  }
-
-  /**
-   * Charge le coût cumulé des AUTRES véhicules de l'équipe (`coutAutresVehicules`,
-   * cf. sa doc) — un seul appel à `getAllForTeam`, puis on exclut CE véhicule
-   * (`v.id !== vehicle().id`) et on somme `buildVehicleSummary(v, sponsorCatalog()).cout`
-   * pour chacun des autres. Échec silencieux (le bloc budget reste à 0 — purement
-   * informatif, ne bloque rien) : une erreur ici ne doit pas empêcher l'utilisateur
-   * de continuer à équiper son véhicule.
-   */
-  private loadCoutAutresVehicules(): void {
-    const vehicleId = this.vehicle().id;
-    const catalog = this.sponsorCatalog();
-
-    this.vehicleService.getAllForTeam(this.team().id).subscribe({
-      next: (vehicles: Vehicle[]): void => {
-        const total = vehicles
-          .filter((v: Vehicle): boolean => v.id !== vehicleId)
-          .reduce((sum: number, v: Vehicle): number => sum + buildVehicleSummary(v, catalog).cout, 0);
-        this.coutAutresVehicules.set(total);
-      },
-      error: (): void => {
-        this.coutAutresVehicules.set(0);
-      },
-    });
-  }
-
-  /**
-   * Recharge le véhicule après un RETRAIT — `removeWeapon`/`removeImprovement`
-   * répondent `204 No Content` (cf. leur doc backend, `Observable<void>` côté
-   * frontend), contrairement à `addWeapon`/`addImprovement` qui renvoient
-   * directement le véhicule rechargé. Aucune entité à exploiter ⇒ on relit les
-   * véhicules de l'équipe et on isole le bon — même technique que le chargement
-   * initial de l'ex-`VehicleEditor` (`getAllForTeam` + `.find()`).
-   */
-  private reloadVehicle(): void {
-    const id = this.vehicle().id;
-
-    this.vehicleService.getAllForTeam(this.team().id).subscribe({
-      next: (vehicles: Vehicle[]): void => {
-        const reloaded = vehicles.find((v: Vehicle): boolean => v.id === id);
-        if (reloaded) {
-          this.vehicleChanged.emit(reloaded);
-        } else {
-          // Incohérence (le véhicule a disparu entre-temps — improbable mais on
-          // ne suppose jamais un tableau garanti non-vide).
-          this.equipmentError.set('Ce véhicule est introuvable — il a peut-être été supprimé entre-temps.');
-        }
-      },
-      error: (): void => {
-        this.equipmentError.set('Impossible de rafraîchir ce véhicule. Réessayez.');
       },
     });
   }
@@ -454,7 +402,7 @@ export class EquipmentManager {
 
     this.equipmentError.set('');
 
-    this.vehicleService.addWeapon(vehicle.id, choice).subscribe({
+    this.dataSource.addWeapon(vehicle.id, choice).subscribe({
       next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de monter cette arme. Réessayez.');
@@ -468,7 +416,7 @@ export class EquipmentManager {
 
     this.equipmentError.set('');
 
-    this.vehicleService.addImprovement(vehicle.id, choice).subscribe({
+    this.dataSource.addImprovement(vehicle.id, choice).subscribe({
       next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de poser cette amélioration. Réessayez.');
@@ -482,7 +430,8 @@ export class EquipmentManager {
    * Retire une arme — demande confirmation (`window.confirm`, mirroir de
    * `Teams.deleteTeam`), puis appelle l'API. AUCUNE vérification de règle
    * métier au préalable : retirer est TOUJOURS permis côté backend (cf. en-tête
-   * de la classe). Succès : `reloadVehicle` (le backend renvoie `204`).
+   * de la classe). Succès : la `EquipmentDataSource` renvoie le véhicule mis à jour,
+   * émis tel quel via `vehicleChanged`.
    */
   removeWeapon(weapon: Weapon): void {
     this.pendingRemoveWeapon.set(weapon);
@@ -495,8 +444,8 @@ export class EquipmentManager {
 
     this.equipmentError.set('');
 
-    this.vehicleService.removeWeapon(weapon.id).subscribe({
-      next: (): void => this.reloadVehicle(),
+    this.dataSource.removeWeapon(this.vehicle().id, weapon.id).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cette arme. Réessayez.');
       },
@@ -516,8 +465,8 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     this.equipmentError.set('');
 
-    this.vehicleService.removeImprovement(vehicle.id, improvement.id).subscribe({
-      next: (): void => this.reloadVehicle(),
+    this.dataSource.removeImprovement(vehicle.id, improvement.id).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cette amélioration. Réessayez.');
       },
@@ -545,7 +494,7 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     this.equipmentError.set('');
 
-    this.vehicleService.assignWeaponToTourelle(vehicle.id, tourelle.id, weaponNomInterne).subscribe({
+    this.dataSource.assignWeaponToTourelle(vehicle.id, tourelle.id, weaponNomInterne).subscribe({
       next: (updated: Vehicle): void => {
         this.selectedOrphanTourelle.set(null);
         this.vehicleChanged.emit(updated);
@@ -568,7 +517,7 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     this.equipmentError.set('');
 
-    this.vehicleService.unassignWeaponFromTourelle(vehicle.id, improvement.id).subscribe({
+    this.dataSource.unassignWeaponFromTourelle(vehicle.id, improvement.id).subscribe({
       next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de désassigner cette arme. Réessayez.');

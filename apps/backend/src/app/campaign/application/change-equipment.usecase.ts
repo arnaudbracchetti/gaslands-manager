@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
-import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import type { Orientation } from '../../team/domain/team';
 import type { CatalogService } from '../../catalog/catalog.service';
 import { assertParticipant } from './record-ranking.usecase';
@@ -47,12 +47,16 @@ export class ChangeEquipmentUseCase {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     const me = assertParticipant(campaign, cmd.userId);
 
-    const resolvedVehicleType = cmd.entityType === 'VEHICLE'
+    const resolvedVehicleType = cmd.entityType === EquipmentEntityType.VEHICLE
       ? (this.catalog.getVehicleType(cmd.nomInterne) ?? null)
       : null;
 
-    const resolvedWeaponType = cmd.entityType === 'WEAPON'
+    const resolvedWeaponType = cmd.entityType === EquipmentEntityType.WEAPON
       ? (this.catalog.getWeaponType(cmd.nomInterne) ?? null)
+      : null;
+
+    const resolvedImprovementType = cmd.entityType === EquipmentEntityType.IMPROVEMENT
+      ? (this.catalog.getImprovementType(cmd.nomInterne) ?? null)
       : null;
 
     try {
@@ -65,6 +69,7 @@ export class ChangeEquipmentUseCase {
         orientation: cmd.orientation,
         resolvedVehicleType,
         resolvedWeaponType,
+        resolvedImprovementType,
       });
       await this.campaignRepo.appendEvents(events[0].gameId, events);
     } catch (e) {

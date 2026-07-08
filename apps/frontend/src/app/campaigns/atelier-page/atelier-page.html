@@ -1,0 +1,35 @@
+<div class="atp-page">
+
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
+
+  <div class="atp-header">
+    <h1>🔧 Atelier</h1>
+  </div>
+
+  @if (loading()) {
+    <p class="atp-status atp-status--loading">Chargement de l'atelier…</p>
+  } @else if (error()) {
+    <p class="atp-status atp-status--error">{{ error() }}</p>
+  } @else {
+    <div class="atp-wallet">
+      <span class="atp-wallet-label">Cagnotte</span>
+      <span class="atp-wallet-value">{{ wallet() }} jerricans</span>
+    </div>
+
+    @if (vehicleSummaries().length === 0) {
+      <p class="atp-vehicles-empty">Aucun véhicule dans cette équipe.</p>
+    } @else {
+      <div class="atp-vehicles-grid">
+        @for (summary of vehicleSummaries(); track summary.id; let i = $index) {
+          <app-vehicle-summary-card
+            [vehicle]="summary"
+            [index]="i + 1"
+            [showDelete]="false"
+            (manageClicked)="onManage($event)"
+          />
+        }
+      </div>
+    }
+  }
+
+</div>

@@ -41,6 +41,23 @@ export const appRoutes: Route[] = [
       import('./campaigns/campaign-detail/campaign-detail').then((m) => m.CampaignDetail),
     canActivate: [authGuard],
   },
+  // Atelier campagne (phase garage post-partie) — liste des véhicules de l'équipe
+  // engagée ; la configuration d'un véhicule se fait sur la route dédiée ci-dessous
+  // (même principe que teams/:teamId/vehicles/:vehicleId).
+  {
+    path: 'campaigns/:id/atelier',
+    loadComponent: () =>
+      import('./campaigns/atelier-page/atelier-page').then((m) => m.AtelierPage),
+    canActivate: [authGuard],
+  },
+  // Configuration d'équipement d'un véhicule de l'atelier — réutilise EquipmentManager
+  // via AtelierEquipmentDataSource (fournie au niveau de ce composant).
+  {
+    path: 'campaigns/:id/atelier/vehicles/:vehicleId',
+    loadComponent: () =>
+      import('./campaigns/atelier-vehicle-page/atelier-vehicle-page').then((m) => m.AtelierVehiclePage),
+    canActivate: [authGuard],
+  },
   // ─── Édition d'une équipe (hub : infos + véhicules) ────────────────────────
   // Déclarée AVANT les routes vehicles pour éviter tout conflit de paramètres.
   {

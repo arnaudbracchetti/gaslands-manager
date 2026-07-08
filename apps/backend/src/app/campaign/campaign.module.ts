@@ -58,6 +58,8 @@ import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { AddSequellaUseCase } from './application/add-sequella.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
+import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
+import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 
 /**
  * Module Campagne unifié (DDD). Agrégat racine `Campaign` (domain/campaign.ts) ;
@@ -240,6 +242,18 @@ import { GetWorkshopUseCase } from './application/get-workshop.usecase';
       provide: GetWorkshopUseCase,
       useFactory: (replay: CampaignReplayService) => new GetWorkshopUseCase(replay),
       inject: [CampaignReplayService],
+    },
+    {
+      provide: GetWorkshopAvailableWeaponsUseCase,
+      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+        new GetWorkshopAvailableWeaponsUseCase(replay, catalog),
+      inject: [CampaignReplayService, CatalogService],
+    },
+    {
+      provide: GetWorkshopAvailableImprovementsUseCase,
+      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+        new GetWorkshopAvailableImprovementsUseCase(replay, catalog),
+      inject: [CampaignReplayService, CatalogService],
     },
   ],
   exports: [TypeOrmModule, ScenarioCatalogService, CampaignReplayService, CAMPAIGN_REPOSITORY],

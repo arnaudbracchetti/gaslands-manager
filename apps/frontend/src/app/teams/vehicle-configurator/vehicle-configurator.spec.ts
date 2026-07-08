@@ -222,10 +222,9 @@ describe('VehicleConfigurator', () => {
     it('charge directement le véhicule visé parmi ceux de l\'équipe — pas d\'étape de choix', () => {
       createFixture(100);
 
-      // Au moins un appel pour le chargement initial du véhicule visé — `EquipmentManager`
-      // (rendu dès que `vehicle()` est non-nul) en déclenche un second via son `effect()`
-      // constructeur (`loadCoutAutresVehicules`, bloc "Budget de l'équipe") : plus
-      // `toHaveBeenCalledExactlyOnceWith`, l'appel initial reste vérifié.
+      // `getAllForTeam` est désormais appelé UNE fois par le parent (`loadTeamVehicles`,
+      // qui sert à la fois à isoler le véhicule visé et à calculer le budget) —
+      // `EquipmentManager` ne l'appelle plus (il reçoit le budget en input).
       expect(mockVehicleService.getAllForTeam).toHaveBeenCalledWith(7);
       expect(component.vehicle()).toEqual(mockCreatedVehicle);
       expect(component.loadingVehicle()).toBe(false);
@@ -271,14 +270,16 @@ describe('VehicleConfigurator', () => {
   // ── Câblage commun vers EquipmentManager (les deux modes y aboutissent) ─────
 
   describe('Câblage vers EquipmentManager', () => {
-    it('transmet le véhicule, le catalogue et l\'équipe en entrée', () => {
+    it('transmet le véhicule, le catalogue et le budget en entrée', () => {
       createFixture(100);
 
       const manager = fixture.debugElement.query(By.directive(EquipmentManager)).componentInstance as EquipmentManager;
 
       expect(manager.vehicle()).toEqual(mockCreatedVehicle);
       expect(manager.sponsorCatalog()).toEqual(mockSponsorCatalog);
-      expect(manager.team()).toEqual(mockTeam);
+      // Le budget est calculé par le parent (total = team.cans) et transmis en input.
+      expect(manager.budget()).toEqual(component.budget());
+      expect(manager.budget().total).toBe(mockTeam.cans);
     });
 
     it('met à jour `vehicle` (et le re-fournit en input) quand EquipmentManager émet (vehicleChanged)', () => {

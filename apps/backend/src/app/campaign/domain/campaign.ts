@@ -15,9 +15,10 @@ import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event'
 import type { WreckOutcome } from './wreck/wreck-outcome';
 import type { WreckTable } from './wreck/wreck-table';
 import { EquipmentChangedEvent } from './events/equipment-changed.event';
-import type { EquipmentOperation, EquipmentEntityType } from './events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from './enums/equipment-change.enums';
 import type { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../team/domain/value-objects/weapon-type';
+import type { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 import type { Orientation } from '../../team/domain/team';
 
 export interface StandingsEntry {
@@ -83,6 +84,7 @@ export interface ChangeEquipmentInput {
   orientation?: Orientation | null;
   resolvedVehicleType: VehicleType | null;
   resolvedWeaponType: WeaponType | null;
+  resolvedImprovementType: ImprovementType | null;
 }
 
 /**
@@ -152,7 +154,7 @@ export class Campaign {
    */
   replay(): void {
     for (const p of this._participants) {
-      p.reset();  // wallet = team.cans, PC = 0, PR = 0 + team.resetCampaignState()
+      p.reset();  // wallet = team.remainingBudget, PC = 0, PR = 0 + team.resetCampaignState()
     }
     const sorted = [...this._games].sort((a, b) => a.order - b.order);
     for (const game of sorted) {
@@ -492,7 +494,7 @@ export class Campaign {
    * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
    * persiste l'événement puis recharge via replay, qui l'applique avec son vrai id.
    */
-  changeEquipment(participantId: number, cmd: ChangeEquipmentInput): WreckResolveOutcome {
+  changeEquipment(participantId: number, cmd: ChangeEquipmentInput): RecordResultOutcome {
     const game = this._games.find((g) => g.status === GameStatus.ATELIER);
     if (!game) {
       throw new DomainException('Aucun atelier ouvert actuellement.');
@@ -500,34 +502,126 @@ export class Campaign {
 
     const me = this.findParticipant(participantId);
 
+    // Le coût est calculé ici (agrégat) puis figé dans l'événement : en event-sourcing
+    // il ne doit jamais être recalculé au replay (le prix catalogue peut changer, le
+    // coût de revente dépend de l'état rejoué).
+    //
+    // Pour un BUY, `nomInterne` et les types résolus viennent du catalogue (fournis par le
+    // use case). Pour un SELL, on les DÉRIVE de l'entité ciblée dans l'équipe replayée : le
+    // client n'a pas à (re)transmettre le `nomInterne` de ce qu'il vend. L'événement reste
+    // ainsi auto-descriptif — le mapper de replay résout toujours un catalogue valide, et
+    // l'undo peut recréer l'entité (symétrie avec le BUY).
     let cost: number;
-    if (cmd.operation === 'BUY') {
-      const resolved = cmd.entityType === 'VEHICLE' ? cmd.resolvedVehicleType : cmd.resolvedWeaponType;
-      if (!resolved) {
-        const label = cmd.entityType === 'VEHICLE' ? 'Véhicule' : 'Arme';
-        throw new DomainException(`${label} inconnu(e) du catalogue : "${cmd.nomInterne}".`);
-      }
-      cost = resolved.price;
-    } else if (cmd.entityType === 'VEHICLE') {
-      cost = me.team.findVehicle(cmd.targetEntityId!).type.price;
+    let nomInterne: string = cmd.nomInterne;
+    let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
+    let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
+    let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
+
+    if (cmd.operation === EquipmentOperation.BUY) {
+      cost = this.resolveBuyCost(cmd);
     } else {
-      const vehicle = me.team.findVehicle(cmd.targetVehicleId!);
-      const weapon = vehicle.weapons.find((w) => w.id === cmd.targetEntityId);
-      if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
-      cost = weapon.type.price;
+      const sold = this.resolveSell(me, cmd);
+      cost = sold.cost;
+      nomInterne = sold.nomInterne;
+      resolvedVehicleType = sold.resolvedVehicleType;
+      resolvedWeaponType = sold.resolvedWeaponType;
+      resolvedImprovementType = sold.resolvedImprovementType;
     }
 
     const event = new EquipmentChangedEvent(
       0, game.id, me.id, 0,
-      cmd.operation, cmd.entityType, cmd.nomInterne, cost,
+      cmd.operation, cmd.entityType, nomInterne, cost,
       cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, cmd.orientation ?? null,
-      cmd.resolvedVehicleType, cmd.resolvedWeaponType,
+      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
     );
 
-    if (cmd.operation === 'BUY') me.assertCanAfford(cost);
+    if (cmd.operation === EquipmentOperation.BUY) me.assertCanAfford(cost);
     game.addEvent(event);
 
     return { events: [event] };
+  }
+
+  /** Coût d'un achat (BUY) selon le type d'entité — depuis le catalogue résolu. */
+  private resolveBuyCost(cmd: ChangeEquipmentInput): number {
+    switch (cmd.entityType) {
+      case EquipmentEntityType.VEHICLE:
+        if (!cmd.resolvedVehicleType) {
+          throw new DomainException(`Véhicule inconnu du catalogue : "${cmd.nomInterne}".`);
+        }
+        return cmd.resolvedVehicleType.price;
+      case EquipmentEntityType.WEAPON:
+        if (!cmd.resolvedWeaponType) {
+          throw new DomainException(`Arme inconnue du catalogue : "${cmd.nomInterne}".`);
+        }
+        return cmd.resolvedWeaponType.price;
+      case EquipmentEntityType.IMPROVEMENT:
+        if (!cmd.resolvedImprovementType) {
+          throw new DomainException(`Amélioration inconnue du catalogue : "${cmd.nomInterne}".`);
+        }
+        // Temps 1 : la Tourelle (prix variable ×3 + assignation d'arme) n'est pas gérée en atelier.
+        if (cmd.resolvedImprovementType.isTourelle) {
+          throw new DomainException("La Tourelle n'est pas disponible en atelier pour l'instant.");
+        }
+        return cmd.resolvedImprovementType.price;
+    }
+  }
+
+  /**
+   * Revente (SELL) — lit l'entité ciblée dans l'équipe replayée et en dérive le coût, le
+   * `nomInterne` et le Value Object de type. Ces derniers rendent l'événement auto-descriptif
+   * (le client n'a pas à transmettre le `nomInterne` de ce qu'il vend) et réversibles (undo).
+   */
+  private resolveSell(
+    me: CampaignParticipant,
+    cmd: ChangeEquipmentInput,
+  ): {
+    cost: number;
+    nomInterne: string;
+    resolvedVehicleType: VehicleType | null;
+    resolvedWeaponType: WeaponType | null;
+    resolvedImprovementType: ImprovementType | null;
+  } {
+    switch (cmd.entityType) {
+      case EquipmentEntityType.VEHICLE: {
+        const vehicle = me.team.findVehicle(cmd.targetEntityId!);
+        return {
+          cost: vehicle.type.price,
+          nomInterne: vehicle.type.nomInterne,
+          resolvedVehicleType: vehicle.type,
+          resolvedWeaponType: null,
+          resolvedImprovementType: null,
+        };
+      }
+      case EquipmentEntityType.WEAPON: {
+        const weapon = me.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId);
+        if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
+        return {
+          cost: weapon.type.price,
+          nomInterne: weapon.type.nomInterne,
+          resolvedVehicleType: null,
+          resolvedWeaponType: weapon.type,
+          resolvedImprovementType: null,
+        };
+      }
+      case EquipmentEntityType.IMPROVEMENT: {
+        const improvement = me.team
+          .findVehicle(cmd.targetVehicleId!)
+          .improvements.find((i) => i.id === cmd.targetEntityId);
+        if (!improvement) throw new DomainException(`Amélioration ${cmd.targetEntityId} introuvable.`);
+        // Garde validée dès la commande pour éviter un événement « poison » au replay ;
+        // Vehicle.removeImprovement la re-vérifie en défense à l'exécution.
+        if (improvement.estDefaut) {
+          throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
+        }
+        return {
+          cost: improvement.price,
+          nomInterne: improvement.type.nomInterne,
+          resolvedVehicleType: null,
+          resolvedWeaponType: null,
+          resolvedImprovementType: improvement.type,
+        };
+      }
+    }
   }
 
   /**

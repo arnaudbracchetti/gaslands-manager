@@ -26,7 +26,7 @@
 | Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1/A2/A3) |
 | Mode campagne — Résultats & classement (rang, PC de classement 10/5/2/1) | ✅ Implémenté (US-B1/B3/C1) |
 | Mode campagne — Exploits de partie (portes franchies, véhicules ennemis détruits) | ✅ Implémenté (US-B2) |
-| Mode campagne — Atelier (cagnotte, achat/revente d'équipement) | 🟡 Partiel — logique backend seule, aucune UI, plusieurs gardes métier absentes (US-D1–D4, cf. cartes kanban) |
+| Mode campagne — Atelier (cagnotte, achat/revente d'équipement) | 🟡 Partiel — **UI Temps 1 implémentée** (page `/campaigns/:id/atelier` réutilisant `EquipmentManager` : achat/retrait armes + améliorations via la cagnotte). Restent en Temps 2 : enforcement des règles au write, revente à moitié prix, gardes sponsor/limite 8, annulation d'achat, Tourelle, UI chocs/séquelles/épaves (cf. [design](plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) |
 | Mode campagne — Table des Épaves (D6 serveur, 9 lignes, pertes aléatoires) | ✅ Implémenté (US-E1–E3) — 🟡 séquelles spéciales absentes (Maintenu par la Rouille, Légende Vivante) |
 | Mode campagne — Points de Résistance (mécanique secrète) | 🟡 Partiel — crédit automatique implémenté (US-F1), aucune lecture possible par le joueur lui-même |
 | Mode campagne — Wizard de fin de partie (classement → épaves → Table des Épaves) | ✅ Implémenté — remplace l'ancienne modale unique |

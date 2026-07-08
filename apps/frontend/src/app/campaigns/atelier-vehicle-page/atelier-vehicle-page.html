@@ -1,0 +1,24 @@
+<div class="vcp-page">
+
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
+
+  <div class="vcp-header">
+    <h1>{{ vehicleName() || 'Gestion de l\'équipement' }}</h1>
+  </div>
+
+  @if (loading()) {
+    <p class="vcp-status vcp-status--loading">Chargement…</p>
+  } @else if (error()) {
+    <p class="vcp-status vcp-status--error">{{ error() }}</p>
+  } @else if (vehicle(); as v) {
+    @if (sponsorCatalog(); as catalog) {
+      <app-equipment-manager
+        [vehicle]="v"
+        [sponsorCatalog]="catalog"
+        [budget]="budget()"
+        (vehicleChanged)="onVehicleChanged()"
+      />
+    }
+  }
+
+</div>

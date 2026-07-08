@@ -228,3 +228,40 @@ describe('Vehicle.canAddImprovement — règles de pose (chaîne Decorator)', ()
     expect(r.ok).toBe(true);
   });
 });
+
+describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilité (listing)', () => {
+  it('renvoie ok() directement si l\'amélioration ne nécessite aucune orientation', () => {
+    const v = vehicleWith([]);
+    const r = v.canAddImprovementInAnyOrientation(improvementType('chenilles', 'chenilles', 1), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('sonde chaque arc et renvoie ok() dès qu\'un arc est libre (Bélier avant occupé, gauche libre)', () => {
+    const belier = new Improvement(1, improvementType('belier', 'belier', 1), 'avant', false);
+    const v = vehicleWith([belier]);
+    const r = v.canAddImprovementInAnyOrientation(improvementType('belier', 'belier', 1), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('refuse (dernière raison) si TOUS les arcs sont occupés', () => {
+    const orientations: readonly ('avant' | 'arrière' | 'gauche' | 'droite')[] = ['avant', 'arrière', 'gauche', 'droite'];
+    const beliers = orientations.map(
+      (o, i) => new Improvement(i + 1, improvementType('belier', 'belier', 1), o, false),
+    );
+    const v = vehicleWith(beliers, { emplacements: 10 });
+    const r = v.canAddImprovementInAnyOrientation(improvementType('belier', 'belier', 1), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Un Bélier occupe déjà');
+  });
+
+  it('refuse sans sonder les arcs si le budget est insuffisant (garde commune à canAddImprovement)', () => {
+    const cherBelier = ImprovementType.from({
+      nom: 'belier', nom_interne: 'belier', prix: 999, emplacement: 1,
+      description: '', regles: '', sponsors_autorises: [], comportement: 'belier',
+    });
+    const v = vehicleWith([]);
+    const r = v.canAddImprovementInAnyOrientation(cherBelier, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Budget');
+  });
+});

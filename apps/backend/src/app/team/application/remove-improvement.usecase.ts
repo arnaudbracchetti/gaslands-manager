@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { ITeamRepository } from '../domain/team.repository.interface';
-import type { Team } from '../domain/team';
+import type { Vehicle } from '../domain/vehicle';
 import { DomainException } from '../domain/team';
 import { LogUseCase } from '../log-use-case.decorator';
 
@@ -19,7 +19,7 @@ export class RemoveImprovementUseCase {
   constructor(private readonly teamRepo: ITeamRepository) {}
 
   @LogUseCase()
-  async execute(cmd: RemoveImprovementCommand): Promise<Team> {
+  async execute(cmd: RemoveImprovementCommand): Promise<Vehicle> {
     const team = await this.teamRepo.findByVehicleId(cmd.vehicleId, cmd.userId);
     const vehicle = team.findVehicle(cmd.vehicleId);
 
@@ -44,6 +44,7 @@ export class RemoveImprovementUseCase {
       throw e;
     }
 
-    return this.teamRepo.save(team);
+    const saved = await this.teamRepo.save(team);
+    return saved.findVehicle(cmd.vehicleId);
   }
 }

@@ -20,6 +20,17 @@ export interface WorkshopSequellaDto {
   chocsCost: number;
 }
 
+export interface WorkshopImprovementDto {
+  id: number;
+  nomInterne: string;
+  orientation: string | null;
+  price: number;
+  /** Emplacements catalogue de l'amélioration — utilisé par le calcul de slots côté IHM. */
+  emplacement: number;
+  estDefaut: boolean;
+  isLost: boolean;
+}
+
 export interface WorkshopVehicleDto {
   id: number;
   nomInterne: string;
@@ -28,10 +39,13 @@ export interface WorkshopVehicleDto {
   chocs: number;
   sequellas: WorkshopSequellaDto[];
   weapons: WorkshopWeaponDto[];
+  improvements: WorkshopImprovementDto[];
 }
 
 export interface WorkshopStateDto {
   participantId: number;
+  /** Sponsor de l'équipe engagée — permet au frontend de charger le catalogue filtré. */
+  sponsor: string;
   wallet: number;
   championshipPoints: number;
   vehicles: WorkshopVehicleDto[];

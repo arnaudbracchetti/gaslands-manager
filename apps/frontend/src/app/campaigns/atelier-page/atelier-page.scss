@@ -1,0 +1,97 @@
+// Même gabarit que VehicleConfiguratorPage (`vcp-page`/`vcp-header`) — pleine
+// largeur d'écran, en-tête collant sous le fil d'Ariane.
+.atp-page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.atp-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: var(--tb-bitume);
+  padding: 16px 0;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--border-rust);
+
+  h1 {
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    font-size: 1.8rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+@media (max-width: 760px) {
+  .atp-header {
+    position: static;
+    background: none;
+    padding: 0;
+    margin-bottom: 32px;
+    border-bottom: none;
+  }
+}
+
+.atp-status {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
+}
+
+.atp-wallet {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  background: var(--tb-bitume-2);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+}
+
+.atp-wallet-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.atp-wallet-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--tb-danger);
+}
+
+.atp-vehicles-empty {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 40px 20px;
+  border: 1px dashed var(--border-rust);
+}
+
+// Pleine largeur exploitée via une grille (même principe que `vc-vehicle-grid`
+// de VehicleConfigurator) plutôt qu'une colonne unique étirée sur 1600px.
+.atp-vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}

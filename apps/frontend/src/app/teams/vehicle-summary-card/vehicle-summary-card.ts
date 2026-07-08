@@ -22,6 +22,9 @@ export class VehicleSummaryCard {
   /** Position dans la liste (1-based) — affichée en filigrane. */
   index = input<number>(1);
 
+  /** Affiche le bouton de suppression — masqué en Atelier (aucune suppression de véhicule possible). */
+  showDelete = input<boolean>(true);
+
   /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
   indexFormate: Signal<string> = computed(() =>
     String(this.index()).padStart(2, '0'),

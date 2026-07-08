@@ -2,10 +2,11 @@ import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
+import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
 import type { Orientation } from '../../../team/domain/team';
+import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 
-export type EquipmentOperation = 'BUY' | 'SELL';
-export type EquipmentEntityType = 'VEHICLE' | 'WEAPON';
+export { EquipmentOperation, EquipmentEntityType };
 
 /**
  * Achat ou revente d'équipement en atelier campagne (D-S11).
@@ -15,14 +16,16 @@ export type EquipmentEntityType = 'VEHICLE' | 'WEAPON';
  * des ids BDD positifs).
  *
  * Champs selon l'opération :
- * - BUY_VEHICLE   : targetVehicleId=null, targetEntityId=null  → crée Vehicle id=-this.id
- * - BUY_WEAPON    : targetVehicleId=vehicleId, targetEntityId=null → crée Weapon id=-this.id
- * - SELL_VEHICLE  : targetVehicleId=null, targetEntityId=vehicleId → retire le véhicule
- * - SELL_WEAPON   : targetVehicleId=vehicleId, targetEntityId=weaponId → retire l'arme
+ * - BUY_VEHICLE     : targetVehicleId=null, targetEntityId=null  → crée Vehicle id=-this.id
+ * - BUY_WEAPON      : targetVehicleId=vehicleId, targetEntityId=null → crée Weapon id=-this.id
+ * - BUY_IMPROVEMENT : targetVehicleId=vehicleId, targetEntityId=null → crée Improvement id=-this.id
+ * - SELL_VEHICLE    : targetVehicleId=null, targetEntityId=vehicleId → retire le véhicule
+ * - SELL_WEAPON     : targetVehicleId=vehicleId, targetEntityId=weaponId → retire l'arme
+ * - SELL_IMPROVEMENT: targetVehicleId=vehicleId, targetEntityId=improvementId → retire l'amélioration
  *
- * `resolvedVehicleType` / `resolvedWeaponType` sont fournis par le use case (write-time)
- * ou par le mapper ORM (replay). Ils permettent à execute/undo de recréer les entités
- * transientes sans accès au catalogue.
+ * `resolvedVehicleType` / `resolvedWeaponType` / `resolvedImprovementType` sont fournis par
+ * le use case (write-time) ou par le mapper ORM (replay). Ils permettent à execute/undo de
+ * recréer les entités transientes sans accès au catalogue.
  */
 export class EquipmentChangedEvent extends GameEvent {
   constructor(
@@ -39,50 +42,65 @@ export class EquipmentChangedEvent extends GameEvent {
     readonly orientation: Orientation | null,
     private readonly resolvedVehicleType: VehicleType | null,
     private readonly resolvedWeaponType: WeaponType | null,
+    private readonly resolvedImprovementType: ImprovementType | null = null,
   ) {
     super(id, gameId, participantId, eventOrder);
   }
 
   execute(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    if (this.operation === 'BUY') {
+    if (this.operation === EquipmentOperation.BUY) {
       p.creditWallet(-this.cost);
-      if (this.entityType === 'VEHICLE') {
-        p.team.addCampaignVehicle(this.resolvedVehicleType!, -this.id);
-      } else {
-        p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, -this.id);
-      }
+      this.addEntity(p, -this.id);
     } else {
       p.creditWallet(this.cost);
-      if (this.entityType === 'VEHICLE') {
-        p.team.removeCampaignVehicle(this.targetEntityId!);
-      } else {
-        p.team.removeCampaignWeapon(this.targetVehicleId!, this.targetEntityId!);
-      }
+      this.removeEntity(p, this.targetEntityId!);
     }
   }
 
   undo(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    if (this.operation === 'BUY') {
+    if (this.operation === EquipmentOperation.BUY) {
       p.creditWallet(this.cost);
-      if (this.entityType === 'VEHICLE') {
-        p.team.removeCampaignVehicle(-this.id);
-      } else {
-        p.team.removeCampaignWeapon(this.targetVehicleId!, -this.id);
-      }
+      this.removeEntity(p, -this.id);
     } else {
       p.creditWallet(-this.cost);
-      if (this.entityType === 'VEHICLE') {
-        p.team.addCampaignVehicle(this.resolvedVehicleType!, this.targetEntityId!);
-      } else {
-        p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, this.targetEntityId!);
-      }
+      this.addEntity(p, this.targetEntityId!);
+    }
+  }
+
+  /** Recrée l'entité transiente avec l'id fourni (achat, ou annulation d'une revente). */
+  private addEntity(p: CampaignParticipant, entityId: number): void {
+    switch (this.entityType) {
+      case EquipmentEntityType.VEHICLE:
+        p.team.addCampaignVehicle(this.resolvedVehicleType!, entityId);
+        break;
+      case EquipmentEntityType.WEAPON:
+        p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, entityId);
+        break;
+      case EquipmentEntityType.IMPROVEMENT:
+        p.team.addCampaignImprovement(this.targetVehicleId!, this.resolvedImprovementType!, this.orientation, entityId);
+        break;
+    }
+  }
+
+  /** Retire l'entité ciblée (revente, ou annulation d'un achat). */
+  private removeEntity(p: CampaignParticipant, entityId: number): void {
+    switch (this.entityType) {
+      case EquipmentEntityType.VEHICLE:
+        p.team.removeCampaignVehicle(entityId);
+        break;
+      case EquipmentEntityType.WEAPON:
+        p.team.removeCampaignWeapon(this.targetVehicleId!, entityId);
+        break;
+      case EquipmentEntityType.IMPROVEMENT:
+        p.team.removeCampaignImprovement(this.targetVehicleId!, entityId);
+        break;
     }
   }
 
   describe(): string {
-    const verb = this.operation === 'BUY' ? 'Achat' : 'Vente';
+    const verb = this.operation === EquipmentOperation.BUY ? 'Achat' : 'Vente';
     return `${verb} : ${this.nomInterne} (${this.cost} jerricans)`;
   }
 }

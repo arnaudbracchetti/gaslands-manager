@@ -21,7 +21,7 @@ import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
-import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
@@ -33,6 +33,7 @@ import type { Orientation } from '../../team/domain/team';
 
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
+import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 
 import { DomainException } from '../../shared/domain/domain-exception';
 
@@ -155,24 +156,39 @@ export class CampaignMapper {
     const entityType = orm.entityType as EquipmentEntityType;
     const orientation = orm.orientation as Orientation | null;
 
+    // La résolution du Value Object catalogue est OBLIGATOIRE pour un BUY (`execute()`
+    // recrée l'entité transiente et en a besoin), mais seulement best-effort pour un SELL :
+    // `execute()` d'une revente ne fait que retirer l'entité par son id ; le type ne sert
+    // qu'à un éventuel `undo()`. On tolère donc un `nomInterne` vide/inconnu sur un SELL
+    // (ex. anciens événements écrits sans `nomInterne`) plutôt que de faire échouer TOUT le
+    // replay de la campagne. Les nouveaux SELL portent le `nomInterne` dérivé de l'entité
+    // vendue (cf. Campaign.resolveSell).
+    const requireResolution = operation === EquipmentOperation.BUY;
+    const nomInterne = orm.nomInterne ?? '';
+
     let resolvedVehicleType: VehicleType | null = null;
     let resolvedWeaponType: WeaponType | null = null;
+    let resolvedImprovementType: ImprovementType | null = null;
 
-    if (entityType === 'VEHICLE') {
-      const raw = this.catalog.getVehiculeByNomInterne(orm.nomInterne!);
-      if (!raw) throw new DomainException(`Véhicule catalogue introuvable : "${orm.nomInterne}"`);
-      resolvedVehicleType = VehicleType.from(raw);
+    if (entityType === EquipmentEntityType.VEHICLE) {
+      const raw = nomInterne ? this.catalog.getVehiculeByNomInterne(nomInterne) : undefined;
+      if (!raw && requireResolution) throw new DomainException(`Véhicule catalogue introuvable : "${nomInterne}"`);
+      resolvedVehicleType = raw ? VehicleType.from(raw) : null;
+    } else if (entityType === EquipmentEntityType.WEAPON) {
+      const raw = nomInterne ? this.catalog.getArmeByNomInterne(nomInterne) : undefined;
+      if (!raw && requireResolution) throw new DomainException(`Arme catalogue introuvable : "${nomInterne}"`);
+      resolvedWeaponType = raw ? WeaponType.from(raw) : null;
     } else {
-      const raw = this.catalog.getArmeByNomInterne(orm.nomInterne!);
-      if (!raw) throw new DomainException(`Arme catalogue introuvable : "${orm.nomInterne}"`);
-      resolvedWeaponType = WeaponType.from(raw);
+      const raw = nomInterne ? this.catalog.getAmeliorationByNomInterne(nomInterne) : undefined;
+      if (!raw && requireResolution) throw new DomainException(`Amélioration catalogue introuvable : "${nomInterne}"`);
+      resolvedImprovementType = raw ? ImprovementType.from(raw) : null;
     }
 
     return new EquipmentChangedEvent(
       orm.id, orm.gameId, orm.participantId, orm.eventOrder,
-      operation, entityType, orm.nomInterne!, orm.cost!,
+      operation, entityType, nomInterne, orm.cost!,
       orm.targetVehicleId, orm.targetEntityId, orientation,
-      resolvedVehicleType, resolvedWeaponType,
+      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
     );
   }
 }

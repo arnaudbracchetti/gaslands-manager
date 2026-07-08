@@ -45,13 +45,15 @@
       title="Gérer l'équipement de ce véhicule">
       GÉRER L'ÉQUIPEMENT
     </button>
-    <button
-      class="tep-btn-delete-vehicle"
-      data-testid="vehicle-card-delete"
-      (click)="deleteClicked.emit(vehicle())"
-      title="Supprimer ce véhicule">
-      🗑
-    </button>
+    @if (showDelete()) {
+      <button
+        class="tep-btn-delete-vehicle"
+        data-testid="vehicle-card-delete"
+        (click)="deleteClicked.emit(vehicle())"
+        title="Supprimer ce véhicule">
+        🗑
+      </button>
+    }
   </div>
 
 </div>

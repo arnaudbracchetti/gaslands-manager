@@ -220,6 +220,25 @@ export class Team {
     this.findVehicle(vehicleId).removeWeapon(weaponId);
   }
 
+  /** Ajoute une amélioration transiente sur un véhicule avec un id explicite (D-S11). */
+  addCampaignImprovement(
+    vehicleId: number,
+    improvementType: ImprovementType,
+    orientation: Orientation | null,
+    campaignId: number,
+  ): Improvement {
+    return this.findVehicle(vehicleId).addCampaignImprovement(improvementType, orientation, campaignId);
+  }
+
+  /**
+   * Retire une amélioration par son id d'un véhicule spécifique. Réutilise
+   * `Vehicle.removeImprovement`, qui refuse les améliorations intégrées (`estDefaut`) —
+   * la garde « une amélioration intégrée ne se revend pas » est ainsi héritée.
+   */
+  removeCampaignImprovement(vehicleId: number, improvementId: number): void {
+    this.findVehicle(vehicleId).removeImprovement(improvementId);
+  }
+
 }
 
 // Ré-export pour que les consumers importent depuis team.ts sans connaître vehicle.ts

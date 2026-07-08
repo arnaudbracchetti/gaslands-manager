@@ -13,7 +13,6 @@ import {
   Request,
   UseGuards,
   ParseIntPipe,
-  HttpCode,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AddWeaponDto } from './dto/add-weapon.dto';
@@ -62,11 +61,11 @@ export class WeaponController {
   }
 
   @Delete('weapons/:id')
-  @HttpCode(204)
   async removeWeapon(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: AuthenticatedRequest,
-  ): Promise<void> {
-    await this.removeWeaponUseCase.execute({ weaponId: id, userId: req.user.id });
+  ): Promise<VehicleDto> {
+    const vehicle = await this.removeWeaponUseCase.execute({ weaponId: id, userId: req.user.id });
+    return vehicleDomainToDto(vehicle);
   }
 }

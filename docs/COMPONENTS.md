@@ -147,6 +147,8 @@ graph TD
         WreckDesignationStep
         WreckResolutionStep
         GameJournalModal
+        AtelierPage["AtelierPage (smart)"]
+        AtelierVehiclePage["AtelierVehiclePage (smart)"]
     end
 
     subgraph Admin
@@ -189,6 +191,12 @@ graph TD
     CampaignProgram --> GameResultWizard
     CampaignProgram --> GameJournalModal
     CampaignProgram --> ConfirmModal
+    CampaignProgram -.->|navigate| AtelierPage
+    AtelierPage --> VehicleSummaryCard
+    AtelierPage --> Breadcrumb
+    AtelierPage -.->|navigate| AtelierVehiclePage
+    AtelierVehiclePage --> EquipmentManager
+    AtelierVehiclePage --> Breadcrumb
     GameResultWizard --> RankingStep
     GameResultWizard --> WreckDesignationStep
     GameResultWizard --> WreckResolutionStep
@@ -906,6 +914,7 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | `deleteGame` | `Game` | Demande de suppression d'une partie |
 | `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
 | `openJournal` | `Game` | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
+| `openAtelier` | `Game` | Ouvre l'atelier (bouton 🔧 visible pour **tout participant** sur une partie en `ATELIER`) — le parent navigue vers `/campaigns/:id/atelier` (l'atelier est au niveau campagne, pas de la partie) |
 
 ---
 
@@ -1089,6 +1098,40 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 | Nom | Type | Description |
 |-----|------|-------------|
 | `closed` | `void` | Fermeture de la modale |
+
+---
+
+### `AtelierPage` — `campaigns/atelier-page/` 🧠
+
+Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=false`, aucun véhicule n'étant supprimable en atelier), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-atelier-page` |
+| **Type** | Smart |
+| **Route** | `/campaigns/:id/atelier` |
+| **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `CatalogService` |
+| **Compose** | `Breadcrumb`, `VehicleSummaryCard` |
+
+**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`).
+
+---
+
+### `AtelierVehiclePage` — `campaigns/atelier-vehicle-page/` 🧠
+
+Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Temps 1 : achat/retrait d'armes et d'améliorations ; hors périmètre : revente à moitié, Chocs/séquelles, épaves, Tourelle (cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-atelier-vehicle-page` |
+| **Type** | Smart |
+| **Route** | `/campaigns/:id/atelier/vehicles/:vehicleId` |
+| **Services** | `ActivatedRoute`, `CampaignsService`, `CatalogService` |
+| **Compose** | `Breadcrumb`, `EquipmentManager` (via `AtelierEquipmentDataSource` fournie au niveau du composant) |
+
+**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged` pour rafraîchir cagnotte + budget.
+
+> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise.
 
 ---
 

@@ -45,7 +45,8 @@ export interface TestContext {
 
 /**
  * Construit un participant avec une équipe, un véhicule, une arme et une amélioration
- * attachés. La cagnotte initiale du participant est 50 (cans de l'équipe).
+ * attachés. Coût du build : 12 (véhicule) + 5 (arme) + 4 (amélioration) = 21.
+ * La cagnotte initiale du participant est donc 29 (remainingBudget = cans 50 − build 21).
  */
 export function makeTestParticipant(participantId = 1): TestContext {
   const weapon = new Weapon(10, makeWeaponType(), 'avant');

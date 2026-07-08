@@ -103,11 +103,11 @@ describe('Campaign — replay', () => {
     expect(participant.championshipPoints).toBe(10);  // 3 + 7
   });
 
-  it('wallet initial = team.cans après reset', () => {
-    const { participant } = makeTestParticipant();  // team.cans = 50
+  it('wallet initial = team.remainingBudget après reset', () => {
+    const { participant } = makeTestParticipant();  // cans 50 − build 21 = 29
     const campaign = makeCampaign([participant], []);
     campaign.replay();
-    expect(participant.wallet).toBe(50);
+    expect(participant.wallet).toBe(29);
   });
 });
 
@@ -631,6 +631,25 @@ describe('Campaign — changeEquipment', () => {
     });
 
     expect((events[0] as EquipmentChangedEvent).cost).toBe(5);  // prix catalogue de makeWeaponType()
+  });
+
+  it('SELL : dérive le nomInterne + le type de l\'entité vendue (même si le client ne les transmet pas)', () => {
+    // Régression : le frontend envoie nomInterne="" pour un SELL. Sans dérivation,
+    // l'événement persisté portait "" → le mapper de replay échouait ("Arme catalogue
+    // introuvable"). L'agrégat doit donc renseigner le nomInterne depuis l'arme vendue.
+    const { participant, vehicle, weapon } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const campaign = makeCampaign([participant], [game]);
+
+    const { events } = campaign.changeEquipment(participant.id, {
+      operation: 'SELL', entityType: 'WEAPON', nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: weapon.id,
+      resolvedVehicleType: null, resolvedWeaponType: null,
+    });
+
+    const event = events[0] as EquipmentChangedEvent;
+    expect(event.nomInterne).toBe('mitrailleuse');
+    expect(event.cost).toBe(5);
   });
 
   it('SELL : refuse une arme introuvable sur le véhicule visé', () => {

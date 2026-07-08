@@ -22,6 +22,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { CampaignState } from '../campaign.model';
 import type { CampaignParticipant } from '../campaign-participant.model';
@@ -48,6 +49,7 @@ import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 })
 export class CampaignProgram implements OnInit {
   private campaignsService: CampaignsService = inject(CampaignsService);
+  private router: Router = inject(Router);
 
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
@@ -332,6 +334,15 @@ export class CampaignProgram implements OnInit {
     this.journalGame.set(null);
     this.journalEntries.set([]);
     this.loadingJournal.set(false);
+  }
+
+  /**
+   * Ouvre l'atelier (phase garage post-partie). L'atelier est au niveau de la
+   * campagne (`GetWorkshopUseCase` retrouve l'unique partie en ATELIER et l'équipe
+   * du participant connecté) — la navigation ne dépend donc pas du `gameId`.
+   */
+  onOpenAtelier(): void {
+    this.router.navigate(['/campaigns', this.campaignId(), 'atelier']);
   }
 
   onDelete(game: Game): void {

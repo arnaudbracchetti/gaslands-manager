@@ -94,7 +94,7 @@ apps/backend/src/app/
 │   ├── application/     ← 15 Use Cases (4 équipe + 2 véhicule + 3 arme + 6 amélioration/tourelle)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 └── campaign/            ← Module campagne unifié (DDD event-sourcing — voir §3.8), ex-`season/` + ex-`game/`
-    ├── campaign.controller.ts       ← Controller HTTP unique (28 routes : CRUD ligue/participants + Programme + event-sourcing)
+    ├── campaign.controller.ts       ← Controller HTTP unique (36 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
     ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
     ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome, WreckTable, IRandomizer
@@ -102,7 +102,7 @@ apps/backend/src/app/
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckTable (domain service, 9 lignes + événements), WreckOutcome (Value Object), IRandomizer (port hexagonal)
-    ├── application/     ← 22 Use Cases (12 CRUD + GetWorkshop + 9 event-sourcing)
+    ├── application/     ← 26 Use Cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing)
     └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, RandomProvider, entités ORM
 ```
 
@@ -254,7 +254,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/infrastructure/team.mapper.ts` | Mapping ORM ↔ agrégat domaine |
 | `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
-| `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (28 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
+| `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (36 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
 | `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `recordResult`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings` |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
@@ -263,14 +263,14 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
 | `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
 | `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine |
-| `apps/backend/src/app/campaign/application/` | 22 use cases (12 CRUD + GetWorkshop + 9 event-sourcing) |
+| `apps/backend/src/app/campaign/application/` | 26 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
 ### 3.8 Mode Campagne — Event Sourcing (`campaign/`)
 
 Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente une architecture **event sourcing** stricte pour le mode campagne : aucun état transient n'est jamais stocké en base — seul le **journal des événements** (`game_events`) est persisté. L'état courant est **recalculé à chaque lecture** par replay du journal.
 
-**Basculement DDD (Phase 2)** : les services anémiques (`CampaignService`, `CampaignParticipantService`, `GameService`, `GameResultService`) et le second controller (`game.controller.ts`) ont été supprimés. Les 28 endpoints passent par un **`CampaignController` unique** délégant aux **use cases** (écritures, via l'agrégat) et au **`CampaignQueryService`** (lectures, CQRS). Les résultats de partie **convergent vers l'event-sourcing** : `POST .../results` crée des `RankingAssignedEvent` via `Campaign.recordResult` (finalisation JOUE + atelier), et `GET .../results` est **dérivé du journal** (`game_events`, `eventType = RANKING_ASSIGNED`) — la table `game_results` / entité `GameResultOrm` n'existent plus.
+**Basculement DDD (Phase 2)** : les services anémiques (`CampaignService`, `CampaignParticipantService`, `GameService`, `GameResultService`) et le second controller (`game.controller.ts`) ont été supprimés. Les 36 endpoints passent par un **`CampaignController` unique** délégant aux **use cases** (écritures, via l'agrégat) et au **`CampaignQueryService`** (lectures, CQRS). Les résultats de partie **convergent vers l'event-sourcing** : `POST .../results` crée des `RankingAssignedEvent` via `Campaign.recordResult` (finalisation JOUE + atelier), et `GET .../results` est **dérivé du journal** (`game_events`, `eventType = RANKING_ASSIGNED`) — la table `game_results` / entité `GameResultOrm` n'existent plus.
 
 #### Trois patterns GoF imbriqués
 

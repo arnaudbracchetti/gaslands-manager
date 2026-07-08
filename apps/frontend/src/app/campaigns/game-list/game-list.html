@@ -35,6 +35,12 @@
         </button>
       }
 
+      @if (isAtelier(game)) {
+        <button type="button" class="game-list__atelier" (click)="openAtelier.emit(game)">
+          🔧 Atelier
+        </button>
+      }
+
       @if (hasJournal(game)) {
         <button type="button" class="game-list__journal" (click)="openJournal.emit(game)">
           📜 Journal
