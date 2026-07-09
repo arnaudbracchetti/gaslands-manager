@@ -35,6 +35,8 @@ Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet 
 
 **Stack** : Monorepo Nx 22.7 · Angular 21 zoneless + Signals (frontend) · NestJS 11 (backend) · PostgreSQL 16 via TypeORM · JWT + bcrypt
 
+**Citations de code** : toute référence à du code source du projet dans une réponse doit être un lien markdown cliquable vers le fichier (et la ligne si pertinent) — format `[chemin/fichier.ts:42](chemin/fichier.ts#L42)`, jamais juste un nom de fichier ou un extrait sans lien.
+
 **Structure** : `apps/frontend/` (port 4200) · `apps/backend/` (port 3000) · `content/` (Markdown) · `database_init/data/` (YAML catalogue jeu)
 
 ---
