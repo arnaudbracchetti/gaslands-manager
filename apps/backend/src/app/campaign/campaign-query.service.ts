@@ -230,15 +230,15 @@ export class CampaignQueryService {
   /**
    * Journal complet d'une partie (tous types d'événements confondus), pour
    * affichage — accessible à tout participant VALIDATED de la campagne, même
-   * absent de cette partie. Les descriptions viennent de l'agrégat
-   * (`Campaign.gameJournal`, `GameEvent.describe()`) ; userName/teamName/
-   * createdAt sont résolus ici, hors du domaine (préoccupation de lecture).
+   * absent de cette partie. Les descriptions viennent de l'objet `Game` lui-même
+   * (`Game.journal()`, `GameEvent.describe()`) ; userName/teamName/createdAt sont
+   * résolus ici, hors du domaine (préoccupation de lecture).
    */
   async getJournal(campaignId: number, gameId: number, userId: number): Promise<GameJournalEntryDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
     const campaign = await this.replayService.load(campaignId);
-    const entries = campaign.gameJournal(gameId);
+    const entries = campaign.findGame(gameId).journal();
 
     const [participants, eventRows] = await Promise.all([
       this.participantRepo.find({ where: { campaignId }, relations: { user: true, team: true } }),

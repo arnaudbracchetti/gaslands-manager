@@ -5,21 +5,7 @@ import type { GameEvent } from './events/game-event';
 import { GameStatus } from './enums/game-status.enum';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
-import { RankingAssignedEvent } from './events/ranking-assigned.event';
-import { GatesCrossedEvent } from './events/gates-crossed.event';
-import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
-import { ResistanceContactedEvent } from './events/resistance-contacted.event';
-import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from './enums/weight-class.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
-import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event';
-import type { WreckOutcome } from './wreck/wreck-outcome';
-import type { WreckTable } from './wreck/wreck-table';
-import { EquipmentChangedEvent } from './events/equipment-changed.event';
-import { EquipmentOperation, EquipmentEntityType } from './enums/equipment-change.enums';
-import type { VehicleType } from '../../team/domain/value-objects/vehicle-type';
-import type { WeaponType } from '../../team/domain/value-objects/weapon-type';
-import type { ImprovementType } from '../../team/domain/value-objects/improvement-type';
-import type { Orientation } from '../../team/domain/team';
 
 export interface StandingsEntry {
   participantId: number;
@@ -29,66 +15,6 @@ export interface StandingsEntry {
   championshipPoints: number;
   wallet: number;
   // resistancePoints délibérément absent — secret (cf. D-S4)
-}
-
-/**
- * Un véhicule ennemi détruit par un participant (exploit, US-B2). `weightClass`
- * n'est PAS transmis par l'appelant — dérivé côté serveur depuis le véhicule réel
- * (cf. `Campaign.findVehicleType`), pour empêcher un appelant de désigner n'importe
- * quel véhicule comme `FORTERESSE` (barème +5 PC) sans qu'un tel véhicule existe.
- */
-export interface DestroyedVehicleInput {
-  vehicleId: number;
-}
-
-/** Un rang attribué à un participant lors de l'enregistrement d'un résultat. */
-export interface RankingInput {
-  participantId: number;
-  rank: number;
-  /** Portes franchies (exploit, US-B2) — 0/absent si aucune. */
-  gatesCrossed?: number;
-  /** Véhicules ennemis détruits par poids (exploit, US-B2) — vide/absent si aucun. */
-  destroyedVehicles?: DestroyedVehicleInput[];
-}
-
-/** Résultat structurel d'un recordResult : événements à journaliser. */
-export interface RecordResultOutcome {
-  events: GameEvent[];
-}
-
-/** Une ligne du journal d'une partie — événement traduit en texte lisible. */
-export interface GameJournalEntry {
-  eventId: number;
-  participantId: number;
-  description: string;
-}
-
-// Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
-const POINTS_TABLE = [10, 5, 2, 1];
-
-/** +5 PC — Table des Épaves, ligne 9 (Favori du public), effet différé confirmé ligne 10+. */
-const FAVORI_DU_PUBLIC_BONUS_POINTS = 5;
-
-/** Résultat structurel d'une résolution de la Table des Épaves : événements à journaliser. */
-export interface WreckResolveOutcome {
-  events: GameEvent[];
-  outcome: WreckOutcome;
-}
-
-/** Commande d'achat/revente d'équipement en atelier — VO catalogue déjà résolus par le use case. */
-export interface ChangeEquipmentInput {
-  operation: EquipmentOperation;
-  entityType: EquipmentEntityType;
-  /** Nom interne du catalogue — requis pour BUY, optionnel pour SELL. */
-  nomInterne: string;
-  /** Véhicule hôte — requis pour BUY_WEAPON, SELL_WEAPON ; id de la cible pour SELL_VEHICLE. */
-  targetVehicleId?: number | null;
-  /** Id de l'entité à vendre — requis pour SELL. */
-  targetEntityId?: number | null;
-  orientation?: Orientation | null;
-  resolvedVehicleType: VehicleType | null;
-  resolvedWeaponType: WeaponType | null;
-  resolvedImprovementType: ImprovementType | null;
 }
 
 /**
@@ -150,6 +76,17 @@ export class Campaign {
     return p;
   }
 
+  /**
+   * Retrouve l'unique partie actuellement en `ATELIER` — invariant "un seul atelier
+   * actif à la fois par campagne", qui porte sur l'ensemble des parties et ne peut
+   * donc pas vivre sur une `Game` isolée.
+   */
+  findAtelierGame(): Game {
+    const game = this._games.find((g) => g.status === GameStatus.ATELIER);
+    if (!game) throw new DomainException('Aucun atelier ouvert actuellement.');
+    return game;
+  }
+
   // ── Replay ───────────────────────────────────────────────────────────────────
 
   /**
@@ -162,7 +99,7 @@ export class Campaign {
     }
     const sorted = [...this._games].sort((a, b) => a.order - b.order);
     for (const game of sorted) {
-      game.apply(this._participants);
+      game.apply(this._participants);    //TODO: apply n'est pas tres explicite comme nom de méthode
     }
   }
 
@@ -200,18 +137,6 @@ export class Campaign {
         championshipPoints: p.championshipPoints,
         wallet: p.wallet,
       }));
-  }
-
-  // ── Journal ──────────────────────────────────────────────────────────────────
-
-  /** Journal complet d'une partie — chaque événement traduit en texte lisible. */
-  gameJournal(gameId: number): GameJournalEntry[] {
-    const game = this.findGame(gameId);
-    return game.events.map((e) => ({
-      eventId: e.id,
-      participantId: e.participantId,
-      description: e.describe(),
-    }));
   }
 
   // ── Commandes CRUD — campagne ────────────────────────────────────────────────
@@ -343,117 +268,6 @@ export class Campaign {
     if (game.id > 0) this._removedGameIds.push(game.id);
   }
 
-  /**
-   * Enregistre le résultat d'une partie : calcule les PC, journalise un
-   * RankingAssignedEvent par participant (+ exploits/résistance). Ne fait PAS
-   * entrer la partie en atelier — celle-ci reste PLANIFIE tant que le wizard de
-   * fin de partie n'est pas entièrement terminé (écran 3, résolution de la
-   * Table des Épaves), pour que les événements de cet écran restent acceptés
-   * par `Game.addEvent` (garde de statut). L'entrée en atelier
-   * (PLANIFIE → ATELIER) est une action explicite et séparée, cf. `enterAtelier()`.
-   *
-   * Les événements créés portent id=0 ; le use case les persiste via appendEvents.
-   */
-  recordResult(gameId: number, rankings: RankingInput[]): RecordResultOutcome {
-    const game = this.findGame(gameId);
-    this.assertPlanifie(game, 'Cette partie a déjà été jouée.');
-
-    // Rangs uniques et consécutifs à partir de 1.
-    const ranks = rankings.map((r) => r.rank).sort((a, b) => a - b);
-    const duplicates = new Set(ranks).size !== ranks.length;
-    const consecutive = ranks.every((r, i) => r === i + 1);
-    if (duplicates || !consecutive) {
-      throw new DomainException('Les rangs doivent être uniques et consécutifs à partir de 1.');
-    }
-
-    // Participants VALIDATED uniquement.
-    const validatedIds = new Set(
-      this._participants.filter((p) => p.status === ParticipantStatus.VALIDATED).map((p) => p.id),
-    );
-    for (const r of rankings) {
-      if (!validatedIds.has(r.participantId)) {
-        throw new DomainException(`Participant ${r.participantId} inconnu ou non validé dans cette campagne.`);
-      }
-    }
-
-    // Calcul des PC de classement selon le type de partie, puis événements de rang.
-    const classified = Math.ceil(rankings.length / 2);
-    const events: GameEvent[] = [];
-    for (const r of rankings) {
-      const points = this.computePoints(game.type, r.rank, classified);
-      const rankingEvent = new RankingAssignedEvent(0, game.id, r.participantId, 0, r.rank, points);
-      game.addEvent(rankingEvent);  // valide canAccept
-      events.push(rankingEvent);
-
-      // Points de Résistance automatiques (US-F1) : tout participant non classé (hors du
-      // top `classified`) reçoit +3 PR secrets, même s'il a marqué des PC d'exploit —
-      // aucune saisie manuelle, l'organisateur n'a pas d'écran dédié pour cette étape.
-      if (r.rank > classified) {
-        const resistanceEvent = new ResistanceContactedEvent(0, game.id, r.participantId, 0);
-        game.addEvent(resistanceEvent);
-        events.push(resistanceEvent);
-      }
-
-      // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
-      // PC figés à l'écriture (D-S8), comme pour le classement.
-      if (r.gatesCrossed && r.gatesCrossed > 0) {
-        const gatesEvent = new GatesCrossedEvent(0, game.id, r.participantId, 0, r.gatesCrossed, r.gatesCrossed);
-        game.addEvent(gatesEvent);
-        events.push(gatesEvent);
-      }
-      for (const destroyed of r.destroyedVehicles ?? []) {
-        // weightClass dérivé du véhicule réel (jamais transmis par l'appelant) — cf.
-        // DestroyedVehicleInput.
-        const weightClass = weightClassFromPoids(this.findVehicleType(destroyed.vehicleId).poids);
-        const exploitPoints = EXPLOIT_POINTS_BY_WEIGHT[weightClass];
-        const destroyedEvent = new VehicleDestroyedEvent(
-          0, game.id, r.participantId, 0, destroyed.vehicleId, weightClass, exploitPoints,
-        );
-        game.addEvent(destroyedEvent);
-        events.push(destroyedEvent);
-      }
-    }
-
-    return { events };
-  }
-
-  /**
-   * Wrapper mince : trouve le véhicule dans l'agrégat, délègue à `WreckTable`
-   * (qui encapsule les 9 lignes + la création des événements), puis journalise
-   * les événements retournés via `game.addEvent()`. Ne connaît PAS la Faveur du
-   * Public — règle indépendante, cf. `creditFavoriDuPublicBonus()`.
-   * Les événements portent id=0 ; le use case les persiste via `appendEvents`.
-   */
-  resolveWreck(gameId: number, participantId: number, vehicleId: number, wreckTable: WreckTable): WreckResolveOutcome {
-    const game = this.findGame(gameId);
-    const participant = this.findParticipant(participantId);
-    const vehicle = participant.team.findVehicle(vehicleId);
-    const { outcome, events } = wreckTable.resolve(vehicle, gameId, participantId);
-    for (const event of events) game.addEvent(event);
-    return { events, outcome };
-  }
-
-  /**
-   * Règle indépendante du tirage de la Table des Épaves : crédite +5 PC au
-   * propriétaire d'un véhicule attesté "Favori du public" (par l'organisateur,
-   * lors d'une partie précédente) lorsque ce véhicule vient d'être détruit.
-   * `vehicleWasDestroyed` est un fait déjà établi par l'appelant (résultat de
-   * `resolveWreck` ci-dessus) — cette méthode ne réinterprète pas la table, elle
-   * applique une règle séparée sur ce fait.
-   */
-  creditFavoriDuPublicBonus(
-    gameId: number,
-    participantId: number,
-    vehicleId: number,
-    vehicleWasDestroyed: boolean,
-  ): GameEvent | null {
-    if (!vehicleWasDestroyed) return null;
-    const game = this.findGame(gameId);
-    const bonusEvent = new FavoriDuPublicBonusEvent(0, gameId, participantId, 0, vehicleId, FAVORI_DU_PUBLIC_BONUS_POINTS);
-    game.addEvent(bonusEvent);
-    return bonusEvent;
-  }
-
   // ── Cycle de vie des parties (event sourcing) ────────────────────────────────
 
   /**
@@ -492,146 +306,6 @@ export class Campaign {
   }
 
   /**
-   * Achat ou revente d'équipement en atelier (D1-D3). Localise lui-même l'unique
-   * partie en ATELIER (un seul atelier actif à la fois par campagne — l'appelant
-   * n'a pas à le préciser), calcule le coût selon opération × type d'entité, et
-   * vérifie la cagnotte (BUY uniquement — la revente crédite toujours).
-   *
-   * Ne fait PAS `event.execute()` (D-S11) : l'id de l'entité transiente créée par
-   * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
-   * persiste l'événement puis recharge via replay, qui l'applique avec son vrai id.
-   */
-  changeEquipment(participantId: number, cmd: ChangeEquipmentInput): RecordResultOutcome {
-    const game = this._games.find((g) => g.status === GameStatus.ATELIER);
-    if (!game) {
-      throw new DomainException('Aucun atelier ouvert actuellement.');
-    }
-
-    const me = this.findParticipant(participantId);
-
-    // Le coût est calculé ici (agrégat) puis figé dans l'événement : en event-sourcing
-    // il ne doit jamais être recalculé au replay (le prix catalogue peut changer, le
-    // coût de revente dépend de l'état rejoué).
-    //
-    // Pour un BUY, `nomInterne` et les types résolus viennent du catalogue (fournis par le
-    // use case). Pour un SELL, on les DÉRIVE de l'entité ciblée dans l'équipe replayée : le
-    // client n'a pas à (re)transmettre le `nomInterne` de ce qu'il vend. L'événement reste
-    // ainsi auto-descriptif — le mapper de replay résout toujours un catalogue valide, et
-    // l'undo peut recréer l'entité (symétrie avec le BUY).
-    let cost: number;
-    let nomInterne: string = cmd.nomInterne;
-    let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
-    let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
-    let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
-
-    if (cmd.operation === EquipmentOperation.BUY) {
-      cost = this.resolveBuyCost(cmd);
-    } else {
-      const sold = this.resolveSell(me, cmd);
-      cost = sold.cost;
-      nomInterne = sold.nomInterne;
-      resolvedVehicleType = sold.resolvedVehicleType;
-      resolvedWeaponType = sold.resolvedWeaponType;
-      resolvedImprovementType = sold.resolvedImprovementType;
-    }
-
-    const event = new EquipmentChangedEvent(
-      0, game.id, me.id, 0,
-      cmd.operation, cmd.entityType, nomInterne, cost,
-      cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, cmd.orientation ?? null,
-      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
-    );
-
-    if (cmd.operation === EquipmentOperation.BUY) me.assertCanAfford(cost);
-    game.addEvent(event);
-
-    return { events: [event] };
-  }
-
-  /** Coût d'un achat (BUY) selon le type d'entité — depuis le catalogue résolu. */
-  private resolveBuyCost(cmd: ChangeEquipmentInput): number {
-    switch (cmd.entityType) {
-      case EquipmentEntityType.VEHICLE:
-        if (!cmd.resolvedVehicleType) {
-          throw new DomainException(`Véhicule inconnu du catalogue : "${cmd.nomInterne}".`);
-        }
-        return cmd.resolvedVehicleType.price;
-      case EquipmentEntityType.WEAPON:
-        if (!cmd.resolvedWeaponType) {
-          throw new DomainException(`Arme inconnue du catalogue : "${cmd.nomInterne}".`);
-        }
-        return cmd.resolvedWeaponType.price;
-      case EquipmentEntityType.IMPROVEMENT:
-        if (!cmd.resolvedImprovementType) {
-          throw new DomainException(`Amélioration inconnue du catalogue : "${cmd.nomInterne}".`);
-        }
-        // Temps 1 : la Tourelle (prix variable ×3 + assignation d'arme) n'est pas gérée en atelier.
-        if (cmd.resolvedImprovementType.isTourelle) {
-          throw new DomainException("La Tourelle n'est pas disponible en atelier pour l'instant.");
-        }
-        return cmd.resolvedImprovementType.price;
-    }
-  }
-
-  /**
-   * Revente (SELL) — lit l'entité ciblée dans l'équipe replayée et en dérive le coût, le
-   * `nomInterne` et le Value Object de type. Ces derniers rendent l'événement auto-descriptif
-   * (le client n'a pas à transmettre le `nomInterne` de ce qu'il vend) et réversibles (undo).
-   */
-  private resolveSell(
-    me: CampaignParticipant,
-    cmd: ChangeEquipmentInput,
-  ): {
-    cost: number;
-    nomInterne: string;
-    resolvedVehicleType: VehicleType | null;
-    resolvedWeaponType: WeaponType | null;
-    resolvedImprovementType: ImprovementType | null;
-  } {
-    switch (cmd.entityType) {
-      case EquipmentEntityType.VEHICLE: {
-        const vehicle = me.team.findVehicle(cmd.targetEntityId!);
-        return {
-          cost: vehicle.type.price,
-          nomInterne: vehicle.type.nomInterne,
-          resolvedVehicleType: vehicle.type,
-          resolvedWeaponType: null,
-          resolvedImprovementType: null,
-        };
-      }
-      case EquipmentEntityType.WEAPON: {
-        const weapon = me.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId);
-        if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
-        return {
-          cost: weapon.type.price,
-          nomInterne: weapon.type.nomInterne,
-          resolvedVehicleType: null,
-          resolvedWeaponType: weapon.type,
-          resolvedImprovementType: null,
-        };
-      }
-      case EquipmentEntityType.IMPROVEMENT: {
-        const improvement = me.team
-          .findVehicle(cmd.targetVehicleId!)
-          .improvements.find((i) => i.id === cmd.targetEntityId);
-        if (!improvement) throw new DomainException(`Amélioration ${cmd.targetEntityId} introuvable.`);
-        // Garde validée dès la commande pour éviter un événement « poison » au replay ;
-        // Vehicle.removeImprovement la re-vérifie en défense à l'exécution.
-        if (improvement.estDefaut) {
-          throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
-        }
-        return {
-          cost: improvement.price,
-          nomInterne: improvement.type.nomInterne,
-          resolvedVehicleType: null,
-          resolvedWeaponType: null,
-          resolvedImprovementType: improvement.type,
-        };
-      }
-    }
-  }
-
-  /**
    * Clôture toute partie encore en ATELIER (transition de la campagne vers TERMINEE).
    */
   closeCampaign(): void {
@@ -640,16 +314,6 @@ export class Campaign {
         game.closeAtelier();
       }
     }
-  }
-
-  /**
-   * Valide et enregistre un événement dans la partie, puis l'applique immédiatement.
-   * Le repository persiste l'événement après cette méthode.
-   */
-  applyNewEvent(gameId: number, event: GameEvent): void {
-    const game = this.findGame(gameId);
-    game.addEvent(event);
-    event.execute([...this._participants]);
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────
@@ -678,30 +342,6 @@ export class Campaign {
 
   private nextOrder(): number {
     return this._games.reduce((max, g) => Math.max(max, g.order), 0) + 1;
-  }
-
-  /**
-   * Retrouve le type catalogue d'un véhicule en cherchant dans toutes les équipes
-   * de la campagne (un véhicule ennemi n'appartient jamais au destructeur). Lève
-   * `DomainException` si aucune équipe ne le possède — empêche de créditer des PC
-   * pour un `vehicleId` inventé.
-   */
-  private findVehicleType(vehicleId: number): VehicleType {
-    for (const p of this._participants) {
-      if (!p.hasTeam) continue;
-      try {
-        return p.team.findVehicle(vehicleId).type;
-      } catch {
-        // Absent de cette équipe — on continue la recherche dans les autres.
-      }
-    }
-    throw new DomainException(`Véhicule #${vehicleId} introuvable dans la campagne.`);
-  }
-
-  private computePoints(gameType: string, rank: number, classified: number): number {
-    if (gameType !== 'EVENEMENT_TELE') return 0;  // ESCARMOUCHE et autres : aucun PC
-    if (rank > classified) return 0;
-    return POINTS_TABLE[rank - 1] ?? 0;
   }
 
   private createGame(

@@ -256,7 +256,8 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (36 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
-| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `recordResult`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings` |
+| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
+| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment`, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `addSequella`, `journal`) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -270,7 +271,9 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 
 Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente une architecture **event sourcing** stricte pour le mode campagne : aucun état transient n'est jamais stocké en base — seul le **journal des événements** (`game_events`) est persisté. L'état courant est **recalculé à chaque lecture** par replay du journal.
 
-**Basculement DDD (Phase 2)** : les services anémiques (`CampaignService`, `CampaignParticipantService`, `GameService`, `GameResultService`) et le second controller (`game.controller.ts`) ont été supprimés. Les 36 endpoints passent par un **`CampaignController` unique** délégant aux **use cases** (écritures, via l'agrégat) et au **`CampaignQueryService`** (lectures, CQRS). Les résultats de partie **convergent vers l'event-sourcing** : `POST .../results` crée des `RankingAssignedEvent` via `Campaign.recordResult` (finalisation JOUE + atelier), et `GET .../results` est **dérivé du journal** (`game_events`, `eventType = RANKING_ASSIGNED`) — la table `game_results` / entité `GameResultOrm` n'existent plus.
+**Basculement DDD (Phase 2)** : les services anémiques (`CampaignService`, `CampaignParticipantService`, `GameService`, `GameResultService`) et le second controller (`game.controller.ts`) ont été supprimés. Les 36 endpoints passent par un **`CampaignController` unique** délégant aux **use cases** (écritures, via l'agrégat) et au **`CampaignQueryService`** (lectures, CQRS). Les résultats de partie **convergent vers l'event-sourcing** : `POST .../results` crée des `RankingAssignedEvent` via `Game.recordResult` (finalisation JOUE + atelier), et `GET .../results` est **dérivé du journal** (`game_events`, `eventType = RANKING_ASSIGNED`) — la table `game_results` / entité `GameResultOrm` n'existent plus.
+
+**Construction des événements — Campaign vs Game** : la construction d'un `GameEvent` (calcul des PC, du coût, résolution du véhicule ciblé…) vit sur `Game`, pas sur `Campaign` — cf. [DOMAIN_MODEL.md §4 — Répartition des responsabilités](DOMAIN_MODEL.md#répartition-des-responsabilités-campaign--game). `Campaign` se limite à la navigation (`findGame`, `findParticipant`, `findAtelierGame`) et aux invariants qui dépassent une seule partie. Les use cases naviguent explicitement (`campaign.findGame(gameId)` ou `campaign.findAtelierGame()`) puis appellent la méthode sur l'objet `Game` obtenu.
 
 #### Trois patterns GoF imbriqués
 
@@ -284,20 +287,25 @@ Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente u
 
 ```
 Controller → UseCase
-  1. loadAndReplay(campaignId)   → Campaign reconstituée depuis le journal
+  1. loadAndReplay(campaignId)     → Campaign reconstituée depuis le journal
   2. assertOrganizer(campaign, userId)
-  3. new XxxEvent(id=0, ...)
-  4. game.addEvent(event)        → valide canAccept (type accepté par ce jeu)
-  5. event.execute(participants) → mute les compteurs en mémoire (wallet, PC, chocs…)
-  6. campaignRepo.appendEvents() → INSERT dans game_events (id assigné par DB)
+  3. game = campaign.findGame(gameId) / campaign.findAtelierGame()
+  4. events = game.xxx(...)        → construit le(s) événement(s) (id=0), les valide et
+                                      les journalise via this.addEvent() (canAccept)
+  5. campaignRepo.appendEvents()   → INSERT dans game_events (id assigné par DB)
 ```
+
+Aucune étape n'appelle `event.execute()` : les compteurs en mémoire (wallet, PC,
+chocs…) ne sont recalculés qu'au prochain `replay()` complet, jamais dans le
+use case lui-même (cf. D-S11 ci-dessous pour la raison précise dans le cas de
+`changeEquipment`).
 
 #### Entités transientes et D-S11
 
 Mécanisme complet (pourquoi `id = -event.id`, recréation à chaque replay) :
 [DOMAIN_MODEL.md §4 — Entités transientes](DOMAIN_MODEL.md#entités-transientes-d-s11).
-Piège d'implémentation propre à ce use case, non documenté ailleurs :
-`ChangeEquipmentUseCase` **ne doit pas appeler `event.execute()`** avant la
+Piège d'implémentation propre à ce cas, non documenté ailleurs :
+`Game.changeEquipment()` **ne doit pas appeler `event.execute()`** avant la
 persistance, car `id=0` donnerait `-0 = 0`, qui ne constitue pas un id négatif
 valide. Le use case persiste d'abord, le client rafraîchit ensuite via
 `GET /campaigns/:id/workshop`.

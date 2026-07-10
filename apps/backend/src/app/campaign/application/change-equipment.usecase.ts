@@ -24,13 +24,14 @@ export interface ChangeEquipmentCommand {
 /**
  * D1-D3 — Achat ou revente d'équipement en atelier campagne.
  *
- * La validation métier (atelier ouvert, coût, existence de la cible, cagnotte) vit
- * dans `Campaign.changeEquipment()`. Ce use case se limite à résoudre les Value
- * Objects catalogue depuis `nomInterne` (étape légitime côté use case, cf. pattern
+ * La validation métier (coût, existence de la cible, cagnotte) vit dans
+ * `Game.changeEquipment()` — `Campaign.findAtelierGame()` se contente de localiser
+ * l'unique partie en ATELIER. Ce use case se limite à résoudre les Value Objects
+ * catalogue depuis `nomInterne` (étape légitime côté use case, cf. pattern
  * documenté pour le module `team/` — ARCHITECTURE.md §3.4) et à persister.
  *
- * Contrairement aux use cases des Parties 4, `Campaign.changeEquipment()` NE DOIT
- * PAS appeler `event.execute()` avant la persistance. La raison : pour les achats
+ * `Game.changeEquipment()` NE DOIT PAS appeler `event.execute()` avant la
+ * persistance. La raison : pour les achats
  * (BUY), l'id de l'entité transiente est calculé comme `-event.id` (D-S11). Or l'id
  * de l'événement n'est assigné qu'après persist. En persistant d'abord, puis en
  * rechargeant via `loadAndReplay`, le replay applique l'événement avec son vrai id
@@ -60,7 +61,8 @@ export class ChangeEquipmentUseCase {
       : null;
 
     try {
-      const { events } = campaign.changeEquipment(me.id, {
+      const game = campaign.findAtelierGame();
+      const events = game.changeEquipment(me, {
         operation: cmd.operation,
         entityType: cmd.entityType,
         nomInterne: cmd.nomInterne,

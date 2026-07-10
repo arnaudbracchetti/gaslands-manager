@@ -44,23 +44,24 @@ export class RecordResultUseCase {
   async execute(cmd: RecordResultCommand): Promise<void> {
     const campaign = await this.replayService.load(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
+    const game = campaign.findGame(cmd.gameId);
 
-    let outcome;
+    let events;
     try {
-      outcome = campaign.recordResult(
-        cmd.gameId,
+      events = game.recordResult(
         cmd.results.map((r) => ({
           participantId: r.participantId,
           rank: r.rank,
           gatesCrossed: r.gatesCrossed,
           destroyedVehicles: r.destroyedVehicles,
         })),
+        campaign.participants,
       );
     } catch (e: unknown) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;
     }
 
-    await this.campaignRepo.appendEvents(cmd.gameId, outcome.events);
+    await this.campaignRepo.appendEvents(cmd.gameId, events);
   }
 }

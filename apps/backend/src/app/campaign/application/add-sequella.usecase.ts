@@ -2,10 +2,8 @@ import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
-import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { SEQUELLA_REGISTRY } from '../../team/domain/sequella-decorators';
 import { assertParticipant } from './authorization.helpers';
-import { GameStatus } from '../domain/enums/game-status.enum';
 
 export interface AddSequellaCommand {
   campaignId: number;
@@ -35,27 +33,16 @@ export class AddSequellaUseCase {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     const me = assertParticipant(campaign, cmd.userId);
 
-    // Le statut ATELIER et la suffisance des Chocs sont désormais des gardes de
-    // DOMAINE (Game.addEvent + SequellaAddedEvent.execute → vehicle.addChocs).
-    const game = campaign.games.find((g) => g.status === GameStatus.ATELIER);
-    if (!game) {
-      throw new BadRequestException('Aucun atelier ouvert actuellement.');
-    }
-
     const entry = SEQUELLA_REGISTRY.get(cmd.sequellaTypeNom);
     if (!entry) throw new BadRequestException(`Séquelle inconnue : "${cmd.sequellaTypeNom}".`);
 
-    const event = new SequellaAddedEvent(
-      0, game.id, me.id, 0,
-      cmd.vehicleId, cmd.sequellaTypeNom, entry.type.chocsCost,
-    );
     try {
-      campaign.applyNewEvent(game.id, event);                  // valide canAccept + statut ATELIER
+      const game = campaign.findAtelierGame();  // lève DomainException si aucun atelier ouvert
+      const events = game.addSequella(me, cmd.vehicleId, cmd.sequellaTypeNom, entry.type.chocsCost);
+      await this.campaignRepo.appendEvents(game.id, events);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;
     }
-
-    await this.campaignRepo.appendEvents(game.id, [event]);
   }
 }

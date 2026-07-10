@@ -109,7 +109,7 @@ présent — Course à la Mort, p.167 :
   ennemi détruit** dans une liste (pas seulement un compteur par poids) — le
   client ne transmet que `vehicleId` ; le poids (`WeightClass` :
   `LEGER`/`MOYEN`/`LOURD`/`FORTERESSE`) est **redérivé côté serveur**
-  (`Campaign.findVehicleType`, recherché dans les équipes réelles de la
+  (recherché par `Game.recordResult` dans les équipes réelles de la
   campagne) et attribue +1/+2/+3/+5 PC au **destructeur** — jamais accepté tel
   que fourni par l'appelant, pour empêcher un organisateur malveillant de
   désigner n'importe quel véhicule comme `FORTERESSE` afin d'obtenir +5 PC
@@ -130,7 +130,7 @@ présent — Course à la Mort, p.167 :
   (`WalletReason.RECOMPENSE`).
 
 **Modèle event-sourcing** : deux nouveaux types d'événement, journalisés par
-`Campaign.recordResult` en plus du `RankingAssignedEvent` — `GatesCrossedEvent`
+`Game.recordResult` en plus du `RankingAssignedEvent` — `GatesCrossedEvent`
 (`gatesCrossed`, `championshipPoints` figé à l'écriture) et
 `VehicleDestroyedEvent` (`vehicleId` informatif, `weightClass` dérivé côté
 serveur — jamais transmis par l'appelant, cf. ci-dessus —,
@@ -223,11 +223,12 @@ apparaît dans le journal. La mécanique elle-même n'est pas secrète — seul 
 et `standings()`, qui continue de l'exclure). Voir un contact ponctuel dans le
 journal ne révèle pas ce total.
 
-`Campaign.gameJournal(gameId)` (agrégat) transforme le journal brut d'une
-partie en `{ eventId, participantId, description }[]`, dans l'ordre déjà
-garanti par `Game.events` (trié par `eventOrder`) — c'est l'agrégat, pas la
-couche lecture, qui sait traduire ses événements en texte. `CampaignQueryService.
-getJournal` enrichit ensuite ce résultat avec `userName`/`teamName` (jointure
+`Game.journal()` transforme le journal brut d'une partie en `{ eventId,
+participantId, description }[]`, dans l'ordre déjà garanti par `Game.events`
+(trié par `eventOrder`) — c'est la partie elle-même, pas la couche lecture,
+qui sait traduire ses événements en texte. `CampaignQueryService.
+getJournal` (via `campaign.findGame(gameId).journal()`) enrichit ensuite ce
+résultat avec `userName`/`teamName` (jointure
 user/team) et `createdAt` (résolu depuis `GameEventOrm`, l'horodatage n'existant
 pas sur le domaine `GameEvent`).
 
@@ -346,7 +347,7 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   lancer, « Légende Vivante » résultat forcé à 1), et toute garde anti-doublon
   sur les séquelles.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
-  **automatique** : `Campaign.recordResult()` crédite tout participant hors du
+  **automatique** : `Game.recordResult()` crédite tout participant hors du
   top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
   dédié — cohérent avec le secret de cette mécanique. Le secret vis-à-vis des
   autres joueurs est bien respecté, mais appliqué trop largement : un participant
@@ -469,7 +470,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }] }`, organisateur) — `weightClass` n'est **pas** transmis, dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). — **ne finalise plus la partie** (reste `PLANIFIE`, cf. §Wizard de fin de partie). Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Campaign.recordResult` (convergence event-sourcing) |
+| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }] }`, organisateur) — `weightClass` n'est **pas** transmis, dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). — **ne finalise plus la partie** (reste `PLANIFIE`, cf. §Wizard de fin de partie). Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Game.recordResult` (convergence event-sourcing) |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) |
 | POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
@@ -492,7 +493,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 > acceptait `championshipPoints` comme valeur fournie par l'appelant, sans appliquer le
 > barème 10/5/2/1 — un organisateur pouvait s'auto-attribuer des PC arbitraires. Aucun
 > consommateur (frontend ni e2e) ne l'utilisait ; seul `POST .../results`
-> (`Campaign.recordResult`, qui calcule les PC correctement) permet désormais
+> (`Game.recordResult`, qui calcule les PC correctement) permet désormais
 > d'enregistrer un classement.
 
 | Méthode | Route | Auth | Description |

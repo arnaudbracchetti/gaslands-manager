@@ -406,11 +406,10 @@ classDiagram
         +enterAtelier(gameId) autoClosedGameId
         +closeAtelier(gameId) void
         +closeCampaign() void
-        +applyNewEvent(gameId, event) void
         +standings() StandingsEntry[]
-        +gameJournal(gameId) GameJournalEntry[]
         +findGame(gameId) Game
         +findParticipant(participantId) CampaignParticipant
+        +findAtelierGame() Game
     }
 
     class CampaignParticipant {
@@ -441,6 +440,15 @@ classDiagram
         +addEvent(event) void
         +apply(participants) void
         +revert(participants) void
+        +recordResult(rankings, participants) GameEvent[]
+        +resolveWreck(participant, vehicleId, wreckTable) WreckTableResult
+        +creditFavoriDuPublicBonus(participantId, vehicleId, wasDestroyed) GameEvent?
+        +changeEquipment(participant, cmd) GameEvent[]
+        +contactResistance(participantId) GameEvent[]
+        +recordWalletMovement(participantId, amount, reason) GameEvent[]
+        +recordVehicleLost(participantId, vehicleId, weaponIds?) GameEvent[]
+        +addSequella(participant, vehicleId, sequellaTypeNom, chocsCost) GameEvent[]
+        +journal() GameJournalEntry[]
     }
 
     class GameEvent {
@@ -474,6 +482,26 @@ classDiagram
     CampaignParticipant --> Team : team (état figé)
 ```
 
+### Répartition des responsabilités Campaign / Game
+
+`Campaign` ne porte que ce qui dépasse une seule partie : navigation
+(`findGame`, `findParticipant`), invariants transversaux (`findAtelierGame` —
+un seul atelier actif à la fois sur l'ensemble des parties de la campagne) et
+orchestration multi-parties (`replay`, cycle de vie, CRUD programme/participants).
+**La construction des événements d'une partie donnée vit sur `Game`, pas sur
+`Campaign`** : `recordResult`, `resolveWreck`, `creditFavoriDuPublicBonus`,
+`changeEquipment`, `contactResistance`, `recordWalletMovement`,
+`recordVehicleLost`, `addSequella`, `journal()` sont toutes des méthodes de
+`Game` — chacune reçoit en paramètre les `CampaignParticipant` dont elle a
+besoin (même convention que `GameEvent.execute(participants)`/
+`Game.apply(participants)`, qui ne détiennent pas non plus de référence
+permanente aux participants). Les use cases naviguent explicitement via
+l'agrégat racine (`campaign.findGame(gameId)` ou `campaign.findAtelierGame()`)
+puis appellent la méthode sur l'objet `Game` obtenu — `Campaign` n'expose plus
+de méthode de pur passage (`applyNewEvent`, ancien point d'entrée générique,
+a été supprimé). Ce choix évite que `Campaign` devienne une classe fourre-tout
+portant des règles qui appartiennent en réalité à ses parties.
+
 ### Hiérarchie Game (Invoker)
 
 Pas de sous-type dédié à l'atelier : la phase garage post-partie est un
@@ -504,7 +532,7 @@ français résumant l'événement (ex. `"Classé 1 (+10 PC)"`,
 synthèse de l'écran 3 du wizard de fin de partie (cf.
 [`docs/spec/CAMPAIGN.md`](spec/CAMPAIGN.md#wizard-de-fin-de-partie)) : `WreckResolveUseCase`
 renvoie `descriptions: string[]` (une par événement créé par un tirage) ; et
-par `Campaign.gameJournal(gameId)` (cf.
+par `Game.journal()` (cf.
 [spec/CAMPAIGN.md — Journal d'une partie](spec/CAMPAIGN.md#journal-dune-partie)),
 qui traduit **tout** le journal d'une partie pour affichage, tous types
 d'événements confondus.

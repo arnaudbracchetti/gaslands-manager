@@ -112,9 +112,11 @@ describe('CampaignQueryService', () => {
     it('enrichit le journal de l\'agrégat avec userName/teamName/createdAt', async () => {
       participantRepo.findOne.mockResolvedValue({ id: 99 });  // assertVisibleParticipant OK
       replayService.load.mockResolvedValue({
-        gameJournal: vi.fn().mockReturnValue([
-          { eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)' },
-        ]),
+        findGame: vi.fn().mockReturnValue({
+          journal: vi.fn().mockReturnValue([
+            { eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)' },
+          ]),
+        }),
       });
       const createdAt = new Date('2026-07-01T00:00:00Z');
       participantRepo.find.mockResolvedValue([

@@ -48,14 +48,14 @@ export class WreckResolveUseCase {
   async execute(cmd: WreckResolveCommand): Promise<WreckResolveResult> {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
+    const game = campaign.findGame(cmd.gameId);
+    const participant = campaign.findParticipant(cmd.participantId);
 
     try {
-      const { events, outcome } = campaign.resolveWreck(
-        cmd.gameId, cmd.participantId, cmd.vehicleId, this.wreckTable,
-      );
+      const { events, outcome } = game.resolveWreck(participant, cmd.vehicleId, this.wreckTable);
 
-      const bonusEvent = campaign.creditFavoriDuPublicBonus(
-        cmd.gameId, cmd.participantId, outcome.vehicleId,
+      const bonusEvent = game.creditFavoriDuPublicBonus(
+        cmd.participantId, outcome.vehicleId,
         outcome.wreckResult === WreckResult.VEHICULE_DETRUIT && (cmd.pendingFavoriDuPublic ?? false),
       );
       if (bonusEvent) events.push(bonusEvent);

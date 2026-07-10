@@ -2,9 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
-import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
-import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
-import type { GameEvent } from '../domain/events/game-event';
 import { assertOrganizer } from './authorization.helpers';
 
 export interface RecordVehicleLostCommand {
@@ -31,24 +28,14 @@ export class RecordVehicleLostUseCase {
   async execute(cmd: RecordVehicleLostCommand): Promise<void> {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
-
-    const events: GameEvent[] = [];
+    const game = campaign.findGame(cmd.gameId);
 
     try {
-      const vehicleEvent = new VehicleLostEvent(0, cmd.gameId, cmd.participantId, 0, cmd.vehicleId);
-      campaign.applyNewEvent(cmd.gameId, vehicleEvent);
-      events.push(vehicleEvent);
-
-      for (const weaponId of cmd.weaponIds ?? []) {
-        const weaponEvent = new WeaponLostEvent(0, cmd.gameId, cmd.participantId, 0, weaponId);
-        campaign.applyNewEvent(cmd.gameId, weaponEvent);
-        events.push(weaponEvent);
-      }
+      const events = game.recordVehicleLost(cmd.participantId, cmd.vehicleId, cmd.weaponIds);
+      await this.campaignRepo.appendEvents(cmd.gameId, events);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;
     }
-
-    await this.campaignRepo.appendEvents(cmd.gameId, events);
   }
 }

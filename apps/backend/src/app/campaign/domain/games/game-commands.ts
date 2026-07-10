@@ -1,0 +1,49 @@
+import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
+import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
+import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import type { Orientation } from '../../../team/domain/team';
+import type { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+
+/**
+ * Un véhicule ennemi détruit par un participant (exploit, US-B2). `weightClass`
+ * n'est PAS transmis par l'appelant — dérivé côté serveur depuis le véhicule réel
+ * (recherche à travers toutes les équipes de la campagne), pour empêcher un appelant
+ * de désigner n'importe quel véhicule comme `FORTERESSE` (barème +5 PC) sans qu'un
+ * tel véhicule existe.
+ */
+export interface DestroyedVehicleInput {
+  vehicleId: number;
+}
+
+/** Un rang attribué à un participant lors de l'enregistrement d'un résultat. */
+export interface RankingInput {
+  participantId: number;
+  rank: number;
+  /** Portes franchies (exploit, US-B2) — 0/absent si aucune. */
+  gatesCrossed?: number;
+  /** Véhicules ennemis détruits par poids (exploit, US-B2) — vide/absent si aucun. */
+  destroyedVehicles?: DestroyedVehicleInput[];
+}
+
+/** Commande d'achat/revente d'équipement en atelier — VO catalogue déjà résolus par le use case. */
+export interface ChangeEquipmentInput {
+  operation: EquipmentOperation;
+  entityType: EquipmentEntityType;
+  /** Nom interne du catalogue — requis pour BUY, optionnel pour SELL. */
+  nomInterne: string;
+  /** Véhicule hôte — requis pour BUY_WEAPON, SELL_WEAPON ; id de la cible pour SELL_VEHICLE. */
+  targetVehicleId?: number | null;
+  /** Id de l'entité à vendre — requis pour SELL. */
+  targetEntityId?: number | null;
+  orientation?: Orientation | null;
+  resolvedVehicleType: VehicleType | null;
+  resolvedWeaponType: WeaponType | null;
+  resolvedImprovementType: ImprovementType | null;
+}
+
+/** Une ligne du journal d'une partie — événement traduit en texte lisible. */
+export interface GameJournalEntry {
+  eventId: number;
+  participantId: number;
+  description: string;
+}
