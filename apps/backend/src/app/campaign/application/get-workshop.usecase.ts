@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
-import { assertParticipant } from './record-ranking.usecase';
+import { assertParticipant } from './authorization.helpers';
 import type { WorkshopStateDto, WorkshopVehicleDto } from '../dto/workshop-state.dto';
 
 export interface GetWorkshopCommand {

@@ -5,7 +5,7 @@ import { DomainException } from '../../shared/domain/domain-exception';
 import { WreckTable } from '../domain/wreck/wreck-table';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
 import type { WreckOutcome } from '../domain/wreck/wreck-outcome';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface WreckResolveCommand {
   campaignId: number;

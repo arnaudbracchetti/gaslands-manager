@@ -5,7 +5,7 @@ import { DomainException } from '../../shared/domain/domain-exception';
 import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import type { Orientation } from '../../team/domain/team';
 import type { CatalogService } from '../../catalog/catalog.service';
-import { assertParticipant } from './record-ranking.usecase';
+import { assertParticipant } from './authorization.helpers';
 
 export interface ChangeEquipmentCommand {
   campaignId: number;

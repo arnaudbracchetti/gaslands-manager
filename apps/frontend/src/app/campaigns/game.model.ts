@@ -67,10 +67,13 @@ export interface GameResult {
  */
 export type WeightClass = 'LEGER' | 'MOYEN' | 'LOURD' | 'FORTERESSE';
 
-/** Un véhicule ennemi détruit, saisi dans le formulaire de résultat (exploit, US-B2). */
+/**
+ * Un véhicule ennemi détruit, saisi dans le formulaire de résultat (exploit, US-B2).
+ * `weightClass` n'est PAS transmis — le backend le redérive lui-même depuis le
+ * véhicule réel (`Campaign.recordResult`), jamais depuis cette valeur cliente.
+ */
 export interface DestroyedVehicleDto {
   vehicleId: number;
-  weightClass: WeightClass;
 }
 
 /**
@@ -91,7 +94,7 @@ export interface RecordResultDto {
     rank: number;
     /** Portes franchies (exploit, US-B2) — omis/0 si aucune. */
     gatesCrossed?: number;
-    /** Véhicules ennemis détruits par poids (exploit, US-B2) — omis si aucun. */
+    /** Véhicules ennemis détruits (exploit, US-B2) — omis si aucun. */
     destroyedVehicles?: DestroyedVehicleDto[];
   }[];
 }

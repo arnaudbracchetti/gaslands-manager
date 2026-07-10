@@ -11,9 +11,9 @@ import { WeaponType } from '../../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 import { CampaignParticipant } from './campaign-participant';
 
-export function makeVehicleType(): VehicleType {
+export function makeVehicleType(poids: 'Léger' | 'Moyen' | 'Lourd' = 'Moyen'): VehicleType {
   return VehicleType.from({
-    nom: 'Voiture', nom_interne: 'voiture', poids: 'Moyen',
+    nom: 'Voiture', nom_interne: 'voiture', poids,
     carrosserie: 6, manoeuvrabilite: 4, vitesse_max: 6, equipage: 2,
     emplacements: 4, prix: 12, description: '', regles: '', sponsors_autorises: [],
     ameliorations_defaut: [],

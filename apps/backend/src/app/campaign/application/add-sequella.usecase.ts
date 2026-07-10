@@ -4,7 +4,7 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { SEQUELLA_REGISTRY } from '../../team/domain/sequella-decorators';
-import { assertParticipant } from './record-ranking.usecase';
+import { assertParticipant } from './authorization.helpers';
 import { GameStatus } from '../domain/enums/game-status.enum';
 
 export interface AddSequellaCommand {

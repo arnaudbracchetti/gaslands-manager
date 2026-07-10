@@ -5,7 +5,7 @@ import { DomainException } from '../../shared/domain/domain-exception';
 import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
 import type { GameEvent } from '../domain/events/game-event';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface RecordVehicleLostCommand {
   campaignId: number;

@@ -3,7 +3,7 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface ContactResistanceCommand {
   campaignId: number;

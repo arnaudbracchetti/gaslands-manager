@@ -4,7 +4,7 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { ScenarioCatalogService } from '../scenario-catalog.service';
 import { GameType } from '../game.enums';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface AddGameCommand {
   campaignId: number;

@@ -2,16 +2,19 @@ import { BadRequestException } from '@nestjs/common';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
-import { assertOrganizer } from './record-ranking.usecase';
-import { WeightClass } from '../domain/enums/weight-class.enum';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface RecordResultCommandItem {
   participantId: number;
   rank: number;
   /** Portes franchies (exploit, US-B2) — optionnel, 0/absent si aucune. */
   gatesCrossed?: number;
-  /** Véhicules ennemis détruits par poids (exploit, US-B2) — optionnel. */
-  destroyedVehicles?: { vehicleId: number; weightClass: string }[];
+  /**
+   * Véhicules ennemis détruits (exploit, US-B2) — optionnel. Seul `vehicleId` est
+   * transmis : le poids (et donc les PC) est dérivé côté serveur depuis le véhicule
+   * réel (`Campaign.findVehicleType`), jamais fourni par l'appelant.
+   */
+  destroyedVehicles?: { vehicleId: number }[];
 }
 
 export interface RecordResultCommand {
@@ -50,10 +53,7 @@ export class RecordResultUseCase {
           participantId: r.participantId,
           rank: r.rank,
           gatesCrossed: r.gatesCrossed,
-          destroyedVehicles: r.destroyedVehicles?.map((d) => ({
-            vehicleId: d.vehicleId,
-            weightClass: this.parseWeightClass(d.weightClass),
-          })),
+          destroyedVehicles: r.destroyedVehicles,
         })),
       );
     } catch (e: unknown) {
@@ -62,12 +62,5 @@ export class RecordResultUseCase {
     }
 
     await this.campaignRepo.appendEvents(cmd.gameId, outcome.events);
-  }
-
-  private parseWeightClass(value: string): WeightClass {
-    if (!Object.values(WeightClass).includes(value as WeightClass)) {
-      throw new BadRequestException(`Poids de véhicule invalide : "${value}".`);
-    }
-    return value as WeightClass;
   }
 }

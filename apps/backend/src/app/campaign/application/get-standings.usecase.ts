@@ -1,7 +1,7 @@
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import type { StandingsEntry } from '../domain/campaign';
-import { assertParticipant } from './record-ranking.usecase';
+import { assertParticipant } from './authorization.helpers';
 
 export interface GetStandingsCommand {
   campaignId: number;

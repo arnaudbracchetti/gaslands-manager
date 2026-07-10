@@ -4,7 +4,7 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface RecordWalletMovementCommand {
   campaignId: number;

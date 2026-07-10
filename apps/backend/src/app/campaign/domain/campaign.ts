@@ -9,7 +9,7 @@ import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GatesCrossedEvent } from './events/gates-crossed.event';
 import { VehicleDestroyedEvent } from './events/vehicle-destroyed.event';
 import { ResistanceContactedEvent } from './events/resistance-contacted.event';
-import { WeightClass, EXPLOIT_POINTS_BY_WEIGHT } from './enums/weight-class.enum';
+import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from './enums/weight-class.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
 import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event';
 import type { WreckOutcome } from './wreck/wreck-outcome';
@@ -31,10 +31,14 @@ export interface StandingsEntry {
   // resistancePoints délibérément absent — secret (cf. D-S4)
 }
 
-/** Un véhicule ennemi détruit par un participant (exploit, US-B2). */
+/**
+ * Un véhicule ennemi détruit par un participant (exploit, US-B2). `weightClass`
+ * n'est PAS transmis par l'appelant — dérivé côté serveur depuis le véhicule réel
+ * (cf. `Campaign.findVehicleType`), pour empêcher un appelant de désigner n'importe
+ * quel véhicule comme `FORTERESSE` (barème +5 PC) sans qu'un tel véhicule existe.
+ */
 export interface DestroyedVehicleInput {
   vehicleId: number;
-  weightClass: WeightClass;
 }
 
 /** Un rang attribué à un participant lors de l'enregistrement d'un résultat. */
@@ -398,9 +402,12 @@ export class Campaign {
         events.push(gatesEvent);
       }
       for (const destroyed of r.destroyedVehicles ?? []) {
-        const exploitPoints = EXPLOIT_POINTS_BY_WEIGHT[destroyed.weightClass];
+        // weightClass dérivé du véhicule réel (jamais transmis par l'appelant) — cf.
+        // DestroyedVehicleInput.
+        const weightClass = weightClassFromPoids(this.findVehicleType(destroyed.vehicleId).poids);
+        const exploitPoints = EXPLOIT_POINTS_BY_WEIGHT[weightClass];
         const destroyedEvent = new VehicleDestroyedEvent(
-          0, game.id, r.participantId, 0, destroyed.vehicleId, destroyed.weightClass, exploitPoints,
+          0, game.id, r.participantId, 0, destroyed.vehicleId, weightClass, exploitPoints,
         );
         game.addEvent(destroyedEvent);
         events.push(destroyedEvent);
@@ -671,6 +678,24 @@ export class Campaign {
 
   private nextOrder(): number {
     return this._games.reduce((max, g) => Math.max(max, g.order), 0) + 1;
+  }
+
+  /**
+   * Retrouve le type catalogue d'un véhicule en cherchant dans toutes les équipes
+   * de la campagne (un véhicule ennemi n'appartient jamais au destructeur). Lève
+   * `DomainException` si aucune équipe ne le possède — empêche de créditer des PC
+   * pour un `vehicleId` inventé.
+   */
+  private findVehicleType(vehicleId: number): VehicleType {
+    for (const p of this._participants) {
+      if (!p.hasTeam) continue;
+      try {
+        return p.team.findVehicle(vehicleId).type;
+      } catch {
+        // Absent de cette équipe — on continue la recherche dans les autres.
+      }
+    }
+    throw new DomainException(`Véhicule #${vehicleId} introuvable dans la campagne.`);
   }
 
   private computePoints(gameType: string, rank: number, classified: number): number {

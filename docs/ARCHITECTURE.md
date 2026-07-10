@@ -117,7 +117,7 @@ apps/backend/src/app/
 > charge `database_init/data/scenarios.yml` au démarrage (`OnModuleInit`, Template
 > Method `readFileContent`, conversion Markdown→HTML) et l'indexe par `nom_interne`.
 > L'autorisation des endpoints en **écriture** est assurée directement par les use cases via
-> `assertOrganizer` / `assertParticipant` (`application/record-ranking.usecase.ts`) — helpers
+> `assertOrganizer` / `assertParticipant` (`application/authorization.helpers.ts`) — helpers
 > qui opèrent sur `campaign.participants` après replay, sans accès à la base. Les endpoints
 > en **lecture** délèguent à `CampaignQueryService` (accès ORM direct, CQRS).
 

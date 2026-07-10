@@ -149,7 +149,7 @@ export class WreckDesignationStep {
         const existing = destroyedVehicles.get(state.destroyerParticipantId) ?? [];
         destroyedVehicles.set(state.destroyerParticipantId, [
           ...existing,
-          { vehicleId: row.vehicle.vehicleId, weightClass: row.vehicle.weightClass },
+          { vehicleId: row.vehicle.vehicleId },
         ]);
       }
     }

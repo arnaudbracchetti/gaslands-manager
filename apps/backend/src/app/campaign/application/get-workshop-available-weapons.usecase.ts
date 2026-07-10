@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { CatalogService } from '../../catalog/catalog.service';
-import { assertParticipant } from './record-ranking.usecase';
+import { assertParticipant } from './authorization.helpers';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { CampaignParticipant } from '../domain/campaign-participant';
 import type { Vehicle } from '../../team/domain/vehicle';

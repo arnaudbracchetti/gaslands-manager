@@ -47,7 +47,6 @@ import { RecordResultUseCase } from './application/record-result.usecase';
 import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event sourcing (Parties 4-5)
-import { RecordRankingUseCase } from './application/record-ranking.usecase';
 import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
 import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
 import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
@@ -178,12 +177,6 @@ import { GetWorkshopAvailableImprovementsUseCase } from './application/get-works
     },
 
     // ── Use cases event sourcing (Parties 4-5) ─────────────────────────────────
-    {
-      provide: RecordRankingUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new RecordRankingUseCase(repo, replay),
-      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
-    },
     {
       provide: RecordWalletMovementUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>

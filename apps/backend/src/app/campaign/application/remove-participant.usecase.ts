@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 
 export interface RemoveParticipantCommand {
   campaignId: number;

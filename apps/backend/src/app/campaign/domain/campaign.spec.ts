@@ -12,12 +12,13 @@ import { FavoriDuPublicBonusEvent } from './events/favori-du-public-bonus.event'
 import { EquipmentChangedEvent } from './events/equipment-changed.event';
 import { GameStatus } from './enums/game-status.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
-import { WeightClass } from './enums/weight-class.enum';
 import { WreckResult } from './enums/wreck-result.enum';
 import { WreckOutcome } from './wreck/wreck-outcome';
 import { WreckTable, type WreckTableResult } from './wreck/wreck-table';
 import { WreckResolvedEvent } from './events/wreck-resolved.event';
 import { makeTestParticipant, makeVehicleType, makeWeaponType } from './test-helpers';
+import { Team } from '../../team/domain/team';
+import { Vehicle } from '../../team/domain/vehicle';
 
 /** Stub de WreckTable qui retourne un outcome et des événements pré-construits.
  * Isole Campaign.resolveWreck() de la logique de WreckTable (testée dans wreck-table.spec.ts). */
@@ -491,20 +492,23 @@ describe('Campaign — recordResult', () => {
     expect(events.some((e) => e instanceof GatesCrossedEvent)).toBe(false);
   });
 
-  it('crée un VehicleDestroyedEvent par véhicule ennemi détruit, PC selon le poids', () => {
+  it('crée un VehicleDestroyedEvent par véhicule ennemi détruit, PC dérivés du poids réel du véhicule', () => {
     const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
     const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const legerVehicle = new Vehicle(55, 3, makeVehicleType('Léger'), [], []);
+    const lourdVehicle = new Vehicle(56, 3, makeVehicleType('Lourd'), [], []);
+    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [legerVehicle, lourdVehicle]);
+    p2.attachTeam(team);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
     const campaign = makeCampaign([p1, p2], [game]);
 
+    // weightClass n'est PAS fourni par l'appelant (cf. DestroyedVehicleInput) — dérivé
+    // par Campaign.findVehicleType depuis l'équipe réelle de p2, pas depuis le client.
     const { events } = campaign.recordResult(10, [
       {
         participantId: 1,
         rank: 1,
-        destroyedVehicles: [
-          { vehicleId: 55, weightClass: WeightClass.LEGER },
-          { vehicleId: 56, weightClass: WeightClass.FORTERESSE },
-        ],
+        destroyedVehicles: [{ vehicleId: 55 }, { vehicleId: 56 }],
       },
       { participantId: 2, rank: 2 },
     ]);
@@ -514,7 +518,19 @@ describe('Campaign — recordResult', () => {
     // Le destructeur (participant 1) est crédité, pas le propriétaire du véhicule détruit.
     expect(destroyedEvents.every((e) => e.participantId === 1)).toBe(true);
     expect(destroyedEvents.find((e) => e.vehicleId === 55)?.championshipPoints).toBe(1);   // Léger
-    expect(destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints).toBe(5);   // Forteresse
+    expect(destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints).toBe(3);   // Lourd
+  });
+
+  it('rejette un vehicleId de destroyedVehicles introuvable dans aucune équipe (empêche de forger des PC)', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const campaign = makeCampaign([p1], [game]);
+
+    expect(() =>
+      campaign.recordResult(10, [
+        { participantId: 1, rank: 1, destroyedVehicles: [{ vehicleId: 999 }] },
+      ]),
+    ).toThrow('introuvable');
   });
 });
 

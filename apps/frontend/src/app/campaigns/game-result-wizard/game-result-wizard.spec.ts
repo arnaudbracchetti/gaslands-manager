@@ -68,13 +68,13 @@ describe('GameResultWizard', () => {
     outputToObservable(component.rankingSubmitted).subscribe((v) => emitted.push(v));
 
     component.onDesignationNext({
-      destroyedVehicles: new Map([[1, [{ vehicleId: 200, weightClass: 'LEGER' }]]]),
+      destroyedVehicles: new Map([[1, [{ vehicleId: 200 }]]]),
       wreckedVehicles: [{ participantId: 2, vehicleId: 200, pendingFavoriDuPublic: false }],
     });
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].results).toEqual([
-      { participantId: 1, rank: 1, gatesCrossed: 3, destroyedVehicles: [{ vehicleId: 200, weightClass: 'LEGER' }] },
+      { participantId: 1, rank: 1, gatesCrossed: 3, destroyedVehicles: [{ vehicleId: 200 }] },
       { participantId: 2, rank: 2, gatesCrossed: undefined, destroyedVehicles: undefined },
     ]);
   });
@@ -166,7 +166,7 @@ describe('GameResultWizard', () => {
   it('destroyedBy résout le libellé du destructeur depuis destroyedVehicles (écran 2)', () => {
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     component.onDesignationNext({
-      destroyedVehicles: new Map([[1, [{ vehicleId: 200, weightClass: 'LEGER' }]]]),
+      destroyedVehicles: new Map([[1, [{ vehicleId: 200 }]]]),
       wreckedVehicles: [{ participantId: 2, vehicleId: 200, pendingFavoriDuPublic: false }],
     });
     expect(component.destroyedBy().get(200)).toBe('Équipe Alpha');

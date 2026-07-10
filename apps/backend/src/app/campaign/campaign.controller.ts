@@ -48,7 +48,6 @@ import { RecordResultUseCase } from './application/record-result.usecase';
 import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event-sourcing (Parties 4-5, inchangés)
-import { RecordRankingUseCase } from './application/record-ranking.usecase';
 import { RecordWalletMovementUseCase } from './application/record-wallet-movement.usecase';
 import { RecordVehicleLostUseCase } from './application/record-vehicle-lost.usecase';
 import { ContactResistanceUseCase } from './application/contact-resistance.usecase';
@@ -76,7 +75,6 @@ import { GameResponseDto } from './dto/game-response.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
 import type { GameJournalEntryDto } from './dto/game-journal-response.dto';
 import type { RecordResultDto } from './dto/record-result.dto';
-import type { RecordRankingDto } from './dto/record-ranking.dto';
 import type { RecordWalletDto } from './dto/record-wallet.dto';
 import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
 import type { ContactResistanceDto } from './dto/contact-resistance.dto';
@@ -117,7 +115,6 @@ export class CampaignController {
     private readonly recordResultUseCase: RecordResultUseCase,
     private readonly getParticipantVehiclesUseCase: GetParticipantVehiclesUseCase,
     // Event sourcing
-    private readonly recordRankingUseCase: RecordRankingUseCase,
     private readonly recordWalletUseCase: RecordWalletMovementUseCase,
     private readonly recordVehicleLostUseCase: RecordVehicleLostUseCase,
     private readonly contactResistanceUseCase: ContactResistanceUseCase,
@@ -382,26 +379,6 @@ export class CampaignController {
   }
 
   // ── Événements de partie (event sourcing) ───────────────────────────────────
-
-  /** POST /api/campaigns/:id/games/:gameId/events/ranking — rang + PC (organisateur). */
-  @UseGuards(JwtAuthGuard)
-  @Post('campaigns/:id/games/:gameId/events/ranking')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  recordRanking(
-    @Request() req: AuthenticatedRequest,
-    @Param('id', ParseIntPipe) campaignId: number,
-    @Param('gameId', ParseIntPipe) gameId: number,
-    @Body() dto: RecordRankingDto,
-  ): Promise<void> {
-    return this.recordRankingUseCase.execute({
-      campaignId,
-      gameId,
-      userId: req.user.id,
-      participantId: dto.participantId,
-      rank: dto.rank,
-      championshipPoints: dto.championshipPoints,
-    });
-  }
 
   /** POST /api/campaigns/:id/games/:gameId/events/wallet — mouvement de cagnotte (organisateur). */
   @UseGuards(JwtAuthGuard)

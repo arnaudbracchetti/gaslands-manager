@@ -51,7 +51,7 @@ describe('WreckDesignationStep', () => {
     component.onNext();
 
     expect(emitted).toHaveLength(1);
-    expect(emitted[0].destroyedVehicles.get(1)).toEqual([{ vehicleId: 200, weightClass: 'LEGER' }]);
+    expect(emitted[0].destroyedVehicles.get(1)).toEqual([{ vehicleId: 200 }]);
   });
 
   it('un véhicule intact n\'apparaît pas dans wreckedVehicles', () => {

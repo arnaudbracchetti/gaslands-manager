@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { DomainException } from '../../shared/domain/domain-exception';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
-import { assertOrganizer } from './record-ranking.usecase';
+import { assertOrganizer } from './authorization.helpers';
 import { weightClassFromPoids } from '../domain/enums/weight-class.enum';
 import type { ParticipantVehiclesDto } from '../dto/participant-vehicles-response.dto';
 
