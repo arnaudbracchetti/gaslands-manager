@@ -145,9 +145,9 @@ Options :
 
 Une fois le domaine identifié, lister ensemble les opérations. Proposer un tableau à compléter collaborativement :
 
-| Opération | Commande ou requête ? | Charge l'agrégat complet ? | Use case ou requête directe ? |
-|-----------|----------------------|---------------------------|-------------------------------|
-| *(exemples à remplir avec l'utilisateur)* | | | |
+| Opération | Commande ou requête ? | Charge l'agrégat complet ? | Use case ou requête directe ? | Vit sur la racine ou une entité enfant ? |
+|-----------|----------------------|---------------------------|-------------------------------|-------------------------------------------|
+| *(exemples à remplir avec l'utilisateur)* | | | | |
 
 Poser pour chaque opération ambiguë :
 
@@ -159,6 +159,29 @@ Options :
   - Non (lire, lister, calculer sans effet de bord)
     → Requête : lecture directe → DTO → pas d'agrégat
 ```
+
+**Si l'agrégat a des entités enfants**, ne pas s'arrêter à "commande ou requête" — poser
+aussi, pour chaque commande, à quel niveau **à l'intérieur** de l'agrégat elle doit vivre :
+
+```
+Question : "Cette opération ne consulte-t-elle les données que d'UNE seule entité enfant ?"
+Options :
+  - Oui → la méthode vit SUR CETTE ENTITÉ ENFANT, pas sur la racine.
+    La racine se limite à trouver l'enfant (findX(id)) puis déléguer.
+  - Non — elle compare/coordonne plusieurs enfants, ou vérifie un invariant qui les traverse
+    (ex. "un seul élément actif à la fois")
+    → la méthode reste sur la racine, c'est un vrai rôle de coordination.
+  - L'enfant a besoin d'une donnée détenue par un sibling ou par la racine
+    → cette donnée lui est passée EN PARAMÈTRE de méthode, jamais détenue en référence
+    permanente (pas de champ this.parent / this.siblings sur l'entité enfant).
+```
+
+Une racine où *toutes* les méthodes vivent à sa surface — y compris celles qui ne touchent
+qu'un seul enfant — est un agrégat-dieu (voir
+[theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Symétrique, à
+l'intérieur du domaine, de l'anti-pattern 1 (logique métier dans le service plutôt que dans le
+domaine) : le bon réflexe n'est pas seulement "est-ce dans le domaine ?" mais aussi "sur quel
+objet DU domaine ?".
 
 ---
 
@@ -228,6 +251,7 @@ Au-delà de la délimitation de l'agrégat, appliquer ces règles pendant la con
 6. **Un Value Object possède ses conversions de données brutes.** Les casts / accès aux données brutes du catalogue vivent *dans* le VO qui possède le type. N'exposer un accès brut (`toRaw()`) qu'au collaborateur qui en a légitimement besoin, jamais par commodité.
 7. **Au mapping domaine ↔ persistance, préserver l'identité** des entités enfants. Sans l'`id` d'origine, le store ne distingue plus création et mise à jour → doublons ou écrasements silencieux.
 8. **Un domaine sans framework se teste trivialement.** `new Aggregate(...)`, appeler la méthode, asserter l'invariant — sans mock ni base de données. C'est le retour sur investissement direct de la règle 4 (aucune dépendance à un framework) et de l'inversion de dépendance (Phase 5, point 5) : si un test de domaine a besoin d'un mock, une dépendance s'est glissée là où elle ne devrait pas être.
+9. **La racine n'est pas le seul endroit légitime pour une méthode métier.** Une fois l'agrégat délimité, réappliquer le test des invariantes (Phase 2b) *opération par opération* : si une commande ne consulte que les données d'UNE entité enfant, elle vit sur cette entité — la racine se limite à trouver l'enfant puis déléguer. Sinon la racine devient un agrégat-dieu qui micro-gère ses enfants au lieu de leur déléguer (voir [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit en paramètre de méthode, jamais en référence permanente stockée.
 
 ---
 

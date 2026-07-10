@@ -213,7 +213,82 @@ class Backpack {
 **Règle :** en déplaçant une règle, lister les données qu'utilisait l'ancien contrôle et vérifier que
 le nouvel emplacement les possède *toutes*.
 
-### Anti-pattern 7 — Le service mort qui contourne l'agrégat
+### Anti-pattern 8 — Tout sur la racine (l'agrégat-dieu)
+
+Une fois la frontière de l'agrégat fixée (les 3 tests ci-dessus), la question ne s'arrête pas
+là : il faut **réappliquer le Test 2, opération par opération**, à l'intérieur même de
+l'agrégat. Une racine qui absorbe systématiquement toute méthode — même celles qui ne
+consultent que les données d'UNE seule entité enfant — devient un agrégat-dieu : symétrique de
+l'Anti-pattern 1 (logique dans le service au lieu du domaine), mais commis *à l'intérieur* du
+domaine plutôt qu'à sa frontière.
+
+```typescript
+// ❌ Order fait tout, même ce qui ne concerne qu'une seule ligne
+class Order {
+  cancelLine(lineId: string, reason: string): void {
+    const line = this._lines.find((l) => l.id === lineId);
+    if (!line) throw new DomainException('Ligne introuvable');
+    if (line.status === 'SHIPPED') throw new DomainException('Ligne déjà expédiée');
+    line.status = 'CANCELLED';        // Order manipule les champs internes de OrderLine
+    line.cancelReason = reason;
+    line.cancelledAt = new Date();
+  }
+  // ... une méthode de ce genre par opération possible sur OrderLine, X10, X20 —
+  // Order finit par contenir toutes les règles de TOUS ses enfants.
+}
+
+// ✅ La règle vit sur l'entité qui possède les données qu'elle consulte
+class OrderLine {
+  cancel(reason: string): void {
+    if (this._status === 'SHIPPED') throw new DomainException('Ligne déjà expédiée');
+    this._status = 'CANCELLED';
+    this._cancelReason = reason;
+    this._cancelledAt = new Date();
+  }
+}
+class Order {
+  // La racine ne garde que la navigation + un appel de délégation — elle ne connaît
+  // plus le détail de la règle "annuler une ligne".
+  cancelLine(lineId: string, reason: string): void {
+    this.findLine(lineId).cancel(reason);
+  }
+}
+```
+
+**Règle** : pour chaque opération, demander *"quel objet — la racine ou une entité enfant —
+possède les données que cette opération consulte ?"* (même question que le Test 2, appliquée à
+l'intérieur de l'agrégat plutôt qu'à sa frontière externe) :
+- Une seule entité enfant suffit → la méthode vit **sur cette entité**. La racine ne garde que
+  la navigation (`findX(id)`) et la délégation.
+- Plusieurs enfants ou un invariant qui les compare entre eux (ex. "un seul élément actif à la
+  fois parmi tous les enfants") → ça reste sur la racine, c'est un vrai rôle de coordination.
+- La racine délègue une opération à un enfant mais doit d'abord trouver *lequel* selon un
+  critère qui porte sur TOUS les enfants (ex. "l'unique ligne encore en brouillon") → ce
+  filtrage-là reste sur la racine (elle seule voit toute la collection) ; l'opération elle-même,
+  une fois l'enfant identifié, part sur l'enfant.
+
+**Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit en paramètre de
+méthode** — il ne les détient jamais en référence permanente (pas de `this.parent` ni de
+`this.siblings` stockés en champ). Ça préserve son encapsulation (l'enfant reste testable seul,
+`new OrderLine(...)`, sans construire tout l'agrégat) et évite un couplage bidirectionnel
+enfant↔racine. Exemple : une règle sur `OrderLine` qui doit comparer l'état de toutes les lignes
+(« pas deux lignes du même produit ») reçoit `siblings: OrderLine[]` en paramètre — fourni par
+`Order`, qui les détient déjà :
+
+```typescript
+class OrderLine {
+  assertNoDuplicateProduct(siblings: readonly OrderLine[]): void {
+    if (siblings.some((s) => s !== this && s.productId === this.productId))
+      throw new DomainException('Produit déjà présent dans une autre ligne');
+  }
+}
+```
+
+Symptôme à surveiller en revue : un agrégat où **toutes** les méthodes vivent sur la racine,
+alors qu'une bonne moitié d'entre elles ne touchent jamais aux données d'un autre enfant que
+celui sur lequel elles opèrent.
+
+### Anti-pattern 9 — Le service mort qui contourne l'agrégat
 
 ```typescript
 // ❌ Un service legacy qui écrit la persistance sans passer par l'agrégat
@@ -237,7 +312,9 @@ await orderRepo.save(order);
 ## Checklist avant de valider la frontière
 
 - [ ] L'agrégat peut-il enforcer **toutes** ses invariantes sans lire de données extérieures ?
-- [ ] Toutes les mutations passent-elles par l'agrégat racine (jamais directement sur les enfants) ?
+- [ ] Toutes les mutations passent-elles par l'agrégat racine (jamais directement sur les enfants, depuis l'EXTÉRIEUR de l'agrégat) ?
+- [ ] À l'INTÉRIEUR de l'agrégat, chaque méthode vit-elle sur l'objet (racine ou entité enfant) qui possède les données qu'elle consulte — pas systématiquement sur la racine (anti-pattern 8) ?
+- [ ] Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit-il en paramètre de méthode, plutôt qu'en référence permanente stockée ?
 - [ ] L'agrégat est-il aussi petit que possible (chaque enfant est-il nécessaire à un invariant de la racine), le seuil de ~200 entités n'étant qu'un garde-fou de dernier recours ?
 - [ ] Les références vers d'autres agrégats se font-elles par identité (id), jamais par objet direct ?
 - [ ] Les entités enfants sont-elles supprimées en cascade avec leur racine ?
