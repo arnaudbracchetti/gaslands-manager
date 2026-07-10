@@ -1,7 +1,9 @@
 # Gaslands Manager — Tests
 
 > Détail des patterns de test et de l'infrastructure e2e. Contexte général et
-> commandes : [ARCHITECTURE.md §8](ARCHITECTURE.md#8-tests).
+> commandes : [ARCHITECTURE.md §8](ARCHITECTURE.md#8-tests). Pour lancer
+> effectivement les e2e sur une machine/conteneur neuf (prérequis, commandes,
+> troubleshooting) : [E2E_TESTING.md](E2E_TESTING.md).
 > Mettre à jour après tout changement de pattern de test ou d'infrastructure e2e.
 
 ---

@@ -390,7 +390,10 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 | E2E frontend | Playwright | `npx nx e2e frontend-e2e` |
 | E2E backend | Vitest + axios | `npx nx e2e backend-e2e` |
 
-> ⚠️ Installer les navigateurs Playwright avant le premier lancement : `npx playwright install`
+> ⚠️ Installer les navigateurs Playwright avant le premier lancement : `npx playwright
+> install` — sur une distro non officiellement supportée ou pour le détail des
+> bibliothèques système requises (WebKit notamment), voir
+> [E2E_TESTING.md](E2E_TESTING.md).
 
 ### Règle
 
@@ -399,4 +402,5 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 
 Patterns de test backend/frontend et détail complet de l'infrastructure e2e
 (base `gaslands_test` dédiée, backend isolé, couverture actuelle) :
-[TESTING.md](TESTING.md).
+[TESTING.md](TESTING.md). Guide pratique pour lancer les e2e (prérequis
+d'environnement, commandes, troubleshooting) : [E2E_TESTING.md](E2E_TESTING.md).

@@ -85,7 +85,15 @@ Postgres) — la base est créée puis vidée à chaque run, aucune action manue
 sur la DB. En revanche, **le backend de dev doit être arrêté au préalable** (`./dev.sh
 --kill` ou `Ctrl+C`) : le backend de test réutilise le port 3000, cible du proxy
 Angular (`apps/frontend/proxy.conf.json`), donc les deux ne peuvent pas cohabiter.
-Détail : @docs/TESTING.md.
+Détail (architecture de l'infra e2e) : @docs/TESTING.md.
+
+**Tests E2E backend (`backend-e2e`)** : contrairement à `frontend-e2e`, ce backend n'est
+**pas** démarré automatiquement — lancer `npx nx serve backend` dans un terminal séparé
+et attendre le healthcheck avant `npx nx e2e backend-e2e`.
+
+**Prérequis d'environnement pour lancer les e2e depuis une machine/conteneur neuf**
+(navigateurs Playwright, bibliothèques système, contournements distro non supportée,
+flakiness connue) : @docs/E2E_TESTING.md — guide pratique, commande par commande.
 
 ---
 
