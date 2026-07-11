@@ -169,6 +169,6 @@ export class EquipmentChangedEvent extends GameEvent {
     }
     const detailsText = details.join(', ');
 
-    return `${verb} : ${nom}${detailsText ? ` (${detailsText})` : ''} (${this.cost} jerricans)`;
+    return `${verb} : ${nom}${detailsText ? ` ${detailsText}` : ''} (${this.cost} jerricans)`;
   }
 }

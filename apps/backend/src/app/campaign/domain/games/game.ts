@@ -18,6 +18,7 @@ import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import type { Orientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
 import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
@@ -253,6 +254,7 @@ export abstract class Game {
     // l'undo peut recréer l'entité (symétrie avec le BUY).
     let cost: number;
     let nomInterne: string = cmd.nomInterne;
+    let orientation: Orientation | null = cmd.orientation ?? null;
     let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
     let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
     let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
@@ -263,6 +265,12 @@ export abstract class Game {
       const sold = this.resolveSell(participant, cmd);
       cost = sold.cost;
       nomInterne = sold.nomInterne;
+      // Comme `nomInterne`/`resolvedWeaponType` ci-dessus : le client ne retransmet pas
+      // l'orientation d'un objet qu'il revend (il n'envoie que son id), elle est donc
+      // RÉSOLUE depuis l'entité réelle plutôt que lue sur `cmd.orientation` (toujours
+      // absent pour un SELL) — sinon `describe()` affiche une vente sans orientation
+      // même quand l'objet vendu en a une.
+      orientation = sold.orientation;
       resolvedVehicleType = sold.resolvedVehicleType;
       resolvedWeaponType = sold.resolvedWeaponType;
       resolvedImprovementType = sold.resolvedImprovementType;
@@ -284,7 +292,7 @@ export abstract class Game {
     const event = new EquipmentChangedEvent(
       0, this.id, participant.id, 0,
       cmd.operation, cmd.entityType, nomInterne, cost,
-      cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, cmd.orientation ?? null,
+      cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, orientation,
       resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
     );
 
@@ -432,6 +440,7 @@ export abstract class Game {
   ): {
     cost: number;
     nomInterne: string;
+    orientation: Orientation | null;
     resolvedVehicleType: VehicleType | null;
     resolvedWeaponType: WeaponType | null;
     resolvedImprovementType: ImprovementType | null;
@@ -442,6 +451,7 @@ export abstract class Game {
         return {
           cost: vehicle.type.price,
           nomInterne: vehicle.type.nomInterne,
+          orientation: null,
           resolvedVehicleType: vehicle.type,
           resolvedWeaponType: null,
           resolvedImprovementType: null,
@@ -457,6 +467,12 @@ export abstract class Game {
         return {
           cost: Math.floor(weapon.price / 2),
           nomInterne: weapon.type.nomInterne,
+          // L'orientation de l'arme VENDUE — jamais transmise par le client (qui n'envoie
+          // que l'id de l'objet à vendre) — doit être RÉSOLUE ici depuis l'entité réelle,
+          // au même titre que `nomInterne`/`resolvedWeaponType` ci-dessus. Sans cela,
+          // `describe()` (EquipmentChangedEvent) affiche un événement de vente sans
+          // orientation même quand l'arme en a une.
+          orientation: weapon.orientation,
           resolvedVehicleType: null,
           resolvedWeaponType: weapon.type,
           resolvedImprovementType: null,
@@ -477,6 +493,7 @@ export abstract class Game {
         return {
           cost: Math.floor(improvement.price / 2),
           nomInterne: improvement.type.nomInterne,
+          orientation: improvement.orientation,
           resolvedVehicleType: null,
           resolvedWeaponType: null,
           resolvedImprovementType: improvement.type,
