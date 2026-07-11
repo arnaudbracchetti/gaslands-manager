@@ -51,6 +51,7 @@ export class Team {
     private _cans: number,
     private _description: string | null,
     private readonly _vehicles: Vehicle[],
+    private readonly _isLocked: boolean = false,
   ) {}
 
   get name(): string { return this._name; }
@@ -58,6 +59,21 @@ export class Team {
   get cans(): number { return this._cans; }
   get description(): string | null { return this._description; }
   get vehicles(): readonly Vehicle[] { return this._vehicles; }
+  get isLocked(): boolean { return this._isLocked; }
+
+  /**
+   * Une équipe engagée (participant VALIDATED) dans une campagne qui n'est plus
+   * EN_CONSTRUCTION est intégralement verrouillée — toute mutation directe passe
+   * par ce garde. Les méthodes "campagne" (section D-S5/D-S11 plus bas), utilisées
+   * par le flux atelier event-sourcing, n'y sont volontairement pas soumises.
+   */
+  assertNotLocked(): void {
+    if (this._isLocked) {
+      throw new DomainException(
+        "Cette équipe est verrouillée : elle participe à une campagne qui n'est plus en construction.",
+      );
+    }
+  }
 
   /**
    * Budget restant = budget total - somme des coûts de tous les véhicules.
@@ -74,6 +90,7 @@ export class Team {
    * Phase 5 : la règle du verrouillage du sponsor est enforcée côté backend.
    */
   update(dto: UpdateTeamCommand): void {
+    this.assertNotLocked();
     if (dto.name !== undefined) this._name = dto.name;
     if (dto.cans !== undefined) this._cans = dto.cans;
     if (dto.description !== undefined) this._description = dto.description;
@@ -93,12 +110,14 @@ export class Team {
    * par le use case avant d'appeler cette méthode.
    */
   addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[]): Vehicle {
+    this.assertNotLocked();
     const vehicle = new Vehicle(0, this.id, vehicleType, [], defaultImprovements);
     this._vehicles.push(vehicle);
     return vehicle;
   }
 
   removeVehicle(vehicleId: number): void {
+    this.assertNotLocked();
     const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
     if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
     this._vehicles.splice(idx, 1);
@@ -139,11 +158,13 @@ export class Team {
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
 
   addWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: Orientation | null): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.addWeapon(weaponType, orientation, this.remainingBudget);
   }
 
   removeWeaponFromVehicle(vehicleId: number, weaponId: number): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.removeWeapon(weaponId);
   }
@@ -151,21 +172,25 @@ export class Team {
   // ── Mutations Improvement (déléguées au Vehicle) ──────────────────────────────
 
   addImprovementToVehicle(vehicleId: number, improvementType: ImprovementType, orientation: Orientation | null): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.addImprovement(improvementType, orientation, this.remainingBudget);
   }
 
   removeImprovementFromVehicle(vehicleId: number, improvementId: number): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.removeImprovement(improvementId);
   }
 
   assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponType: WeaponType): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.assignWeaponToTourelle(improvementId, weaponType, this.remainingBudget);
   }
 
   unassignWeaponFromTourelle(vehicleId: number, improvementId: number): void {
+    this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.unassignWeaponFromTourelle(improvementId);
   }

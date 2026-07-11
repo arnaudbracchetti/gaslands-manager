@@ -32,6 +32,7 @@
         [vehicle]="v"
         [sponsorCatalog]="catalog"
         [budget]="budget()"
+        [locked]="locked()"
         (vehicleChanged)="vehicle.set($event)" />
 
       <div class="vc-footer">
@@ -53,7 +54,11 @@
         Véhicules autorisés par <strong>{{ team().sponsor }}</strong> :
       </p>
 
-      @if (creatingVehicle()) {
+      @if (locked()) {
+        <p class="vc-status vc-status--error">
+          🔒 Équipe verrouillée — impossible d'ajouter un véhicule.
+        </p>
+      } @else if (creatingVehicle()) {
         <p class="vc-status vc-status--loading">Création du véhicule…</p>
       } @else if (catalog.vehicules.length === 0) {
         <!-- Cas limite théorique (tout sponsor a accès à au moins un véhicule

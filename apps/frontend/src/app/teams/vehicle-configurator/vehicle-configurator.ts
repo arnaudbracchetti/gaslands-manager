@@ -167,6 +167,14 @@ export class VehicleConfigurator implements OnInit {
     return this.vehicleId() === null ? 'Terminer' : 'Fermer';
   });
 
+  /**
+   * Vrai si l'équipe participe à une campagne qui n'est plus EN_CONSTRUCTION — le
+   * backend refuse alors toute mutation (cf. Team.assertNotLocked()). Bloque la
+   * création d'un nouveau véhicule (§ci-dessous) et passe en lecture seule
+   * `EquipmentManager` en mode édition.
+   */
+  locked: Signal<boolean> = computed((): boolean => this.team().isLockedByCampaign ?? false);
+
   // ── Cycle de vie ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
@@ -208,6 +216,7 @@ export class VehicleConfigurator implements OnInit {
    * `vehicle()` devient non-nul (cf. template).
    */
   selectVehicle(vehicule: Vehicule): void {
+    if (this.locked()) return;
     this.creatingVehicle.set(true);
     this.error.set('');
 

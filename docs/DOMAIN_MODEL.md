@@ -27,12 +27,15 @@ classDiagram
         -_cans : number
         -_description : string | null
         -_vehicles : Vehicle[]
+        -_isLocked : boolean
         +name : string
         +sponsor : string
         +cans : number
         +description : string | null
         +vehicles : readonly Vehicle[]
+        +isLocked : boolean
         +remainingBudget : number
+        +assertNotLocked() void
         +update(cmd) void
         +addVehicle(type, defaultImprovements) Vehicle
         +removeVehicle(vehicleId) void
@@ -154,6 +157,14 @@ classDiagram
 jamais via une requête SQL. `Team.remainingBudget` agrège le coût de tous ses véhicules.
 Toute mutation valide d'abord les règles métier et lève `DomainException` si une règle
 est violée. La couche application convertit `DomainException` → `BadRequestException`.
+
+**Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
+de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne
+persistée sur `Team`). `assertNotLocked()` est appelé en tête de toutes les méthodes de
+mutation directe (`update`, `addVehicle`, `addWeaponToVehicle`…) mais **pas** des
+méthodes "campagne" (`addCampaignVehicle`, `markWeaponSold`…, section D-S5/D-S11),
+utilisées par le flux atelier event-sourcing qui doit rester fonctionnel pendant que la
+campagne est `EN_COURS`. Détail : [spec/TEAMS.md](spec/TEAMS.md#crud-équipes).
 
 ---
 

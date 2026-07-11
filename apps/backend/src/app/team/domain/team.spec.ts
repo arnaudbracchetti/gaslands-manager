@@ -46,6 +46,38 @@ describe('Team — findWeapon', () => {
   });
 });
 
+describe('Team — verrouillage campagne', () => {
+  function makeLockedTeam(): Team {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    return new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle], true);
+  }
+
+  it('update() refuse toute modification', () => {
+    const team = makeLockedTeam();
+    expect(() => team.update({ name: 'Nouveau nom' })).toThrow(DomainException);
+  });
+
+  it('addVehicle() refuse toute modification', () => {
+    const team = makeLockedTeam();
+    expect(() => team.addVehicle(makeVehicleType(), [])).toThrow(DomainException);
+  });
+
+  it('addWeaponToVehicle() refuse toute modification', () => {
+    const team = makeLockedTeam();
+    expect(() => team.addWeaponToVehicle(10, makeWeaponType(), 'avant')).toThrow(DomainException);
+  });
+
+  it('assertNotLocked() ne lève rien pour une équipe non verrouillée', () => {
+    const team = makeTeam();
+    expect(() => team.assertNotLocked()).not.toThrow();
+  });
+
+  it("les mutations campagne (addCampaignWeapon) restent autorisées même verrouillée", () => {
+    const team = makeLockedTeam();
+    expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', -1)).not.toThrow();
+  });
+});
+
 describe('Team — mutations de base', () => {
   it('update() modifie le nom', () => {
     const team = makeTeam();

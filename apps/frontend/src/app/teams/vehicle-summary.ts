@@ -105,32 +105,37 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
   const equipements: string[] = [];
 
   // Armes : `weapon.prix` résolu côté backend ; emplacement résolu via le catalogue.
-  // `weapon.sold` (atelier uniquement, jamais posé côté construction d'équipe) libère
-  // l'emplacement — l'arme n'est physiquement plus sur le véhicule — mais reste incluse
-  // dans le coût (prix résiduel auto-ajustant, cf. `Weapon.price` backend) et dans les tags.
+  // `weapon.sold`/`weapon.lost` (atelier uniquement, jamais posés côté construction
+  // d'équipe) libèrent l'emplacement — l'arme n'est physiquement plus sur le véhicule —
+  // et restent exclues des tags : seul l'équipement encore actif doit y apparaître (le
+  // badge "Vendue"/barré est affiché ailleurs, dans `MountedEquipment`, pas ici). Le coût
+  // reste néanmoins comptabilisé (prix résiduel auto-ajustant, cf. `Weapon.price` backend).
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
+    if (weapon.sold || weapon.lost) {
+      continue;
+    }
     const armeCatalogue: Arme | undefined = catalog.armes.find(
       (a: Arme): boolean => a.nom_interne === weapon.nomInterne,
     );
-    if (!weapon.sold) {
-      emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
-    }
+    emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
     equipements.push(armeCatalogue?.nom ?? weapon.nomInterne);
   }
 
   // Améliorations : `improvement.prix` et `improvement.emplacement` résolus côté backend.
   // Les défauts (`estDefaut`) ne consomment pas d'emplacement (cf. SPECIFICATION.md §5)
   // et ne sont pas listés dans les tags (ils font partie du profil de base du véhicule).
+  // `sold`/`lost` sont exclus des tags pour la même raison que les armes ci-dessus.
   for (const improvement of vehicle.improvements) {
     cout += improvement.prix;
-    if (!improvement.estDefaut) {
-      emplacementsUtilises += improvement.emplacement;
-      const amCatalogue: Amelioration | undefined = catalog.ameliorations.find(
-        (a: Amelioration): boolean => a.nom_interne === improvement.nomInterne,
-      );
-      equipements.push(amCatalogue?.nom ?? improvement.nomInterne);
+    if (improvement.estDefaut || improvement.sold || improvement.lost) {
+      continue;
     }
+    emplacementsUtilises += improvement.emplacement;
+    const amCatalogue: Amelioration | undefined = catalog.ameliorations.find(
+      (a: Amelioration): boolean => a.nom_interne === improvement.nomInterne,
+    );
+    equipements.push(amCatalogue?.nom ?? improvement.nomInterne);
   }
 
   return {

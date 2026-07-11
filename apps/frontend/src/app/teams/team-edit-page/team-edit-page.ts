@@ -70,6 +70,14 @@ export class TeamEditPage implements OnInit {
   /** Vrai si l'équipe possède au moins un véhicule (verrouille le carousel sponsor). */
   hasVehicles = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
 
+  /**
+   * Vrai si l'équipe participe à une campagne qui n'est plus EN_CONSTRUCTION —
+   * le backend refuse alors toute mutation (cf. Team.assertNotLocked()). Désactive
+   * ici proactivement toute l'édition plutôt que de laisser l'utilisateur découvrir
+   * le blocage via une erreur HTTP 400.
+   */
+  isLocked = computed((): boolean => this.team()?.isLockedByCampaign ?? false);
+
   // ── État formulaire (migré depuis TeamForm) ────────────────────────────────
 
   formName: WritableSignal<string>        = signal('');
@@ -198,6 +206,7 @@ export class TeamEditPage implements OnInit {
   // ── Édition de l'équipe (auto-save au blur) ──────────────────────────────
 
   saveField(fieldName: 'name' | 'description' | 'cans' | 'sponsor'): void {
+    if (this.isLocked()) return;
     if (fieldName === 'name') {
       const name = this.formName().trim();
       if (!name) {
@@ -232,6 +241,7 @@ export class TeamEditPage implements OnInit {
   // ── Suppression de l'équipe ───────────────────────────────────────────────
 
   deleteTeam(): void {
+    if (this.isLocked()) return;
     this.pendingDeleteTeam.set(true);
   }
 
@@ -253,6 +263,7 @@ export class TeamEditPage implements OnInit {
   // ── Navigation véhicules ──────────────────────────────────────────────────
 
   openVehicleBuilder(): void {
+    if (this.isLocked()) return;
     if (!this.hasVehicles()) {
       this.pendingAddVehicle.set(true);
       return;

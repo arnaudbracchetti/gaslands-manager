@@ -46,6 +46,14 @@ export class MountedEquipment {
   /** Catalogue du sponsor — nécessaire pour résoudre noms/emplacements affichés. */
   sponsorCatalog: InputSignal<Sponsor> = input.required<Sponsor>();
 
+  /**
+   * Vrai si le véhicule appartient à une équipe verrouillée (campagne qui n'est
+   * plus EN_CONSTRUCTION) — masque tous les boutons de mutation (retrait,
+   * assignation/désassignation Tourelle). Défaut `false` : ne change rien pour
+   * l'atelier campagne, qui ne renseigne jamais cet input.
+   */
+  locked: InputSignal<boolean> = input<boolean>(false);
+
   /** Demande de retrait d'une arme — le parent confirme puis appelle l'API. */
   weaponRemoved: OutputEmitterRef<Weapon> = output<Weapon>();
 
@@ -58,20 +66,23 @@ export class MountedEquipment {
   /** Désassigne l'arme d'une Tourelle (assigné → orphelin), sans confirmation. */
   tourelleUnassignRequested: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
 
-  // ── Filtre "masquer les équipements vendus" ─────────────────────────────────
+  // ── Filtre "masquer les équipements vendus/détruits" ────────────────────────
   // Filtre d'affichage pur sur des données déjà reçues — état local à ce
   // composant "dumb", pas besoin de le faire remonter à `EquipmentManager`.
-  // `sold` n'est jamais posé côté construction d'équipe (toujours `undefined`),
-  // donc `hiddenSoldCount()` y vaut 0 et le bouton de bascule ne s'affiche pas.
+  // `sold`/`lost` ne sont jamais posés côté construction d'équipe (toujours
+  // `undefined`), donc `hiddenSoldCount()` y vaut 0 et le bouton de bascule ne
+  // s'affiche pas. `lost` (Table des Épaves) suit la même bascule que `sold` —
+  // un équipement détruit reste consultable, mais masqué par défaut, comme un
+  // équipement vendu.
 
   showSold: WritableSignal<boolean> = signal(false);
 
   soldWeaponsCount: Signal<number> = computed((): number =>
-    this.weapons().filter((w): boolean => !!w.sold).length,
+    this.weapons().filter((w): boolean => !!w.sold || !!w.lost).length,
   );
 
   soldImprovementsCount: Signal<number> = computed((): number =>
-    this.improvements().filter((i): boolean => !!i.sold).length,
+    this.improvements().filter((i): boolean => !!i.sold || !!i.lost).length,
   );
 
   hiddenSoldCount: Signal<number> = computed((): number =>
@@ -81,13 +92,13 @@ export class MountedEquipment {
   visibleWeapons: Signal<Weapon[]> = computed((): Weapon[] => {
     const all = this.weapons();
     if (this.showSold()) return all;
-    return all.filter((w): boolean => !w.sold);
+    return all.filter((w): boolean => !w.sold && !w.lost);
   });
 
   visibleImprovements: Signal<VehicleImprovement[]> = computed((): VehicleImprovement[] => {
     const all = this.improvements();
     if (this.showSold()) return all;
-    return all.filter((i): boolean => !i.sold);
+    return all.filter((i): boolean => !i.sold && !i.lost);
   });
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────

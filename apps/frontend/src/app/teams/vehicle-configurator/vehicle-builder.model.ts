@@ -62,6 +62,8 @@ export interface VehicleImprovement {
    */
   sold?: boolean;
   purchasedThisSession?: boolean;
+  /** Perdue via la Table des Épaves (atelier uniquement, jamais posé à la construction d'équipe). */
+  lost?: boolean;
 }
 
 /**
@@ -77,9 +79,10 @@ export interface Weapon {
   createdAt: string;
   /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend. */
   prix: number;
-  /** Cf. `VehicleImprovement.sold`/`purchasedThisSession` — même usage, atelier uniquement. */
+  /** Cf. `VehicleImprovement.sold`/`purchasedThisSession`/`lost` — même usage, atelier uniquement. */
   sold?: boolean;
   purchasedThisSession?: boolean;
+  lost?: boolean;
 }
 
 /**

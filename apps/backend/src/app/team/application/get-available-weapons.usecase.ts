@@ -2,6 +2,7 @@ import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { WeaponType } from '../domain/value-objects/weapon-type';
 import type { AvailableWeaponDto } from '../dto/available-weapon.dto';
+import { fail } from '../domain/team';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface GetAvailableWeaponsQuery {
@@ -29,7 +30,9 @@ export class GetAvailableWeaponsUseCase {
     const weaponTypes = this.catalogRepo.getWeaponTypesForSponsor(team.sponsor);
 
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
-      const result = vehicle.canAddWeapon(wt, null, budget);
+      const result = team.isLocked
+        ? fail('Équipe verrouillée : campagne en cours')
+        : vehicle.canAddWeapon(wt, null, budget);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,

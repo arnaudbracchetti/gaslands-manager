@@ -12,6 +12,14 @@ export interface TeamSummaryDto {
   description: string | null;
   vehicleCount: number;
   isEngaged: boolean;
+  /**
+   * Vrai si l'équipe participe (VALIDATED) à une campagne qui n'est plus
+   * EN_CONSTRUCTION — toute mutation directe est alors refusée côté backend
+   * (cf. Team.assertNotLocked()). Le frontend l'utilise pour désactiver
+   * proactivement l'édition plutôt que de laisser l'utilisateur découvrir le
+   * blocage via une erreur HTTP 400.
+   */
+  isLockedByCampaign: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

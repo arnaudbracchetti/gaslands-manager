@@ -31,6 +31,12 @@ export interface Team {
    * Utilisé pour griser l'équipe dans les sélecteurs de saison.
    */
   isEngaged?: boolean;
+  /**
+   * Vrai si l'équipe participe (VALIDATED) à une campagne qui n'est plus
+   * EN_CONSTRUCTION — le backend refuse alors toute mutation directe (HTTP 400).
+   * Utilisé pour désactiver proactivement l'édition côté IHM.
+   */
+  isLockedByCampaign?: boolean;
 }
 
 /**

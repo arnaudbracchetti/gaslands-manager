@@ -15,6 +15,12 @@
       <div class="tep-error">{{ error() }}</div>
     }
 
+    @if (isLocked()) {
+      <div class="tep-locked-banner">
+        🔒 Cette équipe est verrouillée : elle participe à une campagne qui n'est plus en construction.
+      </div>
+    }
+
     <!-- ── DEUX PANNEAUX ─────────────────────────────────────────────── -->
     <div class="tep-panels">
 
@@ -45,7 +51,8 @@
             placeholder="Ex : Les Furieux du Désert"
             [ngModel]="formName()"
             (ngModelChange)="formName.set($event)"
-            (blur)="saveField('name')" />
+            (blur)="saveField('name')"
+            [disabled]="isLocked()" />
         </div>
 
         <!-- Description -->
@@ -58,7 +65,8 @@
             placeholder="Décrivez votre équipe (optionnel)…"
             [ngModel]="formDescription()"
             (ngModelChange)="formDescription.set($event)"
-            (blur)="saveField('description')">
+            (blur)="saveField('description')"
+            [disabled]="isLocked()">
           </textarea>
         </div>
 
@@ -73,7 +81,8 @@
               min="0"
               [ngModel]="formCans()"
               (ngModelChange)="formCans.set(+$event)"
-              (blur)="saveField('cans')" />
+              (blur)="saveField('cans')"
+              [disabled]="isLocked()" />
             <span class="tep-budget-icon" aria-hidden="true">🥫</span>
           </div>
           <!-- Barre budget utilisé -->
@@ -114,7 +123,7 @@
         } @else {
           <app-sponsor-carousel
             [selectedSponsor]="formSponsor()"
-            [locked]="hasVehicles()"
+            [locked]="hasVehicles() || isLocked()"
             [sponsors]="sponsors()"
             (sponsorChange)="formSponsor.set($event); saveField('sponsor')" />
         }
@@ -132,7 +141,7 @@
             <div class="tep-section-label">// VÉHICULES</div>
             <h2 class="tep-vehicles-title">LES VÉHICULES DE L'ÉQUIPE</h2>
           </div>
-          <button class="tep-btn-add-vehicle" (click)="openVehicleBuilder()">
+          <button class="tep-btn-add-vehicle" (click)="openVehicleBuilder()" [disabled]="isLocked()">
             + AJOUTER UN VÉHICULE
           </button>
         </div>
@@ -165,6 +174,7 @@
               <app-vehicle-summary-card
                 [vehicle]="vehicle"
                 [index]="i + 1"
+                [showDelete]="!isLocked()"
                 (manageClicked)="openVehicleEditor($event)"
                 (deleteClicked)="deleteVehicle($event)" />
             }
@@ -173,7 +183,7 @@
 
         <!-- Bouton suppression équipe -->
         <div class="tep-danger-zone">
-          <button class="btn-action btn-action--delete" (click)="deleteTeam()">
+          <button class="btn-action btn-action--delete" (click)="deleteTeam()" [disabled]="isLocked()">
             🗑 Supprimer l'équipe
           </button>
         </div>

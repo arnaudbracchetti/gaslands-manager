@@ -20,6 +20,8 @@
 
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
+**Verrouillage par une campagne en cours** : dès qu'une équipe est engagée (participant `VALIDATED`) dans une campagne dont l'état n'est plus `EN_CONSTRUCTION` (`EN_COURS` ou `TERMINEE`), l'équipe est intégralement verrouillée — `Team.assertNotLocked()` refuse (`DomainException` → HTTP 400) toute mutation directe : modification/suppression de l'équipe, ajout/suppression de véhicule, arme, amélioration, assignation de Tourelle. Le flag est calculé par `TeamRepository` (jointure `CampaignParticipant` → `Campaign.state`) au chargement de l'agrégat, pas stocké en colonne. **Le flux atelier campagne n'est pas concerné** — pendant qu'une partie est en statut `ATELIER`, l'équipement continue de transiter par l'event-sourcing (`POST /api/campaigns/:id/events/equipment`, cf. [CAMPAIGN.md](CAMPAIGN.md)), qui utilise des méthodes dédiées de l'agrégat (`addCampaignVehicle`, `addCampaignWeapon`…) non soumises à ce verrou.
+
 ---
 
 ## Résumé des véhicules sur la carte d'équipe

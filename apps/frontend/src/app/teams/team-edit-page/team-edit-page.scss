@@ -34,6 +34,17 @@
   flex-shrink: 0;
 }
 
+.tep-locked-banner {
+  padding: 10px 32px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--tb-warn);
+  background: rgba(230, 180, 28, 0.1);
+  border-bottom: 1px solid var(--tb-warn);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
 
 
 .tep-panels {

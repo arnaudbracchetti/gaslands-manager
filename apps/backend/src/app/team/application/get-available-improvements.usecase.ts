@@ -2,6 +2,7 @@ import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { ImprovementType } from '../domain/value-objects/improvement-type';
 import type { AvailableImprovementDto } from '../dto/available-improvement.dto';
+import { fail } from '../domain/team';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface GetAvailableImprovementsQuery {
@@ -31,7 +32,9 @@ export class GetAvailableImprovementsUseCase {
     const improvementTypes = this.catalogRepo.getImprovementTypesForSponsor(team.sponsor);
 
     return improvementTypes.map((it: ImprovementType): AvailableImprovementDto => {
-      const verdict = vehicle.canAddImprovementInAnyOrientation(it, budget);
+      const verdict = team.isLocked
+        ? fail('Équipe verrouillée : campagne en cours')
+        : vehicle.canAddImprovementInAnyOrientation(it, budget);
       return {
         nom: it.nom,
         nomInterne: it.nomInterne,

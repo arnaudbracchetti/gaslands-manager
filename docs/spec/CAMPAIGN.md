@@ -322,9 +322,14 @@ directement sur le wallet — seule la mutation de l'entité (créée, ou flagu�
 
 ## Hors scope de l'itération actuelle
 
-Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
-`EN_COURS`, visibilité partielle pour un `PENDING`, quitter une campagne
-volontairement, rotation du code d'invitation.
+Réordonnancement du Programme (US-A4), visibilité partielle pour un `PENDING`,
+quitter une campagne volontairement, rotation du code d'invitation.
+
+Le verrouillage de l'équipe engagée (interdiction de toute modification directe
+dès que la campagne n'est plus `EN_CONSTRUCTION`) est désormais **implémenté**,
+mais **pas** via la colonne `CampaignParticipant.isLocked` ci-dessous (qui reste
+un champ posé mais inutilisé) — cf.
+[TEAMS.md — Verrouillage par une campagne en cours](TEAMS.md#crud-équipes).
 
 Le classement (rang + Points de Championnat 10/5/2/1, US-B1/B3/C1) est
 **implémenté et consommé par le frontend** — cf. tables d'endpoints ci-dessous.

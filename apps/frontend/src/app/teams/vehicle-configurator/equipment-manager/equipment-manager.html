@@ -57,6 +57,7 @@
       [weapons]="vehicle().weapons"
       [improvements]="vehicle().improvements"
       [sponsorCatalog]="sponsorCatalog()"
+      [locked]="locked()"
       (weaponRemoved)="removeWeapon($event)"
       (improvementRemoved)="removeImprovement($event)"
       (tourelleAssignRequested)="openAssignModal($event)"

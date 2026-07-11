@@ -98,6 +98,14 @@ export class EquipmentManager {
   budget: InputSignal<BudgetView> = input.required<BudgetView>();
 
   /**
+   * Vrai si le véhicule appartient à une équipe verrouillée (campagne qui n'est
+   * plus EN_CONSTRUCTION) — désactive toute mutation (retrait, Tourelle). Défaut
+   * `false` : ne change rien pour `AtelierVehiclePage`, qui ne renseigne jamais
+   * cet input (le flux atelier doit rester pleinement fonctionnel).
+   */
+  locked: InputSignal<boolean> = input<boolean>(false);
+
+  /**
    * Émis avec l'entité FRAÎCHE après CHAQUE mutation réussie — TOUTES les opérations
    * de la `EquipmentDataSource` (ajout ET retrait, tourelle incluse) renvoient le
    * véhicule mis à jour. Le parent met à jour son `vehicle` et le re-fournit en input —
@@ -439,6 +447,7 @@ export class EquipmentManager {
    * émis tel quel via `vehicleChanged`.
    */
   removeWeapon(weapon: Weapon): void {
+    if (this.locked()) return;
     this.pendingRemoveWeapon.set(weapon);
   }
 
@@ -459,6 +468,7 @@ export class EquipmentManager {
 
   /** Retire une amélioration — mirroir exact de `removeWeapon` ci-dessus. */
   removeImprovement(improvement: VehicleImprovement): void {
+    if (this.locked()) return;
     this.pendingRemoveImprovement.set(improvement);
   }
 
@@ -482,6 +492,7 @@ export class EquipmentManager {
 
   /** Ouvre la modale d'assignation pour une Tourelle orpheline. */
   openAssignModal(improvement: VehicleImprovement): void {
+    if (this.locked()) return;
     this.selectedOrphanTourelle.set(improvement);
   }
 
@@ -493,6 +504,7 @@ export class EquipmentManager {
    * L'`effect()` du constructeur recharge automatiquement les verdicts de disponibilité.
    */
   assignWeaponToTourelle(weaponNomInterne: string): void {
+    if (this.locked()) return;
     const tourelle = this.selectedOrphanTourelle();
     if (!tourelle) return;
 
@@ -519,6 +531,7 @@ export class EquipmentManager {
    * avec son bouton [Assigner] — l'action est réversible immédiatement.
    */
   unassignWeaponFromTourelle(improvement: VehicleImprovement): void {
+    if (this.locked()) return;
     const vehicle = this.vehicle();
     this.equipmentError.set('');
 

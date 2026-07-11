@@ -107,6 +107,7 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
         prix: x.price,
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
+        lost: x.isLost,
       }),
     ),
     improvements: w.improvements.map(
@@ -122,6 +123,7 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
         weaponNomInterne: null,
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
+        lost: x.isLost,
       }),
     ),
   };

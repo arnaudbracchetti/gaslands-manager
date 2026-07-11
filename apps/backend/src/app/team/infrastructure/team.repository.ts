@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { TeamOrm } from './entities/team.entity';
 import { VehicleOrm } from './entities/vehicle.entity';
 import { CampaignParticipantOrm } from '../../campaign/infrastructure/entities/campaign-participant.entity';
+import { CampaignState, ParticipantStatus } from '../../campaign/domain/enums/campaign.enums';
 import type { ITeamRepository, TeamSummaryDto } from '../domain/team.repository.interface';
 import type { Team } from '../domain/team';
 import { TeamMapper } from './team.mapper';
@@ -45,6 +46,7 @@ export class TeamRepository implements ITeamRepository {
   private async toSummaryDto(team: TeamOrm): Promise<TeamSummaryDto> {
     const vehicleCount = await this.vehicleOrmRepo.count({ where: { teamId: team.id } });
     const isEngaged = (await this.participantRepo.count({ where: { teamId: team.id } })) > 0;
+    const isLockedByCampaign = await this.isLockedByCampaign(team.id);
     return {
       id: team.id,
       name: team.name,
@@ -53,6 +55,7 @@ export class TeamRepository implements ITeamRepository {
       description: team.description ?? null,
       vehicleCount,
       isEngaged,
+      isLockedByCampaign,
       createdAt: team.createdAt,
       updatedAt: team.updatedAt,
     };
@@ -66,7 +69,8 @@ export class TeamRepository implements ITeamRepository {
       relations: { vehicles: { weapons: true, improvements: true } },
     });
     if (!orm) throw new NotFoundException(`Équipe #${teamId} introuvable`);
-    return this.mapper.toDomain(orm);
+    const isLocked = await this.isLockedByCampaign(teamId);
+    return this.mapper.toDomain(orm, isLocked);
   }
 
   async findByVehicleId(vehicleId: number, userId: number): Promise<Team> {
@@ -90,6 +94,22 @@ export class TeamRepository implements ITeamRepository {
     });
     if (!found) throw new NotFoundException(`Arme #${weaponId} introuvable`);
     return this.findByIdForUser(found.teamId, userId);
+  }
+
+  /**
+   * Une équipe est verrouillée dès qu'un participant VALIDATED l'engage dans une
+   * campagne qui n'est plus EN_CONSTRUCTION — cf. docs/spec/TEAMS.md.
+   */
+  private async isLockedByCampaign(teamId: number): Promise<boolean> {
+    const lockedParticipant = await this.participantRepo.findOne({
+      where: {
+        teamId,
+        status: ParticipantStatus.VALIDATED,
+        campaign: { state: Not(CampaignState.EN_CONSTRUCTION) },
+      },
+      relations: { campaign: true },
+    });
+    return lockedParticipant !== null;
   }
 
   // ── Persistance ───────────────────────────────────────────────────────────────

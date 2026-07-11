@@ -83,8 +83,8 @@ const mockCatalog: Sponsor = {
 // le DTO (`weapon.prix`, `improvement.prix`). `buildVehicleSummary` les consomme
 // directement — les fixtures doivent donc inclure les champs du DTO complet.
 
-function buildWeapon(nomInterne: string, prix: number, sold?: boolean): Weapon {
-  return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix, sold };
+function buildWeapon(nomInterne: string, prix: number, sold?: boolean, lost?: boolean): Weapon {
+  return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix, sold, lost };
 }
 
 function buildImprovement(
@@ -274,21 +274,29 @@ describe('buildVehicleSummary', () => {
     expect(summary.emplacementsUtilises).toBe(2); // 1 (arme) + 1 (blindage)
   });
 
-  // ── Arme vendue (atelier, annulation vs revente) ─────────────────────────────
-  // `weapon.sold` n'existe qu'en atelier (jamais posé côté construction d'équipe,
-  // toujours undefined dans ce contexte) — le filtre ne change donc jamais rien
-  // pour Teams/TeamEditPage.
+  // ── Arme vendue/perdue (atelier, annulation vs revente, Table des Épaves) ────
+  // `weapon.sold`/`weapon.lost` n'existent qu'en atelier (jamais posés côté
+  // construction d'équipe, toujours undefined dans ce contexte) — le filtre ne
+  // change donc jamais rien pour Teams/TeamEditPage.
 
-  it('une arme vendue libère son emplacement mais reste incluse dans le coût et les tags', () => {
+  it('une arme vendue libère son emplacement, reste incluse dans le coût, mais disparaît des tags', () => {
     const vehicle = buildVehicle([buildWeapon('mitrailleuse', 3, true)], []);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
     expect(summary.cout).toBe(18); // 15 (camion) + 3 (arme vendue, prix résiduel déjà appliqué côté backend)
     expect(summary.emplacementsUtilises).toBe(0); // emplacement libéré
-    expect(summary.equipements).toContain('Mitrailleuse'); // reste visible (traçabilité)
+    expect(summary.equipements).not.toContain('Mitrailleuse'); // n'est plus une arme active
   });
 
-  it('combine une arme active et une arme vendue : seule l\'active compte pour les emplacements', () => {
+  it('une arme perdue (Table des Épaves) libère son emplacement et disparaît des tags', () => {
+    const vehicle = buildVehicle([buildWeapon('mitrailleuse', 3, false, true)], []);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(0);
+    expect(summary.equipements).not.toContain('Mitrailleuse');
+  });
+
+  it('combine une arme active et une arme vendue : seule l\'active compte pour les emplacements et les tags', () => {
     const vehicle = buildVehicle(
       [buildWeapon('mitrailleuse', 3), buildWeapon('minigun', 6, true)],
       [],
@@ -297,5 +305,6 @@ describe('buildVehicleSummary', () => {
 
     expect(summary.emplacementsUtilises).toBe(1); // mitrailleuse seule (minigun vendue exclue)
     expect(summary.cout).toBe(24); // 15 + 3 + 6 — le coût inclut toujours les deux
+    expect(summary.equipements).toEqual(['Mitrailleuse']); // minigun vendue exclue des tags
   });
 });

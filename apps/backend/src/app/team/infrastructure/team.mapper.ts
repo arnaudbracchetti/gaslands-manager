@@ -19,7 +19,7 @@ export class TeamMapper {
 
   // ── ORM → Domaine ──────────────────────────────────────────────────────────────
 
-  toDomain(orm: TeamOrm): Team {
+  toDomain(orm: TeamOrm, isLocked = false): Team {
     const vehicles = (orm.vehicles ?? []).map((v) => this.vehicleToDomain(v));
     return new Team(
       orm.id,
@@ -29,6 +29,7 @@ export class TeamMapper {
       orm.cans,
       orm.description ?? null,
       vehicles,
+      isLocked,
     );
   }
 

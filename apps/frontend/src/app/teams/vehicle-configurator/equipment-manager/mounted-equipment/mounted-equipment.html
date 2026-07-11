@@ -43,7 +43,7 @@
               {{ resolveWeaponSlot(weapon.nomInterne) }}
             </span>
           </span>
-          @if (!weapon.sold) {
+          @if (!weapon.sold && !locked()) {
             <button
               class="me-remove"
               type="button"
@@ -101,7 +101,7 @@
                   {{ resolveWeaponSlot(improvement.weaponNomInterne) }}
                 </span>
               </span>
-              @if (!improvement.sold) {
+              @if (!improvement.sold && !locked()) {
                 <!--
                   [Désassigner] toujours disponible — y compris sur la Tourelle du Char
                   d'assaut (estDefaut) : seul le RETRAIT de la Tourelle est interdit pour
@@ -157,7 +157,7 @@
                   {{ improvement.emplacement }}
                 </span>
               </span>
-              @if (!improvement.sold) {
+              @if (!improvement.sold && !locked()) {
                 <button
                   class="me-add-weapon"
                   type="button"
@@ -213,7 +213,7 @@
                 title="Fait partie du profil de base de ce véhicule">
                 🔒 Intégré
               </span>
-            } @else if (!improvement.sold) {
+            } @else if (!improvement.sold && !locked()) {
               <button
                 class="me-remove"
                 type="button"
