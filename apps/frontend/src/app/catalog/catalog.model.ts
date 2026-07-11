@@ -45,22 +45,20 @@ export interface Arme {
   /** Catégorie — pilote l'affichage du sélecteur d'orientation : les armes
    *  d'`équipage` n'en ont pas (360° automatique, cf. SPECIFICATION.md §5/§7). */
   type: 'base' | 'avancée' | 'équipage' | 'largable';
-  /** Coût en Jerricans — toujours un nombre pour les armes (jamais "x3" comme
-   *  pour la Tourelle côté améliorations, cf. doc de `Amelioration.prix` ci-dessous). */
   prix: number;
   emplacement: number;
   description: string;
   regles: string;
   sponsors_autorises: string[];
+  /** Cette arme peut-elle être montée sur Tourelle (arc à 360°, coût ×3) ? */
+  montable_tourelle?: boolean;
 }
 
 /** Amélioration du catalogue — miroir de `Amelioration` (backend `catalog.interfaces.ts`). */
 export interface Amelioration {
   nom: string;
   nom_interne: string;
-  /** `number | string` : la Tourelle vaut `"x3"` (3× le prix de l'arme associée,
-   *  cf. SPECIFICATION.md §4.2/§7 — gestion du budget hors périmètre de ce module). */
-  prix: number | string;
+  prix: number;
   emplacement: number;
   description: string;
   regles: string;

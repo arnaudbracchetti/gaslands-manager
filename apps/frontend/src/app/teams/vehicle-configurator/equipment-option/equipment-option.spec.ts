@@ -227,6 +227,45 @@ describe('EquipmentOption', () => {
     expect(emitted[0]).toEqual({ nomInterne: 'mitrailleuse', orientation: 'avant' });
   });
 
+  // ── Montage sur Tourelle (bouton dédié dans le sélecteur d'orientation) ─────
+
+  it('affiche le bouton "Tourelle x3" seulement si l\'arme est montableSurTourelle', () => {
+    setUp({ ...orientableOption, montableSurTourelle: true }, true);
+
+    fixture.nativeElement.querySelector('.option__add')?.click();
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.orientation-btn')) as HTMLButtonElement[];
+    expect(buttons.some((b) => b.textContent?.includes('Tourelle x3'))).toBe(true);
+  });
+
+  it('masque le bouton "Tourelle x3" si l\'arme n\'est pas montableSurTourelle', () => {
+    setUp({ ...orientableOption, montableSurTourelle: false }, true);
+
+    fixture.nativeElement.querySelector('.option__add')?.click();
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.orientation-btn')) as HTMLButtonElement[];
+    expect(buttons.some((b) => b.textContent?.includes('Tourelle x3'))).toBe(false);
+  });
+
+  it('émet chosen({ nomInterne, orientation: \'tourelle\' }) au clic sur "Tourelle x3"', () => {
+    setUp({ ...orientableOption, montableSurTourelle: true }, true);
+
+    const emitted: EquipmentChoice[] = [];
+    outputToObservable(component.chosen).subscribe((c) => emitted.push(c));
+
+    fixture.nativeElement.querySelector('.option__add')?.click();
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.orientation-btn')) as HTMLButtonElement[];
+    const tourelleBtn = buttons.find((b) => b.textContent?.includes('Tourelle x3'));
+    tourelleBtn?.click();
+
+    expect(emitted).toEqual([{ nomInterne: 'mitrailleuse', orientation: 'tourelle' }]);
+    expect(component.choosingOrientation()).toBe(false);
+  });
+
   it('referme le sélecteur sans émettre au clic sur "Annuler"', () => {
     setUp(availableOption, true);
 

@@ -287,7 +287,7 @@ describe('VehicleConfigurator', () => {
 
       const updated: Vehicle = {
         ...mockCreatedVehicle,
-        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z', prix: 2 }],
+        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z', prix: 2, estDefaut: false }],
       };
       const manager = fixture.debugElement.query(By.directive(EquipmentManager)).componentInstance as EquipmentManager;
 

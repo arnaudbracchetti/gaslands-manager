@@ -3,14 +3,14 @@ import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { Team } from '../domain/team';
 import { DomainException } from '../domain/team';
-import type { Orientation } from '../domain/team';
+import type { WeaponOrientation } from '../domain/team';
 import type { WeaponType } from '../domain/value-objects/weapon-type';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface AddWeaponCommand {
   vehicleId: number;
   nomInterne: string;
-  orientation?: Orientation | null;
+  orientation?: WeaponOrientation | null;
   userId: number;
 }
 

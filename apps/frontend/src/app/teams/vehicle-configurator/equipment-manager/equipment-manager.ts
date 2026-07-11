@@ -54,9 +54,7 @@ import {
   VehicleImprovement,
   Weapon,
 } from '../vehicle-builder.model';
-import type { Arme } from '../../../catalog/catalog.model';
 import { EquipmentOption } from '../equipment-option/equipment-option';
-import { TourelleAssignmentModal } from './tourelle-assignment-modal/tourelle-assignment-modal';
 import { TeamBudget } from './team-budget/team-budget';
 import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary';
 import { MountedEquipment } from './mounted-equipment/mounted-equipment';
@@ -65,7 +63,7 @@ import { ConfirmModal } from '../../../shared/confirm-modal/confirm-modal';
 @Component({
   selector: 'app-equipment-manager',
   standalone: true,
-  imports: [EquipmentOption, TourelleAssignmentModal, TeamBudget, VehicleCostSummary, MountedEquipment, ConfirmModal],
+  imports: [EquipmentOption, TeamBudget, VehicleCostSummary, MountedEquipment, ConfirmModal],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',
 })
@@ -182,60 +180,6 @@ export class EquipmentManager {
     return all.filter((i): boolean => i.disponible || this.improvementNeedsOrientation(i));
   });
 
-  // ── Gestion de la Tourelle — modale d'assignation ───────────────────────────
-
-  /**
-   * Tourelle orpheline en cours d'assignation — `null` quand la modale est fermée.
-   * Piloté par `openAssignModal` / fermeture via [Annuler] ou confirmation.
-   */
-  selectedOrphanTourelle: WritableSignal<VehicleImprovement | null> = signal(null);
-
-  /**
-   * Armes du catalogue disponibles pour montage sur une Tourelle.
-   *
-   * Deux filtres appliqués :
-   * - Exclut les armes de type `équipage` : leur arc 360° est natif — la Tourelle
-   *   ne leur apporte rien et le backend les refuserait (cf. `assignWeaponToTourelle`).
-   * - Exclut les armes dont l'emplacement dépasse les slots restants : une arme sur
-   *   Tourelle consomme les mêmes emplacements qu'une arme normale (cf. `weaponSlotsOf`
-   *   backend et `emplacementsUtilises` ici). La modale ne propose que les armes
-   *   effectivement posables — cohérence avec les verdicts de `getAvailableWeapons`.
-   *
-   * Note : `emplacementsUtilises()` tient déjà compte des armes sur Tourelles déjà
-   * assignées. On soustrait l'arme actuellement assignée à la Tourelle sélectionnée
-   * (si elle est en re-assignation) pour ne pas la compter deux fois.
-   */
-  armesPourTourelle: Signal<Arme[]> = computed((): Arme[] => {
-    const slotsRestants = this.emplacementsTotal() - this.emplacementsUtilises();
-    // Si la Tourelle sélectionnée a déjà une arme assignée (re-assignation),
-    // son slot ET son coût étaient déjà comptés (dans emplacementsUtilises et
-    // budgetRestant) — on les libère temporairement pour évaluer le remplacement
-    // correctement (symétrique de la règle backend Vehicle.assignWeaponToTourelle).
-    const tourelleSelectionnee = this.selectedOrphanTourelle();
-    const armeCourante = (() => {
-      if (!tourelleSelectionnee?.weaponNomInterne) return null;
-      return this.sponsorCatalog().armes.find(
-        (a): boolean => a.nom_interne === tourelleSelectionnee.weaponNomInterne,
-      ) ?? null;
-    })();
-    const slotOccupeTourelleCourante = armeCourante?.emplacement ?? 0;
-    const slotsDisponibles = slotsRestants + slotOccupeTourelleCourante;
-
-    // Budget disponible pour la NOUVELLE arme : on « rend » le coût ×3 de l'arme
-    // actuellement montée sur la Tourelle sélectionnée (cas ré-assignation).
-    // Le coût d'une arme sur Tourelle = 3 × son prix (cf. backend Improvement.price ;
-    // le ×3 n'est pas pré-résolu par le backend pour une arme non encore montée).
-    const coutCourantTourelle = (armeCourante?.prix ?? 0) * 3;
-    const budgetDisponible = this.budgetRestant() + coutCourantTourelle;
-
-    return this.sponsorCatalog().armes.filter(
-      (a): boolean =>
-        a.type !== 'équipage' &&
-        a.emplacement <= slotsDisponibles &&
-        a.prix * 3 <= budgetDisponible,
-    );
-  });
-
   // ── Emplacements (computed) — fusion à l'identique des deux mirroirs ─────────
   // (cf. en-têtes d'origine pour le raisonnement complet : pool PARTAGÉ entre
   // armes et améliorations, résolution `nomInterne → emplacement` via le
@@ -257,10 +201,13 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     const catalog = this.sponsorCatalog();
 
-    // Armes classiques (entités Weapon). `sold` (atelier uniquement, jamais posé côté
-    // construction d'équipe) libère l'emplacement — l'arme reste affichée (barrée) mais
-    // n'est physiquement plus sur le véhicule, contrairement au coût qui reste inclus
-    // (prix résiduel auto-ajustant côté backend, cf. `Weapon.price`).
+    // Armes classiques (entités Weapon) — y compris celles montées sur Tourelle
+    // (`orientation: 'tourelle'`), qui consomment le même emplacement catalogue
+    // qu'une arme normale (seul le coût est ×3, cf. `Weapon.price` backend).
+    // `sold` (atelier uniquement, jamais posé côté construction d'équipe) libère
+    // l'emplacement — l'arme reste affichée (barrée) mais n'est physiquement plus
+    // sur le véhicule, contrairement au coût qui reste inclus (prix résiduel
+    // auto-ajustant côté backend, cf. `Weapon.price`).
     const weaponSlots = vehicle.weapons
       .filter((w): boolean => !w.sold)
       .reduce((sum: number, w): number => {
@@ -278,21 +225,7 @@ export class EquipmentManager {
       return sum + (imp.emplacement ?? 0);
     }, 0);
 
-    // Armes sur Tourelles achetées (`estDefaut: false`) — stockées dans
-    // `improvement.weaponNomInterne`, pas dans `vehicle.weapons`, mais elles
-    // consomment les mêmes emplacements qu'une arme normale.
-    // Miroir de `VehicleService.weaponSlotsOf` côté backend (même règle d'exemption :
-    // Tourelles intégrées `estDefaut: true` exclues).
-    const tourelleWeaponSlots = vehicle.improvements
-      .filter((imp): boolean =>
-        imp.nomInterne === 'tourelle' && imp.weaponNomInterne !== null && !imp.estDefaut,
-      )
-      .reduce((sum: number, imp): number => {
-        const arme = catalog.armes.find((a): boolean => a.nom_interne === imp.weaponNomInterne);
-        return sum + (arme?.emplacement ?? 0);
-      }, 0);
-
-    return weaponSlots + improvementSlots + tourelleWeaponSlots;
+    return weaponSlots + improvementSlots;
   });
 
   // ── Coût (computed) — carte récapitulative (en-tête de `.em-current`) ───────
@@ -338,11 +271,10 @@ export class EquipmentManager {
   /**
    * `true` si le coût cumulé dépasse le budget. En principe jamais atteignable via
    * l'ajout d'équipement — la règle "Budget de l'équipe insuffisant" côté backend
-   * marque par avance toute option trop chère `disponible: false`. Le cas Tourelle
-   * (`prix: "x3"`, coût dépendant de l'arme assignée) est désormais lui aussi couvert :
-   * `armesPourTourelle` masque les armes dont le coût ×3 dépasse le budget, et le
-   * backend (`Vehicle.assignWeaponToTourelle`) refuse l'assignation hors budget
-   * (HTTP 400). Ce signal reste un filet de sécurité d'affichage.
+   * marque par avance toute option trop chère `disponible: false`. Le montage sur
+   * Tourelle (coût ×3) est validé par `Vehicle.canAddWeapon`/`addWeapon` au moment
+   * de l'achat (HTTP 400 si le budget ne suit pas). Ce signal reste un filet de
+   * sécurité d'affichage.
    */
   budgetDepasse: Signal<boolean> = computed((): boolean => this.budgetRestant() < 0);
 
@@ -484,61 +416,6 @@ export class EquipmentManager {
       next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cette amélioration. Réessayez.');
-      },
-    });
-  }
-
-  // ── Gestion de la Tourelle — assignation / désassignation ───────────────────
-
-  /** Ouvre la modale d'assignation pour une Tourelle orpheline. */
-  openAssignModal(improvement: VehicleImprovement): void {
-    if (this.locked()) return;
-    this.selectedOrphanTourelle.set(improvement);
-  }
-
-  /**
-   * Assigne une arme de catalogue à la Tourelle sélectionnée (`selectedOrphanTourelle`).
-   *
-   * Appelle `PATCH .../improvements/:id/weapon` et met à jour le véhicule en émettant
-   * l'entité fraîche vers le parent. La modale se ferme après confirmation.
-   * L'`effect()` du constructeur recharge automatiquement les verdicts de disponibilité.
-   */
-  assignWeaponToTourelle(weaponNomInterne: string): void {
-    if (this.locked()) return;
-    const tourelle = this.selectedOrphanTourelle();
-    if (!tourelle) return;
-
-    const vehicle = this.vehicle();
-    this.equipmentError.set('');
-
-    this.dataSource.assignWeaponToTourelle(vehicle.id, tourelle.id, weaponNomInterne).subscribe({
-      next: (updated: Vehicle): void => {
-        this.selectedOrphanTourelle.set(null);
-        this.vehicleChanged.emit(updated);
-      },
-      error: (err: HttpErrorResponse): void => {
-        this.selectedOrphanTourelle.set(null);
-        this.equipmentError.set(err.error?.message ?? 'Impossible d\'assigner cette arme à la Tourelle. Réessayez.');
-      },
-    });
-  }
-
-  /**
-   * Désassigne l'arme d'une Tourelle (assigné → orphelin) sans supprimer la Tourelle.
-   *
-   * Contrairement au retrait d'arme ordinaire (`removeWeapon`), aucune confirmation
-   * n'est demandée : l'utilisateur revient simplement à l'état "Tourelle orpheline"
-   * avec son bouton [Assigner] — l'action est réversible immédiatement.
-   */
-  unassignWeaponFromTourelle(improvement: VehicleImprovement): void {
-    if (this.locked()) return;
-    const vehicle = this.vehicle();
-    this.equipmentError.set('');
-
-    this.dataSource.unassignWeaponFromTourelle(vehicle.id, improvement.id).subscribe({
-      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
-      error: (err: HttpErrorResponse): void => {
-        this.equipmentError.set(err.error?.message ?? 'Impossible de désassigner cette arme. Réessayez.');
       },
     });
   }

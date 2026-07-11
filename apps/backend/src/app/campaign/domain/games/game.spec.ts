@@ -27,6 +27,7 @@ import { ParticipantStatus } from '../enums/campaign.enums';
 import { makeTestParticipant, makeVehicleType, makeWeaponType } from '../test-helpers';
 import { Team } from '../../../team/domain/team';
 import { Vehicle } from '../../../team/domain/vehicle';
+import { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 
 /** Stub de WreckTable qui retourne un outcome et des événements pré-construits.
  * Isole Game.resolveWreck() de la logique de WreckTable (testée dans wreck-table.spec.ts). */
@@ -593,5 +594,53 @@ describe('Game — changeEquipment', () => {
     expect(result.deleteEventId).toBeNull();
     expect(result.events).toHaveLength(1);
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2); // floor(5/2)
+  });
+
+  it('BUY WEAPON avec orientation \'tourelle\' : coût ×3 débité de la cagnotte', () => {
+    const { participant } = makeTestParticipant(); // wallet = 50
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const montable = WeaponType.from({
+      nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
+      prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+    });
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
+      orientation: 'tourelle',
+      resolvedVehicleType: null, resolvedWeaponType: montable, resolvedImprovementType: null,
+    });
+
+    const event = result.events[0] as EquipmentChangedEvent;
+    expect(event.cost).toBe(15); // 3 × 5
+  });
+
+  it('BUY WEAPON avec orientation \'tourelle\' refuse une arme non montable sur Tourelle', () => {
+    const { participant } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    expect(() => game.changeEquipment(participant, {
+      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
+      orientation: 'tourelle',
+      resolvedVehicleType: null, resolvedWeaponType: makeWeaponType(), resolvedImprovementType: null,
+    })).toThrow('ne peut pas être montée sur Tourelle');
+  });
+
+  it('SELL WEAPON refuse une arme intégrée au profil de base (estDefaut)', () => {
+    const canonType = WeaponType.from({
+      nom: 'Canon de 125mm', nom_interne: 'canon_125mm', type: 'avancée',
+      prix: 6, emplacement: 3, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+    });
+    const canon = new Weapon(1, canonType, 'tourelle', true);
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [canon], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    expect(() => game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: canon.id,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
+    })).toThrow('intégrées au profil de base');
   });
 });

@@ -68,6 +68,14 @@
           {{ orientation }}
         </button>
       }
+      @if (option().montableSurTourelle) {
+        <button
+          class="orientation-btn"
+          type="button"
+          (click)="$event.stopPropagation(); onOrientationChosen('tourelle')">
+          Tourelle x3
+        </button>
+      }
       <button class="orientation-cancel" type="button" (click)="$event.stopPropagation(); cancelOrientation()">
         Annuler
       </button>

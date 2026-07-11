@@ -82,7 +82,6 @@ export class CatalogController {
    * GET /api/catalog/ameliorations
    *
    * Retourne toutes les améliorations de véhicule du catalogue.
-   * Note : le champ `prix` peut être un nombre (Jerricans) ou "x3" (Tourelle).
    */
   @Get('ameliorations')
   getAllAmeliorations(): Amelioration[] {

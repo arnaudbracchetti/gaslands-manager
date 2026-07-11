@@ -5,8 +5,8 @@
  * actuellement engagée, et émet soit le `teamId` choisi (ou `null` pour se
  * désengager), soit `cancelled`.
  *
- * Pattern identique à TourelleAssignmentModal : visibilité contrôlée par le
- * parent via `@if (showChangeTeamModal())` dans `campaign-detail.html`.
+ * Visibilité contrôlée par le parent via `@if (showChangeTeamModal())` dans
+ * `campaign-detail.html` — même pattern que `ConfirmModal`.
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, effect, input, output, signal } from '@angular/core';
 import type { Team } from '../../teams/team.model';

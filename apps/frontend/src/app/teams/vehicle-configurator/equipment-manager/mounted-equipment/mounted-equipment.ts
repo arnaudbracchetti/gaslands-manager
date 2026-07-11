@@ -1,9 +1,9 @@
 /**
  * MountedEquipment — composant "dumb" affichant les armes et améliorations
  * MONTÉES sur le véhicule en cours d'édition ("Armes (N)"/"Améliorations (N)",
- * ex-sections `.em-current__group` d'`EquipmentManager`), avec toute la
- * logique d'affichage de la Tourelle (ligne fusionnée "Arme (Tourelle)",
- * Tourelle orpheline, badges 🔒 *Intégré*).
+ * ex-sections `.em-current__group` d'`EquipmentManager`). Une arme montée sur
+ * Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans
+ * la liste des armes — ce n'est pas une ligne d'amélioration séparée.
  *
  * Purement présentationnel : reçoit `weapons`/`improvements` (entité brute du
  * véhicule) et le `sponsorCatalog` déjà chargé par le parent — nécessaire pour
@@ -11,10 +11,10 @@
  * de `resolveWeaponName`/`resolveImprovementName`/`resolveWeaponSlot`,
  * déplacées ici telles quelles depuis `EquipmentManager`).
  *
- * Chaque action utilisateur (retrait, assignation/désassignation Tourelle) est
- * émise via `output()` — c'est `EquipmentManager` (le parent) qui demande
- * confirmation (`window.confirm`) et appelle l'API, conformément au pattern
- * "le parent seul décide" (ARCHITECTURE.md §2.5).
+ * Chaque action utilisateur (retrait) est émise via `output()` — c'est
+ * `EquipmentManager` (le parent) qui demande confirmation (`window.confirm`)
+ * et appelle l'API, conformément au pattern "le parent seul décide"
+ * (ARCHITECTURE.md §2.5).
  */
 import {
   Component,
@@ -59,12 +59,6 @@ export class MountedEquipment {
 
   /** Demande de retrait d'une amélioration — mirroir de `weaponRemoved`. */
   improvementRemoved: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
-
-  /** Ouvre la modale d'assignation d'arme pour une Tourelle orpheline. */
-  tourelleAssignRequested: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
-
-  /** Désassigne l'arme d'une Tourelle (assigné → orphelin), sans confirmation. */
-  tourelleUnassignRequested: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
 
   // ── Filtre "masquer les équipements vendus/détruits" ────────────────────────
   // Filtre d'affichage pur sur des données déjà reçues — état local à ce

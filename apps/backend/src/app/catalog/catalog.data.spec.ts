@@ -108,9 +108,11 @@ describe('Validité YAML — chargement sans erreur', () => {
   });
 
   it('charge les améliorations (le parse de amelioration.yml a réussi)', () => {
-    // 11 de base + 3 variantes sponsor (Idris/Slime/Scarlett) + 6 exclusives
-    // (Mégaphone, Micro-Blindage, 4 Remorques) = 20 améliorations
-    expect(ameliorations).toHaveLength(20);
+    // 10 de base (Tourelle n'est plus une amélioration — c'est un attribut de
+    // l'arme, WeaponType.montableSurTourelle) + 3 variantes sponsor
+    // (Idris/Slime/Scarlett) + 6 exclusives (Mégaphone, Micro-Blindage,
+    // 4 Remorques) = 19 améliorations
+    expect(ameliorations).toHaveLength(19);
   });
 
   it('tous les sponsors ont un nom non vide', () => {

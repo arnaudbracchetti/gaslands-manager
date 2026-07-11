@@ -10,4 +10,6 @@ export interface AvailableWeaponDto {
   regles: string;
   disponible: boolean;
   raison?: string;
+  /** Cette arme peut-elle être montée sur Tourelle (arc à 360°, coût ×3) ? */
+  montableSurTourelle: boolean;
 }

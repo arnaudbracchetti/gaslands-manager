@@ -47,8 +47,6 @@ import { RemoveWeaponUseCase } from './application/remove-weapon.usecase';
 import { GetAvailableImprovementsUseCase } from './application/get-available-improvements.usecase';
 import { AddImprovementUseCase } from './application/add-improvement.usecase';
 import { RemoveImprovementUseCase } from './application/remove-improvement.usecase';
-import { AssignWeaponToTourelleUseCase } from './application/assign-weapon-to-tourelle.usecase';
-import { UnassignWeaponFromTourelleUseCase } from './application/unassign-weapon-from-tourelle.usecase';
 
 import type { ITeamRepository } from './domain/team.repository.interface';
 import type { ICatalogRepository } from './domain/catalog.repository.interface';
@@ -163,17 +161,6 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     {
       provide: RemoveImprovementUseCase,
       useFactory: (tr: ITeamRepository) => new RemoveImprovementUseCase(tr),
-      inject: [TEAM_REPOSITORY],
-    },
-    {
-      provide: AssignWeaponToTourelleUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
-        new AssignWeaponToTourelleUseCase(tr, cr),
-      inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
-    },
-    {
-      provide: UnassignWeaponFromTourelleUseCase,
-      useFactory: (tr: ITeamRepository) => new UnassignWeaponFromTourelleUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
   ],

@@ -56,9 +56,6 @@ export class VehicleImprovementOrm {
   @Column({ default: false })
   estDefaut: boolean;
 
-  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
-  weaponNomInterne: string | null;
-
   @ManyToOne(() => VehicleOrm, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
   vehicle: VehicleOrm;

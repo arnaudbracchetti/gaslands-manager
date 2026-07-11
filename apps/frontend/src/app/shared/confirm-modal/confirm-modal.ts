@@ -3,7 +3,7 @@
  *
  * Composant **dumb** : affiche un message et deux boutons (confirmer / annuler),
  * émet le choix via outputs. La visibilité est contrôlée par le parent via
- * `@if (showX())` — même pattern que ChangeTeamModal et TourelleAssignmentModal.
+ * `@if (showX())` — même pattern que `ChangeTeamModal`.
  *
  * Design : Panel métal + coins d'enregistrement + bande HazardTape en tête,
  * boutons fidèles au composant Button du design system Terres Brûlées.

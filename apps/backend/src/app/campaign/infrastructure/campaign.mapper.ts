@@ -29,7 +29,7 @@ import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event'
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
 import { WeightClass } from '../domain/enums/weight-class.enum';
-import type { Orientation } from '../../team/domain/team';
+import type { WeaponOrientation } from '../../team/domain/team';
 
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
@@ -154,7 +154,7 @@ export class CampaignMapper {
   private toEquipmentChangedEvent(orm: GameEventOrm): EquipmentChangedEvent {
     const operation = orm.operation as EquipmentOperation;
     const entityType = orm.entityType as EquipmentEntityType;
-    const orientation = orm.orientation as Orientation | null;
+    const orientation = orm.orientation as WeaponOrientation | null;
 
     // La résolution du Value Object catalogue est OBLIGATOIRE pour un BUY (`execute()`
     // recrée l'entité transiente et en a besoin), mais seulement best-effort pour un SELL :

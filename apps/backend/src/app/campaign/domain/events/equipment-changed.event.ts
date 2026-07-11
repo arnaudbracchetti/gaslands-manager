@@ -3,7 +3,7 @@ import type { CampaignParticipant } from '../campaign-participant';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
-import type { Orientation } from '../../../team/domain/team';
+import type { Orientation, WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 
 export { EquipmentOperation, EquipmentEntityType };
@@ -52,7 +52,9 @@ export class EquipmentChangedEvent extends GameEvent {
     readonly cost: number,
     readonly targetVehicleId: number | null,
     readonly targetEntityId: number | null,
-    readonly orientation: Orientation | null,
+    /** WEAPON : 5 valeurs possibles (dont `'tourelle'`, arc à 360°, coût ×3, figée à
+     *  l'achat). VEHICLE/IMPROVEMENT n'utilisent jamais `'tourelle'`. */
+    readonly orientation: WeaponOrientation | null,
     private readonly resolvedVehicleType: VehicleType | null,
     private readonly resolvedWeaponType: WeaponType | null,
     private readonly resolvedImprovementType: ImprovementType | null = null,
@@ -116,7 +118,9 @@ export class EquipmentChangedEvent extends GameEvent {
         p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, entityId);
         break;
       case EquipmentEntityType.IMPROVEMENT:
-        p.team.addCampaignImprovement(this.targetVehicleId!, this.resolvedImprovementType!, this.orientation, entityId);
+        // Une amélioration ne porte jamais 'tourelle' — invariant garanti à la construction
+        // de l'événement (jamais émis par le use case pour ce entityType).
+        p.team.addCampaignImprovement(this.targetVehicleId!, this.resolvedImprovementType!, this.orientation as Orientation | null, entityId);
         break;
     }
   }

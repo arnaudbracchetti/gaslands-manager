@@ -4,6 +4,7 @@ import type { ICatalogRepository } from '../domain/catalog.repository.interface'
 import type { Team } from '../domain/team';
 import type { VehicleType } from '../domain/value-objects/vehicle-type';
 import { Improvement } from '../domain/improvement';
+import { Weapon } from '../domain/weapon';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface AddVehicleCommand {
@@ -52,7 +53,15 @@ export class AddVehicleUseCase {
       })
       .filter((imp): imp is Improvement => imp !== null);
 
-    team.addVehicle(vehicleType, defaultImprovements);
+    const defaultWeapons: Weapon[] = [];
+    if (vehicleType.defaultWeaponNomInterne) {
+      const weaponType = this.catalogRepo.getWeaponType(vehicleType.defaultWeaponNomInterne);
+      if (weaponType) {
+        defaultWeapons.push(new Weapon(0, weaponType, 'tourelle', true));
+      }
+    }
+
+    team.addVehicle(vehicleType, defaultImprovements, defaultWeapons);
     return this.teamRepo.save(team);
   }
 }

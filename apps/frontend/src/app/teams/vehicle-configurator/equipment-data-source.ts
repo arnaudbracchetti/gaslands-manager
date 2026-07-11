@@ -14,10 +14,15 @@
  * backend (`ITeamRepository`/`ICatalogRepository` + tokens) — cf. doc de conception
  * 2026-07-07-atelier-reutilisation-configurateur-design.md.
  *
- * Convention de retour : toutes les mutations (add/remove/tourelle) renvoient le
- * `Vehicle` MIS À JOUR, pour que le composant émette directement `vehicleChanged`
- * sans recharger toute l'équipe. Côté équipe, cela a nécessité que les routes DELETE
+ * Convention de retour : toutes les mutations (add/remove) renvoient le `Vehicle`
+ * MIS À JOUR, pour que le composant émette directement `vehicleChanged` sans
+ * recharger toute l'équipe. Côté équipe, cela a nécessité que les routes DELETE
  * renvoient le véhicule (F4) ; côté atelier, l'implémentation relit l'état d'atelier.
+ *
+ * Le montage sur Tourelle n'est pas une opération séparée : c'est une valeur
+ * d'orientation choisie à l'achat de l'arme (`EquipmentChoice.orientation =
+ * 'tourelle'`), portée par `addWeapon` ci-dessous — il n'existe pas de Tourelle
+ * indépendante à réassigner, seulement une arme qu'on revend puis rachète.
  */
 import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -35,8 +40,6 @@ export interface EquipmentDataSource {
   addImprovement(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle>;
   removeWeapon(vehicleId: number, weaponId: number): Observable<Vehicle>;
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle>;
-  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponNomInterne: string): Observable<Vehicle>;
-  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): Observable<Vehicle>;
 }
 
 export const EQUIPMENT_DATA_SOURCE = new InjectionToken<EquipmentDataSource>('EquipmentDataSource');

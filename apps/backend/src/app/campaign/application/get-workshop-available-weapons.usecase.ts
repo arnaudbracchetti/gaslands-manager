@@ -43,7 +43,7 @@ export class GetWorkshopAvailableWeaponsUseCase {
     const weaponTypes = this.catalog.getWeaponTypesForSponsor(me.team.sponsor);
 
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
-      const result = vehicle.canAddWeapon(wt, null, budget);
+      const result = vehicle.canAddWeapon(wt, null, false, budget);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,
@@ -54,6 +54,7 @@ export class GetWorkshopAvailableWeaponsUseCase {
         regles: wt.regles,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
+        montableSurTourelle: wt.montableSurTourelle,
       };
     });
   }

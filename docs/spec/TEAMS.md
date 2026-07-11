@@ -20,7 +20,7 @@
 
 Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
 
-**Verrouillage par une campagne en cours** : dès qu'une équipe est engagée (participant `VALIDATED`) dans une campagne dont l'état n'est plus `EN_CONSTRUCTION` (`EN_COURS` ou `TERMINEE`), l'équipe est intégralement verrouillée — `Team.assertNotLocked()` refuse (`DomainException` → HTTP 400) toute mutation directe : modification/suppression de l'équipe, ajout/suppression de véhicule, arme, amélioration, assignation de Tourelle. Le flag est calculé par `TeamRepository` (jointure `CampaignParticipant` → `Campaign.state`) au chargement de l'agrégat, pas stocké en colonne. **Le flux atelier campagne n'est pas concerné** — pendant qu'une partie est en statut `ATELIER`, l'équipement continue de transiter par l'event-sourcing (`POST /api/campaigns/:id/events/equipment`, cf. [CAMPAIGN.md](CAMPAIGN.md)), qui utilise des méthodes dédiées de l'agrégat (`addCampaignVehicle`, `addCampaignWeapon`…) non soumises à ce verrou.
+**Verrouillage par une campagne en cours** : dès qu'une équipe est engagée (participant `VALIDATED`) dans une campagne dont l'état n'est plus `EN_CONSTRUCTION` (`EN_COURS` ou `TERMINEE`), l'équipe est intégralement verrouillée — `Team.assertNotLocked()` refuse (`DomainException` → HTTP 400) toute mutation directe : modification/suppression de l'équipe, ajout/suppression de véhicule, arme (montée sur Tourelle ou non), amélioration. Le flag est calculé par `TeamRepository` (jointure `CampaignParticipant` → `Campaign.state`) au chargement de l'agrégat, pas stocké en colonne. **Le flux atelier campagne n'est pas concerné** — pendant qu'une partie est en statut `ATELIER`, l'équipement continue de transiter par l'event-sourcing (`POST /api/campaigns/:id/events/equipment`, cf. [CAMPAIGN.md](CAMPAIGN.md)), qui utilise des méthodes dédiées de l'agrégat (`addCampaignVehicle`, `addCampaignWeapon`…) non soumises à ce verrou.
 
 ---
 
@@ -28,7 +28,11 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 Chaque carte d'équipe affiche la liste de ses véhicules — nom (résolu depuis le catalogue via `nomInterne`) et coût total (prix de base du véhicule + somme des prix de ses armes et améliorations montées). Le frontend charge cette liste via `GET /api/teams/:id/vehicles` et résout les prix via le catalogue du sponsor (`GET /api/catalog/sponsors/:nom`, déjà chargé pour le carousel/builder).
 
-**Cas particulier de la Tourelle** : son coût réel (3× le prix de l'arme associée) ne peut pas être déterminé — `VehicleImprovement` ne mémorise pas quelle arme une Tourelle équipe. Le frontend l'exclut donc du total et préfixe l'affichage d'un « ≈ » pour signaler un montant minoré (cf. `VehicleSummary.coutApproximatif`, `apps/frontend/src/app/teams/vehicle-summary.ts`).
+**Cas du montage sur Tourelle** : la Tourelle n'est pas une amélioration séparée mais une
+valeur d'orientation de l'arme (`Weapon.orientation === 'tourelle'`, cf.
+[VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation))
+— son coût ×3 est déjà porté par `weapon.prix`, résolu côté backend. Le total affiché
+est donc toujours exact, sans approximation (cf. `apps/frontend/src/app/teams/vehicle-summary.ts`).
 
 ---
 

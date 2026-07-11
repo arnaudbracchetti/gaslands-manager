@@ -14,7 +14,17 @@
 > comme compteur mutable** (remplacé par un getter dérivé de `Team.remainingBudget` +
 > récompenses, prouvé mathématiquement équivalent). **Implémenté le 2026-07-11** — cf.
 > [spec/CAMPAIGN.md §Annulation d'achat vs revente](../spec/CAMPAIGN.md#annulation-dachat-vs-revente).
-> Le reste de cette section D3/D4 (enforcement, gardes sponsor/8, Tourelle) reste Temps 2.
+> Le reste de cette section D3/D4 (enforcement, gardes sponsor/8) reste Temps 2.
+>
+> **La Tourelle a été retirée du modèle d'amélioration** (2026-07-11) — ce document la
+> décrit encore comme une amélioration avec assignation d'arme séparée (`EquipmentDataSource.
+> assignWeaponToTourelle`/`unassignWeaponFromTourelle`, ci-dessous), une conception
+> **abandonnée**. Le montage sur Tourelle est désormais un attribut de l'arme
+> (`Weapon.montageTourelle`, coché à l'achat) — cf.
+> [spec/VEHICLES.md §Montage sur Tourelle](../spec/VEHICLES.md#montage-sur-tourelle-attribut-de-larme).
+> Conséquence directe pour l'atelier : aucun endpoint ni événement dédié n'est nécessaire,
+> `POST .../events/equipment` (achat d'arme) suffit — la Tourelle hérite automatiquement du
+> mécanisme de revente/annulation déjà en place pour toute arme.
 
 ---
 

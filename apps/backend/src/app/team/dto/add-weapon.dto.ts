@@ -1,6 +1,7 @@
-import type { Orientation } from '../domain/vehicle-build';
+import type { WeaponOrientation } from '../domain/team';
 
 export class AddWeaponDto {
   nomInterne: string;
-  orientation?: Orientation;
+  /** 5 valeurs possibles, dont `'tourelle'` (montage sur Tourelle — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation;
 }

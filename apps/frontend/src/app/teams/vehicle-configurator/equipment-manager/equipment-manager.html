@@ -59,9 +59,7 @@
       [sponsorCatalog]="sponsorCatalog()"
       [locked]="locked()"
       (weaponRemoved)="removeWeapon($event)"
-      (improvementRemoved)="removeImprovement($event)"
-      (tourelleAssignRequested)="openAssignModal($event)"
-      (tourelleUnassignRequested)="unassignWeaponFromTourelle($event)" />
+      (improvementRemoved)="removeImprovement($event)" />
 
   </section>
 
@@ -138,19 +136,6 @@
 
   </div>
   <!-- /.em-layout -->
-
-  <!-- ═══ Modale d'assignation d'arme sur Tourelle ═══
-       Composant dumb : reçoit la liste filtrée des armes posables et émet
-       soit `weaponChosen` (nomInterne), soit `cancelled`. La visibilité est
-       gérée ici par `@if` — le composant s'affiche toujours quand instancié.
-       Placée hors de `.em-layout` (overlay `position: fixed`, indépendant
-       de la grille). -->
-  @if (selectedOrphanTourelle()) {
-    <app-tourelle-assignment-modal
-      [armes]="armesPourTourelle()"
-      (weaponChosen)="assignWeaponToTourelle($event)"
-      (cancelled)="selectedOrphanTourelle.set(null)" />
-  }
 
   @if (pendingRemoveWeapon()) {
     <app-confirm-modal

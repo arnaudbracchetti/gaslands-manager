@@ -9,10 +9,10 @@
 #                  Format variante sponsor : "<amelioration>_<sponsor>"
 #                  Ex : "nitro_idris" pour la Nitro à moitié prix pour Idris.
 #                  Items exclusifs : nom descriptif simple (ex: "megaphone").
-#   prix         — Coût en Jerricans.
-#                  Cas particulier : la Tourelle utilise "x3" (string, pas un nombre).
-#                  Cela signifie que son coût = 3× le prix de l'arme montée dessus.
-#                  La Tourelle ne s'applique qu'aux armes (jamais aux améliorations).
+#   prix         — Coût en Jerricans (number).
+#                  Le montage sur Tourelle n'est PAS une amélioration : c'est un
+#                  attribut de l'arme elle-même (cf. armes.yml, montable_tourelle),
+#                  coché à l'achat de l'arme, qui triple son coût.
 #   emplacement  — Slots occupés sur le véhicule (0 = n'occupe pas de slot)
 #   description  — Texte libre affiché dans l'UI
 #   regles       — Règles spéciales au format liste Markdown
@@ -331,21 +331,6 @@ ameliorations_vehicules:
       - Ce déplacement dévié n'occasionne pas de Collision.
     sponsors_autorises:
       - "Mishkin"
-
-  - nom: "Tourelle"
-    nom_interne: "tourelle"
-    prix: "x3"
-    emplacement: 0
-    description: |
-      Modification d'arme triplant son coût pour lui accorder un arc de tir complet à 360°.
-    regles: |
-      - Lorsque vous achetez une arme de tir pour ce véhicule, vous pouvez payer trois fois son coût de base pour la monter sur Tourelle.
-      - Une arme montée sur Tourelle bénéficie d'un Arc de Tir à 360°.
-    sponsors_autorises:
-      - "Rutherford"
-      - "Miyazaki"
-      - "Mishkin"
-      - "Idris"
       - "Slime"
       - "La Geôlière"
       - "Scarlett"

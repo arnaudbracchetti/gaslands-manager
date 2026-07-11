@@ -373,9 +373,13 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   en Temps 2** (cf.
   [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
   enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
-  n'est aujourd'hui gardé que par la cagnotte), limite de 8 véhicules, gestion de la
-  **Tourelle** en atelier (exclue au Temps 1), et l'UI des Chocs/séquelles/véhicules
-  perdus.
+  n'est aujourd'hui gardé que par la cagnotte), limite de 8 véhicules, et l'UI des
+  Chocs/séquelles/véhicules perdus. Le montage sur Tourelle, lui, n'est pas une
+  fonctionnalité à part entière à ajouter en atelier : c'est une valeur d'orientation
+  de l'arme (`Weapon.orientation = 'tourelle'`, cf.
+  [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)), acheter une
+  arme montée sur Tourelle en atelier passe par le `POST .../events/equipment` **existant**
+  (`orientation: 'tourelle'` dans le corps), sans endpoint ni événement dédié.
 - **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
   (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
   `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
@@ -554,7 +558,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes **et améliorations**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) — **Tourelle exclue** au Temps 1 |
-| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, … }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
+| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`. `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
 | POST | `/api/campaigns/:id/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` — 204. Même résolution automatique de l'atelier courant que `/events/equipment` |

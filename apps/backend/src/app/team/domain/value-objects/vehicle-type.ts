@@ -55,6 +55,11 @@ export class VehicleType {
     return this.raw.ameliorations_defaut ?? [];
   }
 
+  /** `nom_interne` de l'arme intégrée par défaut (montée sur Tourelle), le cas échéant. */
+  get defaultWeaponNomInterne(): string | undefined {
+    return this.raw.arme_defaut;
+  }
+
   toRaw(): Vehicule {
     return this.raw;
   }

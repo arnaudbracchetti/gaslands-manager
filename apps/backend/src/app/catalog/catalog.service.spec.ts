@@ -17,7 +17,6 @@
  * - Chargement correct du nombre d'items depuis le YAML
  * - Relations pré-résolues : Rutherford a l'Hélicoptère, Mishkin ne l'a pas
  * - Armes exclusives Mishkin (Canon à Arc Électrique)
- * - Cas particulier : prix "x3" (string) préservé pour la Tourelle
  * - Sponsor inexistant retourne undefined
  * - Tous les sponsors ont leurs relations (véhicules, armes, améliorations) résolues
  * - Présence du champ nom_interne sur tous les items
@@ -225,24 +224,6 @@ ameliorations_vehicules:
       - "La Patrouille de l'Autoroute"
       - "Verney"
       - "Rusty et ses Trafiquants d'Alcool"
-  # Tourelle — prix "x3" (string), jamais un nombre
-  - nom: "Tourelle"
-    nom_interne: "tourelle"
-    prix: "x3"
-    emplacement: 0
-    description: "Permet de tirer dans un arc de 360°"
-    regles: |
-      - Coût = 3× le prix de l'arme concernée. La Tourelle ne s'applique qu'aux armes.
-    sponsors_autorises:
-      - "Rutherford"
-      - "Mishkin"
-      - "Idris"
-      - "Slime"
-      - "Scarlett"
-      - "La Geôlière"
-      - "La Patrouille de l'Autoroute"
-      - "Verney"
-      - "Rusty et ses Trafiquants d'Alcool"
   # Nitro original — tous SAUF Idris (Idris a la variante Nitro (Idris))
   - nom: "Nitro"
     nom_interne: "nitro"
@@ -427,12 +408,12 @@ describe('CatalogService', () => {
       expect(service.getAllArmes()).toHaveLength(2);
     });
 
-    it('charge le bon nombre d\'améliorations (14)', () => {
-      // Blindage + Tourelle + Nitro + Nitro(Idris) + Bélier + Bélier(Slime) +
+    it('charge le bon nombre d\'améliorations (13)', () => {
+      // Blindage + Nitro + Nitro(Idris) + Bélier + Bélier(Slime) +
       // MembreEquipage + MembreEquipage(Scarlett) + Mégaphone + Micro-Blindage +
       // Remorque de Transport + Remorque Légère + Remorque Moyenne + Remorque Lourde
-      // = 14 améliorations
-      expect(service.getAllAmeliorations()).toHaveLength(14);
+      // = 13 améliorations (Tourelle n'est plus une amélioration)
+      expect(service.getAllAmeliorations()).toHaveLength(13);
     });
 
     it('charge les noms des 9 sponsors correctement', () => {
@@ -904,17 +885,6 @@ describe('CatalogService', () => {
   describe('Cas particuliers', () => {
     it('retourne undefined pour un sponsor inexistant', () => {
       expect(service.getSponsor('SponsorFantome')).toBeUndefined();
-    });
-
-    it('préserve le prix "x3" (string) pour la Tourelle', () => {
-      const rutherford = service.getSponsor('Rutherford');
-      const tourelle = rutherford!.ameliorations.find(
-        (a) => a.nom === 'Tourelle',
-      );
-      expect(tourelle).toBeDefined();
-      // Le prix doit être la chaîne "x3", pas un nombre
-      expect(tourelle!.prix).toBe('x3');
-      expect(typeof tourelle!.prix).toBe('string');
     });
 
     it('le Blindage a un prix numérique (4 Jerricans)', () => {

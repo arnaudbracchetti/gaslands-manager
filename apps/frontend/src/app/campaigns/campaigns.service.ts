@@ -293,7 +293,7 @@ export class CampaignsService {
 
   /**
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-improvements →
-   * améliorations du sponsor avec verdict (Tourelle exclue au Temps 1, côté backend).
+   * améliorations du sponsor avec verdict (budget = cagnotte).
    */
   getWorkshopAvailableImprovements(campaignId: number, vehicleId: number): Observable<AvailableImprovementDto[]> {
     return this.http.get<AvailableImprovementDto[]>(
@@ -305,6 +305,8 @@ export class CampaignsService {
    * POST /api/campaigns/:id/events/equipment → achat/revente d'équipement en
    * atelier (204 No Content). Le use case retrouve lui-même l'unique partie en
    * ATELIER de la campagne. L'appelant relit l'état via `getWorkshop` après coup.
+   * Le montage sur Tourelle passe par ce même endpoint (`orientation: 'tourelle'`
+   * dans le corps, WEAPON/BUY uniquement) — ce n'est pas une opération séparée.
    */
   changeEquipment(campaignId: number, dto: ChangeEquipmentDto): Observable<void> {
     return this.http.post<void>(`/api/campaigns/${campaignId}/events/equipment`, dto);

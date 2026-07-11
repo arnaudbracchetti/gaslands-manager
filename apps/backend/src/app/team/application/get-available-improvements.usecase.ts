@@ -38,7 +38,7 @@ export class GetAvailableImprovementsUseCase {
       return {
         nom: it.nom,
         nomInterne: it.nomInterne,
-        prix: it.hasVariablePrice ? 'x3' : it.price,
+        prix: it.price,
         emplacement: it.slots,
         description: it.description,
         regles: it.regles,

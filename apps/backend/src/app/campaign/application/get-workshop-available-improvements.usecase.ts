@@ -22,8 +22,8 @@ export interface GetWorkshopAvailableImprovementsCommand {
  * tolérance à l'orientation, est une règle de domaine — pas dupliquée ici), budget =
  * cagnotte (`me.wallet`).
  *
- * Temps 1 : la **Tourelle est exclue** (prix variable ×3 + assignation d'arme sans
- * événement campagne dédié — cf. doc de design). Elle reviendra au Temps 2.
+ * La Tourelle n'existe plus comme amélioration — c'est un attribut de l'arme
+ * (`WeaponType.montableSurTourelle`), cf. `AvailableWeaponDto`.
  */
 export class GetWorkshopAvailableImprovementsUseCase {
   constructor(
@@ -40,16 +40,14 @@ export class GetWorkshopAvailableImprovementsUseCase {
 
     const vehicle = this.resolveVehicle(me, cmd.vehicleId);
     const budget = me.wallet;
-    const improvementTypes = this.catalog
-      .getImprovementTypesForSponsor(me.team.sponsor)
-      .filter((it: ImprovementType) => !it.isTourelle);
+    const improvementTypes = this.catalog.getImprovementTypesForSponsor(me.team.sponsor);
 
     return improvementTypes.map((it: ImprovementType): AvailableImprovementDto => {
       const verdict = vehicle.canAddImprovementInAnyOrientation(it, budget);
       return {
         nom: it.nom,
         nomInterne: it.nomInterne,
-        prix: it.hasVariablePrice ? 'x3' : it.price,
+        prix: it.price,
         emplacement: it.slots,
         description: it.description,
         regles: it.regles,

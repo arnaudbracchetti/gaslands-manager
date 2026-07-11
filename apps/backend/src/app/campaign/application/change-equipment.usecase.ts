@@ -3,7 +3,7 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
 import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
-import type { Orientation } from '../../team/domain/team';
+import type { WeaponOrientation } from '../../team/domain/team';
 import type { CatalogService } from '../../catalog/catalog.service';
 import { assertParticipant } from './authorization.helpers';
 
@@ -18,7 +18,8 @@ export interface ChangeEquipmentCommand {
   targetVehicleId?: number | null;
   /** Id de l'entité à vendre — requis pour SELL. */
   targetEntityId?: number | null;
-  orientation?: Orientation | null;
+  /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation | null;
 }
 
 /**

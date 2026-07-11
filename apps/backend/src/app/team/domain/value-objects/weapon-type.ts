@@ -43,6 +43,11 @@ export class WeaponType {
     return !this.isEquipage;
   }
 
+  /** Cette arme peut-elle être montée sur Tourelle (arc de tir à 360°, coût ×3) ? */
+  get montableSurTourelle(): boolean {
+    return this.raw.montable_tourelle ?? false;
+  }
+
   equals(other: WeaponType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
   }

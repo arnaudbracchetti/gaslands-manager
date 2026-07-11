@@ -21,14 +21,21 @@
 export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
 
 /**
+ * Orientation d'une arme — les 4 arcs plus `'tourelle'` (montage sur Tourelle, arc à
+ * 360°, coût ×3). Distincte d'`Orientation` (utilisée par `VehicleImprovement`, qui
+ * ne supporte jamais le montage Tourelle).
+ */
+export type WeaponOrientation = Orientation | 'tourelle';
+
+/**
  * Une amélioration installée — miroir de `VehicleImprovementDto` (backend).
  * `orientation` est `null` pour les améliorations non-orientées (convention API
  * identique au backend — pas de conversion `null ↔ undefined` côté frontend :
  * cette nuance de vocabulaire reste interne au backend, cf. `VehicleService.getBuild`).
  *
- * `estDefaut`, `prix`, `emplacement` et `weaponNomInterne` sont des champs ajoutés
- * par le backend (`VehicleService.toVehicleDto`) et portent les règles de gestion
- * déjà résolues — le frontend les consomme sans logique propre.
+ * `estDefaut`, `prix` et `emplacement` sont des champs ajoutés par le backend
+ * (`VehicleService.toVehicleDto`) et portent les règles de gestion déjà résolues —
+ * le frontend les consomme sans logique propre.
  */
 export interface VehicleImprovement {
   id: number;
@@ -38,21 +45,10 @@ export interface VehicleImprovement {
   createdAt: string;
   /** `true` si l'amélioration fait partie du profil de base du véhicule (non supprimable). */
   estDefaut: boolean;
-  /**
-   * Prix effectif en Jerricans — toujours un `number` réel :
-   * - `0` pour les défauts (`estDefaut`) ou la Tourelle orpheline.
-   * - Pour la Tourelle assignée : 3× le prix catalogue de l'arme (coût TOTAL, arme incluse).
-   * - Autres améliorations : prix catalogue direct.
-   */
+  /** Prix effectif en Jerricans — `0` pour les défauts (`estDefaut`), prix catalogue sinon. */
   prix: number;
   /** Emplacements consommés — `0` pour les défauts, valeur catalogue sinon. */
   emplacement: number;
-  /**
-   * Nom interne de l'arme montée sur cette Tourelle (`nomInterne === 'tourelle'`),
-   * ou `null` si aucune arme n'est assignée (état orphelin) ou pour toute autre amélioration.
-   * Le frontend l'utilise pour fusionner l'affichage en une seule ligne "Arme (Tourelle)".
-   */
-  weaponNomInterne: string | null;
   /**
    * Champs propres à l'atelier campagne (mode campagne, annulation vs revente) — jamais
    * posés par `TeamEquipmentDataSource` (construction d'équipe), toujours `undefined` dans
@@ -74,11 +70,18 @@ export interface VehicleImprovement {
 export interface Weapon {
   id: number;
   nomInterne: string;
-  orientation: Orientation | null;
+  /**
+   * 5 valeurs possibles, dont `'tourelle'` (montage sur Tourelle — arc à 360°, coût
+   * ×3, immuable après achat). Pour changer d'arme montée sur Tourelle, on revend
+   * celle-ci puis on en achète une nouvelle avec `'tourelle'`.
+   */
+  orientation: WeaponOrientation | null;
   vehicleId: number;
   createdAt: string;
-  /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend. */
+  /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend (×3 si montée sur Tourelle). */
   prix: number;
+  /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut). */
+  estDefaut: boolean;
   /** Cf. `VehicleImprovement.sold`/`purchasedThisSession`/`lost` — même usage, atelier uniquement. */
   sold?: boolean;
   purchasedThisSession?: boolean;
@@ -120,16 +123,11 @@ export interface AddImprovementDto {
 
 /**
  * Ligne de `GET /api/vehicles/:id/available-improvements` — miroir de `AvailableImprovementDto`.
- *
- * `prix: number | string` : `Amelioration.prix` vaut `"x3"` pour la Tourelle dans le
- * catalogue — le backend n'a pas encore de prix résolu pour cet item de liste (le prix
- * réel dépend de l'arme choisie, qui n'est connue qu'au moment de l'assignation).
- * Cf. `VehicleImprovement.prix` pour le prix effectif une fois la Tourelle persistée.
  */
 export interface AvailableImprovementDto {
   nom: string;
   nomInterne: string;
-  prix: number | string;
+  prix: number;
   emplacement: number;
   /** Description de l'amélioration, reprise du catalogue (`Amelioration.description`). */
   description: string;
@@ -147,17 +145,17 @@ export interface AvailableImprovementDto {
  */
 export interface AddWeaponDto {
   nomInterne: string;
-  orientation?: Orientation;
+  /** 5 valeurs possibles, dont `'tourelle'` (montage sur Tourelle — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation;
 }
 
 /**
  * Ligne de `GET /api/vehicles/:id/available-weapons` — miroir de `AvailableWeaponDto`.
  *
- * `prix: number` (jamais `string`, contrairement à son homologue amélioration) :
- * `Arme.prix` est TOUJOURS un nombre fixe (cf. `catalog.model.ts`, doc de `Arme`).
- * `type` : seul ajout par rapport à `AvailableImprovementDto` — c'est ce qui
- * permet à `VehicleBuilder`/`equipment-option` de savoir, AVANT de tenter
+ * `type` : permet à `VehicleBuilder`/`equipment-option` de savoir, AVANT de tenter
  * l'ajout, si un sélecteur d'orientation doit être affiché (`type !== 'équipage'`).
+ * `montableSurTourelle` : attribut catalogue de l'arme — pilote l'affichage de la
+ * case à cocher « Monter sur Tourelle » dans `EquipmentOption`.
  */
 export interface AvailableWeaponDto {
   nom: string;
@@ -171,21 +169,22 @@ export interface AvailableWeaponDto {
   regles: string;
   disponible: boolean;
   raison?: string;
+  montableSurTourelle: boolean;
 }
 
 /**
  * Forme commune à `AvailableWeaponDto` et `AvailableImprovementDto` — exactement
  * ce dont `EquipmentOption` a besoin pour s'afficher (cf. son en-tête, "réutilisable
  * pour armes ET améliorations"). Les deux DTOs ci-dessus sont structurellement
- * compatibles (TypeScript les accepte tels quels — `number` ⊂ `number | string`,
- * et le champ `type` surnuméraire de `AvailableWeaponDto` n'est simplement pas lu
- * par ce sous-composant). Pas de conversion : `VehicleBuilder` passe directement
- * ses tableaux `AvailableWeaponDto[]`/`AvailableImprovementDto[]` en entrée.
+ * compatibles — les champs surnuméraires (`type`, `montableSurTourelle` de
+ * `AvailableWeaponDto`) ne sont simplement pas lus quand l'option est une
+ * amélioration. Pas de conversion : `VehicleBuilder` passe directement ses
+ * tableaux `AvailableWeaponDto[]`/`AvailableImprovementDto[]` en entrée.
  */
 export interface EquipmentOption {
   nom: string;
   nomInterne: string;
-  prix: number | string;
+  prix: number;
   emplacement: number;
   /** Description de l'équipement, reprise du catalogue (cf. `AvailableWeaponDto.description`/`AvailableImprovementDto.description`). */
   description: string;
@@ -193,6 +192,8 @@ export interface EquipmentOption {
   regles: string;
   disponible: boolean;
   raison?: string;
+  /** Armes uniquement — absent pour une amélioration. */
+  montableSurTourelle?: boolean;
 }
 
 /**
@@ -202,5 +203,6 @@ export interface EquipmentOption {
  */
 export interface EquipmentChoice {
   nomInterne: string;
-  orientation?: Orientation;
+  /** Armes : 5 valeurs possibles, dont `'tourelle'` (×3). Améliorations : 4 valeurs. */
+  orientation?: WeaponOrientation;
 }

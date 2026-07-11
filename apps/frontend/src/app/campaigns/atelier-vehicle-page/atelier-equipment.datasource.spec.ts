@@ -29,7 +29,8 @@ const workshop: WorkshopStateDto = {
       chocs: 0,
       sequellas: [],
       weapons: [
-        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
       ],
       improvements: [
         { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
@@ -47,8 +48,12 @@ describe('mapWorkshopVehicleToVehicle', () => {
     expect(v.weapons[0].orientation).toBe('avant');
     expect(v.improvements[0].prix).toBe(4);
     expect(v.improvements[0].emplacement).toBe(1);
-    // Tourelle exclue au Temps 1 → jamais d'arme assignée reconstituée.
-    expect(v.improvements[0].weaponNomInterne).toBeNull();
+  });
+
+  it('conserve l\'orientation \'tourelle\' pour une arme montée sur Tourelle', () => {
+    const v = mapWorkshopVehicleToVehicle(workshop.vehicles[0]);
+    expect(v.weapons[1].orientation).toBe('tourelle');
+    expect(v.weapons[1].prix).toBe(45);
   });
 });
 
@@ -95,6 +100,19 @@ describe('AtelierEquipmentDataSource', () => {
     expect(v.weapons[0].prix).toBe(3);
   });
 
+  it('addWeapon avec orientation \'tourelle\' transmet la valeur au backend', async () => {
+    await firstValueFrom(ds.addWeapon(5, { nomInterne: 'bfg', orientation: 'tourelle' }));
+
+    expect(service.changeEquipment).toHaveBeenCalledWith(7, {
+      operation: 'BUY',
+      entityType: 'WEAPON',
+      nomInterne: 'bfg',
+      targetVehicleId: 5,
+      targetEntityId: null,
+      orientation: 'tourelle',
+    });
+  });
+
   it('addImprovement → BUY IMPROVEMENT', async () => {
     await firstValueFrom(ds.addImprovement(5, { nomInterne: 'blindage' }));
     expect(service.changeEquipment).toHaveBeenCalledWith(7, {
@@ -134,9 +152,5 @@ describe('AtelierEquipmentDataSource', () => {
   it('getAvailableWeapons délègue au service atelier avec le campaignId de la route', () => {
     ds.getAvailableWeapons(5);
     expect(service.getWorkshopAvailableWeapons).toHaveBeenCalledWith(7, 5);
-  });
-
-  it('assignWeaponToTourelle échoue (Tourelle hors périmètre Temps 1)', async () => {
-    await expect(firstValueFrom(ds.assignWeaponToTourelle())).rejects.toThrow();
   });
 });

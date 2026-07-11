@@ -6,7 +6,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Delete,
   Param,
   Body,
@@ -17,14 +16,11 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AddImprovementDto } from './dto/add-improvement.dto';
-import { AssignWeaponToTourelleDto } from './dto/assign-weapon-to-tourelle.dto';
 import { vehicleDomainToDto } from './infrastructure/team-http.mapper';
 import { GetVehicleDetailUseCase } from './application/get-vehicle-detail.usecase';
 import { GetAvailableImprovementsUseCase } from './application/get-available-improvements.usecase';
 import { AddImprovementUseCase } from './application/add-improvement.usecase';
 import { RemoveImprovementUseCase } from './application/remove-improvement.usecase';
-import { AssignWeaponToTourelleUseCase } from './application/assign-weapon-to-tourelle.usecase';
-import { UnassignWeaponFromTourelleUseCase } from './application/unassign-weapon-from-tourelle.usecase';
 import { RemoveVehicleUseCase } from './application/remove-vehicle.usecase';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
 import type { VehicleDetailDto } from './dto/vehicle-detail.dto';
@@ -42,8 +38,6 @@ export class VehicleController {
     private readonly getAvailableImprovements: GetAvailableImprovementsUseCase,
     private readonly addImprovementUseCase: AddImprovementUseCase,
     private readonly removeImprovementUseCase: RemoveImprovementUseCase,
-    private readonly assignWeaponToTourelleUseCase: AssignWeaponToTourelleUseCase,
-    private readonly unassignWeaponFromTourelleUseCase: UnassignWeaponFromTourelleUseCase,
     private readonly removeVehicleUseCase: RemoveVehicleUseCase,
   ) {}
 
@@ -76,39 +70,6 @@ export class VehicleController {
       userId: req.user.id,
     });
     const vehicle = team.findVehicle(id);
-    return vehicleDomainToDto(vehicle);
-  }
-
-  @Patch(':vehicleId/improvements/:improvId/weapon')
-  async assignWeapon(
-    @Param('vehicleId', ParseIntPipe) vehicleId: number,
-    @Param('improvId', ParseIntPipe) improvId: number,
-    @Request() req: AuthenticatedRequest,
-    @Body() dto: AssignWeaponToTourelleDto,
-  ): Promise<VehicleDto> {
-    const team = await this.assignWeaponToTourelleUseCase.execute({
-      vehicleId,
-      improvementId: improvId,
-      weaponNomInterne: dto.weaponNomInterne,
-      userId: req.user.id,
-    });
-    const vehicle = team.findVehicle(vehicleId);
-    return vehicleDomainToDto(vehicle);
-  }
-
-  @Delete(':vehicleId/improvements/:improvId/weapon')
-  @HttpCode(200)
-  async unassignWeapon(
-    @Param('vehicleId', ParseIntPipe) vehicleId: number,
-    @Param('improvId', ParseIntPipe) improvId: number,
-    @Request() req: AuthenticatedRequest,
-  ): Promise<VehicleDto> {
-    const team = await this.unassignWeaponFromTourelleUseCase.execute({
-      vehicleId,
-      improvementId: improvId,
-      userId: req.user.id,
-    });
-    const vehicle = team.findVehicle(vehicleId);
     return vehicleDomainToDto(vehicle);
   }
 

@@ -19,6 +19,14 @@ export function fail(reason: string): RuleResult {
 
 export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
 
+/**
+ * Orientation d'une arme — les 4 arcs de tir plus `'tourelle'` (montage sur Tourelle,
+ * arc à 360°, coût ×3). Distinct d'`Orientation` (utilisée par `VehicleImprovement`,
+ * qui ne supporte jamais le montage Tourelle) pour rendre cet état impossible par le
+ * typage plutôt que de le garder à l'exécution.
+ */
+export type WeaponOrientation = Orientation | 'tourelle';
+
 // ── Commande de mise à jour ───────────────────────────────────────────────────
 
 export interface UpdateTeamCommand {
@@ -105,13 +113,14 @@ export class Team {
   // ── Mutations Vehicle ─────────────────────────────────────────────────────────
 
   /**
-   * Ajoute un nouveau véhicule "nu" à l'équipe avec ses améliorations par défaut.
-   * La validation d'autorisation sponsor (vehicleType ∈ sponsor.vehicules) est faite
-   * par le use case avant d'appeler cette méthode.
+   * Ajoute un nouveau véhicule "nu" à l'équipe avec ses améliorations et son arme par
+   * défaut (ex. Char d'assaut + Canon de 125mm monté sur Tourelle). La validation
+   * d'autorisation sponsor (vehicleType ∈ sponsor.vehicules) est faite par le use case
+   * avant d'appeler cette méthode.
    */
-  addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[]): Vehicle {
+  addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[], defaultWeapons: Weapon[] = []): Vehicle {
     this.assertNotLocked();
-    const vehicle = new Vehicle(0, this.id, vehicleType, [], defaultImprovements);
+    const vehicle = new Vehicle(0, this.id, vehicleType, defaultWeapons, defaultImprovements);
     this._vehicles.push(vehicle);
     return vehicle;
   }
@@ -157,7 +166,11 @@ export class Team {
 
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
 
-  addWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: Orientation | null): void {
+  addWeaponToVehicle(
+    vehicleId: number,
+    weaponType: WeaponType,
+    orientation: WeaponOrientation | null,
+  ): void {
     this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.addWeapon(weaponType, orientation, this.remainingBudget);
@@ -181,18 +194,6 @@ export class Team {
     this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.removeImprovement(improvementId);
-  }
-
-  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponType: WeaponType): void {
-    this.assertNotLocked();
-    const vehicle = this.findVehicle(vehicleId);
-    vehicle.assignWeaponToTourelle(improvementId, weaponType, this.remainingBudget);
-  }
-
-  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): void {
-    this.assertNotLocked();
-    const vehicle = this.findVehicle(vehicleId);
-    vehicle.unassignWeaponFromTourelle(improvementId);
   }
 
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
@@ -234,7 +235,7 @@ export class Team {
   addCampaignWeapon(
     vehicleId: number,
     weaponType: WeaponType,
-    orientation: Orientation | null,
+    orientation: WeaponOrientation | null,
     campaignId: number,
   ): Weapon {
     return this.findVehicle(vehicleId).addCampaignWeapon(weaponType, orientation, campaignId);

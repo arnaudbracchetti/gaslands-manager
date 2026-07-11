@@ -18,7 +18,7 @@ import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
-import type { Orientation } from '../../../team/domain/team';
+import type { WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
 import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
@@ -254,7 +254,7 @@ export abstract class Game {
     // l'undo peut recréer l'entité (symétrie avec le BUY).
     let cost: number;
     let nomInterne: string = cmd.nomInterne;
-    let orientation: Orientation | null = cmd.orientation ?? null;
+    let orientation: WeaponOrientation | null = cmd.orientation ?? null;
     let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
     let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
     let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
@@ -412,18 +412,19 @@ export abstract class Game {
           throw new DomainException(`Véhicule inconnu du catalogue : "${cmd.nomInterne}".`);
         }
         return cmd.resolvedVehicleType.price;
-      case EquipmentEntityType.WEAPON:
+      case EquipmentEntityType.WEAPON: {
         if (!cmd.resolvedWeaponType) {
           throw new DomainException(`Arme inconnue du catalogue : "${cmd.nomInterne}".`);
         }
-        return cmd.resolvedWeaponType.price;
+        const montageTourelle = cmd.orientation === 'tourelle';
+        if (montageTourelle && !cmd.resolvedWeaponType.montableSurTourelle) {
+          throw new DomainException('Cette arme ne peut pas être montée sur Tourelle.');
+        }
+        return cmd.resolvedWeaponType.price * (montageTourelle ? 3 : 1);
+      }
       case EquipmentEntityType.IMPROVEMENT:
         if (!cmd.resolvedImprovementType) {
           throw new DomainException(`Amélioration inconnue du catalogue : "${cmd.nomInterne}".`);
-        }
-        // Temps 1 : la Tourelle (prix variable ×3 + assignation d'arme) n'est pas gérée en atelier.
-        if (cmd.resolvedImprovementType.isTourelle) {
-          throw new DomainException("La Tourelle n'est pas disponible en atelier pour l'instant.");
         }
         return cmd.resolvedImprovementType.price;
     }
@@ -440,7 +441,7 @@ export abstract class Game {
   ): {
     cost: number;
     nomInterne: string;
-    orientation: Orientation | null;
+    orientation: WeaponOrientation | null;
     resolvedVehicleType: VehicleType | null;
     resolvedWeaponType: WeaponType | null;
     resolvedImprovementType: ImprovementType | null;
@@ -460,10 +461,14 @@ export abstract class Game {
       case EquipmentEntityType.WEAPON: {
         const weapon = participant.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId);
         if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
+        if (weapon.estDefaut) {
+          throw new DomainException('Les armes intégrées au profil de base ne peuvent pas être revendues.');
+        }
         // Revente à moitié prix arrondie inférieur (p.170). Si l'objet a été acheté cette
         // même session d'atelier, ce coût est de toute façon ignoré : changeEquipment()
         // court-circuite vers une annulation (suppression du BUY, remboursement intégral)
-        // AVANT de construire l'événement — cf. findSameSessionPurchase.
+        // AVANT de construire l'événement — cf. findSameSessionPurchase. weapon.price
+        // (getter d'entité) gère déjà le montage sur Tourelle (×3) avant la moitié prix.
         return {
           cost: Math.floor(weapon.price / 2),
           nomInterne: weapon.type.nomInterne,
@@ -488,8 +493,6 @@ export abstract class Game {
         if (improvement.estDefaut) {
           throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
         }
-        // improvement.price (getter d'entité, pas type.price) : gère déjà le cas Tourelle
-        // assignée (3× le prix de l'arme montée) avant d'appliquer la moitié prix.
         return {
           cost: Math.floor(improvement.price / 2),
           nomInterne: improvement.type.nomInterne,

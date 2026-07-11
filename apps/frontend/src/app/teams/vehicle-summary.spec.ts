@@ -46,6 +46,7 @@ const mockMinigun: Arme = {
   description: '',
   regles: '',
   sponsors_autorises: [],
+  montable_tourelle: true,
 };
 
 const mockBlindage: Amelioration = {
@@ -58,16 +59,6 @@ const mockBlindage: Amelioration = {
   sponsors_autorises: [],
 };
 
-const mockTourelle: Amelioration = {
-  nom: 'Tourelle',
-  nom_interne: 'tourelle',
-  prix: 'x3',
-  emplacement: 0,
-  description: '',
-  regles: '',
-  sponsors_autorises: [],
-};
-
 const mockCatalog: Sponsor = {
   nom: 'Rutherford',
   description: '',
@@ -75,7 +66,7 @@ const mockCatalog: Sponsor = {
   avantages_sponsorises: '',
   vehicules: [mockVehiculeCatalogue],
   armes: [mockMitrailleuse, mockMinigun],
-  ameliorations: [mockBlindage, mockTourelle],
+  ameliorations: [mockBlindage],
 };
 
 // ── Fixtures véhicules d'équipe ──────────────────────────────────────────────
@@ -83,18 +74,27 @@ const mockCatalog: Sponsor = {
 // le DTO (`weapon.prix`, `improvement.prix`). `buildVehicleSummary` les consomme
 // directement — les fixtures doivent donc inclure les champs du DTO complet.
 
-function buildWeapon(nomInterne: string, prix: number, sold?: boolean, lost?: boolean): Weapon {
-  return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix, sold, lost };
+function buildWeapon(
+  nomInterne: string,
+  prix: number,
+  sold?: boolean,
+  lost?: boolean,
+  montageTourelle = false,
+  estDefaut = false,
+): Weapon {
+  return {
+    id: 1, nomInterne, orientation: montageTourelle ? 'tourelle' : 'avant', vehicleId: 1,
+    createdAt: '2025-01-01T00:00:00.000Z', prix, estDefaut, sold, lost,
+  };
 }
 
 function buildImprovement(
   nomInterne: string,
   prix: number,
   estDefaut = false,
-  weaponNomInterne: string | null = null,
   emplacement = 0,
 ): VehicleImprovement {
-  return { id: 1, nomInterne, orientation: null, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', estDefaut, prix, emplacement, weaponNomInterne };
+  return { id: 1, nomInterne, orientation: null, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', estDefaut, prix, emplacement };
 }
 
 function buildVehicle(weapons: Weapon[], improvements: VehicleImprovement[]): Vehicle {
@@ -143,47 +143,40 @@ describe('buildVehicleSummary', () => {
     expect(summary.cout).toBe(19);
   });
 
-  // ── Cas Tourelle — prix désormais EXACT ────────────────────────────────────
+  // ── Cas Tourelle — attribut de l'arme, prix EXACT résolu côté backend ───────
 
-  it('Tourelle ASSIGNÉE : ajoute 3× le prix de l\'arme (prix résolu côté backend)', () => {
-    // Le backend stocke `improvement.prix = 9` (3 × 3j de la Mitrailleuse).
-    // `buildVehicleSummary` additionne simplement ce prix, comme toute amélioration.
+  it('arme montée sur Tourelle : ajoute son prix ×3 (résolu côté backend)', () => {
+    // Le backend stocke `weapon.prix = 9` (3 × 3j de la Mitrailleuse).
+    // `buildVehicleSummary` additionne simplement ce prix, comme toute arme.
     const vehicle = buildVehicle(
+      [buildWeapon('mitrailleuse', 9, false, false, /* montageTourelle */ true)],
       [],
-      [buildImprovement('tourelle', 9, false, 'mitrailleuse')],
     );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) + 9 (Tourelle + Mitrailleuse, coût total résolu)
+    // 15 (camion) + 9 (Mitrailleuse montée sur Tourelle, coût total résolu)
     expect(summary.cout).toBe(24);
   });
 
-  it('Tourelle ORPHELINE (aucune arme assignée) : prix = 0 en attendant l\'assignation', () => {
-    // La Tourelle orpheline a prix = 0 dans le DTO (backend : weaponNomInterne null → 0).
-    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0)]);
-    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
-
-    // 15 (camion) — Tourelle orpheline contribue 0
-    expect(summary.cout).toBe(15);
-  });
-
-  it('Tourelle INTÉGRÉE au profil de base (estDefaut: true) : prix = 0', () => {
-    // Char d'assaut : Tourelle intégrée — coût zéro par définition (estDefaut).
-    // Le backend retourne prix = 0 même si une arme est assignée dessus.
-    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0, /* estDefaut */ true, 'canon_125mm')]);
-    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
-
-    expect(summary.cout).toBe(15); // prix de base seulement — Tourelle intégrée coûte 0
-  });
-
-  it('combine Tourelle assignée ET amélioration normale dans un total exact', () => {
+  it('arme intégrée montée sur Tourelle (Canon de 125mm du Char d\'assaut, estDefaut) : prix = 0', () => {
+    // Le backend retourne prix = 0 pour une arme estDefaut, même montée sur Tourelle.
     const vehicle = buildVehicle(
+      [buildWeapon('canon_125mm', 0, false, false, /* montageTourelle */ true, /* estDefaut */ true)],
       [],
-      [buildImprovement('blindage', 4), buildImprovement('tourelle', 18, false, 'minigun')],
     );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    // 15 (camion) + 4 (blindage) + 18 (Tourelle + Minigun = 3 × 6j)
+    expect(summary.cout).toBe(15); // prix de base seulement — arme intégrée coûte 0
+  });
+
+  it('combine une arme montée sur Tourelle ET une amélioration normale dans un total exact', () => {
+    const vehicle = buildVehicle(
+      [buildWeapon('minigun', 18, false, false, /* montageTourelle */ true)],
+      [buildImprovement('blindage', 4)],
+    );
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    // 15 (camion) + 18 (Minigun montée sur Tourelle = 3 × 6j) + 4 (blindage)
     expect(summary.cout).toBe(37);
   });
 
@@ -250,7 +243,7 @@ describe('buildVehicleSummary', () => {
 
   it('compte les emplacements des améliorations achetées (via improvement.emplacement)', () => {
     // Blindage : emplacement = 1 (valeur dans le DTO)
-    const vehicle = buildVehicle([], [buildImprovement('blindage', 4, false, null, 1)]);
+    const vehicle = buildVehicle([], [buildImprovement('blindage', 4, false, 1)]);
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
     expect(summary.emplacementsUtilises).toBe(1);
@@ -258,7 +251,17 @@ describe('buildVehicleSummary', () => {
 
   it('ignore les emplacements des améliorations estDefaut', () => {
     // Amélioration intégrée — ne consomme pas d'emplacement achetable
-    const vehicle = buildVehicle([], [buildImprovement('tourelle', 0, /* estDefaut */ true, null, 0)]);
+    const vehicle = buildVehicle([], [buildImprovement('blindage', 0, /* estDefaut */ true, 0)]);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(0);
+  });
+
+  it('ignore les emplacements des armes estDefaut (même montées sur Tourelle)', () => {
+    const vehicle = buildVehicle(
+      [buildWeapon('minigun', 0, false, false, /* montageTourelle */ true, /* estDefaut */ true)],
+      [],
+    );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
     expect(summary.emplacementsUtilises).toBe(0);
@@ -267,7 +270,7 @@ describe('buildVehicleSummary', () => {
   it('combine emplacements armes + améliorations', () => {
     const vehicle = buildVehicle(
       [buildWeapon('mitrailleuse', 3)],
-      [buildImprovement('blindage', 4, false, null, 1)],
+      [buildImprovement('blindage', 4, false, 1)],
     );
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 

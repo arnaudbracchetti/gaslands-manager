@@ -32,7 +32,7 @@ export class GetAvailableWeaponsUseCase {
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
       const result = team.isLocked
         ? fail('Équipe verrouillée : campagne en cours')
-        : vehicle.canAddWeapon(wt, null, budget);
+        : vehicle.canAddWeapon(wt, null, false, budget);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,
@@ -43,6 +43,7 @@ export class GetAvailableWeaponsUseCase {
         regles: wt.regles,
         disponible: result.ok,
         raison: result.ok ? undefined : result.reason,
+        montableSurTourelle: wt.montableSurTourelle,
       };
     });
   }

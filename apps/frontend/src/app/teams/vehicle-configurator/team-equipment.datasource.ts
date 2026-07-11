@@ -12,7 +12,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { VehicleService } from './vehicle.service';
 import { EquipmentDataSource } from './equipment-data-source';
-import { AvailableImprovementDto, AvailableWeaponDto, EquipmentChoice, Vehicle } from './vehicle-builder.model';
+import { AvailableImprovementDto, AvailableWeaponDto, EquipmentChoice, Orientation, Vehicle } from './vehicle-builder.model';
 
 @Injectable()
 export class TeamEquipmentDataSource implements EquipmentDataSource {
@@ -31,7 +31,10 @@ export class TeamEquipmentDataSource implements EquipmentDataSource {
   }
 
   addImprovement(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle> {
-    return this.vs.addImprovement(vehicleId, choice);
+    // Une amélioration ne porte jamais 'tourelle' — invariant garanti par
+    // EquipmentOption (le bouton "Tourelle x3" n'apparaît que pour les armes,
+    // cf. AvailableWeaponDto.montableSurTourelle, absent d'AvailableImprovementDto).
+    return this.vs.addImprovement(vehicleId, choice as { nomInterne: string; orientation?: Orientation });
   }
 
   // La route "à plat" DELETE /weapons/:id ne prend pas le vehicleId — ignoré ici.
@@ -41,13 +44,5 @@ export class TeamEquipmentDataSource implements EquipmentDataSource {
 
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle> {
     return this.vs.removeImprovement(vehicleId, improvementId);
-  }
-
-  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponNomInterne: string): Observable<Vehicle> {
-    return this.vs.assignWeaponToTourelle(vehicleId, improvementId, weaponNomInterne);
-  }
-
-  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): Observable<Vehicle> {
-    return this.vs.unassignWeaponFromTourelle(vehicleId, improvementId);
   }
 }

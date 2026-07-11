@@ -1,5 +1,5 @@
 import type { EquipmentOperation, EquipmentEntityType } from '../domain/events/equipment-changed.event';
-import type { Orientation } from '../../team/domain/team';
+import type { WeaponOrientation } from '../../team/domain/team';
 
 export class ChangeEquipmentDto {
   operation!: EquipmentOperation;
@@ -7,5 +7,6 @@ export class ChangeEquipmentDto {
   nomInterne!: string;
   targetVehicleId?: number | null;
   targetEntityId?: number | null;
-  orientation?: Orientation | null;
+  /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation | null;
 }

@@ -9,8 +9,12 @@ import type { WreckResult } from '../domain/enums/wreck-result.enum';
 export interface WorkshopWeaponDto {
   id: number;
   nomInterne: string;
+  /** 5 valeurs possibles, dont `'tourelle'` (montage sur Tourelle — arc à 360°, coût
+   *  ×3, immuable après achat). */
   orientation: string | null;
   price: number;
+  /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut). */
+  estDefaut: boolean;
   isLost: boolean;
   /** Vendue (revente pré-existante, moitié prix) — reste visible, barrée, côté IHM. */
   isSold: boolean;

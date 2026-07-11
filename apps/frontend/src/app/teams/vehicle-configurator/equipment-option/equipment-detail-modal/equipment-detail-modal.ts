@@ -6,9 +6,8 @@
  * description ET règles complètes (`regles`, absent de la carte pour la garder
  * compacte, cf. `vehicle-builder.model.ts`) — dans une mise en page aérée.
  *
- * Composant **dumb**, même pattern que `TourelleAssignmentModal` (overlay plein
- * écran + boîte centrale, `role="dialog"`/`aria-modal`, cf.
- * `equipment-manager/tourelle-assignment-modal/`). Purement informative : la
+ * Composant **dumb** : overlay plein écran + boîte centrale, `role="dialog"`/
+ * `aria-modal`, même pattern que `ConfirmModal`. Purement informative : la
  * seule sortie est `closed` ("Annuler" OU clic sur l'overlay, en dehors de la
  * boîte) — le parent referme la popup sans action. L'ajout au véhicule reste
  * l'action exclusive du bouton "+" de la carte (`EquipmentOption.onAddClicked`),

@@ -123,7 +123,6 @@ graph TD
                 EquipmentOption
                 EquipmentDetailModal
                 MountedEquipment
-                TourelleAssignmentModal
                 TeamBudget
                 VehicleCostSummary
             end
@@ -170,7 +169,6 @@ graph TD
     VehicleChoiceCard --> SlotGauge
     EquipmentManager --> EquipmentOption
     EquipmentManager --> MountedEquipment
-    EquipmentManager --> TourelleAssignmentModal
     EquipmentManager --> TeamBudget
     EquipmentManager --> VehicleCostSummary
     EquipmentManager --> ConfirmModal
@@ -514,14 +512,14 @@ Carte de sélection du type de véhicule de base. Affiche les statistiques du v�
 
 ### `EquipmentManager` — `teams/vehicle-configurator/equipment-manager/` 🧠
 
-Cœur de la gestion d'équipement. Charge les armes et améliorations disponibles (avec verdicts du backend), gère l'ajout/retrait, le cas particulier de la Tourelle, et affiche le budget de l'équipe.
+Cœur de la gestion d'équipement. Charge les armes et améliorations disponibles (avec verdicts du backend), gère l'ajout/retrait — y compris le montage sur Tourelle, simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) choisie au moment de son ajout — et affiche le budget de l'équipe.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-equipment-manager` |
 | **Type** | Smart |
 | **Services** | `VehicleService` |
-| **Compose** | `EquipmentOption`, `MountedEquipment`, `TourelleAssignmentModal`, `TeamBudget`, `VehicleCostSummary`, `ConfirmModal` |
+| **Compose** | `EquipmentOption`, `MountedEquipment`, `TeamBudget`, `VehicleCostSummary`, `ConfirmModal` |
 
 **Inputs**
 
@@ -537,13 +535,13 @@ Cœur de la gestion d'équipement. Charge les armes et améliorations disponible
 |-----|------|-------------|
 | `vehicleChanged` | `Vehicle` | Émis après chaque mutation — le parent met à jour son signal |
 
-**Signals computed clés** : `emplacementsUtilises`, `emplacementsTotal`, `coutBase`, `coutEquipement`, `coutTotal`, `budgetRestant`, `budgetDepasse`, `visibleWeapons`, `visibleImprovements`, `armesPourTourelle`.
+**Signals computed clés** : `emplacementsUtilises`, `emplacementsTotal`, `coutBase`, `coutEquipement`, `coutTotal`, `budgetRestant`, `budgetDepasse`, `visibleWeapons`, `visibleImprovements`.
 
 ---
 
 ### `EquipmentOption` — `teams/vehicle-configurator/equipment-option/`
 
-Carte d'un équipement disponible dans le catalogue. Si orientable, affiche un sélecteur de direction avant d'émettre le choix. Ouvre `EquipmentDetailModal` au clic sur la carte.
+Carte d'un équipement disponible dans le catalogue. Si orientable, affiche un sélecteur de direction avant d'émettre le choix. Pour une arme catalogue `montableSurTourelle`, le sélecteur inclut aussi un bouton « Tourelle x3 » (même style que les 4 boutons d'orientation, coût ×3, exclusif avec le choix de direction). Ouvre `EquipmentDetailModal` au clic sur la carte.
 
 | | |
 |---|---|
@@ -555,14 +553,14 @@ Carte d'un équipement disponible dans le catalogue. Si orientable, affiche un s
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `option` | `EquipmentOptionDto` | — | Arme ou amélioration avec verdict de disponibilité |
+| `option` | `EquipmentOptionDto` | — | Arme ou amélioration avec verdict de disponibilité (`montableSurTourelle` pour une arme) |
 | `requiresOrientation` | `boolean` | `false` | Indique si un arc de tir doit être sélectionné |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `chosen` | `EquipmentChoice` | `{ nomInterne, orientation? }` — émis seulement quand l'info est complète |
+| `chosen` | `EquipmentChoice` | `{ nomInterne, orientation? }` (armes : 5 valeurs possibles dont `'tourelle'`) — émis seulement quand l'info est complète |
 
 ---
 
@@ -592,7 +590,7 @@ Popup d'information sur un équipement : nom, coût, emplacement, description, r
 
 ### `MountedEquipment` — `teams/vehicle-configurator/equipment-manager/mounted-equipment/`
 
-Affiche les armes et améliorations actuellement montées sur le véhicule, avec leurs boutons de retrait. Gère l'affichage spécial de la Tourelle (orpheline vs assignée).
+Affiche les armes et améliorations actuellement montées sur le véhicule, avec leurs boutons de retrait. Une arme montée sur Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans la liste des armes — ce n'est pas une ligne d'amélioration séparée.
 
 | | |
 |---|---|
@@ -613,32 +611,6 @@ Affiche les armes et améliorations actuellement montées sur le véhicule, avec
 |-----|------|-------------|
 | `weaponRemoved` | `Weapon` | Demande de retrait d'une arme |
 | `improvementRemoved` | `VehicleImprovement` | Demande de retrait d'une amélioration |
-| `tourelleAssignRequested` | `VehicleImprovement` | Tourelle orpheline → ouvre la modale d'assignation |
-| `tourelleUnassignRequested` | `VehicleImprovement` | Désassigner l'arme d'une Tourelle |
-
----
-
-### `TourelleAssignmentModal` — `teams/vehicle-configurator/equipment-manager/tourelle-assignment-modal/`
-
-Modale de sélection de l'arme à monter sur une Tourelle orpheline. Affiche chaque arme candidate avec son prix × 3.
-
-| | |
-|---|---|
-| **Sélecteur** | `app-tourelle-assignment-modal` |
-| **Type** | Dumb |
-
-**Inputs**
-
-| Nom | Type | Défaut | Description |
-|-----|------|--------|-------------|
-| `armes` | `Arme[]` | — | Armes candidates (hors type équipage, dans la limite des emplacements) |
-
-**Outputs**
-
-| Nom | Type | Description |
-|-----|------|-------------|
-| `weaponChosen` | `string` | `nomInterne` de l'arme choisie |
-| `cancelled` | `void` | Annulation |
 
 ---
 
@@ -1119,7 +1091,7 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 
 ### `AtelierVehiclePage` — `campaigns/atelier-vehicle-page/` 🧠
 
-Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Temps 1 : achat/retrait d'armes et d'améliorations ; hors périmètre : revente à moitié, Chocs/séquelles, épaves, Tourelle (cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
+Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Achat/retrait d'armes et d'améliorations, et revente à moitié prix, sont implémentés — y compris le montage sur Tourelle, une simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) et non une opération séparée ; hors périmètre : Chocs/séquelles, épaves (cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
 
 | | |
 |---|---|

@@ -1,5 +1,5 @@
 import type { WeaponType } from './value-objects/weapon-type';
-import type { Orientation } from './team';
+import type { WeaponOrientation } from './team';
 
 /**
  * Une arme montée sur un véhicule d'équipe (instance de jeu).
@@ -15,17 +15,27 @@ export class Weapon {
   constructor(
     readonly id: number,
     readonly type: WeaponType,
-    readonly orientation: Orientation | null,
+    /** `'tourelle'` = montée sur Tourelle (arc de tir à 360°, coût ×3) — choisie à
+     *  l'achat, immuable ensuite : pour changer d'arme sur Tourelle, revendre celle-ci
+     *  et en acheter une autre (hérite ainsi automatiquement de la revente à moitié
+     *  prix / annulation). */
+    readonly orientation: WeaponOrientation | null,
+    /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut) —
+     *  coût toujours nul, jamais retirable ni réassignable. */
+    readonly estDefaut: boolean = false,
   ) {}
 
   /**
    * Prix résiduel une fois vendue : ce qui reste après remboursement à moitié prix
    * (floor). floor(X/2) remboursé (via le budget dérivé, cf. CampaignParticipant.wallet)
    * + ceil(X/2) résiduel = X. Jamais 0 (affichage lisible sur la carte barrée), jamais
-   * le plein prix (le remboursement a bien eu lieu).
+   * le plein prix (le remboursement a bien eu lieu). Le montage sur Tourelle triple le
+   * prix de base AVANT application du résiduel de revente.
    */
   get price(): number {
-    return this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
+    if (this.estDefaut) return 0;
+    const base = this.type.price * (this.orientation === 'tourelle' ? 3 : 1);
+    return this._isSold ? Math.ceil(base / 2) : base;
   }
 
   /**
@@ -35,7 +45,7 @@ export class Weapon {
    * s'annule jamais complètement en revanche — cf. son commentaire (résiduel vs remboursement).
    */
   get slots(): number {
-    return this._isLost || this._isSold ? 0 : this.type.slots;
+    return this.estDefaut || this._isLost || this._isSold ? 0 : this.type.slots;
   }
 
   get isLost(): boolean {

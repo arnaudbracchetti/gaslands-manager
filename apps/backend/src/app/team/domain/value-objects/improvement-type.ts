@@ -31,16 +31,8 @@ export class ImprovementType {
     return this.raw.comportement;
   }
 
-  get hasVariablePrice(): boolean {
-    return this.raw.prix === 'x3';
-  }
-
-  get isTourelle(): boolean {
-    return this.raw.nom_interne === 'tourelle';
-  }
-
   get price(): number {
-    return this.hasVariablePrice ? 0 : (this.raw.prix as number);
+    return this.raw.prix;
   }
 
   equals(other: ImprovementType): boolean {

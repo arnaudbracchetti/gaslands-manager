@@ -1,26 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Improvement } from './improvement';
 import { ImprovementType } from './value-objects/improvement-type';
-import { WeaponType } from './value-objects/weapon-type';
 
 function makeImprovementType(prix: number, emplacement: number): ImprovementType {
   return ImprovementType.from({
     nom: 'Blindage', nom_interne: 'blindage',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [],
-  });
-}
-
-function makeTourelleType(): ImprovementType {
-  return ImprovementType.from({
-    nom: 'Tourelle', nom_interne: 'tourelle',
-    prix: 'x3', emplacement: 0, description: '', regles: '', sponsors_autorises: [],
-  });
-}
-
-function makeWeaponType(prix: number): WeaponType {
-  return WeaponType.from({
-    nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
-    prix, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
   });
 }
 
@@ -60,14 +45,6 @@ describe('Improvement', () => {
       const improvement = new Improvement(1, makeImprovementType(4, 1), null, true);
       improvement.markSold();
       expect(improvement.price).toBe(0);
-    });
-
-    it('applique le résiduel sur le prix Tourelle (3× l\'arme assignée) une fois vendue', () => {
-      const improvement = new Improvement(1, makeTourelleType(), null, false);
-      improvement.assignWeapon(makeWeaponType(5));
-      expect(improvement.price).toBe(15); // 3 × 5, avant vente
-      improvement.markSold();
-      expect(improvement.price).toBe(8); // ceil(15/2) = 8
     });
   });
 

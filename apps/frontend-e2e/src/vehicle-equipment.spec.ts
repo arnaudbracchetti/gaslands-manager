@@ -3,8 +3,9 @@ import { registerTestUser, uniqueEmail } from './support/auth';
 import { createTeam, createTeamWithVehicles, addVehicle, openEquipmentManager, optionCard, saveAndWait } from './support/teams';
 
 /**
- * Gestion de l'équipement d'un véhicule — armes, améliorations, cas particulier
- * de la Tourelle et garde de budget (EquipmentManager, cf. COMPONENTS.md).
+ * Gestion de l'équipement d'un véhicule — armes, améliorations, montage sur
+ * Tourelle (attribut de l'arme) et garde de budget (EquipmentManager, cf.
+ * COMPONENTS.md).
  *
  * Véhicule par défaut utilisé : "Camion à glaces" — premier véhicule autorisé
  * pour Rutherford (sponsor par défaut du catalogue, cf. teams.spec.ts) qui
@@ -15,7 +16,7 @@ import { createTeam, createTeamWithVehicles, addVehicle, openEquipmentManager, o
  * Chaque test enregistre son propre utilisateur (email unique) — cf.
  * teams.spec.ts pour le raisonnement sur l'isolation par `userId`.
  */
-test.describe('Vehicle equipment — armes, améliorations, Tourelle, budget', () => {
+test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle, budget', () => {
   test('ajoute une arme avec orientation et la retrouve montée', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
@@ -65,7 +66,7 @@ test.describe('Vehicle equipment — armes, améliorations, Tourelle, budget', (
     await expect(page.getByText('Aucune arme montée.')).toBeVisible();
   });
 
-  test('ajoute puis retire une amélioration non-Tourelle', async ({ page }) => {
+  test('ajoute puis retire une amélioration', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Jabassa',
@@ -90,7 +91,7 @@ test.describe('Vehicle equipment — armes, améliorations, Tourelle, budget', (
     await expect(page.getByText('Aucune amélioration installée.')).toBeVisible();
   });
 
-  test("une amélioration par défaut (estDefaut) ne peut pas être retirée", async ({ page }) => {
+  test("une arme intégrée par défaut (estDefaut) ne peut pas être retirée", async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Jabassa',
@@ -98,76 +99,45 @@ test.describe('Vehicle equipment — armes, améliorations, Tourelle, budget', (
       password: 'test1234',
     });
 
-    // Char d'assaut (Rutherford, sponsor par défaut) porte une Tourelle intégrée
-    // (`estDefaut: true`, cf. VEHICLES.md — "Améliorations par défaut").
+    // Char d'assaut (Rutherford, sponsor par défaut) porte un Canon de 125mm monté
+    // sur Tourelle, intégré (`Weapon.estDefaut: true`, cf. VEHICLES.md — "Améliorations
+    // et armes par défaut") — ce n'est plus une amélioration mais une arme.
     await createTeamWithVehicles(page, { vehicleNames: ["Char d'assaut"] });
     await openEquipmentManager(page);
 
-    const tourelleOrpheline = page.locator('.me-item--tourelle-orpheline');
-    await expect(tourelleOrpheline).toBeVisible();
-    await expect(tourelleOrpheline.getByText('🔒 Intégré')).toBeVisible();
-    await expect(tourelleOrpheline.getByRole('button', { name: 'Retirer', exact: true })).toHaveCount(0);
+    const canonIntegre = page.locator('.me-item').filter({ hasText: 'Canon de 125mm' });
+    await expect(canonIntegre).toBeVisible();
+    await expect(canonIntegre.getByText('(Tourelle)')).toBeVisible();
+    await expect(canonIntegre.getByText('🔒 Intégré')).toBeVisible();
+    await expect(canonIntegre.getByRole('button', { name: 'Retirer', exact: true })).toHaveCount(0);
   });
 
-  test('assigne une arme à une Tourelle orpheline et vérifie le coût x3', async ({ page }) => {
+  test('monte une arme sur Tourelle (case à cocher) et vérifie le coût x3', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Jabassa',
-      email: uniqueEmail('e2e-equip-tourelle-assign'),
-      password: 'test1234',
-    });
-
-    // Char d'assaut a bien une Tourelle orpheline dès la création, mais elle est
-    // `estDefaut: true` — son prix reste TOUJOURS 0 une fois l'arme assignée
-    // (`Improvement.price` renvoie 0 avant même de regarder `weaponAssignee`,
-    // cf. backend `domain/improvement.ts`). Pour vérifier la règle de coût ×3,
-    // il faut une Tourelle ACHETÉE (non estDefaut) — cf. Camion à glaces ici,
-    // même montage que le test "retire une Tourelle achetée" ci-dessous.
-    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
-    await openEquipmentManager(page);
-
-    await optionCard(page, 'Tourelle').getByRole('button', { name: 'Ajouter' }).click();
-    await page.locator('.me-item--tourelle-orpheline').getByRole('button', { name: 'Assigner une arme' }).click();
-
-    await expect(page.getByRole('dialog', { name: "Choisir l'arme de la Tourelle" })).toBeVisible();
-    const mitrailleuseChoice = page.getByTestId('tam-weapon-mitrailleuse');
-    // Prix affiché = 3 × le prix catalogue de l'arme (2 🛢️ → 6 🛢️, cf. amelioration.yml/armes.yml).
-    await expect(mitrailleuseChoice).toContainText('6');
-    await mitrailleuseChoice.click();
-
-    const assignedTourelle = page.locator('.me-item--tourelle');
-    await expect(assignedTourelle).toBeVisible();
-    await expect(assignedTourelle.getByText('Mitrailleuse')).toBeVisible();
-    await expect(assignedTourelle.getByText('(Tourelle)')).toBeVisible();
-    // improvement.prix = 3 × prix de l'arme montée — coût total, arme incluse.
-    await expect(assignedTourelle).toContainText('6');
-  });
-
-  test("désassigne une arme d'une Tourelle", async ({ page }) => {
-    await registerTestUser(page, {
-      firstName: 'Furiosa',
-      lastName: 'Jabassa',
-      email: uniqueEmail('e2e-equip-tourelle-unassign'),
+      email: uniqueEmail('e2e-equip-tourelle-mount'),
       password: 'test1234',
     });
 
     await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
     await openEquipmentManager(page);
 
-    await optionCard(page, 'Tourelle').getByRole('button', { name: 'Ajouter' }).click();
-    await page.locator('.me-item--tourelle-orpheline').getByRole('button', { name: 'Assigner une arme' }).click();
-    await page.getByTestId('tam-weapon-mitrailleuse').click();
-    await expect(page.locator('.me-item--tourelle')).toBeVisible();
+    const mitrailleuseOption = optionCard(page, 'Mitrailleuse');
+    await mitrailleuseOption.getByRole('button', { name: 'Ajouter' }).click();
 
-    await page.locator('.me-item--tourelle').getByRole('button', { name: 'Désassigner' }).click();
+    // Bouton « Tourelle x3 » — visible car Mitrailleuse est montable_tourelle.
+    await mitrailleuseOption.getByRole('button', { name: 'Tourelle x3' }).click();
 
-    const tourelleOrpheline = page.locator('.me-item--tourelle-orpheline');
-    await expect(tourelleOrpheline).toBeVisible();
-    await expect(tourelleOrpheline.getByText('⚠ Aucune arme assignée')).toBeVisible();
-    await expect(tourelleOrpheline.getByRole('button', { name: 'Assigner une arme' })).toBeVisible();
+    const mountedWeapon = page.locator('.me-item').filter({ hasText: 'Mitrailleuse' });
+    await expect(mountedWeapon).toBeVisible();
+    await expect(mountedWeapon.getByText('(Tourelle)')).toBeVisible();
+    // Prix ×3 (2 🛢️ → 6 🛢️, cf. armes.yml) — pas d'orientation affichée (arc 360°).
+    await expect(mountedWeapon).toContainText('6');
+    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(gauche\)$|^\(droite\)$/)).toHaveCount(0);
   });
 
-  test('retire une Tourelle achetée (non estDefaut) entièrement', async ({ page }) => {
+  test('retire une arme montée sur Tourelle comme n\'importe quelle arme', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Jabassa',
@@ -175,29 +145,19 @@ test.describe('Vehicle equipment — armes, améliorations, Tourelle, budget', (
       password: 'test1234',
     });
 
-    // Camion à glaces n'a PAS de Tourelle intégrée — celle-ci sera achetée
-    // (estDefaut: false), donc entièrement retirable.
     await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
     await openEquipmentManager(page);
 
-    const tourelleOption = optionCard(page, 'Tourelle');
-    await tourelleOption.getByRole('button', { name: 'Ajouter' }).click();
-    await expect(page.getByText('Améliorations (1)')).toBeVisible();
+    const mitrailleuseOption = optionCard(page, 'Mitrailleuse');
+    await mitrailleuseOption.getByRole('button', { name: 'Ajouter' }).click();
+    await mitrailleuseOption.getByRole('button', { name: 'Tourelle x3' }).click();
+    await expect(page.getByText('Armes (1)')).toBeVisible();
 
-    await page.locator('.me-item--tourelle-orpheline').getByRole('button', { name: 'Assigner une arme' }).click();
-    await page.getByTestId('tam-weapon-mitrailleuse').click();
-
-    const assignedTourelle = page.locator('.me-item--tourelle');
-    await expect(assignedTourelle).toBeVisible();
-    // Tourelle ACHETÉE (pas estDefaut) → bouton "Retirer la Tourelle" disponible,
-    // en plus de "Désassigner" (cf. mounted-equipment.html).
-    await assignedTourelle.getByRole('button', { name: 'Retirer la Tourelle' }).click();
+    await page.locator('.me-item').filter({ hasText: 'Mitrailleuse' }).getByRole('button', { name: 'Retirer' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Retirer', exact: true }).click();
 
-    await expect(page.getByText('Améliorations (0)')).toBeVisible();
-    await expect(page.getByText('Aucune amélioration installée.')).toBeVisible();
-    // L'arme n'a jamais existé comme entité Weapon séparée — rien à nettoyer côté "Armes".
     await expect(page.getByText('Armes (0)')).toBeVisible();
+    await expect(page.getByText('Aucune arme montée.')).toBeVisible();
   });
 
   test('le budget de l\'équipe empêche l\'ajout d\'un équipement trop cher', async ({ page }) => {

@@ -37,15 +37,13 @@ classDiagram
         +remainingBudget : number
         +assertNotLocked() void
         +update(cmd) void
-        +addVehicle(type, defaultImprovements) Vehicle
+        +addVehicle(type, defaultImprovements, defaultWeapons) Vehicle
         +removeVehicle(vehicleId) void
         +findVehicle(vehicleId) Vehicle
         +addWeaponToVehicle(vehicleId, weaponType, orientation) void
         +removeWeaponFromVehicle(vehicleId, weaponId) void
         +addImprovementToVehicle(vehicleId, improvementType, orientation) void
         +removeImprovementFromVehicle(vehicleId, improvementId) void
-        +assignWeaponToTourelle(vehicleId, improvementId, weaponType) void
-        +unassignWeaponFromTourelle(vehicleId, improvementId) void
     }
 
     class Vehicle {
@@ -65,15 +63,14 @@ classDiagram
         +removeWeapon(weaponId) void
         +addImprovement(type, orientation, budget) void
         +removeImprovement(improvementId) void
-        +assignWeaponToTourelle(improvementId, weaponType, budget) void
-        +unassignWeaponFromTourelle(improvementId) void
     }
 
     class Weapon {
         <<Entity>>
         +id : number
         +type : WeaponType
-        +orientation : Orientation | null
+        +orientation : WeaponOrientation | null
+        +estDefaut : boolean
         +price : number
         +slots : number
     }
@@ -84,12 +81,8 @@ classDiagram
         +type : ImprovementType
         +orientation : Orientation | null
         +estDefaut : boolean
-        -_weaponAssignee : WeaponType | null
-        +weaponAssignee : WeaponType | null
         +price : number
         +slots : number
-        +assignWeapon(weaponType) void
-        +unassignWeapon() void
     }
 
     class VehicleType {
@@ -105,6 +98,7 @@ classDiagram
         +equipage : number
         +poids : Léger|Moyen|Lourd
         +defaultImprovements : string[]
+        +defaultWeaponNomInterne : string | undefined
         +from(raw)$ VehicleType
         +equals(other) boolean
     }
@@ -119,6 +113,7 @@ classDiagram
         +type : base|avancée|équipage|largable
         +isEquipage : boolean
         +requiresOrientation : boolean
+        +montableSurTourelle : boolean
         +from(raw)$ WeaponType
         +equals(other) boolean
     }
@@ -130,8 +125,6 @@ classDiagram
         +nom : string
         +slots : number
         +price : number
-        +hasVariablePrice : boolean
-        +isTourelle : boolean
         +from(raw)$ ImprovementType
         +equals(other) boolean
     }
@@ -148,7 +141,6 @@ classDiagram
     Vehicle --> VehicleType : type
     Weapon --> WeaponType : type
     Improvement --> ImprovementType : type
-    Improvement --> WeaponType : weaponAssignee (Tourelle)
     Team ..> DomainException : lève
     Vehicle ..> DomainException : lève
 ```
@@ -157,6 +149,20 @@ classDiagram
 jamais via une requête SQL. `Team.remainingBudget` agrège le coût de tous ses véhicules.
 Toute mutation valide d'abord les règles métier et lève `DomainException` si une règle
 est violée. La couche application convertit `DomainException` → `BadRequestException`.
+
+**Montage sur Tourelle** : n'est pas modélisé comme une amélioration indépendante, ni
+comme un booléen orthogonal à l'orientation — c'est la valeur `'tourelle'` du type
+`WeaponOrientation = Orientation | 'tourelle'` (distinct de l'`Orientation` à 4 valeurs
+utilisée par `VehicleImprovement`, qui ne supporte jamais ce montage). `Weapon.orientation
+=== 'tourelle'` triple `price` (arc à 360°) ; l'ancien état invalide « orientation ET
+montage Tourelle choisis en même temps » est désormais impossible à représenter, plutôt
+que gardé à l'exécution. Ce choix élimine toute notion d'« assignation » séparée :
+réassigner une arme sur une Tourelle revient à revendre l'arme actuelle (`removeWeapon`)
+puis en acheter une nouvelle avec `orientation: 'tourelle'` — l'arme montée hérite alors
+directement du mécanisme de revente/annulation déjà en place pour toute arme
+(`isSold`/`purchasedThisSession`, prix résiduel), sans code dédié. Seule
+`WeaponType.montableSurTourelle` (attribut catalogue, `Arme.montable_tourelle`) détermine
+si une arme peut être montée ainsi — tous les sponsors l'acceptent.
 
 **Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
 de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne
@@ -205,6 +211,7 @@ classDiagram
         +regles : string
         +sponsors_autorises : string[]
         +ameliorations_defaut : string[]
+        +arme_defaut : string | undefined
     }
 
     class Arme {
@@ -217,6 +224,7 @@ classDiagram
         +description : string
         +regles : string
         +sponsors_autorises : string[]
+        +montable_tourelle : boolean | undefined
     }
 
     class Amelioration {
@@ -302,7 +310,8 @@ erDiagram
     WEAPON {
         number id PK
         string nomInterne "réf. catalogue Arme"
-        enum orientation "avant|arrière|gauche|droite"
+        enum orientation "avant|arrière|gauche|droite|tourelle (coût x3), null si équipage"
+        boolean estDefaut "intégré au profil de base (ex. Canon de 125mm du Char d'assaut)"
         number vehicleId FK
         date createdAt
     }
@@ -371,12 +380,12 @@ erDiagram
         string sequellaTypeNom "nullable"
         number chocsCost "nullable"
         string operation "nullable — BUY|SELL"
-        string entityType "nullable — VEHICLE|WEAPON"
+        string entityType "nullable — VEHICLE|WEAPON|IMPROVEMENT"
         string nomInterne "nullable — EquipmentChanged"
         number cost "nullable"
         number targetVehicleId "nullable"
         number targetEntityId "nullable"
-        string orientation "nullable"
+        string orientation "nullable — EquipmentChanged ; WEAPON : 5 valeurs dont 'tourelle' (coût x3)"
         date createdAt
     }
 ```

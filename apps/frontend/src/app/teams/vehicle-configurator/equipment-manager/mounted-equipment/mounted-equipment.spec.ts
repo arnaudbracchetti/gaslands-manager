@@ -2,10 +2,10 @@
  * Tests unitaires pour MountedEquipment.
  *
  * Composant "dumb" : on vérifie l'affichage des listes "Armes"/"Améliorations"
- * (y compris la résolution des noms/emplacements depuis `sponsorCatalog` et
- * toute la logique d'affichage Tourelle — assignée, orpheline, intégrée), et
- * l'émission des 4 outputs au clic sur chaque bouton d'action (mirroir de
- * `team-card.spec.ts` pour `outputToObservable`).
+ * (y compris la résolution des noms/emplacements depuis `sponsorCatalog` et le
+ * badge "(Tourelle)" sur une arme montée sur Tourelle), et l'émission des 2
+ * outputs au clic sur chaque bouton d'action (mirroir de `team-card.spec.ts`
+ * pour `outputToObservable`).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
@@ -22,11 +22,10 @@ const mockSponsorCatalog: Sponsor = {
   vehicules: [],
   armes: [
     { nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
-    { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 18, emplacement: 2, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
+    { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 18, emplacement: 2, description: '', regles: '', sponsors_autorises: ['Rutherford'], montable_tourelle: true },
   ],
   ameliorations: [
     { nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
-    { nom: 'Tourelle', nom_interne: 'tourelle', prix: 'x3', emplacement: 0, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
   ],
 };
 
@@ -37,6 +36,7 @@ const mockWeapon: Weapon = {
   vehicleId: 100,
   createdAt: '2026-01-01T00:00:01.000Z',
   prix: 4,
+  estDefaut: false,
 };
 
 const mockImprovement: VehicleImprovement = {
@@ -48,35 +48,24 @@ const mockImprovement: VehicleImprovement = {
   estDefaut: false,
   prix: 4,
   emplacement: 1,
-  weaponNomInterne: null,
 };
 
-// Tourelle assignée — ligne fusionnée "Arme (Tourelle)".
-const mockTourelleAssignee: VehicleImprovement = {
-  id: 301,
-  nomInterne: 'tourelle',
-  orientation: 'avant',
+// Arme montée sur Tourelle — coût ×3, arc à 360° (pas d'orientation).
+const mockWeaponTourelle: Weapon = {
+  id: 201,
+  nomInterne: 'bfg',
+  orientation: 'tourelle',
   vehicleId: 100,
   createdAt: '2026-01-01T00:00:03.000Z',
-  estDefaut: false,
   prix: 54, // 3 × 18 (BFG)
-  emplacement: 0,
-  weaponNomInterne: 'bfg',
+  estDefaut: false,
 };
 
-// Tourelle orpheline — aucune arme assignée.
-const mockTourelleOrpheline: VehicleImprovement = {
-  ...mockTourelleAssignee,
-  id: 302,
-  orientation: null,
+// Arme intégrée au profil de base (Canon de 125mm du Char d'assaut) — non retirable.
+const mockWeaponDefaut: Weapon = {
+  ...mockWeaponTourelle,
+  id: 202,
   prix: 0,
-  weaponNomInterne: null,
-};
-
-// Tourelle intégrée (Char d'assaut, estDefaut) — non supprimable.
-const mockTourelleIntegree: VehicleImprovement = {
-  ...mockTourelleAssignee,
-  id: 303,
   estDefaut: true,
 };
 
@@ -111,7 +100,7 @@ describe('MountedEquipment', () => {
     expect(el.querySelectorAll('.me-item')).toHaveLength(0);
   });
 
-  // ── Affichage standard (arme + amélioration non-Tourelle) ──────────────────
+  // ── Affichage standard (arme + amélioration) ────────────────────────────────
 
   it('affiche les titres de section avec le nombre d\'éléments, le nom résolu, l\'orientation et les badges prix/emplacement', () => {
     setInputs([mockWeapon], [mockImprovement]);
@@ -188,7 +177,7 @@ describe('MountedEquipment', () => {
     expect(el.textContent).toContain('Mitrailleuse');
   });
 
-  it('affiche le filigrane "Vendu" pour une amélioration vendue (non-Tourelle), sans bouton Retirer', () => {
+  it('affiche le filigrane "Vendu" pour une amélioration vendue, sans bouton Retirer', () => {
     setInputs([], [{ ...mockImprovement, sold: true }]);
     component.showSold.set(true);
     fixture.detectChanges();
@@ -212,72 +201,26 @@ describe('MountedEquipment', () => {
     expect(el.querySelector('.me-item__watermark')).not.toBeNull();
   });
 
-  // ── Tourelle ASSIGNÉE — ligne fusionnée "Arme (Tourelle)" ───────────────────
+  // ── Arme montée sur Tourelle (attribut de l'arme) ───────────────────────────
 
-  it('fusionne une Tourelle assignée en une ligne "Arme (Tourelle)" avec son coût total et le bouton Désassigner', () => {
-    setInputs([], [mockTourelleAssignee]);
+  it('affiche le badge "(Tourelle)" et le coût ×3 pour une arme montée sur Tourelle, sans orientation', () => {
+    setInputs([mockWeaponTourelle], []);
 
     const el = fixture.nativeElement as HTMLElement;
-    const item = el.querySelector('.me-item--tourelle') as HTMLElement;
+    expect(el.textContent).toContain('BFG');
+    expect(el.textContent).toContain('(Tourelle)');
+    expect(el.textContent).not.toContain('(avant)');
+    expect(el.textContent).toContain('54'); // prix total (3× BFG)
 
-    expect(item.textContent).toContain('BFG'); // arme résolue depuis weaponNomInterne
-    expect(item.textContent).toContain('(Tourelle)');
-    expect(item.textContent).toContain('(avant)');
-    expect(item.textContent).toContain('54'); // prix total (3× BFG)
-
-    const badges = item.querySelectorAll('.me-badge');
-    expect(badges[1].textContent).toContain('2'); // emplacement de l'arme (BFG)
-
-    expect(item.textContent).toContain('Désassigner');
-    expect(item.textContent).toContain('Retirer la Tourelle');
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(1);
   });
 
-  it('Tourelle assignée vendue : filigrane "Vendu", ni Désassigner ni Retirer', () => {
-    setInputs([], [{ ...mockTourelleAssignee, sold: true }]);
-    component.showSold.set(true);
-    fixture.detectChanges();
+  it('arme intégrée montée sur Tourelle (Canon de 125mm du Char d\'assaut) : badge Intégré, pas de bouton Retirer', () => {
+    setInputs([mockWeaponDefaut], []);
 
     const el = fixture.nativeElement as HTMLElement;
-    const item = el.querySelector('.me-item--tourelle') as HTMLElement;
-
-    expect(item.querySelector('.me-item__watermark')?.textContent).toContain('Vendu');
-    expect(item.textContent).not.toContain('Désassigner');
-    expect(item.textContent).not.toContain('Retirer la Tourelle');
-  });
-
-  it('Tourelle assignée intégrée (estDefaut) : Désassigner reste possible, mais pas de retrait — badge "Tourelle intégrée"', () => {
-    setInputs([], [mockTourelleIntegree]);
-
-    const el = fixture.nativeElement as HTMLElement;
-    const item = el.querySelector('.me-item--tourelle') as HTMLElement;
-
-    expect(item.textContent).toContain('Désassigner');
-    expect(item.textContent).not.toContain('Retirer la Tourelle');
-    expect(item.querySelector('.me-badge-defaut')?.textContent).toContain('Tourelle intégrée');
-  });
-
-  // ── Tourelle ORPHELINE — aucune arme assignée ────────────────────────────────
-
-  it('affiche une Tourelle orpheline avec l\'avertissement et le bouton Assigner une arme', () => {
-    setInputs([], [mockTourelleOrpheline]);
-
-    const el = fixture.nativeElement as HTMLElement;
-    const item = el.querySelector('.me-item--tourelle-orpheline') as HTMLElement;
-
-    expect(item.textContent).toContain('Tourelle');
-    expect(item.textContent).toContain('⚠ Aucune arme assignée');
-    expect(item.textContent).toContain('Assigner une arme');
-    expect(item.textContent).toContain('Retirer'); // pas estDefaut → bouton Retirer présent
-  });
-
-  it('Tourelle orpheline intégrée (estDefaut) : badge 🔒 Intégré, pas de bouton Retirer', () => {
-    setInputs([], [{ ...mockTourelleOrpheline, estDefaut: true }]);
-
-    const el = fixture.nativeElement as HTMLElement;
-    const item = el.querySelector('.me-item--tourelle-orpheline') as HTMLElement;
-
-    expect(item.querySelector('.me-badge-defaut')?.textContent).toContain('Intégré');
-    expect(item.querySelector('.me-remove')).toBeNull();
+    expect(el.querySelector('.me-badge-defaut')?.textContent).toContain('Intégré');
+    expect(el.querySelector('.me-remove')).toBeNull();
   });
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
@@ -292,6 +235,16 @@ describe('MountedEquipment', () => {
     expect(emitted).toEqual([mockWeapon]);
   });
 
+  it('émet weaponRemoved au clic sur "Retirer" d\'une arme montée sur Tourelle', () => {
+    setInputs([mockWeaponTourelle], []);
+    const emitted: Weapon[] = [];
+    outputToObservable(component.weaponRemoved).subscribe((w) => emitted.push(w));
+
+    (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual([mockWeaponTourelle]);
+  });
+
   it('émet improvementRemoved au clic sur "Retirer" d\'une amélioration standard', () => {
     setInputs([], [mockImprovement]);
     const emitted: VehicleImprovement[] = [];
@@ -300,39 +253,5 @@ describe('MountedEquipment', () => {
     (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
 
     expect(emitted).toEqual([mockImprovement]);
-  });
-
-  it('émet tourelleAssignRequested au clic sur "Assigner une arme" d\'une Tourelle orpheline', () => {
-    setInputs([], [mockTourelleOrpheline]);
-    const emitted: VehicleImprovement[] = [];
-    outputToObservable(component.tourelleAssignRequested).subscribe((i) => emitted.push(i));
-
-    (fixture.nativeElement.querySelector('.me-add-weapon') as HTMLButtonElement).click();
-
-    expect(emitted).toEqual([mockTourelleOrpheline]);
-  });
-
-  it('émet tourelleUnassignRequested au clic sur "Désassigner" d\'une Tourelle assignée', () => {
-    setInputs([], [mockTourelleAssignee]);
-    const emitted: VehicleImprovement[] = [];
-    outputToObservable(component.tourelleUnassignRequested).subscribe((i) => emitted.push(i));
-
-    const buttons = fixture.nativeElement.querySelectorAll('.me-remove') as NodeListOf<HTMLButtonElement>;
-    // Premier bouton = "Désassigner" (cf. ordre du template).
-    buttons[0].click();
-
-    expect(emitted).toEqual([mockTourelleAssignee]);
-  });
-
-  it('émet improvementRemoved au clic sur "Retirer la Tourelle" d\'une Tourelle assignée non-défaut', () => {
-    setInputs([], [mockTourelleAssignee]);
-    const emitted: VehicleImprovement[] = [];
-    outputToObservable(component.improvementRemoved).subscribe((i) => emitted.push(i));
-
-    const buttons = fixture.nativeElement.querySelectorAll('.me-remove') as NodeListOf<HTMLButtonElement>;
-    // Second bouton = "Retirer la Tourelle".
-    buttons[1].click();
-
-    expect(emitted).toEqual([mockTourelleAssignee]);
   });
 });

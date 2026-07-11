@@ -9,5 +9,4 @@ export interface VehicleImprovementDto {
   estDefaut: boolean;
   prix: number;
   emplacement: number;
-  weaponNomInterne: string | null;
 }

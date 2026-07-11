@@ -32,7 +32,6 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
       estDefaut: imp.estDefaut,
       prix: imp.price,
       emplacement: imp.slots,
-      weaponNomInterne: imp.weaponAssignee?.nomInterne ?? null,
     }),
   );
 
@@ -44,6 +43,7 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
       vehicleId: vehicle.id,
       createdAt: new Date(0),
       prix: w.price,
+      estDefaut: w.estDefaut,
     }),
   );
 

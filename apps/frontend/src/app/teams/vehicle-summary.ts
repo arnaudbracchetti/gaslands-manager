@@ -31,12 +31,9 @@ export interface VehicleSummary {
   nom: string;
   /**
    * Coût total EXACT en jerricans : prix de base du véhicule + somme des prix de ses
-   * armes et améliorations montées.
-   *
-   * Désormais toujours précis : le backend résout le prix de chaque Tourelle
-   * (`improvement.prix` = 3× le prix catalogue de l'arme assignée, ou 0 si orpheline).
-   * `VehicleService.toVehicleDto` garantit que `prix` est toujours un `number` réel —
-   * plus de cas `"x3"` string ni d'approximation côté frontend.
+   * armes et améliorations montées. Une arme montée sur Tourelle (`weapon.orientation
+   * === 'tourelle'`) porte déjà son coût ×3 dans `weapon.prix`, résolu côté backend —
+   * aucune approximation côté frontend.
    */
   cout: number;
   /**
@@ -88,11 +85,9 @@ export interface TeamVehiclePair {
  * règle de gestion résolue côté serveur, 0 pour les défauts).
  *
  * Le calcul est TOUJOURS exact :
- * - Armes : `weapon.prix` = prix catalogue direct (jamais 0 sauf bug de données).
- * - Améliorations par défaut (`estDefaut: true`) : `prix` = 0 — pas de contribution.
- * - Tourelle orpheline : `prix` = 0 (aucune arme assignée — coût en attente).
- * - Tourelle assignée : `prix` = 3× le prix catalogue de l'arme choisie — coût total,
- *   arme incluse (l'arme n'existe pas comme entité Weapon séparée, cf. architecture).
+ * - Armes : `weapon.prix` = prix catalogue direct (×3 si montée sur Tourelle), jamais 0
+ *   sauf bug de données ou `estDefaut` (Canon de 125mm intégré du Char d'assaut).
+ * - Améliorations/armes par défaut (`estDefaut: true`) : `prix` = 0 — pas de contribution.
  */
 export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): VehicleSummary {
   const vehiculeCatalogue: Vehicule | undefined = catalog.vehicules.find(
@@ -110,9 +105,11 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
   // et restent exclues des tags : seul l'équipement encore actif doit y apparaître (le
   // badge "Vendue"/barré est affiché ailleurs, dans `MountedEquipment`, pas ici). Le coût
   // reste néanmoins comptabilisé (prix résiduel auto-ajustant, cf. `Weapon.price` backend).
+  // `estDefaut` (Canon de 125mm intégré du Char d'assaut) : même exclusion des tags/slots
+  // que les améliorations par défaut ci-dessous — fait partie du profil de base.
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
-    if (weapon.sold || weapon.lost) {
+    if (weapon.estDefaut || weapon.sold || weapon.lost) {
       continue;
     }
     const armeCatalogue: Arme | undefined = catalog.armes.find(

@@ -10,6 +10,7 @@
  */
 import {
   Orientation,
+  WeaponOrientation,
   Vehicle,
   VehicleImprovement,
   Weapon,
@@ -18,8 +19,12 @@ import {
 export interface WorkshopWeaponDto {
   id: number;
   nomInterne: string;
+  /** 5 valeurs possibles, dont `'tourelle'` (montage sur Tourelle — arc à 360°, coût
+   *  ×3, immuable après achat). */
   orientation: string | null;
   price: number;
+  /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut). */
+  estDefaut: boolean;
   isLost: boolean;
   /** Vendue (revente pré-existante, moitié prix) — reste visible, barrée, côté IHM. */
   isSold: boolean;
@@ -81,15 +86,15 @@ export interface ChangeEquipmentDto {
   nomInterne: string;
   targetVehicleId?: number | null;
   targetEntityId?: number | null;
-  orientation?: Orientation | null;
+  /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation | null;
 }
 
 /**
  * Traduit un véhicule d'atelier (`WorkshopVehicleDto`) vers l'entité `Vehicle`
  * attendue par `EquipmentManager`. Champs absents de l'atelier synthétisés :
- * `teamId`/`createdAt` (non pertinents ici, `EquipmentManager` ne les lit pas) ;
- * `weaponNomInterne` toujours `null` (la Tourelle est exclue de l'atelier au Temps 1,
- * cf. doc de conception). `price` (atelier) → `prix` (modèle équipe).
+ * `teamId`/`createdAt` (non pertinents ici, `EquipmentManager` ne les lit pas).
+ * `price` (atelier) → `prix` (modèle équipe).
  */
 export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
   return {
@@ -101,10 +106,11 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
       (x: WorkshopWeaponDto): Weapon => ({
         id: x.id,
         nomInterne: x.nomInterne,
-        orientation: x.orientation as Orientation | null,
+        orientation: x.orientation as WeaponOrientation | null,
         vehicleId: w.id,
         createdAt: '',
         prix: x.price,
+        estDefaut: x.estDefaut,
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
         lost: x.isLost,
@@ -120,7 +126,6 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
         estDefaut: x.estDefaut,
         prix: x.price,
         emplacement: x.emplacement,
-        weaponNomInterne: null,
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
         lost: x.isLost,

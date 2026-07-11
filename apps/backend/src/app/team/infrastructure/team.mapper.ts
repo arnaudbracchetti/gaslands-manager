@@ -50,7 +50,7 @@ export class TeamMapper {
     if (!weaponType) {
       throw new Error(`Arme catalogue inconnue : "${orm.nomInterne}" (weapon #${orm.id})`);
     }
-    return new Weapon(orm.id, weaponType, orm.orientation);
+    return new Weapon(orm.id, weaponType, orm.orientation, orm.estDefaut);
   }
 
   private improvementToDomain(orm: VehicleImprovementOrm): Improvement {
@@ -58,14 +58,7 @@ export class TeamMapper {
     if (!improvementType) {
       throw new Error(`Amélioration catalogue inconnue : "${orm.nomInterne}" (improvement #${orm.id})`);
     }
-    const imp = new Improvement(orm.id, improvementType, orm.orientation, orm.estDefaut);
-
-    if (improvementType.isTourelle && orm.weaponNomInterne) {
-      const weaponType = this.catalogRepo.getWeaponType(orm.weaponNomInterne);
-      if (weaponType) imp.assignWeapon(weaponType);
-    }
-
-    return imp;
+    return new Improvement(orm.id, improvementType, orm.orientation, orm.estDefaut);
   }
 
   // ── Domaine → ORM (pour la persistance) ──────────────────────────────────────
@@ -100,6 +93,7 @@ export class TeamMapper {
       id: domain.id || undefined,
       nomInterne: domain.type.nomInterne,
       orientation: domain.orientation,
+      estDefaut: domain.estDefaut,
       vehicleId: vehicleId || undefined,
     };
   }
@@ -110,7 +104,6 @@ export class TeamMapper {
       nomInterne: domain.type.nomInterne,
       orientation: domain.orientation,
       estDefaut: domain.estDefaut,
-      weaponNomInterne: domain.weaponAssignee?.nomInterne ?? null,
       vehicleId: vehicleId || undefined,
     };
   }

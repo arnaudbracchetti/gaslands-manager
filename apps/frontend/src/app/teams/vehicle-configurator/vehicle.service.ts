@@ -16,17 +16,17 @@
  *  2/4. `getAvailableImprovements`/`getAvailableWeapons` → étape 2 : charger les options
  *  3/5. `addImprovement`/`addWeapon`                     → étape 2 : équiper (un par un)
  *
- * Deux méthodes supplémentaires gèrent l'arme d'une Tourelle :
- *  `assignWeaponToTourelle`   → PATCH, assigne une arme (orphelin → assigné)
- *  `unassignWeaponFromTourelle` → DELETE, retire l'arme (assigné → orphelin)
- *
  * Une sixième, `getAllForTeam`, est ÉTRANGÈRE au flux de construction : elle sert
  * à `Teams` pour afficher la liste des véhicules sur chaque carte (cf. `vehicle-summary.ts`).
  *
  * `remove`/`removeWeapon`/`removeImprovement` servent la fonctionnalité "modifier/
  * supprimer un véhicule depuis la carte d'équipe". Les retraits simples suivent la
- * convention REST `204 No Content` — d'où `Observable<void>`. Les deux méthodes
- * Tourelle retournent le véhicule rechargé (`200 OK`) — le frontend en a besoin.
+ * convention REST `204 No Content` — d'où `Observable<void>`.
+ *
+ * La Tourelle n'est pas une entité indépendante à assigner/réassigner : c'est une
+ * valeur d'orientation de l'arme (`AddWeaponDto.orientation = 'tourelle'`), choisie
+ * au moment de `addWeapon` — pour en changer, on revend l'arme montée (`removeWeapon`)
+ * puis on en achète une nouvelle.
  */
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -142,34 +142,5 @@ export class VehicleService {
    */
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle> {
     return this.http.delete<Vehicle>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
-  }
-
-  /**
-   * PATCH /api/vehicles/:vehicleId/improvements/:improvId/weapon
-   * Assigne une arme de catalogue à une Tourelle (état orphelin → assigné).
-   *
-   * L'arme est référencée par `nom_interne` — pas d'entité Weapon créée.
-   * Retourne le véhicule rechargé (200 OK) avec le prix de la Tourelle mis à jour
-   * (3× le prix de l'arme choisie).
-   */
-  assignWeaponToTourelle(vehicleId: number, improvementId: number, weaponNomInterne: string): Observable<Vehicle> {
-    return this.http.patch<Vehicle>(
-      `/api/vehicles/${vehicleId}/improvements/${improvementId}/weapon`,
-      { weaponNomInterne },
-    );
-  }
-
-  /**
-   * DELETE /api/vehicles/:vehicleId/improvements/:improvId/weapon
-   * Désassigne l'arme d'une Tourelle (état assigné → orphelin), sans supprimer
-   * la Tourelle elle-même.
-   *
-   * Retourne le véhicule rechargé (200 OK) — différent des retraits simples
-   * (`204 No Content`) car l'état du véhicule change et le frontend en a besoin.
-   */
-  unassignWeaponFromTourelle(vehicleId: number, improvementId: number): Observable<Vehicle> {
-    return this.http.delete<Vehicle>(
-      `/api/vehicles/${vehicleId}/improvements/${improvementId}/weapon`,
-    );
   }
 }

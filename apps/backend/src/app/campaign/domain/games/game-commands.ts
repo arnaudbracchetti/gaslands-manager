@@ -1,7 +1,7 @@
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
-import type { Orientation } from '../../../team/domain/team';
+import type { WeaponOrientation } from '../../../team/domain/team';
 import type { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import type { GameEvent } from '../events/game-event';
 
@@ -36,7 +36,8 @@ export interface ChangeEquipmentInput {
   targetVehicleId?: number | null;
   /** Id de l'entité à vendre — requis pour SELL. */
   targetEntityId?: number | null;
-  orientation?: Orientation | null;
+  /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
+  orientation?: WeaponOrientation | null;
   resolvedVehicleType: VehicleType | null;
   resolvedWeaponType: WeaponType | null;
   resolvedImprovementType: ImprovementType | null;

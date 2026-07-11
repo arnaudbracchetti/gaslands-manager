@@ -5,6 +5,7 @@ import { WeaponType } from './value-objects/weapon-type';
 import { ImprovementType } from './value-objects/improvement-type';
 import { SequellaType } from './value-objects/sequella-type';
 import { Improvement } from './improvement';
+import { Weapon } from './weapon';
 import { DomainException } from './vehicle';
 
 function makeVehicleType(emplacements = 4, prix = 12): VehicleType {
@@ -31,6 +32,13 @@ function makeImprovementType(prix = 4, emplacement = 1): ImprovementType {
 
 function makeVehicle(emplacements = 4, prix = 12): Vehicle {
   return new Vehicle(1, 10, makeVehicleType(emplacements, prix), [], []);
+}
+
+function makeTourelleWeaponType(prix = 5, emplacement = 1): WeaponType {
+  return WeaponType.from({
+    nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
+    prix, emplacement, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+  });
 }
 
 describe('Vehicle — champs transients de campagne', () => {
@@ -263,5 +271,36 @@ describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilit�
     const r = v.canAddImprovementInAnyOrientation(cherBelier, 100);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toContain('Budget');
+  });
+});
+
+describe('Vehicle.canAddWeapon/addWeapon — montage sur Tourelle (orientation \'tourelle\')', () => {
+  it('refuse le montage sur Tourelle si l\'arme ne le permet pas', () => {
+    const v = makeVehicle();
+    const r = v.canAddWeapon(makeWeaponType(), 'tourelle', 100); // makeWeaponType() : montable_tourelle absent
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('ne peut pas être montée sur Tourelle');
+  });
+
+  it('calcule le coût ×3 pour un montage sur Tourelle', () => {
+    const v = makeVehicle();
+    const r = v.canAddWeapon(makeTourelleWeaponType(5), 'tourelle', 15);
+    expect(r.ok).toBe(true); // 5×3=15, budget exactement suffisant
+    const insuffisant = v.canAddWeapon(makeTourelleWeaponType(5), 'tourelle', 10);
+    expect(insuffisant.ok).toBe(false);
+    if (!insuffisant.ok) expect(insuffisant.reason).toContain('Budget');
+  });
+
+  it('addWeapon monte l\'arme sur Tourelle : orientation \'tourelle\', prix ×3', () => {
+    const v = makeVehicle();
+    v.addWeapon(makeTourelleWeaponType(5), 'tourelle', 100);
+    expect(v.weapons[0].orientation).toBe('tourelle');
+    expect(v.weapons[0].price).toBe(15);
+  });
+
+  it('removeWeapon refuse de retirer une arme estDefaut (Canon de 125mm du Char d\'assaut)', () => {
+    const canon = new Weapon(1, makeTourelleWeaponType(6, 3), 'tourelle', true);
+    const v = new Vehicle(1, 10, makeVehicleType(), [canon], []);
+    expect(() => v.removeWeapon(1)).toThrow('intégrées au profil de base');
   });
 });

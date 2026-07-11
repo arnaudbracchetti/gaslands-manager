@@ -18,9 +18,16 @@
  *   2. Clic sur une direction → émet `{ nomInterne, orientation }`
  * Pour un équipement non-orientable (`requiresOrientation() === false`, ex: arme
  * d'équipage ou amélioration non-orientée), "Ajouter" émet directement `{ nomInterne }`.
+ *
+ * **Montage sur Tourelle** (armes uniquement) : un bouton « Tourelle x3 », identique
+ * en style aux 4 boutons d'orientation, apparaît dans le même sélecteur, visible
+ * uniquement si `option().montableSurTourelle` est vrai (attribut catalogue propre
+ * à cette arme). Son clic appelle le même `onOrientationChosen('tourelle')` que les
+ * 4 boutons de direction — `'tourelle'` est juste une 5ème valeur d'orientation
+ * (arc à 360°) — le coût ×3 est calculé côté backend.
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
-import { EquipmentChoice, EquipmentOption as EquipmentOptionDto, Orientation } from '../vehicle-builder.model';
+import { EquipmentChoice, EquipmentOption as EquipmentOptionDto, Orientation, WeaponOrientation } from '../vehicle-builder.model';
 import { EquipmentDetailModal } from './equipment-detail-modal/equipment-detail-modal';
 
 @Component({
@@ -115,8 +122,11 @@ export class EquipmentOption {
     this.chosen.emit({ nomInterne: this.option().nomInterne });
   }
 
-  /** Clic sur une direction du sélecteur : émet le choix complet et referme le sélecteur. */
-  onOrientationChosen(orientation: Orientation): void {
+  /**
+   * Clic sur une direction du sélecteur (ou sur "Tourelle x3", qui appelle ce même
+   * handler avec `'tourelle'`) : émet le choix complet et referme le sélecteur.
+   */
+  onOrientationChosen(orientation: WeaponOrientation): void {
     this.chosen.emit({ nomInterne: this.option().nomInterne, orientation });
     this.choosingOrientation.set(false);
   }

@@ -1,7 +1,7 @@
 import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
-import type { Orientation, RuleResult } from './team';
+import type { Orientation, WeaponOrientation, RuleResult } from './team';
 import { ok, fail } from './team';
 import { Weapon } from './weapon';
 import { Improvement } from './improvement';
@@ -101,21 +101,30 @@ export class Vehicle {
 
   // ── Règles publiques (pour GET /available-weapons et /available-improvements) ──
 
-  canAddWeapon(type: WeaponType, orientation: Orientation | null, remainingBudget: number): RuleResult {
+  canAddWeapon(type: WeaponType, orientation: WeaponOrientation | null, remainingBudget: number): RuleResult {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
 
-    if (!type.hasVariablePrice && type.price > remainingBudget) {
+    const montageTourelle = orientation === 'tourelle';
+    if (montageTourelle && !type.montableSurTourelle) {
+      return fail('Cette arme ne peut pas être montée sur Tourelle');
+    }
+
+    const price = type.price * (montageTourelle ? 3 : 1);
+    if (price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
     }
     if (type.slots > this.availableSlots) {
       return fail('Emplacements insuffisants sur ce véhicule');
     }
-    if (type.requiresOrientation && orientation === null) {
-      return fail('Une orientation est requise pour cette arme');
-    }
-    if (!type.requiresOrientation && orientation !== null) {
-      return fail('Les armes d\'équipage ne peuvent pas être orientées');
+
+    if (!montageTourelle) {
+      if (type.requiresOrientation && orientation === null) {
+        return fail('Une orientation est requise pour cette arme');
+      }
+      if (!type.requiresOrientation && orientation !== null) {
+        return fail('Les armes d\'équipage ne peuvent pas être orientées');
+      }
     }
     return ok();
   }
@@ -124,7 +133,7 @@ export class Vehicle {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
 
-    if (!type.hasVariablePrice && type.price > remainingBudget) {
+    if (type.price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
     }
     // Contrôle d'emplacements *global* (armes + améliorations) — la chaîne de décorateurs
@@ -196,15 +205,18 @@ export class Vehicle {
 
   // ── Mutations ─────────────────────────────────────────────────────────────────
 
-  addWeapon(type: WeaponType, orientation: Orientation | null, remainingBudget: number): void {
+  addWeapon(type: WeaponType, orientation: WeaponOrientation | null, remainingBudget: number): void {
     const result = this.canAddWeapon(type, orientation, remainingBudget);
     if (!result.ok) throw new DomainException(result.reason);
-    this._weapons.push(new Weapon(0, type, orientation));
+    this._weapons.push(new Weapon(0, type, orientation, false));
   }
 
   removeWeapon(weaponId: number): void {
     const index = this._weapons.findIndex((w) => w.id === weaponId);
     if (index === -1) throw new DomainException('Arme introuvable sur ce véhicule');
+    if (this._weapons[index].estDefaut) {
+      throw new DomainException('Les armes intégrées au profil de base ne peuvent pas être retirées');
+    }
     this._weapons.splice(index, 1);
   }
 
@@ -221,41 +233,6 @@ export class Vehicle {
       throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être retirées');
     }
     this._improvements.splice(index, 1);
-  }
-
-  /**
-   * Assigne une arme à une Tourelle, en validant le budget.
-   *
-   * remainingBudget est le solde de l'équipe AVANT cette assignation. En
-   * ré-assignation, le coût de l'arme actuellement montée est déjà décompté du
-   * budget de l'équipe — on le « rend » donc (budget + ancienCout) pour comparer
-   * correctement.
-   */
-  assignWeaponToTourelle(improvementId: number, weaponType: WeaponType, remainingBudget: number): void {
-    const tourelle = this.findImprovement(improvementId);
-    if (!tourelle.type.isTourelle) {
-      throw new DomainException('Cette amélioration n\'est pas une Tourelle');
-    }
-
-    const ancienneArme = tourelle.weaponAssignee;
-    const ancienCout = tourelle.price;
-
-    tourelle.assignWeapon(weaponType);
-    const nouveauCout = tourelle.price;
-
-    if (nouveauCout > remainingBudget + ancienCout) {
-      if (ancienneArme) tourelle.assignWeapon(ancienneArme);
-      else tourelle.unassignWeapon();
-      throw new DomainException('Budget de l\'équipe insuffisant');
-    }
-  }
-
-  unassignWeaponFromTourelle(improvementId: number): void {
-    const tourelle = this.findImprovement(improvementId);
-    if (!tourelle.type.isTourelle) {
-      throw new DomainException('Cette amélioration n\'est pas une Tourelle');
-    }
-    tourelle.unassignWeapon();
   }
 
   // ── Mutations campagne ────────────────────────────────────────────────────────
@@ -337,8 +314,8 @@ export class Vehicle {
    * Ajoute une arme avec un id explicite (D-S11 : id négatif = entité transiente campagne).
    * Distinct de addWeapon() qui passe par les règles de budget/emplacements.
    */
-  addCampaignWeapon(weaponType: WeaponType, orientation: Orientation | null, campaignId: number): Weapon {
-    const weapon = new Weapon(campaignId, weaponType, orientation);
+  addCampaignWeapon(weaponType: WeaponType, orientation: WeaponOrientation | null, campaignId: number): Weapon {
+    const weapon = new Weapon(campaignId, weaponType, orientation, false);
     this._weapons.push(weapon);
     return weapon;
   }

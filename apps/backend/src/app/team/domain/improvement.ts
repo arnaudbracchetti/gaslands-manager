@@ -1,17 +1,11 @@
 import type { ImprovementType } from './value-objects/improvement-type';
-import type { WeaponType } from './value-objects/weapon-type';
 import type { Orientation } from './team';
 
 /**
  * Une amélioration montée sur un véhicule d'équipe (instance de jeu).
  * Entité enfant de Vehicle, lui-même entité enfant de l'agrégat Team.
- *
- * Cas particulier de la Tourelle : elle porte une arme assignée (weaponAssignee)
- * dont le prix détermine son coût total (3×). assignWeapon/unassignWeapon
- * mutent cet état directement sur l'entité.
  */
 export class Improvement {
-  private _weaponAssignee: WeaponType | null = null;
   private _isLost = false;
   private _isSold = false;
 
@@ -22,21 +16,14 @@ export class Improvement {
     readonly estDefaut: boolean,
   ) {}
 
-  get weaponAssignee(): WeaponType | null {
-    return this._weaponAssignee;
-  }
-
   /**
    * Prix résiduel une fois vendue : ce qui reste après remboursement à moitié prix
-   * (floor), appliqué au prix de base normalement calculé (estDefaut/Tourelle
-   * inchangés). floor(X/2) remboursé + ceil(X/2) résiduel = X.
+   * (floor), appliqué au prix de base normalement calculé (estDefaut inchangé).
+   * floor(X/2) remboursé + ceil(X/2) résiduel = X.
    */
   get price(): number {
     if (this.estDefaut) return 0;
-    const basePrice = this.type.isTourelle
-      ? (this._weaponAssignee ? this._weaponAssignee.price * 3 : 0)
-      : this.type.price;
-    return this._isSold ? Math.ceil(basePrice / 2) : basePrice;
+    return this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
   }
 
   /**
@@ -80,13 +67,5 @@ export class Improvement {
   clearCampaignState(): void {
     this._isLost = false;
     this._isSold = false;
-  }
-
-  assignWeapon(weaponType: WeaponType): void {
-    this._weaponAssignee = weaponType;
-  }
-
-  unassignWeapon(): void {
-    this._weaponAssignee = null;
   }
 }

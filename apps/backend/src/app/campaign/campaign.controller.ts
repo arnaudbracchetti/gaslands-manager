@@ -245,7 +245,7 @@ export class CampaignController {
 
   /**
    * GET /api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements — verdict de
-   * disponibilité des améliorations (Tourelle exclue au Temps 1, budget = cagnotte).
+   * disponibilité des améliorations (budget = cagnotte).
    */
   @UseGuards(JwtAuthGuard)
   @Get('campaigns/:id/workshop/vehicles/:vehicleId/available-improvements')

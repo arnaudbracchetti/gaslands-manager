@@ -18,6 +18,11 @@
 #                  Les munitions sont notées ici : "**N Munitions**."
 #   sponsors_autorises — Sponsors pouvant équiper cette arme
 #                  Si seul "Mishkin" figure dans la liste, l'arme est électrique/exclusive.
+#   montable_tourelle — (optionnel, booléen) Autorise le montage sur Tourelle à l'achat
+#                  (case à cocher IHM) : triple le prix, interdit l'orientation (arc
+#                  360°). Réservé aux armes de tir (base/avancée/largable) — jamais aux
+#                  armes d'équipage. Tous les sponsors acceptent le montage sur Tourelle
+#                  d'une arme qui le permet ; seule l'arme porte la restriction.
 #
 # Note sur Rutherford : les armes avec 3 munitions de départ passent à 4 munitions
 # gratuitement à l'achat pour Rutherford (règle décrite dans sponsors.yml,
@@ -58,6 +63,7 @@ armes:
   - nom: "Mitrailleuse"
     nom_interne: "mitrailleuse"
     type: "base"
+    montable_tourelle: true
     prix: 2
     emplacement: 1
     description: |
@@ -84,6 +90,7 @@ armes:
   - nom: "Mitrailleuse Lourde"
     nom_interne: "mitrailleuse_lourde"
     type: "base"
+    montable_tourelle: true
     prix: 3
     emplacement: 1
     description: |
@@ -110,6 +117,7 @@ armes:
   - nom: "Minigun"
     nom_interne: "minigun"
     type: "base"
+    montable_tourelle: true
     prix: 5
     emplacement: 1
     description: |
@@ -138,6 +146,7 @@ armes:
   - nom: "BFG"
     nom_interne: "bfg"
     type: "avancée"
+    montable_tourelle: true
     prix: 1
     emplacement: 3
     description: |
@@ -167,6 +176,7 @@ armes:
   - nom: "Boule de démolition"
     nom_interne: "boule_de_demolition"
     type: "avancée"
+    montable_tourelle: false
     prix: 2
     emplacement: 3
     description: |
@@ -197,6 +207,7 @@ armes:
   - nom: "Bras Mécanique"
     nom_interne: "bras_mecanique"
     type: "avancée"
+    montable_tourelle: false
     prix: 6
     emplacement: 1
     description: |
@@ -225,6 +236,7 @@ armes:
   - nom: "Brouilleur Électromagnétique"
     nom_interne: "brouilleur_electromagnetique"
     type: "avancée"
+    montable_tourelle: false
     prix: 2
     emplacement: 0
     description: |
@@ -240,6 +252,7 @@ armes:
   - nom: "Canon à Arc Électrique"
     nom_interne: "canon_arc_electrique"
     type: "avancée"
+    montable_tourelle: true
     prix: 6
     emplacement: 2
     description: |
@@ -258,6 +271,7 @@ armes:
   - nom: "Canon de 125 mm"
     nom_interne: "canon_125mm"
     type: "avancée"
+    montable_tourelle: true
     prix: 6
     emplacement: 3
     description: |
@@ -286,6 +300,7 @@ armes:
   - nom: "Canon Gravitationnel"
     nom_interne: "canon_gravitationnel"
     type: "avancée"
+    montable_tourelle: true
     prix: 2
     emplacement: 1
     description: |
@@ -303,6 +318,7 @@ armes:
   - nom: "Canon Laser"
     nom_interne: "canon_laser"
     type: "avancée"
+    montable_tourelle: true
     prix: 5
     emplacement: 1
     description: |
@@ -331,6 +347,7 @@ armes:
   - nom: "Harpon"
     nom_interne: "harpon"
     type: "avancée"
+    montable_tourelle: true
     prix: 2
     emplacement: 1
     description: |
@@ -361,6 +378,7 @@ armes:
   - nom: "Lance-Carcasse"
     nom_interne: "lance_carcasse"
     type: "avancée"
+    montable_tourelle: true
     prix: 4
     emplacement: 4
     description: |
@@ -392,6 +410,7 @@ armes:
   - nom: "Lance-Flammes"
     nom_interne: "lance_flammes"
     type: "avancée"
+    montable_tourelle: true
     prix: 4
     emplacement: 2
     description: |
@@ -420,6 +439,7 @@ armes:
   - nom: "Lance-Missiles"
     nom_interne: "lance_missiles"
     type: "avancée"
+    montable_tourelle: true
     prix: 5
     emplacement: 2
     description: |
@@ -446,6 +466,7 @@ armes:
   - nom: "Lance-Roquettes"
     nom_interne: "lance_roquettes"
     type: "avancée"
+    montable_tourelle: true
     prix: 4
     emplacement: 2
     description: |
@@ -473,6 +494,7 @@ armes:
   - nom: "Marteleur"
     nom_interne: "marteleur"
     type: "avancée"
+    montable_tourelle: false
     prix: 4
     emplacement: 2
     description: |
@@ -490,6 +512,7 @@ armes:
   - nom: "Mortier"
     nom_interne: "mortier"
     type: "avancée"
+    montable_tourelle: true
     prix: 4
     emplacement: 1
     description: |
@@ -517,6 +540,7 @@ armes:
   - nom: "Mur de haut-parleurs"
     nom_interne: "mur_haut_parleurs"
     type: "avancée"
+    montable_tourelle: false
     prix: 4
     emplacement: 3
     description: |
@@ -544,6 +568,7 @@ armes:
   - nom: "Rayon Désintégrateur"
     nom_interne: "rayon_desintegrateur"
     type: "avancée"
+    montable_tourelle: true
     prix: 3
     emplacement: 1
     description: |
@@ -561,6 +586,7 @@ armes:
   - nom: "Super Amplificateur Cinétique"
     nom_interne: "super_amplificateur_cinetique"
     type: "avancée"
+    montable_tourelle: true
     prix: 6
     emplacement: 2
     description: |

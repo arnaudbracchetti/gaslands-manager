@@ -583,8 +583,7 @@ vehicules:
       - **Franchissement** : lors de l'Étape de Déplacement de ce véhicule, après avoir résolu une Collision avec un obstacle de Poids inférieur, ce véhicule peut annoncer qu'il le franchit.
       - S'il le fait, il peut ignorer cet obstacle pour le reste de son Étape de Déplacement.
       - Ce véhicule ne peut pas utiliser Franchissement pour ignorer un autre véhicule ayant également la règle spéciale Franchissement.
-    ameliorations_defaut:
-      - "tourelle"               # Tourelle intégrée — coût zéro, non supprimable
+    arme_defaut: "canon_125mm"   # Canon de 125mm monté sur Tourelle intégrée — coût zéro, non retirable
     sponsors_autorises:
       - "Rutherford"             # Véhicule exclusif Rutherford (Accès Limité)
 

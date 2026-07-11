@@ -48,6 +48,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   regles: '',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Mitrailleuse" sur un arc de tir',
+  montableSurTourelle: false,
 };
 
 describe('VehicleService', () => {
@@ -182,8 +183,8 @@ describe('VehicleService', () => {
       let result: Vehicle[] | undefined;
       const equipped: Vehicle = {
         ...mockVehicle,
-        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1, weaponNomInterne: null }],
-        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2 }],
+        improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
+        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2, estDefaut: false }],
       };
 
       service.getAllForTeam(3).subscribe((vehicles) => { result = vehicles; });

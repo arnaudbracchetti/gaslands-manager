@@ -48,6 +48,13 @@ export interface Vehicule {
    * Optionnel : absent ou vide pour la majorité des véhicules.
    */
   ameliorations_defaut?: string[];
+  /**
+   * Arme intégrée au profil de base du véhicule, montée sur Tourelle, coût zéro et non
+   * retirable (`nom_interne` d'une arme du catalogue). Cas unique aujourd'hui : le Char
+   * d'assaut et son Canon de 125mm — entorse actée à la règle générale (la Tourelle
+   * gratuite d'un Char d'assaut est toujours ce canon précis, jamais réassignable).
+   */
+  arme_defaut?: string;
 }
 
 /** Arme telle que définie dans armes.yml */
@@ -67,6 +74,14 @@ export interface Arme {
   regles: string;
   /** Noms des sponsors autorisés à équiper cette arme */
   sponsors_autorises: string[];
+  /**
+   * Cette arme peut-elle être montée sur Tourelle (arc de tir à 360°, coût ×3) ?
+   * Attribut explicite par arme plutôt que dérivé du `type` — seules les armes de tir
+   * (base/avancée) le sont en pratique, jamais les armes d'équipage ni largables, mais
+   * la donnée reste posée arme par arme pour laisser la main au catalogue en cas
+   * d'exception. Absent ⇒ `false`.
+   */
+  montable_tourelle?: boolean;
 }
 
 /** Amélioration de véhicule telle que définie dans amelioration.yml */
@@ -76,12 +91,8 @@ export interface Amelioration {
    *  Format variante sponsor : "<amelioration>_<sponsor>" (ex: "nitro_idris", "belier_slime").
    *  Items exclusifs d'un sponsor : nom descriptif simple (ex: "megaphone", "micro_blindage"). */
   nom_interne: string;
-  /**
-   * Coût en Jerricans.
-   * Cas particulier : la Tourelle utilise "x3" (multiplicateur du coût de l'arme),
-   * pas un coût fixe — d'où le type `number | string`.
-   */
-  prix: number | string;
+  /** Coût en Jerricans. */
+  prix: number;
   /** Nombre d'emplacements occupés */
   emplacement: number;
   description: string;

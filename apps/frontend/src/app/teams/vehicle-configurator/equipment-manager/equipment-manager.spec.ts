@@ -91,13 +91,13 @@ const mockVehicle: Vehicle = {
 // le recalcul des emplacements consommés.
 const mockVehicleWithWeapon: Vehicle = {
   ...mockVehicle,
-  weapons: [{ id: 200, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z', prix: 4 }],
+  weapons: [{ id: 200, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 100, createdAt: '2026-01-01T00:00:01.000Z', prix: 4, estDefaut: false }],
 };
 
 // Véhicule équipé d'une amélioration — sert au mirroir `removeImprovement`/`addImprovement`.
 const mockVehicleWithImprovement: Vehicle = {
   ...mockVehicle,
-  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1, weaponNomInterne: null }],
+  improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
 };
 
 const mockAvailableWeapon: AvailableWeaponDto = {
@@ -109,6 +109,7 @@ const mockAvailableWeapon: AvailableWeaponDto = {
   description: '',
   regles: '',
   disponible: true,
+  montableSurTourelle: false,
 };
 
 const mockAvailableImprovement: AvailableImprovementDto = {
@@ -134,6 +135,7 @@ const mockUnavailableWeapon: AvailableWeaponDto = {
   regles: '',
   disponible: false,
   raison: 'Emplacements insuffisants : 6/4 requis avec "BFG"',
+  montableSurTourelle: false,
 };
 
 // "Il manque une information" (orientation) — TOUJOURS visible, cf.
@@ -148,6 +150,7 @@ const mockOrientableWeapon: AvailableWeaponDto = {
   regles: '',
   disponible: false,
   raison: 'Une orientation est requise pour monter "Lance-Flammes" sur un arc de tir',
+  montableSurTourelle: false,
 };
 
 const mockUnavailableImprovement: AvailableImprovementDto = {
@@ -171,8 +174,6 @@ describe('EquipmentManager', () => {
     addImprovement: ReturnType<typeof vi.fn>;
     removeWeapon: ReturnType<typeof vi.fn>;
     removeImprovement: ReturnType<typeof vi.fn>;
-    assignWeaponToTourelle: ReturnType<typeof vi.fn>;
-    unassignWeaponFromTourelle: ReturnType<typeof vi.fn>;
   };
 
   /** Instancie le composant avec un budget donné (défaut : `defaultBudget`). */
@@ -193,8 +194,6 @@ describe('EquipmentManager', () => {
       addImprovement: vi.fn().mockReturnValue(of(mockVehicleWithImprovement)),
       removeWeapon: vi.fn().mockReturnValue(of(mockVehicle)),
       removeImprovement: vi.fn().mockReturnValue(of(mockVehicle)),
-      assignWeaponToTourelle: vi.fn().mockReturnValue(of(mockVehicle)),
-      unassignWeaponFromTourelle: vi.fn().mockReturnValue(of(mockVehicle)),
     };
 
     await TestBed.configureTestingModule({
@@ -394,86 +393,6 @@ describe('EquipmentManager', () => {
       component.onConfirmRemoveImprovement();
       expect(mockDataSource.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
     });
-
-    it('tourelleAssignRequested → openAssignModal (ouvre la modale d\'assignation)', () => {
-      const tourelle: Vehicle['improvements'][number] = {
-        id: 301, nomInterne: 'tourelle', orientation: null, vehicleId: 100,
-        createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 0, emplacement: 0, weaponNomInterne: null,
-      };
-      fixture.componentRef.setInput('vehicle', { ...mockVehicle, improvements: [tourelle] });
-      fixture.detectChanges();
-
-      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
-      mounted.tourelleAssignRequested.emit(tourelle);
-
-      expect(component.selectedOrphanTourelle()).toEqual(tourelle);
-    });
-
-    it('tourelleUnassignRequested → unassignWeaponFromTourelle', () => {
-      const tourelleAssignee: Vehicle['improvements'][number] = {
-        id: 301, nomInterne: 'tourelle', orientation: 'avant', vehicleId: 100,
-        createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 12, emplacement: 0, weaponNomInterne: 'mitrailleuse',
-      };
-      fixture.componentRef.setInput('vehicle', { ...mockVehicle, improvements: [tourelleAssignee] });
-      fixture.detectChanges();
-
-      const mounted = fixture.debugElement.query(By.directive(MountedEquipment)).componentInstance as MountedEquipment;
-      mounted.tourelleUnassignRequested.emit(tourelleAssignee);
-
-      expect(mockDataSource.unassignWeaponFromTourelle).toHaveBeenCalledExactlyOnceWith(100, 301);
-    });
-  });
-
-  // ── Filtre budget de armesPourTourelle (armes hors budget masquées) ─────────
-
-  describe('armesPourTourelle (filtre budget)', () => {
-    // Sponsor avec deux armes : une bon marché (×3 = 12) et une chère (×3 = 60).
-    const catalogueAvecArmeChere: Sponsor = {
-      ...mockSponsorCatalog,
-      armes: [
-        { nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
-        { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 20, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
-      ],
-    };
-
-    const tourelleOrpheline: Vehicle['improvements'][number] = {
-      id: 301, nomInterne: 'tourelle', orientation: null, vehicleId: 100,
-      createdAt: '2026-01-01T00:00:03.000Z', estDefaut: false, prix: 0, emplacement: 0, weaponNomInterne: null,
-    };
-
-    // usedByOthers 16 (un autre véhicule) reproduit l'ancien scénario getAllForTeam.
-    function setup(total: number, vehicle: Vehicle = { ...mockVehicle, improvements: [tourelleOrpheline] }): void {
-      createWith(vehicle, { total, usedByOthers: 16 }, catalogueAvecArmeChere);
-      component.selectedOrphanTourelle.set(vehicle.improvements[0]);
-    }
-
-    it('exclut une arme dont le coût ×3 dépasse le budget disponible', () => {
-      // Véhicule courant nu = 16, usedByOthers 16 → coutEquipeTotal 32. Budget 50 →
-      // restant = 18. BFG ×3 = 60 > 18 → exclue.
-      setup(50);
-      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
-      expect(noms).toContain('mitrailleuse'); // 12 ≤ 18
-      expect(noms).not.toContain('bfg'); // 60 > 18
-    });
-
-    it('inclut une arme finançable', () => {
-      // Budget large : 100 → restant = 100 - 32 = 68. BFG ×3 = 60 ≤ 68 → incluse.
-      setup(100);
-      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
-      expect(noms).toContain('bfg');
-    });
-
-    it('en ré-assignation, « rend » le coût de l\'arme actuellement montée', () => {
-      // Tourelle déjà montée avec BFG (coût ×3 = 60). Véhicule courant = 16 + 60 = 76,
-      // + 16 (usedByOthers) = 92. Budget 100 → restant = 8. Sans reprise, la BFG (60)
-      // serait exclue ; mais on rend son coût (60) → 68 dispo → BFG reste proposée.
-      const tourelleBfg: Vehicle['improvements'][number] = {
-        ...tourelleOrpheline, prix: 60, weaponNomInterne: 'bfg',
-      };
-      setup(100, { ...mockVehicle, improvements: [tourelleBfg] });
-      const noms = component.armesPourTourelle().map((a): string => a.nom_interne);
-      expect(noms).toContain('bfg');
-    });
   });
 
   // ── Ajout d'arme ────────────────────────────────────────────────────────────
@@ -487,6 +406,12 @@ describe('EquipmentManager', () => {
 
     expect(mockDataSource.addWeapon).toHaveBeenCalledExactlyOnceWith(100, { nomInterne: 'mitrailleuse', orientation: 'avant' });
     expect(emitted).toEqual([mockVehicleWithWeapon]);
+  });
+
+  it('ajoute une arme avec orientation \'tourelle\' et transmet le choix tel quel au data source', () => {
+    component.addWeapon({ nomInterne: 'bfg', orientation: 'tourelle' });
+
+    expect(mockDataSource.addWeapon).toHaveBeenCalledWith(100, { nomInterne: 'bfg', orientation: 'tourelle' });
   });
 
   it('recharge automatiquement les verdicts de disponibilité après un ajout réussi (via l\'effect réagissant à `vehicle`)', () => {

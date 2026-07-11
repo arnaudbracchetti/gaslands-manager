@@ -14,7 +14,7 @@ Le catalogue contient :
 - **13 sponsors** — chacun avec ses classes d'avantage et ses règles spéciales
 - **16 véhicules** — répartis en Léger / Moyen / Lourd, avec leurs statistiques complètes
 - **41 armes** — de type base, avancée, équipage ou largable
-- **11 améliorations** — modifications de véhicule
+- **10 améliorations** — modifications de véhicule
 
 **Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané.
 
@@ -30,7 +30,7 @@ Le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:t
 
 **Détail d'un équipement** : toute la carte d'une arme ou d'une amélioration (`equipment-option`) est cliquable et ouvre une popup (`EquipmentDetailModal`) — nom, coût, emplacement, description, règles complètes, et raison de refus éventuelle. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
-**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier de la Tourelle** : son prix catalogue est `"x3"`, donc l'**ajout** de la Tourelle orpheline (coût 0) n'est jamais bloqué par cette règle — la garde budget porte sur l'**assignation de l'arme** (coût = 3× le prix de l'arme), cf. §Budget ci-dessous.
+**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : coché au moment de l'ajout d'une arme (case « Monter sur Tourelle », visible si `Arme.montable_tourelle`), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
 
 ---
 
@@ -68,10 +68,10 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 
 - Budget de départ : **50 jerricans** par équipe (modifiable)
 - Chaque véhicule, arme et amélioration a un coût en jerricans
-- Exception : l'amélioration **Tourelle** coûte **3× le prix de l'arme** concernée (coût variable)
+- Exception : une arme **montée sur Tourelle** coûte **3× son prix catalogue** (`Weapon.orientation = 'tourelle'`, choisi à l'achat)
 - Le total ne doit pas dépasser le budget
 
-**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est marquée `disponible: false`. **Cas de la Tourelle** (`prix: "x3"`) : son coût dépend de l'arme assignée, inconnue au moment de l'ajout — l'ajout de la Tourelle orpheline (coût 0) reste donc autorisé. La garde budget s'applique à l'**assignation de l'arme** : l'agrégat `Vehicle.assignWeaponToTourelle` refuse (`DomainException` → HTTP 400) toute arme dont le coût ×3 dépasse le budget restant (en ré-assignation, le coût de l'arme remplacée est « rendu » au budget). Côté frontend, `EquipmentManager.armesPourTourelle` masque par avance les armes hors budget de la modale d'assignation.
+**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est marquée `disponible: false`. Le montage sur Tourelle est un choix fait au moment même de l'ajout de l'arme (case à cocher, visible si `Arme.montable_tourelle`) — l'agrégat `Vehicle.canAddWeapon`/`addWeapon` refuse (`DomainException` → HTTP 400) l'ajout si le coût ×3 dépasse le budget restant. Il n'y a plus d'« assignation » différée : changer l'arme montée sur une Tourelle consiste à revendre l'arme actuelle (cf. §Annulation d'achat vs revente, [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente), pour l'atelier) puis en acheter une nouvelle avec la case cochée.
 
 ### Véhicules (16 au total)
 
@@ -94,7 +94,20 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 
 *Canon à Arc Électrique et 5 autres armes électroniques : **Mishkin uniquement**.
 
-### Améliorations de véhicule (11 au total)
+### Montage sur Tourelle (5ème valeur d'orientation)
+
+La Tourelle **n'est pas une amélioration** — c'est une valeur possible de
+l'orientation de l'arme (`Weapon.orientation = 'tourelle'`, choisie au moment de
+l'achat via le bouton « Tourelle x3 », au même endroit que les 4 arcs de tir
+classiques) : elle triple le coût de l'arme (arc de tir à 360°), exclusive avec
+toute autre orientation puisque c'est la même valeur qui les porte toutes.
+Seules les armes marquées `montable_tourelle: true` au catalogue (`Arme.montable_tourelle`,
+`database_init/data/armes.yml`) peuvent être montées ainsi — tous les sponsors
+l'acceptent, seule l'arme elle-même porte la restriction. Pour changer l'arme montée
+sur Tourelle : revendre l'arme actuelle puis en acheter une nouvelle avec la case
+cochée (cf. `Weapon.price`, `Vehicle.canAddWeapon`/`addWeapon`).
+
+### Améliorations de véhicule (10 au total)
 
 | Amélioration | Coût | Emplacement | Note |
 |---|---|---|---|
@@ -108,18 +121,22 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 | Nitro | 6 | 0 | Accélération forcée |
 | Réacteur Nucléaire Expérimental | 5 | 0 | **Mishkin uniquement** |
 | Téléporteur Expérimental | 7 | 0 | **Mishkin uniquement** |
-| Tourelle | **×3** | 0 | Arc 360° pour une arme (coût = 3× le prix de l'arme) |
 
-### Améliorations par défaut
+### Améliorations et armes par défaut
 
-Certains véhicules ont des améliorations **intégrées à leur profil de base** : présentes dès la création, sans coût, et **non retirables**.
+Certains véhicules ont un équipement **intégré à leur profil de base** : présent dès
+la création, sans coût, et **non retirable**.
 
-| Véhicule | Amélioration intégrée | Raison |
+| Véhicule | Équipement intégré | Raison |
 |----------|-----------------------|--------|
-| Buggy | Arceaux | Fait partie du profil standard du Buggy |
-| Char d'assaut | Tourelle | Canon principal — non détachable |
+| Buggy | Arceaux (amélioration) | Fait partie du profil standard du Buggy |
+| Char d'assaut | Canon de 125mm monté sur Tourelle (arme) | Canon principal — non détachable, non réassignable |
 
-Modélisées par `VehicleImprovement.estDefaut = true`, insérées automatiquement par `VehicleService.create()` depuis `ameliorations_defaut` du catalogue YAML. Elles n'apparaissent pas dans le calcul du budget ni dans le pool d'emplacements — seul le badge 🔒 *Intégré* les identifie dans l'UI.
+Modélisées par `VehicleImprovement.estDefaut = true` (Buggy) ou `Weapon.estDefaut = true`
+(Char d'assaut, mirroir sur l'arme), insérées automatiquement par `VehicleService.create()`
+depuis `ameliorations_defaut`/`arme_defaut` du catalogue YAML. Elles n'apparaissent pas
+dans le calcul du budget ni dans le pool d'emplacements — seul le badge 🔒 *Intégré* les
+identifie dans l'UI.
 
 ---
 
@@ -129,11 +146,11 @@ Modélisées par `VehicleImprovement.estDefaut = true`, insérées automatiqueme
 
 **`Sponsor`** — champs : `nom`, `description`, `classes_avantage[]`, `avantages_sponsorises`, `vehicules[]`, `armes[]`, `ameliorations[]`
 
-**`Vehicule`** — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]`
+**`Vehicule`** — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]`, `arme_defaut?` (nom_interne de l'arme intégrée, ex. Char d'assaut → `canon_125mm`)
 
-**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`
+**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3)
 
-**`Amelioration`** — champs : `nom`, `prix` (number ou `"x3"` pour la Tourelle), `emplacement`, `description`, `regles`, `sponsors_autorises[]`
+**`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`
 
 ### `Vehicle` _(entité DB — module Vehicle)_
 
@@ -178,7 +195,8 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `nomInterne` | string | référence vers `Arme.nom_interne` du catalogue |
-| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | **obligatoire** pour `type !== 'équipage'`, **interdite** pour `type === 'équipage'` |
+| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite' \| 'tourelle'` \| `null` | **obligatoire** pour `type !== 'équipage'` (5 valeurs, dont `'tourelle'` — montage sur Tourelle, arc à 360°, coût ×3), **interdite** (`null`) pour `type === 'équipage'`. Choisi à l'achat (`AddWeaponDto.orientation`), immuable ensuite — pour en changer, revendre puis racheter |
+| `estDefaut` | boolean | `false` pour les armes achetées ; `true` pour une arme intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut, non retirable) |
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 
@@ -186,7 +204,7 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 
 | Champ (DTO) | Type | Description |
 |-------------|------|-------------|
-| `prix` | number | Prix de l'arme en jerricans, résolu depuis le catalogue via getter. |
+| `prix` | number | `0` si `estDefaut` ; sinon prix catalogue, ×3 si `orientation === 'tourelle'`. Calculé via getter sur l'entité hydratée. |
 
 ---
 
@@ -222,8 +240,8 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/vehicles/:id/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité (sponsor + orientation + emplacements) |
-| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (validation puis persistance) |
-| DELETE | `/api/weapons/:id` | JWT | Retirer une arme |
+| GET | `/api/vehicles/:id/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité (sponsor + orientation + emplacements) — inclut `montableSurTourelle: boolean` par arme |
+| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (`AddWeaponDto.orientation?`, 5 valeurs dont `'tourelle'`, validation puis persistance) |
+| DELETE | `/api/weapons/:id` | JWT | Retirer une arme — refusée (`DomainException` → HTTP 400) si `estDefaut: true` |
 
 > `AvailableImprovementDto` et `AvailableWeaponDto` incluent `description: string` (affiché dans `equipment-option`) et `regles: string` (affiché dans `EquipmentDetailModal` uniquement).

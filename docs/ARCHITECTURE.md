@@ -91,7 +91,7 @@ apps/backend/src/app/
 ├── shared/domain/       ← DomainException partagée entre team/ et campaign/
 ├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement
 │   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement, Value Objects, ITeamRepository, ICatalogRepository
-│   ├── application/     ← 15 Use Cases (4 équipe + 2 véhicule + 3 arme + 6 amélioration/tourelle)
+│   ├── application/     ← 13 Use Cases (4 équipe + 3 véhicule + 3 arme + 3 amélioration)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 └── campaign/            ← Module campagne unifié (DDD event-sourcing — voir §3.8), ex-`season/` + ex-`game/`
     ├── campaign.controller.ts       ← Controller HTTP unique (36 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
@@ -180,7 +180,7 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 }
 ```
 
-**Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `isTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
+**Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `montableSurTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
 
 **Dependency Inversion** — le domaine définit `ITeamRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`TeamRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
 

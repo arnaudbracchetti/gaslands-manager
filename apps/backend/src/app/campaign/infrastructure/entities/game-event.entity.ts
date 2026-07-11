@@ -117,8 +117,10 @@ export class GameEventOrm {
   @Column({ type: 'int', nullable: true })
   targetEntityId!: number | null;
 
+  // 'avant' | 'arrière' | 'gauche' | 'droite' | 'tourelle' (WEAPON — montage sur
+  // Tourelle, arc à 360°, coût ×3)
   @Column({ type: 'varchar', nullable: true })
-  orientation!: string | null;    // 'avant' | 'arrière' | 'gauche' | 'droite'
+  orientation!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;
