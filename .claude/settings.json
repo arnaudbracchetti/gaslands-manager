@@ -9,5 +9,18 @@
   },
   "enabledPlugins": {
     "nx@nx-claude-plugins": true
-  }
+  },
+ "hooks": {
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "powershell.exe -c \"(New-Object Media.SoundPlayer 'C:\\Windows\\Media\\Windows Notify System Generic.wav').PlaySync()\""
+        }
+      ]
+    }
+  ]
+}
+
 }
