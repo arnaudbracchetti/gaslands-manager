@@ -238,7 +238,7 @@ export class CampaignQueryService {
     await this.assertVisibleParticipant(campaignId, userId);
 
     const campaign = await this.replayService.load(campaignId);
-    const entries = campaign.findGame(gameId).journal();
+    const entries = campaign.findGame(gameId).journal(campaign.participants);
 
     const [participants, eventRows] = await Promise.all([
       this.participantRepo.find({ where: { campaignId }, relations: { user: true, team: true } }),

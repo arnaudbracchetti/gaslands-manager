@@ -206,7 +206,7 @@ describe('Game — addEvent / DomainException', () => {
     expect(() => partie.closeAtelier()).toThrow('atelier');
   });
 
-  it('_events triés par eventOrder dans apply', () => {
+  it('_events triés par eventOrder dans replayEvents', () => {
     const applied: number[] = [];
     class SpyEvent extends RankingAssignedEvent {
       override execute(): void { applied.push(this.eventOrder); }
@@ -215,7 +215,7 @@ describe('Game — addEvent / DomainException', () => {
     const e1 = new SpyEvent(1, 10, 1, 3, 1, 0);
     const e2 = new SpyEvent(2, 10, 1, 1, 1, 0);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e1, e2]);
-    game.apply([]);
+    game.replayEvents([]);
     expect(applied).toEqual([1, 3]);  // sorted by eventOrder
   });
 });
@@ -226,7 +226,7 @@ describe('Game — journal', () => {
     const e2 = new GatesCrossedEvent(200, 10, 1, 2, 3, 3);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e2, e1]); // volontairement désordonné en entrée
 
-    const journal = game.journal();
+    const journal = game.journal([]);
 
     expect(journal.map((j) => j.eventId)).toEqual([e1.id, e2.id]); // trié par eventOrder
     expect(journal[0].participantId).toBe(1);
@@ -238,7 +238,7 @@ describe('Game — journal', () => {
     const resistanceEvent = new ResistanceContactedEvent(300, 10, 1, 1);
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [resistanceEvent]);
 
-    const journal = game.journal();
+    const journal = game.journal([]);
 
     expect(journal).toHaveLength(1);
     expect(journal[0].eventId).toBe(300);

@@ -1,5 +1,7 @@
 import { DomainException } from '../../../shared/domain/domain-exception';
 import type { CampaignParticipant } from '../campaign-participant';
+import type { Team } from '../../../team/domain/team';
+import type { Vehicle } from '../../../team/domain/vehicle';
 
 /**
  * Commande de campagne — GoF Command.
@@ -22,12 +24,38 @@ export abstract class GameEvent {
   abstract execute(participants: CampaignParticipant[]): void;
   abstract undo(participants: CampaignParticipant[]): void;
 
-  /** Ligne de texte (français) décrivant cet événement — utilisée par la synthèse de fin de partie. */
-  abstract describe(): string;
+  /**
+   * Ligne de texte (français) décrivant cet événement — utilisée par la synthèse de fin
+   * de partie et le journal complet d'une partie. `participants` (état rejoué, équipes
+   * attachées) permet de résoudre les noms lisibles de véhicules/équipes à partir des
+   * seuls identifiants stockés sur l'événement.
+   */
+  abstract describe(participants: readonly CampaignParticipant[]): string;
 
-  protected findParticipant(participants: CampaignParticipant[]): CampaignParticipant {
+  protected findParticipant(participants: readonly CampaignParticipant[]): CampaignParticipant {
     const p = participants.find((x) => x.id === this.participantId);
     if (!p) throw new DomainException(`Participant #${this.participantId} introuvable dans la saison`);
     return p;
+  }
+
+  /**
+   * Recherche un véhicule par id à travers toutes les équipes des participants fournis —
+   * la victime d'un exploit (véhicule détruit) n'est pas forcément dans l'équipe du
+   * participant de l'événement. Retourne `null` plutôt que de lever : `describe()` est un
+   * chemin de lecture, il ne doit jamais faire planter l'affichage du journal.
+   */
+  protected findVehicleWithTeam(
+    participants: readonly CampaignParticipant[],
+    vehicleId: number,
+  ): { team: Team; vehicle: Vehicle } | null {
+    for (const p of participants) {
+      if (!p.hasTeam) continue;
+      try {
+        return { team: p.team, vehicle: p.team.findVehicle(vehicleId) };
+      } catch {
+        // Absent de cette équipe — on continue la recherche dans les autres.
+      }
+    }
+    return null;
   }
 }

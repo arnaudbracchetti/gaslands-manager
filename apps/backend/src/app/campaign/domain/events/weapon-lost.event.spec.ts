@@ -27,8 +27,9 @@ describe('WeaponLostEvent — execute / undo', () => {
     expect(weapon.isLost).toBe(before);
   });
 
-  it('describe() décrit la perte de l\'arme', () => {
-    const event = new WeaponLostEvent(1, 10, 1, 1, 1);
-    expect(event.describe()).toBe('Arme perdue');
+  it('describe() décrit la perte de l\'arme, avec son nom et le véhicule hôte', () => {
+    const { participant, participants, weapon } = makeTestParticipant();
+    const event = new WeaponLostEvent(1, 10, participant.id, 1, weapon.id);
+    expect(event.describe(participants)).toBe('Arme perdue sur le véhicule Voiture : Mitrailleuse');
   });
 });

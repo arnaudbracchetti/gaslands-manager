@@ -111,7 +111,7 @@ export abstract class Game {
   /**
    * Rejoue tous les événements dans l'ordre (ordre croissant d'eventOrder).
    */
-  apply(participants: CampaignParticipant[]): void {
+  replayEvents(participants: CampaignParticipant[]): void {
     for (const event of this._events) {
       event.execute(participants);
     }
@@ -326,11 +326,11 @@ export abstract class Game {
   }
 
   /** Journal complet de cette partie — chaque événement traduit en texte lisible. */
-  journal(): GameJournalEntry[] {
+  journal(participants: readonly CampaignParticipant[]): GameJournalEntry[] {
     return this._events.map((e) => ({
       eventId: e.id,
       participantId: e.participantId,
-      description: e.describe(),
+      description: e.describe(participants),
     }));
   }
 

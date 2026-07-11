@@ -99,8 +99,21 @@ export class EquipmentChangedEvent extends GameEvent {
     }
   }
 
-  describe(): string {
+  describe(participants: readonly CampaignParticipant[]): string {
     const verb = this.operation === EquipmentOperation.BUY ? 'Achat' : 'Vente';
-    return `${verb} : ${this.nomInterne} (${this.cost} jerricans)`;
+    const nom = this.resolvedWeaponType?.nom
+      ?? this.resolvedImprovementType?.nom
+      ?? this.resolvedVehicleType?.nom
+      ?? this.nomInterne;
+
+    const details: string[] = [];
+    if (this.orientation) details.push(this.orientation);
+    if (this.entityType !== EquipmentEntityType.VEHICLE && this.targetVehicleId !== null) {
+      const hostVehicle = this.findVehicleWithTeam(participants, this.targetVehicleId)?.vehicle;
+      if (hostVehicle) details.push(`sur ${hostVehicle.type.nom}`);
+    }
+    const detailsText = details.join(', ');
+
+    return `${verb} : ${nom}${detailsText ? ` (${detailsText})` : ''} (${this.cost} jerricans)`;
   }
 }

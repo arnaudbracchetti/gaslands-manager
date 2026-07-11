@@ -61,7 +61,7 @@ export class WreckResolveUseCase {
       if (bonusEvent) events.push(bonusEvent);
 
       await this.campaignRepo.appendEvents(cmd.gameId, events);
-      return { outcome, descriptions: events.map((e) => e.describe()) };
+      return { outcome, descriptions: events.map((e) => e.describe(campaign.participants)) };
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

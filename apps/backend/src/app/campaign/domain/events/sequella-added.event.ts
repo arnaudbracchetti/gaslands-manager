@@ -44,6 +44,7 @@ export class SequellaAddedEvent extends GameEvent {
   }
 
   describe(): string {
-    return `Séquelle acquise : ${this.sequellaTypeNom} (-${this.chocsCost} chocs)`;
+    const nom = SEQUELLA_REGISTRY.get(this.sequellaTypeNom)?.type.nom ?? this.sequellaTypeNom;
+    return `Séquelle acquise : ${nom} (-${this.chocsCost} chocs)`;
   }
 }

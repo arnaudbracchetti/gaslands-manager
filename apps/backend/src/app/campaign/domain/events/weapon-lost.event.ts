@@ -27,7 +27,15 @@ export class WeaponLostEvent extends GameEvent {
     p.team.findWeapon(this.weaponId).clearLost();
   }
 
-  describe(): string {
-    return 'Arme perdue';
+  describe(participants: readonly CampaignParticipant[]): string {
+    try {
+      const p = this.findParticipant(participants);
+      const nom = p.team.findWeapon(this.weaponId).type.nom;
+      const vehicle = p.team.vehicles.find((v) => v.weapons.some((w) => w.id === this.weaponId));
+      const vehicleLabel = vehicle ? ` sur le véhicule ${vehicle.type.nom}` : '';
+      return `Arme perdue${vehicleLabel} : ${nom}`;
+    } catch {
+      return `Arme perdue : #${this.weaponId}`;
+    }
   }
 }

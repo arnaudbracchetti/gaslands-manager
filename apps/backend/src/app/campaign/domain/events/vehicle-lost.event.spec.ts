@@ -27,8 +27,9 @@ describe('VehicleLostEvent — execute / undo', () => {
     expect(vehicle.isLost).toBe(before);
   });
 
-  it('describe() décrit la perte du véhicule', () => {
-    const event = new VehicleLostEvent(1, 10, 1, 1, 1);
-    expect(event.describe()).toBe('Véhicule détruit');
+  it('describe() décrit la perte du véhicule, avec son nom', () => {
+    const { participant, participants, vehicle } = makeTestParticipant();
+    const event = new VehicleLostEvent(1, 10, participant.id, 1, vehicle.id);
+    expect(event.describe(participants)).toBe('Véhicule détruit : Voiture');
   });
 });

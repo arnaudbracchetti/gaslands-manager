@@ -2,12 +2,14 @@ import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import { WreckResult } from '../enums/wreck-result.enum';
 
+
 /**
- * Résultat du lancer de la Table des Épaves — snapshot figé (D-S9).
+ * Résultat du lancer de la Table des Épaves
  *
  * Stocke le résultat brut du D6 + la ligne de table appliquée. Les effets concrets
- * (VehicleLostEvent, WeaponLostEvent) sont créés séparément par WreckResolveUseCase
- * et persistés comme événements distincts. Celui-ci n'applique que les Chocs.
+ * (VehicleLostEvent, WeaponLostEvent, ImprovementLostEvent) sont créés séparément par
+ * `WreckTable` (domain service) et persistés comme événements distincts. Celui-ci
+ * n'applique que les Chocs.
  */
 export class WreckResolvedEvent extends GameEvent {
   constructor(
@@ -34,11 +36,13 @@ export class WreckResolvedEvent extends GameEvent {
     p.team.findVehicle(this.vehicleId).addChocs(-this.chocsGained);
   }
 
-  describe(): string {
+  describe(participants: readonly CampaignParticipant[]): string {
     const chocs = this.chocsGained !== 0
       ? `, ${this.chocsGained > 0 ? '+' : ''}${this.chocsGained} choc(s)`
       : '';
-    return `Table des Épaves : ${WRECK_RESULT_LABELS[this.wreckResult]} `
+    const found = this.findVehicleWithTeam(participants, this.vehicleId);
+    const vehicleName = found?.vehicle.type.nom ?? '';
+    return `Table des Épaves${vehicleName ? ` (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} `
       + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${chocs})`;
   }
 }

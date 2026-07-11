@@ -55,8 +55,8 @@ describe('SequellaAddedEvent — execute / undo', () => {
     expect(() => event.execute(participants)).toThrow('insuffisants');
   });
 
-  it('describe() résume la séquelle et son coût', () => {
+  it('describe() résume la séquelle (nom lisible) et son coût', () => {
     const event = new SequellaAddedEvent(1, 10, 1, 1, 1, 'moteur_endommage', 2);
-    expect(event.describe()).toBe('Séquelle acquise : moteur_endommage (-2 chocs)');
+    expect(event.describe()).toBe('Séquelle acquise : Moteur endommagé (-2 chocs)');
   });
 });

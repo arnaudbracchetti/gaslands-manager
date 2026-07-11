@@ -33,7 +33,16 @@ export class VehicleDestroyedEvent extends GameEvent {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
 
-  describe(): string {
-    return `Véhicule ennemi détruit (${this.weightClass}) (+${this.championshipPoints} PC)`;
+  describe(participants: readonly CampaignParticipant[]): string {
+    const found = this.findVehicleWithTeam(participants, this.vehicleId);
+    const label = found ? `${found.vehicle.type.nom} (${found.team.name})` : `#${this.vehicleId}`;
+    return `Véhicule ennemi détruit : ${label} — ${WEIGHT_CLASS_LABELS[this.weightClass]} (+${this.championshipPoints} PC)`;
   }
 }
+
+const WEIGHT_CLASS_LABELS: Record<WeightClass, string> = {
+  [WeightClass.LEGER]: 'Léger',
+  [WeightClass.MOYEN]: 'Moyen',
+  [WeightClass.LOURD]: 'Lourd',
+  [WeightClass.FORTERESSE]: 'Forteresse',
+};

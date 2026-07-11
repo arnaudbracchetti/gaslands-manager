@@ -1,5 +1,11 @@
 version: '3.8'
 
+# Nom de projet Compose figé : sans ça, Compose dérive le nom du dossier courant
+# (ex. "gaslands-manager") pour préfixer les volumes nommés — un renommage de
+# dossier crée alors de nouveaux volumes vides et masque les anciens (postgres_data,
+# pgadmin_data) au lieu de les réutiliser.
+name: gaslands
+
 # ============================================================
 # Docker Compose — Gaslands Manager
 #

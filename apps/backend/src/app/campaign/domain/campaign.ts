@@ -99,7 +99,7 @@ export class Campaign {
     }
     const sorted = [...this._games].sort((a, b) => a.order - b.order);
     for (const game of sorted) {
-      game.apply(this._participants);    //TODO: apply n'est pas tres explicite comme nom de méthode
+      game.replayEvents(this._participants);
     }
   }
 
@@ -115,7 +115,7 @@ export class Campaign {
       .filter((g) => g.order < target.order)
       .sort((a, b) => a.order - b.order);
     for (const game of sorted) {
-      game.apply(this._participants);
+      game.replayEvents(this._participants);
     }
   }
 

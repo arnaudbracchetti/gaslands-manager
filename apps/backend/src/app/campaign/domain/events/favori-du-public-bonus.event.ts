@@ -32,7 +32,9 @@ export class FavoriDuPublicBonusEvent extends GameEvent {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
 
-  describe(): string {
-    return `Bonus Favori du public (+${this.championshipPoints} PC)`;
+  describe(participants: readonly CampaignParticipant[]): string {
+    const found = this.findVehicleWithTeam(participants, this.vehicleId);
+    const label = found ? ` : ${found.vehicle.type.nom}` : '';
+    return `Bonus Favori du public${label} (+${this.championshipPoints} PC)`;
   }
 }

@@ -28,6 +28,12 @@ export class WalletMovementEvent extends GameEvent {
 
   describe(): string {
     const sign = this.amount >= 0 ? '+' : '';
-    return `${sign}${this.amount} jerricans (${this.reason})`;
+    return `${sign}${this.amount} jerricans (${WALLET_REASON_LABELS[this.reason]})`;
   }
 }
+
+const WALLET_REASON_LABELS: Record<WalletReason, string> = {
+  [WalletReason.RECOMPENSE]: 'Récompense',
+  [WalletReason.ACHAT]: 'Achat atelier',
+  [WalletReason.REVENTE]: 'Revente atelier',
+};

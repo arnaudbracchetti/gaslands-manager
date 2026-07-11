@@ -84,7 +84,7 @@ describe('WreckResolveUseCase', () => {
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toBe('Arme perdue');
+    expect(result.descriptions[1]).toBe('Arme perdue sur le véhicule Voiture : Mitrailleuse');
   });
 
   it('ARRACHEE avec une amélioration perdue : deux descriptions (WreckResolved + ImprovementLost)', async () => {
@@ -94,7 +94,7 @@ describe('WreckResolveUseCase', () => {
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toBe('Amélioration perdue');
+    expect(result.descriptions[1]).toBe('Amélioration perdue sur le véhicule Voiture : Blindage');
   });
 
   it('SIEGE_IRRECUPERABLE : deux descriptions (WreckResolved + SequellaAdded)', async () => {
@@ -116,7 +116,7 @@ describe('WreckResolveUseCase', () => {
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toBe('Véhicule détruit');
+    expect(result.descriptions[1]).toBe('Véhicule détruit : Voiture');
   });
 
   it('VEHICULE_DETRUIT avec favori du public en attente : trois descriptions (+ FavoriDuPublicBonus)', async () => {
