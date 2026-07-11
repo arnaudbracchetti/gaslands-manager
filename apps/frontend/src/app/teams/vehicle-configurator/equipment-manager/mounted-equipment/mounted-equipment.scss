@@ -36,6 +36,8 @@
 }
 
 .me-item {
+  position: relative; // contient le filigrane .me-item__watermark
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,6 +47,37 @@
   background: var(--metal-sheen);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
+}
+
+// Objet revendu (atelier) — carte assombrie/désaturée, contenu toujours lisible.
+.me-item--sold {
+  filter: grayscale(0.4);
+  opacity: 0.75;
+}
+
+// Tampon "VENDU" en filigrane, incliné — remplace l'ancien petit badge texte.
+// Grand format volontaire (occupe une bonne part de la carte) et rouge franc
+// (`--tb-rouille`, pas `--tb-danger` qui est en réalité un or/jaune dans les
+// tokens du projet) pour être immédiatement visible, tout en gardant assez de
+// transparence pour laisser deviner le contenu de la carte en dessous.
+.me-item__watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  font-family: var(--font-display);
+  font-size: 3.4rem;
+  font-weight: 700;
+  color: var(--tb-rouille-lt);
+  opacity: 0.65;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1px var(--tb-rouille-deep);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .me-name {
@@ -127,16 +160,6 @@
   opacity: 0.85;
 }
 
-// Mirroir de `.me-badge-defaut` pour un objet revendu (atelier, annulation vs revente).
-.me-badge-sold {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  opacity: 0.85;
-}
-
 .me-tourelle-badge {
   margin-left: 4px;
   font-family: var(--font-mono);
@@ -166,6 +189,34 @@
   cursor: pointer;
   transition: border-color 160ms, color 160ms;
   white-space: nowrap;
+
+  &:hover {
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+  }
+}
+
+// ─── Filtre "masquer les équipements vendus" ──────────────────────────────────
+// Petit bouton icône — délibérément compact (pas de texte long à la `.em-toggle`
+// d'origine, qui provoquait un débordement horizontal dans la sidebar étroite
+// `.em-current`). Le libellé complet reste disponible via `title` (tooltip).
+
+.me-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: fit-content;
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+  white-space: nowrap;
+  margin-bottom: 4px;
 
   &:hover {
     border-color: var(--tb-danger);

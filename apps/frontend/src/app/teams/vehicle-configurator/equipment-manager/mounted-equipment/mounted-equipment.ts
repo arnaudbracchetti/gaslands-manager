@@ -16,7 +16,17 @@
  * confirmation (`window.confirm`) et appelle l'API, conformément au pattern
  * "le parent seul décide" (ARCHITECTURE.md §2.5).
  */
-import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
+import {
+  Component,
+  InputSignal,
+  OutputEmitterRef,
+  Signal,
+  WritableSignal,
+  computed,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { Sponsor } from '../../../../catalog/catalog.model';
 import { VehicleImprovement, Weapon } from '../../vehicle-builder.model';
 
@@ -47,6 +57,38 @@ export class MountedEquipment {
 
   /** Désassigne l'arme d'une Tourelle (assigné → orphelin), sans confirmation. */
   tourelleUnassignRequested: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
+
+  // ── Filtre "masquer les équipements vendus" ─────────────────────────────────
+  // Filtre d'affichage pur sur des données déjà reçues — état local à ce
+  // composant "dumb", pas besoin de le faire remonter à `EquipmentManager`.
+  // `sold` n'est jamais posé côté construction d'équipe (toujours `undefined`),
+  // donc `hiddenSoldCount()` y vaut 0 et le bouton de bascule ne s'affiche pas.
+
+  showSold: WritableSignal<boolean> = signal(false);
+
+  soldWeaponsCount: Signal<number> = computed((): number =>
+    this.weapons().filter((w): boolean => !!w.sold).length,
+  );
+
+  soldImprovementsCount: Signal<number> = computed((): number =>
+    this.improvements().filter((i): boolean => !!i.sold).length,
+  );
+
+  hiddenSoldCount: Signal<number> = computed((): number =>
+    this.soldWeaponsCount() + this.soldImprovementsCount(),
+  );
+
+  visibleWeapons: Signal<Weapon[]> = computed((): Weapon[] => {
+    const all = this.weapons();
+    if (this.showSold()) return all;
+    return all.filter((w): boolean => !w.sold);
+  });
+
+  visibleImprovements: Signal<VehicleImprovement[]> = computed((): VehicleImprovement[] => {
+    const all = this.improvements();
+    if (this.showSold()) return all;
+    return all.filter((i): boolean => !i.sold);
+  });
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────
   // Déplacées telles quelles depuis EquipmentManager (cf. son ancien en-tête,

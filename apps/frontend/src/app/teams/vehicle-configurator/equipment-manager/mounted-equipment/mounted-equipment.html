@@ -1,12 +1,32 @@
+<!-- ── Filtre "masquer les équipements vendus" — absent si rien n'est vendu ── -->
+@if (hiddenSoldCount() > 0) {
+  <button
+    class="me-toggle"
+    type="button"
+    [attr.title]="showSold() ? 'Masquer les équipements vendus' : 'Afficher les équipements vendus (' + hiddenSoldCount() + ')'"
+    (click)="showSold.set(!showSold())">
+    @if (showSold()) {
+      🙈
+    } @else {
+      👁 {{ hiddenSoldCount() }}
+    }
+  </button>
+}
+
 <!-- ── Armes montées — hors celles absorbées par une ligne Tourelle ── -->
 <section class="me-group">
   <h4 class="me-group-title">Armes ({{ weapons().length }})</h4>
   @if (weapons().length === 0) {
     <p class="me-status">Aucune arme montée.</p>
+  } @else if (visibleWeapons().length === 0) {
+    <p class="me-status">Toutes les armes de ce véhicule ont été vendues — affichez-les pour les consulter.</p>
   } @else {
     <ul class="me-list">
-      @for (weapon of weapons(); track weapon.id) {
-        <li class="me-item">
+      @for (weapon of visibleWeapons(); track weapon.id) {
+        <li class="me-item" [class.me-item--sold]="weapon.sold" [attr.title]="weapon.sold ? 'Revendue (atelier)' : null">
+          @if (weapon.sold) {
+            <span class="me-item__watermark">Vendu</span>
+          }
           <span class="me-name" [class.me-name--sold]="weapon.sold">
             {{ resolveWeaponName(weapon.nomInterne) }}
             @if (weapon.orientation) {
@@ -23,9 +43,7 @@
               {{ resolveWeaponSlot(weapon.nomInterne) }}
             </span>
           </span>
-          @if (weapon.sold) {
-            <span class="me-badge-sold" title="Revendue (atelier)">Vendue</span>
-          } @else {
+          @if (!weapon.sold) {
             <button
               class="me-remove"
               type="button"
@@ -45,9 +63,11 @@
   <h4 class="me-group-title">Améliorations ({{ improvements().length }})</h4>
   @if (improvements().length === 0) {
     <p class="me-status">Aucune amélioration installée.</p>
+  } @else if (visibleImprovements().length === 0) {
+    <p class="me-status">Toutes les améliorations de ce véhicule ont été vendues — affichez-les pour les consulter.</p>
   } @else {
     <ul class="me-list">
-      @for (improvement of improvements(); track improvement.id) {
+      @for (improvement of visibleImprovements(); track improvement.id) {
 
         @if (improvement.nomInterne === 'tourelle') {
 
@@ -60,7 +80,10 @@
               Le badge emplacement reprend celui de l'ARME montée (la Tourelle elle-même
               coûte 0 emplacement, cf. SPECIFICATION.md §7).
             -->
-            <li class="me-item me-item--tourelle">
+            <li class="me-item me-item--tourelle" [class.me-item--sold]="improvement.sold" [attr.title]="improvement.sold ? 'Revendue (atelier)' : null">
+              @if (improvement.sold) {
+                <span class="me-item__watermark">Vendu</span>
+              }
               <span class="me-name" [class.me-name--sold]="improvement.sold">
                 🔫 {{ resolveWeaponName(improvement.weaponNomInterne) }}
                 <span class="me-tourelle-badge">(Tourelle)</span>
@@ -78,9 +101,7 @@
                   {{ resolveWeaponSlot(improvement.weaponNomInterne) }}
                 </span>
               </span>
-              @if (improvement.sold) {
-                <span class="me-badge-sold" title="Revendue (atelier)">Vendue</span>
-              } @else {
+              @if (!improvement.sold) {
                 <!--
                   [Désassigner] toujours disponible — y compris sur la Tourelle du Char
                   d'assaut (estDefaut) : seul le RETRAIT de la Tourelle est interdit pour
@@ -118,7 +139,10 @@
               [Assigner] ouvre la modale de sélection d'arme catalogue.
               [Retirer] disponible seulement si la Tourelle est achetée (pas estDefaut).
             -->
-            <li class="me-item me-item--tourelle-orpheline">
+            <li class="me-item me-item--tourelle-orpheline" [class.me-item--sold]="improvement.sold" [attr.title]="improvement.sold ? 'Revendue (atelier)' : null">
+              @if (improvement.sold) {
+                <span class="me-item__watermark">Vendu</span>
+              }
               <span class="me-name" [class.me-name--sold]="improvement.sold">
                 ⚙ {{ resolveImprovementName(improvement.nomInterne) }}
                 <span class="me-warning">⚠ Aucune arme assignée</span>
@@ -133,9 +157,7 @@
                   {{ improvement.emplacement }}
                 </span>
               </span>
-              @if (improvement.sold) {
-                <span class="me-badge-sold" title="Revendue (atelier)">Vendue</span>
-              } @else {
+              @if (!improvement.sold) {
                 <button
                   class="me-add-weapon"
                   type="button"
@@ -165,7 +187,10 @@
         } @else {
 
           <!-- Amélioration NON-Tourelle — affichage standard -->
-          <li class="me-item">
+          <li class="me-item" [class.me-item--sold]="improvement.sold" [attr.title]="improvement.sold ? 'Revendue (atelier)' : null">
+            @if (improvement.sold) {
+              <span class="me-item__watermark">Vendu</span>
+            }
             <span class="me-name" [class.me-name--sold]="improvement.sold">
               {{ resolveImprovementName(improvement.nomInterne) }}
               @if (improvement.orientation) {
@@ -188,9 +213,7 @@
                 title="Fait partie du profil de base de ce véhicule">
                 🔒 Intégré
               </span>
-            } @else if (improvement.sold) {
-              <span class="me-badge-sold" title="Revendue (atelier)">Vendue</span>
-            } @else {
+            } @else if (!improvement.sold) {
               <button
                 class="me-remove"
                 type="button"

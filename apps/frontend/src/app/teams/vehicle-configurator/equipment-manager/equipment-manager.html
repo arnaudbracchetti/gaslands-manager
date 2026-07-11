@@ -154,7 +154,8 @@
   @if (pendingRemoveWeapon()) {
     <app-confirm-modal
       [message]="weaponRemovalMessage(pendingRemoveWeapon()!)"
-      [confirmLabel]="weaponRemovalConfirmLabel(pendingRemoveWeapon()!)"
+      [confirmLabel]="weaponRemovalConfirmLabel()"
+      cancelLabel="Fermer"
       (confirmed)="onConfirmRemoveWeapon()"
       (cancelled)="pendingRemoveWeapon.set(null)" />
   }
@@ -162,7 +163,8 @@
   @if (pendingRemoveImprovement()) {
     <app-confirm-modal
       [message]="improvementRemovalMessage(pendingRemoveImprovement()!)"
-      [confirmLabel]="improvementRemovalConfirmLabel(pendingRemoveImprovement()!)"
+      [confirmLabel]="improvementRemovalConfirmLabel()"
+      cancelLabel="Fermer"
       (confirmed)="onConfirmRemoveImprovement()"
       (cancelled)="pendingRemoveImprovement.set(null)" />
   }

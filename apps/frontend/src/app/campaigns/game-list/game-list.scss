@@ -166,7 +166,6 @@
     padding: 6px 12px;
     border-radius: var(--r-sm);
     cursor: pointer;
-    margin-left: auto;
     transition: border-color 160ms, color 160ms;
 
     &:hover {
@@ -175,7 +174,29 @@
     }
 
     @include bp.mobile {
-      margin-left: 0;
+      width: 100%;
+    }
+  }
+
+  &__atelier {
+    background: var(--tb-bitume);
+    border: 1px solid var(--border-rust);
+    color: var(--tb-os);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: border-color 160ms, color 160ms;
+
+    &:hover {
+      border-color: var(--tb-danger);
+      color: var(--tb-danger);
+    }
+
+    @include bp.mobile {
       width: 100%;
     }
   }

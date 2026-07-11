@@ -161,22 +161,40 @@ describe('MountedEquipment', () => {
 
   // ── Badge "Vendue" (atelier — annulation vs revente) ────────────────────────
 
-  it('affiche le badge "Vendue" (pas de bouton Retirer) pour une arme vendue, nom barré', () => {
+  it('masque par défaut un objet vendu (filtre "showSold"), révélé une fois le filtre activé', () => {
     setInputs([{ ...mockWeapon, sold: true }], []);
 
+    let el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-item')).toBeNull();
+    expect(el.textContent).toContain('Toutes les armes de ce véhicule ont été vendues');
+
+    component.showSold.set(true);
+    fixture.detectChanges();
+    el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-item__watermark')).not.toBeNull();
+  });
+
+  it('affiche le filigrane "Vendu" (pas de bouton Retirer) pour une arme vendue, nom barré', () => {
+    setInputs([{ ...mockWeapon, sold: true }], []);
+    component.showSold.set(true);
+    fixture.detectChanges();
+
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(el.querySelector('.me-item__watermark')?.textContent).toContain('Vendu');
+    expect(el.querySelector('.me-item--sold')).not.toBeNull();
     expect(el.querySelector('.me-name--sold')).not.toBeNull();
     expect(el.querySelector('.me-remove')).toBeNull();
     // Reste visible malgré la vente — traçabilité.
     expect(el.textContent).toContain('Mitrailleuse');
   });
 
-  it('affiche le badge "Vendue" pour une amélioration vendue (non-Tourelle), sans bouton Retirer', () => {
+  it('affiche le filigrane "Vendu" pour une amélioration vendue (non-Tourelle), sans bouton Retirer', () => {
     setInputs([], [{ ...mockImprovement, sold: true }]);
+    component.showSold.set(true);
+    fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(el.querySelector('.me-item__watermark')?.textContent).toContain('Vendu');
     expect(el.querySelector('.me-name--sold')).not.toBeNull();
     expect(el.querySelector('.me-remove')).toBeNull();
     expect(el.textContent).toContain('Blindage');
@@ -184,10 +202,14 @@ describe('MountedEquipment', () => {
 
   it('estDefaut prime sur sold : badge "Intégré" affiché même si sold=true (cas théorique)', () => {
     setInputs([], [{ ...mockImprovement, estDefaut: true, sold: true }]);
+    component.showSold.set(true);
+    fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.me-badge-defaut')?.textContent).toContain('Intégré');
-    expect(el.querySelector('.me-badge-sold')).toBeNull();
+    // `sold` reste vrai indépendamment de estDefaut — le filigrane s'affiche quand même,
+    // seul le bouton d'action (Retirer vs Intégré) dépend de la priorité estDefaut.
+    expect(el.querySelector('.me-item__watermark')).not.toBeNull();
   });
 
   // ── Tourelle ASSIGNÉE — ligne fusionnée "Arme (Tourelle)" ───────────────────
@@ -210,13 +232,15 @@ describe('MountedEquipment', () => {
     expect(item.textContent).toContain('Retirer la Tourelle');
   });
 
-  it('Tourelle assignée vendue : badge "Vendue", ni Désassigner ni Retirer', () => {
+  it('Tourelle assignée vendue : filigrane "Vendu", ni Désassigner ni Retirer', () => {
     setInputs([], [{ ...mockTourelleAssignee, sold: true }]);
+    component.showSold.set(true);
+    fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     const item = el.querySelector('.me-item--tourelle') as HTMLElement;
 
-    expect(item.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(item.querySelector('.me-item__watermark')?.textContent).toContain('Vendu');
     expect(item.textContent).not.toContain('Désassigner');
     expect(item.textContent).not.toContain('Retirer la Tourelle');
   });

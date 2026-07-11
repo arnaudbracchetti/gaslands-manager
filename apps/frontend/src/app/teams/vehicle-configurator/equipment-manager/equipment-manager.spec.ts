@@ -606,23 +606,23 @@ describe('EquipmentManager', () => {
     it('propose "Revendre" avec le montant à moitié prix (floor) quand l\'objet est pré-existant', () => {
       const weapon = mockVehicleWithWeapon.weapons[0]; // prix 4, purchasedThisSession absent
       expect(component.weaponRemovalMessage(weapon)).toBe('Revendre "Mitrailleuse" pour 2 jerricans (50%) ?');
-      expect(component.weaponRemovalConfirmLabel(weapon)).toBe('Revendre');
+      expect(component.weaponRemovalConfirmLabel()).toBe('Retirer');
     });
 
     it('propose "Annuler l\'achat" sans montant quand l\'objet a été acheté cette session', () => {
       const weapon = { ...mockVehicleWithWeapon.weapons[0], purchasedThisSession: true };
       expect(component.weaponRemovalMessage(weapon)).toBe('Annuler l\'achat de "Mitrailleuse" ?');
-      expect(component.weaponRemovalConfirmLabel(weapon)).toBe('Annuler');
+      expect(component.weaponRemovalConfirmLabel()).toBe('Retirer');
     });
 
     it('mirroir exact pour les améliorations', () => {
       const improvement = mockVehicleWithImprovement.improvements[0]; // prix 4
       expect(component.improvementRemovalMessage(improvement)).toBe('Revendre "Blindage" pour 2 jerricans (50%) ?');
-      expect(component.improvementRemovalConfirmLabel(improvement)).toBe('Revendre');
+      expect(component.improvementRemovalConfirmLabel()).toBe('Retirer');
 
       const purchasedThisSession = { ...improvement, purchasedThisSession: true };
       expect(component.improvementRemovalMessage(purchasedThisSession)).toBe('Annuler l\'achat de "Blindage" ?');
-      expect(component.improvementRemovalConfirmLabel(purchasedThisSession)).toBe('Annuler');
+      expect(component.improvementRemovalConfirmLabel()).toBe('Retirer');
     });
   });
 

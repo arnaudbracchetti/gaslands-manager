@@ -577,8 +577,8 @@ export class EquipmentManager {
     return `Revendre "${nom}" pour ${this.previewSellAmount(weapon.prix)} jerricans (50%) ?`;
   }
 
-  weaponRemovalConfirmLabel(weapon: Weapon): string {
-    return weapon.purchasedThisSession ? 'Annuler' : 'Revendre';
+  weaponRemovalConfirmLabel(): string {
+    return 'Retirer';
   }
 
   improvementRemovalMessage(improvement: VehicleImprovement): string {
@@ -587,8 +587,8 @@ export class EquipmentManager {
     return `Revendre "${nom}" pour ${this.previewSellAmount(improvement.prix)} jerricans (50%) ?`;
   }
 
-  improvementRemovalConfirmLabel(improvement: VehicleImprovement): string {
-    return improvement.purchasedThisSession ? 'Annuler' : 'Revendre';
+  improvementRemovalConfirmLabel(): string {
+    return 'Retirer';
   }
 
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──
