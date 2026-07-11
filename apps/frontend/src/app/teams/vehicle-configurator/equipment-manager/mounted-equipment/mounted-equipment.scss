@@ -56,6 +56,12 @@
   letter-spacing: 0.02em;
 }
 
+// Objet revendu (atelier) — reste visible, barré. Mirroir de `.me-badge-defaut` pour le badge.
+.me-name--sold {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
 .me-orientation {
   margin-left: 6px;
   font-family: var(--font-mono);
@@ -113,6 +119,16 @@
 // ─── Tourelle ────────────────────────────────────────────────────────────────
 
 .me-badge-defaut {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+// Mirroir de `.me-badge-defaut` pour un objet revendu (atelier, annulation vs revente).
+.me-badge-sold {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--text-dim);

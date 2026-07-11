@@ -20,7 +20,7 @@ import type { WeaponType } from '../../../team/domain/value-objects/weapon-type'
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
-import type { RankingInput, ChangeEquipmentInput, GameJournalEntry } from './game-commands';
+import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
 
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
 const POINTS_TABLE = [10, 5, 2, 1];
@@ -233,17 +233,19 @@ export abstract class Game {
   /**
    * Achat ou revente d'équipement en atelier (D1-D3). Calcule le coût selon
    * opération × type d'entité, et vérifie la cagnotte (BUY uniquement — la revente
-   * crédite toujours).
+   * crédite toujours, via le prix résiduel qui fait varier le budget dérivé).
+   *
+   * Annulation vs revente (WEAPON/IMPROVEMENT uniquement, jamais VEHICLE) : si l'objet
+   * ciblé par un SELL a été acheté PENDANT cette même session d'atelier (son événement BUY
+   * est encore dans `this._events`), le retrait est une annulation pure — l'événement BUY
+   * est supprimé, aucun événement de vente n'est créé, remboursement intégral et invisible
+   * au journal (cf. `findSameSessionPurchase`).
    *
    * Ne fait PAS `event.execute()` (D-S11) : l'id de l'entité transiente créée par
    * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
    * persiste l'événement puis recharge via replay, qui l'applique avec son vrai id.
    */
-  changeEquipment(participant: CampaignParticipant, cmd: ChangeEquipmentInput): GameEvent[] {
-    // Le coût est calculé ici puis figé dans l'événement : en event-sourcing il ne doit
-    // jamais être recalculé au replay (le prix catalogue peut changer, le coût de revente
-    // dépend de l'état rejoué).
-    //
+  changeEquipment(participant: CampaignParticipant, cmd: ChangeEquipmentInput): ChangeEquipmentResult {
     // Pour un BUY, `nomInterne` et les types résolus viennent du catalogue (fournis par le
     // use case). Pour un SELL, on les DÉRIVE de l'entité ciblée dans l'équipe replayée : le
     // client n'a pas à (re)transmettre le `nomInterne` de ce qu'il vend. L'événement reste
@@ -257,13 +259,26 @@ export abstract class Game {
 
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
-    } else {
+    } else if (cmd.operation === EquipmentOperation.SELL) {
       const sold = this.resolveSell(participant, cmd);
       cost = sold.cost;
       nomInterne = sold.nomInterne;
       resolvedVehicleType = sold.resolvedVehicleType;
       resolvedWeaponType = sold.resolvedWeaponType;
       resolvedImprovementType = sold.resolvedImprovementType;
+
+      // resolveSell() a déjà validé la propriété de l'objet (ownership) — la recherche
+      // same-session ci-dessous ne peut donc jamais cibler un événement appartenant à un
+      // autre véhicule/participant. Scopée à WEAPON/IMPROVEMENT : cf. l'invariant vérifié
+      // sur canAccept() en ATELIER (aucun autre événement accepté ici ne référence un
+      // weaponId/improvementId — élargir la suppression physique à VEHICLE casserait cet
+      // invariant, cf. docs/plans/2026-07-11-atelier-annulation-revente-design.md §1).
+      if (cmd.entityType !== EquipmentEntityType.VEHICLE) {
+        const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
+        if (buyEvent) return { events: [], deleteEventId: buyEvent.id };
+      }
+    } else {
+      throw new DomainException(`Opération d'équipement inconnue : "${cmd.operation}".`);
     }
 
     const event = new EquipmentChangedEvent(
@@ -276,7 +291,28 @@ export abstract class Game {
     if (cmd.operation === EquipmentOperation.BUY) participant.assertCanAfford(cost);
     this.addEvent(event);
 
-    return [event];
+    return { events: [event], deleteEventId: null };
+  }
+
+  /**
+   * Un objet WEAPON/IMPROVEMENT ciblé par un SELL a-t-il été acheté PENDANT cette partie
+   * (session d'atelier en cours) ? Recherche dans `this._events` — déjà scopé à la partie
+   * courante, donc à la session en cours (un `Game` ne peut entrer en ATELIER qu'une seule
+   * fois dans sa vie). L'id transient d'une entité achetée est `-event.id` (D-S11).
+   */
+  private findSameSessionPurchase(entityType: EquipmentEntityType, entityId: number): EquipmentChangedEvent | null {
+    return this._events.find(
+      (e): e is EquipmentChangedEvent =>
+        e instanceof EquipmentChangedEvent &&
+        e.operation === EquipmentOperation.BUY &&
+        e.entityType === entityType &&
+        -e.id === entityId,
+    ) ?? null;
+  }
+
+  /** Point d'entrée public en lecture (GetWorkshopUseCase) — cf. `findSameSessionPurchase`. */
+  wasPurchasedThisSession(entityType: EquipmentEntityType, entityId: number): boolean {
+    return this.findSameSessionPurchase(entityType, entityId) !== null;
   }
 
   /** F1 — Enregistre qu'un participant a contacté la Résistance (+3 PR secrets). */
@@ -414,8 +450,12 @@ export abstract class Game {
       case EquipmentEntityType.WEAPON: {
         const weapon = participant.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId);
         if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
+        // Revente à moitié prix arrondie inférieur (p.170). Si l'objet a été acheté cette
+        // même session d'atelier, ce coût est de toute façon ignoré : changeEquipment()
+        // court-circuite vers une annulation (suppression du BUY, remboursement intégral)
+        // AVANT de construire l'événement — cf. findSameSessionPurchase.
         return {
-          cost: weapon.type.price,
+          cost: Math.floor(weapon.price / 2),
           nomInterne: weapon.type.nomInterne,
           resolvedVehicleType: null,
           resolvedWeaponType: weapon.type,
@@ -432,8 +472,10 @@ export abstract class Game {
         if (improvement.estDefaut) {
           throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
         }
+        // improvement.price (getter d'entité, pas type.price) : gère déjà le cas Tourelle
+        // assignée (3× le prix de l'arme montée) avant d'appliquer la moitié prix.
         return {
-          cost: improvement.price,
+          cost: Math.floor(improvement.price / 2),
           nomInterne: improvement.type.nomInterne,
           resolvedVehicleType: null,
           resolvedWeaponType: null,

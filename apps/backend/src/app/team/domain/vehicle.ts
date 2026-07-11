@@ -270,6 +270,28 @@ export class Vehicle {
   }
 
   /**
+   * Marque une arme "vendue" (flag isSold, remboursement à moitié prix) plutôt que de la
+   * retirer du véhicule (distinct de `removeWeapon`) — utilisé pour la revente d'un objet
+   * pré-existant en atelier (cf. annulation vs revente, campaign/domain/games/game.ts).
+   */
+  markWeaponSold(weaponId: number): void {
+    this.findWeapon(weaponId).markSold();
+  }
+
+  clearWeaponSold(weaponId: number): void {
+    this.findWeapon(weaponId).clearSold();
+  }
+
+  /** Mirroir de markWeaponSold/clearWeaponSold pour les améliorations. */
+  markImprovementSold(improvementId: number): void {
+    this.findImprovement(improvementId).markSold();
+  }
+
+  clearImprovementSold(improvementId: number): void {
+    this.findImprovement(improvementId).clearSold();
+  }
+
+  /**
    * Ajoute (ou retire si n < 0) des chocs sur ce véhicule.
    * Les chocs ne peuvent pas être négatifs : lève DomainException si le résultat
    * serait inférieur à 0 (tentative de consommer plus de chocs qu'on n'en possède).
@@ -333,6 +355,12 @@ export class Vehicle {
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────
+
+  private findWeapon(id: number): Weapon {
+    const weapon = this._weapons.find((w) => w.id === id);
+    if (!weapon) throw new DomainException('Arme introuvable sur ce véhicule');
+    return weapon;
+  }
 
   private findImprovement(id: number): Improvement {
     const imp = this._improvements.find((i) => i.id === id);

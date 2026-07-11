@@ -50,6 +50,9 @@ export class EscarmoucheGame extends Game {
       );
     }
     if (this.status === GameStatus.ATELIER) {
+      // ⚠️ Cf. le même commentaire dans EvenementTeleGame.canAccept : la suppression
+      // physique du BUY (annulation d'achat) n'est sûre que parce qu'aucun autre événement
+      // accepté ici ne référence un weaponId/improvementId.
       return event instanceof EquipmentChangedEvent || event instanceof SequellaAddedEvent;
     }
     return false;

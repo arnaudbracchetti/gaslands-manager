@@ -83,8 +83,8 @@ const mockCatalog: Sponsor = {
 // le DTO (`weapon.prix`, `improvement.prix`). `buildVehicleSummary` les consomme
 // directement — les fixtures doivent donc inclure les champs du DTO complet.
 
-function buildWeapon(nomInterne: string, prix: number): Weapon {
-  return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix };
+function buildWeapon(nomInterne: string, prix: number, sold?: boolean): Weapon {
+  return { id: 1, nomInterne, orientation: 'avant', vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix, sold };
 }
 
 function buildImprovement(
@@ -272,5 +272,30 @@ describe('buildVehicleSummary', () => {
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
     expect(summary.emplacementsUtilises).toBe(2); // 1 (arme) + 1 (blindage)
+  });
+
+  // ── Arme vendue (atelier, annulation vs revente) ─────────────────────────────
+  // `weapon.sold` n'existe qu'en atelier (jamais posé côté construction d'équipe,
+  // toujours undefined dans ce contexte) — le filtre ne change donc jamais rien
+  // pour Teams/TeamEditPage.
+
+  it('une arme vendue libère son emplacement mais reste incluse dans le coût et les tags', () => {
+    const vehicle = buildVehicle([buildWeapon('mitrailleuse', 3, true)], []);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.cout).toBe(18); // 15 (camion) + 3 (arme vendue, prix résiduel déjà appliqué côté backend)
+    expect(summary.emplacementsUtilises).toBe(0); // emplacement libéré
+    expect(summary.equipements).toContain('Mitrailleuse'); // reste visible (traçabilité)
+  });
+
+  it('combine une arme active et une arme vendue : seule l\'active compte pour les emplacements', () => {
+    const vehicle = buildVehicle(
+      [buildWeapon('mitrailleuse', 3), buildWeapon('minigun', 6, true)],
+      [],
+    );
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsUtilises).toBe(1); // mitrailleuse seule (minigun vendue exclue)
+    expect(summary.cout).toBe(24); // 15 + 3 + 6 — le coût inclut toujours les deux
   });
 });

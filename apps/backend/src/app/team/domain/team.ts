@@ -239,6 +239,28 @@ export class Team {
     this.findVehicle(vehicleId).removeImprovement(improvementId);
   }
 
+  /**
+   * Marque une arme d'un véhicule spécifique "vendue" (flag isSold) plutôt que de la
+   * retirer — mirroir de removeCampaignWeapon, utilisé par la revente d'un objet
+   * pré-existant en atelier (annulation vs revente).
+   */
+  markWeaponSold(vehicleId: number, weaponId: number): void {
+    this.findVehicle(vehicleId).markWeaponSold(weaponId);
+  }
+
+  clearWeaponSold(vehicleId: number, weaponId: number): void {
+    this.findVehicle(vehicleId).clearWeaponSold(weaponId);
+  }
+
+  /** Mirroir de markWeaponSold/clearWeaponSold pour les améliorations. */
+  markImprovementSold(vehicleId: number, improvementId: number): void {
+    this.findVehicle(vehicleId).markImprovementSold(improvementId);
+  }
+
+  clearImprovementSold(vehicleId: number, improvementId: number): void {
+    this.findVehicle(vehicleId).clearImprovementSold(improvementId);
+  }
+
 }
 
 // Ré-export pour que les consumers importent depuis team.ts sans connaître vehicle.ts

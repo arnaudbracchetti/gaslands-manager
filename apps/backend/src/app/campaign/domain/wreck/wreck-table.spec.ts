@@ -132,6 +132,22 @@ describe('WreckTable — Table des Épaves (10 lignes)', () => {
       expect(outcome.lostEquipment).toEqual({ kind: 'improvement', id: 9 });
     });
 
+    it('ARRACHEE exclut une arme isSold — vendue en atelier, plus physiquement sur le véhicule', () => {
+      const soldWeapon = makeWeapon(7);
+      soldWeapon.markSold();
+      const { outcome } = new WreckTable(new FixedRandomizer(5, 0))
+        .resolve(makeVehicle('Moyen', 0, [soldWeapon]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toBeNull();
+    });
+
+    it('ARRACHEE exclut une amélioration isSold, tire la suivante', () => {
+      const soldImpro = makeImprovement(8); soldImpro.markSold();
+      const stillMounted = makeImprovement(9);
+      const { outcome } = new WreckTable(new FixedRandomizer(5, 0))
+        .resolve(makeVehicle('Moyen', 0, [], [soldImpro, stillMounted]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toEqual({ kind: 'improvement', id: 9 });
+    });
+
     it('D6=6, chocs=0 → modifié=6 → PIGNON_ENDOMMAGE (+1)', () => {
       const { outcome } = new WreckTable(new FixedRandomizer(6)).resolve(makeVehicle('Moyen', 0), GAME_ID, PARTICIPANT_ID);
       expect(outcome.wreckResult).toBe(WreckResult.PIGNON_ENDOMMAGE);

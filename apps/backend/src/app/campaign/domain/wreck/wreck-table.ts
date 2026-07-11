@@ -84,12 +84,16 @@ export class WreckTable {
 
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
-  /** Armes non perdues + améliorations non perdues et non intégrées (estDefaut). */
+  /**
+   * Armes non perdues et non vendues + améliorations non perdues, non vendues et non
+   * intégrées (estDefaut). Un objet vendu n'est plus physiquement sur le véhicule — il ne
+   * doit jamais être tiré au sort par cette table (sinon "arraché" une seconde fois).
+   */
   private buildEquipmentPool(vehicle: Vehicle): NonNullable<LostEquipment>[] {
     return [
-      ...vehicle.weapons.filter((w) => !w.isLost).map((w) => ({ kind: 'weapon' as const, id: w.id })),
+      ...vehicle.weapons.filter((w) => !w.isLost && !w.isSold).map((w) => ({ kind: 'weapon' as const, id: w.id })),
       ...vehicle.improvements
-        .filter((i) => !i.estDefaut && !i.isLost)
+        .filter((i) => !i.estDefaut && !i.isLost && !i.isSold)
         .map((i) => ({ kind: 'improvement' as const, id: i.id })),
     ];
   }

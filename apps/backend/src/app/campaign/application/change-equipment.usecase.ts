@@ -62,7 +62,7 @@ export class ChangeEquipmentUseCase {
 
     try {
       const game = campaign.findAtelierGame();
-      const events = game.changeEquipment(me, {
+      const result = game.changeEquipment(me, {
         operation: cmd.operation,
         entityType: cmd.entityType,
         nomInterne: cmd.nomInterne,
@@ -73,7 +73,14 @@ export class ChangeEquipmentUseCase {
         resolvedWeaponType,
         resolvedImprovementType,
       });
-      await this.campaignRepo.appendEvents(events[0].gameId, events);
+      // Annulation d'achat de cette session : suppression pure de l'événement BUY, aucun
+      // événement à ajouter (cf. Game.changeEquipment). `game.id` (pas `events[0].gameId`)
+      // car `result.events` est vide dans ce cas.
+      if (result.deleteEventId !== null) {
+        await this.campaignRepo.deleteEvent(result.deleteEventId);
+      } else {
+        await this.campaignRepo.appendEvents(game.id, result.events);
+      }
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;

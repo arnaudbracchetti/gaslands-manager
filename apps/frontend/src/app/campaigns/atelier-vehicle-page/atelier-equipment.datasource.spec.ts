@@ -29,10 +29,10 @@ const workshop: WorkshopStateDto = {
       chocs: 0,
       sequellas: [],
       weapons: [
-        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, isLost: false },
+        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, isLost: false, isSold: false, purchasedThisSession: false },
       ],
       improvements: [
-        { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false },
+        { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
       ],
     },
   ],

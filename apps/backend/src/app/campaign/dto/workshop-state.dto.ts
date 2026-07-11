@@ -12,6 +12,10 @@ export interface WorkshopWeaponDto {
   orientation: string | null;
   price: number;
   isLost: boolean;
+  /** Vendue (revente pré-existante, moitié prix) — reste visible, barrée, côté IHM. */
+  isSold: boolean;
+  /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
+  purchasedThisSession: boolean;
 }
 
 export interface WorkshopSequellaDto {
@@ -29,6 +33,10 @@ export interface WorkshopImprovementDto {
   emplacement: number;
   estDefaut: boolean;
   isLost: boolean;
+  /** Vendue (revente pré-existante, moitié prix) — reste visible, barrée, côté IHM. */
+  isSold: boolean;
+  /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
+  purchasedThisSession: boolean;
 }
 
 export interface WorkshopVehicleDto {

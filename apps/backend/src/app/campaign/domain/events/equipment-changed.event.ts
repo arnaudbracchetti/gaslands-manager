@@ -20,12 +20,25 @@ export { EquipmentOperation, EquipmentEntityType };
  * - BUY_WEAPON      : targetVehicleId=vehicleId, targetEntityId=null → crée Weapon id=-this.id
  * - BUY_IMPROVEMENT : targetVehicleId=vehicleId, targetEntityId=null → crée Improvement id=-this.id
  * - SELL_VEHICLE    : targetVehicleId=null, targetEntityId=vehicleId → retire le véhicule
- * - SELL_WEAPON     : targetVehicleId=vehicleId, targetEntityId=weaponId → retire l'arme
- * - SELL_IMPROVEMENT: targetVehicleId=vehicleId, targetEntityId=improvementId → retire l'amélioration
+ * - SELL_WEAPON     : targetVehicleId=vehicleId, targetEntityId=weaponId → flague l'arme "vendue" (isSold)
+ * - SELL_IMPROVEMENT: targetVehicleId=vehicleId, targetEntityId=improvementId → flague l'amélioration "vendue" (isSold)
+ *
+ * SELL_WEAPON/SELL_IMPROVEMENT ne retirent plus l'entité : elle reste visible (barrée,
+ * badge "Vendue" côté IHM), remboursée à moitié prix (cf. `Weapon.price`/`Improvement.price`,
+ * prix résiduel). SELL_VEHICLE reste sur l'ancien modèle (suppression complète, remboursement
+ * plein) — hors scope de l'annulation vs revente (Vehicle ne porte pas `isSold`).
  *
  * `resolvedVehicleType` / `resolvedWeaponType` / `resolvedImprovementType` sont fournis par
  * le use case (write-time) ou par le mapper ORM (replay). Ils permettent à execute/undo de
  * recréer les entités transientes sans accès au catalogue.
+ *
+ * `p.team.addCampaignWeapon(vehicleId, ...)`/`markWeaponSold(vehicleId, ...)` (et leurs
+ * équivalents amélioration) sont des passe-plats sur `Team` qui délèguent aussitôt à
+ * `Vehicle` (`this.findVehicle(vehicleId).xxx(...)`) — la logique réelle vit déjà sur
+ * `Vehicle`. Cet événement appelle volontairement `Team`, jamais `Vehicle` directement :
+ * `Team` est l'agrégat racine (cf. `docs/ARCHITECTURE.md` §3.4), et les appelants externes
+ * à l'agrégat ne doivent transiter que par sa racine, jamais par une entité enfant en la
+ * contournant — même pattern préexistant qu'`addCampaignWeapon`/`removeCampaignWeapon`.
  */
 export class EquipmentChangedEvent extends GameEvent {
   constructor(
@@ -47,30 +60,54 @@ export class EquipmentChangedEvent extends GameEvent {
     super(id, gameId, participantId, eventOrder);
   }
 
+  /**
+   * Le wallet n'est plus jamais touché ici : il est dérivé de `Team.remainingBudget`
+   * (cf. `CampaignParticipant.wallet`) — un achat/une vente modifie l'arbre d'entités
+   * (via createTransientEquipment/removeTransientEquipment/markSoldEntity/clearSoldEntity),
+   * ce qui suffit à faire varier le budget restant, donc le wallet dérivé, du bon montant
+   * automatiquement.
+   *
+   * VEHICULE reste sur l'ancien modèle (suppression complète à la revente, jamais flaguée
+   * "vendue") — `isSold` n'existe que sur Weapon/Improvement (cf. annulation vs revente,
+   * scopée à ces deux types pour préserver l'invariant de sécurité de la suppression
+   * physique d'un achat de la session, cf. Game.changeEquipment/canAccept en ATELIER).
+   *
+   * execute()/undo() tranchent sur DEUX axes indépendants, volontairement séparés en deux
+   * `if` successifs plutôt qu'un seul enchaînement if/else-if/else : d'abord l'opération
+   * (BUY vs SELL), puis — seulement pour SELL — le type d'entité (VEHICLE vs le reste).
+   * BUY se comporte identiquement quel que soit le type d'entité, d'où le retour anticipé.
+   */
   execute(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
     if (this.operation === EquipmentOperation.BUY) {
-      p.creditWallet(-this.cost);
-      this.addEntity(p, -this.id);
+      this.createTransientEquipment(p, -this.id);
+      return;
+    }
+    // SELL : VEHICULE reste sur le modèle "suppression complète" (ci-dessus) ;
+    // WEAPON/IMPROVEMENT passent au modèle "flag isSold" (revente pré-existante).
+    if (this.entityType === EquipmentEntityType.VEHICLE) {
+      this.removeTransientEquipment(p, this.targetEntityId!);
     } else {
-      p.creditWallet(this.cost);
-      this.removeEntity(p, this.targetEntityId!);
+      this.markSoldEntity(p, this.targetEntityId!);
     }
   }
 
   undo(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
     if (this.operation === EquipmentOperation.BUY) {
-      p.creditWallet(this.cost);
-      this.removeEntity(p, -this.id);
+      this.removeTransientEquipment(p, -this.id);
+      return;
+    }
+    // SELL : miroir exact d'execute() ci-dessus.
+    if (this.entityType === EquipmentEntityType.VEHICLE) {
+      this.createTransientEquipment(p, this.targetEntityId!);
     } else {
-      p.creditWallet(-this.cost);
-      this.addEntity(p, this.targetEntityId!);
+      this.clearSoldEntity(p, this.targetEntityId!);
     }
   }
 
-  /** Recrée l'entité transiente avec l'id fourni (achat, ou annulation d'une revente). */
-  private addEntity(p: CampaignParticipant, entityId: number): void {
+  /** Recrée l'entité transiente (Vehicle/Weapon/Improvement) avec l'id fourni (achat, ou annulation d'une revente VEHICULE). */
+  private createTransientEquipment(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
         p.team.addCampaignVehicle(this.resolvedVehicleType!, entityId);
@@ -84,8 +121,8 @@ export class EquipmentChangedEvent extends GameEvent {
     }
   }
 
-  /** Retire l'entité ciblée (revente, ou annulation d'un achat). */
-  private removeEntity(p: CampaignParticipant, entityId: number): void {
+  /** Retire l'entité transiente ciblée (annulation d'un achat, ou revente VEHICULE). */
+  private removeTransientEquipment(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
         p.team.removeCampaignVehicle(entityId);
@@ -96,6 +133,24 @@ export class EquipmentChangedEvent extends GameEvent {
       case EquipmentEntityType.IMPROVEMENT:
         p.team.removeCampaignImprovement(this.targetVehicleId!, entityId);
         break;
+    }
+  }
+
+  /** Flague l'entité ciblée "vendue" (WEAPON/IMPROVEMENT uniquement — revente pré-existante). */
+  private markSoldEntity(p: CampaignParticipant, entityId: number): void {
+    if (this.entityType === EquipmentEntityType.WEAPON) {
+      p.team.markWeaponSold(this.targetVehicleId!, entityId);
+    } else {
+      p.team.markImprovementSold(this.targetVehicleId!, entityId);
+    }
+  }
+
+  /** Undo de markSoldEntity. */
+  private clearSoldEntity(p: CampaignParticipant, entityId: number): void {
+    if (this.entityType === EquipmentEntityType.WEAPON) {
+      p.team.clearWeaponSold(this.targetVehicleId!, entityId);
+    } else {
+      p.team.clearImprovementSold(this.targetVehicleId!, entityId);
     }
   }
 

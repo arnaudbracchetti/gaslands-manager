@@ -249,11 +249,16 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     const catalog = this.sponsorCatalog();
 
-    // Armes classiques (entités Weapon).
-    const weaponSlots = vehicle.weapons.reduce((sum: number, w): number => {
-      const arme = catalog.armes.find((a): boolean => a.nom_interne === w.nomInterne);
-      return sum + (arme?.emplacement ?? 0);
-    }, 0);
+    // Armes classiques (entités Weapon). `sold` (atelier uniquement, jamais posé côté
+    // construction d'équipe) libère l'emplacement — l'arme reste affichée (barrée) mais
+    // n'est physiquement plus sur le véhicule, contrairement au coût qui reste inclus
+    // (prix résiduel auto-ajustant côté backend, cf. `Weapon.price`).
+    const weaponSlots = vehicle.weapons
+      .filter((w): boolean => !w.sold)
+      .reduce((sum: number, w): number => {
+        const arme = catalog.armes.find((a): boolean => a.nom_interne === w.nomInterne);
+        return sum + (arme?.emplacement ?? 0);
+      }, 0);
 
     // `improvement.emplacement` est résolu côté backend (getter de l'entité hydratée) :
     // 0 pour les améliorations par défaut, valeur catalogue pour les autres. Le frontend
@@ -548,6 +553,42 @@ export class EquipmentManager {
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
   resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
+  }
+
+  /**
+   * Prévisualisation CLIENT du montant remboursé en cas de revente (moitié prix arrondie
+   * inférieur, p.170) — affichée dans le texte de confirmation avant le clic. Le serveur
+   * reste seul décisionnaire du montant réel : cette valeur n'est jamais transmise à l'API.
+   */
+  previewSellAmount(prix: number): number {
+    return Math.floor(prix / 2);
+  }
+
+  // ── Texte des modales de confirmation de retrait — annulation vs revente ────
+  // `purchasedThisSession` (posé uniquement côté atelier, cf. `vehicle-builder.model.ts`)
+  // distingue les deux cas ; en construction d'équipe il est toujours `undefined` (falsy),
+  // donc le texte "Revendre" ne s'affiche jamais côté équipe puisque `removeWeapon`/
+  // `removeImprovement` n'y sont même invoqués que sur des objets jamais "vendables"
+  // au sens atelier — la distinction n'a de sens qu'en atelier.
+
+  weaponRemovalMessage(weapon: Weapon): string {
+    const nom = this.resolveWeaponName(weapon.nomInterne);
+    if (weapon.purchasedThisSession) return `Annuler l'achat de "${nom}" ?`;
+    return `Revendre "${nom}" pour ${this.previewSellAmount(weapon.prix)} jerricans (50%) ?`;
+  }
+
+  weaponRemovalConfirmLabel(weapon: Weapon): string {
+    return weapon.purchasedThisSession ? 'Annuler' : 'Revendre';
+  }
+
+  improvementRemovalMessage(improvement: VehicleImprovement): string {
+    const nom = this.resolveImprovementName(improvement.nomInterne);
+    if (improvement.purchasedThisSession) return `Annuler l'achat de "${nom}" ?`;
+    return `Revendre "${nom}" pour ${this.previewSellAmount(improvement.prix)} jerricans (50%) ?`;
+  }
+
+  improvementRemovalConfirmLabel(improvement: VehicleImprovement): string {
+    return improvement.purchasedThisSession ? 'Annuler' : 'Revendre';
   }
 
   // ── Détection "orientation requise" (cf. doc complète sur `EquipmentOption.requiresOrientation`) ──

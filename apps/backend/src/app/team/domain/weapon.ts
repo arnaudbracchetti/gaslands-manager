@@ -10,6 +10,7 @@ import type { Orientation } from './team';
  */
 export class Weapon {
   private _isLost = false;
+  private _isSold = false;
 
   constructor(
     readonly id: number,
@@ -17,22 +18,32 @@ export class Weapon {
     readonly orientation: Orientation | null,
   ) {}
 
+  /**
+   * Prix résiduel une fois vendue : ce qui reste après remboursement à moitié prix
+   * (floor). floor(X/2) remboursé (via le budget dérivé, cf. CampaignParticipant.wallet)
+   * + ceil(X/2) résiduel = X. Jamais 0 (affichage lisible sur la carte barrée), jamais
+   * le plein prix (le remboursement a bien eu lieu).
+   */
   get price(): number {
-    return this.type.price;
+    return this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
   }
 
   /**
    * Emplacements occupés par cette arme.
-   * Retourne 0 si l'arme est perdue : l'emplacement est libéré pour un remplacement
-   * (règle campagne Gaslands). `price` reste inchangé — perdre une arme n'implique
-   * aucun remboursement, le coût a été payé lors de l'achat initial.
+   * Retourne 0 si l'arme est perdue OU vendue : l'emplacement est libéré (perte : pour un
+   * remplacement ; vente : l'arme n'est physiquement plus sur le véhicule). `price` ne
+   * s'annule jamais complètement en revanche — cf. son commentaire (résiduel vs remboursement).
    */
   get slots(): number {
-    return this._isLost ? 0 : this.type.slots;
+    return this._isLost || this._isSold ? 0 : this.type.slots;
   }
 
   get isLost(): boolean {
     return this._isLost;
+  }
+
+  get isSold(): boolean {
+    return this._isSold;
   }
 
   /** Idempotent : marquer une arme déjà perdue n'a pas d'effet supplémentaire. */
@@ -44,8 +55,18 @@ export class Weapon {
     this._isLost = false;
   }
 
+  /** Idempotent : marquer une arme déjà vendue n'a pas d'effet supplémentaire. */
+  markSold(): void {
+    this._isSold = true;
+  }
+
+  clearSold(): void {
+    this._isSold = false;
+  }
+
   /** Remet l'état campaign à zéro — appelé par Vehicle.clearCampaignState() au début du replay. */
   clearCampaignState(): void {
     this._isLost = false;
+    this._isSold = false;
   }
 }

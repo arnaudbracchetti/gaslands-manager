@@ -1,11 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import { Improvement } from './improvement';
 import { ImprovementType } from './value-objects/improvement-type';
+import { WeaponType } from './value-objects/weapon-type';
 
 function makeImprovementType(prix: number, emplacement: number): ImprovementType {
   return ImprovementType.from({
     nom: 'Blindage', nom_interne: 'blindage',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [],
+  });
+}
+
+function makeTourelleType(): ImprovementType {
+  return ImprovementType.from({
+    nom: 'Tourelle', nom_interne: 'tourelle',
+    prix: 'x3', emplacement: 0, description: '', regles: '', sponsors_autorises: [],
+  });
+}
+
+function makeWeaponType(prix: number): WeaponType {
+  return WeaponType.from({
+    nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
+    prix, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
   });
 }
 
@@ -34,6 +49,26 @@ describe('Improvement', () => {
       improvement.markLost();
       expect(improvement.price).toBe(4);
     });
+
+    it('devient le prix résiduel (ceil(X/2)) une fois vendue', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      improvement.markSold();
+      expect(improvement.price).toBe(2); // ceil(4/2) = 2
+    });
+
+    it('reste 0 pour une amélioration estDefaut, même marquée vendue', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, true);
+      improvement.markSold();
+      expect(improvement.price).toBe(0);
+    });
+
+    it('applique le résiduel sur le prix Tourelle (3× l\'arme assignée) une fois vendue', () => {
+      const improvement = new Improvement(1, makeTourelleType(), null, false);
+      improvement.assignWeapon(makeWeaponType(5));
+      expect(improvement.price).toBe(15); // 3 × 5, avant vente
+      improvement.markSold();
+      expect(improvement.price).toBe(8); // ceil(15/2) = 8
+    });
   });
 
   describe('markLost / clearLost', () => {
@@ -60,11 +95,44 @@ describe('Improvement', () => {
   });
 
   describe('clearCampaignState', () => {
-    it('remet isLost à false', () => {
+    it('remet isLost ET isSold à false', () => {
       const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
       improvement.markLost();
+      improvement.markSold();
       improvement.clearCampaignState();
       expect(improvement.isLost).toBe(false);
+      expect(improvement.isSold).toBe(false);
+    });
+  });
+
+  describe('markSold / clearSold', () => {
+    it('isSold est false par défaut', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      expect(improvement.isSold).toBe(false);
+    });
+
+    it('markSold libère l\'emplacement et applique le prix résiduel', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      improvement.markSold();
+      expect(improvement.isSold).toBe(true);
+      expect(improvement.slots).toBe(0);
+      expect(improvement.price).toBe(2);
+    });
+
+    it('markSold est idempotent', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      improvement.markSold();
+      improvement.markSold();
+      expect(improvement.isSold).toBe(true);
+    });
+
+    it('clearSold remet l\'amélioration à l\'état actif (prix plein, emplacement restauré)', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      improvement.markSold();
+      improvement.clearSold();
+      expect(improvement.isSold).toBe(false);
+      expect(improvement.slots).toBe(1);
+      expect(improvement.price).toBe(4);
     });
   });
 });

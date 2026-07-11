@@ -53,6 +53,15 @@ export interface VehicleImprovement {
    * Le frontend l'utilise pour fusionner l'affichage en une seule ligne "Arme (Tourelle)".
    */
   weaponNomInterne: string | null;
+  /**
+   * Champs propres à l'atelier campagne (mode campagne, annulation vs revente) — jamais
+   * posés par `TeamEquipmentDataSource` (construction d'équipe), toujours `undefined` dans
+   * ce contexte (`!undefined === true`, aucune régression). `sold` : revente d'un objet
+   * pré-existant (moitié prix, reste visible barré). `purchasedThisSession` : achetée
+   * pendant la session d'atelier en cours (retrait = annulation, pas revente).
+   */
+  sold?: boolean;
+  purchasedThisSession?: boolean;
 }
 
 /**
@@ -68,6 +77,9 @@ export interface Weapon {
   createdAt: string;
   /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend. */
   prix: number;
+  /** Cf. `VehicleImprovement.sold`/`purchasedThisSession` — même usage, atelier uniquement. */
+  sold?: boolean;
+  purchasedThisSession?: boolean;
 }
 
 /**

@@ -13,6 +13,7 @@ import type { Orientation } from './team';
 export class Improvement {
   private _weaponAssignee: WeaponType | null = null;
   private _isLost = false;
+  private _isSold = false;
 
   constructor(
     readonly id: number,
@@ -25,26 +26,36 @@ export class Improvement {
     return this._weaponAssignee;
   }
 
+  /**
+   * Prix résiduel une fois vendue : ce qui reste après remboursement à moitié prix
+   * (floor), appliqué au prix de base normalement calculé (estDefaut/Tourelle
+   * inchangés). floor(X/2) remboursé + ceil(X/2) résiduel = X.
+   */
   get price(): number {
     if (this.estDefaut) return 0;
-    if (this.type.isTourelle) {
-      return this._weaponAssignee ? this._weaponAssignee.price * 3 : 0;
-    }
-    return this.type.price;
+    const basePrice = this.type.isTourelle
+      ? (this._weaponAssignee ? this._weaponAssignee.price * 3 : 0)
+      : this.type.price;
+    return this._isSold ? Math.ceil(basePrice / 2) : basePrice;
   }
 
   /**
    * Emplacements occupés par cette amélioration.
-   * Retourne 0 si l'amélioration est perdue (Table des Épaves, ligne ARRACHEE) — même
-   * raisonnement que `Weapon.slots` : l'emplacement est libéré, le coût n'est pas remboursé.
+   * Retourne 0 si l'amélioration est perdue (Table des Épaves, ligne ARRACHEE) OU vendue
+   * — même raisonnement que `Weapon.slots` : l'emplacement est libéré, le prix ne
+   * s'annule jamais complètement (résiduel pour la vente, inchangé pour la perte).
    */
   get slots(): number {
-    if (this.estDefaut || this._isLost) return 0;
+    if (this.estDefaut || this._isLost || this._isSold) return 0;
     return this.type.slots;
   }
 
   get isLost(): boolean {
     return this._isLost;
+  }
+
+  get isSold(): boolean {
+    return this._isSold;
   }
 
   /** Idempotent : marquer une amélioration déjà perdue n'a pas d'effet supplémentaire. */
@@ -56,9 +67,19 @@ export class Improvement {
     this._isLost = false;
   }
 
+  /** Idempotent : marquer une amélioration déjà vendue n'a pas d'effet supplémentaire. */
+  markSold(): void {
+    this._isSold = true;
+  }
+
+  clearSold(): void {
+    this._isSold = false;
+  }
+
   /** Remet l'état campagne à zéro — appelé par Vehicle/Team.clearCampaignState() au début du replay. */
   clearCampaignState(): void {
     this._isLost = false;
+    this._isSold = false;
   }
 
   assignWeapon(weaponType: WeaponType): void {

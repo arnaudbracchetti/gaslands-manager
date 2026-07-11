@@ -5,6 +5,16 @@
 > [`docs/spec/VEHICLES.md`](../spec/VEHICLES.md) (construction de véhicule). Prolonge
 > [`2026-07-05-atelier-lifecycle-design.md`](2026-07-05-atelier-lifecycle-design.md)
 > (cycle de vie `PLANIFIE → ATELIER → JOUE`).
+>
+> **D4/R4 (annulation d'achat ≠ revente) ont une conception détaillée et affinée dans
+> [`2026-07-11-atelier-annulation-revente-design.md`](2026-07-11-atelier-annulation-revente-design.md)**
+> (brainstorming du 2026-07-11) — mécanisme de suppression d'événement confirmé, plus deux
+> raffinements qui n'étaient pas encore identifiés ici : le **prix résiduel** (`ceil(prix/2)`
+> sur l'objet revendu, plutôt qu'une ligne à coût négatif) et la **suppression du wallet
+> comme compteur mutable** (remplacé par un getter dérivé de `Team.remainingBudget` +
+> récompenses, prouvé mathématiquement équivalent). **Implémenté le 2026-07-11** — cf.
+> [spec/CAMPAIGN.md §Annulation d'achat vs revente](../spec/CAMPAIGN.md#annulation-dachat-vs-revente).
+> Le reste de cette section D3/D4 (enforcement, gardes sponsor/8, Tourelle) reste Temps 2.
 
 ---
 
@@ -170,14 +180,23 @@ sponsor non autorisé) passerait toujours par appel API direct. Enforcer au writ
 domaine cohérent avec le back équipe et comble les gardes manquantes signalées dans la
 spec.
 
-### D3 — Fonctionnalités atelier spécifiques — ⚠️ **Temps 2 (différé)**
+### D3 — Fonctionnalités atelier spécifiques — 🟡 partiellement implémenté
 
-Retenus (pour le Temps 2) : **revente à moitié prix** (arrondie inférieur, corrige le bug actuel « prix
-plein », p.170) · **Chocs & séquelles** (affichage + échange Chocs→séquelle, endpoint
-`/events/sequella` déjà existant) · **véhicules perdus** (affichage/gestion des `isLost`)
-· **gardes sponsor + limite 8 véhicules** (absentes aujourd'hui).
+**Revente à moitié prix** (arrondie inférieur, p.170) est **implémentée** (2026-07-11,
+fusionnée avec D4 ci-dessous). Restent Temps 2 : **Chocs & séquelles** (affichage +
+échange Chocs→séquelle, endpoint `/events/sequella` déjà existant) · **véhicules
+perdus** (affichage/gestion des `isLost`) · **gardes sponsor + limite 8 véhicules**
+(absentes aujourd'hui).
 
-### D4 — Annulation d'achat ≠ revente — ⚠️ **Temps 2 (différé)**
+### D4 — Annulation d'achat ≠ revente — ✅ implémenté (2026-07-11)
+
+> Conception complète, vérifiée dans le code (pas seulement supposée) et affinée :
+> [`2026-07-11-atelier-annulation-revente-design.md`](2026-07-11-atelier-annulation-revente-design.md).
+> Le principe ci-dessous (suppression d'événement vs `SELL`) reste correct — le nouveau
+> document ajoute l'invariant vérifié qui rend la suppression sûre, le prix résiduel
+> (`ceil(prix/2)`) plutôt qu'un coût négatif, et la suppression du wallet comme compteur
+> mutable séparé. **Implémenté le 2026-07-11** — cf.
+> [spec/CAMPAIGN.md §Annulation d'achat vs revente](../spec/CAMPAIGN.md#annulation-dachat-vs-revente).
 
 Raffinement métier clé, apporté pendant la session. Retirer un équipement, ce sont **deux
 opérations distinctes** selon son origine :
@@ -238,20 +257,29 @@ dans `GetWorkshopUseCase` depuis `v.improvements`.
   mappé en `BadRequestException`) ;
 - garde sponsor à l'achat (le `nomInterne` doit être dans le catalogue du sponsor) ;
 - limite 8 véhicules (refuser un BUY VEHICLE si `me.team.vehicles.length >= 8`) ;
-- revente : `SELL` crédite `Math.floor(price / 2)` (sauf R4).
+- revente : `SELL` crédite `Math.floor(price / 2)` — ✅ implémenté (2026-07-11, cf. R4).
+  Le reste de R3b (enforcement, garde sponsor, limite 8 véhicules) reste Temps 2.
 
-**R4 — Annulation d'achat (suppression d'événement). ⚠️ Temps 2 (différé).**
+**R4 — Annulation d'achat (suppression d'événement). ✅ Implémenté (2026-07-11) — conception
+détaillée dans [`2026-07-11-atelier-annulation-revente-design.md`](2026-07-11-atelier-annulation-revente-design.md).**
 - L'entité transiente a `id = -event.id` ; retrouver l'événement BUY et son `gameId`.
 - Si `gameId === partie ATELIER ouverte` → l'agrégat signale une **suppression**
   (résultat discriminé, ex. `{ deleteEventId }`), le use case appelle une **nouvelle
   méthode repo** `CampaignRepository.deleteEvent(eventId)` (aujourd'hui seul
   `appendEvents` existe).
-- Sinon (persisté, ou BUY figé) → événement `SELL` moitié prix.
-- **Caveat cascade** : supprimer un BUY VEHICLE de la session doit aussi retirer les
-  BUY WEAPON/IMPROVEMENT de la session pointant sur `targetVehicleId = -buyEventId` (sinon
-  événements orphelins). À trancher à l'implémentation ; **option la plus simple** : refuser
-  le retrait tant que le véhicule transient porte de l'équipement acheté cette session, avec
-  message explicite.
+- Sinon (persisté, ou BUY figé) → événement `SELL` moitié prix — voir le nouveau document
+  pour le mécanisme de **prix résiduel** (`ceil(prix/2)`, pas une ligne à coût négatif) qui
+  rend ce remboursement cohérent avec `Vehicle.cost`/`buildVehicleSummary` sans filtre
+  supplémentaire.
+- **Caveat cascade (toujours ouvert)** : supprimer un BUY VEHICLE de la session doit aussi
+  retirer les BUY WEAPON/IMPROVEMENT de la session pointant sur `targetVehicleId =
+  -buyEventId` (sinon événements orphelins). Le document du 2026-07-11 **ne couvre pas ce
+  cas** — son mécanisme est volontairement scopé aux armes/améliorations (`VEHICLE` non
+  exposé en atelier à ce jour), précisément pour s'appuyer sur un invariant vérifié qui ne
+  tiendrait plus si un événement pouvait référencer un véhicule transient. Ce caveat reste
+  donc à trancher **si/quand** l'achat de véhicule est un jour exposé en atelier. Option la
+  plus simple, toujours valable : refuser le retrait tant que le véhicule transient porte de
+  l'équipement acheté cette session, avec message explicite.
 
 ### Frontend (`apps/frontend/src/app/teams/vehicle-configurator/`)
 
@@ -326,10 +354,14 @@ manuellement (discipline existante, pas de code partagé front/back).
 
 ### Temps 2 — fonctionnalités atelier (différé, documenté ci-dessus)
 
-4. **Back write** (D2 / R3b) — enforcement des règles dans `changeEquipment`, revente
-   `floor(prix/2)`, gardes sponsor + limite 8.
-5. **Annulation d'achat** (D4 / R4) — distinction suppression d'événement vs revente.
-6. **Front extras** (D3) — Chocs/séquelles, véhicules perdus, action revente.
+4. **Back write** (D2 / R3b) — enforcement des règles dans `changeEquipment` (emplacements/
+   orientation/sponsor), gardes sponsor + limite 8. La revente `floor(prix/2)` elle-même
+   est faite (point 5).
+5. **Annulation d'achat** (D4 / R4) — ✅ **fait (2026-07-11)** : distinction suppression
+   d'événement vs revente à moitié prix, cf.
+   [spec/CAMPAIGN.md §Annulation d'achat vs revente](../spec/CAMPAIGN.md#annulation-dachat-vs-revente).
+6. **Front extras** (D3) — Chocs/séquelles, véhicules perdus. L'action revente/annulation
+   elle-même est déjà en place (point 5) — restent les autres extras de cette section.
 
 ## Ce qui reste à trancher à l'implémentation
 

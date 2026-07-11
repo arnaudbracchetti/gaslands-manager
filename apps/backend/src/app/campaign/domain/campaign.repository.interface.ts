@@ -15,6 +15,15 @@ import type { GameEvent } from './events/game-event';
 export interface ICampaignRepository {
   findCampaign(campaignId: number): Promise<Campaign>;
   appendEvents(gameId: number, events: GameEvent[]): Promise<void>;
+
+  /**
+   * Supprime définitivement un événement du journal — utilisé UNIQUEMENT pour
+   * l'annulation d'un achat de la session d'atelier en cours (Game.changeEquipment,
+   * `deleteEventId`) : l'achat n'a jamais eu lieu, donc rien à compenser par un événement
+   * inverse (contrairement à `undo()`, qui reste utilisé pour le replay partiel).
+   */
+  deleteEvent(eventId: number): Promise<void>;
+
   saveCampaign(campaign: Campaign): Promise<void>;
 
   /**

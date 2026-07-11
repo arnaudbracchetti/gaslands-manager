@@ -29,6 +29,12 @@ describe('Weapon', () => {
       weapon.markLost();
       expect(weapon.price).toBe(5);
     });
+
+    it('devient le prix résiduel (ceil(X/2)) une fois vendue', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      weapon.markSold();
+      expect(weapon.price).toBe(3); // ceil(5/2) = 3, floor(5/2) = 2 remboursé côté wallet dérivé
+    });
   });
 
   describe('markLost / clearLost', () => {
@@ -51,6 +57,48 @@ describe('Weapon', () => {
       weapon.clearLost();
       expect(weapon.isLost).toBe(false);
       expect(weapon.slots).toBe(2);
+    });
+  });
+
+  describe('markSold / clearSold', () => {
+    it('isSold est false par défaut', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      expect(weapon.isSold).toBe(false);
+    });
+
+    it('markSold libère l\'emplacement et applique le prix résiduel', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      weapon.markSold();
+      expect(weapon.isSold).toBe(true);
+      expect(weapon.slots).toBe(0);
+      expect(weapon.price).toBe(3);
+    });
+
+    it('markSold est idempotent', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      weapon.markSold();
+      weapon.markSold();
+      expect(weapon.isSold).toBe(true);
+    });
+
+    it('clearSold remet l\'arme à l\'état actif (prix plein, emplacement restauré)', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      weapon.markSold();
+      weapon.clearSold();
+      expect(weapon.isSold).toBe(false);
+      expect(weapon.slots).toBe(2);
+      expect(weapon.price).toBe(5);
+    });
+  });
+
+  describe('clearCampaignState', () => {
+    it('remet isLost ET isSold à false', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      weapon.markLost();
+      weapon.markSold();
+      weapon.clearCampaignState();
+      expect(weapon.isLost).toBe(false);
+      expect(weapon.isSold).toBe(false);
     });
   });
 });

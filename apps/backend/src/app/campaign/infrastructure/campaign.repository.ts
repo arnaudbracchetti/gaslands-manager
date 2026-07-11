@@ -112,6 +112,11 @@ export class CampaignRepository implements ICampaignRepository {
     await this.gameEventRepo.save(orms);
   }
 
+  /** Cf. `ICampaignRepository.deleteEvent` — annulation d'achat de la session en cours. */
+  async deleteEvent(eventId: number): Promise<void> {
+    await this.gameEventRepo.delete(eventId);
+  }
+
   /**
    * Persiste les transitions structurelles de statut des parties
    * (PLANIFIE→ATELIER→JOUE), déclenchées par EnterAtelier/CloseAtelier/CloseCampaign.

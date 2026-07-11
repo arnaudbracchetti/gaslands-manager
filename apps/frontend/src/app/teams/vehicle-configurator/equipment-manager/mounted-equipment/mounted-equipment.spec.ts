@@ -159,6 +159,37 @@ describe('MountedEquipment', () => {
     expect(el.querySelector('.me-remove')).toBeNull();
   });
 
+  // ── Badge "Vendue" (atelier — annulation vs revente) ────────────────────────
+
+  it('affiche le badge "Vendue" (pas de bouton Retirer) pour une arme vendue, nom barré', () => {
+    setInputs([{ ...mockWeapon, sold: true }], []);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(el.querySelector('.me-name--sold')).not.toBeNull();
+    expect(el.querySelector('.me-remove')).toBeNull();
+    // Reste visible malgré la vente — traçabilité.
+    expect(el.textContent).toContain('Mitrailleuse');
+  });
+
+  it('affiche le badge "Vendue" pour une amélioration vendue (non-Tourelle), sans bouton Retirer', () => {
+    setInputs([], [{ ...mockImprovement, sold: true }]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(el.querySelector('.me-name--sold')).not.toBeNull();
+    expect(el.querySelector('.me-remove')).toBeNull();
+    expect(el.textContent).toContain('Blindage');
+  });
+
+  it('estDefaut prime sur sold : badge "Intégré" affiché même si sold=true (cas théorique)', () => {
+    setInputs([], [{ ...mockImprovement, estDefaut: true, sold: true }]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-badge-defaut')?.textContent).toContain('Intégré');
+    expect(el.querySelector('.me-badge-sold')).toBeNull();
+  });
+
   // ── Tourelle ASSIGNÉE — ligne fusionnée "Arme (Tourelle)" ───────────────────
 
   it('fusionne une Tourelle assignée en une ligne "Arme (Tourelle)" avec son coût total et le bouton Désassigner', () => {
@@ -177,6 +208,17 @@ describe('MountedEquipment', () => {
 
     expect(item.textContent).toContain('Désassigner');
     expect(item.textContent).toContain('Retirer la Tourelle');
+  });
+
+  it('Tourelle assignée vendue : badge "Vendue", ni Désassigner ni Retirer', () => {
+    setInputs([], [{ ...mockTourelleAssignee, sold: true }]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    const item = el.querySelector('.me-item--tourelle') as HTMLElement;
+
+    expect(item.querySelector('.me-badge-sold')?.textContent).toContain('Vendue');
+    expect(item.textContent).not.toContain('Désassigner');
+    expect(item.textContent).not.toContain('Retirer la Tourelle');
   });
 
   it('Tourelle assignée intégrée (estDefaut) : Désassigner reste possible, mais pas de retrait — badge "Tourelle intégrée"', () => {

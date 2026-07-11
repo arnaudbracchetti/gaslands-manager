@@ -12,7 +12,10 @@ import { ImprovementLostEvent } from '../events/improvement-lost.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
+import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
+import type { GameEvent } from '../events/game-event';
+import { Weapon } from '../../../team/domain/weapon';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { WeightClass } from '../enums/weight-class.enum';
 import { WreckResult } from '../enums/wreck-result.enum';
@@ -21,7 +24,7 @@ import { WreckTable, type WreckTableResult } from '../wreck/wreck-table';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { CampaignParticipant } from '../campaign-participant';
 import { ParticipantStatus } from '../enums/campaign.enums';
-import { makeTestParticipant, makeVehicleType } from '../test-helpers';
+import { makeTestParticipant, makeVehicleType, makeWeaponType } from '../test-helpers';
 import { Team } from '../../../team/domain/team';
 import { Vehicle } from '../../../team/domain/vehicle';
 
@@ -52,7 +55,15 @@ function makeWalletEvent(id = 2): WalletMovementEvent {
 }
 
 function makeEquipmentEvent(id = 3): EquipmentChangedEvent {
-  return new EquipmentChangedEvent(id, 10, 1, id, 'BUY', 'WEAPON', 'mitrailleuse', 5, 1, null, null, null, null);
+  return new EquipmentChangedEvent(
+    id, 10, 1, id,
+    EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
+    1, null, null, null, null,
+  );
+}
+
+function makeVehicleLostEvent(id = 9): VehicleLostEvent {
+  return new VehicleLostEvent(id, 10, 1, id, 1);
 }
 
 function makeSequellaEvent(id = 4): SequellaAddedEvent {
@@ -132,6 +143,37 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
 
   it('refuse GatesCrossedEvent', () => {
     expect(game.canAccept(makeGatesCrossedEvent())).toBe(false);
+  });
+
+  /**
+   * Test exhaustif — TOUS les types d'événements connus du domaine. Si ce test casse
+   * après l'ajout d'un nouveau type d'événement : lire le commentaire sur `canAccept()`
+   * (evenement-tele-game.ts/escarmouche-game.ts) AVANT de l'accepter en ATELIER — la
+   * suppression physique d'un achat de cette session (annulation vs revente,
+   * Game.changeEquipment) n'est sûre que parce qu'aucun événement accepté ici ne
+   * référence un weaponId/improvementId à part EquipmentChangedEvent.
+   */
+  const allKnownEvents: [string, boolean, () => GameEvent][] = [
+    ['RankingAssignedEvent', false, makeRankingEvent],
+    ['WalletMovementEvent', false, makeWalletEvent],
+    ['EquipmentChangedEvent', true, makeEquipmentEvent],
+    ['SequellaAddedEvent', true, makeSequellaEvent],
+    ['GatesCrossedEvent', false, makeGatesCrossedEvent],
+    ['VehicleDestroyedEvent', false, makeVehicleDestroyedEvent],
+    ['ImprovementLostEvent', false, makeImprovementLostEvent],
+    ['FavoriDuPublicBonusEvent', false, makeFavoriDuPublicBonusEvent],
+    ['ResistanceContactedEvent', false, () => new ResistanceContactedEvent(11, 10, 1, 11)],
+    ['WeaponLostEvent', false, () => new WeaponLostEvent(12, 10, 1, 12, 10)],
+    ['VehicleLostEvent', false, makeVehicleLostEvent],
+    [
+      'WreckResolvedEvent',
+      false,
+      () => new WreckResolvedEvent(13, 10, 1, 13, 1, 2, 0, WreckResult.INDEMNE, 0),
+    ],
+  ];
+
+  it.each(allKnownEvents)('%s → accepté=%s en ATELIER', (_name, expected, factory) => {
+    expect(game.canAccept(factory())).toBe(expected);
   });
 });
 
@@ -423,12 +465,13 @@ describe('Game — changeEquipment', () => {
     const { participant } = makeTestParticipant();  // wallet = 50
     const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
 
-    const events = game.changeEquipment(participant, {
+    const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.VEHICLE, nomInterne: 'voiture',
       resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null,
     });
 
-    const event = events[0] as EquipmentChangedEvent;
+    expect(result.deleteEventId).toBeNull();
+    const event = result.events[0] as EquipmentChangedEvent;
     expect(event.cost).toBe(12);  // prix catalogue de makeVehicleType()
   });
 
@@ -453,17 +496,21 @@ describe('Game — changeEquipment', () => {
     })).toThrow('inconnu');
   });
 
-  it('SELL : calcule le coût depuis l\'arme existante du véhicule', () => {
+  it('SELL : revente d\'une arme pré-existante — coût = moitié prix arrondie inférieur (p.170)', () => {
     const { participant, vehicle, weapon } = makeTestParticipant();
     const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
 
-    const events = game.changeEquipment(participant, {
+    const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
       targetVehicleId: vehicle.id, targetEntityId: weapon.id,
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
     });
 
-    expect((events[0] as EquipmentChangedEvent).cost).toBe(5);  // prix catalogue de makeWeaponType()
+    expect(result.deleteEventId).toBeNull();
+    expect(result.events).toHaveLength(1);
+    // floor(5/2) = 2 — prix catalogue de makeWeaponType() est 5, l'arme n'a pas été
+    // achetée cette session (id positif, pré-existant) → revente, pas annulation.
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2);
   });
 
   it('SELL : dérive le nomInterne + le type de l\'entité vendue (même si le client ne les transmet pas)', () => {
@@ -473,15 +520,15 @@ describe('Game — changeEquipment', () => {
     const { participant, vehicle, weapon } = makeTestParticipant();
     const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
 
-    const events = game.changeEquipment(participant, {
+    const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: weapon.id,
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
     });
 
-    const event = events[0] as EquipmentChangedEvent;
+    const event = result.events[0] as EquipmentChangedEvent;
     expect(event.nomInterne).toBe('mitrailleuse');
-    expect(event.cost).toBe(5);
+    expect(event.cost).toBe(2);
   });
 
   it('SELL : refuse une arme introuvable sur le véhicule visé', () => {
@@ -493,5 +540,58 @@ describe('Game — changeEquipment', () => {
       targetVehicleId: vehicle.id, targetEntityId: 999,
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
     })).toThrow('introuvable');
+  });
+
+  it('SELL sur un achat de CETTE session : annule l\'achat (deleteEventId, aucun événement créé)', () => {
+    // L'arme transiente (id=-99) simule le résultat d'un replay ayant déjà appliqué le
+    // BUY (event id=99) de cette même partie ATELIER — cf. D-S11 (id transient = -event.id).
+    const weaponType = makeWeaponType();
+    const transientWeapon = new Weapon(-99, weaponType, null);
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [transientWeapon], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+
+    const buyEvent = new EquipmentChangedEvent(
+      99, 10, participant.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
+      vehicle.id, null, null, null, weaponType, null,
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: -99,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
+    });
+
+    expect(result.deleteEventId).toBe(99);
+    expect(result.events).toHaveLength(0);
+  });
+
+  it('SELL sur un achat d\'une AUTRE session (partie différente) : revente normale, pas annulation', () => {
+    // Même id transient négatif, mais le BUY appartient à une AUTRE partie (gameId=20,
+    // pas la partie ATELIER courante id=10) — findSameSessionPurchase ne doit PAS le
+    // trouver (il ne cherche que dans this._events, scopés à la partie courante).
+    const weaponType = makeWeaponType();
+    const transientWeapon = new Weapon(-77, weaponType, null);
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [transientWeapon], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+
+    // Partie ATELIER courante (id=10) — aucun événement à elle (le BUY appartient à la
+    // partie 20, déjà JOUE, non représentée ici).
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: -77,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
+    });
+
+    expect(result.deleteEventId).toBeNull();
+    expect(result.events).toHaveLength(1);
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2); // floor(5/2)
   });
 });

@@ -3,6 +3,7 @@ import type { WeaponType } from '../../../team/domain/value-objects/weapon-type'
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
 import type { Orientation } from '../../../team/domain/team';
 import type { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import type { GameEvent } from '../events/game-event';
 
 /**
  * Un véhicule ennemi détruit par un participant (exploit, US-B2). `weightClass`
@@ -46,4 +47,14 @@ export interface GameJournalEntry {
   eventId: number;
   participantId: number;
   description: string;
+}
+
+/**
+ * Résultat de `Game.changeEquipment` — discrimine annulation d'achat (suppression pure
+ * de l'événement BUY de cette session, `events` vide) vs achat/revente normal (événement
+ * créé, `deleteEventId` null). Cf. annulation vs revente (WEAPON/IMPROVEMENT uniquement).
+ */
+export interface ChangeEquipmentResult {
+  events: GameEvent[];
+  deleteEventId: number | null;
 }

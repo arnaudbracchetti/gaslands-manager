@@ -105,12 +105,17 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
   const equipements: string[] = [];
 
   // Armes : `weapon.prix` résolu côté backend ; emplacement résolu via le catalogue.
+  // `weapon.sold` (atelier uniquement, jamais posé côté construction d'équipe) libère
+  // l'emplacement — l'arme n'est physiquement plus sur le véhicule — mais reste incluse
+  // dans le coût (prix résiduel auto-ajustant, cf. `Weapon.price` backend) et dans les tags.
   for (const weapon of vehicle.weapons) {
     cout += weapon.prix;
     const armeCatalogue: Arme | undefined = catalog.armes.find(
       (a: Arme): boolean => a.nom_interne === weapon.nomInterne,
     );
-    emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
+    if (!weapon.sold) {
+      emplacementsUtilises += armeCatalogue?.emplacement ?? 0;
+    }
     equipements.push(armeCatalogue?.nom ?? weapon.nomInterne);
   }
 

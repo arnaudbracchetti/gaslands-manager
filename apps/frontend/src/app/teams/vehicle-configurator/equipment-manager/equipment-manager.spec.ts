@@ -254,6 +254,16 @@ describe('EquipmentManager', () => {
     expect(component.emplacementsUtilises()).toBe(2);
   });
 
+  it('exclut une arme vendue (atelier) du calcul des emplacements — l\'emplacement est libéré', () => {
+    fixture.componentRef.setInput('vehicle', {
+      ...mockVehicle,
+      weapons: [{ ...mockVehicleWithWeapon.weapons[0], sold: true }],
+    });
+    fixture.detectChanges();
+
+    expect(component.emplacementsUtilises()).toBe(0);
+  });
+
   // ── Coût (computed) — carte récapitulative (en-tête de `.em-current`) ──────
 
   it('coutBase reflète le prix catalogue du véhicule, coutEquipement est nul et coutTotal égal coutBase pour un véhicule nu', () => {
@@ -588,6 +598,32 @@ describe('EquipmentManager', () => {
 
     expect(mockDataSource.removeImprovement).toHaveBeenCalledExactlyOnceWith(100, 300);
     expect(emitted).toEqual([mockVehicle]);
+  });
+
+  // ── Texte de confirmation de retrait — annulation vs revente (atelier) ──────
+
+  describe('weaponRemovalMessage / improvementRemovalMessage', () => {
+    it('propose "Revendre" avec le montant à moitié prix (floor) quand l\'objet est pré-existant', () => {
+      const weapon = mockVehicleWithWeapon.weapons[0]; // prix 4, purchasedThisSession absent
+      expect(component.weaponRemovalMessage(weapon)).toBe('Revendre "Mitrailleuse" pour 2 jerricans (50%) ?');
+      expect(component.weaponRemovalConfirmLabel(weapon)).toBe('Revendre');
+    });
+
+    it('propose "Annuler l\'achat" sans montant quand l\'objet a été acheté cette session', () => {
+      const weapon = { ...mockVehicleWithWeapon.weapons[0], purchasedThisSession: true };
+      expect(component.weaponRemovalMessage(weapon)).toBe('Annuler l\'achat de "Mitrailleuse" ?');
+      expect(component.weaponRemovalConfirmLabel(weapon)).toBe('Annuler');
+    });
+
+    it('mirroir exact pour les améliorations', () => {
+      const improvement = mockVehicleWithImprovement.improvements[0]; // prix 4
+      expect(component.improvementRemovalMessage(improvement)).toBe('Revendre "Blindage" pour 2 jerricans (50%) ?');
+      expect(component.improvementRemovalConfirmLabel(improvement)).toBe('Revendre');
+
+      const purchasedThisSession = { ...improvement, purchasedThisSession: true };
+      expect(component.improvementRemovalMessage(purchasedThisSession)).toBe('Annuler l\'achat de "Blindage" ?');
+      expect(component.improvementRemovalConfirmLabel(purchasedThisSession)).toBe('Annuler');
+    });
   });
 
   // ── Détection "orientation requise" ─────────────────────────────────────────

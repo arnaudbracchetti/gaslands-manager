@@ -282,6 +282,44 @@ lui-même l'unique partie actuellement en `ATELIER` dans la campagne (erreur
 
 ---
 
+## Annulation d'achat vs revente
+
+Retirer un équipement (arme ou amélioration) en atelier est **deux opérations
+distinctes** selon son origine — conception détaillée :
+[`docs/plans/2026-07-11-atelier-annulation-revente-design.md`](../plans/2026-07-11-atelier-annulation-revente-design.md).
+
+- **Acheté pendant la session d'atelier en cours** (son événement `BUY` est
+  encore dans le journal de la partie actuellement en `ATELIER`) : **annulation**
+  — l'événement `BUY` est supprimé du journal, aucun événement de vente n'est
+  créé, remboursement intégral et invisible dans le journal (comme si l'achat
+  n'avait jamais eu lieu).
+- **Pré-existant** (construction d'équipe, ou atelier antérieur déjà clôturé) :
+  **revente** à moitié prix arrondie à l'inférieur (p.170) — `Weapon`/
+  `Improvement` gagnent un flag `isSold`, mirroir d'`isLost` : l'objet reste
+  visible sur la fiche du véhicule (barré, badge "Vendue"), son prix devient le
+  résiduel `ceil(prix/2)` et son emplacement est libéré (`slots = 0`). Scopé aux
+  **armes et améliorations uniquement** — jamais aux véhicules (invariant de
+  sécurité de la suppression physique du `BUY`, cf. commentaire sur `canAccept()`
+  dans `evenement-tele-game.ts`/`escarmouche-game.ts`).
+
+Le critère de décision (BUY de cette session ou non) est déterminé côté serveur
+uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
+même endpoint `POST .../events/equipment`, sans savoir laquelle des deux
+opérations aura lieu. `WorkshopWeaponDto`/`WorkshopImprovementDto` exposent
+`isSold` et `purchasedThisSession` (ce dernier uniquement pour adapter le texte
+de confirmation *avant* le clic — "Annuler l'achat" vs "Revendre pour N
+jerricans (50%)" — jamais pour décider côté client).
+
+**Cagnotte dérivée** — `CampaignParticipant.wallet` n'est plus un compteur
+mutable : c'est un getter dérivé de `Team.remainingBudget` (budget non dépensé
+de l'équipe, qui reflète déjà le prix résiduel des objets vendus) plus les
+récompenses cumulées (`WalletMovementEvent`, seul mouvement sans contrepartie
+dans l'arbre d'équipement). Achat et revente n'écrivent donc plus jamais
+directement sur le wallet — seule la mutation de l'entité (créée, ou flaguée
+`isSold`) suffit à faire varier le budget dérivé du bon montant.
+
+---
+
 ## Hors scope de l'itération actuelle
 
 Réordonnancement du Programme (US-A4), verrouillage effectif `isLocked` en
@@ -324,13 +362,15 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   la cagnotte. La phase atelier reste un statut du
   cycle de vie de la partie (`PLANIFIE → ATELIER → JOUE`, cf.
   [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier))
-  plutôt qu'une entité séparée. **Reste en Temps 2** (cf.
+  plutôt qu'une entité séparée. La revente à moitié prix (p.170) et la distinction
+  annulation-d'achat/revente sont désormais implémentées (cf.
+  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessous). **Reste
+  en Temps 2** (cf.
   [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
   enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
-  n'est aujourd'hui gardé que par la cagnotte), limite de 8 véhicules, revente à moitié
-  prix (la revente crédite encore le **prix plein**, bug p.170), distinction
-  annulation-d'achat/revente, gestion de la **Tourelle** en atelier (exclue au Temps 1),
-  et l'UI des Chocs/séquelles/véhicules perdus.
+  n'est aujourd'hui gardé que par la cagnotte), limite de 8 véhicules, gestion de la
+  **Tourelle** en atelier (exclue au Temps 1), et l'UI des Chocs/séquelles/véhicules
+  perdus.
 - **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
   (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
   `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/

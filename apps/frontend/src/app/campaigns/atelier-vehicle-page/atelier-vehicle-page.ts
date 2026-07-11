@@ -28,6 +28,7 @@ import { EquipmentManager } from '../../teams/vehicle-configurator/equipment-man
 import { WorkshopStateDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
 import { AtelierEquipmentDataSource } from './atelier-equipment.datasource';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
+import { buildVehicleSummary } from '../../teams/vehicle-summary';
 
 @Component({
   selector: 'app-atelier-vehicle-page',
@@ -88,8 +89,8 @@ export class AtelierVehiclePage implements OnInit {
     if (!catalog || !v) return { total: 0, usedByOthers: 0 };
 
     const all = this.allVehicles();
-    const totalAllCost = all.reduce((sum: number, x: Vehicle): number => sum + this.costOf(x, catalog), 0);
-    const thisCost = this.costOf(v, catalog);
+    const totalAllCost = all.reduce((sum: number, x: Vehicle): number => sum + buildVehicleSummary(x, catalog).cout, 0);
+    const thisCost = buildVehicleSummary(v, catalog).cout;
 
     return {
       total: this.wallet() + totalAllCost,
@@ -168,11 +169,4 @@ export class AtelierVehiclePage implements OnInit {
     this.loadWorkshop(false);
   }
 
-  /** Coût total d'un véhicule — calqué sur `EquipmentManager.coutTotal`. */
-  private costOf(vehicle: Vehicle, catalog: Sponsor): number {
-    const base = catalog.vehicules.find((v): boolean => v.nom_interne === vehicle.nomInterne)?.prix ?? 0;
-    const weapons = vehicle.weapons.reduce((sum: number, w): number => sum + w.prix, 0);
-    const improvements = vehicle.improvements.reduce((sum: number, i): number => sum + i.prix, 0);
-    return base + weapons + improvements;
-  }
 }

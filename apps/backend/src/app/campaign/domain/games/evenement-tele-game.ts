@@ -46,6 +46,13 @@ export class EvenementTeleGame extends Game {
       );
     }
     if (this.status === GameStatus.ATELIER) {
+      // ⚠️ L'annulation d'achat (Game.changeEquipment) supprime PHYSIQUEMENT un
+      // EquipmentChangedEvent (BUY) de cette session — sûr uniquement parce qu'aucun AUTRE
+      // événement accepté ici ne référence un weaponId/improvementId (SequellaAddedEvent ne
+      // porte qu'un vehicleId). Avant d'accepter un nouveau type d'événement en ATELIER,
+      // vérifier qu'il ne référence pas un id d'entité transiente WEAPON/IMPROVEMENT — sinon
+      // la suppression physique du BUY laisserait une référence orpheline au replay. Cf.
+      // docs/plans/2026-07-11-atelier-annulation-revente-design.md §1.
       return event instanceof EquipmentChangedEvent || event instanceof SequellaAddedEvent;
     }
     return false;

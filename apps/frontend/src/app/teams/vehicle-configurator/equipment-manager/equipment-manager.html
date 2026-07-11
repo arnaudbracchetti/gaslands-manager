@@ -153,16 +153,16 @@
 
   @if (pendingRemoveWeapon()) {
     <app-confirm-modal
-      [message]="'Retirer &quot;' + resolveWeaponName(pendingRemoveWeapon()!.nomInterne) + '&quot; de ce véhicule ?'"
-      confirmLabel="Retirer"
+      [message]="weaponRemovalMessage(pendingRemoveWeapon()!)"
+      [confirmLabel]="weaponRemovalConfirmLabel(pendingRemoveWeapon()!)"
       (confirmed)="onConfirmRemoveWeapon()"
       (cancelled)="pendingRemoveWeapon.set(null)" />
   }
 
   @if (pendingRemoveImprovement()) {
     <app-confirm-modal
-      [message]="'Retirer &quot;' + resolveImprovementName(pendingRemoveImprovement()!.nomInterne) + '&quot; de ce véhicule ?'"
-      confirmLabel="Retirer"
+      [message]="improvementRemovalMessage(pendingRemoveImprovement()!)"
+      [confirmLabel]="improvementRemovalConfirmLabel(pendingRemoveImprovement()!)"
       (confirmed)="onConfirmRemoveImprovement()"
       (cancelled)="pendingRemoveImprovement.set(null)" />
   }
