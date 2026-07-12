@@ -21,20 +21,15 @@ const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'gau
 /**
  * Un véhicule appartenant à une équipe — entité enfant de l'agrégat Team.
  *
- * Contrairement à l'ancienne architecture où Vehicle était l'agrégat racine, Vehicle
- * ne gère ici que ses propres règles (emplacements, orientation des armes). Les règles
+ * Vehicle ne gère ici que ses propres règles (emplacements, orientation des armes). Les règles
  * qui dépendent de données d'équipe (budget, sponsor) sont gérées par Team qui passe
  * les valeurs nécessaires en paramètre (pattern "tell, don't ask").
- *
- * sponsorNom n'est plus porté par Vehicle : il est porté par Team et passé par les
- * use cases au moment de la validation d'autorisation catalogue.
  */
 export class Vehicle {
-  // ── Champs transients de campagne (D-S5) ─────────────────────────────────────
-  // Non persistés en base — reconstruits au replay de la séquence d'événements.
-
+  
   private _isLost = false;
   private _isSold = false;
+  
   /**
    * Ids des armes/améliorations/avantages marqués vendus PAR la revente de CE
    * véhicule (cascade de `markSold()`) — distincts de ceux déjà vendus
@@ -100,14 +95,10 @@ export class Vehicle {
 
   /**
    * Coût total : prix du châssis + armes + améliorations achetées.
-   * Inchangé si le véhicule est perdu : la perte n'est pas un remboursement
-   * (le coût a été payé lors de l'achat et compte toujours dans le budget équipe).
    *
-   * Le châssis contribue son prix résiduel (`ceil(prix/2)`) une fois `_isSold` —
-   * même principe que `Weapon.price`/`Improvement.price` — le reste de la somme
-   * (armes/améliorations/avantages) reflète déjà leur propre `isSold` sans
-   * condition supplémentaire ici, `markSold()` les ayant cascadés au moment de
-   * la vente (cf. sa doc).
+   * Dans le cas d'un vehicule vendu, le cout calculé ici 
+   * est prix résiduel une fois la vente réalisée `_isSold` —
+   * même principe que `Weapon.price`/`Improvement.price` 
    */
   get cost(): number {
     const chassisCost = this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
@@ -118,10 +109,9 @@ export class Vehicle {
   }
 
   /**
-   * Montant remboursé si ce véhicule est revendu — même règle *par élément* que la
-   * revente individuelle : châssis à moitié prix (arrondi inférieur), chaque arme/
-   * amélioration ACTIVE à moitié prix (`resaleRefund` de l'entité), chaque avantage à 0
-   * (perte totale). Ne s'applique qu'à la revente d'un véhicule PRÉ-EXISTANT — un
+   * Montant remboursé si ce véhicule est revendu 
+   * 
+   * Ne s'applique qu'à la revente d'un véhicule PRÉ-EXISTANT — un
    * véhicule acheté PENDANT la session d'atelier en cours est annulé intégralement
    * (100 %), un cas distinct géré par `Game.changeEquipment` (cf. sa doc), pas ici.
    *
