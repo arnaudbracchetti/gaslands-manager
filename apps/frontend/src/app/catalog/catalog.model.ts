@@ -42,8 +42,6 @@ export interface Vehicule {
 export interface Arme {
   nom: string;
   nom_interne: string;
-  /** Catégorie — pilote l'affichage du sélecteur d'orientation : les armes
-   *  d'`équipage` n'en ont pas (360° automatique, cf. SPECIFICATION.md §5/§7). */
   type: 'base' | 'avancée' | 'équipage' | 'largable';
   prix: number;
   emplacement: number;
@@ -52,6 +50,10 @@ export interface Arme {
   sponsors_autorises: string[];
   /** Cette arme peut-elle être montée sur Tourelle (arc à 360°, coût ×3) ? */
   montable_tourelle?: boolean;
+  /** Cette arme nécessite-t-elle une orientation à l'achat ? Purement informative
+   *  côté frontend — la détection réelle passe par le contrat textuel `raison`
+   *  (cf. `equipment-manager.ts`, `weaponNeedsOrientation`). */
+  necessite_orientation: boolean;
 }
 
 /** Amélioration du catalogue — miroir de `Amelioration` (backend `catalog.interfaces.ts`). */
@@ -66,6 +68,10 @@ export interface Amelioration {
   /** Clé du décorateur métier (Pattern Decorator backend) — purement informative
    *  côté frontend : aucun composant n'a besoin d'instancier de décorateur ici. */
   comportement?: string;
+  /** Cette amélioration nécessite-t-elle une orientation à l'achat ? Purement
+   *  informative côté frontend — même contrat textuel `raison` que pour les armes
+   *  (cf. `equipment-manager.ts`, `improvementNeedsOrientation`). */
+  necessite_orientation: boolean;
 }
 
 /**

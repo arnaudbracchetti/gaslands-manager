@@ -1,4 +1,4 @@
-import { ImprovementDecorator, ok, fail, type RuleResult, type VehicleStats } from './vehicle-build';
+import { ImprovementDecorator, ok, fail, type RuleResult, type VehicleStats, type Orientation } from './vehicle-build';
 
 export class ChenillesDecorator extends ImprovementDecorator {
   private static readonly VEHICULES_INCOMPATIBLES: readonly string[] = [
@@ -41,10 +41,9 @@ export class MembreEquipageDecorator extends ImprovementDecorator {
 
 export class BelierDecorator extends ImprovementDecorator {
   protected override validateSelf(): RuleResult {
-    if (!this.instance.orientation) {
-      return fail('Une orientation est requise pour le Bélier');
-    }
-    if (this.inner.hasOrientationFor(BelierDecorator, this.instance.orientation)) {
+    // Orientation requise déjà garantie par `Vehicle.canAddImprovement` (ImprovementType.requiresOrientation,
+    // catalogue `necessite_orientation`) avant que la chaîne de décorateurs ne soit construite.
+    if (this.inner.hasOrientationFor(BelierDecorator, this.instance.orientation as Orientation)) {
       return fail(`Un Bélier occupe déjà la position "${this.instance.orientation}"`);
     }
     return ok();
@@ -58,9 +57,6 @@ export class BelierExplosifDecorator extends ImprovementDecorator {
     }
     if (this.inner.countByType(BelierExplosifDecorator) >= 1) {
       return fail('Un seul Bélier Explosif par véhicule');
-    }
-    if (!this.instance.orientation) {
-      return fail('Une orientation est requise pour le Bélier Explosif');
     }
     return ok();
   }

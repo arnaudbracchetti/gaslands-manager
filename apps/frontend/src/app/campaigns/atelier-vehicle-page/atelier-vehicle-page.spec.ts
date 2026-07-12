@@ -11,7 +11,7 @@
  * Ce qui EST testé ici, spécifique à cette page :
  *   - résolution de `campaignId`/`vehicleId` depuis les paramètres de route
  *   - véhicule introuvable dans le workshop
- *   - câblage `[vehicle]`/`[sponsorCatalog]`/`[budget]` vers `<app-equipment-manager>`
+ *   - câblage `[vehicle]`/`[sponsorCatalog]`/`[budget]`/`[allowResale]="true"` vers `<app-equipment-manager>`
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';

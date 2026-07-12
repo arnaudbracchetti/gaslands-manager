@@ -82,6 +82,13 @@ export interface Arme {
    * d'exception. Absent ⇒ `false`.
    */
   montable_tourelle?: boolean;
+  /**
+   * Cette arme nécessite-t-elle une orientation à l'achat ? Attribut explicite par
+   * arme plutôt que dérivé du `type` — les armes d'équipage n'en ont jamais besoin,
+   * mais certaines armes de tir à arc 360° (Boule de démolition, Marteleur…) non plus,
+   * d'où un champ posé arme par arme plutôt qu'une règle générique sur `type`.
+   */
+  necessite_orientation: boolean;
 }
 
 /** Amélioration de véhicule telle que définie dans amelioration.yml */
@@ -110,6 +117,14 @@ export interface Amelioration {
    * récapitulatif).
    */
   comportement?: string;
+  /**
+   * Cette amélioration nécessite-t-elle une orientation à l'achat ? Aujourd'hui
+   * uniquement le Bélier et ses variantes (`comportement: "belier"`) et le Bélier
+   * Explosif — posé comme champ catalogue explicite plutôt que codé en dur dans le
+   * décorateur, pour que la donnée seule pilote la règle de pose et l'affichage
+   * du sélecteur de direction côté frontend.
+   */
+  necessite_orientation: boolean;
 }
 
 // ── Type enrichi : sponsor avec relations pré-résolues ───────────────────────

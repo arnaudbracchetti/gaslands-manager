@@ -41,7 +41,7 @@ describe('CampaignParticipant.wallet (dérivé)', () => {
 
   it('diminue du prix catalogue quand un achat ajoute une entité transiente à l\'arbre', () => {
     const { participant, vehicle } = makeTestParticipant();
-    participant.team.addCampaignWeapon(vehicle.id, makeWeaponType(), null, false, -1);
+    participant.team.addCampaignWeapon(vehicle.id, makeWeaponType(), null, -1);
     expect(participant.wallet).toBe(29 - 5); // prix catalogue de makeWeaponType() = 5
   });
 
@@ -55,7 +55,7 @@ describe('CampaignParticipant.wallet (dérivé)', () => {
   it('achat, récompense puis revente du même objet — le total net est cohérent quel que soit l\'ordre', () => {
     const { participant, vehicle } = makeTestParticipant();
 
-    const bought = participant.team.addCampaignWeapon(vehicle.id, makeWeaponType(), null, false, -1);
+    const bought = participant.team.addCampaignWeapon(vehicle.id, makeWeaponType(), null, -1);
     expect(participant.wallet).toBe(24); // 29 − 5 (achat)
 
     participant.creditWallet(10);

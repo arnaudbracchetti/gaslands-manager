@@ -23,6 +23,12 @@
 #                  360°). Réservé aux armes de tir (base/avancée/largable) — jamais aux
 #                  armes d'équipage. Tous les sponsors acceptent le montage sur Tourelle
 #                  d'une arme qui le permet ; seule l'arme porte la restriction.
+#   necessite_orientation — (booléen, obligatoire) Cette arme doit-elle se voir assigner
+#                  un arc de tir (avant/arrière/gauche/droite) à l'achat ? `false` pour
+#                  les armes d'équipage (arc à 360° automatique) et pour certaines armes
+#                  de tir à arc non-orienté ou à effet sans trajectoire (ex. Boule de
+#                  démolition, Marteleur, Mur de haut-parleurs, Auto-Tourelle, Brouilleur
+#                  Électromagnétique) ; `true` pour toutes les autres.
 #
 # Note sur Rutherford : les armes avec 3 munitions de départ passent à 4 munitions
 # gratuitement à l'achat pour Rutherford (règle décrite dans sponsors.yml,
@@ -36,6 +42,7 @@ armes:
   - nom: "Pistolet"
     nom_interne: "pistolet"
     type: "équipage"
+    necessite_orientation: false
     prix: 0
     emplacement: 0
     description: |
@@ -64,6 +71,7 @@ armes:
     nom_interne: "mitrailleuse"
     type: "base"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 2
     emplacement: 1
     description: |
@@ -91,6 +99,7 @@ armes:
     nom_interne: "mitrailleuse_lourde"
     type: "base"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 3
     emplacement: 1
     description: |
@@ -118,6 +127,7 @@ armes:
     nom_interne: "minigun"
     type: "base"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 5
     emplacement: 1
     description: |
@@ -147,6 +157,7 @@ armes:
     nom_interne: "bfg"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 1
     emplacement: 3
     description: |
@@ -177,6 +188,7 @@ armes:
     nom_interne: "boule_de_demolition"
     type: "avancée"
     montable_tourelle: false
+    necessite_orientation: false
     prix: 2
     emplacement: 3
     description: |
@@ -208,6 +220,7 @@ armes:
     nom_interne: "bras_mecanique"
     type: "avancée"
     montable_tourelle: false
+    necessite_orientation: true
     prix: 6
     emplacement: 1
     description: |
@@ -237,6 +250,7 @@ armes:
     nom_interne: "brouilleur_electromagnetique"
     type: "avancée"
     montable_tourelle: false
+    necessite_orientation: false
     prix: 2
     emplacement: 0
     description: |
@@ -253,6 +267,7 @@ armes:
     nom_interne: "canon_arc_electrique"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: false
     prix: 6
     emplacement: 2
     description: |
@@ -272,6 +287,7 @@ armes:
     nom_interne: "canon_125mm"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 6
     emplacement: 3
     description: |
@@ -301,6 +317,7 @@ armes:
     nom_interne: "canon_gravitationnel"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 2
     emplacement: 1
     description: |
@@ -319,6 +336,7 @@ armes:
     nom_interne: "canon_laser"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 5
     emplacement: 1
     description: |
@@ -348,6 +366,7 @@ armes:
     nom_interne: "harpon"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 2
     emplacement: 1
     description: |
@@ -379,6 +398,7 @@ armes:
     nom_interne: "lance_carcasse"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 4
     emplacement: 4
     description: |
@@ -411,6 +431,7 @@ armes:
     nom_interne: "lance_flammes"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 4
     emplacement: 2
     description: |
@@ -440,6 +461,7 @@ armes:
     nom_interne: "lance_missiles"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 5
     emplacement: 2
     description: |
@@ -467,6 +489,7 @@ armes:
     nom_interne: "lance_roquettes"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 4
     emplacement: 2
     description: |
@@ -495,6 +518,7 @@ armes:
     nom_interne: "marteleur"
     type: "avancée"
     montable_tourelle: false
+    necessite_orientation: false
     prix: 4
     emplacement: 2
     description: |
@@ -513,6 +537,7 @@ armes:
     nom_interne: "mortier"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 4
     emplacement: 1
     description: |
@@ -541,6 +566,7 @@ armes:
     nom_interne: "mur_haut_parleurs"
     type: "avancée"
     montable_tourelle: false
+    necessite_orientation: false
     prix: 4
     emplacement: 3
     description: |
@@ -569,6 +595,7 @@ armes:
     nom_interne: "rayon_desintegrateur"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 3
     emplacement: 1
     description: |
@@ -587,6 +614,7 @@ armes:
     nom_interne: "super_amplificateur_cinetique"
     type: "avancée"
     montable_tourelle: true
+    necessite_orientation: true
     prix: 6
     emplacement: 2
     description: |
@@ -606,6 +634,7 @@ armes:
   - nom: "Cocktails Molotov"
     nom_interne: "cocktails_molotov"
     type: "équipage"
+    necessite_orientation: false
     prix: 1
     emplacement: 0
     description: |
@@ -636,6 +665,7 @@ armes:
   - nom: "Fusil à Pompe"
     nom_interne: "fusil_a_pompe"
     type: "équipage"
+    necessite_orientation: false
     prix: 4
     emplacement: 0
     description: |
@@ -665,6 +695,7 @@ armes:
   - nom: "Filet Métallique"
     nom_interne: "filet_metallique"
     type: "équipage"
+    necessite_orientation: false
     prix: 2
     emplacement: 0
     description: |
@@ -693,6 +724,7 @@ armes:
   - nom: "Grenades"
     nom_interne: "grenades"
     type: "équipage"
+    necessite_orientation: false
     prix: 1
     emplacement: 0
     description: |
@@ -723,6 +755,7 @@ armes:
   - nom: "Grenades Lacrymogènes"
     nom_interne: "grenades_lacrymogenes"
     type: "équipage"
+    necessite_orientation: false
     prix: 1
     emplacement: 0
     description: |
@@ -753,6 +786,7 @@ armes:
   - nom: "Magnum"
     nom_interne: "magnum"
     type: "équipage"
+    necessite_orientation: false
     prix: 3
     emplacement: 0
     description: |
@@ -780,6 +814,7 @@ armes:
   - nom: "Pistolet Mitrailleur"
     nom_interne: "pistolet_mitrailleur"
     type: "équipage"
+    necessite_orientation: false
     prix: 5
     emplacement: 0
     description: |
@@ -806,6 +841,7 @@ armes:
   - nom: "Tromblon"
     nom_interne: "tromblon"
     type: "équipage"
+    necessite_orientation: false
     prix: 2
     emplacement: 0
     description: |
@@ -835,6 +871,7 @@ armes:
   - nom: "Auto-Tourelle"
     nom_interne: "auto_tourelle"
     type: "largable"
+    necessite_orientation: false
     prix: 3
     emplacement: 0
     description: |
@@ -864,6 +901,7 @@ armes:
   - nom: "Bombes Téléguidées"
     nom_interne: "bombes_teleguideees"
     type: "largable"
+    necessite_orientation: true
     prix: 3
     emplacement: 0
     description: |
@@ -893,6 +931,7 @@ armes:
   - nom: "Largueur de Chausse-Trapes"
     nom_interne: "largueur_chausse_trapes"
     type: "largable"
+    necessite_orientation: true
     prix: 1
     emplacement: 1
     description: |
@@ -920,6 +959,7 @@ armes:
   - nom: "Largueur de Colle"
     nom_interne: "largueur_colle"
     type: "largable"
+    necessite_orientation: true
     prix: 1
     emplacement: 1
     description: |
@@ -948,6 +988,7 @@ armes:
   - nom: "Largueur de Fumigènes"
     nom_interne: "largueur_fumigenes"
     type: "largable"
+    necessite_orientation: true
     prix: 1
     emplacement: 0
     description: |
@@ -976,6 +1017,7 @@ armes:
   - nom: "Largueur d'Huile"
     nom_interne: "largueur_huile"
     type: "largable"
+    necessite_orientation: true
     prix: 2
     emplacement: 0
     description: |
@@ -1002,6 +1044,7 @@ armes:
   - nom: "Largueur de Mines"
     nom_interne: "largueur_mines"
     type: "largable"
+    necessite_orientation: true
     prix: 1
     emplacement: 1
     description: |
@@ -1030,6 +1073,7 @@ armes:
   - nom: "Largueur de Napalm"
     nom_interne: "largueur_napalm"
     type: "largable"
+    necessite_orientation: true
     prix: 1
     emplacement: 1
     description: |

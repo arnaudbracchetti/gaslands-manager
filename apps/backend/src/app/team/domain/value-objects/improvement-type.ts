@@ -31,6 +31,10 @@ export class ImprovementType {
     return this.raw.comportement;
   }
 
+  get requiresOrientation(): boolean {
+    return this.raw.necessite_orientation;
+  }
+
   get price(): number {
     return this.raw.prix;
   }

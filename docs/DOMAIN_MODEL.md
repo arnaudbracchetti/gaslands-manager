@@ -111,7 +111,6 @@ classDiagram
         +price : number
         +slots : number
         +type : base|avancée|équipage|largable
-        +isEquipage : boolean
         +requiresOrientation : boolean
         +montableSurTourelle : boolean
         +from(raw)$ WeaponType
@@ -125,6 +124,7 @@ classDiagram
         +nom : string
         +slots : number
         +price : number
+        +requiresOrientation : boolean
         +from(raw)$ ImprovementType
         +equals(other) boolean
     }
@@ -163,6 +163,15 @@ directement du mécanisme de revente/annulation déjà en place pour toute arme
 (`isSold`/`purchasedThisSession`, prix résiduel), sans code dédié. Seule
 `WeaponType.montableSurTourelle` (attribut catalogue, `Arme.montable_tourelle`) détermine
 si une arme peut être montée ainsi — tous les sponsors l'acceptent.
+
+**Orientation requise** : `WeaponType.requiresOrientation` et `ImprovementType.requiresOrientation`
+lisent directement le champ catalogue `necessite_orientation` (`Arme`/`Amelioration`,
+booléen obligatoire) — ni l'un ni l'autre n'est dérivé (`WeaponType` ne dérive plus de
+son `type` catalogue, il n'existe d'ailleurs plus de getter `isEquipage`) ou codé en dur
+(les décorateurs `BelierDecorator`/`BelierExplosifDecorator`, seuls jusque-là à exiger une
+orientation, ont perdu leur vérification manuelle au profit d'une garde générique dans
+`Vehicle.canAddImprovement`, symétrique à celle déjà en place sur `canAddWeapon`). Détail
+des valeurs catalogue : [spec/VEHICLES.md](spec/VEHICLES.md#orientation-requise-champ-catalogue-necessite_orientation).
 
 **Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
 de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne
@@ -225,6 +234,7 @@ classDiagram
         +regles : string
         +sponsors_autorises : string[]
         +montable_tourelle : boolean | undefined
+        +necessite_orientation : boolean
     }
 
     class Amelioration {
@@ -237,6 +247,7 @@ classDiagram
         +regles : string
         +sponsors_autorises : string[]
         +comportement : string
+        +necessite_orientation : boolean
     }
 
     class Scenario {

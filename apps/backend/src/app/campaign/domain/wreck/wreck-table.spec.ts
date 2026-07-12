@@ -45,13 +45,14 @@ function makeWeapon(id: number): Weapon {
   return new Weapon(id, WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base' as const,
     prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: true,
   }), 'avant');
 }
 
 function makeImprovement(id: number, estDefaut = false): Improvement {
   return new Improvement(id, ImprovementType.from({
     nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1,
-    description: '', regles: '', sponsors_autorises: [],
+    description: '', regles: '', sponsors_autorises: [], necessite_orientation: false,
   }), null, estDefaut);
 }
 

@@ -94,6 +94,31 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 
 *Canon à Arc Électrique et 5 autres armes électroniques : **Mishkin uniquement**.
 
+### Orientation requise (champ catalogue `necessite_orientation`)
+
+Le besoin d'orientation d'une arme ou d'une amélioration est un **champ catalogue
+explicite** (`Arme.necessite_orientation`/`Amelioration.necessite_orientation`,
+booléen obligatoire) — plutôt qu'une règle dérivée du `type` (armes) ou codée en
+dur au cas par cas (améliorations).
+
+- **Armes** : `false` pour toutes les armes d'équipage (arc à 360° automatique)
+  ainsi que pour certaines armes de tir à arc non-orienté ou à effet sans
+  trajectoire (ex. Boule de démolition, Marteleur, Mur de haut-parleurs,
+  Auto-Tourelle, Brouilleur Électromagnétique) ; `true` pour toutes les autres.
+  `WeaponType.requiresOrientation` lit directement ce champ.
+- **Améliorations** : `true` uniquement pour le Bélier (et sa variante Slime) et
+  le Bélier Explosif ; `false` pour toutes les autres. `ImprovementType.requiresOrientation`
+  lit directement ce champ — remplace l'ancienne vérification codée en dur dans
+  `BelierDecorator`/`BelierExplosifDecorator` (`improvement-decorators.ts`), désormais
+  appliquée en amont par `Vehicle.canAddImprovement` (garde générique, symétrique
+  à celle déjà en place sur `Vehicle.canAddWeapon`).
+
+Le frontend ne consulte pas ce champ directement pour piloter l'affichage du
+sélecteur de direction : il continue de s'appuyer sur le contrat textuel du
+message d'erreur backend (`raison` commence par `'Une orientation est requise'`,
+cf. `equipment-manager.ts`) — le champ catalogue est mirroré côté frontend
+(`catalog.model.ts`) à titre purement informatif.
+
 ### Montage sur Tourelle (5ème valeur d'orientation)
 
 La Tourelle **n'est pas une amélioration** — c'est une valeur possible de
@@ -148,9 +173,9 @@ identifie dans l'UI.
 
 **`Vehicule`** — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]`, `arme_defaut?` (nom_interne de l'arme intégrée, ex. Char d'assaut → `canon_125mm`)
 
-**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3)
+**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3), `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
 
-**`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`
+**`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
 
 ### `Vehicle` _(entité DB — module Vehicle)_
 

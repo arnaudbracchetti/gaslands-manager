@@ -24,6 +24,7 @@ export function makeWeaponType(): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base' as const,
     prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: true,
   });
 }
 
@@ -31,6 +32,7 @@ export function makeImprovementType(): ImprovementType {
   return ImprovementType.from({
     nom: 'Blindage', nom_interne: 'blindage',
     prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: false,
   });
 }
 

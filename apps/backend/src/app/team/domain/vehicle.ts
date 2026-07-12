@@ -141,6 +141,9 @@ export class Vehicle {
     if (type.slots > this.availableSlots) {
       return fail('Emplacements insuffisants sur ce véhicule');
     }
+    if (type.requiresOrientation && orientation === null) {
+      return fail('Une orientation est requise pour cette amélioration');
+    }
     // Règles de pose spécifiques à l'amélioration (incompatibilités véhicule, unicité,
     // orientation exclusive, équipage max…), portées par la chaîne de décorateurs Gaslands.
     const placement = this.buildChain({ type, orientation }).validate();
@@ -152,9 +155,20 @@ export class Vehicle {
    * Verdict de disponibilité d'une amélioration ORIENTABLE, tolérant à l'arc précis :
    * on tente d'abord sans orientation (`null`), puis — si ça échoue potentiellement à
    * cause du seul "orientation requise" (Bélier…) — chaque arc à tour de rôle.
-   * Disponible dès qu'AU MOINS un arc passe ; les autres règles de pose (incompatibilité
-   * véhicule, unicité, équipage max…) grisent bien l'option puisqu'elles échouent quel
-   * que soit l'arc testé.
+   *
+   * ⚠️ Quand un arc fonctionne, on ne renvoie PAS l'`ok()` de cet arc : l'appelant
+   * (listing) n'a fait que sonder, il n'a pas choisi cette orientation pour de vrai.
+   * On renvoie `direct` (l'échec initial "orientation requise") — c'est ce signal,
+   * pas un `ok()` muet, que le frontend utilise pour savoir qu'il doit encore
+   * demander l'arc à l'utilisateur avant tout ajout réel (même contrat que pour
+   * les armes, cf. `GetAvailableWeaponsUseCase`/`equipment-manager.ts`). Un `ok()`
+   * ici aurait fait sauter cette étape et provoqué un ajout sans orientation,
+   * rejeté ensuite par `canAddImprovement` à l'écriture.
+   * Disponible (verdict final `ok()`) seulement quand AUCUNE orientation n'est
+   * requise ; sinon toujours `fail('Une orientation est requise…')` tant qu'AU
+   * MOINS un arc passe, et la dernière raison d'échec si tous les arcs sont pris
+   * — les autres règles de pose (incompatibilité véhicule, unicité, équipage
+   * max…) grisent bien l'option puisqu'elles échouent quel que soit l'arc testé.
    *
    * Règle de LECTURE (verdict "cette amélioration est-elle proposable ?"), distincte de
    * `canAddImprovement` (règle d'ÉCRITURE pour un arc déjà choisi par l'appelant) — les
@@ -169,7 +183,7 @@ export class Vehicle {
     let last: RuleResult = direct;
     for (const orientation of ORIENTATIONS_A_SONDER) {
       const result = this.canAddImprovement(type, orientation, remainingBudget);
-      if (result.ok) return result;
+      if (result.ok) return direct;
       last = result;
     }
     return last;

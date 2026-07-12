@@ -35,12 +35,8 @@ export class WeaponType {
     return this.raw.type;
   }
 
-  get isEquipage(): boolean {
-    return this.raw.type === 'équipage';
-  }
-
   get requiresOrientation(): boolean {
-    return !this.isEquipage;
+    return this.raw.necessite_orientation;
   }
 
   /** Cette arme peut-elle être montée sur Tourelle (arc de tir à 360°, coût ×3) ? */

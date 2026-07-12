@@ -51,6 +51,7 @@ describe('GetWorkshopUseCase', () => {
     const bfgType = WeaponType.from({
       nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 20, emplacement: 2,
       description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+      necessite_orientation: true,
     });
     const weapon = new Weapon(1, bfgType, 'tourelle', false);
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [weapon], []);

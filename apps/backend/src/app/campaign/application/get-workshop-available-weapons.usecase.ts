@@ -43,7 +43,7 @@ export class GetWorkshopAvailableWeaponsUseCase {
     const weaponTypes = this.catalog.getWeaponTypesForSponsor(me.team.sponsor);
 
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
-      const result = vehicle.canAddWeapon(wt, null, false, budget);
+      const result = vehicle.canAddWeapon(wt, null, budget);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,

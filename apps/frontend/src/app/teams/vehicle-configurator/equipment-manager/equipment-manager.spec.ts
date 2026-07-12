@@ -58,6 +58,7 @@ const mockSponsorCatalog: Sponsor = {
       description: '',
       regles: '',
       sponsors_autorises: ['Rutherford'],
+      necessite_orientation: true,
     },
   ],
   ameliorations: [
@@ -69,6 +70,7 @@ const mockSponsorCatalog: Sponsor = {
       description: '',
       regles: '',
       sponsors_autorises: ['Rutherford'],
+      necessite_orientation: false,
     },
   ],
 };
@@ -525,22 +527,35 @@ describe('EquipmentManager', () => {
     expect(emitted).toEqual([mockVehicle]);
   });
 
-  // ── Texte de confirmation de retrait — annulation vs revente (atelier) ──────
+  // ── Texte de confirmation de retrait — suppression (équipe) vs annulation/revente (atelier) ──
 
   describe('weaponRemovalMessage / improvementRemovalMessage', () => {
-    it('propose "Revendre" avec le montant à moitié prix (floor) quand l\'objet est pré-existant', () => {
+    it('propose une suppression pure par défaut (construction d\'équipe, allowResale absent)', () => {
+      const weapon = mockVehicleWithWeapon.weapons[0]; // prix 4, purchasedThisSession absent
+      expect(component.weaponRemovalMessage(weapon)).toBe('Retirer "Mitrailleuse" du véhicule ?');
+      expect(component.weaponRemovalConfirmLabel()).toBe('Retirer');
+
+      const improvement = mockVehicleWithImprovement.improvements[0];
+      expect(component.improvementRemovalMessage(improvement)).toBe('Retirer "Blindage" du véhicule ?');
+      expect(component.improvementRemovalConfirmLabel()).toBe('Retirer');
+    });
+
+    it('propose "Revendre" avec le montant à moitié prix (floor) quand l\'objet est pré-existant (atelier)', () => {
+      fixture.componentRef.setInput('allowResale', true);
       const weapon = mockVehicleWithWeapon.weapons[0]; // prix 4, purchasedThisSession absent
       expect(component.weaponRemovalMessage(weapon)).toBe('Revendre "Mitrailleuse" pour 2 jerricans (50%) ?');
       expect(component.weaponRemovalConfirmLabel()).toBe('Retirer');
     });
 
-    it('propose "Annuler l\'achat" sans montant quand l\'objet a été acheté cette session', () => {
+    it('propose "Annuler l\'achat" sans montant quand l\'objet a été acheté cette session (atelier)', () => {
+      fixture.componentRef.setInput('allowResale', true);
       const weapon = { ...mockVehicleWithWeapon.weapons[0], purchasedThisSession: true };
       expect(component.weaponRemovalMessage(weapon)).toBe('Annuler l\'achat de "Mitrailleuse" ?');
       expect(component.weaponRemovalConfirmLabel()).toBe('Retirer');
     });
 
-    it('mirroir exact pour les améliorations', () => {
+    it('mirroir exact pour les améliorations (atelier)', () => {
+      fixture.componentRef.setInput('allowResale', true);
       const improvement = mockVehicleWithImprovement.improvements[0]; // prix 4
       expect(component.improvementRemovalMessage(improvement)).toBe('Revendre "Blindage" pour 2 jerricans (50%) ?');
       expect(component.improvementRemovalConfirmLabel()).toBe('Retirer');

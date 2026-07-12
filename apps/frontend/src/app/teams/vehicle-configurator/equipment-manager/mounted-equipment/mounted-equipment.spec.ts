@@ -21,11 +21,11 @@ const mockSponsorCatalog: Sponsor = {
   avantages_sponsorises: '',
   vehicules: [],
   armes: [
-    { nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
-    { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 18, emplacement: 2, description: '', regles: '', sponsors_autorises: ['Rutherford'], montable_tourelle: true },
+    { nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'], necessite_orientation: true },
+    { nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 18, emplacement: 2, description: '', regles: '', sponsors_autorises: ['Rutherford'], montable_tourelle: true, necessite_orientation: true },
   ],
   ameliorations: [
-    { nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'] },
+    { nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'], necessite_orientation: false },
   ],
 };
 

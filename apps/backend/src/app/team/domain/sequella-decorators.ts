@@ -39,6 +39,7 @@ abstract class SequellaDecorator extends ImprovementDecorator {
       description: sequellaType.description,
       regles: '',
       sponsors_autorises: [],
+      necessite_orientation: false,
     };
     super(inner, amelioration, { nom_interne: sequellaType.nomInterne });
   }

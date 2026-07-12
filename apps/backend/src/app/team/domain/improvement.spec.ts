@@ -6,6 +6,7 @@ function makeImprovementType(prix: number, emplacement: number): ImprovementType
   return ImprovementType.from({
     nom: 'Blindage', nom_interne: 'blindage',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: false,
   });
 }
 

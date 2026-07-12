@@ -370,3 +370,78 @@ describe('comportement — cohérence YAML ↔ ImprovementDecoratorFactory.REGIS
     expect(comportementsDeclares.length).toBeGreaterThan(0);
   });
 });
+
+// ── 7. necessite_orientation — présence et valeurs attendues ─────────────────
+//
+// `necessite_orientation` est un champ OBLIGATOIRE (pas de valeur par défaut côté
+// TypeScript) : toute entrée d'armes.yml/amelioration.yml qui l'omettrait ferait
+// planter le typage silencieusement à `undefined` au runtime (YAML n'impose rien).
+// Les listes ci-dessous verrouillent aussi la RÈGLE MÉTIER exacte (pas seulement
+// la présence du champ), pour qu'un futur ajout d'arme/amélioration oublié dans
+// cette spec échoue explicitement plutôt que de se retrouver avec la mauvaise valeur.
+
+describe('necessite_orientation — présence sur toutes les armes et améliorations', () => {
+  it('toutes les armes ont un necessite_orientation booléen', () => {
+    for (const a of armes) {
+      expect(
+        typeof a.necessite_orientation,
+        `L'arme "${a.nom}" n'a pas de necessite_orientation booléen`,
+      ).toBe('boolean');
+    }
+  });
+
+  it('toutes les améliorations ont un necessite_orientation booléen', () => {
+    for (const a of ameliorations) {
+      expect(
+        typeof a.necessite_orientation,
+        `L'amélioration "${a.nom}" n'a pas de necessite_orientation booléen`,
+      ).toBe('boolean');
+    }
+  });
+});
+
+describe('necessite_orientation — valeurs métier attendues', () => {
+  // Armes d'équipage (arc à 360° automatique) + armes de tir à arc non-orienté
+  // (360° ou effet sans trajectoire) explicitement identifiées lors de la
+  // conception de ce champ (cf. docs/spec/VEHICLES.md).
+  const armesSansOrientation = new Set([
+    'pistolet', 'cocktails_molotov', 'fusil_a_pompe', 'filet_metallique',
+    'grenades', 'grenades_lacrymogenes', 'magnum', 'pistolet_mitrailleur', 'tromblon',
+    'boule_de_demolition', 'canon_arc_electrique', 'marteleur', 'mur_haut_parleurs',
+    'auto_tourelle', 'brouilleur_electromagnetique',
+  ]);
+
+  it('les armes à arc non-orienté ont necessite_orientation=false', () => {
+    for (const a of armes) {
+      if (armesSansOrientation.has(a.nom_interne)) {
+        expect(
+          a.necessite_orientation,
+          `L'arme "${a.nom}" (${a.nom_interne}) devrait avoir necessite_orientation=false`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('toutes les autres armes ont necessite_orientation=true', () => {
+    for (const a of armes) {
+      if (!armesSansOrientation.has(a.nom_interne)) {
+        expect(
+          a.necessite_orientation,
+          `L'arme "${a.nom}" (${a.nom_interne}) devrait avoir necessite_orientation=true`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  // Seuls le Bélier (et ses variantes sponsor) et le Bélier Explosif requièrent
+  // une orientation — cf. `comportement` partagé "belier"/"belier_explosif".
+  it('seules les améliorations de comportement belier/belier_explosif ont necessite_orientation=true', () => {
+    for (const a of ameliorations) {
+      const attendu = a.comportement === 'belier' || a.comportement === 'belier_explosif';
+      expect(
+        a.necessite_orientation,
+        `L'amélioration "${a.nom}" (comportement: ${a.comportement ?? 'aucun'}) devrait avoir necessite_orientation=${attendu}`,
+      ).toBe(attendu);
+    }
+  });
+});

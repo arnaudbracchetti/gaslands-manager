@@ -35,6 +35,7 @@ const mockMitrailleuse: Arme = {
   description: '',
   regles: '',
   sponsors_autorises: [],
+  necessite_orientation: true,
 };
 
 const mockMinigun: Arme = {
@@ -47,6 +48,7 @@ const mockMinigun: Arme = {
   regles: '',
   sponsors_autorises: [],
   montable_tourelle: true,
+  necessite_orientation: true,
 };
 
 const mockBlindage: Amelioration = {
@@ -57,6 +59,7 @@ const mockBlindage: Amelioration = {
   description: '',
   regles: '',
   sponsors_autorises: [],
+  necessite_orientation: false,
 };
 
 const mockCatalog: Sponsor = {

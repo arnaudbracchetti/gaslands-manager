@@ -104,6 +104,18 @@ export class EquipmentManager {
   locked: InputSignal<boolean> = input<boolean>(false);
 
   /**
+   * Vrai uniquement côté atelier campagne (`AtelierVehiclePage`) : le retrait y a une
+   * conséquence économique réelle (revente à moitié prix contre la cagnotte, ou
+   * annulation intégrale si l'objet a été acheté dans la session en cours). Défaut
+   * `false` : en construction d'équipe (`VehicleConfigurator`), retirer un équipement
+   * n'est qu'une suppression pure — il n'y a ni cagnotte ni notion de revente, donc pas
+   * de texte de confirmation évoquant un remboursement à 50%. Pilote uniquement le
+   * TEXTE affiché (cf. `weaponRemovalMessage`/`improvementRemovalMessage`) — la
+   * `EquipmentDataSource` propre à chaque contexte gère déjà le comportement réel.
+   */
+  allowResale: InputSignal<boolean> = input<boolean>(false);
+
+  /**
    * Émis avec l'entité FRAÎCHE après CHAQUE mutation réussie — TOUTES les opérations
    * de la `EquipmentDataSource` (ajout ET retrait, tourelle incluse) renvoient le
    * véhicule mis à jour. Le parent met à jour son `vehicle` et le re-fournit en input —
@@ -454,15 +466,16 @@ export class EquipmentManager {
     return Math.floor(prix / 2);
   }
 
-  // ── Texte des modales de confirmation de retrait — annulation vs revente ────
-  // `purchasedThisSession` (posé uniquement côté atelier, cf. `vehicle-builder.model.ts`)
-  // distingue les deux cas ; en construction d'équipe il est toujours `undefined` (falsy),
-  // donc le texte "Revendre" ne s'affiche jamais côté équipe puisque `removeWeapon`/
-  // `removeImprovement` n'y sont même invoqués que sur des objets jamais "vendables"
-  // au sens atelier — la distinction n'a de sens qu'en atelier.
+  // ── Texte des modales de confirmation de retrait — annulation vs revente vs suppression ──
+  // En construction d'équipe (`allowResale() === false`), retirer est une suppression pure :
+  // il n'y a ni cagnotte ni revente, le texte ne doit donc jamais parler de remboursement.
+  // En atelier (`allowResale() === true`), `purchasedThisSession` (posé uniquement côté
+  // atelier, cf. `vehicle-builder.model.ts`) distingue annulation d'achat (session en
+  // cours, remboursement intégral) vs revente d'un objet pré-existant (moitié prix).
 
   weaponRemovalMessage(weapon: Weapon): string {
     const nom = this.resolveWeaponName(weapon.nomInterne);
+    if (!this.allowResale()) return `Retirer "${nom}" du véhicule ?`;
     if (weapon.purchasedThisSession) return `Annuler l'achat de "${nom}" ?`;
     return `Revendre "${nom}" pour ${this.previewSellAmount(weapon.prix)} jerricans (50%) ?`;
   }
@@ -473,6 +486,7 @@ export class EquipmentManager {
 
   improvementRemovalMessage(improvement: VehicleImprovement): string {
     const nom = this.resolveImprovementName(improvement.nomInterne);
+    if (!this.allowResale()) return `Retirer "${nom}" du véhicule ?`;
     if (improvement.purchasedThisSession) return `Annuler l'achat de "${nom}" ?`;
     return `Revendre "${nom}" pour ${this.previewSellAmount(improvement.prix)} jerricans (50%) ?`;
   }

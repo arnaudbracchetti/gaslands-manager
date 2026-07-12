@@ -99,13 +99,13 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
       password: 'test1234',
     });
 
-    // Char d'assaut (Rutherford, sponsor par défaut) porte un Canon de 125mm monté
+    // Char d'assaut (Rutherford, sponsor par défaut) porte un Canon de 125 mm monté
     // sur Tourelle, intégré (`Weapon.estDefaut: true`, cf. VEHICLES.md — "Améliorations
     // et armes par défaut") — ce n'est plus une amélioration mais une arme.
     await createTeamWithVehicles(page, { vehicleNames: ["Char d'assaut"] });
     await openEquipmentManager(page);
 
-    const canonIntegre = page.locator('.me-item').filter({ hasText: 'Canon de 125mm' });
+    const canonIntegre = page.locator('.me-item').filter({ hasText: 'Canon de 125 mm' });
     await expect(canonIntegre).toBeVisible();
     await expect(canonIntegre.getByText('(Tourelle)')).toBeVisible();
     await expect(canonIntegre.getByText('🔒 Intégré')).toBeVisible();
@@ -182,6 +182,55 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
     const mitrailleuseOption = optionCard(page, 'Mitrailleuse');
     await expect(mitrailleuseOption.getByText(/Budget de l'équipe insuffisant/)).toBeVisible();
     await expect(mitrailleuseOption.getByRole('button', { name: 'Ajouter' })).toHaveCount(0);
+  });
+
+  test('une arme d\'équipage (necessite_orientation=false) s\'ajoute directement, sans sélecteur d\'orientation', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-no-orientation-weapon'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
+    await openEquipmentManager(page);
+
+    // Grenades : type "équipage", necessite_orientation=false (armes.yml) — le clic
+    // sur "Ajouter" monte l'arme immédiatement, sans afficher le sélecteur 4 directions.
+    const grenadesOption = optionCard(page, 'Grenades');
+    await grenadesOption.getByRole('button', { name: 'Ajouter' }).click();
+
+    const mountedWeapon = page.locator('.me-item').filter({ hasText: 'Grenades' });
+    await expect(mountedWeapon).toBeVisible();
+    await expect(page.getByText('Armes (1)')).toBeVisible();
+    // Aucune orientation affichée sur l'arme montée (arc à 360° automatique).
+    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(gauche\)$|^\(droite\)$/)).toHaveCount(0);
+  });
+
+  test('une amélioration Bélier (necessite_orientation=true) requiert une orientation avant l\'ajout', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-orientation-improvement'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
+    await openEquipmentManager(page);
+
+    // Bélier : necessite_orientation=true (amelioration.yml) — la garde générique
+    // de `Vehicle.canAddImprovement` (et non plus une vérification propre au
+    // décorateur) impose le même sélecteur 4 directions qu'une arme orientable.
+    const belierOption = optionCard(page, 'Bélier');
+    await belierOption.getByRole('button', { name: 'Ajouter' }).click();
+
+    await expect(belierOption.getByRole('button', { name: 'avant', exact: true })).toBeVisible();
+    await belierOption.getByRole('button', { name: 'avant', exact: true }).click();
+
+    const mountedImprovement = page.locator('.me-item').filter({ hasText: 'Bélier' });
+    await expect(mountedImprovement).toBeVisible();
+    await expect(mountedImprovement.getByText('(avant)')).toBeVisible();
+    await expect(page.getByText('Améliorations (1)')).toBeVisible();
   });
 
   test("ouvre la modale de détail d'un équipement sans l'ajouter", async ({ page }) => {

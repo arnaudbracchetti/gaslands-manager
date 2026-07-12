@@ -18,6 +18,7 @@ function makeWeaponType(): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
     prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: true,
   });
 }
 
@@ -64,7 +65,7 @@ describe('Team — verrouillage campagne', () => {
 
   it('addWeaponToVehicle() refuse toute modification', () => {
     const team = makeLockedTeam();
-    expect(() => team.addWeaponToVehicle(10, makeWeaponType(), 'avant', false)).toThrow(DomainException);
+    expect(() => team.addWeaponToVehicle(10, makeWeaponType(), 'avant')).toThrow(DomainException);
   });
 
   it('assertNotLocked() ne lève rien pour une équipe non verrouillée', () => {
@@ -74,7 +75,7 @@ describe('Team — verrouillage campagne', () => {
 
   it("les mutations campagne (addCampaignWeapon) restent autorisées même verrouillée", () => {
     const team = makeLockedTeam();
-    expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', false, -1)).not.toThrow();
+    expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', -1)).not.toThrow();
   });
 });
 

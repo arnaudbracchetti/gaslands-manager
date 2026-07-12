@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser } from './support/auth';
 import { createTeam } from './support/teams';
+import { createCampaign, addGame, runResultWizard } from './support/campaigns';
 
 /**
  * Flux pilote e2e : mode campagne — Programme Télé et wizard de fin de partie.
@@ -20,6 +21,11 @@ import { createTeam } from './support/teams';
  * (désignation des épaves) n'a alors rien à afficher, tous les véhicules
  * restent implicitement "Intact" — ce qui laisse l'écran 3 s'activer
  * immédiatement ("Terminer" actif dès l'arrivée, aucune épave à résoudre).
+ *
+ * Le pilotage générique (création de saison, ajout de partie, traversée du
+ * wizard) est délégué à `support/campaigns.ts` — réutilisé tel quel par les
+ * autres specs Campaigns/Atelier — ce test garde seulement ses assertions
+ * spécifiques (badges, disparition du bouton, persistance au reload).
  */
 test.describe('Campagnes — Programme Télé et wizard de fin de partie', () => {
   test('crée une saison, planifie une partie, saisit son résultat et la fait entrer en atelier', async ({ page }) => {
@@ -33,60 +39,14 @@ test.describe('Campagnes — Programme Télé et wizard de fin de partie', () =>
     const teamName = 'Escouade Atelier';
     await createTeam(page, teamName);
 
-    // ── Création de la saison, équipe engagée dès la création ──────────────
-    await page.goto('/campaigns');
-    await page.getByRole('button', { name: '+ Créer une saison' }).click();
+    await createCampaign(page, { name: 'Saison E2E Atelier', teamName });
 
-    await page.getByLabel('Nom de la saison').fill('Saison E2E Atelier');
-    await page.getByLabel('Mon équipe engagée').selectOption({ label: teamName });
-
-    const createCampaignResponse = page.waitForResponse(
-      (r) => r.request().method() === 'POST' && /\/api\/campaigns$/.test(r.url()),
-    );
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
-    await createCampaignResponse;
-    await expect(page).toHaveURL(/\/campaigns\/\d+$/);
-
-    // ── Ajout d'une partie au Programme (premier scénario du catalogue) ─────
-    await page.getByRole('button', { name: '➕ Ajouter une partie' }).click();
-    await page.getByLabel('Scénario').selectOption({ index: 1 });
-
-    const createGameResponse = page.waitForResponse(
-      (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games$/.test(r.url()),
-    );
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
-    await createGameResponse;
+    await addGame(page);
 
     const gameItem = page.locator('.game-list__item').first();
     await expect(gameItem.locator('.game-list__badge--status')).toHaveText('Planifiée');
 
-    // ── Écran 1 du wizard : présence + classement ───────────────────────────
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
-
-    const participantRow = page.locator('.rst__participant-row').filter({ hasText: teamName });
-    await participantRow.locator('input[type="checkbox"]').check();
-    await page.getByRole('button', { name: 'Suivant — désigner les épaves' }).click();
-
-    // ── Écran 2 du wizard : désignation des épaves (rien à désigner ici) ────
-    // Aucun véhicule dans l'équipe → tous les véhicules restent "Intact" par
-    // défaut, rien à cocher. Ce clic déclenche POST .../results.
-    const recordResultResponse = page.waitForResponse(
-      (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games\/\d+\/results$/.test(r.url()),
-    );
-    await page.getByRole('button', { name: 'Suivant — résoudre les épaves' }).click();
-    await recordResultResponse;
-
-    // ── Écran 3 du wizard : résolution automatique (vide ici) puis "Terminer" ──
-    // Sans véhicule mis en épave, allResolved() est vrai dès l'arrivée sur cet
-    // écran (aucun tirage à attendre) — le bouton "Terminer" est donc déjà actif.
-    const terminerButton = page.getByRole('button', { name: 'Terminer' });
-    await expect(terminerButton).toBeEnabled();
-
-    const enterAtelierResponse = page.waitForResponse(
-      (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games\/\d+\/enter-atelier$/.test(r.url()),
-    );
-    await terminerButton.click();
-    await enterAtelierResponse;
+    await runResultWizard(page, { teamNames: [teamName] });
 
     // ── Le wizard se ferme, la partie affiche désormais le statut Atelier ───
     await expect(page.getByRole('button', { name: 'Terminer' })).toHaveCount(0);

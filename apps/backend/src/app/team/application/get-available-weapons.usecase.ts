@@ -32,7 +32,7 @@ export class GetAvailableWeaponsUseCase {
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
       const result = team.isLocked
         ? fail('Équipe verrouillée : campagne en cours')
-        : vehicle.canAddWeapon(wt, null, false, budget);
+        : vehicle.canAddWeapon(wt, null, budget);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,

@@ -20,13 +20,18 @@ function makeWeaponType(prix = 5, emplacement = 1): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: true,
   });
 }
 
+// Fixture générique "amélioration quelconque" — nommée Bélier par commodité mais SANS
+// `comportement`, donc `necessite_orientation: false` (elle ne teste pas les règles
+// spécifiques du Bélier, cf. `improvementType()` plus bas pour ça).
 function makeImprovementType(prix = 4, emplacement = 1): ImprovementType {
   return ImprovementType.from({
     nom: 'Bélier', nom_interne: 'belier', prix, emplacement,
     description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: false,
   });
 }
 
@@ -38,8 +43,29 @@ function makeTourelleWeaponType(prix = 5, emplacement = 1): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+    necessite_orientation: true,
   });
 }
+
+describe('ImprovementType.requiresOrientation — lecture du catalogue', () => {
+  it('est true pour le Bélier (necessite_orientation: true)', () => {
+    const belier = ImprovementType.from({
+      nom: 'Bélier', nom_interne: 'belier', prix: 4, emplacement: 1,
+      description: '', regles: '', sponsors_autorises: [], comportement: 'belier',
+      necessite_orientation: true,
+    });
+    expect(belier.requiresOrientation).toBe(true);
+  });
+
+  it('est false pour une amélioration neutre (necessite_orientation: false)', () => {
+    const blindage = ImprovementType.from({
+      nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1,
+      description: '', regles: '', sponsors_autorises: [],
+      necessite_orientation: false,
+    });
+    expect(blindage.requiresOrientation).toBe(false);
+  });
+});
 
 describe('Vehicle — champs transients de campagne', () => {
   describe('markLost / clearLost', () => {
@@ -158,6 +184,7 @@ function improvementType(nomInterne: string, comportement: string, emplacement =
   return ImprovementType.from({
     nom: nomInterne, nom_interne: nomInterne, prix: 0, emplacement,
     description: '', regles: '', sponsors_autorises: [], comportement,
+    necessite_orientation: comportement === 'belier' || comportement === 'belier_explosif',
   });
 }
 
@@ -196,6 +223,13 @@ describe('Vehicle.canAddImprovement — règles de pose (chaîne Decorator)', ()
     const r = v.canAddImprovement(improvementType('membre_equipage', 'membre_equipage', 0), null, 100);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toContain('Maximum d\'équipage');
+  });
+
+  it('refuse une amélioration nécessitant une orientation (necessite_orientation=true) sans orientation fournie', () => {
+    const v = vehicleWith([]);
+    const r = v.canAddImprovement(improvementType('belier', 'belier', 1), null, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('Une orientation est requise pour cette amélioration');
   });
 
   it('refuse un deuxième Bélier sur la même orientation', () => {
@@ -244,11 +278,15 @@ describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilit�
     expect(r.ok).toBe(true);
   });
 
-  it('sonde chaque arc et renvoie ok() dès qu\'un arc est libre (Bélier avant occupé, gauche libre)', () => {
+  it('sonde chaque arc et renvoie le signal "orientation requise" dès qu\'un arc est libre (Bélier avant occupé, gauche libre) — pas un ok() muet', () => {
+    // Un arc libre rend l'amélioration proposable, mais l'utilisateur doit encore
+    // choisir laquelle : le verdict reste `fail('orientation requise')`, jamais
+    // l'`ok()` d'un arc sondé silencieusement (cf. doc de la méthode).
     const belier = new Improvement(1, improvementType('belier', 'belier', 1), 'avant', false);
     const v = vehicleWith([belier]);
     const r = v.canAddImprovementInAnyOrientation(improvementType('belier', 'belier', 1), 100);
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('Une orientation est requise pour cette amélioration');
   });
 
   it('refuse (dernière raison) si TOUS les arcs sont occupés', () => {
@@ -266,6 +304,7 @@ describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilit�
     const cherBelier = ImprovementType.from({
       nom: 'belier', nom_interne: 'belier', prix: 999, emplacement: 1,
       description: '', regles: '', sponsors_autorises: [], comportement: 'belier',
+      necessite_orientation: true,
     });
     const v = vehicleWith([]);
     const r = v.canAddImprovementInAnyOrientation(cherBelier, 100);

@@ -6,6 +6,7 @@ function makeWeaponType(prix: number, emplacement: number): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
     prix, emplacement, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: true,
   });
 }
 

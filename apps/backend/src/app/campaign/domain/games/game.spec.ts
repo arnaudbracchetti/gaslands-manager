@@ -602,6 +602,7 @@ describe('Game — changeEquipment', () => {
     const montable = WeaponType.from({
       nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
       prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+      necessite_orientation: true,
     });
 
     const result = game.changeEquipment(participant, {
@@ -629,6 +630,7 @@ describe('Game — changeEquipment', () => {
     const canonType = WeaponType.from({
       nom: 'Canon de 125mm', nom_interne: 'canon_125mm', type: 'avancée',
       prix: 6, emplacement: 3, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+      necessite_orientation: true,
     });
     const canon = new Weapon(1, canonType, 'tourelle', true);
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [canon], []);
