@@ -1,6 +1,7 @@
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import type { WeaponOrientation } from '../../../team/domain/team';
 import type { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import type { GameEvent } from '../events/game-event';
@@ -41,6 +42,7 @@ export interface ChangeEquipmentInput {
   resolvedVehicleType: VehicleType | null;
   resolvedWeaponType: WeaponType | null;
   resolvedImprovementType: ImprovementType | null;
+  resolvedAdvantageType: AdvantageType | null;
 }
 
 /** Une ligne du journal d'une partie — événement traduit en texte lisible. */

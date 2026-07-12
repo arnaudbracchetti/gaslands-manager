@@ -6,8 +6,8 @@
  * d'une fonction pure (cf. son en-tête, "trivialement testable en isolation").
  */
 import { buildVehicleSummary, VehicleSummary } from './vehicle-summary';
-import { Vehicle, Weapon, VehicleImprovement } from './vehicle-configurator/vehicle-builder.model';
-import { Sponsor, Vehicule, Arme, Amelioration } from '../catalog/catalog.model';
+import { Vehicle, Weapon, VehicleImprovement, VehicleAdvantage } from './vehicle-configurator/vehicle-builder.model';
+import { Sponsor, Vehicule, Arme, Amelioration, Avantage } from '../catalog/catalog.model';
 
 // ── Fixtures catalogue ───────────────────────────────────────────────────────
 
@@ -62,6 +62,15 @@ const mockBlindage: Amelioration = {
   necessite_orientation: false,
 };
 
+const mockExpertise: Avantage = {
+  nom: 'Expertise',
+  nom_interne: 'expertise',
+  categorie: 'Précision',
+  prix: 3,
+  description: '',
+  regles: '',
+};
+
 const mockCatalog: Sponsor = {
   nom: 'Rutherford',
   description: '',
@@ -70,6 +79,7 @@ const mockCatalog: Sponsor = {
   vehicules: [mockVehiculeCatalogue],
   armes: [mockMitrailleuse, mockMinigun],
   ameliorations: [mockBlindage],
+  avantages: [mockExpertise],
 };
 
 // ── Fixtures véhicules d'équipe ──────────────────────────────────────────────
@@ -100,13 +110,22 @@ function buildImprovement(
   return { id: 1, nomInterne, orientation: null, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', estDefaut, prix, emplacement };
 }
 
-function buildVehicle(weapons: Weapon[], improvements: VehicleImprovement[]): Vehicle {
+function buildAdvantage(nomInterne: string, prix: number, sold?: boolean): VehicleAdvantage {
+  return { id: 1, nomInterne, vehicleId: 1, createdAt: '2025-01-01T00:00:00.000Z', prix, sold };
+}
+
+function buildVehicle(
+  weapons: Weapon[],
+  improvements: VehicleImprovement[],
+  advantages: VehicleAdvantage[] = [],
+): Vehicle {
   return {
     id: 1,
     nomInterne: 'camion',
     teamId: 4,
     improvements,
     weapons,
+    advantages,
     createdAt: '2025-01-01T00:00:00.000Z',
   };
 }
@@ -312,5 +331,24 @@ describe('buildVehicleSummary', () => {
     expect(summary.emplacementsUtilises).toBe(1); // mitrailleuse seule (minigun vendue exclue)
     expect(summary.cout).toBe(24); // 15 + 3 + 6 — le coût inclut toujours les deux
     expect(summary.equipements).toEqual(['Mitrailleuse']); // minigun vendue exclue des tags
+  });
+
+  // ── Avantages — pas d'emplacement, coût jamais réduit même vendu ────────────
+
+  it('additionne le prix d\'un avantage au prix de base, sans consommer d\'emplacement', () => {
+    const vehicle = buildVehicle([], [], [buildAdvantage('expertise', 3)]);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.cout).toBe(18); // 15 (camion) + 3 (expertise)
+    expect(summary.emplacementsUtilises).toBe(0);
+    expect(summary.equipements).toContain('Expertise');
+  });
+
+  it('un avantage vendu reste comptabilisé dans le coût (perte totale, aucun remboursement) mais disparaît des tags', () => {
+    const vehicle = buildVehicle([], [], [buildAdvantage('expertise', 3, true)]);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.cout).toBe(18); // 15 + 3 — jamais réduit, contrairement à une arme/amélioration vendue
+    expect(summary.equipements).not.toContain('Expertise');
   });
 });

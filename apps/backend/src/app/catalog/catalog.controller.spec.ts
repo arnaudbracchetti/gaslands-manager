@@ -21,7 +21,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
-import { Sponsor, Vehicule, Arme, Amelioration } from './catalog.interfaces';
+import { Sponsor, Vehicule, Arme, Amelioration, Avantage } from './catalog.interfaces';
 
 // ── Données fictives utilisées dans les mocks ─────────────────────────────────
 
@@ -33,6 +33,17 @@ const mockSponsor: Sponsor = {
   vehicules: [],
   armes: [],
   ameliorations: [],
+  avantages: [],
+};
+
+const mockAvantage: Avantage = {
+  nom: 'Expertise',
+  nom_interne: 'expertise',
+  categorie: 'Précision',
+  prix: 3,
+  comportement: 'expertise',
+  description: 'Augmente la Manœuvrabilité du véhicule en permanence.',
+  regles: '',
 };
 
 const mockVehicule: Vehicule = {
@@ -79,6 +90,7 @@ const mockCatalogService = {
   getAllVehicules: vi.fn(),
   getAllArmes: vi.fn(),
   getAllAmeliorations: vi.fn(),
+  getAllAvantages: vi.fn(),
 };
 
 // ── Suite de tests ────────────────────────────────────────────────────────────
@@ -193,6 +205,19 @@ describe('CatalogController', () => {
 
       expect(mockCatalogService.getAllAmeliorations).toHaveBeenCalledOnce();
       expect(result).toEqual([mockAmelioration]);
+    });
+  });
+
+  // ── GET /catalog/avantages ──────────────────────────────────────────────────
+
+  describe('getAllAvantages()', () => {
+    it('retourne la liste des avantages depuis le service', () => {
+      mockCatalogService.getAllAvantages.mockReturnValue([mockAvantage]);
+
+      const result = controller.getAllAvantages();
+
+      expect(mockCatalogService.getAllAvantages).toHaveBeenCalledOnce();
+      expect(result).toEqual([mockAvantage]);
     });
   });
 });

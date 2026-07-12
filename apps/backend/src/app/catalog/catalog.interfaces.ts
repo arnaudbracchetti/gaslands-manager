@@ -127,6 +127,35 @@ export interface Amelioration {
   necessite_orientation: boolean;
 }
 
+/** Avantage de véhicule tel que défini dans avantage.yml */
+export interface Avantage {
+  nom: string;
+  /** Identifiant technique stable (snake_case, sans accents), ex: "expertise", "cascadeur". */
+  nom_interne: string;
+  /**
+   * Catégorie de style (une des 12 étiquettes déjà utilisées dans `RawSponsor.classes_avantage`
+   * : Agression, Audace, Dur à Cuire, Horreur, Mécanique, Militaire, Optimisation,
+   * Poursuite, Précision, Rapidité, Technologie, Trompe-la-Mort). L'éligibilité sponsor↔avantage
+   * est DÉRIVÉE de ce champ (`categorie ∈ sponsor.classes_avantage`) — pas de
+   * `sponsors_autorises` déclaré item par item, contrairement aux armes/améliorations.
+   */
+  categorie: string;
+  /** Coût en Jerricans. */
+  prix: number;
+  description: string;
+  /** Règles spéciales de l'avantage (bloc YAML |) */
+  regles: string;
+  /**
+   * Clé du décorateur métier à instancier (Pattern Decorator, voir
+   * team/domain/advantage-decorator.factory.ts). Présente uniquement pour les 3 avantages
+   * à effet mécanique réel ("expertise", "cascadeur", "sur_deux_roues") ; absente ⇒
+   * avantage neutre (purement descriptif, aucun effet sur les stats ni règle de pose).
+   */
+  comportement?: string;
+  // Pas de `emplacement` (toujours 0, aucun avantage n'occupe de slot) ni
+  // `necessite_orientation` (jamais requise) — contrairement à Amelioration/Arme.
+}
+
 // ── Type enrichi : sponsor avec relations pré-résolues ───────────────────────
 
 /**
@@ -143,4 +172,6 @@ export interface Sponsor extends RawSponsor {
   armes: Arme[];
   /** Améliorations que ce sponsor est autorisé à sélectionner */
   ameliorations: Amelioration[];
+  /** Avantages dont la catégorie figure dans `classes_avantage` de ce sponsor. */
+  avantages: Avantage[];
 }

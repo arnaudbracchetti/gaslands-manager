@@ -34,6 +34,7 @@ const mockSponsor: Sponsor = {
   vehicules: [],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 describe('CatalogService', () => {

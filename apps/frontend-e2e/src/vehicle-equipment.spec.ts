@@ -255,4 +255,74 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
 
     await expect(page.getByText('Aucune arme montée.')).toBeVisible();
   });
+
+  // ── Avantages (catégorie distincte des armes/améliorations) ─────────────────
+  // Sponsor par défaut = Rutherford, classes_avantage = ["Dur à Cuire", "Militaire"]
+  // (cf. sponsors.yml) — les 2 sections affichées dans EquipmentManager.
+
+  test('ajoute un avantage (jamais d\'orientation ni d\'emplacement) et le retrouve acquis', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-add-advantage'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
+    await openEquipmentManager(page);
+
+    await expect(page.getByText('Avantages — Dur à Cuire')).toBeVisible();
+    await expect(page.getByText('Avantages — Militaire')).toBeVisible();
+
+    // Tireur d'Élite (Militaire, prix 2) — jamais de sélecteur d'orientation.
+    const tireurEliteOption = optionCard(page, 'Tireur d\'Élite');
+    await tireurEliteOption.getByRole('button', { name: 'Ajouter' }).click();
+
+    const mountedAdvantage = page.locator('.me-item').filter({ hasText: 'Tireur d\'Élite' });
+    await expect(mountedAdvantage).toBeVisible();
+    await expect(page.getByText('Avantages (1)')).toBeVisible();
+    // Aucun badge d'emplacement affiché pour un avantage (contrairement à une arme/amélioration).
+    await expect(mountedAdvantage.locator('.me-badge')).toHaveCount(1);
+  });
+
+  test('retire un avantage acquis avec confirmation', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-remove-advantage'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
+    await openEquipmentManager(page);
+
+    const tireurEliteOption = optionCard(page, 'Tireur d\'Élite');
+    await tireurEliteOption.getByRole('button', { name: 'Ajouter' }).click();
+    await expect(page.getByText('Avantages (1)')).toBeVisible();
+
+    await page.locator('.me-item').filter({ hasText: 'Tireur d\'Élite' }).getByRole('button', { name: 'Retirer' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Retirer', exact: true }).click();
+
+    await expect(page.getByText('Avantages (0)')).toBeVisible();
+    await expect(page.getByText('Aucun avantage acquis.')).toBeVisible();
+  });
+
+  test('un même avantage ne peut être acheté qu\'une seule fois par véhicule (unicité)', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-advantage-unique'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, { vehicleNames: ['Camion à glaces'] });
+    await openEquipmentManager(page);
+
+    const tireurEliteOption = optionCard(page, 'Tireur d\'Élite');
+    await tireurEliteOption.getByRole('button', { name: 'Ajouter' }).click();
+    await expect(page.getByText('Avantages (1)')).toBeVisible();
+
+    // Une fois acquis, l'avantage disparaît du catalogue disponible (déjà possédé).
+    await expect(optionCard(page, 'Tireur d\'Élite')).toHaveCount(0);
+  });
 });

@@ -25,6 +25,7 @@ const mockVehicle: Vehicle = {
   teamId: 3,
   improvements: [],
   weapons: [],
+  advantages: [],
   createdAt: '2025-01-01T00:00:00.000Z',
 };
 
@@ -240,6 +241,60 @@ describe('VehicleService', () => {
       service.removeImprovement(7, 3).subscribe(() => { completed = true; });
 
       const req = httpMock.expectOne('/api/vehicles/7/improvements/3');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      expect(completed).toBe(true);
+    });
+  });
+
+  // ── getAvailableAdvantages() ────────────────────────────────────────────────
+
+  describe('getAvailableAdvantages()', () => {
+    it('effectue GET /api/vehicles/:id/available-advantages et retourne le catalogue filtré', () => {
+      const mockAvailableAdvantage = {
+        nom: 'Expertise', nomInterne: 'expertise', categorie: 'Précision', prix: 3,
+        description: '', regles: '', disponible: true,
+      };
+      let result: unknown;
+
+      service.getAvailableAdvantages(7).subscribe((dtos) => { result = dtos; });
+
+      const req = httpMock.expectOne('/api/vehicles/7/available-advantages');
+      expect(req.request.method).toBe('GET');
+      req.flush([mockAvailableAdvantage]);
+
+      expect(result).toEqual([mockAvailableAdvantage]);
+    });
+  });
+
+  // ── addAdvantage() ──────────────────────────────────────────────────────────
+
+  describe('addAdvantage()', () => {
+    it('effectue POST /api/vehicles/:id/advantages avec le DTO (sans orientation)', () => {
+      let result: Vehicle | undefined;
+      const dto = { nomInterne: 'expertise' };
+
+      service.addAdvantage(7, dto).subscribe((vehicle) => { result = vehicle; });
+
+      const req = httpMock.expectOne('/api/vehicles/7/advantages');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(dto);
+      req.flush(mockVehicle);
+
+      expect(result).toEqual(mockVehicle);
+    });
+  });
+
+  // ── removeAdvantage() ───────────────────────────────────────────────────────
+
+  describe('removeAdvantage()', () => {
+    it('effectue DELETE /api/vehicles/:id/advantages/:advantageId — route nichée, mirroir de removeImprovement', () => {
+      let completed = false;
+
+      service.removeAdvantage(7, 4).subscribe(() => { completed = true; });
+
+      const req = httpMock.expectOne('/api/vehicles/7/advantages/4');
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
 

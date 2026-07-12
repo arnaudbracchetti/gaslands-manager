@@ -1,16 +1,19 @@
 import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
+import type { AdvantageType } from './value-objects/advantage-type';
 import type { Orientation, WeaponOrientation, RuleResult } from './team';
 import { ok, fail } from './team';
 import { Weapon } from './weapon';
 import { Improvement } from './improvement';
+import { Advantage } from './advantage';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { SequellaType } from './value-objects/sequella-type';
 import { CatalogVehicleBuild } from './vehicle-build';
 import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
-import type { Amelioration } from '../../catalog/catalog.interfaces';
+import { AdvantageDecoratorFactory } from './advantage-decorator.factory';
+import type { Amelioration, Avantage } from '../../catalog/catalog.interfaces';
 
 /** Les 4 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
 const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
@@ -47,6 +50,7 @@ export class Vehicle {
     readonly type: VehicleType,
     private readonly _weapons: Weapon[],
     private readonly _improvements: Improvement[],
+    private readonly _advantages: Advantage[] = [],
   ) {}
 
   get weapons(): readonly Weapon[] {
@@ -55,6 +59,10 @@ export class Vehicle {
 
   get improvements(): readonly Improvement[] {
     return this._improvements;
+  }
+
+  get advantages(): readonly Advantage[] {
+    return this._advantages;
   }
 
   // ── Getters campagne ──────────────────────────────────────────────────────────
@@ -81,7 +89,18 @@ export class Vehicle {
   get cost(): number {
     const weaponsCost = this._weapons.reduce((sum, w) => sum + w.price, 0);
     const improvementsCost = this._improvements.reduce((sum, i) => sum + i.price, 0);
-    return this.type.price + weaponsCost + improvementsCost;
+    const advantagesCost = this._advantages.reduce((sum, a) => sum + a.price, 0);
+    return this.type.price + weaponsCost + improvementsCost + advantagesCost;
+  }
+
+  /**
+   * Montant remboursé si ce véhicule est revendu — prix du châssis SEUL (contrairement
+   * à `cost` ci-dessus, son équipement n'est pas inclus). VEHICLE ne porte pas de flag
+   * `isSold`/prix résiduel comme `Weapon`/`Improvement` : sa revente reste sur l'ancien
+   * modèle de suppression complète (cf. `EquipmentChangedEvent`, SELL_VEHICLE).
+   */
+  get resaleRefund(): number {
+    return this.type.price;
   }
 
   /**
@@ -146,7 +165,31 @@ export class Vehicle {
     }
     // Règles de pose spécifiques à l'amélioration (incompatibilités véhicule, unicité,
     // orientation exclusive, équipage max…), portées par la chaîne de décorateurs Gaslands.
-    const placement = this.buildChain({ type, orientation }).validate();
+    const placement = this.buildChain({ improvement: { type, orientation } }).validate();
+    if (!placement.ok) return fail(placement.reason);
+    return ok();
+  }
+
+  /**
+   * Règle de pose d'un avantage : garde véhicule perdu, budget, puis UNICITÉ (un même
+   * avantage ne peut être acquis qu'une fois par véhicule — règle générique, propre aux
+   * avantages, vérifiée ici plutôt que dans un décorateur puisqu'elle s'applique à TOUS
+   * les avantages, pas à un `comportement` particulier). Pas de check d'emplacements
+   * (un avantage n'en occupe jamais), pas de paramètre orientation (jamais requise).
+   * Délègue ensuite à la chaîne de décorateurs pour les 2 restrictions spécifiques
+   * (Cascadeur, Sur Deux Roues) — la chaîne inclut aussi les améliorations déjà montées,
+   * pour que ces restrictions lisent la Manœuvrabilité EFFECTIVE (cf. buildChain).
+   */
+  canAddAdvantage(type: AdvantageType, remainingBudget: number): RuleResult {
+    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+
+    if (type.price > remainingBudget) {
+      return fail('Budget de l\'équipe insuffisant');
+    }
+    if (this._advantages.some((a) => !a.isSold && a.type.equals(type))) {
+      return fail(`"${type.nom}" est déjà acquis sur ce véhicule`);
+    }
+    const placement = this.buildChain({ advantage: { type } }).validate();
     if (!placement.ok) return fail(placement.reason);
     return ok();
   }
@@ -191,28 +234,59 @@ export class Vehicle {
 
   /**
    * Reconstruit la chaîne de décorateurs "véhicule monté" à partir de l'état de
-   * l'agrégat, afin de valider les règles de pose des améliorations. Les améliorations
-   * par défaut (`estDefaut`) sont exclues : hors pool d'emplacements (slots = 0 dans
-   * l'agrégat) et ne portant aucune de ces règles, les inclure fausserait le contrôle
-   * d'emplacements interne de la chaîne (`validateGenerique`, qui lit le prix catalogue brut).
+   * l'agrégat, afin de valider les règles de pose des améliorations ET des avantages.
+   * Les améliorations par défaut (`estDefaut`) sont exclues : hors pool d'emplacements
+   * (slots = 0 dans l'agrégat) et ne portant aucune de ces règles, les inclure
+   * fausserait le contrôle d'emplacements interne de la chaîne (`validateGenerique`,
+   * qui lit le prix catalogue brut).
+   *
+   * Plie `_improvements` PUIS `_advantages`, PUIS le candidat testé (amélioration OU
+   * avantage — union discriminée, un seul des deux jamais fourni à la fois). Cet ordre
+   * garantit que les restrictions de pose d'un avantage (Cascadeur, Sur Deux Roues —
+   * Manœuvrabilité EFFECTIVE ≥ 3) voient le cumul des bonus de stats des couches du
+   * dessous, qu'ils viennent d'une amélioration (Chenilles) ou d'un autre avantage déjà
+   * acquis (Expertise).
    */
-  private buildChain(candidate: { type: ImprovementType; orientation: Orientation | null }): VehicleBuild {
-    const installed: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
+  private buildChain(
+    candidate:
+      | { improvement: { type: ImprovementType; orientation: Orientation | null } }
+      | { advantage: { type: AdvantageType } },
+  ): VehicleBuild {
+    const installedImprovements: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
       ...this._improvements
         .filter((i) => !i.estDefaut)
         .map((i) => ({
           raw: i.type.toRaw(),
           instance: { nom_interne: i.type.nomInterne, orientation: i.orientation ?? undefined },
         })),
-      {
-        raw: candidate.type.toRaw(),
-        instance: { nom_interne: candidate.type.nomInterne, orientation: candidate.orientation ?? undefined },
-      },
+      ...('improvement' in candidate
+        ? [
+            {
+              raw: candidate.improvement.type.toRaw(),
+              instance: {
+                nom_interne: candidate.improvement.type.nomInterne,
+                orientation: candidate.improvement.orientation ?? undefined,
+              },
+            },
+          ]
+        : []),
+    ];
+
+    const installedAdvantages: ReadonlyArray<{ raw: Avantage; instance: InstalledImprovement }> = [
+      ...this._advantages
+        .filter((a) => !a.isSold)
+        .map((a) => ({ raw: a.type.toRaw(), instance: { nom_interne: a.type.nomInterne } })),
+      ...('advantage' in candidate
+        ? [{ raw: candidate.advantage.type.toRaw(), instance: { nom_interne: candidate.advantage.type.nomInterne } }]
+        : []),
     ];
 
     let build: VehicleBuild = new CatalogVehicleBuild(this.type.toRaw());
-    for (const { raw, instance } of installed) {
+    for (const { raw, instance } of installedImprovements) {
       build = ImprovementDecoratorFactory.wrap(build, raw, instance);
+    }
+    for (const { raw, instance } of installedAdvantages) {
+      build = AdvantageDecoratorFactory.wrap(build, raw, instance);
     }
     return build;
   }
@@ -249,6 +323,18 @@ export class Vehicle {
     this._improvements.splice(index, 1);
   }
 
+  addAdvantage(type: AdvantageType, remainingBudget: number): void {
+    const result = this.canAddAdvantage(type, remainingBudget);
+    if (!result.ok) throw new DomainException(result.reason);
+    this._advantages.push(new Advantage(0, type));
+  }
+
+  removeAdvantage(advantageId: number): void {
+    const index = this._advantages.findIndex((a) => a.id === advantageId);
+    if (index === -1) throw new DomainException('Avantage introuvable sur ce véhicule');
+    this._advantages.splice(index, 1);
+  }
+
   // ── Mutations campagne ────────────────────────────────────────────────────────
 
   /** Idempotent : marquer un véhicule déjà perdu n'a pas d'effet supplémentaire. */
@@ -280,6 +366,20 @@ export class Vehicle {
 
   clearImprovementSold(improvementId: number): void {
     this.findImprovement(improvementId).clearSold();
+  }
+
+  /**
+   * Mirroir de markWeaponSold/clearWeaponSold pour les avantages. Contrairement aux
+   * armes/améliorations, marquer un avantage vendu ne réduit jamais son `price` (cf.
+   * `Advantage.price`) — le remboursement en atelier est donc toujours nul, sans code
+   * de calcul séparé (mécanisme "perte totale").
+   */
+  markAdvantageSold(advantageId: number): void {
+    this.findAdvantage(advantageId).markSold();
+  }
+
+  clearAdvantageSold(advantageId: number): void {
+    this.findAdvantage(advantageId).clearSold();
   }
 
   /**
@@ -345,6 +445,18 @@ export class Vehicle {
     return improvement;
   }
 
+  /**
+   * Ajoute un avantage avec un id explicite (D-S11 : id négatif = entité transiente
+   * campagne). Miroir d'addCampaignImprovement : ne passe PAS par les règles
+   * (canAddAdvantage) — cohérent avec la limitation "Temps 2" déjà en place pour
+   * armes/améliorations en atelier (seule la cagnotte est gardée à l'écriture).
+   */
+  addCampaignAdvantage(type: AdvantageType, campaignId: number): Advantage {
+    const advantage = new Advantage(campaignId, type);
+    this._advantages.push(advantage);
+    return advantage;
+  }
+
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
   private findWeapon(id: number): Weapon {
@@ -357,6 +469,12 @@ export class Vehicle {
     const imp = this._improvements.find((i) => i.id === id);
     if (!imp) throw new DomainException('Amélioration introuvable sur ce véhicule');
     return imp;
+  }
+
+  private findAdvantage(id: number): Advantage {
+    const advantage = this._advantages.find((a) => a.id === id);
+    if (!advantage) throw new DomainException('Avantage introuvable sur ce véhicule');
+    return advantage;
   }
 }
 

@@ -28,7 +28,7 @@ import {
   signal,
 } from '@angular/core';
 import { Sponsor } from '../../../../catalog/catalog.model';
-import { VehicleImprovement, Weapon } from '../../vehicle-builder.model';
+import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
 
 @Component({
   selector: 'app-mounted-equipment',
@@ -42,6 +42,9 @@ export class MountedEquipment {
 
   /** Améliorations posées — les Tourelles reçoivent un traitement spécial. */
   improvements: InputSignal<VehicleImprovement[]> = input.required<VehicleImprovement[]>();
+
+  /** Avantages acquis — jamais d'orientation, jamais d'emplacement. */
+  advantages: InputSignal<VehicleAdvantage[]> = input.required<VehicleAdvantage[]>();
 
   /** Catalogue du sponsor — nécessaire pour résoudre noms/emplacements affichés. */
   sponsorCatalog: InputSignal<Sponsor> = input.required<Sponsor>();
@@ -59,6 +62,9 @@ export class MountedEquipment {
 
   /** Demande de retrait d'une amélioration — mirroir de `weaponRemoved`. */
   improvementRemoved: OutputEmitterRef<VehicleImprovement> = output<VehicleImprovement>();
+
+  /** Demande de retrait d'un avantage — mirroir de `weaponRemoved`/`improvementRemoved`. */
+  advantageRemoved: OutputEmitterRef<VehicleAdvantage> = output<VehicleAdvantage>();
 
   // ── Filtre "masquer les équipements vendus/détruits" ────────────────────────
   // Filtre d'affichage pur sur des données déjà reçues — état local à ce
@@ -79,8 +85,14 @@ export class MountedEquipment {
     this.improvements().filter((i): boolean => !!i.sold || !!i.lost).length,
   );
 
+  /** Mirroir de `soldWeaponsCount`/`soldImprovementsCount` — un avantage ne porte pas `lost`
+   *  (pas de mécanisme de perte via la Table des Épaves pour les avantages aujourd'hui). */
+  soldAdvantagesCount: Signal<number> = computed((): number =>
+    this.advantages().filter((a): boolean => !!a.sold).length,
+  );
+
   hiddenSoldCount: Signal<number> = computed((): number =>
-    this.soldWeaponsCount() + this.soldImprovementsCount(),
+    this.soldWeaponsCount() + this.soldImprovementsCount() + this.soldAdvantagesCount(),
   );
 
   visibleWeapons: Signal<Weapon[]> = computed((): Weapon[] => {
@@ -93,6 +105,12 @@ export class MountedEquipment {
     const all = this.improvements();
     if (this.showSold()) return all;
     return all.filter((i): boolean => !i.sold && !i.lost);
+  });
+
+  visibleAdvantages: Signal<VehicleAdvantage[]> = computed((): VehicleAdvantage[] => {
+    const all = this.advantages();
+    if (this.showSold()) return all;
+    return all.filter((a): boolean => !a.sold);
   });
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────
@@ -114,6 +132,11 @@ export class MountedEquipment {
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
   resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
+  }
+
+  /** Résout le nom affiché d'un avantage acquis — mirroir exact de `resolveWeaponName`. */
+  resolveAdvantageName(nomInterne: string): string {
+    return this.sponsorCatalog().avantages.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 
   /**

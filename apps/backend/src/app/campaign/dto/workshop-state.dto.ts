@@ -43,6 +43,17 @@ export interface WorkshopImprovementDto {
   purchasedThisSession: boolean;
 }
 
+export interface WorkshopAdvantageDto {
+  id: number;
+  nomInterne: string;
+  price: number;
+  /** Vendu (revente pré-existante) — reste visible, barré, côté IHM. Contrairement à
+   *  une arme/amélioration, `price` ne baisse jamais (perte totale, cf. `Advantage.price`). */
+  isSold: boolean;
+  /** Acheté pendant la session d'atelier en cours — retrait = annulation, pas revente. */
+  purchasedThisSession: boolean;
+}
+
 export interface WorkshopVehicleDto {
   id: number;
   nomInterne: string;
@@ -52,6 +63,7 @@ export interface WorkshopVehicleDto {
   sequellas: WorkshopSequellaDto[];
   weapons: WorkshopWeaponDto[];
   improvements: WorkshopImprovementDto[];
+  advantages: WorkshopAdvantageDto[];
 }
 
 export interface WorkshopStateDto {

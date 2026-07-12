@@ -15,4 +15,5 @@ export enum EquipmentEntityType {
   VEHICLE = 'VEHICLE',
   WEAPON = 'WEAPON',
   IMPROVEMENT = 'IMPROVEMENT',
+  ADVANTAGE = 'ADVANTAGE',
 }

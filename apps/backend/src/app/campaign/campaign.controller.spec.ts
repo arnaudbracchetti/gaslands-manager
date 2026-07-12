@@ -20,6 +20,7 @@ describe('CampaignController (câblage)', () => {
   let addGameUseCase: ReturnType<typeof uc>;
   let recordResultUseCase: ReturnType<typeof uc>;
   let validateParticipantUseCase: ReturnType<typeof uc>;
+  let getWorkshopAvailableAdvantagesUseCase: ReturnType<typeof uc>;
   let controller: CampaignController;
 
   beforeEach(() => {
@@ -41,6 +42,7 @@ describe('CampaignController (câblage)', () => {
     addGameUseCase = uc(7);
     recordResultUseCase = uc(undefined);
     validateParticipantUseCase = uc(undefined);
+    getWorkshopAvailableAdvantagesUseCase = uc(['avantage']);
 
     controller = new CampaignController(
       query as never,
@@ -70,6 +72,7 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // workshop
       uc() as never,            // getWorkshopAvailableWeapons
       uc() as never,            // getWorkshopAvailableImprovements
+      getWorkshopAvailableAdvantagesUseCase as never,
     );
   });
 
@@ -120,5 +123,13 @@ describe('CampaignController (câblage)', () => {
       campaignId: 1, pid: 5, userId: 42, accept: true,
     });
     expect(query.getParticipant).toHaveBeenCalledWith(1, 5);
+  });
+
+  it('getWorkshopAvailableAdvantages délègue au use case avec campaignId/vehicleId/userId', async () => {
+    const result = await controller.getWorkshopAvailableAdvantages(req as never, 1, 5);
+    expect(getWorkshopAvailableAdvantagesUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, vehicleId: 5, userId: 42,
+    });
+    expect(result).toEqual(['avantage']);
   });
 });

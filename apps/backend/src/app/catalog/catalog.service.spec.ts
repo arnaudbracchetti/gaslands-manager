@@ -354,6 +354,44 @@ ameliorations_vehicules:
     sponsors_autorises:
       - "Rusty et ses Trafiquants d'Alcool"
 `,
+
+  'avantage.yml': `
+avantages:
+  # Militaire — Rutherford (Militaire, Dur à Cuire)
+  - nom: "Tireur d'Élite"
+    nom_interne: "tireur_elite"
+    categorie: "Militaire"
+    prix: 2
+    description: "Améliore la précision de tir à longue portée."
+    regles: ""
+  # Précision — Mishkin/Idris (Mishkin: Technologie/Précision, Idris: Rapidité/Précision)
+  - nom: "Expertise"
+    nom_interne: "expertise"
+    categorie: "Précision"
+    prix: 3
+    comportement: "expertise"
+    description: "Augmente la Manœuvrabilité du véhicule en permanence."
+    regles: |
+      - Ce véhicule ajoute 1 à sa Valeur de Manœuvrabilité.
+  # Audace — aucun sponsor du mock n'y a accès, sert à tester l'exclusion
+  - nom: "Cascadeur"
+    nom_interne: "cascadeur"
+    categorie: "Audace"
+    prix: 7
+    comportement: "cascadeur"
+    description: "Réservé aux véhicules légers et maniables."
+    regles: |
+      - Réservé aux véhicules de Poids Léger ou Moyen avec Manœuvrabilité effective d'au moins 3.
+  # Optimisation — Slime/Scarlett
+  - nom: "Sur Deux Roues"
+    nom_interne: "sur_deux_roues"
+    categorie: "Optimisation"
+    prix: 6
+    comportement: "sur_deux_roues"
+    description: "Rend ce véhicule temporairement intangible."
+    regles: |
+      - Manœuvrabilité effective d'au moins 3 requise.
+`,
 };
 
 // ── Sous-classe de test (Pattern Template Method) ─────────────────────────────

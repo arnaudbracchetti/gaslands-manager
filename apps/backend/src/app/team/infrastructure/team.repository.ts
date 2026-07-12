@@ -66,7 +66,7 @@ export class TeamRepository implements ITeamRepository {
   async findByIdForUser(teamId: number, userId: number): Promise<Team> {
     const orm = await this.teamOrmRepo.findOne({
       where: { id: teamId, userId },
-      relations: { vehicles: { weapons: true, improvements: true } },
+      relations: { vehicles: { weapons: true, improvements: true, advantages: true } },
     });
     if (!orm) throw new NotFoundException(`Équipe #${teamId} introuvable`);
     const isLocked = await this.isLockedByCampaign(teamId);
@@ -130,7 +130,7 @@ export class TeamRepository implements ITeamRepository {
     if (ids.length === 0) return [];
     const orms = await this.teamOrmRepo.find({
       where: { id: In(ids) },
-      relations: { vehicles: { weapons: true, improvements: true } },
+      relations: { vehicles: { weapons: true, improvements: true, advantages: true } },
     });
     return orms.map((orm) => this.mapper.toDomain(orm));
   }

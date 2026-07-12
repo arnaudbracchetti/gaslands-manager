@@ -17,7 +17,7 @@
  * séparer le calcul pur de son orchestration).
  */
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
-import { Amelioration, Arme, Sponsor, Vehicule } from '../catalog/catalog.model';
+import { Amelioration, Arme, Avantage, Sponsor, Vehicule } from '../catalog/catalog.model';
 import { Team } from './team.model';
 
 /**
@@ -133,6 +133,21 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
       (a: Amelioration): boolean => a.nom_interne === improvement.nomInterne,
     );
     equipements.push(amCatalogue?.nom ?? improvement.nomInterne);
+  }
+
+  // Avantages : `advantage.prix` ne baisse JAMAIS avec `sold` (perte totale à la
+  // revente, cf. `Advantage.price` backend) — toujours comptabilisé dans le coût,
+  // que l'avantage soit vendu ou non. Jamais d'emplacement à ajouter. Exclu des tags
+  // une fois vendu, même raison que les armes/améliorations ci-dessus.
+  for (const advantage of vehicle.advantages) {
+    cout += advantage.prix;
+    if (advantage.sold) {
+      continue;
+    }
+    const avCatalogue: Avantage | undefined = catalog.avantages.find(
+      (a: Avantage): boolean => a.nom_interne === advantage.nomInterne,
+    );
+    equipements.push(avCatalogue?.nom ?? advantage.nomInterne);
   }
 
   return {

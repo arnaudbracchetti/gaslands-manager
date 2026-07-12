@@ -73,6 +73,15 @@ export class GetWorkshopUseCase {
         isSold: imp.isSold,
         purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.IMPROVEMENT, imp.id) ?? false,
       })),
+      advantages: v.advantages.map((a) => ({
+        id: a.id,
+        nomInterne: a.type.nomInterne,
+        // a.price ne baisse jamais avec isSold (perte totale, cf. Advantage.price) —
+        // contrairement à weapons/improvements, pas de prix résiduel à distinguer ici.
+        price: a.price,
+        isSold: a.isSold,
+        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.ADVANTAGE, a.id) ?? false,
+      })),
     }));
 
     return {

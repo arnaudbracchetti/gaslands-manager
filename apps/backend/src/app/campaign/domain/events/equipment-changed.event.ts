@@ -3,6 +3,7 @@ import type { CampaignParticipant } from '../campaign-participant';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import type { Orientation, WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 
@@ -39,6 +40,22 @@ export { EquipmentOperation, EquipmentEntityType };
  * `Team` est l'agrégat racine (cf. `docs/ARCHITECTURE.md` §3.4), et les appelants externes
  * à l'agrégat ne doivent transiter que par sa racine, jamais par une entité enfant en la
  * contournant — même pattern préexistant qu'`addCampaignWeapon`/`removeCampaignWeapon`.
+ *
+ * **Pourquoi une seule classe avec un champ `entityType`, plutôt qu'une hiérarchie
+ * (`WeaponChangeEvent`/`ImprovementChangeEvent`/`AdvantageChangeEvent`/...)** : `entityType`
+ * discrimine ICI un même `eventType` DB (`EQUIPMENT_CHANGED`), contrairement à
+ * `WeaponLostEvent`/`ImprovementLostEvent` qui sont deux `eventType` distincts avec chacun
+ * sa propre classe — pas le même genre de choix. Découper cette classe déplacerait le
+ * switch au lieu de l'éliminer : `campaign.mapper.ts:toEquipmentChangedEvent()` a déjà un
+ * `if/else` sur `entityType` pour résoudre le bon Value Object catalogue ; avec une
+ * hiérarchie, ce même `if/else` devrait en plus choisir QUELLE sous-classe instancier, et
+ * s'imbriquer dans le switch externe de `toEvent()` (qui, pour tous les autres événements,
+ * reste un mapping direct un-eventType-une-classe). Une hiérarchie romprait aussi le choix
+ * documenté "table `GAME_EVENT` plate, pas de STI" (`docs/DOMAIN_MODEL.md` §3) et
+ * dupliquerait la sémantique BUY/SELL — identique pour les 4 types d'entité — sur 4
+ * classes séparées. Les méthodes `create/remove/markSold/clearSold` ci-dessous ne portent
+ * pas de logique métier complexe (une ligne de délégation par cas) : les séparer
+ * éparpillerait cette complexité au lieu de la réduire.
  */
 export class EquipmentChangedEvent extends GameEvent {
   constructor(
@@ -58,6 +75,7 @@ export class EquipmentChangedEvent extends GameEvent {
     private readonly resolvedVehicleType: VehicleType | null,
     private readonly resolvedWeaponType: WeaponType | null,
     private readonly resolvedImprovementType: ImprovementType | null = null,
+    private readonly resolvedAdvantageType: AdvantageType | null = null,
   ) {
     super(id, gameId, participantId, eventOrder);
   }
@@ -122,6 +140,9 @@ export class EquipmentChangedEvent extends GameEvent {
         // de l'événement (jamais émis par le use case pour ce entityType).
         p.team.addCampaignImprovement(this.targetVehicleId!, this.resolvedImprovementType!, this.orientation as Orientation | null, entityId);
         break;
+      case EquipmentEntityType.ADVANTAGE:
+        p.team.addCampaignAdvantage(this.targetVehicleId!, this.resolvedAdvantageType!, entityId);
+        break;
     }
   }
 
@@ -137,24 +158,45 @@ export class EquipmentChangedEvent extends GameEvent {
       case EquipmentEntityType.IMPROVEMENT:
         p.team.removeCampaignImprovement(this.targetVehicleId!, entityId);
         break;
+      case EquipmentEntityType.ADVANTAGE:
+        p.team.removeCampaignAdvantage(this.targetVehicleId!, entityId);
+        break;
     }
   }
 
-  /** Flague l'entité ciblée "vendue" (WEAPON/IMPROVEMENT uniquement — revente pré-existante). */
+  /**
+   * Flague l'entité ciblée "vendue" (WEAPON/IMPROVEMENT/ADVANTAGE — revente pré-existante).
+   * VEHICLE n'apparaît jamais ici — `execute()` l'a déjà routé vers `removeTransientEquipment`
+   * avant cet appel ; `case` explicite plutôt que `default`, pour qu'un futur 5ᵉ
+   * `EquipmentEntityType` échoue bruyamment (switch non exhaustif) au lieu d'être
+   * silencieusement traité comme une amélioration.
+   */
   private markSoldEntity(p: CampaignParticipant, entityId: number): void {
-    if (this.entityType === EquipmentEntityType.WEAPON) {
-      p.team.markWeaponSold(this.targetVehicleId!, entityId);
-    } else {
-      p.team.markImprovementSold(this.targetVehicleId!, entityId);
+    switch (this.entityType) {
+      case EquipmentEntityType.WEAPON:
+        p.team.markWeaponSold(this.targetVehicleId!, entityId);
+        break;
+      case EquipmentEntityType.IMPROVEMENT:
+        p.team.markImprovementSold(this.targetVehicleId!, entityId);
+        break;
+      case EquipmentEntityType.ADVANTAGE:
+        p.team.markAdvantageSold(this.targetVehicleId!, entityId);
+        break;
     }
   }
 
-  /** Undo de markSoldEntity. */
+  /** Undo de markSoldEntity — même raisonnement sur `case` explicite vs `default`. */
   private clearSoldEntity(p: CampaignParticipant, entityId: number): void {
-    if (this.entityType === EquipmentEntityType.WEAPON) {
-      p.team.clearWeaponSold(this.targetVehicleId!, entityId);
-    } else {
-      p.team.clearImprovementSold(this.targetVehicleId!, entityId);
+    switch (this.entityType) {
+      case EquipmentEntityType.WEAPON:
+        p.team.clearWeaponSold(this.targetVehicleId!, entityId);
+        break;
+      case EquipmentEntityType.IMPROVEMENT:
+        p.team.clearImprovementSold(this.targetVehicleId!, entityId);
+        break;
+      case EquipmentEntityType.ADVANTAGE:
+        p.team.clearAdvantageSold(this.targetVehicleId!, entityId);
+        break;
     }
   }
 
@@ -162,6 +204,7 @@ export class EquipmentChangedEvent extends GameEvent {
     const verb = this.operation === EquipmentOperation.BUY ? 'Achat' : 'Vente';
     const nom = this.resolvedWeaponType?.nom
       ?? this.resolvedImprovementType?.nom
+      ?? this.resolvedAdvantageType?.nom
       ?? this.resolvedVehicleType?.nom
       ?? this.nomInterne;
 

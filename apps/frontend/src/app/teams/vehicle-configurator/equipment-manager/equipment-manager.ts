@@ -49,10 +49,13 @@ import { EQUIPMENT_DATA_SOURCE, BudgetView, EquipmentDataSource } from '../equip
 import {
   AvailableImprovementDto,
   AvailableWeaponDto,
+  AvailableAdvantageDto,
   EquipmentChoice,
+  EquipmentOption as EquipmentOptionDto,
   Vehicle,
   VehicleImprovement,
   Weapon,
+  VehicleAdvantage,
 } from '../vehicle-builder.model';
 import { EquipmentOption } from '../equipment-option/equipment-option';
 import { TeamBudget } from './team-budget/team-budget';
@@ -127,6 +130,7 @@ export class EquipmentManager {
 
   availableWeapons: WritableSignal<AvailableWeaponDto[]> = signal<AvailableWeaponDto[]>([]);
   availableImprovements: WritableSignal<AvailableImprovementDto[]> = signal<AvailableImprovementDto[]>([]);
+  availableAdvantages: WritableSignal<AvailableAdvantageDto[]> = signal<AvailableAdvantageDto[]>([]);
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
 
@@ -137,6 +141,9 @@ export class EquipmentManager {
 
   /** Amélioration en attente de confirmation de retrait (null = aucune) */
   pendingRemoveImprovement: WritableSignal<VehicleImprovement | null> = signal<VehicleImprovement | null>(null);
+
+  /** Avantage en attente de confirmation de retrait (null = aucun) */
+  pendingRemoveAdvantage: WritableSignal<VehicleAdvantage | null> = signal<VehicleAdvantage | null>(null);
 
   // ── Filtrage des options définitivement indisponibles ───────────────────────
 
@@ -168,9 +175,15 @@ export class EquipmentManager {
     ).length;
   });
 
+  /** Mirroir de `hiddenWeaponsCount`/`hiddenImprovementsCount` pour les avantages — pas
+   *  de notion d'orientation, le refus est toujours définitif (budget/unicité/Cascadeur/Sur Deux Roues). */
+  hiddenAdvantagesCount: Signal<number> = computed((): number => {
+    return this.availableAdvantages().filter((a): boolean => !a.disponible).length;
+  });
+
   /** Total toutes catégories confondues — affiché dans le libellé du bouton. */
   hiddenCount: Signal<number> = computed((): number => {
-    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount();
+    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount() + this.hiddenAdvantagesCount();
   });
 
   /**
@@ -191,6 +204,45 @@ export class EquipmentManager {
     if (this.showUnavailable()) return all;
     return all.filter((i): boolean => i.disponible || this.improvementNeedsOrientation(i));
   });
+
+  /** Mirroir de `visibleWeapons`/`visibleImprovements` — pas de notion d'orientation
+   *  pour un avantage (jamais requise), donc pas de condition supplémentaire au filtre. */
+  visibleAdvantages: Signal<AvailableAdvantageDto[]> = computed((): AvailableAdvantageDto[] => {
+    const all = this.availableAdvantages();
+    if (this.showUnavailable()) return all;
+    return all.filter((a): boolean => a.disponible);
+  });
+
+  /**
+   * Les avantages du sponsor sont scindés en 2 sous-listes par catégorie de style
+   * (`Sponsor.classes_avantage[0]`/`[1]`, cf. sponsors.yml) — présentation demandée pour
+   * clarifier l'IHM plutôt qu'une liste unique de 12 avantages. `emplacement: 0` est
+   * synthétisé ici (absent d'`AvailableAdvantageDto`, un avantage n'occupe jamais de
+   * slot) pour satisfaire la forme structurelle attendue par `<app-equipment-option>`.
+   */
+  advantagesCategoryA: Signal<EquipmentOptionDto[]> = computed((): EquipmentOptionDto[] => {
+    return this.advantagesForCategory(this.sponsorCatalog().classes_avantage[0]);
+  });
+
+  /** Mirroir exact d'`advantagesCategoryA` pour la 2ᵉ catégorie du sponsor. */
+  advantagesCategoryB: Signal<EquipmentOptionDto[]> = computed((): EquipmentOptionDto[] => {
+    return this.advantagesForCategory(this.sponsorCatalog().classes_avantage[1]);
+  });
+
+  private advantagesForCategory(categorie: string | undefined): EquipmentOptionDto[] {
+    return this.visibleAdvantages()
+      .filter((a): boolean => a.categorie === categorie)
+      .map((a): EquipmentOptionDto => ({
+        nom: a.nom,
+        nomInterne: a.nomInterne,
+        prix: a.prix,
+        emplacement: 0,
+        description: a.description,
+        regles: a.regles,
+        disponible: a.disponible,
+        raison: a.raison,
+      }));
+  }
 
   // ── Emplacements (computed) — fusion à l'identique des deux mirroirs ─────────
   // (cf. en-têtes d'origine pour le raisonnement complet : pool PARTAGÉ entre
@@ -255,7 +307,8 @@ export class EquipmentManager {
     const vehicle = this.vehicle();
     const weaponsCost = vehicle.weapons.reduce((sum: number, w): number => sum + w.prix, 0);
     const improvementsCost = vehicle.improvements.reduce((sum: number, imp): number => sum + imp.prix, 0);
-    return weaponsCost + improvementsCost;
+    const advantagesCost = vehicle.advantages.reduce((sum: number, a): number => sum + a.prix, 0);
+    return weaponsCost + improvementsCost + advantagesCost;
   });
 
   /** Coût total du véhicule — prix de base + équipement monté. */
@@ -332,10 +385,12 @@ export class EquipmentManager {
     forkJoin({
       weapons: this.dataSource.getAvailableWeapons(vehicle.id),
       improvements: this.dataSource.getAvailableImprovements(vehicle.id),
+      advantages: this.dataSource.getAvailableAdvantages(vehicle.id),
     }).subscribe({
-      next: ({ weapons, improvements }): void => {
+      next: ({ weapons, improvements, advantages }): void => {
         this.availableWeapons.set(weapons);
         this.availableImprovements.set(improvements);
+        this.availableAdvantages.set(advantages);
         this.loadingEquipment.set(false);
       },
       error: (): void => {
@@ -377,6 +432,20 @@ export class EquipmentManager {
       next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
       error: (err: HttpErrorResponse): void => {
         this.equipmentError.set(err.error?.message ?? 'Impossible de poser cette amélioration. Réessayez.');
+      },
+    });
+  }
+
+  /** Ajoute un avantage — mirroir exact d'`addWeapon`/`addImprovement` (jamais d'orientation). */
+  addAdvantage(choice: EquipmentChoice): void {
+    const vehicle = this.vehicle();
+
+    this.equipmentError.set('');
+
+    this.dataSource.addAdvantage(vehicle.id, choice).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
+      error: (err: HttpErrorResponse): void => {
+        this.equipmentError.set(err.error?.message ?? 'Impossible d\'acquérir cet avantage. Réessayez.');
       },
     });
   }
@@ -432,6 +501,28 @@ export class EquipmentManager {
     });
   }
 
+  /** Retire un avantage — mirroir exact de `removeWeapon`/`removeImprovement` ci-dessus. */
+  removeAdvantage(advantage: VehicleAdvantage): void {
+    if (this.locked()) return;
+    this.pendingRemoveAdvantage.set(advantage);
+  }
+
+  onConfirmRemoveAdvantage(): void {
+    const advantage = this.pendingRemoveAdvantage();
+    this.pendingRemoveAdvantage.set(null);
+    if (!advantage) return;
+
+    const vehicle = this.vehicle();
+    this.equipmentError.set('');
+
+    this.dataSource.removeAdvantage(vehicle.id, advantage.id).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
+      error: (err: HttpErrorResponse): void => {
+        this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cet avantage. Réessayez.');
+      },
+    });
+  }
+
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────
   // `resolveWeaponSlot` a été déplacée dans `MountedEquipment` (seul composant
   // qui l'utilise désormais, via son input `sponsorCatalog`). `resolveWeaponName`/
@@ -455,6 +546,11 @@ export class EquipmentManager {
   /** Résout le nom affiché d'une amélioration posée — mirroir exact de `resolveWeaponName`. */
   resolveImprovementName(nomInterne: string): string {
     return this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
+  }
+
+  /** Résout le nom affiché d'un avantage acquis — mirroir exact de `resolveWeaponName`. */
+  resolveAdvantageName(nomInterne: string): string {
+    return this.sponsorCatalog().avantages.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 
   /**
@@ -492,6 +588,23 @@ export class EquipmentManager {
   }
 
   improvementRemovalConfirmLabel(): string {
+    return 'Retirer';
+  }
+
+  /**
+   * Mirroir de `weaponRemovalMessage`/`improvementRemovalMessage`, mais SANS moitié
+   * prix : revendre un avantage préexistant fait perdre la TOTALITÉ de son prix
+   * (aucun remboursement, cf. `Advantage.price` backend qui ne baisse jamais avec
+   * `isSold`) — texte différent pour ne jamais laisser croire à un remboursement à 50%.
+   */
+  advantageRemovalMessage(advantage: VehicleAdvantage): string {
+    const nom = this.resolveAdvantageName(advantage.nomInterne);
+    if (!this.allowResale()) return `Retirer "${nom}" du véhicule ?`;
+    if (advantage.purchasedThisSession) return `Annuler l'achat de "${nom}" ?`;
+    return `Revendre "${nom}" ? Le prix total (${advantage.prix} jerricans) est perdu, aucun remboursement.`;
+  }
+
+  advantageRemovalConfirmLabel(): string {
     return 'Retirer';
   }
 

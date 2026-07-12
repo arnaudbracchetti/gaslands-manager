@@ -6,9 +6,11 @@ import { Team } from '../../team/domain/team';
 import { Vehicle } from '../../team/domain/vehicle';
 import { Weapon } from '../../team/domain/weapon';
 import { Improvement } from '../../team/domain/improvement';
+import { Advantage } from '../../team/domain/advantage';
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
+import { AdvantageType } from '../../team/domain/value-objects/advantage-type';
 import { CampaignParticipant } from './campaign-participant';
 
 export function makeVehicleType(poids: 'Léger' | 'Moyen' | 'Lourd' = 'Moyen'): VehicleType {
@@ -36,6 +38,13 @@ export function makeImprovementType(): ImprovementType {
   });
 }
 
+export function makeAdvantageType(): AdvantageType {
+  return AdvantageType.from({
+    nom: 'Tireur d\'Élite', nom_interne: 'tireur_elite', categorie: 'Militaire',
+    prix: 2, description: '', regles: '',
+  });
+}
+
 export interface TestContext {
   team: Team;
   vehicle: Vehicle;
@@ -43,6 +52,10 @@ export interface TestContext {
   improvement: Improvement;
   participant: CampaignParticipant;
   participants: CampaignParticipant[];
+}
+
+export interface TestContextWithAdvantage extends TestContext {
+  advantage: Advantage;
 }
 
 /**
@@ -60,4 +73,23 @@ export function makeTestParticipant(participantId = 1): TestContext {
   participant.attachTeam(team);
 
   return { team, vehicle, weapon, improvement, participant, participants: [participant] };
+}
+
+/**
+ * Mirroir de `makeTestParticipant`, ÉTENDU d'un avantage pré-existant (id positif —
+ * distinct de `makeTestParticipant` pour ne pas changer le coût de build de 21 déjà
+ * référencé en dur dans d'autres specs, ex. `wallet === 29`). Coût du build : 12
+ * (véhicule) + 5 (arme) + 4 (amélioration) + 2 (avantage) = 23. Cagnotte initiale : 27.
+ */
+export function makeTestParticipantWithAdvantage(participantId = 1): TestContextWithAdvantage {
+  const weapon = new Weapon(10, makeWeaponType(), 'avant');
+  const improvement = new Improvement(20, makeImprovementType(), null, false);
+  const advantage = new Advantage(30, makeAdvantageType());
+  const vehicle = new Vehicle(1, 1, makeVehicleType(), [weapon], [improvement], [advantage]);
+  const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+
+  const participant = new CampaignParticipant(participantId, 42, 1, false);
+  participant.attachTeam(team);
+
+  return { team, vehicle, weapon, improvement, advantage, participant, participants: [participant] };
 }

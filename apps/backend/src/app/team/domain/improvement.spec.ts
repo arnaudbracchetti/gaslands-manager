@@ -49,6 +49,13 @@ describe('Improvement', () => {
     });
   });
 
+  describe('resaleRefund', () => {
+    it('vaut floor(prix/2) tant que l\'amélioration n\'est pas encore vendue', () => {
+      const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);
+      expect(improvement.resaleRefund).toBe(2); // floor(4/2), complémentaire de price=2 (ceil) une fois vendue
+    });
+  });
+
   describe('markLost / clearLost', () => {
     it('isLost est false par défaut', () => {
       const improvement = new Improvement(1, makeImprovementType(4, 1), null, false);

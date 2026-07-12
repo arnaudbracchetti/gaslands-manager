@@ -38,6 +38,12 @@ export class VehicleOrm {
   })
   weapons: WeaponOrm[];
 
+  @OneToMany(() => VehicleAdvantageOrm, (advantage) => advantage.vehicle, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
+  advantages: VehicleAdvantageOrm[];
+
   @CreateDateColumn()
   createdAt: Date;
 }
@@ -57,6 +63,30 @@ export class VehicleImprovementOrm {
   estDefaut: boolean;
 
   @ManyToOne(() => VehicleOrm, (vehicle) => vehicle.improvements, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'vehicleId' })
+  vehicle: VehicleOrm;
+
+  @Column()
+  vehicleId: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+
+/**
+ * Un avantage acquis sur un véhicule. Mirroir de `VehicleImprovementOrm`, SANS colonne
+ * `orientation` (un avantage n'en demande jamais) ni `estDefaut` (aucun véhicule du
+ * catalogue n'a d'avantage intégré à son profil de base).
+ */
+@Entity('vehicle_advantages')
+export class VehicleAdvantageOrm {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ length: 100 })
+  nomInterne: string;
+
+  @ManyToOne(() => VehicleOrm, (vehicle) => vehicle.advantages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicleId' })
   vehicle: VehicleOrm;
 

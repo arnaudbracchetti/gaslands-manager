@@ -30,7 +30,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CatalogService } from './catalog.service';
 import { ImprovementDecoratorFactory } from '../team/domain/improvement-decorator.factory';
-import type { Sponsor, Vehicule, Arme, Amelioration } from './catalog.interfaces';
+import { AdvantageDecoratorFactory } from '../team/domain/advantage-decorator.factory';
+import type { Sponsor, Vehicule, Arme, Amelioration, Avantage } from './catalog.interfaces';
 
 // ── Sous-classe avec chemin absolu vers les vrais fichiers ─────────────────────
 //
@@ -69,6 +70,7 @@ let sponsors: Sponsor[];
 let vehicules: Vehicule[];
 let armes: Arme[];
 let ameliorations: Amelioration[];
+let avantages: Avantage[];
 let sponsorNoms: Set<string>;
 
 beforeAll(() => {
@@ -82,6 +84,7 @@ beforeAll(() => {
   vehicules = service.getAllVehicules();
   armes = service.getAllArmes();
   ameliorations = service.getAllAmeliorations();
+  avantages = service.getAllAvantages();
 
   // Ensemble des noms de sponsors pour vérifier les références croisées
   sponsorNoms = new Set(sponsors.map((s) => s.nom));
@@ -113,6 +116,10 @@ describe('Validité YAML — chargement sans erreur', () => {
     // (Idris/Slime/Scarlett) + 6 exclusives (Mégaphone, Micro-Blindage,
     // 4 Remorques) = 19 améliorations
     expect(ameliorations).toHaveLength(19);
+  });
+
+  it('charge les 72 avantages (12 catégories × 6)', () => {
+    expect(avantages).toHaveLength(72);
   });
 
   it('tous les sponsors ont un nom non vide', () => {
@@ -152,11 +159,21 @@ describe('nom_interne — présence et format', () => {
     }
   });
 
+  it('tous les avantages ont un nom_interne non vide', () => {
+    for (const a of avantages) {
+      expect(
+        a.nom_interne,
+        `L'avantage "${a.nom}" n'a pas de nom_interne`,
+      ).toBeTruthy();
+    }
+  });
+
   it('les nom_interne ne contiennent pas d\'espaces (snake_case)', () => {
     const tous = [
       ...vehicules.map((v) => ({ nom: v.nom, nom_interne: v.nom_interne })),
       ...armes.map((a) => ({ nom: a.nom, nom_interne: a.nom_interne })),
       ...ameliorations.map((a) => ({ nom: a.nom, nom_interne: a.nom_interne })),
+      ...avantages.map((a) => ({ nom: a.nom, nom_interne: a.nom_interne })),
     ];
     for (const item of tous) {
       expect(
@@ -184,6 +201,12 @@ describe('nom_interne — unicité dans chaque catégorie', () => {
 
   it('aucun doublon de nom_interne parmi les améliorations', () => {
     const noms = ameliorations.map((a) => a.nom_interne);
+    const doublons = noms.filter((n, i) => noms.indexOf(n) !== i);
+    expect(doublons, `Doublons détectés : ${doublons.join(', ')}`).toHaveLength(0);
+  });
+
+  it('aucun doublon de nom_interne parmi les avantages', () => {
+    const noms = avantages.map((a) => a.nom_interne);
     const doublons = noms.filter((n, i) => noms.indexOf(n) !== i);
     expect(doublons, `Doublons détectés : ${doublons.join(', ')}`).toHaveLength(0);
   });
@@ -443,5 +466,82 @@ describe('necessite_orientation — valeurs métier attendues', () => {
         `L'amélioration "${a.nom}" (comportement: ${a.comportement ?? 'aucun'}) devrait avoir necessite_orientation=${attendu}`,
       ).toBe(attendu);
     }
+  });
+});
+
+// ── 8. Avantages — catégories, comportement↔registre, résolution sponsor ─────
+//
+// Contrairement aux armes/améliorations, un avantage ne déclare pas de
+// sponsors_autorises : l'éligibilité est DÉRIVÉE (avantage.categorie ∈
+// sponsor.classes_avantage). Ces tests verrouillent donc un contrat différent :
+// chaque avantage doit porter une des 12 catégories déjà utilisées dans
+// sponsors.yml, et chaque sponsor doit voir exactement 12 avantages (ses 2
+// catégories × 6). Un avantage avec une catégorie mal orthographiée serait
+// invisible pour TOUS les sponsors sans qu'aucune erreur ne se déclenche —
+// c'est précisément ce que ce test rend explicite.
+
+describe('Avantages — catégories cohérentes avec sponsors.yml (classes_avantage)', () => {
+  const CATEGORIES_CONNUES = new Set([
+    'Agression', 'Audace', 'Dur à Cuire', 'Horreur', 'Mécanique', 'Militaire',
+    'Optimisation', 'Poursuite', 'Précision', 'Rapidité', 'Technologie', 'Trompe-la-Mort',
+  ]);
+
+  it('les 12 catégories connues sont exactement celles utilisées dans classes_avantage', () => {
+    const categoriesUtilisees = new Set(sponsors.flatMap((s) => s.classes_avantage));
+    expect(categoriesUtilisees).toEqual(CATEGORIES_CONNUES);
+  });
+
+  it('chaque avantage porte une catégorie parmi les 12 connues', () => {
+    for (const a of avantages) {
+      expect(
+        CATEGORIES_CONNUES.has(a.categorie),
+        `L'avantage "${a.nom}" a une catégorie inconnue : "${a.categorie}"`,
+      ).toBe(true);
+    }
+  });
+
+  it('chaque catégorie contient exactement 6 avantages', () => {
+    for (const categorie of CATEGORIES_CONNUES) {
+      const count = avantages.filter((a) => a.categorie === categorie).length;
+      expect(count, `La catégorie "${categorie}" ne contient pas 6 avantages (trouvé : ${count})`).toBe(6);
+    }
+  });
+
+  it('chaque sponsor voit exactement 12 avantages résolus (2 catégories × 6)', () => {
+    for (const sponsor of sponsors) {
+      expect(
+        sponsor.avantages.length,
+        `Le sponsor "${sponsor.nom}" ne voit pas 12 avantages (trouvé : ${sponsor.avantages.length})`,
+      ).toBe(12);
+    }
+  });
+
+  it('les avantages résolus pour un sponsor correspondent exactement à ses classes_avantage', () => {
+    for (const sponsor of sponsors) {
+      const categoriesResolues = new Set(sponsor.avantages.map((a) => a.categorie));
+      expect(categoriesResolues).toEqual(new Set(sponsor.classes_avantage));
+    }
+  });
+});
+
+describe('Avantages — comportement ↔ AdvantageDecoratorFactory.REGISTRE', () => {
+  it('tout `comportement` déclaré dans avantage.yml correspond à une entrée du REGISTRE', () => {
+    const comportementsDeclares = avantages
+      .map((a) => a.comportement)
+      .filter((c): c is string => c !== undefined);
+
+    for (const comportement of comportementsDeclares) {
+      expect(
+        AdvantageDecoratorFactory.REGISTRE[comportement],
+        `Le comportement "${comportement}" est déclaré dans avantage.yml mais absent du REGISTRE`,
+      ).toBeDefined();
+    }
+  });
+
+  it('exactement 3 avantages déclarent un comportement (expertise, cascadeur, sur_deux_roues)', () => {
+    const comportementsDeclares = avantages.filter((a) => a.comportement !== undefined);
+    expect(comportementsDeclares.map((a) => a.comportement).sort()).toEqual([
+      'cascadeur', 'expertise', 'sur_deux_roues',
+    ]);
   });
 });

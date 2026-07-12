@@ -27,6 +27,15 @@ export class Improvement {
   }
 
   /**
+   * Montant remboursé si cette amélioration est revendue MAINTENANT (avant tout appel
+   * à `markSold()`) — moitié prix arrondie à l'inférieur (p.170), même raisonnement
+   * que `Weapon.resaleRefund`.
+   */
+  get resaleRefund(): number {
+    return Math.floor(this.price / 2);
+  }
+
+  /**
    * Emplacements occupés par cette amélioration.
    * Retourne 0 si l'amélioration est perdue (Table des Épaves, ligne ARRACHEE) OU vendue
    * — même raisonnement que `Weapon.slots` : l'emplacement est libéré, le prix ne

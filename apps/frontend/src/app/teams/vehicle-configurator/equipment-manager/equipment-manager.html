@@ -56,10 +56,12 @@
     <app-mounted-equipment
       [weapons]="vehicle().weapons"
       [improvements]="vehicle().improvements"
+      [advantages]="vehicle().advantages"
       [sponsorCatalog]="sponsorCatalog()"
       [locked]="locked()"
       (weaponRemoved)="removeWeapon($event)"
-      (improvementRemoved)="removeImprovement($event)" />
+      (improvementRemoved)="removeImprovement($event)"
+      (advantageRemoved)="removeAdvantage($event)" />
 
   </section>
 
@@ -131,6 +133,44 @@
           </div>
         }
       </section>
+
+      <!--
+        ═══ Avantages — 2 sous-listes par catégorie de style du sponsor ═══
+        (`Sponsor.classes_avantage[0]`/`[1]`, cf. sponsors.yml) plutôt qu'une liste
+        unique de 12 avantages — présentation demandée pour clarifier l'IHM. Jamais
+        d'orientation pour un avantage : `requiresOrientation` toujours `false`.
+      -->
+      <section class="em-equipment__group">
+        <h3 class="em-equipment__title">Avantages — {{ sponsorCatalog().classes_avantage[0] }}</h3>
+        @if (advantagesCategoryA().length === 0) {
+          <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
+        } @else {
+          <div class="em-equipment__list">
+            @for (advantage of advantagesCategoryA(); track advantage.nomInterne) {
+              <app-equipment-option
+                [option]="advantage"
+                [requiresOrientation]="false"
+                (chosen)="addAdvantage($event)" />
+            }
+          </div>
+        }
+      </section>
+
+      <section class="em-equipment__group">
+        <h3 class="em-equipment__title">Avantages — {{ sponsorCatalog().classes_avantage[1] }}</h3>
+        @if (advantagesCategoryB().length === 0) {
+          <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
+        } @else {
+          <div class="em-equipment__list">
+            @for (advantage of advantagesCategoryB(); track advantage.nomInterne) {
+              <app-equipment-option
+                [option]="advantage"
+                [requiresOrientation]="false"
+                (chosen)="addAdvantage($event)" />
+            }
+          </div>
+        }
+      </section>
     </div>
   }
 
@@ -153,6 +193,15 @@
       cancelLabel="Fermer"
       (confirmed)="onConfirmRemoveImprovement()"
       (cancelled)="pendingRemoveImprovement.set(null)" />
+  }
+
+  @if (pendingRemoveAdvantage()) {
+    <app-confirm-modal
+      [message]="advantageRemovalMessage(pendingRemoveAdvantage()!)"
+      [confirmLabel]="advantageRemovalConfirmLabel()"
+      cancelLabel="Fermer"
+      (confirmed)="onConfirmRemoveAdvantage()"
+      (cancelled)="pendingRemoveAdvantage.set(null)" />
   }
 
 </div>

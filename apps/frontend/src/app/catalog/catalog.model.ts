@@ -74,6 +74,22 @@ export interface Amelioration {
   necessite_orientation: boolean;
 }
 
+/** Avantage du catalogue — miroir de `Avantage` (backend `catalog.interfaces.ts`). */
+export interface Avantage {
+  nom: string;
+  nom_interne: string;
+  /** Une des 12 étiquettes déjà présentes dans `classes_avantage` (ci-dessous). */
+  categorie: string;
+  prix: number;
+  description: string;
+  regles: string;
+  /** Clé du décorateur métier — purement informative côté frontend, comme
+   *  `Amelioration.comportement`. */
+  comportement?: string;
+  // Pas de `emplacement` ni `necessite_orientation` : un avantage n'occupe jamais
+  // de slot et ne demande jamais d'orientation.
+}
+
 /**
  * Sponsor avec ses relations résolues — miroir de `Sponsor` (backend, vue
  * "enrichie" exposée par `GET /api/catalog/sponsors/:nom`). Voir la note d'en-tête
@@ -90,4 +106,6 @@ export interface Sponsor {
   armes: Arme[];
   /** Améliorations que ce sponsor est autorisé à sélectionner — alimente l'étape 2 du builder. */
   ameliorations: Amelioration[];
+  /** Avantages dont la catégorie figure dans `classes_avantage` (2 catégories, 12 avantages). */
+  avantages: Avantage[];
 }

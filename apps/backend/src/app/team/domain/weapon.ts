@@ -39,6 +39,16 @@ export class Weapon {
   }
 
   /**
+   * Montant remboursé si cette arme est revendue MAINTENANT (avant tout appel à
+   * `markSold()`) — moitié prix arrondie à l'inférieur (p.170). Calculé sur `price`
+   * pendant qu'il reflète encore le prix plein (`isSold` toujours faux à cet instant) :
+   * floor(X/2) remboursé + ceil(X/2) résiduel (post-vente, cf. `price`) = X.
+   */
+  get resaleRefund(): number {
+    return Math.floor(this.price / 2);
+  }
+
+  /**
    * Emplacements occupés par cette arme.
    * Retourne 0 si l'arme est perdue OU vendue : l'emplacement est libéré (perte : pour un
    * remplacement ; vente : l'arme n'est physiquement plus sur le véhicule). `price` ne

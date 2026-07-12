@@ -73,6 +73,7 @@ const mockSponsorCatalog: Sponsor = {
   vehicules: [mockVehicule],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 // Véhicule "nu" retourné par `vehicleService.create` — entité brute, pas encore équipée.
@@ -82,6 +83,7 @@ const mockCreatedVehicle: Vehicle = {
   teamId: 7,
   improvements: [],
   weapons: [],
+  advantages: [],
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -92,6 +94,7 @@ const mockOtherVehicle: Vehicle = {
   teamId: 7,
   improvements: [],
   weapons: [],
+  advantages: [],
   createdAt: '2026-01-02T00:00:00.000Z',
 };
 
@@ -104,6 +107,7 @@ describe('VehicleConfigurator', () => {
     getAllForTeam: ReturnType<typeof vi.fn>;
     getAvailableWeapons: ReturnType<typeof vi.fn>;
     getAvailableImprovements: ReturnType<typeof vi.fn>;
+    getAvailableAdvantages: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -114,10 +118,11 @@ describe('VehicleConfigurator', () => {
       create: vi.fn().mockReturnValue(of(mockCreatedVehicle)),
       getAllForTeam: vi.fn().mockReturnValue(of([mockCreatedVehicle, mockOtherVehicle])),
       // `EquipmentManager` (rendu réellement dès que `vehicle()` est non-nul,
-      // cf. en-tête) charge ces deux catalogues dans son `effect()` constructeur
+      // cf. en-tête) charge ces trois catalogues dans son `effect()` constructeur
       // — `of([])` suffit : son AFFICHAGE n'est pas l'objet de CES tests.
       getAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getAvailableImprovements: vi.fn().mockReturnValue(of([])),
+      getAvailableAdvantages: vi.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({

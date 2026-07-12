@@ -29,6 +29,7 @@ import { Observable } from 'rxjs';
 import {
   AvailableImprovementDto,
   AvailableWeaponDto,
+  AvailableAdvantageDto,
   EquipmentChoice,
   Vehicle,
 } from './vehicle-builder.model';
@@ -36,10 +37,13 @@ import {
 export interface EquipmentDataSource {
   getAvailableWeapons(vehicleId: number): Observable<AvailableWeaponDto[]>;
   getAvailableImprovements(vehicleId: number): Observable<AvailableImprovementDto[]>;
+  getAvailableAdvantages(vehicleId: number): Observable<AvailableAdvantageDto[]>;
   addWeapon(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle>;
   addImprovement(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle>;
+  addAdvantage(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle>;
   removeWeapon(vehicleId: number, weaponId: number): Observable<Vehicle>;
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle>;
+  removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle>;
 }
 
 export const EQUIPMENT_DATA_SOURCE = new InjectionToken<EquipmentDataSource>('EquipmentDataSource');

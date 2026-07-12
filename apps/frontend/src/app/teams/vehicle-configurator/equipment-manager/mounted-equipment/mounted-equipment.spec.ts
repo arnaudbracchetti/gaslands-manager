@@ -11,7 +11,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { MountedEquipment } from './mounted-equipment';
 import { Sponsor } from '../../../../catalog/catalog.model';
-import { VehicleImprovement, Weapon } from '../../vehicle-builder.model';
+import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
 
 // Catalogue minimal — sert à résoudre noms/emplacements affichés.
 const mockSponsorCatalog: Sponsor = {
@@ -26,6 +26,9 @@ const mockSponsorCatalog: Sponsor = {
   ],
   ameliorations: [
     { nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1, description: '', regles: '', sponsors_autorises: ['Rutherford'], necessite_orientation: false },
+  ],
+  avantages: [
+    { nom: 'Tireur d\'Élite', nom_interne: 'tireur_elite', categorie: 'Militaire', prix: 2, description: '', regles: '' },
   ],
 };
 
@@ -69,13 +72,22 @@ const mockWeaponDefaut: Weapon = {
   estDefaut: true,
 };
 
+const mockAdvantage: VehicleAdvantage = {
+  id: 400,
+  nomInterne: 'tireur_elite',
+  vehicleId: 100,
+  createdAt: '2026-01-01T00:00:04.000Z',
+  prix: 2,
+};
+
 describe('MountedEquipment', () => {
   let component: MountedEquipment;
   let fixture: ComponentFixture<MountedEquipment>;
 
-  function setInputs(weapons: Weapon[], improvements: VehicleImprovement[]): void {
+  function setInputs(weapons: Weapon[], improvements: VehicleImprovement[], advantages: VehicleAdvantage[] = []): void {
     fixture.componentRef.setInput('weapons', weapons);
     fixture.componentRef.setInput('improvements', improvements);
+    fixture.componentRef.setInput('advantages', advantages);
     fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
     fixture.detectChanges();
   }
@@ -97,6 +109,7 @@ describe('MountedEquipment', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Aucune arme montée');
     expect(el.textContent).toContain('Aucune amélioration installée');
+    expect(el.textContent).toContain('Aucun avantage acquis');
     expect(el.querySelectorAll('.me-item')).toHaveLength(0);
   });
 
@@ -253,5 +266,52 @@ describe('MountedEquipment', () => {
     (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
 
     expect(emitted).toEqual([mockImprovement]);
+  });
+
+  // ── Avantages (jamais d'orientation ni d'emplacement, perte totale à la revente) ──
+
+  it('affiche le titre de section, le nom résolu et le badge prix (sans badge emplacement) pour un avantage acquis', () => {
+    setInputs([], [], [mockAdvantage]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Avantages (1)');
+    expect(el.textContent).toContain('Tireur d\'Élite');
+    expect(el.textContent).toContain('2');
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(1);
+  });
+
+  it('masque par défaut un avantage vendu (filtre "showSold"), révélé une fois le filtre activé', () => {
+    setInputs([], [], [{ ...mockAdvantage, sold: true }]);
+
+    let el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Tous les avantages de ce véhicule ont été vendus');
+
+    component.showSold.set(true);
+    fixture.detectChanges();
+    el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-item__watermark')).not.toBeNull();
+  });
+
+  it('affiche le filigrane "Vendu" (pas de bouton Retirer) pour un avantage vendu, prix INCHANGÉ (perte totale, pas de résiduel)', () => {
+    setInputs([], [], [{ ...mockAdvantage, sold: true }]);
+    component.showSold.set(true);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.me-item__watermark')?.textContent).toContain('Vendu');
+    expect(el.querySelector('.me-name--sold')).not.toBeNull();
+    expect(el.querySelector('.me-remove')).toBeNull();
+    expect(el.textContent).toContain('Tireur d\'Élite');
+    expect(el.textContent).toContain('2'); // prix catalogue plein, jamais réduit
+  });
+
+  it('émet advantageRemoved au clic sur "Retirer" d\'un avantage', () => {
+    setInputs([], [], [mockAdvantage]);
+    const emitted: VehicleAdvantage[] = [];
+    outputToObservable(component.advantageRemoved).subscribe((a) => emitted.push(a));
+
+    (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual([mockAdvantage]);
   });
 });

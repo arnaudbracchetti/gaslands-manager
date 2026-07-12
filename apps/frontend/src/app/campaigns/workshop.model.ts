@@ -14,6 +14,7 @@ import {
   Vehicle,
   VehicleImprovement,
   Weapon,
+  VehicleAdvantage,
 } from '../teams/vehicle-configurator/vehicle-builder.model';
 
 export interface WorkshopWeaponDto {
@@ -53,6 +54,15 @@ export interface WorkshopSequellaDto {
   chocsCost: number;
 }
 
+export interface WorkshopAdvantageDto {
+  id: number;
+  nomInterne: string;
+  /** Ne baisse jamais avec `isSold` (perte totale à la revente, cf. `Advantage.price`). */
+  price: number;
+  isSold: boolean;
+  purchasedThisSession: boolean;
+}
+
 export interface WorkshopVehicleDto {
   id: number;
   nomInterne: string;
@@ -62,6 +72,7 @@ export interface WorkshopVehicleDto {
   sequellas: WorkshopSequellaDto[];
   weapons: WorkshopWeaponDto[];
   improvements: WorkshopImprovementDto[];
+  advantages: WorkshopAdvantageDto[];
 }
 
 export interface WorkshopStateDto {
@@ -76,7 +87,7 @@ export interface WorkshopStateDto {
 // ── Achat / revente (POST /api/campaigns/:id/events/equipment) ────────────────
 
 export type EquipmentOperation = 'BUY' | 'SELL';
-export type EquipmentEntityType = 'VEHICLE' | 'WEAPON' | 'IMPROVEMENT';
+export type EquipmentEntityType = 'VEHICLE' | 'WEAPON' | 'IMPROVEMENT' | 'ADVANTAGE';
 
 /** Corps de `POST /api/campaigns/:id/events/equipment` — miroir de `ChangeEquipmentDto`. */
 export interface ChangeEquipmentDto {
@@ -129,6 +140,17 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
         lost: x.isLost,
+      }),
+    ),
+    advantages: w.advantages.map(
+      (x: WorkshopAdvantageDto): VehicleAdvantage => ({
+        id: x.id,
+        nomInterne: x.nomInterne,
+        vehicleId: w.id,
+        createdAt: '',
+        prix: x.price,
+        sold: x.isSold,
+        purchasedThisSession: x.purchasedThisSession,
       }),
     ),
   };

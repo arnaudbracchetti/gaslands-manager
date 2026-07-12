@@ -1,0 +1,707 @@
+# Catalogue des avantages de véhicule Gaslands
+#
+# Ce fichier est chargé une seule fois au démarrage par CatalogService.
+# Contrairement aux armes/améliorations, un avantage ne déclare pas de sponsors
+# autorisés item par item : l'éligibilité est DÉRIVÉE du champ `categorie`, comparé
+# à `Sponsor.classes_avantage` (déjà présent dans sponsors.yml, 2 catégories par
+# sponsor). CatalogService filtre : avantage.categorie ∈ sponsor.classes_avantage.
+#
+# Structure de chaque entrée :
+#   nom          - Nom affiché dans l'UI
+#   nom_interne  - Identifiant technique stable (snake_case, sans accents)
+#   categorie    - Une des 12 étiquettes de style déjà utilisées dans
+#                  sponsors.yml (classes_avantage) : Agression, Audace,
+#                  Dur à Cuire, Horreur, Mécanique, Militaire, Optimisation,
+#                  Poursuite, Précision, Rapidité, Technologie, Trompe-la-Mort.
+#   prix         - Coût en Jerricans (number).
+#   description  - Courte synthèse (une phrase), affichée sur la carte équipement.
+#   regles       - Texte complet de la règle (liste Markdown), affiché en détail.
+#   comportement - (optionnel) Clé du décorateur métier à instancier
+#                  (AdvantageDecoratorFactory). Présent uniquement pour les 3
+#                  avantages à effet mécanique réel : expertise, cascadeur,
+#                  sur_deux_roues. Absent pour les 69 autres (purement descriptifs).
+#
+# Pas de champ `emplacement` (toujours 0, aucun avantage n'occupe de slot) ni
+# `necessite_orientation` (jamais requise) ni `sponsors_autorises` (résolution
+# par catégorie, cf. ci-dessus).
+
+avantages:
+
+  # ── Agression ──────────────────────────────────────────────────────────────
+
+  - nom: "Double Canon"
+    nom_interne: "double_canon"
+    categorie: "Agression"
+    prix: 2
+    description: |
+      Améliore la précision de plusieurs armes d'équipage lors de l'attaque.
+    regles: |
+      - Lors de l'Étape d'Attaque de ce véhicule, jusqu'à trois Armes d'Équipage peuvent recevoir un bonus de +1 pour toucher.
+
+  - nom: "Abordage"
+    nom_interne: "abordage"
+    categorie: "Agression"
+    prix: 2
+    description: |
+      Permet d'attaquer même au contact d'un obstacle, sans pénalité de Désorientation.
+    regles: |
+      - Ce véhicule ignore la règle Désorientation. Autrement dit, ce véhicule peut attaquer lors de son Étape d'Attaque même s'il est en contact avec un obstacle.
+
+  - nom: "Marteau de Guerre"
+    nom_interne: "marteau_de_guerre"
+    categorie: "Agression"
+    prix: 4
+    description: |
+      Rend l'éperonnage plus dévastateur à mesure que les Jetons Danger s'accumulent.
+    regles: |
+      - Lorsqu'il effectue un Éperonnage, ce véhicule gagne +1 dé d'attaque pour chaque Jeton Danger qu'il a actuellement.
+
+  - nom: "Psychopathe"
+    nom_interne: "psychopathe"
+    categorie: "Agression"
+    prix: 5
+    description: |
+      Punit les véhicules adverses qui s'approchent trop près.
+    regles: |
+      - Lorsqu'un véhicule contrôlé par un autre joueur termine son Étape de Déplacement à Portée Courte maximum de ce véhicule, il prend un Jeton Danger.
+
+  - nom: "Broyeur"
+    nom_interne: "broyeur"
+    categorie: "Agression"
+    prix: 5
+    description: |
+      Permet de convertir les dégâts d'un éperonnage en Jetons Danger plutôt qu'en perte de carrosserie.
+    regles: |
+      - Avant que ce véhicule ne lance ses dés d'attaque lors d'un Éperonnage, il peut choisir d'ajouter 1 Jeton Danger au véhicule ciblé pour chaque point de dégât qu'il inflige, au lieu de lui retirer des Points de Carrosserie.
+
+  - nom: "Engin de la Mort"
+    nom_interne: "engin_de_la_mort"
+    categorie: "Agression"
+    prix: 5
+    description: |
+      Autorise ce véhicule à effectuer des Passages en Force, comme une Forteresse Mobile.
+    regles: |
+      - Ce véhicule peut effectuer des Passages en Force, comme une Forteresse Mobile.
+
+  # ── Audace ──────────────────────────────────────────────────────────────────
+
+  - nom: "Symbiose"
+    nom_interne: "symbiose"
+    categorie: "Audace"
+    prix: 2
+    description: |
+      Autorise des tentatives de coup répétées lors du déplacement, au prix de Jetons Danger.
+    regles: |
+      - Ce véhicule peut Tenter le Coup autant de fois qu'il le souhaite lors d'une même Étape de Déplacement, en prenant 1 Jeton Danger à chaque fois.
+
+  - nom: "Insaisissable"
+    nom_interne: "insaisissable"
+    categorie: "Audace"
+    prix: 3
+    description: |
+      Pénalise les véhicules qui tentent un éperonnage contre ce véhicule.
+    regles: |
+      - Les véhicules faisant un Éperonnage contre ce véhicule subissent une pénalité de -2 Dés d'attaque.
+
+  - nom: "As du Frein à Main"
+    nom_interne: "as_du_frein_a_main"
+    categorie: "Audace"
+    prix: 3
+    description: |
+      Permet de choisir librement l'orientation lors d'une Rotation.
+    regles: |
+      - Lorsque vous appliquez un résultat Rotation, ce véhicule peut choisir n'importe quelle orientation.
+
+  - nom: "Feinte"
+    nom_interne: "feinte"
+    categorie: "Audace"
+    prix: 5
+    description: |
+      Convertit des Jetons Danger en bonus aux jets d'Esquive.
+    regles: |
+      - Avant de faire un jet d'Esquive, ce véhicule peut prendre n'importe quel nombre de Jetons Danger pour ajouter +1 à chacun de ses dés d'Esquive pour chaque Jeton Danger ainsi pris. Un résultat de « 1 » sur un dé d'Esquive est toujours considéré comme un échec.
+
+  - nom: "Dérapage Contrôlé"
+    nom_interne: "derapage_controle"
+    categorie: "Audace"
+    prix: 5
+    description: |
+      Autorise un choix élargi de gabarits pour résoudre un Dérapage.
+    regles: |
+      - Ce véhicule peut utiliser n'importe quel gabarit, à l'exception du gabarit droit Long, au lieu du gabarit de Dérapage lorsqu'il applique un résultat Dérapage. Comme décrit au point 1.1 de l'Étape de Déplacement, vous devez utiliser le premier gabarit de déplacement que vous touchez. Considérez le gabarit de déplacement choisi comme un gabarit de Dérapage pour déterminer la Position Finale.
+
+  - nom: "Cascadeur"
+    nom_interne: "cascadeur"
+    categorie: "Audace"
+    prix: 7
+    comportement: "cascadeur"
+    description: |
+      Réservé aux véhicules légers et maniables, permet d'ignorer des obstacles au prix de Jetons Danger.
+    regles: |
+      - Cet avantage ne peut être pris que par les véhicules de Poids Léger ou Moyen avec une Valeur de Manœuvrabilité d'au moins 3.
+      - Ce véhicule peut choisir d'ignorer n'importe quel nombre d'obstacles lors de son Étape de Déplacement.
+      - Après chaque Étape de Déplacement où ce véhicule choisit d'ignorer des obstacles grâce à cette capacité, ce véhicule prend immédiatement 3 Jetons Danger.
+
+  # ── Dur à Cuire ─────────────────────────────────────────────────────────────
+
+  - nom: "Baril de Poudre"
+    nom_interne: "baril_de_poudre"
+    categorie: "Dur à Cuire"
+    prix: 1
+    description: |
+      Rend l'explosion de ce véhicule plus dangereuse pour son entourage.
+    regles: |
+      - Ce véhicule peut ajouter +1 à son Test d'Explosion. Considérez ce véhicule comme étant d'une classe de Poids immédiatement supérieure lorsqu'il explose. Ce bonus s'applique lors de la résolution de l'avantage Feux d'Artifice.
+
+  - nom: "Sens du Spectacle"
+    nom_interne: "sens_du_spectacle"
+    categorie: "Dur à Cuire"
+    prix: 1
+    description: |
+      Transforme une Perte de Contrôle en Vote du Public.
+    regles: |
+      - Si ce véhicule subit une Perte de Contrôle, gagnez 1 Vote du Public.
+
+  - nom: "Guerrier de la Route"
+    nom_interne: "guerrier_de_la_route"
+    categorie: "Dur à Cuire"
+    prix: 2
+    description: |
+      Récompense l'agressivité en retirant un Jeton Danger après avoir touché l'adversaire.
+    regles: |
+      - Une fois par activation, si ce véhicule a infligé une ou plusieurs touches à un véhicule adverse à n'importe quel moment de son activation, ce véhicule peut retirer un unique Jeton Danger à la fin de son Étape d'Attaque.
+
+  - nom: "Couvrez-moi !"
+    nom_interne: "couvrez_moi"
+    categorie: "Dur à Cuire"
+    prix: 2
+    description: |
+      Permet de transférer un Jeton Danger à un véhicule ami proche.
+    regles: |
+      - Une fois durant son activation, ce véhicule peut retirer un Jeton Danger et le placer sur un autre véhicule ami se trouvant à Portée Double maximum.
+
+  - nom: "Fou Furieux"
+    nom_interne: "fou_furieux"
+    categorie: "Dur à Cuire"
+    prix: 3
+    description: |
+      Permet de reporter un Jeton Danger sur un autre véhicule quand ceux-ci s'accumulent trop.
+    regles: |
+      - À la fin de l'Étape de Déplacement de ce véhicule, s'il cumule au moins 4 Jetons Danger, il peut retirer un Jeton Danger et le placer sur un autre véhicule se trouvant à Portée Moyenne maximum.
+
+  - nom: "Pluie de Balles"
+    nom_interne: "pluie_de_balles"
+    categorie: "Dur à Cuire"
+    prix: 3
+    description: |
+      Transforme un Dérapage en occasion de tirer à 360° avec une arme au choix.
+    regles: |
+      - Si ce véhicule résout un résultat Dérapage lors de son Étape de Déplacement, il peut choisir l'une de ses armes qui est alors considérée comme montée sur Tourelle pour le restant de l'activation.
+
+  # ── Horreur ─────────────────────────────────────────────────────────────────
+
+  - nom: "Flammes Purificatrices"
+    nom_interne: "flammes_purificatrices"
+    categorie: "Horreur"
+    prix: 1
+    description: |
+      Permet de sacrifier ses propres Points de Carrosserie pour réparer un véhicule ami.
+    regles: |
+      - Une fois par activation, au début de son activation, ce véhicule peut subir jusqu'à trois dégâts pour choisir un véhicule ami. Pour chaque point de dégât infligé par cet effet, réparez ce même nombre de Points de Carrosserie sur le véhicule choisi. Ces dégâts ne peuvent pas être réduits. Ils comptent comme ayant la règle Enflammé. Cet effet ne peut pas être utilisé pour permettre à un véhicule de dépasser sa Valeur de Carrosserie de départ.
+
+  - nom: "Visions Extatiques"
+    nom_interne: "visions_extatiques"
+    categorie: "Horreur"
+    prix: 1
+    description: |
+      Permet de transférer ses propres Jetons Danger sur un véhicule ami.
+    regles: |
+      - Une fois par activation, au début de son activation, ce véhicule peut prendre jusqu'à 3 Jetons Danger pour en défausser le même nombre d'un véhicule ami.
+
+  - nom: "Pacte avec le Diable"
+    nom_interne: "pacte_avec_le_diable"
+    categorie: "Horreur"
+    prix: 1
+    description: |
+      Additionne la Vitesse d'un allié à la sienne lors d'un test d'Esquive, au prix d'un risque partagé.
+    regles: |
+      - Lorsque ce véhicule effectue un test d'Esquive, son propriétaire peut choisir un véhicule ami à Portée Moyenne maximum. Ajoutez la Vitesse actuelle du véhicule choisi à la Vitesse actuelle du véhicule pour le test d'Esquive. Les deux véhicules subissent les dégâts non annulés de cette attaque, ainsi que les effets supplémentaires.
+
+  - nom: "Autoroute vers l'Enfer"
+    nom_interne: "autoroute_vers_enfer"
+    categorie: "Horreur"
+    prix: 2
+    description: |
+      Permet de laisser derrière soi un gabarit de Napalm en contrepartie de dégâts encaissés.
+    regles: |
+      - À la fin de son Étape de Déplacement, si ce véhicule a choisi un gabarit droit, ce véhicule peut subir deux dégâts. Ces dégâts sont considérés comme ayant la règle Enflammé. Si des Points de Carrosserie sont retirés par cet effet, ce véhicule peut laisser son gabarit de déplacement en jeu (à l'exception du gabarit de Dérapage), comme s'il s'agissait du gabarit du Largueur de Napalm. Retirez ce gabarit au début de la prochaine activation de ce véhicule (vous pouvez télécharger et imprimer un gabarit en papier supplémentaire pour cet effet).
+
+  - nom: "Manifestation Diabolique"
+    nom_interne: "manifestation_diabolique"
+    categorie: "Horreur"
+    prix: 3
+    description: |
+      Déclenche une explosion offensive au moment où ce véhicule revient en piste.
+    regles: |
+      - Lorsque ce véhicule Revient en Piste, effectuez une attaque immédiate (avec le nombre de dés correspondant au Poids de ce véhicule) contre tous les autres véhicules à Portée Moyenne maximum, comme si ce véhicule avait explosé en devenant une Épave. Cette explosion a les règles spéciales Impact et Enflammé.
+
+  - nom: "Ange de la Mort"
+    nom_interne: "ange_de_la_mort"
+    categorie: "Horreur"
+    prix: 4
+    description: |
+      Permet de sacrifier des Points de Carrosserie pour renforcer une attaque.
+    regles: |
+      - Avant d'effectuer une attaque, ce véhicule peut subir jusqu'à trois dégâts pour ajouter autant de dés d'attaque à l'une des armes utilisées dans cette attaque.
+
+  # ── Mécanique ───────────────────────────────────────────────────────────────
+
+  - nom: "Poids Mort"
+    nom_interne: "poids_mort"
+    categorie: "Mécanique"
+    prix: 2
+    description: |
+      Permet de se faire passer pour une classe de poids supérieure au prix de Jetons Danger.
+    regles: |
+      - Lors de l'Étape d'Attaque de ce véhicule, il peut prendre 2 Jetons Danger pour être considéré comme d'une classe de Poids immédiatement supérieure (sauf s'il est déjà dans la classe de Poids Lourd) jusqu'au début de sa prochaine activation.
+
+  - nom: "Expert en Tonneaux"
+    nom_interne: "expert_en_tonneaux"
+    categorie: "Mécanique"
+    prix: 2
+    description: |
+      Offre plus de flexibilité dans le placement du gabarit lors d'un Tonneau.
+    regles: |
+      - Lorsque ce véhicule subit un Tonneau, il peut choisir de placer le gabarit utilisé pour le Tonneau perpendiculairement et au contact du centre de n'importe quelle face de son véhicule, au lieu d'être en contact avec sa face avant comme à l'accoutumée.
+
+  - nom: "Cogneur"
+    nom_interne: "cogneur"
+    categorie: "Mécanique"
+    prix: 4
+    description: |
+      Inflige un Jeton Danger à l'adversaire lors d'une collision non esquivée.
+    regles: |
+      - Lors d'une collision impliquant ce véhicule, si ce véhicule annonce une réaction autre qu'Esquive contre un véhicule adverse, le véhicule adverse prend immédiatement un Jeton Danger.
+
+  - nom: "Retour de Flamme"
+    nom_interne: "retour_de_flamme"
+    categorie: "Mécanique"
+    prix: 5
+    description: |
+      Déclenche une contre-attaque automatique dès que ce véhicule encaisse des dégâts.
+    regles: |
+      - Une fois par Étape, lorsque ce véhicule perd au moins un Point de Carrosserie, effectuez une attaque avec un D6 contre chaque autre véhicule (même ami) à Portée Moyenne à la fin de cette étape.
+
+  - nom: "Concasseur"
+    nom_interne: "concasseur"
+    categorie: "Mécanique"
+    prix: 7
+    description: |
+      Donne à ce véhicule la règle spéciale Franchissement des Monster Trucks.
+    regles: |
+      - Ce véhicule gagne la règle spéciale Franchissement (voir les règles pour les Monster Trucks).
+
+  - nom: "Même pas Mal !"
+    nom_interne: "meme_pas_mal"
+    categorie: "Mécanique"
+    prix: 8
+    description: |
+      Annule les attaques adverses qui n'infligent que peu de touches.
+    regles: |
+      - Lors de l'Étape d'Attaque d'un véhicule adverse, après qu'un attaquant a lancé ses dés d'attaque contre ce véhicule, si après résolution de l'attaque il reste au maximum 2 touches non annulées, annulez ces touches.
+
+  # ── Militaire ───────────────────────────────────────────────────────────────
+
+  - nom: "Tireur d'Élite"
+    nom_interne: "tireur_elite"
+    categorie: "Militaire"
+    prix: 2
+    description: |
+      Améliore la précision de tir à longue portée.
+    regles: |
+      - Lors de l'Étape d'Attaque de ce véhicule, il gagne un bonus de +1 à chacun de ses dés pour toucher s'il effectue une attaque de tir à Portée Double mais au-delà de la Portée Moyenne. Seul un 6 naturel est une Touche Critique.
+
+  - nom: "Servant d'Artillerie"
+    nom_interne: "servant_artillerie"
+    categorie: "Militaire"
+    prix: 2
+    description: |
+      Permet de sacrifier temporairement de l'Équipage pour améliorer sa précision de tir.
+    regles: |
+      - Au début de son Étape d'Attaque, ce véhicule peut temporairement réduire de 1 sa Valeur d'Équipage, une seule fois, jusqu'à la fin de son Étape d'Attaque, pour gagner un bonus de +1 à chacun de ses dés pour toucher avec l'une de ses armes. Seul un 6 naturel est une Touche Critique.
+
+  - nom: "Chargé à Bloc"
+    nom_interne: "charge_a_bloc"
+    categorie: "Militaire"
+    prix: 2
+    description: |
+      Renforce une arme de tir qui a accumulé suffisamment de Jetons Munition.
+    regles: |
+      - Si une arme de tir sur ce véhicule cumule au moins 3 Jetons Munition avant de défausser un Jeton Munition pour attaquer, cette arme gagne +1 dé d'attaque.
+
+  - nom: "Tirs Rapides"
+    nom_interne: "tirs_rapides"
+    categorie: "Militaire"
+    prix: 2
+    description: |
+      Permet une Étape d'Attaque supplémentaire avec une seule arme, une fois par manche.
+    regles: |
+      - Une fois par manche, après avoir attaqué avec une arme, ce véhicule peut résoudre une Étape d'Attaque supplémentaire pour attaquer avec cette arme uniquement.
+
+  - nom: "Tir à la Tête"
+    nom_interne: "tir_a_la_tete"
+    categorie: "Militaire"
+    prix: 4
+    description: |
+      Rend les Touches Critiques de tir encore plus meurtrières.
+    regles: |
+      - Lorsqu'il effectue une attaque de tir, les Touches Critiques de ce véhicule infligent 3 touches au lieu des 2 habituelles.
+
+  - nom: "Riposte"
+    nom_interne: "riposte"
+    categorie: "Militaire"
+    prix: 5
+    description: |
+      Permet de contre-attaquer immédiatement après avoir subi un tir, au prix de Jetons Danger.
+    regles: |
+      - Une fois par Phase de Vitesse, si ce véhicule est la cible d'une attaque de tir, il peut prendre 2 Jetons Danger pour attaquer immédiatement, comme s'il s'agissait de son Étape d'Attaque.
+
+  # ── Optimisation ────────────────────────────────────────────────────────────
+
+  - nom: "Fenderkiss"
+    nom_interne: "fenderkiss"
+    categorie: "Optimisation"
+    prix: 2
+    description: |
+      Neutralise les effets de l'éperonnage, dans les deux sens.
+    regles: |
+      - Lorsque ce véhicule effectue un Éperonnage, il subit une pénalité de -2 dés d'attaque. Les véhicules effectuant un Éperonnage contre ce véhicule subissent une pénalité de -2 dés d'attaque.
+
+  - nom: "Propulsion"
+    nom_interne: "propulsion"
+    categorie: "Optimisation"
+    prix: 2
+    description: |
+      Modifie le point de pivot du véhicule lors d'une Rotation.
+    regles: |
+      - Ce véhicule peut pivoter autour du centre de sa face avant plutôt qu'autour de son centre de rotation lorsqu'il résout un résultat Rotation.
+
+  - nom: "Doigté"
+    nom_interne: "doigte"
+    categorie: "Optimisation"
+    prix: 3
+    description: |
+      Rend ce véhicule insensible aux icônes Danger des gabarits de déplacement.
+    regles: |
+      - Ce véhicule ignore les icônes Danger sur les gabarits de déplacement.
+
+  - nom: "Momentum"
+    nom_interne: "momentum"
+    categorie: "Optimisation"
+    prix: 3
+    description: |
+      Permet de relancer un Dé de Manœuvre en mettant de côté un résultat Dérapage ou Rotation.
+    regles: |
+      - Lorsqu'il résout ses Dés de Manœuvre, ce véhicule peut mettre de côté un résultat Dérapage ou Rotation pour relancer un Dé de Manœuvre. Cet effet peut être utilisé à plusieurs reprises. Les Dés de Manœuvre mis de côté doivent être résolus.
+
+  - nom: "Ronronnement"
+    nom_interne: "ronronnement"
+    categorie: "Optimisation"
+    prix: 6
+    description: |
+      Plafonne le nombre de Jetons Danger gagnés par activation.
+    regles: |
+      - Durant chaque activation, ce véhicule ne prend pas plus de 1 Jeton Danger pour les résultats Rotation, pas plus de 1 Jeton Danger pour les résultats Dérapage et pas plus de 1 Jeton Danger pour les résultats Danger.
+
+  - nom: "Sur Deux Roues"
+    nom_interne: "sur_deux_roues"
+    categorie: "Optimisation"
+    prix: 6
+    comportement: "sur_deux_roues"
+    description: |
+      Rend ce véhicule temporairement intangible pour les autres véhicules, au prix de Jetons Danger.
+    regles: |
+      - Si ce véhicule a une Manœuvrabilité d'au moins 3, il peut prendre 3 Jetons Danger à la fin de son Étape de Déplacement.
+      - S'il le fait, il est ignoré par les autres véhicules durant leurs Étapes de Déplacement, jusqu'au début de sa prochaine activation.
+      - Si, en ignorant ainsi ce véhicule, la Position Finale d'un véhicule tiers devait le chevaucher, reculez le véhicule tiers le long de son gabarit de déplacement autant que nécessaire pour éviter qu'il ne chevauche quoi que ce soit.
+
+  # ── Poursuite ───────────────────────────────────────────────────────────────
+
+  - nom: "À tes Trousses"
+    nom_interne: "a_tes_trousses"
+    categorie: "Poursuite"
+    prix: 2
+    description: |
+      Punit les véhicules adverses qui manœuvrent trop près de ce véhicule.
+    regles: |
+      - Lorsqu'un véhicule adverse résout un Dérapage ou une Rotation qui termine au maximum à Portée Courte de ce véhicule, le véhicule adverse prend 1 Jeton Danger.
+
+  - nom: "Le Malheur des Uns..."
+    nom_interne: "le_malheur_des_uns"
+    categorie: "Poursuite"
+    prix: 2
+    description: |
+      Efface tous les Jetons Danger de ce véhicule quand un adversaire proche perd le contrôle.
+    regles: |
+      - Si un autre véhicule Perd le Contrôle au maximum à Portée Courte de ce véhicule (que ce soit avant ou après un Tonneau), retirez tous les Jetons Danger de ce véhicule.
+
+  - nom: "Provocation"
+    nom_interne: "provocation"
+    categorie: "Poursuite"
+    prix: 2
+    description: |
+      Impose un Dé de Manœuvre à un véhicule ciblé proche.
+    regles: |
+      - Au début de l'Étape d'Attaque de ce véhicule, lancez un Dé de Manœuvre. Si vous obtenez un résultat différent d'Embrayage, vous pouvez placer ce Dé de Manœuvre, sans le modifier, sur la carte Tableau de Bord d'un véhicule ciblé à Portée Courte maximum. Ce Dé de Manœuvre doit être résolu par le véhicule ciblé lors de sa prochaine Étape de Déplacement, et il ne peut pas être relancé. Il pourra cependant être annulé par un résultat Embrayage lors de la prochaine activation du véhicule ciblé.
+
+  - nom: "Distancer"
+    nom_interne: "distancer"
+    categorie: "Poursuite"
+    prix: 2
+    description: |
+      Punit les véhicules adverses proches et plus lents.
+    regles: |
+      - Au début de l'Étape d'Attaque de ce véhicule, tous les véhicules à Portée Courte maximum de ce véhicule et dans une Vitesse actuelle inférieure à la sienne prennent 1 Jeton Danger.
+
+  - nom: "TIP"
+    nom_interne: "tip"
+    categorie: "Poursuite"
+    prix: 4
+    description: |
+      Force un véhicule adverse à effectuer un déplacement dangereux après une collision.
+    regles: |
+      - Lors de l'activation de ce véhicule, s'il est impliqué dans une Collision autre que Frontale avec un véhicule adverse, son propriétaire peut annoncer « TIP » comme réaction (pour Technique d'Immobilisation Provoquée), en ciblant le véhicule adverse, au lieu d'un Éperonnage ou d'une Esquive. S'il le fait, il peut choisir n'importe quel gabarit de déplacement que la cible considère comme Dangereux à sa propre Vitesse actuelle. Le propriétaire du véhicule ciblé place le gabarit à l'avant de son véhicule. Immédiatement après la résolution de cette Collision, le véhicule ciblé doit effectuer un déplacement forcé vers l'avant en utilisant le gabarit de déplacement choisi.
+
+  - nom: "Regard Déstabilisant"
+    nom_interne: "regard_destabilisant"
+    categorie: "Poursuite"
+    prix: 5
+    description: |
+      Empêche les véhicules adverses proches de retirer des Jetons Danger via un résultat Embrayage.
+    regles: |
+      - Les véhicules adverses à Portée Courte maximum de ce véhicule ne peuvent pas utiliser les résultats Embrayage pour retirer des Jetons Danger de leur carte Tableau de Bord.
+
+  # ── Précision ───────────────────────────────────────────────────────────────
+
+  - nom: "Mister Fahrenheit"
+    nom_interne: "mister_fahrenheit"
+    categorie: "Précision"
+    prix: 2
+    description: |
+      Plafonne les Jetons Danger gagnés lors des collisions d'une même activation.
+    regles: |
+      - Ce véhicule ne peut pas prendre plus de 2 Jetons Danger lors des Collisions au cours d'une même activation.
+
+  - nom: "Heure de Gloire"
+    nom_interne: "heure_de_gloire"
+    categorie: "Précision"
+    prix: 2
+    description: |
+      Permet, une fois par partie, de choisir librement le résultat de ses Dés de Manœuvre.
+    regles: |
+      - Une fois par partie, après avoir lancé les Dés de Manœuvre, mais avant de résoudre leurs résultats, ce véhicule peut immédiatement placer n'importe quel nombre de Dés de Manœuvre sur les faces de son choix.
+
+  - nom: "Prudence"
+    nom_interne: "prudence"
+    categorie: "Précision"
+    prix: 2
+    description: |
+      Permet de retirer un Jeton Danger au lieu d'en gagner un en cas de perte de Vitesse.
+    regles: |
+      - Quand ce véhicule devrait prendre un Jeton Danger lorsqu'il descend d'une Vitesse, ce véhicule peut retirer un Jeton Danger à la place.
+
+  - nom: "Expertise"
+    nom_interne: "expertise"
+    categorie: "Précision"
+    prix: 3
+    comportement: "expertise"
+    description: |
+      Augmente la Manœuvrabilité du véhicule en permanence.
+    regles: |
+      - Ce véhicule ajoute 1 à sa Valeur de Manœuvrabilité.
+
+  - nom: "Art de la Route"
+    nom_interne: "art_de_la_route"
+    categorie: "Précision"
+    prix: 3
+    description: |
+      Permet de choisir ses gabarits de déplacement comme à une Vitesse différente de la Vitesse réelle.
+    regles: |
+      - Ce véhicule peut choisir ses gabarits de déplacement comme si sa Vitesse actuelle était d'un cran immédiatement plus bas ou plus haut. Utilisez cette nouvelle vitesse pour déterminer si la manœuvre est triviale ou dangereuse.
+
+  - nom: "Pilote-Né"
+    nom_interne: "pilote_ne"
+    categorie: "Précision"
+    prix: 5
+    description: |
+      Permet de défausser un résultat de Dé de Manœuvre indésirable, une fois par manche.
+    regles: |
+      - Une fois par manche, ce véhicule peut défausser le résultat d'un Dé de Manœuvre avant d'appliquer leurs résultats.
+
+  # ── Rapidité ────────────────────────────────────────────────────────────────
+
+  - nom: "Départ Éclair"
+    nom_interne: "depart_eclair"
+    categorie: "Rapidité"
+    prix: 1
+    description: |
+      Détermine une Vitesse de départ aléatoire et potentiellement avantageuse.
+    regles: |
+      - Lancez un D6 en début de partie. Ce véhicule commence la partie à cette Vitesse. Relancez-le si le résultat est supérieur à sa Vitesse maximale.
+
+  - nom: "Sillage"
+    nom_interne: "sillage"
+    categorie: "Rapidité"
+    prix: 2
+    description: |
+      Permet de profiter d'une collision arrière pour changer de Vitesse sans risque.
+    regles: |
+      - Si ce véhicule est impliqué dans une Collision Arrière lors de son activation, ce véhicule peut annoncer une réaction Sillage. S'il le fait, l'autre véhicule ne peut pas annoncer de réaction. Le véhicule actif peut alors monter ou descendre d'une Vitesse en prenant un Jeton Danger. Aucun des véhicules ne prend de Jeton Danger suite à cette Collision.
+
+  - nom: "Surcharge"
+    nom_interne: "surcharge"
+    categorie: "Rapidité"
+    prix: 2
+    description: |
+      Permet de lancer un Dé de Manœuvre supplémentaire pour accélérer, au prix d'un risque en cas d'échec.
+    regles: |
+      - Lors de la résolution des Dés de Manœuvre pendant l'Étape de Déplacement, ce véhicule peut lancer un Dé de Manœuvre supplémentaire. S'il le fait, il doit faire en sorte de monter d'au moins une Vitesse. S'il ne parvient pas à monter de Vitesse, il doit prendre un Jeton Danger.
+
+  - nom: "Rétrograder"
+    nom_interne: "retrograder"
+    categorie: "Rapidité"
+    prix: 3
+    description: |
+      Autorise un déplacement forcé supplémentaire après avoir perdu de la Vitesse.
+    regles: |
+      - À la fin d'une Étape de Déplacement où ce véhicule est descendu d'au moins une Vitesse, ce véhicule peut effectuer un déplacement forcé vers l'avant avec le gabarit droit Court.
+
+  - nom: "Temps Additionnel !"
+    nom_interne: "temps_additionnel"
+    categorie: "Rapidité"
+    prix: 3
+    description: |
+      Permet de nettoyer ses Jetons Danger après avoir franchi une Porte.
+    regles: |
+      - À la fin d'une Étape de Déplacement où ce véhicule franchit une Porte, il peut retirer n'importe quel nombre de Jetons Danger.
+
+  - nom: "À Fond la Caisse"
+    nom_interne: "a_fond_la_caisse"
+    categorie: "Rapidité"
+    prix: 5
+    description: |
+      Rend le gabarit droit Long utilisable sans danger à toute Vitesse.
+    regles: |
+      - Ce véhicule considère le gabarit droit Long comme étant autorisé à n'importe quelle Vitesse. Le gabarit droit Long est considéré comme n'étant ni Dangereux ni Trivial, quelle que soit la Vitesse.
+
+  # ── Technologie ─────────────────────────────────────────────────────────────
+
+  - nom: "Moteurs-Fusée"
+    nom_interne: "moteurs_fusee"
+    categorie: "Technologie"
+    prix: 1
+    description: |
+      Offre un choix élargi de gabarits lors d'un Tonneau en mouvement.
+    regles: |
+      - Lorsque ce véhicule se déplace durant un Tonneau, il peut choisir d'utiliser le gabarit droit Long, Déviation ou Léger au lieu du gabarit droit Moyen.
+
+  - nom: "Survolté"
+    nom_interne: "survolte"
+    categorie: "Technologie"
+    prix: 1
+    description: |
+      Octroie un avantage Rapidité aléatoire pour la durée de la partie.
+    regles: |
+      - Au début de chaque partie, ce véhicule gagne un avantage Rapidité au hasard. Cet avantage est retiré en fin de partie.
+
+  - nom: "Gyroscope"
+    nom_interne: "gyroscope"
+    categorie: "Technologie"
+    prix: 1
+    description: |
+      Octroie un avantage Audace aléatoire pour la durée de la partie.
+    regles: |
+      - Au début de chaque partie, ce véhicule gagne un avantage Audace au hasard. Cet avantage est retiré en fin de partie.
+
+  - nom: "Navigation Satellite"
+    nom_interne: "navigation_satellite"
+    categorie: "Technologie"
+    prix: 2
+    description: |
+      Permet de mettre en réserve des résultats Embrayage utilisables par toute l'équipe.
+    regles: |
+      - Lorsque ce véhicule résout ses Dés de Manœuvre, son propriétaire peut mettre de côté un résultat Embrayage. Ce véhicule peut avoir autant de résultats Embrayage mis de côté que désiré. Tout véhicule de cette équipe peut utiliser ces résultats Embrayage mis de côté lors d'une Étape de Déplacement ultérieure, comme s'ils les avaient obtenus lors de leur Étape de Déplacement.
+
+  - nom: "Mécano de Bord"
+    nom_interne: "mecano_de_bord"
+    categorie: "Technologie"
+    prix: 3
+    description: |
+      Permet une réparation de fortune en sacrifiant temporairement de l'Équipage.
+    regles: |
+      - Une fois par activation, au début de son Étape d'Attaque, ce véhicule peut temporairement réduire sa Valeur d'Équipage, une seule fois et jusqu'à la fin de l'Étape d'Attaque, pour effectuer une réparation de fortune. S'il le fait, ce véhicule regagne 1 Point de Carrosserie. Ceci ne peut pas lui permettre de dépasser son nombre de Points de Carrosserie de départ.
+
+  - nom: "Eurêka !"
+    nom_interne: "eureka"
+    categorie: "Technologie"
+    prix: 4
+    description: |
+      Permet d'utiliser exceptionnellement une arme non équipée, une fois par partie.
+    regles: |
+      - Une fois par partie, au début de son Étape d'Attaque, le propriétaire de ce véhicule peut choisir n'importe quelle arme avec laquelle ce véhicule n'a pas encore attaqué durant cette partie, même une dont il n'est pas équipé ou à laquelle il n'a pas accès normalement. Ce véhicule est considéré comme étant équipé de l'arme en question, orientée comme il souhaite et pour la prochaine attaque uniquement. Les armes ayant des restrictions en termes d'orientation doivent continuer à respecter cette restriction.
+
+  # ── Trompe-la-Mort ──────────────────────────────────────────────────────────
+
+  - nom: "Rage au Volant"
+    nom_interne: "rage_au_volant"
+    categorie: "Trompe-la-Mort"
+    prix: 1
+    description: |
+      Impose un Jeton Danger automatique à chaque activation.
+    regles: |
+      - Au début de son activation, ce véhicule prend 1 Jeton Danger.
+
+  - nom: "Frénésie"
+    nom_interne: "frenesie"
+    categorie: "Trompe-la-Mort"
+    prix: 2
+    description: |
+      Renforce l'éperonnage lors d'une collision survenue pendant une Perte de Contrôle.
+    regles: |
+      - Lors d'une Collision résolue durant une Perte de Contrôle, ce véhicule gagne +2 dés d'attaque pour un Éperonnage.
+
+  - nom: "Foutu pour Foutu"
+    nom_interne: "foutu_pour_foutu"
+    categorie: "Trompe-la-Mort"
+    prix: 2
+    description: |
+      Double les dés d'éperonnage une fois un fort niveau de danger atteint.
+    regles: |
+      - Si ce véhicule a pris au moins 6 Jetons Danger lors de son activation (qu'il les ait encore ou non), il peut doubler ses dés d'attaque pour les Éperonnages qu'il effectue pour le reste de son activation.
+
+  - nom: "Intouchable"
+    nom_interne: "intouchable"
+    categorie: "Trompe-la-Mort"
+    prix: 4
+    description: |
+      Rend ce véhicule inaltérable en Jetons Danger, au prix d'un lot initial important.
+    regles: |
+      - Au début de son activation, ce véhicule peut prendre 4 Jetons Danger. S'il le fait, il ne peut pas en prendre ou en défausser de quelque façon que ce soit jusqu'au début de sa prochaine activation.
+
+  - nom: "Plus Balaise que Toi"
+    nom_interne: "plus_balaise_que_toi"
+    categorie: "Trompe-la-Mort"
+    prix: 4
+    description: |
+      Amplifie les effets de la différence de poids lors d'une collision.
+    regles: |
+      - Si ce véhicule est impliqué dans une Collision, doublez les bonus ou les malus d'Éperonnage causés par la différence de Poids lors de cette Collision.
+
+  - nom: "Bièreserker"
+    nom_interne: "biereserker"
+    categorie: "Trompe-la-Mort"
+    prix: 5
+    description: |
+      Réduit les dégâts subis en dehors de sa propre activation.
+    regles: |
+      - Lorsque ce véhicule devrait subir des dégâts en dehors de son activation, réduisez-les de 1, jusqu'à un minimum de 1.

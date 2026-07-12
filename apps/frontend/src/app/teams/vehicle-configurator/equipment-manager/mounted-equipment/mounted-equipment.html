@@ -114,3 +114,41 @@
     </ul>
   }
 </section>
+
+<!-- ── Avantages acquis — jamais d'orientation ni d'emplacement ── -->
+<section class="me-group">
+  <h4 class="me-group-title">Avantages ({{ advantages().length }})</h4>
+  @if (advantages().length === 0) {
+    <p class="me-status">Aucun avantage acquis.</p>
+  } @else if (visibleAdvantages().length === 0) {
+    <p class="me-status">Tous les avantages de ce véhicule ont été vendus — affichez-les pour les consulter.</p>
+  } @else {
+    <ul class="me-list">
+      @for (advantage of visibleAdvantages(); track advantage.id) {
+        <li class="me-item" [class.me-item--sold]="advantage.sold" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : null">
+          @if (advantage.sold) {
+            <span class="me-item__watermark">Vendu</span>
+          }
+          <span class="me-name" [class.me-name--sold]="advantage.sold">
+            {{ resolveAdvantageName(advantage.nomInterne) }}
+          </span>
+          <span class="me-badges">
+            <span class="me-badge" title="Coût en jerricans">
+              <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+              {{ advantage.prix }}
+            </span>
+          </span>
+          @if (!advantage.sold && !locked()) {
+            <button
+              class="me-remove"
+              type="button"
+              title="Retirer cet avantage"
+              (click)="advantageRemoved.emit(advantage)">
+              Retirer
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

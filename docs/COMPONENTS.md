@@ -512,7 +512,7 @@ Carte de sélection du type de véhicule de base. Affiche les statistiques du v�
 
 ### `EquipmentManager` — `teams/vehicle-configurator/equipment-manager/` 🧠
 
-Cœur de la gestion d'équipement. Charge les armes et améliorations disponibles (avec verdicts du backend), gère l'ajout/retrait — y compris le montage sur Tourelle, simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) choisie au moment de son ajout — et affiche le budget de l'équipe.
+Cœur de la gestion d'équipement. Charge les armes, améliorations **et avantages** disponibles (avec verdicts du backend), gère l'ajout/retrait — y compris le montage sur Tourelle, simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) choisie au moment de son ajout — et affiche le budget de l'équipe. Les avantages disponibles sont scindés en **2 sous-listes** (`advantagesCategoryA`/`advantagesCategoryB`), une par catégorie du sponsor (`Sponsor.classes_avantage[0]`/`[1]`), chacune sous son propre titre de section — un avantage n'occupe jamais d'emplacement (synthétisé à `0` sur l'option transmise à `EquipmentOption`) et ne demande jamais d'orientation.
 
 | | |
 |---|---|
@@ -535,7 +535,7 @@ Cœur de la gestion d'équipement. Charge les armes et améliorations disponible
 |-----|------|-------------|
 | `vehicleChanged` | `Vehicle` | Émis après chaque mutation — le parent met à jour son signal |
 
-**Signals computed clés** : `emplacementsUtilises`, `emplacementsTotal`, `coutBase`, `coutEquipement`, `coutTotal`, `budgetRestant`, `budgetDepasse`, `visibleWeapons`, `visibleImprovements`.
+**Signals computed clés** : `emplacementsUtilises`, `emplacementsTotal`, `coutBase`, `coutEquipement` (inclut désormais les avantages), `coutTotal`, `budgetRestant`, `budgetDepasse`, `visibleWeapons`, `visibleImprovements`, `visibleAdvantages`, `advantagesCategoryA`/`advantagesCategoryB`.
 
 ---
 
@@ -590,7 +590,7 @@ Popup d'information sur un équipement : nom, coût, emplacement, description, r
 
 ### `MountedEquipment` — `teams/vehicle-configurator/equipment-manager/mounted-equipment/`
 
-Affiche les armes et améliorations actuellement montées sur le véhicule, avec leurs boutons de retrait. Une arme montée sur Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans la liste des armes — ce n'est pas une ligne d'amélioration séparée.
+Affiche les armes, améliorations **et avantages** actuellement montés/acquis sur le véhicule, avec leurs boutons de retrait. Une arme montée sur Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans la liste des armes — ce n'est pas une ligne d'amélioration séparée. Un avantage revendu en atelier affiche le même filigrane "Vendu" que les autres équipements, mais son prix affiché **ne change jamais** (perte totale à la revente, contrairement à la moitié-prix des armes/améliorations) — reflet direct d'`Advantage.price`, jamais réduit.
 
 | | |
 |---|---|
@@ -603,6 +603,7 @@ Affiche les armes et améliorations actuellement montées sur le véhicule, avec
 |-----|------|--------|-------------|
 | `weapons` | `Weapon[]` | — | Armes montées |
 | `improvements` | `VehicleImprovement[]` | — | Améliorations montées |
+| `advantages` | `VehicleAdvantage[]` | — | Avantages acquis (jamais d'orientation ni d'emplacement) |
 | `sponsorCatalog` | `Sponsor` | — | Pour résoudre les noms et emplacements depuis les `nomInterne` |
 
 **Outputs**
@@ -611,6 +612,7 @@ Affiche les armes et améliorations actuellement montées sur le véhicule, avec
 |-----|------|-------------|
 | `weaponRemoved` | `Weapon` | Demande de retrait d'une arme |
 | `improvementRemoved` | `VehicleImprovement` | Demande de retrait d'une amélioration |
+| `advantageRemoved` | `VehicleAdvantage` | Demande de retrait d'un avantage (mirroir de `weaponRemoved`/`improvementRemoved`) |
 
 ---
 

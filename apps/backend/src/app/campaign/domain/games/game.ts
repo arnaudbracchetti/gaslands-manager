@@ -18,6 +18,7 @@ import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import type { WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
@@ -258,6 +259,7 @@ export abstract class Game {
     let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
     let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
     let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
+    let resolvedAdvantageType: AdvantageType | null = cmd.resolvedAdvantageType;
 
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
@@ -274,13 +276,14 @@ export abstract class Game {
       resolvedVehicleType = sold.resolvedVehicleType;
       resolvedWeaponType = sold.resolvedWeaponType;
       resolvedImprovementType = sold.resolvedImprovementType;
+      resolvedAdvantageType = sold.resolvedAdvantageType;
 
       // resolveSell() a déjà validé la propriété de l'objet (ownership) — la recherche
       // same-session ci-dessous ne peut donc jamais cibler un événement appartenant à un
-      // autre véhicule/participant. Scopée à WEAPON/IMPROVEMENT : cf. l'invariant vérifié
-      // sur canAccept() en ATELIER (aucun autre événement accepté ici ne référence un
-      // weaponId/improvementId — élargir la suppression physique à VEHICLE casserait cet
-      // invariant, cf. docs/plans/2026-07-11-atelier-annulation-revente-design.md §1).
+      // autre véhicule/participant. Scopée à WEAPON/IMPROVEMENT/ADVANTAGE : cf. l'invariant
+      // vérifié sur canAccept() en ATELIER (aucun autre événement accepté ici ne référence un
+      // weaponId/improvementId/advantageId — élargir la suppression physique à VEHICLE
+      // casserait cet invariant, cf. docs/plans/2026-07-11-atelier-annulation-revente-design.md §1).
       if (cmd.entityType !== EquipmentEntityType.VEHICLE) {
         const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
         if (buyEvent) return { events: [], deleteEventId: buyEvent.id };
@@ -293,7 +296,7 @@ export abstract class Game {
       0, this.id, participant.id, 0,
       cmd.operation, cmd.entityType, nomInterne, cost,
       cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, orientation,
-      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
+      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
     );
 
     if (cmd.operation === EquipmentOperation.BUY) participant.assertCanAfford(cost);
@@ -427,6 +430,11 @@ export abstract class Game {
           throw new DomainException(`Amélioration inconnue du catalogue : "${cmd.nomInterne}".`);
         }
         return cmd.resolvedImprovementType.price;
+      case EquipmentEntityType.ADVANTAGE:
+        if (!cmd.resolvedAdvantageType) {
+          throw new DomainException(`Avantage inconnu du catalogue : "${cmd.nomInterne}".`);
+        }
+        return cmd.resolvedAdvantageType.price;
     }
   }
 
@@ -434,6 +442,16 @@ export abstract class Game {
    * Revente (SELL) — lit l'entité ciblée dans l'équipe replayée et en dérive le coût, le
    * `nomInterne` et le Value Object de type. Ces derniers rendent l'événement auto-descriptif
    * (le client n'a pas à transmettre le `nomInterne` de ce qu'il vend) et réversibles (undo).
+   *
+   * Le calcul du montant remboursé (`resaleRefund`) vit sur chaque entité (`Vehicle`/
+   * `Weapon`/`Improvement`/`Advantage`), pas ici : ce switch ne consulte à chaque branche
+   * que les données d'UNE seule entité, donc la règle "combien on récupère" leur
+   * appartient (cf. skill DDD, test des invariantes). Ce qui reste ici est propre à
+   * `Game`/l'événement : localiser l'entité dans l'agrégat, garder les invariants qui
+   * dépassent l'entité seule (ex. `estDefaut`), et peupler la structure plate à 4 champs
+   * `resolved*Type` — miroir de la table `GAME_EVENT` sans STI (cf. ARCHITECTURE.md
+   * §3.8), qui resterait de toute façon nécessaire même si chaque entité savait calculer
+   * son propre remboursement.
    */
   private resolveSell(
     participant: CampaignParticipant,
@@ -445,17 +463,19 @@ export abstract class Game {
     resolvedVehicleType: VehicleType | null;
     resolvedWeaponType: WeaponType | null;
     resolvedImprovementType: ImprovementType | null;
+    resolvedAdvantageType: AdvantageType | null;
   } {
     switch (cmd.entityType) {
       case EquipmentEntityType.VEHICLE: {
         const vehicle = participant.team.findVehicle(cmd.targetEntityId!);
         return {
-          cost: vehicle.type.price,
+          cost: vehicle.resaleRefund,
           nomInterne: vehicle.type.nomInterne,
           orientation: null,
           resolvedVehicleType: vehicle.type,
           resolvedWeaponType: null,
           resolvedImprovementType: null,
+          resolvedAdvantageType: null,
         };
       }
       case EquipmentEntityType.WEAPON: {
@@ -464,13 +484,12 @@ export abstract class Game {
         if (weapon.estDefaut) {
           throw new DomainException('Les armes intégrées au profil de base ne peuvent pas être revendues.');
         }
-        // Revente à moitié prix arrondie inférieur (p.170). Si l'objet a été acheté cette
-        // même session d'atelier, ce coût est de toute façon ignoré : changeEquipment()
-        // court-circuite vers une annulation (suppression du BUY, remboursement intégral)
-        // AVANT de construire l'événement — cf. findSameSessionPurchase. weapon.price
-        // (getter d'entité) gère déjà le montage sur Tourelle (×3) avant la moitié prix.
+        // Si l'objet a été acheté cette même session d'atelier, ce coût est de toute façon
+        // ignoré : changeEquipment() court-circuite vers une annulation (suppression du
+        // BUY, remboursement intégral) AVANT de construire l'événement — cf.
+        // findSameSessionPurchase.
         return {
-          cost: Math.floor(weapon.price / 2),
+          cost: weapon.resaleRefund,
           nomInterne: weapon.type.nomInterne,
           // L'orientation de l'arme VENDUE — jamais transmise par le client (qui n'envoie
           // que l'id de l'objet à vendre) — doit être RÉSOLUE ici depuis l'entité réelle,
@@ -481,6 +500,7 @@ export abstract class Game {
           resolvedVehicleType: null,
           resolvedWeaponType: weapon.type,
           resolvedImprovementType: null,
+          resolvedAdvantageType: null,
         };
       }
       case EquipmentEntityType.IMPROVEMENT: {
@@ -494,12 +514,28 @@ export abstract class Game {
           throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
         }
         return {
-          cost: Math.floor(improvement.price / 2),
+          cost: improvement.resaleRefund,
           nomInterne: improvement.type.nomInterne,
           orientation: improvement.orientation,
           resolvedVehicleType: null,
           resolvedWeaponType: null,
           resolvedImprovementType: improvement.type,
+          resolvedAdvantageType: null,
+        };
+      }
+      case EquipmentEntityType.ADVANTAGE: {
+        const advantage = participant.team
+          .findVehicle(cmd.targetVehicleId!)
+          .advantages.find((a) => a.id === cmd.targetEntityId);
+        if (!advantage) throw new DomainException(`Avantage ${cmd.targetEntityId} introuvable.`);
+        return {
+          cost: advantage.resaleRefund,
+          nomInterne: advantage.type.nomInterne,
+          orientation: null,
+          resolvedVehicleType: null,
+          resolvedWeaponType: null,
+          resolvedImprovementType: null,
+          resolvedAdvantageType: advantage.type,
         };
       }
     }

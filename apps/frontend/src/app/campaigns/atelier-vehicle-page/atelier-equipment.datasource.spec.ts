@@ -35,6 +35,9 @@ const workshop: WorkshopStateDto = {
       improvements: [
         { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
       ],
+      advantages: [
+        { id: 3, nomInterne: 'expertise', price: 3, isSold: false, purchasedThisSession: false },
+      ],
     },
   ],
 };
@@ -64,6 +67,7 @@ describe('AtelierEquipmentDataSource', () => {
     getWorkshop: ReturnType<typeof vi.fn>;
     getWorkshopAvailableWeapons: ReturnType<typeof vi.fn>;
     getWorkshopAvailableImprovements: ReturnType<typeof vi.fn>;
+    getWorkshopAvailableAdvantages: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -72,6 +76,7 @@ describe('AtelierEquipmentDataSource', () => {
       getWorkshop: vi.fn().mockReturnValue(of(workshop)),
       getWorkshopAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableImprovements: vi.fn().mockReturnValue(of([])),
+      getWorkshopAvailableAdvantages: vi.fn().mockReturnValue(of([])),
     };
 
     TestBed.configureTestingModule({

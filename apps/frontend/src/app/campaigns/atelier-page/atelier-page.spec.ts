@@ -51,6 +51,7 @@ const mockSponsorCatalog: Sponsor = {
   vehicules: [mockVehicule],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 const mockWorkshop: WorkshopStateDto = {
@@ -68,6 +69,7 @@ const mockWorkshop: WorkshopStateDto = {
       sequellas: [],
       weapons: [],
       improvements: [],
+      advantages: [],
     },
   ],
 };

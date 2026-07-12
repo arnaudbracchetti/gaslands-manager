@@ -1,9 +1,11 @@
 import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
+import type { AdvantageType } from './value-objects/advantage-type';
 import { Vehicle, DomainException } from './vehicle';
 import { Weapon } from './weapon';
 import { Improvement } from './improvement';
+import { Advantage } from './advantage';
 
 // ── Résultat de validation ────────────────────────────────────────────────────
 
@@ -164,6 +166,19 @@ export class Team {
     throw new DomainException(`Amélioration #${improvementId} introuvable dans l'équipe`);
   }
 
+  /**
+   * Recherche un avantage par son id dans tous les véhicules de l'équipe. Mirroir de
+   * `findImprovement` — pas d'événement campagne dédié aujourd'hui (pas d'équivalent
+   * `AdvantageLostEvent`), mais gardée pour la même cohérence de contrat que ses siblings.
+   */
+  findAdvantage(advantageId: number): Advantage {
+    for (const vehicle of this._vehicles) {
+      const advantage = vehicle.advantages.find((a) => a.id === advantageId);
+      if (advantage) return advantage;
+    }
+    throw new DomainException(`Avantage #${advantageId} introuvable dans l'équipe`);
+  }
+
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
 
   addWeaponToVehicle(
@@ -196,6 +211,20 @@ export class Team {
     vehicle.removeImprovement(improvementId);
   }
 
+  // ── Mutations Advantage (déléguées au Vehicle) ────────────────────────────────
+
+  addAdvantageToVehicle(vehicleId: number, advantageType: AdvantageType): void {
+    this.assertNotLocked();
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.addAdvantage(advantageType, this.remainingBudget);
+  }
+
+  removeAdvantageFromVehicle(vehicleId: number, advantageId: number): void {
+    this.assertNotLocked();
+    const vehicle = this.findVehicle(vehicleId);
+    vehicle.removeAdvantage(advantageId);
+  }
+
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
 
   /**
@@ -210,6 +239,9 @@ export class Team {
       }
       for (const improvement of vehicle.improvements) {
         improvement.clearCampaignState();
+      }
+      for (const advantage of vehicle.advantages) {
+        advantage.clearCampaignState();
       }
     }
   }
@@ -265,6 +297,16 @@ export class Team {
     this.findVehicle(vehicleId).removeImprovement(improvementId);
   }
 
+  /** Ajoute un avantage transient sur un véhicule avec un id explicite (D-S11). */
+  addCampaignAdvantage(vehicleId: number, advantageType: AdvantageType, campaignId: number): Advantage {
+    return this.findVehicle(vehicleId).addCampaignAdvantage(advantageType, campaignId);
+  }
+
+  /** Retire un avantage par son id d'un véhicule spécifique (annulation d'achat en session courante). */
+  removeCampaignAdvantage(vehicleId: number, advantageId: number): void {
+    this.findVehicle(vehicleId).removeAdvantage(advantageId);
+  }
+
   /**
    * Marque une arme d'un véhicule spécifique "vendue" (flag isSold) plutôt que de la
    * retirer — mirroir de removeCampaignWeapon, utilisé par la revente d'un objet
@@ -285,6 +327,15 @@ export class Team {
 
   clearImprovementSold(vehicleId: number, improvementId: number): void {
     this.findVehicle(vehicleId).clearImprovementSold(improvementId);
+  }
+
+  /** Mirroir de markWeaponSold/clearWeaponSold pour les avantages. */
+  markAdvantageSold(vehicleId: number, advantageId: number): void {
+    this.findVehicle(vehicleId).markAdvantageSold(advantageId);
+  }
+
+  clearAdvantageSold(vehicleId: number, advantageId: number): void {
+    this.findVehicle(vehicleId).clearAdvantageSold(advantageId);
   }
 
 }

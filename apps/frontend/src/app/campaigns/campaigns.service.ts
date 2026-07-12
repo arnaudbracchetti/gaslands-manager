@@ -26,6 +26,7 @@ import type { WorkshopStateDto, ChangeEquipmentDto } from './workshop.model';
 import type {
   AvailableWeaponDto,
   AvailableImprovementDto,
+  AvailableAdvantageDto,
 } from '../teams/vehicle-configurator/vehicle-builder.model';
 
 @Injectable({ providedIn: 'root' })
@@ -298,6 +299,16 @@ export class CampaignsService {
   getWorkshopAvailableImprovements(campaignId: number, vehicleId: number): Observable<AvailableImprovementDto[]> {
     return this.http.get<AvailableImprovementDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-improvements`,
+    );
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vId/available-advantages →
+   * avantages du sponsor avec verdict (budget = cagnotte, y compris Cascadeur/Sur Deux Roues).
+   */
+  getWorkshopAvailableAdvantages(campaignId: number, vehicleId: number): Observable<AvailableAdvantageDto[]> {
+    return this.http.get<AvailableAdvantageDto[]>(
+      `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-advantages`,
     );
   }
 

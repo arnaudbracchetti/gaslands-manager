@@ -3,9 +3,11 @@ import { Vehicle } from './vehicle';
 import { VehicleType } from './value-objects/vehicle-type';
 import { WeaponType } from './value-objects/weapon-type';
 import { ImprovementType } from './value-objects/improvement-type';
+import { AdvantageType } from './value-objects/advantage-type';
 import { SequellaType } from './value-objects/sequella-type';
 import { Improvement } from './improvement';
 import { Weapon } from './weapon';
+import { Advantage } from './advantage';
 import { DomainException } from './vehicle';
 
 function makeVehicleType(emplacements = 4, prix = 12): VehicleType {
@@ -37,6 +39,13 @@ function makeImprovementType(prix = 4, emplacement = 1): ImprovementType {
 
 function makeVehicle(emplacements = 4, prix = 12): Vehicle {
   return new Vehicle(1, 10, makeVehicleType(emplacements, prix), [], []);
+}
+
+function makeAdvantageType(nomInterne: string, prix = 3, categorie = 'Précision', comportement?: string): AdvantageType {
+  return AdvantageType.from({
+    nom: nomInterne, nom_interne: nomInterne, categorie, prix,
+    description: '', regles: '', comportement,
+  });
 }
 
 function makeTourelleWeaponType(prix = 5, emplacement = 1): WeaponType {
@@ -341,5 +350,180 @@ describe('Vehicle.canAddWeapon/addWeapon — montage sur Tourelle (orientation \
     const canon = new Weapon(1, makeTourelleWeaponType(6, 3), 'tourelle', true);
     const v = new Vehicle(1, 10, makeVehicleType(), [canon], []);
     expect(() => v.removeWeapon(1)).toThrow('intégrées au profil de base');
+  });
+});
+
+// ── Avantages ──────────────────────────────────────────────────────────────────
+
+describe('Vehicle.cost — inclut les avantages', () => {
+  it('additionne le prix des avantages au coût total', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('expertise', 3), 100);
+    // 12 (véhicule nu) + 3 (expertise)
+    expect(v.cost).toBe(15);
+  });
+});
+
+describe('Vehicle.resaleRefund', () => {
+  it('vaut le prix du châssis SEUL — n\'inclut pas le coût de son équipement (contrairement à cost)', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('expertise', 3), 100);
+    expect(v.cost).toBe(15);
+    expect(v.resaleRefund).toBe(12);
+  });
+});
+
+describe('Vehicle.canAddAdvantage / addAdvantage / removeAdvantage', () => {
+  it('retourne fail si le véhicule est perdu', () => {
+    const v = makeVehicle();
+    v.markLost();
+    const r = v.canAddAdvantage(makeAdvantageType('tireur_elite'), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('hors combat');
+  });
+
+  it('refuse si le budget est insuffisant', () => {
+    const v = makeVehicle();
+    const r = v.canAddAdvantage(makeAdvantageType('tireur_elite', 999), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Budget');
+  });
+
+  it('autorise un avantage neutre (sans comportement) si budget suffisant', () => {
+    const v = makeVehicle();
+    const r = v.canAddAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('refuse l\'acquisition d\'un même avantage une seconde fois (unicité)', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    const r = v.canAddAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('déjà acquis');
+  });
+
+  it('permet de racheter un avantage déjà vendu (unicité ignore les avantages vendus)', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    v.markAdvantageSold(v.advantages[0].id);
+    const r = v.canAddAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('addAdvantage ajoute l\'avantage au véhicule', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    expect(v.advantages).toHaveLength(1);
+    expect(v.advantages[0].type.nomInterne).toBe('tireur_elite');
+    expect(v.advantages[0].slots).toBe(0);
+  });
+
+  it('removeAdvantage retire l\'avantage ciblé', () => {
+    const v = makeVehicle();
+    v.addAdvantage(makeAdvantageType('tireur_elite', 2), 100);
+    const id = v.advantages[0].id;
+    v.removeAdvantage(id);
+    expect(v.advantages).toHaveLength(0);
+  });
+
+  it('removeAdvantage lève DomainException si l\'avantage est introuvable', () => {
+    const v = makeVehicle();
+    expect(() => v.removeAdvantage(999)).toThrow(DomainException);
+  });
+});
+
+describe('Advantage.price — perte totale à la revente (jamais réduit avec isSold)', () => {
+  it('price reste inchangé après markSold (contrairement à Weapon/Improvement)', () => {
+    const advantage = new Advantage(1, makeAdvantageType('expertise', 3));
+    expect(advantage.price).toBe(3);
+    advantage.markSold();
+    expect(advantage.price).toBe(3); // toujours 3, jamais ceil(3/2)
+    expect(advantage.slots).toBe(0);
+  });
+
+  it('clearSold est l\'inverse de markSold (idempotent)', () => {
+    const advantage = new Advantage(1, makeAdvantageType('expertise', 3));
+    advantage.markSold();
+    advantage.markSold();
+    expect(advantage.isSold).toBe(true);
+    advantage.clearSold();
+    expect(advantage.isSold).toBe(false);
+  });
+
+  it('clearCampaignState remet isSold à false', () => {
+    const advantage = new Advantage(1, makeAdvantageType('expertise', 3));
+    advantage.markSold();
+    advantage.clearCampaignState();
+    expect(advantage.isSold).toBe(false);
+  });
+});
+
+describe('Vehicle — décorateurs d\'avantage (Expertise/Cascadeur/Sur Deux Roues)', () => {
+  it('Cascadeur est refusé sur un véhicule de Poids Lourd, quelle que soit la manœuvrabilité', () => {
+    const v = vehicleWith([], { poids: 'Lourd', emplacements: 10 });
+    const r = v.canAddAdvantage(makeAdvantageType('cascadeur', 7, 'Audace', 'cascadeur'), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Poids Léger ou Moyen');
+  });
+
+  it('Cascadeur est refusé sur un véhicule Léger/Moyen avec Manœuvrabilité effective < 3', () => {
+    const type = VehicleType.from({
+      nom: 'Ambulance', nom_interne: 'ambulance', poids: 'Moyen',
+      carrosserie: 6, manoeuvrabilite: 2, vitesse_max: 5, equipage: 2,
+      emplacements: 10, prix: 12, description: '', regles: '', sponsors_autorises: [],
+    });
+    const v = new Vehicle(1, 10, type, [], []);
+    const r = v.canAddAdvantage(makeAdvantageType('cascadeur', 7, 'Audace', 'cascadeur'), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain("Manœuvrabilité effective d'au moins 3");
+  });
+
+  it('Cascadeur devient éligible si Expertise (+1) porte la Manœuvrabilité effective à 3', () => {
+    const type = VehicleType.from({
+      nom: 'Ambulance', nom_interne: 'ambulance', poids: 'Moyen',
+      carrosserie: 6, manoeuvrabilite: 2, vitesse_max: 5, equipage: 2,
+      emplacements: 10, prix: 12, description: '', regles: '', sponsors_autorises: [],
+    });
+    const v = new Vehicle(1, 10, type, [], []);
+    v.addAdvantage(makeAdvantageType('expertise', 3, 'Précision', 'expertise'), 100);
+    const r = v.canAddAdvantage(makeAdvantageType('cascadeur', 7, 'Audace', 'cascadeur'), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('Cascadeur devient éligible si Chenilles (amélioration, +1 manœuvrabilité) porte l\'effectif à 3', () => {
+    const type = VehicleType.from({
+      nom: 'Ambulance', nom_interne: 'ambulance', poids: 'Moyen',
+      carrosserie: 6, manoeuvrabilite: 2, vitesse_max: 5, equipage: 2,
+      emplacements: 10, prix: 12, description: '', regles: '', sponsors_autorises: [],
+    });
+    const chenilles = new Improvement(1, improvementType('chenilles', 'chenilles', 1), null, false);
+    const v = new Vehicle(1, 10, type, [], [chenilles]);
+    const r = v.canAddAdvantage(makeAdvantageType('cascadeur', 7, 'Audace', 'cascadeur'), 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('Sur Deux Roues est refusé si Manœuvrabilité effective < 3 (aucune restriction de poids)', () => {
+    const type = VehicleType.from({
+      nom: 'Bus', nom_interne: 'bus', poids: 'Lourd',
+      carrosserie: 10, manoeuvrabilite: 2, vitesse_max: 4, equipage: 2,
+      emplacements: 10, prix: 20, description: '', regles: '', sponsors_autorises: [],
+    });
+    const v = new Vehicle(1, 10, type, [], []);
+    const r = v.canAddAdvantage(makeAdvantageType('sur_deux_roues', 6, 'Optimisation', 'sur_deux_roues'), 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain("Manœuvrabilité effective d'au moins 3");
+  });
+
+  it('Sur Deux Roues est autorisé sur un véhicule Lourd si la Manœuvrabilité effective atteint 3', () => {
+    const type = VehicleType.from({
+      nom: 'Bus', nom_interne: 'bus', poids: 'Lourd',
+      carrosserie: 10, manoeuvrabilite: 2, vitesse_max: 4, equipage: 2,
+      emplacements: 10, prix: 20, description: '', regles: '', sponsors_autorises: [],
+    });
+    const v = new Vehicle(1, 10, type, [], []);
+    v.addAdvantage(makeAdvantageType('expertise', 3, 'Précision', 'expertise'), 100);
+    const r = v.canAddAdvantage(makeAdvantageType('sur_deux_roues', 6, 'Optimisation', 'sur_deux_roues'), 100);
+    expect(r.ok).toBe(true); // pas de restriction de poids, contrairement à Cascadeur
   });
 });

@@ -9,10 +9,10 @@
 ## 1. Agrégat Team (Domain-Driven Design)
 
 Le module `team/` est l'agrégat DDD principal. `Team` est la racine ; `Vehicle`,
-`Weapon` et `Improvement` sont des entités enfants dont le cycle de vie est entièrement
-contrôlé par la racine. Les **Value Objects** (`VehicleType`, `WeaponType`,
-`ImprovementType`) enveloppent les données brutes du catalogue YAML et exposent une API
-métier typée.
+`Weapon`, `Improvement` et `Advantage` sont des entités enfants dont le cycle de vie est
+entièrement contrôlé par la racine. Les **Value Objects** (`VehicleType`, `WeaponType`,
+`ImprovementType`, `AdvantageType`) enveloppent les données brutes du catalogue YAML et
+exposent une API métier typée.
 
 ```mermaid
 classDiagram
@@ -44,6 +44,8 @@ classDiagram
         +removeWeaponFromVehicle(vehicleId, weaponId) void
         +addImprovementToVehicle(vehicleId, improvementType, orientation) void
         +removeImprovementFromVehicle(vehicleId, improvementId) void
+        +addAdvantageToVehicle(vehicleId, advantageType) void
+        +removeAdvantageFromVehicle(vehicleId, advantageId) void
     }
 
     class Vehicle {
@@ -53,16 +55,21 @@ classDiagram
         +type : VehicleType
         -_weapons : Weapon[]
         -_improvements : Improvement[]
+        -_advantages : Advantage[]
         +weapons : readonly Weapon[]
         +improvements : readonly Improvement[]
+        +advantages : readonly Advantage[]
         +cost : number
         +usedSlots : number
         +canAddWeapon(type, orientation, budget) RuleResult
         +canAddImprovement(type, orientation, budget) RuleResult
+        +canAddAdvantage(type, budget) RuleResult
         +addWeapon(type, orientation, budget) void
         +removeWeapon(weaponId) void
         +addImprovement(type, orientation, budget) void
         +removeImprovement(improvementId) void
+        +addAdvantage(type, budget) void
+        +removeAdvantage(advantageId) void
     }
 
     class Weapon {
@@ -83,6 +90,18 @@ classDiagram
         +estDefaut : boolean
         +price : number
         +slots : number
+    }
+
+    class Advantage {
+        <<Entity>>
+        +id : number
+        +type : AdvantageType
+        -_isSold : boolean
+        +price : number
+        +slots : number
+        +isSold : boolean
+        +markSold() void
+        +clearSold() void
     }
 
     class VehicleType {
@@ -129,6 +148,18 @@ classDiagram
         +equals(other) boolean
     }
 
+    class AdvantageType {
+        <<Value Object>>
+        -raw : Avantage
+        +nomInterne : string
+        +nom : string
+        +categorie : string
+        +price : number
+        +comportement : string | undefined
+        +from(raw)$ AdvantageType
+        +equals(other) boolean
+    }
+
     class DomainException {
         <<Exception>>
         +name : "DomainException"
@@ -138,9 +169,11 @@ classDiagram
     Team "1" *-- "0..*" Vehicle : possède
     Vehicle "1" *-- "0..*" Weapon : possède
     Vehicle "1" *-- "0..*" Improvement : possède
+    Vehicle "1" *-- "0..*" Advantage : possède
     Vehicle --> VehicleType : type
     Weapon --> WeaponType : type
     Improvement --> ImprovementType : type
+    Advantage --> AdvantageType : type
     Team ..> DomainException : lève
     Vehicle ..> DomainException : lève
 ```
@@ -173,6 +206,18 @@ orientation, ont perdu leur vérification manuelle au profit d'une garde génér
 `Vehicle.canAddImprovement`, symétrique à celle déjà en place sur `canAddWeapon`). Détail
 des valeurs catalogue : [spec/VEHICLES.md](spec/VEHICLES.md#orientation-requise-champ-catalogue-necessite_orientation).
 
+**Avantages** : `Advantage` réutilise le même pattern Décorateur que `Improvement`
+(`AdvantageDecorator extends ImprovementDecorator`, construit un `Amelioration` factice
+depuis l'`Avantage` réel — précédent direct : `SequellaDecorator`, qui fait déjà ceci pour
+un concept hors catalogue `amelioration.yml`). `Vehicle.buildChain()` plie
+**améliorations puis avantages** dans la même chaîne avant le candidat en cours de
+validation — nécessaire pour que les 2 avantages à comportement mécanique (Cascadeur, Sur
+Deux Roues) voient la Manœuvrabilité **effective** après tout bonus déjà monté (Chenilles,
+Expertise). `Advantage.price` retourne toujours `type.price`, jamais réduit même
+`isSold: true` — c'est ce qui porte entièrement la règle de "perte totale" à la revente en
+atelier (aucun second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/
+`Improvement`). Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
+
 **Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
 de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne
 persistée sur `Team`). `assertNotLocked()` est appelé en tête de toutes les méthodes de
@@ -203,6 +248,7 @@ classDiagram
         +vehicules : Vehicule[]
         +armes : Arme[]
         +ameliorations : Amelioration[]
+        +avantages : Avantage[]
     }
 
     class Vehicule {
@@ -250,6 +296,17 @@ classDiagram
         +necessite_orientation : boolean
     }
 
+    class Avantage {
+        <<Catalogue>>
+        +nom : string
+        +nom_interne : string
+        +categorie : string
+        +prix : number
+        +description : string
+        +regles : string
+        +comportement : string | undefined
+    }
+
     class Scenario {
         <<Catalogue>>
         +nom : string
@@ -261,11 +318,16 @@ classDiagram
     Sponsor "1" o-- "0..*" Vehicule : autorise
     Sponsor "1" o-- "0..*" Arme : autorise
     Sponsor "1" o-- "0..*" Amelioration : autorise
+    Sponsor "1" o-- "0..*" Avantage : autorise (par categorie)
 ```
 
-Les trois types `VehicleType`, `WeaponType`, `ImprovementType` (§1) enveloppent
-respectivement `Vehicule`, `Arme` et `Amelioration` via `static from(raw)`. Le catalogue
-`Scenario` est géré par `ScenarioCatalogService` (même singleton pattern que
+Les quatre types `VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType` (§1)
+enveloppent respectivement `Vehicule`, `Arme`, `Amelioration` et `Avantage` via
+`static from(raw)`. **`Avantage` est résolu différemment des trois autres** : pas de champ
+`sponsors_autorises` — la relation Sponsor→Avantage passe par correspondance de
+`categorie` avec `Sponsor.classes_avantage[2]` (cf.
+[spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total)).
+Le catalogue `Scenario` est géré par `ScenarioCatalogService` (même singleton pattern que
 `CatalogService`).
 
 ---
@@ -280,6 +342,7 @@ erDiagram
     TEAM ||--o{ VEHICLE : contient
     VEHICLE ||--o{ WEAPON : possède
     VEHICLE ||--o{ VEHICLE_IMPROVEMENT : possède
+    VEHICLE ||--o{ VEHICLE_ADVANTAGE : possède
 
     USER ||--o{ CAMPAIGN_PARTICIPANT : participe_via
     TEAM |o--o{ CAMPAIGN_PARTICIPANT : est_engagée_dans
@@ -332,6 +395,13 @@ erDiagram
         string nomInterne "réf. catalogue Amelioration"
         enum orientation "avant|arrière|gauche|droite"
         boolean estDefaut "intégré au profil de base"
+        number vehicleId FK
+        date createdAt
+    }
+
+    VEHICLE_ADVANTAGE {
+        number id PK
+        string nomInterne "réf. catalogue Avantage"
         number vehicleId FK
         date createdAt
     }
@@ -391,7 +461,7 @@ erDiagram
         string sequellaTypeNom "nullable"
         number chocsCost "nullable"
         string operation "nullable — BUY|SELL"
-        string entityType "nullable — VEHICLE|WEAPON|IMPROVEMENT"
+        string entityType "nullable — VEHICLE|WEAPON|IMPROVEMENT|ADVANTAGE"
         string nomInterne "nullable — EquipmentChanged"
         number cost "nullable"
         number targetVehicleId "nullable"
@@ -403,9 +473,10 @@ erDiagram
 
 **Clés logiques (pas de FK SQL)** : `VEHICLE.nomInterne` → `Vehicule.nom_interne`,
 `WEAPON.nomInterne` → `Arme.nom_interne`, `VEHICLE_IMPROVEMENT.nomInterne` →
-`Amelioration.nom_interne`, `GAME.scenarioId` → `Scenario.nom_interne`,
-`GAME_EVENT.sequellaTypeNom` → `SequellaType.nom_interne` (registre en mémoire).
-Ces références pointent vers des données en mémoire, pas des tables SQL.
+`Amelioration.nom_interne`, `VEHICLE_ADVANTAGE.nomInterne` → `Avantage.nom_interne`,
+`GAME.scenarioId` → `Scenario.nom_interne`, `GAME_EVENT.sequellaTypeNom` →
+`SequellaType.nom_interne` (registre en mémoire). Ces références pointent vers des
+données en mémoire, pas des tables SQL.
 
 **Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne.
 
@@ -585,4 +656,4 @@ d'événements confondus.
 
 ### Entités transientes (D-S11)
 
-Les véhicules et armes achetés en atelier **n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`, `WEAPON`).
+Les véhicules, armes, améliorations et avantages achetés en atelier **n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`, `WEAPON`, `VEHICLE_IMPROVEMENT`, `VEHICLE_ADVANTAGE`).

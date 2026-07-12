@@ -61,6 +61,10 @@ export class ChangeEquipmentUseCase {
       ? (this.catalog.getImprovementType(cmd.nomInterne) ?? null)
       : null;
 
+    const resolvedAdvantageType = cmd.entityType === EquipmentEntityType.ADVANTAGE
+      ? (this.catalog.getAdvantageType(cmd.nomInterne) ?? null)
+      : null;
+
     try {
       const game = campaign.findAtelierGame();
       const result = game.changeEquipment(me, {
@@ -73,6 +77,7 @@ export class ChangeEquipmentUseCase {
         resolvedVehicleType,
         resolvedWeaponType,
         resolvedImprovementType,
+        resolvedAdvantageType,
       });
       // Annulation d'achat de cette session : suppression pure de l'événement BUY, aucun
       // événement à ajouter (cf. Game.changeEquipment). `game.id` (pas `events[0].gameId`)

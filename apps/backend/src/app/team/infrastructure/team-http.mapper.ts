@@ -2,9 +2,11 @@ import type { Team } from '../domain/team';
 import type { Vehicle } from '../domain/vehicle';
 import type { Weapon } from '../domain/weapon';
 import type { Improvement } from '../domain/improvement';
+import type { Advantage } from '../domain/advantage';
 import type { VehicleDto } from '../dto/vehicle.dto';
 import type { VehicleImprovementDto } from '../dto/vehicle-improvement.dto';
 import type { WeaponDto } from '../dto/weapon.dto';
+import type { VehicleAdvantageDto } from '../dto/vehicle-advantage.dto';
 
 /**
  * Traduit un agrégat Team (ou un Vehicle extrait de l'agrégat) en DTOs HTTP sérialisables.
@@ -47,6 +49,16 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
     }),
   );
 
+  const advantages: VehicleAdvantageDto[] = vehicle.advantages.map(
+    (a: Advantage): VehicleAdvantageDto => ({
+      id: a.id,
+      nomInterne: a.type.nomInterne,
+      vehicleId: vehicle.id,
+      createdAt: new Date(0),
+      prix: a.price,
+    }),
+  );
+
   return {
     id: vehicle.id,
     nomInterne: vehicle.type.nomInterne,
@@ -54,5 +66,6 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
     createdAt: new Date(0),
     improvements,
     weapons,
+    advantages,
   };
 }

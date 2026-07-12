@@ -1,6 +1,7 @@
 import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
+import type { AdvantageType } from './value-objects/advantage-type';
 
 /**
  * Contrat d'accès au catalogue de jeu depuis la couche domaine de Team.
@@ -13,7 +14,9 @@ export interface ICatalogRepository {
   getVehicleType(nomInterne: string): VehicleType | undefined;
   getWeaponType(nomInterne: string): WeaponType | undefined;
   getImprovementType(nomInterne: string): ImprovementType | undefined;
+  getAdvantageType(nomInterne: string): AdvantageType | undefined;
   getVehicleTypesForSponsor(sponsorNom: string): VehicleType[];
   getWeaponTypesForSponsor(sponsorNom: string): WeaponType[];
   getImprovementTypesForSponsor(sponsorNom: string): ImprovementType[];
+  getAdvantageTypesForSponsor(sponsorNom: string): AdvantageType[];
 }

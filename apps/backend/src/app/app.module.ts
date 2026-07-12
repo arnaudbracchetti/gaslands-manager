@@ -12,6 +12,7 @@ import { TeamOrm } from './team/infrastructure/entities/team.entity';
 import {
   VehicleOrm,
   VehicleImprovementOrm,
+  VehicleAdvantageOrm,
 } from './team/infrastructure/entities/vehicle.entity';
 import { WeaponOrm } from './team/infrastructure/entities/weapon.entity';
 import { CampaignModule } from './campaign/campaign.module';
@@ -37,7 +38,7 @@ import { GameEventOrm } from './campaign/infrastructure/entities/game-event.enti
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameEventOrm],
+        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, VehicleAdvantageOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameEventOrm],
         synchronize: true,
         logging: false,
       }),

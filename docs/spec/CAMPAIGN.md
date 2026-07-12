@@ -284,31 +284,55 @@ lui-même l'unique partie actuellement en `ATELIER` dans la campagne (erreur
 
 ## Annulation d'achat vs revente
 
-Retirer un équipement (arme ou amélioration) en atelier est **deux opérations
-distinctes** selon son origine — conception détaillée :
-[`docs/plans/2026-07-11-atelier-annulation-revente-design.md`](../plans/2026-07-11-atelier-annulation-revente-design.md).
+Retirer un équipement (arme, amélioration ou avantage) en atelier est **deux
+opérations distinctes** selon son origine — conception détaillée :
+[`docs/plans/2026-07-11-atelier-annulation-revente-design.md`](../plans/2026-07-11-atelier-annulation-revente-design.md)
+et, pour la spécificité des avantages,
+[`docs/plans/2026-07-12-avantages-vehicule-design.md`](../plans/2026-07-12-avantages-vehicule-design.md).
 
 - **Acheté pendant la session d'atelier en cours** (son événement `BUY` est
   encore dans le journal de la partie actuellement en `ATELIER`) : **annulation**
   — l'événement `BUY` est supprimé du journal, aucun événement de vente n'est
   créé, remboursement intégral et invisible dans le journal (comme si l'achat
-  n'avait jamais eu lieu).
+  n'avait jamais eu lieu). Comportement identique quel que soit le type
+  d'équipement, avantages compris.
 - **Pré-existant** (construction d'équipe, ou atelier antérieur déjà clôturé) :
-  **revente** à moitié prix arrondie à l'inférieur (p.170) — `Weapon`/
-  `Improvement` gagnent un flag `isSold`, mirroir d'`isLost` : l'objet reste
-  visible sur la fiche du véhicule (barré, badge "Vendue"), son prix devient le
-  résiduel `ceil(prix/2)` et son emplacement est libéré (`slots = 0`). Scopé aux
-  **armes et améliorations uniquement** — jamais aux véhicules (invariant de
-  sécurité de la suppression physique du `BUY`, cf. commentaire sur `canAccept()`
-  dans `evenement-tele-game.ts`/`escarmouche-game.ts`).
+  **revente**, dont le montant récupéré dépend du type d'équipement :
+  - **Arme/Amélioration** : moitié prix arrondie à l'inférieur (p.170) —
+    `Weapon`/`Improvement` gagnent un flag `isSold`, mirroir d'`isLost` : l'objet
+    reste visible sur la fiche du véhicule (barré, badge "Vendue"), son prix
+    devient le résiduel `ceil(prix/2)` et son emplacement est libéré (`slots = 0`).
+  - **Avantage** : **perte totale** — aucun remboursement. `Advantage` gagne le
+    même flag `isSold`, mais son `price` reste **toujours** le prix catalogue
+    plein (`Advantage.price` ne dépend jamais d'`isSold`) : contrairement à une
+    arme/amélioration, il n'existe pas de second nombre "prix résiduel" à
+    calculer — la perte totale tient entièrement au fait que ce prix ne varie
+    jamais. Reste visible sur la fiche véhicule (barré, badge "Vendu"), comme
+    tout autre équipement revendu.
+
+  Scopé aux **armes, améliorations et avantages uniquement** — jamais aux
+  véhicules (invariant de sécurité de la suppression physique du `BUY`, cf.
+  commentaire sur `canAccept()` dans `evenement-tele-game.ts`/`escarmouche-game.ts`).
 
 Le critère de décision (BUY de cette session ou non) est déterminé côté serveur
 uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
 même endpoint `POST .../events/equipment`, sans savoir laquelle des deux
-opérations aura lieu. `WorkshopWeaponDto`/`WorkshopImprovementDto` exposent
-`isSold` et `purchasedThisSession` (ce dernier uniquement pour adapter le texte
-de confirmation *avant* le clic — "Annuler l'achat" vs "Revendre pour N
-jerricans (50%)" — jamais pour décider côté client).
+opérations aura lieu. `WorkshopWeaponDto`/`WorkshopImprovementDto`/
+`WorkshopAdvantageDto` exposent `isSold` et `purchasedThisSession` (ce dernier
+uniquement pour adapter le texte de confirmation *avant* le clic — "Annuler
+l'achat" vs "Revendre pour N jerricans (50%)" pour une arme/amélioration,
+"Revendre ? Le prix total est perdu, aucun remboursement" pour un avantage —
+jamais pour décider côté client).
+
+**Limitation connue — Cascadeur/Sur Deux Roues non réévalués en atelier** : les
+2 avantages à comportement mécanique (Cascadeur, Sur Deux Roues, cf.
+[VEHICLES.md](VEHICLES.md#avantages-de-véhicule-72-au-total)) sont correctement
+grisés dans la liste des avantages disponibles (`GetWorkshopAvailableAdvantagesUseCase`
+appelle la règle complète `canAddAdvantage`), mais `Game.changeEquipment()` ne
+revérifie **pas** ces 2 règles à l'écriture — seul le budget de la cagnotte,
+comme pour toute arme/amélioration aujourd'hui (cf. limitation déjà documentée
+pour l'Atelier ci-dessous). Ce n'est pas une régression propre aux avantages :
+c'est le même périmètre "Temps 1" que le reste de l'équipement atelier.
 
 **Cagnotte dérivée** — `CampaignParticipant.wallet` n'est plus un compteur
 mutable : c'est un getter dérivé de `Team.remainingBudget` (budget non dépensé
@@ -362,9 +386,9 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   que la construction d'équipe, via l'abstraction `EquipmentDataSource` (token DI)
   — l'implémentation `AtelierEquipmentDataSource` traduit chaque achat/retrait en
   `POST .../events/equipment` puis relit `GET .../workshop`. Achat **et** retrait
-  d'armes et d'améliorations sont gérés (le buy/sell backend supporte désormais
-  `IMPROVEMENT`, cf. `EquipmentChangedEvent`) ; le budget affiché est calibré sur
-  la cagnotte. La phase atelier reste un statut du
+  d'armes, d'améliorations **et d'avantages** sont gérés (le buy/sell backend supporte
+  désormais `IMPROVEMENT` et `ADVANTAGE`, cf. `EquipmentChangedEvent`) ; le budget
+  affiché est calibré sur la cagnotte. La phase atelier reste un statut du
   cycle de vie de la partie (`PLANIFIE → ATELIER → JOUE`, cf.
   [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier))
   plutôt qu'une entité séparée. La revente à moitié prix (p.170) et la distinction
@@ -556,9 +580,10 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes **et améliorations**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
+| GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
-| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`. `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
+| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`. `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
 | POST | `/api/campaigns/:id/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` — 204. Même résolution automatique de l'atelier courant que `/events/equipment` |

@@ -16,13 +16,18 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AddImprovementDto } from './dto/add-improvement.dto';
+import { AddAdvantageDto } from './dto/add-advantage.dto';
 import { vehicleDomainToDto } from './infrastructure/team-http.mapper';
 import { GetVehicleDetailUseCase } from './application/get-vehicle-detail.usecase';
 import { GetAvailableImprovementsUseCase } from './application/get-available-improvements.usecase';
 import { AddImprovementUseCase } from './application/add-improvement.usecase';
 import { RemoveImprovementUseCase } from './application/remove-improvement.usecase';
+import { GetAvailableAdvantagesUseCase } from './application/get-available-advantages.usecase';
+import { AddAdvantageUseCase } from './application/add-advantage.usecase';
+import { RemoveAdvantageUseCase } from './application/remove-advantage.usecase';
 import { RemoveVehicleUseCase } from './application/remove-vehicle.usecase';
 import type { AvailableImprovementDto } from './dto/available-improvement.dto';
+import type { AvailableAdvantageDto } from './dto/available-advantage.dto';
 import type { VehicleDetailDto } from './dto/vehicle-detail.dto';
 import type { VehicleDto } from './dto/vehicle.dto';
 
@@ -38,6 +43,9 @@ export class VehicleController {
     private readonly getAvailableImprovements: GetAvailableImprovementsUseCase,
     private readonly addImprovementUseCase: AddImprovementUseCase,
     private readonly removeImprovementUseCase: RemoveImprovementUseCase,
+    private readonly getAvailableAdvantages: GetAvailableAdvantagesUseCase,
+    private readonly addAdvantageUseCase: AddAdvantageUseCase,
+    private readonly removeAdvantageUseCase: RemoveAdvantageUseCase,
     private readonly removeVehicleUseCase: RemoveVehicleUseCase,
   ) {}
 
@@ -80,6 +88,39 @@ export class VehicleController {
     @Request() req: AuthenticatedRequest,
   ): Promise<VehicleDto> {
     const vehicle = await this.removeImprovementUseCase.execute({ vehicleId: id, improvementId, userId: req.user.id });
+    return vehicleDomainToDto(vehicle);
+  }
+
+  @Get(':id/available-advantages')
+  getAvailableAdvantagesList(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<AvailableAdvantageDto[]> {
+    return this.getAvailableAdvantages.execute({ vehicleId: id, userId: req.user.id });
+  }
+
+  @Post(':id/advantages')
+  async addAdvantage(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: AddAdvantageDto,
+  ): Promise<VehicleDto> {
+    const team = await this.addAdvantageUseCase.execute({
+      vehicleId: id,
+      nomInterne: dto.nomInterne,
+      userId: req.user.id,
+    });
+    const vehicle = team.findVehicle(id);
+    return vehicleDomainToDto(vehicle);
+  }
+
+  @Delete(':id/advantages/:advantageId')
+  async removeAdvantage(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('advantageId', ParseIntPipe) advantageId: number,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<VehicleDto> {
+    const vehicle = await this.removeAdvantageUseCase.execute({ vehicleId: id, advantageId, userId: req.user.id });
     return vehicleDomainToDto(vehicle);
   }
 

@@ -14,12 +14,13 @@
  *   GET /api/catalog/vehicules
  *   GET /api/catalog/armes
  *   GET /api/catalog/ameliorations
+ *   GET /api/catalog/avantages
  */
 
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 // import type : ces interfaces n'existent qu'à la compilation, pas à l'exécution.
-import type { Amelioration, Arme, Sponsor, Vehicule } from './catalog.interfaces';
+import type { Amelioration, Arme, Avantage, Sponsor, Vehicule } from './catalog.interfaces';
 
 @Controller('catalog')
 export class CatalogController {
@@ -86,5 +87,15 @@ export class CatalogController {
   @Get('ameliorations')
   getAllAmeliorations(): Amelioration[] {
     return this.catalogService.getAllAmeliorations();
+  }
+
+  /**
+   * GET /api/catalog/avantages
+   *
+   * Retourne tous les avantages de véhicule du catalogue (72 au total, 12 catégories).
+   */
+  @Get('avantages')
+  getAllAvantages(): Avantage[] {
+    return this.catalogService.getAllAvantages();
   }
 }

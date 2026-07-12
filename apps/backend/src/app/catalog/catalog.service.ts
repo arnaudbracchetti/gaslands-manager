@@ -23,6 +23,7 @@ import * as path from 'path';
 import {
   Amelioration,
   Arme,
+  Avantage,
   RawSponsor,
   Sponsor,
   Vehicule,
@@ -31,6 +32,7 @@ import type { ICatalogRepository } from '../team/domain/catalog.repository.inter
 import { VehicleType } from '../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../team/domain/value-objects/improvement-type';
+import { AdvantageType } from '../team/domain/value-objects/advantage-type';
 
 @Injectable()
 export class CatalogService implements OnModuleInit, ICatalogRepository {
@@ -52,6 +54,7 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
   private allVehicules: Vehicule[] = [];
   private allArmes: Arme[] = [];
   private allAmeliorations: Amelioration[] = [];
+  private allAvantages: Avantage[] = [];
 
   /**
    * Lifecycle hook NestJS : appelé automatiquement après l'initialisation
@@ -78,6 +81,10 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
         ameliorations_vehicules: Amelioration[];
       }>('amelioration.yml').ameliorations_vehicules;
 
+      this.allAvantages = this.loadYaml<{ avantages: Avantage[] }>(
+        'avantage.yml',
+      ).avantages;
+
       // Étape 1bis : Convertir les champs Markdown (`description`/`regles`) en HTML.
       // Fait une seule fois ici, comme ContentService le fait pour les fichiers .md —
       // évite de refaire la conversion à chaque rendu côté frontend (cf. ARCHITECTURE.md §3.3).
@@ -98,6 +105,10 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
         a.description = this.toHtml(a.description);
         a.regles = this.toHtml(a.regles);
       }
+      for (const a of this.allAvantages) {
+        a.description = this.toHtml(a.description);
+        a.regles = this.toHtml(a.regles);
+      }
 
       // Étape 2 : Construire la Map avec les relations pré-résolues.
       // Pour chaque sponsor, on filtre les items dont sponsors_autorises[] contient son nom.
@@ -115,6 +126,12 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
           ameliorations: this.allAmeliorations.filter((a: Amelioration) =>
             a.sponsors_autorises.includes(raw.nom),
           ),
+          // Résolution DIFFÉRENTE des autres catalogues : un avantage ne déclare pas de
+          // sponsors_autorises — l'éligibilité est dérivée de sa `categorie`, comparée
+          // aux classes_avantage (2 par sponsor) déjà présentes dans sponsors.yml.
+          avantages: this.allAvantages.filter((a: Avantage) =>
+            raw.classes_avantage.includes(a.categorie),
+          ),
         });
       }
 
@@ -122,7 +139,8 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
         `Catalogue chargé : ${this.sponsorMap.size} sponsors, ` +
           `${this.allVehicules.length} véhicules, ` +
           `${this.allArmes.length} armes, ` +
-          `${this.allAmeliorations.length} améliorations.`,
+          `${this.allAmeliorations.length} améliorations, ` +
+          `${this.allAvantages.length} avantages.`,
       );
     } catch (err: unknown) {
       // `unknown` : TypeScript force le narrowing avant usage.
@@ -209,6 +227,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
     return this.allAmeliorations;
   }
 
+  /** Retourne tous les avantages du catalogue. */
+  getAllAvantages(): Avantage[] {
+    return this.allAvantages;
+  }
+
   // ── Recherches par nom_interne (clés étrangères logiques vers le catalogue) ──
   //
   // Le module Vehicle référence ses items catalogue par `nom_interne` (cf.
@@ -233,6 +256,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
     return this.allAmeliorations.find((a: Amelioration) => a.nom_interne === nomInterne);
   }
 
+  /** Retourne un avantage du catalogue par son nom_interne, ou undefined si inconnu. */
+  getAvantageByNomInterne(nomInterne: string): Avantage | undefined {
+    return this.allAvantages.find((a: Avantage) => a.nom_interne === nomInterne);
+  }
+
   // ── Implémentation ICatalogRepository — retourne des Value Objects du domaine ──
 
   getVehicleType(nomInterne: string): VehicleType | undefined {
@@ -250,6 +278,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
     return raw ? ImprovementType.from(raw) : undefined;
   }
 
+  getAdvantageType(nomInterne: string): AdvantageType | undefined {
+    const raw = this.getAvantageByNomInterne(nomInterne);
+    return raw ? AdvantageType.from(raw) : undefined;
+  }
+
   getVehicleTypesForSponsor(sponsorNom: string): VehicleType[] {
     return (this.getSponsor(sponsorNom)?.vehicules ?? []).map(VehicleType.from);
   }
@@ -260,5 +293,9 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
 
   getImprovementTypesForSponsor(sponsorNom: string): ImprovementType[] {
     return (this.getSponsor(sponsorNom)?.ameliorations ?? []).map(ImprovementType.from);
+  }
+
+  getAdvantageTypesForSponsor(sponsorNom: string): AdvantageType[] {
+    return (this.getSponsor(sponsorNom)?.avantages ?? []).map(AdvantageType.from);
   }
 }

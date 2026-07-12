@@ -34,6 +34,7 @@ import type { WeaponOrientation } from '../../team/domain/team';
 import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
+import { AdvantageType } from '../../team/domain/value-objects/advantage-type';
 
 import { DomainException } from '../../shared/domain/domain-exception';
 
@@ -169,6 +170,7 @@ export class CampaignMapper {
     let resolvedVehicleType: VehicleType | null = null;
     let resolvedWeaponType: WeaponType | null = null;
     let resolvedImprovementType: ImprovementType | null = null;
+    let resolvedAdvantageType: AdvantageType | null = null;
 
     if (entityType === EquipmentEntityType.VEHICLE) {
       const raw = nomInterne ? this.catalog.getVehiculeByNomInterne(nomInterne) : undefined;
@@ -178,6 +180,10 @@ export class CampaignMapper {
       const raw = nomInterne ? this.catalog.getArmeByNomInterne(nomInterne) : undefined;
       if (!raw && requireResolution) throw new DomainException(`Arme catalogue introuvable : "${nomInterne}"`);
       resolvedWeaponType = raw ? WeaponType.from(raw) : null;
+    } else if (entityType === EquipmentEntityType.ADVANTAGE) {
+      const raw = nomInterne ? this.catalog.getAvantageByNomInterne(nomInterne) : undefined;
+      if (!raw && requireResolution) throw new DomainException(`Avantage catalogue introuvable : "${nomInterne}"`);
+      resolvedAdvantageType = raw ? AdvantageType.from(raw) : null;
     } else {
       const raw = nomInterne ? this.catalog.getAmeliorationByNomInterne(nomInterne) : undefined;
       if (!raw && requireResolution) throw new DomainException(`Amélioration catalogue introuvable : "${nomInterne}"`);
@@ -188,7 +194,7 @@ export class CampaignMapper {
       orm.id, orm.gameId, orm.participantId, orm.eventOrder,
       operation, entityType, nomInterne, orm.cost!,
       orm.targetVehicleId, orm.targetEntityId, orientation,
-      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType,
+      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
     );
   }
 }

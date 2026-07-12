@@ -89,6 +89,24 @@ export interface Weapon {
 }
 
 /**
+ * Un avantage acquis — miroir de `VehicleAdvantageDto` (backend). Plus simple que
+ * `VehicleImprovement`/`Weapon` : pas d'`orientation` (jamais requise), pas
+ * d'`estDefaut`/`emplacement` (un avantage n'occupe jamais de slot).
+ */
+export interface VehicleAdvantage {
+  id: number;
+  nomInterne: string;
+  vehicleId: number;
+  createdAt: string;
+  /** Prix en Jerricans — ne baisse JAMAIS avec `sold` (perte totale à la revente,
+   *  contrairement à `VehicleImprovement.prix`/`Weapon.prix`). */
+  prix: number;
+  /** Cf. `VehicleImprovement.sold`/`purchasedThisSession` — même usage, atelier uniquement. */
+  sold?: boolean;
+  purchasedThisSession?: boolean;
+}
+
+/**
  * Un véhicule d'équipe — miroir de `Vehicle` (backend `vehicle.entity.ts`).
  *
  * ⚠️ C'est l'entité BRUTE retournée par les endpoints d'ajout (`create`,
@@ -103,6 +121,7 @@ export interface Vehicle {
   teamId: number;
   improvements: VehicleImprovement[];
   weapons: Weapon[];
+  advantages: VehicleAdvantage[];
   createdAt: string;
 }
 
@@ -170,6 +189,27 @@ export interface AvailableWeaponDto {
   disponible: boolean;
   raison?: string;
   montableSurTourelle: boolean;
+}
+
+/** Corps de `POST /api/vehicles/:id/advantages` — miroir de `AddAdvantageDto`. Pas d'orientation. */
+export interface AddAdvantageDto {
+  nomInterne: string;
+}
+
+/**
+ * Ligne de `GET /api/vehicles/:id/available-advantages` — miroir de `AvailableAdvantageDto`.
+ * Pas de champ `emplacement` (un avantage n'en occupe jamais) — `EquipmentManager` synthétise
+ * `emplacement: 0` en construisant l'`EquipmentOption` passé à `<app-equipment-option>`.
+ */
+export interface AvailableAdvantageDto {
+  nom: string;
+  nomInterne: string;
+  categorie: string;
+  prix: number;
+  description: string;
+  regles: string;
+  disponible: boolean;
+  raison?: string;
 }
 
 /**

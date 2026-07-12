@@ -9,6 +9,7 @@ import { TeamOrm } from './infrastructure/entities/team.entity';
 import {
   VehicleOrm,
   VehicleImprovementOrm,
+  VehicleAdvantageOrm,
 } from './infrastructure/entities/vehicle.entity';
 import { WeaponOrm } from './infrastructure/entities/weapon.entity';
 
@@ -48,13 +49,18 @@ import { GetAvailableImprovementsUseCase } from './application/get-available-imp
 import { AddImprovementUseCase } from './application/add-improvement.usecase';
 import { RemoveImprovementUseCase } from './application/remove-improvement.usecase';
 
+// Use cases — avantages
+import { GetAvailableAdvantagesUseCase } from './application/get-available-advantages.usecase';
+import { AddAdvantageUseCase } from './application/add-advantage.usecase';
+import { RemoveAdvantageUseCase } from './application/remove-advantage.usecase';
+
 import type { ITeamRepository } from './domain/team.repository.interface';
 import type { ICatalogRepository } from './domain/catalog.repository.interface';
 import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, WeaponOrm, CampaignParticipantOrm]),
+    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, VehicleAdvantageOrm, WeaponOrm, CampaignParticipantOrm]),
     CatalogModule,
   ],
   controllers: [TeamController, VehicleTeamController, VehicleController, WeaponController],
@@ -161,6 +167,26 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     {
       provide: RemoveImprovementUseCase,
       useFactory: (tr: ITeamRepository) => new RemoveImprovementUseCase(tr),
+      inject: [TEAM_REPOSITORY],
+    },
+
+    // ── Use cases — avantages ─────────────────────────────────────────────────
+
+    {
+      provide: GetAvailableAdvantagesUseCase,
+      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
+        new GetAvailableAdvantagesUseCase(tr, cr),
+      inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
+    },
+    {
+      provide: AddAdvantageUseCase,
+      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
+        new AddAdvantageUseCase(tr, cr),
+      inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
+    },
+    {
+      provide: RemoveAdvantageUseCase,
+      useFactory: (tr: ITeamRepository) => new RemoveAdvantageUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
   ],

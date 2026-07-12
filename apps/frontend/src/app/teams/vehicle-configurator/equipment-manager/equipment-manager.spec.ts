@@ -20,7 +20,7 @@ import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary'
 import { MountedEquipment } from './mounted-equipment/mounted-equipment';
 import { EQUIPMENT_DATA_SOURCE, BudgetView } from '../equipment-data-source';
 import { Sponsor, Vehicule } from '../../../catalog/catalog.model';
-import { AvailableImprovementDto, AvailableWeaponDto, Vehicle } from '../vehicle-builder.model';
+import { AvailableImprovementDto, AvailableWeaponDto, AvailableAdvantageDto, Vehicle } from '../vehicle-builder.model';
 
 // ── Données fictives ──────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ const mockVehicule: Vehicule = {
 const mockSponsorCatalog: Sponsor = {
   nom: 'Rutherford',
   description: 'Sponsor militaire.',
-  classes_avantage: ['Militaire'],
+  classes_avantage: ['Militaire', 'Dur à Cuire'],
   avantages_sponsorises: '',
   vehicules: [mockVehicule],
   armes: [
@@ -73,6 +73,24 @@ const mockSponsorCatalog: Sponsor = {
       necessite_orientation: false,
     },
   ],
+  avantages: [
+    {
+      nom: 'Tireur d\'Élite',
+      nom_interne: 'tireur_elite',
+      categorie: 'Militaire',
+      prix: 2,
+      description: '',
+      regles: '',
+    },
+    {
+      nom: 'Baril de Poudre',
+      nom_interne: 'baril_de_poudre',
+      categorie: 'Dur à Cuire',
+      prix: 1,
+      description: '',
+      regles: '',
+    },
+  ],
 };
 
 // Budget par défaut : total 50, rien consommé ailleurs (usedByOthers 0).
@@ -86,6 +104,7 @@ const mockVehicle: Vehicle = {
   teamId: 7,
   improvements: [],
   weapons: [],
+  advantages: [],
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -100,6 +119,12 @@ const mockVehicleWithWeapon: Vehicle = {
 const mockVehicleWithImprovement: Vehicle = {
   ...mockVehicle,
   improvements: [{ id: 300, nomInterne: 'blindage', orientation: null, vehicleId: 100, createdAt: '2026-01-01T00:00:02.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
+};
+
+// Véhicule équipé d'un avantage — sert au mirroir `removeAdvantage`/`addAdvantage`.
+const mockVehicleWithAdvantage: Vehicle = {
+  ...mockVehicle,
+  advantages: [{ id: 400, nomInterne: 'tireur_elite', vehicleId: 100, createdAt: '2026-01-01T00:00:03.000Z', prix: 2 }],
 };
 
 const mockAvailableWeapon: AvailableWeaponDto = {
@@ -119,6 +144,28 @@ const mockAvailableImprovement: AvailableImprovementDto = {
   nomInterne: 'blindage',
   prix: 4,
   emplacement: 1,
+  description: '',
+  regles: '',
+  disponible: true,
+};
+
+// Catégorie 'Militaire' — 1ère catégorie de `mockSponsorCatalog.classes_avantage`.
+const mockAvailableAdvantageA: AvailableAdvantageDto = {
+  nom: 'Tireur d\'Élite',
+  nomInterne: 'tireur_elite',
+  categorie: 'Militaire',
+  prix: 2,
+  description: '',
+  regles: '',
+  disponible: true,
+};
+
+// Catégorie 'Dur à Cuire' — 2ᵉ catégorie de `mockSponsorCatalog.classes_avantage`.
+const mockAvailableAdvantageB: AvailableAdvantageDto = {
+  nom: 'Baril de Poudre',
+  nomInterne: 'baril_de_poudre',
+  categorie: 'Dur à Cuire',
+  prix: 1,
   description: '',
   regles: '',
   disponible: true,
@@ -172,10 +219,13 @@ describe('EquipmentManager', () => {
   let mockDataSource: {
     getAvailableWeapons: ReturnType<typeof vi.fn>;
     getAvailableImprovements: ReturnType<typeof vi.fn>;
+    getAvailableAdvantages: ReturnType<typeof vi.fn>;
     addWeapon: ReturnType<typeof vi.fn>;
     addImprovement: ReturnType<typeof vi.fn>;
+    addAdvantage: ReturnType<typeof vi.fn>;
     removeWeapon: ReturnType<typeof vi.fn>;
     removeImprovement: ReturnType<typeof vi.fn>;
+    removeAdvantage: ReturnType<typeof vi.fn>;
   };
 
   /** Instancie le composant avec un budget donné (défaut : `defaultBudget`). */
@@ -192,10 +242,13 @@ describe('EquipmentManager', () => {
     mockDataSource = {
       getAvailableWeapons: vi.fn().mockReturnValue(of([mockAvailableWeapon])),
       getAvailableImprovements: vi.fn().mockReturnValue(of([mockAvailableImprovement])),
+      getAvailableAdvantages: vi.fn().mockReturnValue(of([])),
       addWeapon: vi.fn().mockReturnValue(of(mockVehicleWithWeapon)),
       addImprovement: vi.fn().mockReturnValue(of(mockVehicleWithImprovement)),
+      addAdvantage: vi.fn().mockReturnValue(of(mockVehicle)),
       removeWeapon: vi.fn().mockReturnValue(of(mockVehicle)),
       removeImprovement: vi.fn().mockReturnValue(of(mockVehicle)),
+      removeAdvantage: vi.fn().mockReturnValue(of(mockVehicle)),
     };
 
     await TestBed.configureTestingModule({
@@ -638,6 +691,107 @@ describe('EquipmentManager', () => {
       expect(toggle.textContent).toContain('Masquer les indisponibles');
       expect(el.textContent).toContain('BFG');
       expect(el.textContent).toContain('Nitro');
+    });
+  });
+
+  // ── Avantages — 2 sous-listes par catégorie du sponsor ─────────────────────
+
+  describe('Avantages', () => {
+    beforeEach(() => {
+      vi.clearAllMocks(); // le beforeEach global a déjà appelé createWith() une fois — ne compter que ce second rendu
+      mockDataSource.getAvailableAdvantages.mockReturnValue(of([mockAvailableAdvantageA, mockAvailableAdvantageB]));
+      createWith(mockVehicle);
+    });
+
+    it('charge les avantages disponibles au premier rendu', () => {
+      expect(mockDataSource.getAvailableAdvantages).toHaveBeenCalledExactlyOnceWith(100);
+      expect(component.availableAdvantages()).toEqual([mockAvailableAdvantageA, mockAvailableAdvantageB]);
+    });
+
+    it('scinde les avantages en 2 sous-listes selon classes_avantage du sponsor', () => {
+      // mockSponsorCatalog.classes_avantage = ['Militaire', 'Dur à Cuire']
+      expect(component.advantagesCategoryA()).toHaveLength(1);
+      expect(component.advantagesCategoryA()[0].nomInterne).toBe('tireur_elite');
+      expect(component.advantagesCategoryB()).toHaveLength(1);
+      expect(component.advantagesCategoryB()[0].nomInterne).toBe('baril_de_poudre');
+    });
+
+    it('synthétise emplacement=0 sur les options transmises à <app-equipment-option> (un avantage n\'occupe jamais de slot)', () => {
+      expect(component.advantagesCategoryA()[0].emplacement).toBe(0);
+      expect(component.advantagesCategoryB()[0].emplacement).toBe(0);
+    });
+
+    it('affiche les 2 sections de catégorie avec leurs titres et les avantages disponibles', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Avantages — Militaire');
+      expect(el.textContent).toContain('Avantages — Dur à Cuire');
+      expect(el.textContent).toContain('Tireur d\'Élite');
+      expect(el.textContent).toContain('Baril de Poudre');
+    });
+
+    it('ajoute un avantage et notifie le parent via vehicleChanged (mirroir d\'addImprovement)', () => {
+      mockDataSource.addAdvantage.mockReturnValue(of(mockVehicleWithAdvantage));
+      const emitted: Vehicle[] = [];
+      outputToObservable(component.vehicleChanged).subscribe((v) => emitted.push(v));
+      vi.clearAllMocks();
+
+      component.addAdvantage({ nomInterne: 'tireur_elite' });
+
+      expect(mockDataSource.addAdvantage).toHaveBeenCalledExactlyOnceWith(100, { nomInterne: 'tireur_elite' });
+      expect(emitted).toEqual([mockVehicleWithAdvantage]);
+    });
+
+    it('affiche la raison du refus si l\'ajout d\'un avantage échoue, sans émettre vehicleChanged', () => {
+      mockDataSource.addAdvantage.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ error: { message: '"Tireur d\'Élite" est déjà acquis sur ce véhicule' }, status: 400 })),
+      );
+      const emitted: Vehicle[] = [];
+      outputToObservable(component.vehicleChanged).subscribe((v) => emitted.push(v));
+
+      component.addAdvantage({ nomInterne: 'tireur_elite' });
+
+      expect(component.equipmentError()).toBe('"Tireur d\'Élite" est déjà acquis sur ce véhicule');
+      expect(emitted).toHaveLength(0);
+    });
+
+    it('removeAdvantage() ouvre la modale puis, à confirmation, retire l\'avantage et notifie le parent (mirroir de removeImprovement)', () => {
+      mockDataSource.removeAdvantage.mockReturnValue(of(mockVehicle));
+      fixture.componentRef.setInput('vehicle', mockVehicleWithAdvantage);
+      fixture.detectChanges();
+      const emitted: Vehicle[] = [];
+      outputToObservable(component.vehicleChanged).subscribe((v) => emitted.push(v));
+
+      component.removeAdvantage(mockVehicleWithAdvantage.advantages[0]);
+      expect(component.pendingRemoveAdvantage()).toEqual(mockVehicleWithAdvantage.advantages[0]);
+      expect(mockDataSource.removeAdvantage).not.toHaveBeenCalled();
+
+      component.onConfirmRemoveAdvantage();
+
+      expect(mockDataSource.removeAdvantage).toHaveBeenCalledExactlyOnceWith(100, 400);
+      expect(emitted).toEqual([mockVehicle]);
+      expect(component.pendingRemoveAdvantage()).toBeNull();
+    });
+
+    describe('advantageRemovalMessage — perte totale, jamais "moitié prix"', () => {
+      it('propose une suppression pure par défaut (construction d\'équipe, allowResale absent)', () => {
+        const advantage = mockVehicleWithAdvantage.advantages[0];
+        expect(component.advantageRemovalMessage(advantage)).toBe('Retirer "Tireur d\'Élite" du véhicule ?');
+        expect(component.advantageRemovalConfirmLabel()).toBe('Retirer');
+      });
+
+      it('propose "perte totale" (jamais "50%") quand l\'avantage est pré-existant (atelier)', () => {
+        fixture.componentRef.setInput('allowResale', true);
+        const advantage = mockVehicleWithAdvantage.advantages[0]; // prix 2
+        expect(component.advantageRemovalMessage(advantage)).toBe(
+          'Revendre "Tireur d\'Élite" ? Le prix total (2 jerricans) est perdu, aucun remboursement.',
+        );
+      });
+
+      it('propose "Annuler l\'achat" quand l\'avantage a été acheté cette session (atelier)', () => {
+        fixture.componentRef.setInput('allowResale', true);
+        const advantage = { ...mockVehicleWithAdvantage.advantages[0], purchasedThisSession: true };
+        expect(component.advantageRemovalMessage(advantage)).toBe('Annuler l\'achat de "Tireur d\'Élite" ?');
+      });
     });
   });
 });

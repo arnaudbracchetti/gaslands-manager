@@ -65,6 +65,7 @@ const mockSponsorCatalog: Sponsor = {
   vehicules: [mockVehicule],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 describe('VehicleConfiguratorPage', () => {

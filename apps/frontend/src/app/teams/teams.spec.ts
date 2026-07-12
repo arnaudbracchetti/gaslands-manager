@@ -67,6 +67,7 @@ const mockSponsorCatalog: Sponsor = {
   ],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 const mockVehicle: Vehicle = {
@@ -75,6 +76,7 @@ const mockVehicle: Vehicle = {
   teamId: 10,
   improvements: [],
   weapons: [],
+  advantages: [],
   createdAt: '2025-01-01T00:00:00.000Z',
 };
 

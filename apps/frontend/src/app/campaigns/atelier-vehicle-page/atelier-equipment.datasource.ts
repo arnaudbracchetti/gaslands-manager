@@ -20,7 +20,13 @@ import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, map, switchMap } from 'rxjs';
 import { EquipmentDataSource } from '../../teams/vehicle-configurator/equipment-data-source';
-import { AvailableImprovementDto, AvailableWeaponDto, EquipmentChoice, Vehicle } from '../../teams/vehicle-configurator/vehicle-builder.model';
+import {
+  AvailableImprovementDto,
+  AvailableWeaponDto,
+  AvailableAdvantageDto,
+  EquipmentChoice,
+  Vehicle,
+} from '../../teams/vehicle-configurator/vehicle-builder.model';
 import { CampaignsService } from '../campaigns.service';
 import { WorkshopStateDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
 
@@ -81,6 +87,32 @@ export class AtelierEquipmentDataSource implements EquipmentDataSource {
       nomInterne: '',
       targetVehicleId: vehicleId,
       targetEntityId: improvementId,
+      orientation: null,
+    }));
+  }
+
+  getAvailableAdvantages(vehicleId: number): Observable<AvailableAdvantageDto[]> {
+    return this.service.getWorkshopAvailableAdvantages(this.campaignId, vehicleId);
+  }
+
+  addAdvantage(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle> {
+    return this.mutate(vehicleId, () => this.service.changeEquipment(this.campaignId, {
+      operation: 'BUY',
+      entityType: 'ADVANTAGE',
+      nomInterne: choice.nomInterne,
+      targetVehicleId: vehicleId,
+      targetEntityId: null,
+      orientation: null,
+    }));
+  }
+
+  removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle> {
+    return this.mutate(vehicleId, () => this.service.changeEquipment(this.campaignId, {
+      operation: 'SELL',
+      entityType: 'ADVANTAGE',
+      nomInterne: '',
+      targetVehicleId: vehicleId,
+      targetEntityId: advantageId,
       orientation: null,
     }));
   }

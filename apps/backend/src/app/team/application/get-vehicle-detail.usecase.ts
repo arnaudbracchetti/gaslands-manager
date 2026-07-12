@@ -39,7 +39,11 @@ export class GetVehicleDetailUseCase {
         orientation: i.orientation ?? undefined,
       }));
 
-    const build = this.buildFactory.create(catalogVehicule.toRaw(), installed);
+    const installedAdvantages = vehicle.advantages
+      .filter((a) => !a.isSold)
+      .map((a) => ({ nom_interne: a.type.nomInterne }));
+
+    const build = this.buildFactory.create(catalogVehicule.toRaw(), installed, installedAdvantages);
 
     return {
       id: vehicle.id,

@@ -57,6 +57,7 @@ const mockSponsorCatalog: Sponsor = {
   vehicules: [mockVehicule],
   armes: [],
   ameliorations: [],
+  avantages: [],
 };
 
 const mockWorkshop: WorkshopStateDto = {
@@ -74,6 +75,7 @@ const mockWorkshop: WorkshopStateDto = {
       sequellas: [],
       weapons: [],
       improvements: [],
+      advantages: [],
     },
   ],
 };
@@ -86,6 +88,7 @@ describe('AtelierVehiclePage', () => {
     getWorkshop: ReturnType<typeof vi.fn>;
     getWorkshopAvailableWeapons: ReturnType<typeof vi.fn>;
     getWorkshopAvailableImprovements: ReturnType<typeof vi.fn>;
+    getWorkshopAvailableAdvantages: ReturnType<typeof vi.fn>;
     changeEquipment: ReturnType<typeof vi.fn>;
   };
   let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn> };
@@ -96,6 +99,7 @@ describe('AtelierVehiclePage', () => {
       getWorkshop: vi.fn().mockReturnValue(of(mockWorkshop)),
       getWorkshopAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableImprovements: vi.fn().mockReturnValue(of([])),
+      getWorkshopAvailableAdvantages: vi.fn().mockReturnValue(of([])),
       changeEquipment: vi.fn().mockReturnValue(of(undefined)),
     };
     mockCatalogService = {

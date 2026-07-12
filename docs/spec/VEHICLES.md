@@ -15,10 +15,11 @@ Le catalogue contient :
 - **16 véhicules** — répartis en Léger / Moyen / Lourd, avec leurs statistiques complètes
 - **41 armes** — de type base, avancée, équipage ou largable
 - **10 améliorations** — modifications de véhicule
+- **72 avantages** — 12 catégories de style (6 chacune), cf. §Avantages de véhicule ci-dessous
 
-**Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané.
+**Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané. **Exception** : la liste des avantages d'un sponsor n'est **pas** résolue via un champ `sponsors_autorises` (les avantages n'en portent pas) mais par correspondance de catégorie — cf. §Avantages de véhicule.
 
-**Conversion Markdown → HTML au chargement** : les champs `description`/`regles` (`Vehicule`, `Arme`, `Amelioration`) ainsi que `Sponsor.description` contiennent du Markdown dans les fichiers YAML. `CatalogService.onModuleInit()` les convertit une seule fois en HTML via `marked`. Le frontend affiche directement ce HTML via `[innerHTML]`. `Sponsor.avantages_sponsorises` garde sa conversion existante côté client (`sponsor-carousel.ts`, `marked.parse()` + `DomSanitizer`), inchangée.
+**Conversion Markdown → HTML au chargement** : les champs `description`/`regles` (`Vehicule`, `Arme`, `Amelioration`, `Avantage`) ainsi que `Sponsor.description` contiennent du Markdown dans les fichiers YAML. `CatalogService.onModuleInit()` les convertit une seule fois en HTML via `marked`. Le frontend affiche directement ce HTML via `[innerHTML]`. `Sponsor.avantages_sponsorises` garde sa conversion existante côté client (`sponsor-carousel.ts`, `marked.parse()` + `DomSanitizer`), inchangée.
 
 Les endpoints du catalogue sont **publics** (pas de JWT requis).
 
@@ -163,19 +164,60 @@ depuis `ameliorations_defaut`/`arme_defaut` du catalogue YAML. Elles n'apparaiss
 dans le calcul du budget ni dans le pool d'emplacements — seul le badge 🔒 *Intégré* les
 identifie dans l'UI.
 
+### Avantages de véhicule (72 au total)
+
+Catégorie d'équipement distincte des armes et améliorations — 12 catégories de style
+(Agression, Audace, Dur à Cuire, Horreur, Mécanique, Militaire, Optimisation, Poursuite,
+Précision, Rapidité, Technologie, Trompe-la-Mort), 6 avantages par catégorie. Un avantage
+se comporte comme une amélioration (achat/retrait, même mécanisme de budget), à trois
+différences près :
+
+- **Aucun emplacement** : `emplacement` toujours 0, pas de consommation du pool de slots
+  du véhicule.
+- **Jamais d'orientation**.
+- **Unicité** : un même avantage ne peut être acheté qu'une seule fois par véhicule
+  (contrainte propre aux avantages, absente des armes/améliorations).
+
+**Lien sponsor → catégories** : chaque sponsor a accès à exactement **2** des 12
+catégories, via le champ `Sponsor.classes_avantage: string[2]` déjà présent dans
+`sponsors.yml` (utilisé jusqu'ici comme simple badge d'affichage dans le carousel de
+sélection sponsor). La résolution du catalogue par sponsor (`CatalogService`) filtre les
+avantages sur `avantage.categorie ∈ sponsor.classes_avantage` — **pas** sur un champ
+`sponsors_autorises` (les avantages n'en portent pas), contrairement aux véhicules/armes/
+améliorations. `avantage.yml` (`database_init/data/`) ne référence donc jamais directement
+un sponsor.
+
+**Comportement mécanique réel** : 69 des 72 avantages sont purement descriptifs (texte
+affiché, `comportement` absent). 3 exceptions, portées par le même mécanisme de décorateur
+que les améliorations (`AdvantageDecorator`, § voir ARCHITECTURE.md) :
+
+| Avantage | Catégorie | Effet |
+|---|---|---|
+| Expertise | Précision | +1 Manœuvrabilité en permanence |
+| Cascadeur | Audace | Réservé aux véhicules Poids Léger/Moyen (pas Lourd), Manœuvrabilité **effective** (après bonus d'améliorations/avantages déjà montés — ex. Chenilles, Expertise) ≥ 3 |
+| Sur Deux Roues | Optimisation | Manœuvrabilité effective ≥ 3 (pas de restriction de poids) |
+
+**Revente en atelier — perte totale** : contrairement à une arme/amélioration revendue
+(moitié prix, arrondi inférieur), un avantage revendu ne rembourse **rien** — cf.
+[CAMPAIGN.md — Annulation d'achat vs revente](CAMPAIGN.md#annulation-dachat-vs-revente).
+`Advantage.price` retourne toujours le prix catalogue plein, `isSold` ou non ; c'est ce
+qui porte entièrement la règle de perte totale (pas un second champ de "prix résiduel").
+
 ---
 
 ## Modèles de données
 
 ### Catalogue (en mémoire, pas en base de données)
 
-**`Sponsor`** — champs : `nom`, `description`, `classes_avantage[]`, `avantages_sponsorises`, `vehicules[]`, `armes[]`, `ameliorations[]`
+**`Sponsor`** — champs : `nom`, `description`, `classes_avantage[]`, `avantages_sponsorises`, `vehicules[]`, `armes[]`, `ameliorations[]`, `avantages[]` (résolus par catégorie, cf. §Avantages de véhicule ci-dessus)
 
 **`Vehicule`** — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]`, `arme_defaut?` (nom_interne de l'arme intégrée, ex. Char d'assaut → `canon_125mm`)
 
 **`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3), `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
 
 **`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
+
+**`Avantage`** — champs : `nom`, `nom_interne`, `categorie` (une des 12 catégories, cf. §Avantages de véhicule ci-dessus), `prix`, `description`, `regles`, `comportement?` (présent seulement pour Expertise/Cascadeur/Sur Deux Roues). Pas d'`emplacement`, de `necessite_orientation`, ni de `sponsors_autorises` — jamais d'orientation, jamais de slot, résolution par `categorie`.
 
 ### `Vehicle` _(entité DB — module Vehicle)_
 
@@ -231,6 +273,23 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 |-------------|------|-------------|
 | `prix` | number | `0` si `estDefaut` ; sinon prix catalogue, ×3 si `orientation === 'tourelle'`. Calculé via getter sur l'entité hydratée. |
 
+### `VehicleAdvantage` _(entité DB — module Vehicle)_
+
+Mirroir de `VehicleImprovement`, **sans colonne `orientation`** (jamais d'orientation pour un avantage).
+
+| Champ | Type | Contraintes |
+|-------|------|-------------|
+| `id` | number | PK, auto-incrémenté |
+| `nomInterne` | string | référence vers `Avantage.nom_interne` du catalogue |
+| `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
+| `createdAt` | Date | auto |
+
+**Champ calculé dans la réponse API** :
+
+| Champ (DTO) | Type | Description |
+|-------------|------|-------------|
+| `prix` | number | Toujours le prix catalogue plein (`Advantage.price`) — **jamais réduit**, même une fois revendu en atelier (`isSold: true`). C'est ce champ qui porte entièrement la règle de "perte totale" à la revente (cf. §Avantages de véhicule ci-dessus), pas un calcul séparé. |
+
 ---
 
 ## API Endpoints — Catalogue & Véhicules
@@ -244,6 +303,7 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 | GET | `/api/catalog/vehicules` | Non | Tous les véhicules du catalogue |
 | GET | `/api/catalog/armes` | Non | Toutes les armes du catalogue |
 | GET | `/api/catalog/ameliorations` | Non | Toutes les améliorations du catalogue |
+| GET | `/api/catalog/avantages` | Non | Tous les avantages du catalogue |
 
 Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%20Ge%C3%B4li%C3%A8re`).
 
@@ -257,7 +317,10 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 | GET | `/api/vehicles/:id/available-improvements` | JWT | Améliorations du sponsor avec verdict de disponibilité |
 | POST | `/api/vehicles/:id/improvements` | JWT | Ajouter une amélioration (validation puis persistance) |
 | DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration — **HTTP 403** si `estDefaut: true`, **HTTP 204** sinon |
-| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule (cascade sur ses armes/améliorations) |
+| GET | `/api/vehicles/:id/available-advantages` | JWT | Avantages du sponsor avec verdict de disponibilité (budget + unicité, et Cascadeur/Sur Deux Roues via `canAddAdvantage`) |
+| POST | `/api/vehicles/:id/advantages` | JWT | Ajouter un avantage (validation puis persistance, jamais d'orientation) |
+| DELETE | `/api/vehicles/:id/advantages/:advantageId` | JWT | Retirer un avantage |
+| DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule (cascade sur ses armes/améliorations/avantages) |
 
 > **`PUT /api/vehicles/:id` — non prévue.** `nomInterne` est immutable une fois le véhicule créé. "Modifier un véhicule" signifie *gérer son équipement* via les routes dédiées ci-dessous.
 
@@ -269,4 +332,4 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 | POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (`AddWeaponDto.orientation?`, 5 valeurs dont `'tourelle'`, validation puis persistance) |
 | DELETE | `/api/weapons/:id` | JWT | Retirer une arme — refusée (`DomainException` → HTTP 400) si `estDefaut: true` |
 
-> `AvailableImprovementDto` et `AvailableWeaponDto` incluent `description: string` (affiché dans `equipment-option`) et `regles: string` (affiché dans `EquipmentDetailModal` uniquement).
+> `AvailableImprovementDto`, `AvailableWeaponDto` et `AvailableAdvantageDto` incluent `description: string` (affiché dans `equipment-option`) et `regles: string` (affiché dans `EquipmentDetailModal` uniquement).

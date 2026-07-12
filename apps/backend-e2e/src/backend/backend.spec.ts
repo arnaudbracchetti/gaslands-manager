@@ -33,6 +33,37 @@ describe('GET /api/catalog/sponsors', () => {
     expect(firstSponsor).toHaveProperty('vehicules');
     expect(firstSponsor).toHaveProperty('armes');
     expect(firstSponsor).toHaveProperty('ameliorations');
+    expect(firstSponsor).toHaveProperty('avantages');
+  });
+
+  it('chaque sponsor voit exactement 12 avantages (2 catégories × 6)', async () => {
+    const res = await axios.get('/api/catalog/sponsors');
+
+    for (const sponsor of res.data) {
+      expect(sponsor.avantages).toHaveLength(12);
+    }
+  });
+});
+
+describe('GET /api/catalog/avantages', () => {
+  it('retourne la liste des 72 avantages du catalogue', async () => {
+    const res = await axios.get('/api/catalog/avantages');
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.data)).toBe(true);
+    expect(res.data.length).toBe(72);
+  });
+
+  it('chaque avantage possède les champs attendus (pas d\'emplacement ni d\'orientation)', async () => {
+    const res = await axios.get('/api/catalog/avantages');
+    const firstAdvantage = res.data[0];
+
+    expect(firstAdvantage).toHaveProperty('nom');
+    expect(firstAdvantage).toHaveProperty('nom_interne');
+    expect(firstAdvantage).toHaveProperty('categorie');
+    expect(firstAdvantage).toHaveProperty('prix');
+    expect(firstAdvantage).not.toHaveProperty('emplacement');
+    expect(firstAdvantage).not.toHaveProperty('necessite_orientation');
   });
 });
 

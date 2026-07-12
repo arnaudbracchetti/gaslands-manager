@@ -12,7 +12,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { VehicleService } from './vehicle.service';
 import { EquipmentDataSource } from './equipment-data-source';
-import { AvailableImprovementDto, AvailableWeaponDto, EquipmentChoice, Orientation, Vehicle } from './vehicle-builder.model';
+import {
+  AvailableImprovementDto,
+  AvailableWeaponDto,
+  AvailableAdvantageDto,
+  EquipmentChoice,
+  Orientation,
+  Vehicle,
+} from './vehicle-builder.model';
 
 @Injectable()
 export class TeamEquipmentDataSource implements EquipmentDataSource {
@@ -44,5 +51,19 @@ export class TeamEquipmentDataSource implements EquipmentDataSource {
 
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle> {
     return this.vs.removeImprovement(vehicleId, improvementId);
+  }
+
+  getAvailableAdvantages(vehicleId: number): Observable<AvailableAdvantageDto[]> {
+    return this.vs.getAvailableAdvantages(vehicleId);
+  }
+
+  addAdvantage(vehicleId: number, choice: EquipmentChoice): Observable<Vehicle> {
+    // Un avantage n'a jamais d'orientation — invariant garanti par EquipmentOption
+    // (requiresOrientation=false pour les avantages, cf. equipment-manager.html).
+    return this.vs.addAdvantage(vehicleId, { nomInterne: choice.nomInterne });
+  }
+
+  removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle> {
+    return this.vs.removeAdvantage(vehicleId, advantageId);
   }
 }

@@ -38,6 +38,8 @@ import {
   AvailableImprovementDto,
   AddWeaponDto,
   AvailableWeaponDto,
+  AddAdvantageDto,
+  AvailableAdvantageDto,
 } from './vehicle-builder.model';
 
 @Injectable({ providedIn: 'root' })
@@ -142,5 +144,26 @@ export class VehicleService {
    */
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle> {
     return this.http.delete<Vehicle>(`/api/vehicles/${vehicleId}/improvements/${improvementId}`);
+  }
+
+  /**
+   * GET /api/vehicles/:id/available-advantages → catalogue d'avantages du sponsor
+   * (les 12 avantages de ses 2 catégories), chacun avec son verdict de disponibilité.
+   */
+  getAvailableAdvantages(vehicleId: number): Observable<AvailableAdvantageDto[]> {
+    return this.http.get<AvailableAdvantageDto[]>(`/api/vehicles/${vehicleId}/available-advantages`);
+  }
+
+  /** POST /api/vehicles/:id/advantages → ajoute un avantage. Mirroir d'`addImprovement`, sans orientation. */
+  addAdvantage(vehicleId: number, dto: AddAdvantageDto): Observable<Vehicle> {
+    return this.http.post<Vehicle>(`/api/vehicles/${vehicleId}/advantages`, dto);
+  }
+
+  /**
+   * DELETE /api/vehicles/:id/advantages/:advantageId → retire un avantage acquis
+   * (route nichée, mirroir de `removeImprovement`).
+   */
+  removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle> {
+    return this.http.delete<Vehicle>(`/api/vehicles/${vehicleId}/advantages/${advantageId}`);
   }
 }

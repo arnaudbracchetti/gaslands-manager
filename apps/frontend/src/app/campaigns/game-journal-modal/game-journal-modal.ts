@@ -56,7 +56,7 @@ export class GameJournalModal {
     switch (this.game().status) {
       case 'JOUE': return 'Jouée';
       case 'ATELIER': return 'Atelier';
-      default: return 'Planifiée';
+      case 'PLANIFIE': return 'Planifiée';
     }
   }
 }

@@ -38,6 +38,18 @@ describe('Weapon', () => {
     });
   });
 
+  describe('resaleRefund', () => {
+    it('vaut floor(prix/2) tant que l\'arme n\'est pas encore vendue', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');
+      expect(weapon.resaleRefund).toBe(2); // floor(5/2), complémentaire de price=3 (ceil) une fois vendue
+    });
+
+    it('coïncide avec floor(prix ×3/2) pour une arme montée sur Tourelle', () => {
+      const weapon = new Weapon(1, makeWeaponType(5, 2), 'tourelle');
+      expect(weapon.resaleRefund).toBe(7); // floor(15/2)
+    });
+  });
+
   describe('markLost / clearLost', () => {
     it('isLost est false par défaut', () => {
       const weapon = new Weapon(1, makeWeaponType(5, 2), 'avant');

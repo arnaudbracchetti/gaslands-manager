@@ -96,6 +96,74 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.atp-wallet-value')).toHaveText('37 jerricans'); // 41 - 4
   });
 
+  test('avantage : achat + annulation même session, puis revente pré-existante à perte totale', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Atelier',
+      email: uniqueEmail('e2e-atelier-advantage'),
+      password: 'test1234',
+    });
+
+    const teamName = 'Escouade Avantages';
+    await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
+
+    // Avantage acquis AVANT la campagne — "pré-existant" du point de vue de
+    // l'atelier, revendu à PERTE TOTALE (contrairement à une arme/amélioration,
+    // moitié prix) — cf. docs/spec/CAMPAIGN.md, Annulation d'achat vs revente.
+    await openEquipmentManager(page);
+    const tireurEliteOption = optionCard(page, 'Tireur d\'Élite');
+    await tireurEliteOption.getByRole('button', { name: 'Ajouter' }).click();
+    await expect(page.locator('.me-item').filter({ hasText: 'Tireur d\'Élite' })).toBeVisible();
+
+    const campaignId = await createCampaign(page, { name: 'Saison E2E Atelier Avantages', teamName });
+    await addGame(page);
+    await runResultWizard(page, { teamNames: [teamName] });
+
+    await openAtelier(page);
+    // Cagnotte de départ : 50 (budget) - 8 (véhicule) - 2 (Tireur d'Élite) = 40.
+    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+
+    await page.getByTestId('vehicle-card-manage').first().click();
+
+    // ── Achat d'un second avantage (session en cours), Baril de Poudre (prix 1) ──
+    const barilOption = optionCard(page, 'Baril de Poudre');
+    await waitForEquipmentEvent(page, () => barilOption.getByRole('button', { name: 'Ajouter' }).click());
+    await expect(page.locator('.me-item').filter({ hasText: 'Baril de Poudre' })).toBeVisible();
+
+    await page.goto(`/campaigns/${campaignId}/atelier`);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('39 jerricans'); // 40 - 1
+
+    // ── Annulation du même achat (session en cours) : remboursement intégral ──
+    await page.getByTestId('vehicle-card-manage').first().click();
+    const barilItemAgain = page.locator('.me-item').filter({ hasText: 'Baril de Poudre' });
+    await barilItemAgain.getByRole('button', { name: 'Retirer' }).click();
+    const cancelDialog = page.getByRole('dialog', { name: 'Annuler l\'achat de "Baril de Poudre" ?' });
+    await expect(cancelDialog).toBeVisible();
+    await waitForEquipmentEvent(page, () => cancelDialog.getByRole('button', { name: 'Retirer', exact: true }).click());
+    await expect(page.locator('.me-item').filter({ hasText: 'Baril de Poudre' })).toHaveCount(0);
+
+    await page.goto(`/campaigns/${campaignId}/atelier`);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+
+    // ── Revente de l'avantage PRÉ-EXISTANT (Tireur d'Élite) : PERTE TOTALE ──
+    await page.getByTestId('vehicle-card-manage').first().click();
+    const tireurEliteItem = page.locator('.me-item').filter({ hasText: 'Tireur d\'Élite' });
+    await tireurEliteItem.getByRole('button', { name: 'Retirer' }).click();
+    const resellDialog = page.getByRole(
+      'dialog',
+      { name: 'Revendre "Tireur d\'Élite" ? Le prix total (2 jerricans) est perdu, aucun remboursement.' },
+    );
+    await expect(resellDialog).toBeVisible();
+    await waitForEquipmentEvent(page, () => resellDialog.getByRole('button', { name: 'Retirer', exact: true }).click());
+    await page.locator('.me-toggle').click();
+    await expect(page.locator('.me-item--sold').filter({ hasText: 'Tireur d\'Élite' })).toBeVisible();
+
+    await page.goto(`/campaigns/${campaignId}/atelier`);
+    // Aucun remboursement — la cagnotte reste à 40 (contrairement à la moitié-prix
+    // récupérée pour une arme/amélioration revendue).
+    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+  });
+
   test('grille AtelierPage — plusieurs véhicules, aucun bouton d\'ajout de véhicule', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',

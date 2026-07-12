@@ -60,6 +60,7 @@ import { AddSequellaUseCase } from './application/add-sequella.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
+import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-workshop-available-advantages.usecase';
 
 // DTOs
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -85,6 +86,7 @@ import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
 import type { AvailableWeaponDto } from '../team/dto/available-weapon.dto';
 import type { AvailableImprovementDto } from '../team/dto/available-improvement.dto';
+import type { AvailableAdvantageDto } from '../team/dto/available-advantage.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
@@ -127,6 +129,7 @@ export class CampaignController {
     private readonly getWorkshopUseCase: GetWorkshopUseCase,
     private readonly getWorkshopAvailableWeaponsUseCase: GetWorkshopAvailableWeaponsUseCase,
     private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
+    private readonly getWorkshopAvailableAdvantagesUseCase: GetWorkshopAvailableAdvantagesUseCase,
   ) {}
 
   // ── Catalogue (public) ──────────────────────────────────────────────────────
@@ -255,6 +258,20 @@ export class CampaignController {
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableImprovementDto[]> {
     return this.getWorkshopAvailableImprovementsUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages — verdict de
+   * disponibilité des avantages (budget = cagnotte), y compris Cascadeur/Sur Deux Roues.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/workshop/vehicles/:vehicleId/available-advantages')
+  getWorkshopAvailableAdvantages(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('vehicleId', ParseIntPipe) vehicleId: number,
+  ): Promise<AvailableAdvantageDto[]> {
+    return this.getWorkshopAvailableAdvantagesUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
   }
 
   /** GET /api/campaigns/:id/games/:gameId/results — résultats triés (dérivés du journal). */

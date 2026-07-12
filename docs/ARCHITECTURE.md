@@ -89,9 +89,9 @@ apps/backend/src/app/
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
 ├── shared/domain/       ← DomainException partagée entre team/ et campaign/
-├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement
-│   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement, Value Objects, ITeamRepository, ICatalogRepository
-│   ├── application/     ← 13 Use Cases (4 équipe + 3 véhicule + 3 arme + 3 amélioration)
+├── team/                ← Agrégat Team (DDD — voir §3.4) : Team + Vehicle + Weapon + Improvement + Advantage
+│   ├── domain/          ← Agrégat Team (racine), entités Vehicle/Weapon/Improvement/Advantage, Value Objects, ITeamRepository, ICatalogRepository
+│   ├── application/     ← 16 Use Cases (4 équipe + 3 véhicule + 3 arme + 3 amélioration + 3 avantage)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 └── campaign/            ← Module campagne unifié (DDD event-sourcing — voir §3.8), ex-`season/` + ex-`game/`
     ├── campaign.controller.ts       ← Controller HTTP unique (36 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
@@ -181,6 +181,8 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 ```
 
 **Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `montableSurTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
+
+**Pattern Décorateur pour les stats effectives** — `ImprovementDecorator` (`domain/improvement-decorators.ts`) et `AdvantageDecorator` (`domain/advantage-decorators.ts`) calculent les stats **effectives** du véhicule (après bonus des améliorations/avantages déjà montés) en pliant une chaîne de décorateurs (`VehicleBuild`). `AdvantageDecorator extends ImprovementDecorator` : il construit un `Amelioration` factice depuis l'`Avantage` réel (`emplacement: 0`, `sponsors_autorises: []`), exactement comme `SequellaDecorator` le fait déjà pour un concept hors catalogue. `Vehicle.buildChain()` plie **améliorations puis avantages** dans la même chaîne — les 2 avantages à comportement mécanique (`CascadeurDecorator`, `SurDeuxRouesDecorator`) valident sur la Manœuvrabilité effective, donc après le bonus d'`ExpertiseDecorator` ou de Chenilles déjà montés. `AdvantageDecoratorFactory.REGISTRE` (mirroir d'`ImprovementDecoratorFactory`) résout le décorateur concret depuis `Avantage.comportement` (`expertise`, `cascadeur`, `sur_deux_roues` ; `NeutralAdvantageDecorator` pour les 69 avantages purement descriptifs).
 
 **Dependency Inversion** — le domaine définit `ITeamRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`TeamRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
 
