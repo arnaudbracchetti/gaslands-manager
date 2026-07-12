@@ -269,17 +269,20 @@ export abstract class Game {
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
     } else if (cmd.operation === EquipmentOperation.SELL) {
-      // Véhicule acheté PENDANT cette session : annulation cascade, vérifiée AVANT tout
-      // calcul de remboursement par élément (resolveSell lirait un état sur le point de
-      // disparaître intégralement, pas seulement à moitié prix).
-      if (cmd.entityType === EquipmentEntityType.VEHICLE) {
-        const buyEvent = this.findSameSessionPurchase(EquipmentEntityType.VEHICLE, cmd.targetEntityId!);
-        if (buyEvent) {
-          return { events: [], deleteEventIds: this.collectSessionEventsForVehicle(cmd.targetEntityId!, buyEvent.id) };
-        }
+      // Objet acheté PENDANT cette session d'atelier : annulation, vérifiée AVANT tout
+      // calcul de remboursement (resolveSell lirait sinon un état sur le point de
+      // disparaître intégralement). Même contrôle pour les 4 types d'entité — seule la
+      // liste d'ids à supprimer diffère (cascade pour VEHICLE, cf. collectSessionEventsForVehicle).
+      const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
+      if (buyEvent) {
+        const deleteEventIds = cmd.entityType === EquipmentEntityType.VEHICLE
+          ? this.collectSessionEventsForVehicle(cmd.targetEntityId!, buyEvent.id)
+          : [buyEvent.id];
+        return { events: [], deleteEventIds };
       }
+
       const sold = this.resolveSell(participant, cmd);
-      cost = sold.cost;
+      cost = sold.refund;
       nomInterne = sold.nomInterne;
       // Comme `nomInterne`/`resolvedWeaponType` ci-dessus : le client ne retransmet pas
       // l'orientation d'un objet qu'il revend (il n'envoie que son id), elle est donc
@@ -291,15 +294,6 @@ export abstract class Game {
       resolvedWeaponType = sold.resolvedWeaponType;
       resolvedImprovementType = sold.resolvedImprovementType;
       resolvedAdvantageType = sold.resolvedAdvantageType;
-
-      // resolveSell() a déjà validé la propriété de l'objet (ownership) — la recherche
-      // same-session ci-dessous ne peut donc jamais cibler un événement appartenant à un
-      // autre véhicule/participant. VEHICLE déjà traité ci-dessus (cascade), donc exclu ici
-      // pour ne pas répéter le même contrôle deux fois.
-      if (cmd.entityType !== EquipmentEntityType.VEHICLE) {
-        const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
-        if (buyEvent) return { events: [], deleteEventIds: [buyEvent.id] };
-      }
     } else {
       throw new DomainException(`Opération d'équipement inconnue : "${cmd.operation}".`);
     }
@@ -466,25 +460,17 @@ export abstract class Game {
   }
 
   /**
-   * Revente (SELL) — lit l'entité ciblée dans l'équipe replayée et en dérive le coût, le
-   * `nomInterne` et le Value Object de type. Ces derniers rendent l'événement auto-descriptif
-   * (le client n'a pas à transmettre le `nomInterne` de ce qu'il vend) et réversibles (undo).
-   *
-   * Le calcul du montant remboursé (`resaleRefund`) vit sur chaque entité (`Vehicle`/
-   * `Weapon`/`Improvement`/`Advantage`), pas ici : ce switch ne consulte à chaque branche
-   * que les données d'UNE seule entité, donc la règle "combien on récupère" leur
-   * appartient (cf. skill DDD, test des invariantes). Ce qui reste ici est propre à
-   * `Game`/l'événement : localiser l'entité dans l'agrégat, garder les invariants qui
-   * dépassent l'entité seule (ex. `estDefaut`), et peupler la structure plate à 4 champs
-   * `resolved*Type` — miroir de la table `GAME_EVENT` sans STI (cf. ARCHITECTURE.md
-   * §3.8), qui resterait de toute façon nécessaire même si chaque entité savait calculer
-   * son propre remboursement.
+   * Revente (SELL) — localise l'entité ciblée dans l'équipe rejouée et en dérive
+   * `nomInterne`/orientation/type catalogue (le client ne transmet qu'un id) et le montant
+   * remboursé, délégué à `entity.resaleRefund` (règle métier propre à chaque entité).
+   * Peuple la structure plate à 4 champs `resolved*Type`, miroir de `GAME_EVENT` sans STI
+   * (ARCHITECTURE.md §3.8).
    */
   private resolveSell(
     participant: CampaignParticipant,
     cmd: ChangeEquipmentInput,
   ): {
-    cost: number;
+    refund: number;
     nomInterne: string;
     orientation: WeaponOrientation | null;
     resolvedVehicleType: VehicleType | null;
@@ -496,7 +482,7 @@ export abstract class Game {
       case EquipmentEntityType.VEHICLE: {
         const vehicle = participant.team.findVehicle(cmd.targetEntityId!);
         return {
-          cost: vehicle.resaleRefund,
+          refund: vehicle.resaleRefund,
           nomInterne: vehicle.type.nomInterne,
           orientation: null,
           resolvedVehicleType: vehicle.type,
@@ -506,17 +492,14 @@ export abstract class Game {
         };
       }
       case EquipmentEntityType.WEAPON: {
-        const weapon = participant.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId);
-        if (!weapon) throw new DomainException(`Arme ${cmd.targetEntityId} introuvable.`);
-        if (weapon.estDefaut) {
-          throw new DomainException('Les armes intégrées au profil de base ne peuvent pas être revendues.');
-        }
-        // Si l'objet a été acheté cette même session d'atelier, ce coût est de toute façon
-        // ignoré : changeEquipment() court-circuite vers une annulation (suppression du
-        // BUY, remboursement intégral) AVANT de construire l'événement — cf.
-        // findSameSessionPurchase.
+        const weapon = this.assertSellable(
+          participant.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId),
+          cmd.targetEntityId!,
+          'Arme',
+          'Les armes intégrées au profil de base ne peuvent pas être revendues.',
+        );
         return {
-          cost: weapon.resaleRefund,
+          refund: weapon.resaleRefund,
           nomInterne: weapon.type.nomInterne,
           // L'orientation de l'arme VENDUE — jamais transmise par le client (qui n'envoie
           // que l'id de l'objet à vendre) — doit être RÉSOLUE ici depuis l'entité réelle,
@@ -531,17 +514,14 @@ export abstract class Game {
         };
       }
       case EquipmentEntityType.IMPROVEMENT: {
-        const improvement = participant.team
-          .findVehicle(cmd.targetVehicleId!)
-          .improvements.find((i) => i.id === cmd.targetEntityId);
-        if (!improvement) throw new DomainException(`Amélioration ${cmd.targetEntityId} introuvable.`);
-        // Garde validée dès la commande pour éviter un événement « poison » au replay ;
-        // Vehicle.removeImprovement la re-vérifie en défense à l'exécution.
-        if (improvement.estDefaut) {
-          throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être revendues.');
-        }
+        const improvement = this.assertSellable(
+          participant.team.findVehicle(cmd.targetVehicleId!).improvements.find((i) => i.id === cmd.targetEntityId),
+          cmd.targetEntityId!,
+          'Amélioration',
+          'Les améliorations intégrées au profil de base ne peuvent pas être revendues.',
+        );
         return {
-          cost: improvement.resaleRefund,
+          refund: improvement.resaleRefund,
           nomInterne: improvement.type.nomInterne,
           orientation: improvement.orientation,
           resolvedVehicleType: null,
@@ -556,7 +536,7 @@ export abstract class Game {
           .advantages.find((a) => a.id === cmd.targetEntityId);
         if (!advantage) throw new DomainException(`Avantage ${cmd.targetEntityId} introuvable.`);
         return {
-          cost: advantage.resaleRefund,
+          refund: advantage.resaleRefund,
           nomInterne: advantage.type.nomInterne,
           orientation: null,
           resolvedVehicleType: null,
@@ -566,5 +546,23 @@ export abstract class Game {
         };
       }
     }
+  }
+
+  /**
+   * Garde commune WEAPON/IMPROVEMENT lors d'une revente : entité introuvable, ou
+   * intégrée au profil de base (`estDefaut`) — vérifiée ici pour éviter un événement
+   * « poison » au replay (les mutateurs de `Vehicle` revérifient en défense à
+   * l'exécution). ADVANTAGE n'a pas d'`estDefaut`, VEHICLE une localisation différente
+   * (cf. `resolveSell`) — hors périmètre de ce helper.
+   */
+  private assertSellable<T extends { estDefaut: boolean }>(
+    entity: T | undefined,
+    entityId: number,
+    label: string,
+    estDefautMessage: string,
+  ): T {
+    if (!entity) throw new DomainException(`${label} ${entityId} introuvable.`);
+    if (entity.estDefaut) throw new DomainException(estDefautMessage);
+    return entity;
   }
 }
