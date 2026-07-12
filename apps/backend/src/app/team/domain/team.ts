@@ -308,6 +308,21 @@ export class Team {
   }
 
   /**
+   * Marque un véhicule "vendu" (flag isSold, cascade sur son équipement pas encore
+   * vendu) plutôt que de le retirer de l'équipe — mirroir de removeCampaignVehicle,
+   * utilisé par la revente d'un véhicule pré-existant en atelier (annulation vs
+   * revente). Passe-plat pur : toute la logique (cascade, calcul du résiduel) vit
+   * sur `Vehicle.markSold()`.
+   */
+  markVehicleSold(vehicleId: number): void {
+    this.findVehicle(vehicleId).markSold();
+  }
+
+  clearVehicleSold(vehicleId: number): void {
+    this.findVehicle(vehicleId).clearSold();
+  }
+
+  /**
    * Marque une arme d'un véhicule spécifique "vendue" (flag isSold) plutôt que de la
    * retirer — mirroir de removeCampaignWeapon, utilisé par la revente d'un objet
    * pré-existant en atelier (annulation vs revente).

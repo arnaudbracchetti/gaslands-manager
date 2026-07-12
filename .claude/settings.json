@@ -10,6 +10,18 @@
   "enabledPlugins": {
     "nx@nx-claude-plugins": true
   },
+  "permissions": {
+    "ask": [
+      "Bash(sudo *)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(chmod -R *)",
+      "Bash(mkfs*)",
+      "Bash(dd *)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
@@ -21,8 +33,9 @@
         ]
       }
     ],
-    "Notification": [
+    "PreToolUse": [
       {
+        "matcher": "AskUserQuestion",
         "hooks": [
           {
             "type": "command",

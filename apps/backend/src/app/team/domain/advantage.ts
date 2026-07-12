@@ -1,4 +1,5 @@
 import type { AdvantageType } from './value-objects/advantage-type';
+import { DomainException } from '../../shared/domain/domain-exception';
 
 /**
  * Un avantage acquis sur un véhicule d'équipe (instance de jeu). Entité enfant de
@@ -31,8 +32,14 @@ export class Advantage {
    * du fait que `price` ci-dessus ne baisse jamais avec `isSold` : aucun second calcul
    * de remboursement n'est nécessaire, ce getter documente juste la règle explicitement
    * là où `Game.resolveSell` en a besoin.
+   *
+   * Garde `isSold` posée par symétrie avec `Weapon`/`Improvement.resaleRefund` — sans
+   * effet numérique ici (toujours 0), mais rend le pré-requis explicite plutôt qu'implicite.
    */
   get resaleRefund(): number {
+    if (this._isSold) {
+      throw new DomainException('Cet avantage est déjà vendu — son remboursement a déjà été calculé et crédité.');
+    }
     return 0;
   }
 

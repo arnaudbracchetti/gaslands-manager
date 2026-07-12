@@ -1,0 +1,215 @@
+// SellVehicleModal — reprend le style visuel de ConfirmModal (Panel métal + HazardTape),
+// dupliqué (pas de ng-content générique) : seul cet écran a besoin d'un contenu structuré.
+@use '../../../shared/styles/breakpoints' as bp;
+
+.svm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.svm-modal {
+  position: relative;
+  overflow: hidden;
+  width: min(480px, 92vw);
+  max-height: 90vh;
+
+  @include bp.mobile {
+    width: min(480px, 96vw);
+  }
+
+  background-image: var(--metal-sheen);
+  border: 2px solid var(--border-hair);
+  box-shadow: var(--shadow-stamp-lg);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    z-index: 7;
+    pointer-events: none;
+    border-color: var(--tb-rouille);
+    border-style: solid;
+  }
+
+  &::before {
+    top: 10px;
+    left: 10px;
+    border-width: 3px 0 0 3px;
+  }
+
+  &::after {
+    bottom: 10px;
+    right: 10px;
+    border-width: 0 3px 3px 0;
+  }
+}
+
+.svm-modal__tape {
+  height: 10px;
+  background-image: var(--stripe-rust);
+  box-shadow: var(--shadow-stamp);
+  position: relative;
+  z-index: 6;
+}
+
+.svm-modal__body {
+  position: relative;
+  z-index: 6;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 10px);
+
+  @include bp.mobile {
+    padding: 20px;
+  }
+}
+
+.svm-modal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--text-strong);
+}
+
+.svm-modal__vehicle-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 0 0;
+}
+
+.svm-modal__vehicle-name {
+  margin: 0;
+  font-family: var(--font-text);
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+
+.svm-modal__vehicle-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-text);
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.svm-modal__message {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 0.95rem;
+  color: var(--text-strong);
+  line-height: 1.5;
+}
+
+.svm-modal__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.svm-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-text);
+  font-size: 0.9rem;
+  color: var(--text-strong);
+}
+
+.svm-modal__item-category {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+  min-width: 90px;
+}
+
+.svm-modal__item-label {
+  flex: 1;
+}
+
+.svm-modal__item-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.svm-modal__refund {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-text);
+  font-weight: 600;
+  color: var(--text-strong);
+  border-top: 1px solid var(--border-hair);
+  padding-top: 12px;
+}
+
+.svm-modal__refund-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.svm-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.svm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+%svm-btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-text);
+  font-weight: 600;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 12px 24px;
+  min-height: 44px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  transition:
+    filter 160ms var(--ease-mech),
+    transform 90ms var(--ease-mech),
+    box-shadow 90ms var(--ease-mech);
+
+  &:hover {
+    filter: brightness(1.12);
+  }
+}
+
+.svm-modal__confirm {
+  @extend %svm-btn-base;
+  background: var(--tb-rouille);
+  color: var(--tb-os);
+  border: 2px solid var(--tb-rouille);
+}
+
+.svm-modal__cancel {
+  @extend %svm-btn-base;
+  background: transparent;
+  color: var(--tb-os);
+  border: 2px solid var(--border-strong);
+}

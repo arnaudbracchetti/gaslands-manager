@@ -20,7 +20,7 @@
 | `/campaigns/join/:code` | JWT | Rejoindre une campagne via son code d'invitation (**implémenté**) |
 | `/campaigns/:id` | JWT | Détail d'une campagne — inclut la section **Programme Télé** (visible dans tous les états ; gérable en `EN_CONSTRUCTION`/`EN_COURS`, lecture seule en `TERMINEE`) (mode campagne, **implémenté**) |
 | `/campaigns/:id/atelier` | JWT | **Atelier** (phase garage post-partie) — liste des véhicules de l'équipe engagée (cartes façon `TeamEditPage`, sans suppression). Accessible via le bouton 🔧 Atelier d'une partie en `ATELIER` (mode campagne — Temps 1, **implémenté**) |
-| `/campaigns/:id/atelier/vehicles/:vehicleId` | JWT | Configuration d'équipement d'un véhicule d'atelier — réutilise `EquipmentManager` (même composant que côté équipe) via `AtelierEquipmentDataSource` ; achat/retrait armes + améliorations depuis la cagnotte. Atteinte depuis la liste ci-dessus (mode campagne — Temps 1, **implémenté**) |
+| `/campaigns/:id/atelier/vehicles/:vehicleId` | JWT | Configuration d'équipement d'un véhicule d'atelier — réutilise `EquipmentManager` (même composant que côté équipe) via `AtelierEquipmentDataSource` ; achat/retrait armes + améliorations depuis la cagnotte. Atteinte depuis la liste ci-dessus (mode campagne — Temps 1, **implémenté**). La liste elle-même permet en plus l'achat d'un nouveau véhicule et la vente/annulation d'un véhicule existant (cf. [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente)) |
 | `/login` | Public | Page de connexion |
 | `/register` | Public | Page d'inscription |
 

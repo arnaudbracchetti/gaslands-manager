@@ -1,5 +1,6 @@
 import type { ImprovementType } from './value-objects/improvement-type';
 import type { Orientation } from './team';
+import { DomainException } from '../../shared/domain/domain-exception';
 
 /**
  * Une amélioration montée sur un véhicule d'équipe (instance de jeu).
@@ -29,9 +30,12 @@ export class Improvement {
   /**
    * Montant remboursé si cette amélioration est revendue MAINTENANT (avant tout appel
    * à `markSold()`) — moitié prix arrondie à l'inférieur (p.170), même raisonnement
-   * que `Weapon.resaleRefund`.
+   * que `Weapon.resaleRefund` (garde `isSold` comprise, cf. sa doc).
    */
   get resaleRefund(): number {
+    if (this._isSold) {
+      throw new DomainException('Cette amélioration est déjà vendue — son remboursement a déjà été calculé et crédité.');
+    }
     return Math.floor(this.price / 2);
   }
 

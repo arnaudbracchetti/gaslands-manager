@@ -34,12 +34,16 @@ export class GetWorkshopUseCase {
       atelierGame = null;
     }
 
-    const vehicles: WorkshopVehicleDto[] = me.team.vehicles.map((v) => ({
+    // Un véhicule vendu (isSold) disparaît entièrement de l'atelier — contrairement à
+    // une arme/amélioration/avantage vendu(e), qui reste visible barré(e). Cf. Vehicle.markSold.
+    const vehicles: WorkshopVehicleDto[] = me.team.vehicles.filter((v) => !v.isSold).map((v) => ({
       id: v.id,
       nomInterne: v.type.nomInterne,
       price: v.type.price,
       isLost: v.isLost,
       chocs: v.chocs,
+      resaleRefund: v.resaleRefund,
+      purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.VEHICLE, v.id) ?? false,
       sequellas: v.sequellas.map((s) => ({
         nomInterne: s.nomInterne,
         nom: s.nom,

@@ -37,11 +37,15 @@ describe('Advantage', () => {
   });
 
   describe('resaleRefund — perte totale', () => {
-    it('vaut toujours 0, avant comme après la vente — aucun remboursement', () => {
+    it('vaut toujours 0 avant la vente — aucun remboursement', () => {
       const advantage = new Advantage(1, makeAdvantageType(3));
       expect(advantage.resaleRefund).toBe(0);
+    });
+
+    it('lève une DomainException si appelé après markSold — précondition explicite', () => {
+      const advantage = new Advantage(1, makeAdvantageType(3));
       advantage.markSold();
-      expect(advantage.resaleRefund).toBe(0);
+      expect(() => advantage.resaleRefund).toThrow('Cet avantage est déjà vendu');
     });
   });
 

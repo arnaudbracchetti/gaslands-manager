@@ -95,3 +95,25 @@
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 14px;
 }
+
+.atp-add-vehicle {
+  margin-top: 24px;
+}
+
+.atp-add-vehicle__toggle {
+  font-family: var(--font-text);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--tb-os);
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+  margin-bottom: 16px;
+
+  &:hover {
+    filter: brightness(1.12);
+  }
+}

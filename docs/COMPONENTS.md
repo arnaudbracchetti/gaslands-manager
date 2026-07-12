@@ -1077,7 +1077,7 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 
 ### `AtelierPage` — `campaigns/atelier-page/` 🧠
 
-Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=false`, aucun véhicule n'étant supprimable en atelier), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
+Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=true`, libellé/icône adaptés — "Vendre"/💰 ou "Annuler l'achat" selon `purchasedThisSession`), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Un bouton "+ Ajouter un véhicule" ouvre une grille de `VehicleChoiceCard` (réutilisé tel quel) alimentée par `sponsorCatalog().vehicules`, pour acheter un nouveau véhicule via la cagnotte. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
 
 | | |
 |---|---|
@@ -1085,9 +1085,33 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 | **Type** | Smart |
 | **Route** | `/campaigns/:id/atelier` |
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `CatalogService` |
-| **Compose** | `Breadcrumb`, `VehicleSummaryCard` |
+| **Compose** | `Breadcrumb`, `VehicleSummaryCard`, `VehicleChoiceCard`, `SellVehicleModal` |
 
-**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`).
+**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`), `pendingSaleVehicleId`, `saleSummary` (computed via `buildVehicleSaleSummary`), `showAddVehicle`.
+
+---
+
+### `SellVehicleModal` — `campaigns/atelier-page/sell-vehicle-modal/`
+
+Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément, `summary.refund` — valeur backend, jamais recalculée côté client) sinon.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-sell-vehicle-modal` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `summary` | `VehicleSaleSummary` | — | Synthèse pré-calculée par `buildVehicleSaleSummary` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `confirmed` | `void` | Vente/annulation confirmée |
+| `cancelled` | `void` | Fermeture sans action |
 
 ---
 

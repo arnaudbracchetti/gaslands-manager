@@ -164,7 +164,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
   });
 
-  test('grille AtelierPage — plusieurs véhicules, aucun bouton d\'ajout de véhicule', async ({ page }) => {
+  test('grille AtelierPage — plusieurs véhicules, bouton d\'ajout de véhicule présent', async ({ page }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -182,10 +182,118 @@ test.describe('Campagnes — Atelier', () => {
     await openAtelier(page);
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(2);
 
-    // Garde-fou Temps 1 : aucune fonctionnalité d'ajout de véhicule en atelier.
-    await expect(page.getByRole('button', { name: /AJOUTER UN VÉHICULE/i })).toHaveCount(0);
+    // Achat de véhicule désormais possible en atelier (cf. tests dédiés ci-dessous
+    // pour le flux complet achat/annulation/revente) — le bouton est bien présent.
+    await expect(page.getByRole('button', { name: /AJOUTER UN VÉHICULE/i })).toBeVisible();
 
     await page.getByTestId('vehicle-card-manage').nth(1).click();
     await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier\/vehicles\/\d+$/);
+  });
+
+  test('achat d\'un véhicule en atelier, équipement dans la même session, puis annulation cascade intégrale', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Atelier',
+      email: uniqueEmail('e2e-atelier-buy-cancel'),
+      password: 'test1234',
+    });
+
+    const teamName = 'Escouade Achat';
+    await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
+
+    const campaignId = await createCampaign(page, { name: 'Saison E2E Atelier Achat', teamName });
+    await addGame(page);
+    await runResultWizard(page, { teamNames: [teamName] });
+
+    await openAtelier(page);
+    // Cagnotte de départ : 50 (budget) - 8 (Camion à glaces, sans équipement) = 42.
+    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans');
+
+    // ── Achat d'un second véhicule (Ambulance, prix 20) ──
+    await page.getByRole('button', { name: /AJOUTER UN VÉHICULE/i }).click();
+    const ambulanceCard = page.locator('.choice-card').filter({ hasText: 'Ambulance' });
+    await waitForEquipmentEvent(page, () => ambulanceCard.getByRole('button', { name: 'Choisir ce véhicule' }).click());
+    await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(2);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('22 jerricans'); // 42 - 20
+
+    // ── Équipement de ce véhicule DANS LA MÊME SESSION (arme + amélioration) ──
+    // L'Ambulance vient d'être ajoutée en fin de liste (index 1). Son id est
+    // TRANSIENT et négatif (-eventId, D-S11) — d'où le `-?` dans la regex,
+    // absent des autres routes de ce fichier qui ciblent des véhicules pré-existants.
+    await page.getByTestId('vehicle-card-manage').nth(1).click();
+    await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier\/vehicles\/-?\d+$/);
+
+    const mitrailleuseOption = optionCard(page, 'Mitrailleuse');
+    await waitForEquipmentEvent(page, async () => {
+      await mitrailleuseOption.getByRole('button', { name: 'Ajouter' }).click();
+      await mitrailleuseOption.getByRole('button', { name: 'avant', exact: true }).click();
+    });
+    const arceauxOption = optionCard(page, 'Arceaux');
+    await waitForEquipmentEvent(page, () => arceauxOption.getByRole('button', { name: 'Ajouter' }).click());
+
+    await page.goto(`/campaigns/${campaignId}/atelier`);
+    // 22 - 2 (Mitrailleuse) - 4 (Arceaux) = 16.
+    await expect(page.locator('.atp-wallet-value')).toHaveText('16 jerricans');
+
+    // ── Annulation cascade : retirer le véhicule acheté cette session rembourse
+    // INTÉGRALEMENT tout ce qui a été dépensé dessus (véhicule + arme +
+    // amélioration), sans laisser d'événement orphelin dans le journal — cf.
+    // Game.collectSessionEventsForVehicle.
+    await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(2);
+    await page.getByTestId('vehicle-card-delete').nth(1).click();
+    const cancelDialog = page.getByRole('dialog', { name: 'Annuler l\'achat de ce véhicule ?' });
+    await expect(cancelDialog).toBeVisible();
+    await waitForEquipmentEvent(page, () => cancelDialog.getByRole('button', { name: 'Annuler l\'achat' }).click());
+
+    await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(1);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans'); // remboursement intégral
+
+    // Le reste du journal (Camion à glaces initial) doit rester consultable —
+    // preuve que la cascade n'a pas cassé le replay de la campagne.
+    await page.reload();
+    await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(1);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans');
+  });
+
+  test('revente d\'un véhicule pré-existant en atelier — règle par élément (moitié prix)', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Atelier',
+      email: uniqueEmail('e2e-atelier-sell-vehicle'),
+      password: 'test1234',
+    });
+
+    const teamName = 'Escouade Revente';
+    await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
+
+    // Arme + amélioration montées AVANT la campagne — "pré-existantes" du point
+    // de vue de l'atelier, chacune remboursée à moitié prix lors de la revente
+    // du véhicule ENTIER (cf. Vehicle.resaleRefund).
+    await openEquipmentManager(page);
+    const mitrailleuseOption = optionCard(page, 'Mitrailleuse');
+    await mitrailleuseOption.getByRole('button', { name: 'Ajouter' }).click();
+    await mitrailleuseOption.getByRole('button', { name: 'avant', exact: true }).click();
+    const arceauxOption = optionCard(page, 'Arceaux');
+    await arceauxOption.getByRole('button', { name: 'Ajouter' }).click();
+    await expect(page.locator('.me-item').filter({ hasText: 'Mitrailleuse' })).toBeVisible();
+    await expect(page.locator('.me-item').filter({ hasText: 'Arceaux' })).toBeVisible();
+
+    await createCampaign(page, { name: 'Saison E2E Atelier Revente Véhicule', teamName });
+    await addGame(page);
+    await runResultWizard(page, { teamNames: [teamName] });
+
+    await openAtelier(page);
+    // Cagnotte de départ : 50 - 8 (véhicule) - 2 (Mitrailleuse) - 4 (Arceaux) = 36.
+    await expect(page.locator('.atp-wallet-value')).toHaveText('36 jerricans');
+
+    await page.getByTestId('vehicle-card-delete').first().click();
+    const sellDialog = page.getByRole('dialog', { name: 'Vendre ce véhicule ?' });
+    await expect(sellDialog).toBeVisible();
+    // floor(8/2) châssis + floor(2/2) Mitrailleuse + floor(4/2) Arceaux = 4 + 1 + 2 = 7.
+    await expect(sellDialog.locator('.svm-modal__refund-amount')).toContainText('7');
+    await waitForEquipmentEvent(page, () => sellDialog.getByRole('button', { name: 'Vendre', exact: true }).click());
+
+    await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(0);
+    await expect(page.locator('.atp-wallet-value')).toHaveText('43 jerricans'); // 36 + 7
   });
 });

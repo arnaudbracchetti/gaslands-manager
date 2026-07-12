@@ -24,6 +24,14 @@ export interface ICampaignRepository {
    */
   deleteEvent(eventId: number): Promise<void>;
 
+  /**
+   * Supprime plusieurs événements en une seule opération atomique — annulation cascade
+   * d'un véhicule acheté PENDANT la session d'atelier en cours (cf.
+   * `Game.collectSessionEventsForVehicle`) : l'événement d'achat du véhicule ET tout
+   * événement qui le référence doivent disparaître ensemble, sans fenêtre intermédiaire.
+   */
+  deleteEvents(eventIds: number[]): Promise<void>;
+
   saveCampaign(campaign: Campaign): Promise<void>;
 
   /**

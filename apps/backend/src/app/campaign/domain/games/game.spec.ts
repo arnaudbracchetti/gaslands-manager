@@ -16,6 +16,7 @@ import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import type { GameEvent } from '../events/game-event';
 import { Weapon } from '../../../team/domain/weapon';
+import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { WeightClass } from '../enums/weight-class.enum';
@@ -25,7 +26,7 @@ import { WreckTable, type WreckTableResult } from '../wreck/wreck-table';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { CampaignParticipant } from '../campaign-participant';
 import { ParticipantStatus } from '../enums/campaign.enums';
-import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType, makeWeaponType, makeAdvantageType } from '../test-helpers';
+import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType, makeWeaponType, makeImprovementType, makeAdvantageType } from '../test-helpers';
 import { Team } from '../../../team/domain/team';
 import { Vehicle } from '../../../team/domain/vehicle';
 import { WeaponType } from '../../../team/domain/value-objects/weapon-type';
@@ -472,7 +473,7 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBeNull();
+    expect(result.deleteEventIds).toEqual([]);
     const event = result.events[0] as EquipmentChangedEvent;
     expect(event.cost).toBe(12);  // prix catalogue de makeVehicleType()
   });
@@ -508,7 +509,7 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBeNull();
+    expect(result.deleteEventIds).toEqual([]);
     expect(result.events).toHaveLength(1);
     // floor(5/2) = 2 — prix catalogue de makeWeaponType() est 5, l'arme n'a pas été
     // achetée cette session (id positif, pré-existant) → revente, pas annulation.
@@ -544,7 +545,7 @@ describe('Game — changeEquipment', () => {
     })).toThrow('introuvable');
   });
 
-  it('SELL sur un achat de CETTE session : annule l\'achat (deleteEventId, aucun événement créé)', () => {
+  it('SELL sur un achat de CETTE session : annule l\'achat (deleteEventIds, aucun événement créé)', () => {
     // L'arme transiente (id=-99) simule le résultat d'un replay ayant déjà appliqué le
     // BUY (event id=99) de cette même partie ATELIER — cf. D-S11 (id transient = -event.id).
     const weaponType = makeWeaponType();
@@ -567,7 +568,7 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBe(99);
+    expect(result.deleteEventIds).toEqual([99]);
     expect(result.events).toHaveLength(0);
   });
 
@@ -592,7 +593,7 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBeNull();
+    expect(result.deleteEventIds).toEqual([]);
     expect(result.events).toHaveLength(1);
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2); // floor(5/2)
   });
@@ -660,7 +661,7 @@ describe('Game — changeEquipment', () => {
       resolvedAdvantageType: makeAdvantageType(),
     });
 
-    expect(result.deleteEventId).toBeNull();
+    expect(result.deleteEventIds).toEqual([]);
     const event = result.events[0] as EquipmentChangedEvent;
     expect(event.cost).toBe(2); // prix catalogue de makeAdvantageType(), jamais divisé
   });
@@ -686,7 +687,7 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBeNull(); // avantage pré-existant (id positif) → revente, pas annulation
+    expect(result.deleteEventIds).toEqual([]); // avantage pré-existant (id positif) → revente, pas annulation
     expect(result.events).toHaveLength(1);
     // Contrairement à WEAPON/IMPROVEMENT (floor(prix/2)), un avantage revendu fait
     // perdre la TOTALITÉ du prix : ce cost=0 est un champ d'affichage du journal,
@@ -734,7 +735,7 @@ describe('Game — changeEquipment', () => {
     })).toThrow('introuvable');
   });
 
-  it('SELL ADVANTAGE sur un achat de CETTE session : annule l\'achat (deleteEventId, aucun événement créé)', () => {
+  it('SELL ADVANTAGE sur un achat de CETTE session : annule l\'achat (deleteEventIds, aucun événement créé)', () => {
     // Même pattern que le mirroir WEAPON ci-dessus : l'avantage transient (id=-42)
     // simule le résultat d'un replay ayant déjà appliqué le BUY (event id=42) de
     // cette même partie ATELIER (D-S11, id transient = -event.id).
@@ -758,7 +759,153 @@ describe('Game — changeEquipment', () => {
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
     });
 
-    expect(result.deleteEventId).toBe(42);
+    expect(result.deleteEventIds).toEqual([42]);
     expect(result.events).toHaveLength(0);
+  });
+
+  // ── VEHICLE — revente par élément vs annulation cascade same-session ─────────
+
+  it('SELL VEHICLE : revente d\'un véhicule pré-existant — coût = châssis + équipement actif, tous à moitié prix', () => {
+    const { team, participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: vehicle.id,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+    });
+
+    expect(result.deleteEventIds).toEqual([]); // véhicule pré-existant (id positif) → revente, pas annulation
+    // floor(12/2) châssis + floor(5/2) arme + floor(4/2) amélioration = 6 + 2 + 2 = 10.
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(10);
+
+    // Le montant affiché par changeEquipment() doit réellement être appliqué au budget
+    // dérivé une fois l'événement exécuté (régression du bug "cagnotte non créditée" —
+    // Team.remainingBudget passe de 29 (50 - 12 - 5 - 4) à 39 (29 + 10), pas à 50).
+    result.events[0].execute([participant]);
+    expect(team.remainingBudget).toBe(39);
+    expect(vehicle.isSold).toBe(true);
+  });
+
+  it('SELL VEHICLE sur un achat de CETTE session : annule intégralement le véhicule ET tout événement de la session qui le référence (cascade)', () => {
+    // Simule un véhicule acheté (event id=50), équipé d'une arme (event id=51) et d'une
+    // amélioration (event id=52) — le tout dans la MÊME session d'atelier en cours. Les
+    // trois événements doivent disparaître ENSEMBLE : laisser 51/52 dans le journal après
+    // suppression du seul événement 50 romprait le prochain replay (Team.findVehicle
+    // lèverait une DomainException sur un véhicule qui n'existe plus).
+    const vehicleType = makeVehicleType();
+    const weaponType = makeWeaponType();
+    const improvementType = makeImprovementType();
+    const transientWeapon = new Weapon(-51, weaponType, 'avant');
+    const transientImprovement = new Improvement(-52, improvementType, null, false);
+    const transientVehicle = new Vehicle(-50, 1, vehicleType, [transientWeapon], [transientImprovement]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+
+    const buyVehicleEvent = new EquipmentChangedEvent(
+      50, 10, participant.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'voiture', 12,
+      null, null, null, vehicleType, null, null, null,
+    );
+    const buyWeaponEvent = new EquipmentChangedEvent(
+      51, 10, participant.id, 1,
+      EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
+      -50, null, 'avant', null, weaponType, null, null,
+    );
+    const buyImprovementEvent = new EquipmentChangedEvent(
+      52, 10, participant.id, 2,
+      EquipmentOperation.BUY, EquipmentEntityType.IMPROVEMENT, 'blindage', 4,
+      -50, null, null, null, null, improvementType, null,
+    );
+    const game = new EvenementTeleGame(
+      10, 1, GameStatus.ATELIER, 1, 'scen', new Date(),
+      [buyVehicleEvent, buyWeaponEvent, buyImprovementEvent],
+    );
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: -50,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+    });
+
+    expect(result.events).toHaveLength(0);
+    expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([50, 51, 52]);
+  });
+
+  it('SELL VEHICLE sur un achat d\'une AUTRE session : revente normale, pas d\'annulation cascade', () => {
+    const vehicleType = makeVehicleType();
+    const transientVehicle = new Vehicle(-77, 1, vehicleType, [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+
+    // Partie ATELIER courante (id=10) — aucun événement à elle (le BUY_VEHICLE appartient
+    // à une partie déjà JOUE, non représentée ici).
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: -77,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+    });
+
+    expect(result.deleteEventIds).toEqual([]);
+    expect(result.events).toHaveLength(1);
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(6); // floor(12/2), pas d'équipement
+
+    // team.remainingBudget = 50 - 12 = 38 avant vente ; après exécution, le véhicule
+    // n'est pas retiré (comme avant ce correctif) mais marqué vendu à prix résiduel
+    // ceil(12/2) = 6 → remainingBudget = 50 - 6 = 44 (38 + 6, le remboursement).
+    result.events[0].execute([participant]);
+    expect(team.remainingBudget).toBe(44);
+    expect(transientVehicle.isSold).toBe(true);
+  });
+
+  it('SELL VEHICLE : cascade sur toute arme/amélioration/avantage pas encore vendu(e)', () => {
+    const { team, participant, vehicle, weapon, improvement, advantage } = makeTestParticipantWithAdvantage();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: vehicle.id,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+    });
+    // floor(12/2) châssis + floor(5/2) arme + floor(4/2) amélioration + floor_avantage(0) = 6+2+2+0 = 10.
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(10);
+
+    result.events[0].execute([participant]);
+
+    expect(vehicle.isSold).toBe(true);
+    expect(weapon.isSold).toBe(true);
+    expect(improvement.isSold).toBe(true);
+    expect(advantage.isSold).toBe(true);
+    // 27 (cagnotte avant vente, cf. doc makeTestParticipantWithAdvantage) + 10 remboursés = 37.
+    expect(team.remainingBudget).toBe(37);
+  });
+
+  it('SELL VEHICLE : undo() restaure le véhicule et les enfants cascadés, mais PAS un enfant déjà vendu individuellement avant', () => {
+    const { team, participant, vehicle, weapon, improvement, advantage } = makeTestParticipantWithAdvantage();
+    // Simule une vente individuelle antérieure de l'arme (session déjà close) — la cascade
+    // de la vente du véhicule ne doit ni la re-vendre (déjà vendue) ni la restaurer à l'undo.
+    weapon.markSold();
+
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: vehicle.id,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+    });
+    result.events[0].execute([participant]);
+    expect(weapon.isSold).toBe(true); // déjà vendue avant, inchangé
+    expect(improvement.isSold).toBe(true); // cascadée par la vente du véhicule
+    expect(advantage.isSold).toBe(true); // cascadé par la vente du véhicule
+
+    result.events[0].undo([participant]);
+
+    expect(vehicle.isSold).toBe(false);
+    expect(weapon.isSold).toBe(true); // reste vendue — pas cascadée par CETTE vente
+    expect(improvement.isSold).toBe(false); // dé-cascadée
+    expect(advantage.isSold).toBe(false); // dé-cascadé
   });
 });

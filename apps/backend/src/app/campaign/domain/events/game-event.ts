@@ -32,6 +32,18 @@ export abstract class GameEvent {
    */
   abstract describe(participants: readonly CampaignParticipant[]): string;
 
+  /**
+   * Cet événement référence-t-il ce véhicule (comme cible d'un achat/vente d'équipement,
+   * ou d'une séquelle) ? `false` par défaut ; seuls les événements portant un
+   * `vehicleId`/`targetVehicleId` le surchargent. Utilisé par
+   * `Game.collectSessionEventsForVehicle` pour retrouver, sans connaître chaque type
+   * d'événement, tout ce qui doit être supprimé en cascade quand un véhicule acheté
+   * pendant la session d'atelier en cours est annulé.
+   */
+  targetsVehicle(_vehicleId: number): boolean {
+    return false;
+  }
+
   protected findParticipant(participants: readonly CampaignParticipant[]): CampaignParticipant {
     const p = participants.find((x) => x.id === this.participantId);
     if (!p) throw new DomainException(`Participant #${this.participantId} introuvable dans la saison`);

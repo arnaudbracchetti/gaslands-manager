@@ -70,6 +70,8 @@ const mockWorkshop: WorkshopStateDto = {
       weapons: [],
       improvements: [],
       advantages: [],
+      resaleRefund: 8,
+      purchasedThisSession: false,
     },
   ],
 };

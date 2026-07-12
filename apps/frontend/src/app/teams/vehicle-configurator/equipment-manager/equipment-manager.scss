@@ -85,14 +85,32 @@
 
 .em-equipment__title {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-left: 2px solid var(--tb-danger);
+  padding: 0 0 0 8px;
   font-family: var(--font-text);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-left: 2px solid var(--tb-danger);
-  padding-left: 8px;
+  cursor: pointer;
+}
+
+.em-equipment__chevron {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  transition: transform 160ms;
+}
+
+.em-equipment__title--collapsed .em-equipment__chevron {
+  transform: rotate(-90deg);
 }
 
 .em-equipment__list {

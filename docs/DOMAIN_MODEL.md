@@ -56,11 +56,13 @@ classDiagram
         -_weapons : Weapon[]
         -_improvements : Improvement[]
         -_advantages : Advantage[]
+        -_isSold : boolean
         +weapons : readonly Weapon[]
         +improvements : readonly Improvement[]
         +advantages : readonly Advantage[]
         +cost : number
         +usedSlots : number
+        +isSold : boolean
         +canAddWeapon(type, orientation, budget) RuleResult
         +canAddImprovement(type, orientation, budget) RuleResult
         +canAddAdvantage(type, budget) RuleResult
@@ -70,6 +72,8 @@ classDiagram
         +removeImprovement(improvementId) void
         +addAdvantage(type, budget) void
         +removeAdvantage(advantageId) void
+        +markSold() void
+        +clearSold() void
     }
 
     class Weapon {
@@ -217,6 +221,22 @@ Expertise). `Advantage.price` retourne toujours `type.price`, jamais réduit mê
 `isSold: true` — c'est ce qui porte entièrement la règle de "perte totale" à la revente en
 atelier (aucun second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/
 `Improvement`). Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
+
+**Revente d'un véhicule pré-existant en atelier** : `Vehicle` porte, comme
+`Weapon`/`Improvement`/`Advantage`, un flag `isSold` et un prix résiduel — le
+châssis contribue `Math.ceil(type.price / 2)` à `cost` une fois vendu, au lieu
+du prix plein. `markSold()` (sans paramètre, auto-suffisant) **cascade** sur
+toute arme/amélioration/avantage pas encore vendu(e) du véhicule — un véhicule
+vendu doit voir tout son équipement vendu avec lui, par cohérence d'état, même
+si `Advantage.price` ne varie jamais avec `isSold` (aucun effet monétaire pour
+les avantages, seulement l'intégrité de l'état). Pour que `clearSold()` (undo)
+ne dé-marque QUE les enfants cascadés par CETTE vente — pas un enfant déjà
+vendu individuellement avant — `Vehicle` mémorise transitoirement (D-S5) les
+ids cascadés dans trois tableaux, recalculés à chaque replay complet. Seule
+différence restante avec une arme/amélioration vendue : côté application,
+`GetWorkshopUseCase` filtre entièrement un véhicule vendu de la liste exposée
+(il disparaît), plutôt que de le laisser visible barré avec un badge "Vendu" —
+cf. [spec/CAMPAIGN.md — Annulation d'achat vs revente](spec/CAMPAIGN.md#annulation-dachat-vs-revente).
 
 **Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
 de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne

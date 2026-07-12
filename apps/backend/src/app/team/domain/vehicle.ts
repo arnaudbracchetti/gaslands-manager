@@ -34,6 +34,19 @@ export class Vehicle {
   // Non persistés en base — reconstruits au replay de la séquence d'événements.
 
   private _isLost = false;
+  private _isSold = false;
+  /**
+   * Ids des armes/améliorations/avantages marqués vendus PAR la revente de CE
+   * véhicule (cascade de `markSold()`) — distincts de ceux déjà vendus
+   * individuellement avant. Transient (D-S5), reconstruit à chaque replay
+   * complet : `markSold()` recalcule ces listes en filtrant les enfants pas
+   * encore vendus au moment de l'appel, ce qui est déterministe puisque le
+   * replay rejoue toujours les mêmes événements dans le même ordre depuis un
+   * état vierge. Permet à `clearSold()` (undo) de ne dé-marquer QUE ceux-là.
+   */
+  private _cascadeSoldWeaponIds: number[] = [];
+  private _cascadeSoldImprovementIds: number[] = [];
+  private _cascadeSoldAdvantageIds: number[] = [];
   private _chocs = 0;
   /**
    * Séquelles actives sur ce véhicule, stockées comme Value Objects `SequellaType`.
@@ -79,28 +92,69 @@ export class Vehicle {
     return this._sequellas;
   }
 
+  get isSold(): boolean {
+    return this._isSold;
+  }
+
   // ── Calculs ──────────────────────────────────────────────────────────────────
 
   /**
    * Coût total : prix du châssis + armes + améliorations achetées.
    * Inchangé si le véhicule est perdu : la perte n'est pas un remboursement
    * (le coût a été payé lors de l'achat et compte toujours dans le budget équipe).
+   *
+   * Le châssis contribue son prix résiduel (`ceil(prix/2)`) une fois `_isSold` —
+   * même principe que `Weapon.price`/`Improvement.price` — le reste de la somme
+   * (armes/améliorations/avantages) reflète déjà leur propre `isSold` sans
+   * condition supplémentaire ici, `markSold()` les ayant cascadés au moment de
+   * la vente (cf. sa doc).
    */
   get cost(): number {
+    const chassisCost = this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
     const weaponsCost = this._weapons.reduce((sum, w) => sum + w.price, 0);
     const improvementsCost = this._improvements.reduce((sum, i) => sum + i.price, 0);
     const advantagesCost = this._advantages.reduce((sum, a) => sum + a.price, 0);
-    return this.type.price + weaponsCost + improvementsCost + advantagesCost;
+    return chassisCost + weaponsCost + improvementsCost + advantagesCost;
   }
 
   /**
-   * Montant remboursé si ce véhicule est revendu — prix du châssis SEUL (contrairement
-   * à `cost` ci-dessus, son équipement n'est pas inclus). VEHICLE ne porte pas de flag
-   * `isSold`/prix résiduel comme `Weapon`/`Improvement` : sa revente reste sur l'ancien
-   * modèle de suppression complète (cf. `EquipmentChangedEvent`, SELL_VEHICLE).
+   * Montant remboursé si ce véhicule est revendu — même règle *par élément* que la
+   * revente individuelle : châssis à moitié prix (arrondi inférieur), chaque arme/
+   * amélioration ACTIVE à moitié prix (`resaleRefund` de l'entité), chaque avantage à 0
+   * (perte totale). Ne s'applique qu'à la revente d'un véhicule PRÉ-EXISTANT — un
+   * véhicule acheté PENDANT la session d'atelier en cours est annulé intégralement
+   * (100 %), un cas distinct géré par `Game.changeEquipment` (cf. sa doc), pas ici.
+   *
+   * Les éléments déjà vendus (`isSold`) sont exclus de la somme : leur remboursement a
+   * déjà été crédité au moment de LEUR vente individuelle — les resommer ici via
+   * `resaleRefund` (qui recalculerait une fraction de leur prix déjà résiduel)
+   * doublerait le remboursement.
+   *
+   * Précondition : ce véhicule ne doit pas être déjà vendu — `chassisRefund` est
+   * calculé sur `this.type.price` (prix catalogue brut), jamais réduit par `_isSold`
+   * contrairement à `Weapon`/`Improvement`. Un second appel après `markSold()`
+   * calculerait donc un remboursement fantôme non nul plutôt que 0 — la garde
+   * ci-dessous transforme ce bug silencieux en échec explicite.
    */
   get resaleRefund(): number {
-    return this.type.price;
+    if (this._isSold) {
+      throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
+    }
+    const chassisRefund = Math.floor(this.type.price / 2);
+    const weaponsRefund = this._weapons
+      .filter((w) => !w.isSold)
+      .reduce((sum, w) => sum + w.resaleRefund, 0);
+    const improvementsRefund = this._improvements
+      .filter((i) => !i.isSold)
+      .reduce((sum, i) => sum + i.resaleRefund, 0);
+    // Avantages : resaleRefund vaut toujours 0 (perte totale), donc ce filtre ne change
+    // jamais la somme — mais il reste nécessaire : un avantage déjà vendu individuellement
+    // lève désormais une DomainException si on relit son resaleRefund (cf. Advantage.resaleRefund),
+    // même filtrage que weapons/improvements ci-dessus, pour la même raison.
+    const advantagesRefund = this._advantages
+      .filter((a) => !a.isSold)
+      .reduce((sum, a) => sum + a.resaleRefund, 0);
+    return chassisRefund + weaponsRefund + improvementsRefund + advantagesRefund;
   }
 
   /**
@@ -123,6 +177,10 @@ export class Vehicle {
   canAddWeapon(type: WeaponType, orientation: WeaponOrientation | null, remainingBudget: number): RuleResult {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    // Idem pour un véhicule vendu en atelier (cf. markSold) — sans effet observable
+    // aujourd'hui (un véhicule vendu est filtré de l'atelier, donc inatteignable
+    // depuis l'UI), gardé par cohérence avec la garde _isLost ci-dessus.
+    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
 
     const montageTourelle = orientation === 'tourelle';
     if (montageTourelle && !type.montableSurTourelle) {
@@ -151,6 +209,8 @@ export class Vehicle {
   canAddImprovement(type: ImprovementType, orientation: Orientation | null, remainingBudget: number): RuleResult {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    // Idem pour un véhicule vendu en atelier — cf. canAddWeapon.
+    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
 
     if (type.price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
@@ -182,6 +242,8 @@ export class Vehicle {
    */
   canAddAdvantage(type: AdvantageType, remainingBudget: number): RuleResult {
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    // Idem pour un véhicule vendu en atelier — cf. canAddWeapon.
+    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
 
     if (type.price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
@@ -347,6 +409,44 @@ export class Vehicle {
   }
 
   /**
+   * Marque ce véhicule "vendu" (flag isSold, châssis à prix résiduel `ceil(prix/2)`,
+   * cf. `cost`) plutôt que de le retirer de l'équipe — revente d'un véhicule
+   * pré-existant en atelier (cf. annulation vs revente, campaign/domain/games/game.ts).
+   * Idempotent.
+   *
+   * Cascade sur toute arme/amélioration/avantage PAS ENCORE vendu(e) : un véhicule
+   * vendu doit voir tout son équipement vendu avec lui, par cohérence d'état — même
+   * si `Advantage.price` ne varie jamais avec `isSold` (perte totale, cf. sa doc),
+   * donc sans le moindre effet sur `cost` pour les avantages ; l'enjeu est
+   * l'intégrité de l'état (ex. la garde d'unicité `canAddAdvantage` lit `!isSold`),
+   * pas le calcul. Mémorise quels enfants ont été cascadés par CET appel
+   * (`_cascadeSoldXxxIds`) pour que `clearSold()` ne dé-marque que ceux-là, pas un
+   * enfant déjà vendu individuellement avant cette vente.
+   */
+  markSold(): void {
+    if (this._isSold) return;
+    this._isSold = true;
+    this._cascadeSoldWeaponIds = this._weapons.filter((w) => !w.isSold).map((w) => w.id);
+    this._cascadeSoldImprovementIds = this._improvements.filter((i) => !i.isSold).map((i) => i.id);
+    this._cascadeSoldAdvantageIds = this._advantages.filter((a) => !a.isSold).map((a) => a.id);
+    for (const id of this._cascadeSoldWeaponIds) this.findWeapon(id).markSold();
+    for (const id of this._cascadeSoldImprovementIds) this.findImprovement(id).markSold();
+    for (const id of this._cascadeSoldAdvantageIds) this.findAdvantage(id).markSold();
+  }
+
+  /** Undo de markSold() — ne dé-marque que les enfants cascadés par CETTE vente. */
+  clearSold(): void {
+    if (!this._isSold) return;
+    this._isSold = false;
+    for (const id of this._cascadeSoldWeaponIds) this.findWeapon(id).clearSold();
+    for (const id of this._cascadeSoldImprovementIds) this.findImprovement(id).clearSold();
+    for (const id of this._cascadeSoldAdvantageIds) this.findAdvantage(id).clearSold();
+    this._cascadeSoldWeaponIds = [];
+    this._cascadeSoldImprovementIds = [];
+    this._cascadeSoldAdvantageIds = [];
+  }
+
+  /**
    * Marque une arme "vendue" (flag isSold, remboursement à moitié prix) plutôt que de la
    * retirer du véhicule (distinct de `removeWeapon`) — utilisé pour la revente d'un objet
    * pré-existant en atelier (cf. annulation vs revente, campaign/domain/games/game.ts).
@@ -415,11 +515,15 @@ export class Vehicle {
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
 
   /**
-   * Remet tous les états transients de campagne à zéro (isLost, chocs, séquelles).
-   * Appelé par Team.resetCampaignState() au début de chaque replay.
+   * Remet tous les états transients de campagne à zéro (isLost, isSold, chocs,
+   * séquelles). Appelé par Team.resetCampaignState() au début de chaque replay.
    */
   clearCampaignState(): void {
     this._isLost = false;
+    this._isSold = false;
+    this._cascadeSoldWeaponIds = [];
+    this._cascadeSoldImprovementIds = [];
+    this._cascadeSoldAdvantageIds = [];
     this._chocs = 0;
     this._sequellas.length = 0;
   }

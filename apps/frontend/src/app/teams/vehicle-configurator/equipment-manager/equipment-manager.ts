@@ -229,6 +229,28 @@ export class EquipmentManager {
     return this.advantagesForCategory(this.sponsorCatalog().classes_avantage[1]);
   });
 
+  // ── Repli/dépli des sections du catalogue ────────────────────────────────────
+
+  /**
+   * Clés des sections actuellement REPLIÉES (`'weapons'`/`'improvements'`/
+   * `'advantagesA'`/`'advantagesB'`) — absente du Set = dépliée. Un `Set` plutôt
+   * que 4 booléens séparés : plus simple à étendre, une seule méthode `toggleSection`
+   * pour les 4 sections. Vide par défaut : comportement inchangé (tout déplié) tant
+   * que l'utilisateur n'a rien replié.
+   */
+  collapsedSections: WritableSignal<ReadonlySet<string>> = signal<ReadonlySet<string>>(new Set());
+
+  /** Replie ou déplie une section — recrée le `Set` (immutabilité attendue par les Signals). */
+  toggleSection(key: string): void {
+    const next = new Set(this.collapsedSections());
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this.collapsedSections.set(next);
+  }
+
   private advantagesForCategory(categorie: string | undefined): EquipmentOptionDto[] {
     return this.visibleAdvantages()
       .filter((a): boolean => a.categorie === categorie)

@@ -79,11 +79,13 @@ export class ChangeEquipmentUseCase {
         resolvedImprovementType,
         resolvedAdvantageType,
       });
-      // Annulation d'achat de cette session : suppression pure de l'événement BUY, aucun
-      // événement à ajouter (cf. Game.changeEquipment). `game.id` (pas `events[0].gameId`)
-      // car `result.events` est vide dans ce cas.
-      if (result.deleteEventId !== null) {
-        await this.campaignRepo.deleteEvent(result.deleteEventId);
+      // Annulation d'achat de cette session : suppression pure d'un ou plusieurs événements
+      // BUY (un seul pour WEAPON/IMPROVEMENT/ADVANTAGE, en cascade pour VEHICLE — cf.
+      // Game.collectSessionEventsForVehicle), aucun événement à ajouter (cf.
+      // Game.changeEquipment). `game.id` (pas `events[0].gameId`) car `result.events` est
+      // vide dans ce cas.
+      if (result.deleteEventIds.length > 0) {
+        await this.campaignRepo.deleteEvents(result.deleteEventIds);
       } else {
         await this.campaignRepo.appendEvents(game.id, result.events);
       }

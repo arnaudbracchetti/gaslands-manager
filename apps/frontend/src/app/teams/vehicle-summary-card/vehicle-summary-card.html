@@ -50,8 +50,8 @@
         class="tep-btn-delete-vehicle"
         data-testid="vehicle-card-delete"
         (click)="deleteClicked.emit(vehicle())"
-        title="Supprimer ce véhicule">
-        🗑
+        [title]="deleteTitle()">
+        {{ deleteIcon() }}
       </button>
     }
   </div>

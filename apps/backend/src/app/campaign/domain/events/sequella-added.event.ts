@@ -47,4 +47,9 @@ export class SequellaAddedEvent extends GameEvent {
     const nom = SEQUELLA_REGISTRY.get(this.sequellaTypeNom)?.type.nom ?? this.sequellaTypeNom;
     return `Séquelle acquise : ${nom} (-${this.chocsCost} chocs)`;
   }
+
+  /** Mirroir d'`EquipmentChangedEvent.targetsVehicle` — cette séquelle cible `vehicleId`. */
+  override targetsVehicle(vehicleId: number): boolean {
+    return this.vehicleId === vehicleId;
+  }
 }

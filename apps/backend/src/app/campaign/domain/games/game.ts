@@ -237,11 +237,16 @@ export abstract class Game {
    * opération × type d'entité, et vérifie la cagnotte (BUY uniquement — la revente
    * crédite toujours, via le prix résiduel qui fait varier le budget dérivé).
    *
-   * Annulation vs revente (WEAPON/IMPROVEMENT uniquement, jamais VEHICLE) : si l'objet
-   * ciblé par un SELL a été acheté PENDANT cette même session d'atelier (son événement BUY
-   * est encore dans `this._events`), le retrait est une annulation pure — l'événement BUY
-   * est supprimé, aucun événement de vente n'est créé, remboursement intégral et invisible
-   * au journal (cf. `findSameSessionPurchase`).
+   * Annulation vs revente : si l'objet ciblé par un SELL a été acheté PENDANT cette même
+   * session d'atelier (son événement BUY est encore dans `this._events`), le retrait est
+   * une annulation pure — aucun événement de vente n'est créé, remboursement intégral et
+   * invisible au journal (cf. `findSameSessionPurchase`). Pour WEAPON/IMPROVEMENT/ADVANTAGE,
+   * seul l'événement BUY de l'objet est supprimé. Pour VEHICLE, l'annulation doit être une
+   * CASCADE : supprimer aussi tout événement de cette session qui référence ce véhicule
+   * (armes/améliorations/avantages montés dessus, séquelles) — sinon le PROCHAIN replay
+   * rejouerait un événement ciblant un véhicule qui n'existe plus (`Team.findVehicle` lève
+   * alors une `DomainException`, cassant tout le replay de la campagne). Cf.
+   * `collectSessionEventsForVehicle`.
    *
    * Ne fait PAS `event.execute()` (D-S11) : l'id de l'entité transiente créée par
    * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
@@ -264,6 +269,15 @@ export abstract class Game {
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
     } else if (cmd.operation === EquipmentOperation.SELL) {
+      // Véhicule acheté PENDANT cette session : annulation cascade, vérifiée AVANT tout
+      // calcul de remboursement par élément (resolveSell lirait un état sur le point de
+      // disparaître intégralement, pas seulement à moitié prix).
+      if (cmd.entityType === EquipmentEntityType.VEHICLE) {
+        const buyEvent = this.findSameSessionPurchase(EquipmentEntityType.VEHICLE, cmd.targetEntityId!);
+        if (buyEvent) {
+          return { events: [], deleteEventIds: this.collectSessionEventsForVehicle(cmd.targetEntityId!, buyEvent.id) };
+        }
+      }
       const sold = this.resolveSell(participant, cmd);
       cost = sold.cost;
       nomInterne = sold.nomInterne;
@@ -280,13 +294,11 @@ export abstract class Game {
 
       // resolveSell() a déjà validé la propriété de l'objet (ownership) — la recherche
       // same-session ci-dessous ne peut donc jamais cibler un événement appartenant à un
-      // autre véhicule/participant. Scopée à WEAPON/IMPROVEMENT/ADVANTAGE : cf. l'invariant
-      // vérifié sur canAccept() en ATELIER (aucun autre événement accepté ici ne référence un
-      // weaponId/improvementId/advantageId — élargir la suppression physique à VEHICLE
-      // casserait cet invariant, cf. docs/plans/2026-07-11-atelier-annulation-revente-design.md §1).
+      // autre véhicule/participant. VEHICLE déjà traité ci-dessus (cascade), donc exclu ici
+      // pour ne pas répéter le même contrôle deux fois.
       if (cmd.entityType !== EquipmentEntityType.VEHICLE) {
         const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
-        if (buyEvent) return { events: [], deleteEventId: buyEvent.id };
+        if (buyEvent) return { events: [], deleteEventIds: [buyEvent.id] };
       }
     } else {
       throw new DomainException(`Opération d'équipement inconnue : "${cmd.operation}".`);
@@ -302,11 +314,26 @@ export abstract class Game {
     if (cmd.operation === EquipmentOperation.BUY) participant.assertCanAfford(cost);
     this.addEvent(event);
 
-    return { events: [event], deleteEventId: null };
+    return { events: [event], deleteEventIds: [] };
   }
 
   /**
-   * Un objet WEAPON/IMPROVEMENT ciblé par un SELL a-t-il été acheté PENDANT cette partie
+   * Toutes les ids d'événements à supprimer pour annuler INTÉGRALEMENT un véhicule acheté
+   * cette session : l'achat du véhicule lui-même, PLUS tout événement de cette partie qui
+   * le référence (achats/reventes d'armes/améliorations/avantages montés dessus depuis,
+   * séquelles ajoutées) — sinon le PROCHAIN replay rejouerait un événement ciblant un
+   * véhicule qui n'existe plus (`Team.findVehicle` lève une `DomainException`, cassant
+   * tout le replay de la campagne). L'appelant supprime ce tableau en une seule opération
+   * atomique (`ICampaignRepository.deleteEvents`, `DELETE ... WHERE id IN (...)`) — pas de
+   * fenêtre où certains événements de ce véhicule seraient supprimés et d'autres non.
+   */
+  private collectSessionEventsForVehicle(vehicleId: number, buyEventId: number): number[] {
+    const related = this._events.filter((e) => e.targetsVehicle(vehicleId)).map((e) => e.id);
+    return [buyEventId, ...related];
+  }
+
+  /**
+   * Un objet WEAPON/IMPROVEMENT/ADVANTAGE/VEHICLE ciblé par un SELL a-t-il été acheté PENDANT cette partie
    * (session d'atelier en cours) ? Recherche dans `this._events` — déjà scopé à la partie
    * courante, donc à la session en cours (un `Game` ne peut entrer en ATELIER qu'une seule
    * fois dans sa vie). L'id transient d'une entité achetée est `-event.id` (D-S11).

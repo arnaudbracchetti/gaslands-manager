@@ -22,8 +22,15 @@ export class VehicleSummaryCard {
   /** Position dans la liste (1-based) — affichée en filigrane. */
   index = input<number>(1);
 
-  /** Affiche le bouton de suppression — masqué en Atelier (aucune suppression de véhicule possible). */
+  /** Affiche le bouton de suppression/vente. */
   showDelete = input<boolean>(true);
+
+  /** Titre (tooltip) du bouton — "Supprimer ce véhicule" par défaut (construction d'équipe),
+   *  adapté par l'atelier ("Vendre ce véhicule"/"Annuler l'achat"). */
+  deleteTitle = input<string>('Supprimer ce véhicule');
+
+  /** Icône du bouton — 🗑 par défaut, adaptée par l'atelier (ex. 💰 pour une vente). */
+  deleteIcon = input<string>('🗑');
 
   /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
   indexFormate: Signal<string> = computed(() =>

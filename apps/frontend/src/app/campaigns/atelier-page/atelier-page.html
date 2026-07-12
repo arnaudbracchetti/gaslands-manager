@@ -24,12 +24,41 @@
           <app-vehicle-summary-card
             [vehicle]="summary"
             [index]="i + 1"
-            [showDelete]="false"
+            [showDelete]="true"
+            [deleteTitle]="sellTitleFor(summary.id)"
+            [deleteIcon]="sellIconFor(summary.id)"
             (manageClicked)="onManage($event)"
+            (deleteClicked)="onSellRequested($event)"
           />
         }
       </div>
     }
+
+    <div class="atp-add-vehicle">
+      <button class="atp-add-vehicle__toggle" type="button" (click)="toggleAddVehicle()">
+        {{ showAddVehicle() ? 'Annuler' : '+ Ajouter un véhicule' }}
+      </button>
+
+      @if (showAddVehicle()) {
+        @if (addingVehicle()) {
+          <p class="atp-status atp-status--loading">Achat du véhicule…</p>
+        } @else if (sponsorCatalog(); as catalog) {
+          <div class="atp-vehicles-grid">
+            @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i = $index) {
+              <app-vehicle-choice-card [vehicule]="vehicule" [index]="i + 1" (chosen)="onVehicleChosen($event)" />
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  @if (saleSummary(); as summary) {
+    <app-sell-vehicle-modal
+      [summary]="summary"
+      (confirmed)="onConfirmSale()"
+      (cancelled)="onCancelSale()"
+    />
   }
 
 </div>

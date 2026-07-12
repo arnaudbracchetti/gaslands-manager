@@ -54,10 +54,17 @@ export interface GameJournalEntry {
 
 /**
  * Résultat de `Game.changeEquipment` — discrimine annulation d'achat (suppression pure
- * de l'événement BUY de cette session, `events` vide) vs achat/revente normal (événement
- * créé, `deleteEventId` null). Cf. annulation vs revente (WEAPON/IMPROVEMENT uniquement).
+ * d'un ou plusieurs événements de cette session, `events` vide) vs achat/revente normal
+ * (événement créé, `deleteEventIds` vide). Cf. annulation vs revente.
+ *
+ * `deleteEventIds` est un TABLEAU (pas un simple `number | null`) car l'annulation d'un
+ * véhicule acheté cette session doit supprimer, en une seule fois, l'événement d'achat du
+ * véhicule ET tout événement de cette partie qui le référence (armes/améliorations/
+ * avantages montés dessus, séquelles) — cf. `Game.collectSessionEventsForVehicle`. Pour
+ * WEAPON/IMPROVEMENT/ADVANTAGE, ce tableau ne contient jamais qu'un seul id (comportement
+ * inchangé).
  */
 export interface ChangeEquipmentResult {
   events: GameEvent[];
-  deleteEventId: number | null;
+  deleteEventIds: number[];
 }

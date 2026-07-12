@@ -364,12 +364,41 @@ describe('Vehicle.cost — inclut les avantages', () => {
   });
 });
 
-describe('Vehicle.resaleRefund', () => {
-  it('vaut le prix du châssis SEUL — n\'inclut pas le coût de son équipement (contrairement à cost)', () => {
-    const v = makeVehicle();
+describe('Vehicle.resaleRefund — règle par élément (châssis + équipement actif à moitié prix, avantages à 0)', () => {
+  it('vaut la moitié du prix châssis (arrondi inférieur) sur un véhicule nu', () => {
+    const v = makeVehicle(4, 12);
+    expect(v.resaleRefund).toBe(6); // floor(12/2)
+  });
+
+  it('ajoute la moitié du prix de chaque arme/amélioration ACTIVE (arrondi inférieur)', () => {
+    const v = makeVehicle(4, 12);
+    v.addWeapon(makeWeaponType(5), 'avant', 100);
+    v.addImprovement(makeImprovementType(4), null, 100);
+    // floor(12/2) + floor(5/2) + floor(4/2) = 6 + 2 + 2 = 10
+    expect(v.resaleRefund).toBe(10);
+  });
+
+  it('les avantages ne contribuent jamais (perte totale)', () => {
+    const v = makeVehicle(4, 12);
     v.addAdvantage(makeAdvantageType('expertise', 3), 100);
     expect(v.cost).toBe(15);
-    expect(v.resaleRefund).toBe(12);
+    expect(v.resaleRefund).toBe(6); // floor(12/2) seulement — l'avantage n'ajoute rien
+  });
+
+  it('exclut de la somme une arme/amélioration DÉJÀ vendue — pas de double remboursement', () => {
+    const v = makeVehicle(4, 12);
+    v.addWeapon(makeWeaponType(5), 'avant', 100);
+    v.addImprovement(makeImprovementType(4), null, 100);
+    v.markWeaponSold(v.weapons[0].id);
+    // L'arme déjà vendue a déjà été remboursée à sa vente individuelle : seule
+    // l'amélioration encore active contribue. floor(12/2) + floor(4/2) = 6 + 2 = 8.
+    expect(v.resaleRefund).toBe(8);
+  });
+
+  it('ignore les armes/améliorations estDefaut (prix nul, non séparément revendables)', () => {
+    const canon = new Weapon(1, makeTourelleWeaponType(6, 3), 'tourelle', true);
+    const v = new Vehicle(1, 10, makeVehicleType(4, 12), [canon], []);
+    expect(v.resaleRefund).toBe(6); // floor(12/2) — le canon intégré n'ajoute rien
   });
 });
 

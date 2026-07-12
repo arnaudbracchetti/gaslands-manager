@@ -20,14 +20,22 @@ export { EquipmentOperation, EquipmentEntityType };
  * - BUY_VEHICLE     : targetVehicleId=null, targetEntityId=null  → crée Vehicle id=-this.id
  * - BUY_WEAPON      : targetVehicleId=vehicleId, targetEntityId=null → crée Weapon id=-this.id
  * - BUY_IMPROVEMENT : targetVehicleId=vehicleId, targetEntityId=null → crée Improvement id=-this.id
- * - SELL_VEHICLE    : targetVehicleId=null, targetEntityId=vehicleId → retire le véhicule
+ * - SELL_VEHICLE    : targetVehicleId=null, targetEntityId=vehicleId → flague le véhicule "vendu" (isSold), cascade sur son équipement
  * - SELL_WEAPON     : targetVehicleId=vehicleId, targetEntityId=weaponId → flague l'arme "vendue" (isSold)
  * - SELL_IMPROVEMENT: targetVehicleId=vehicleId, targetEntityId=improvementId → flague l'amélioration "vendue" (isSold)
  *
- * SELL_WEAPON/SELL_IMPROVEMENT ne retirent plus l'entité : elle reste visible (barrée,
- * badge "Vendue" côté IHM), remboursée à moitié prix (cf. `Weapon.price`/`Improvement.price`,
- * prix résiduel). SELL_VEHICLE reste sur l'ancien modèle (suppression complète, remboursement
- * plein) — hors scope de l'annulation vs revente (Vehicle ne porte pas `isSold`).
+ * SELL_WEAPON/SELL_IMPROVEMENT/SELL_VEHICLE ne retirent plus l'entité : elle reste vendue
+ * (flag `isSold`), remboursée à moitié prix par élément (cf. `Weapon.price`/
+ * `Improvement.price`/`Vehicle.cost`, prix résiduel). Pour VEHICLE, `markSold()` cascade
+ * sur toute arme/amélioration/avantage pas encore vendue (cf. sa doc, `team/domain/
+ * vehicle.ts`) — un véhicule reste néanmoins filtré de la liste atelier exposée
+ * (`GetWorkshopUseCase`), contrairement à une arme/amélioration vendue qui reste visible
+ * barrée (badge "Vendue" côté IHM) : seule cette exposition diffère, le mécanisme
+ * `isSold`/prix résiduel est désormais identique pour les 4 types d'entité. Un véhicule
+ * acheté PENDANT la session d'atelier en cours n'emprunte pas ce chemin : `Game.
+ * changeEquipment` le détecte en amont et bascule vers une annulation cascade
+ * (suppression de tous les événements le référençant, cf.
+ * `Game.collectSessionEventsForVehicle`), jamais une revente à moitié prix.
  *
  * `resolvedVehicleType` / `resolvedWeaponType` / `resolvedImprovementType` sont fournis par
  * le use case (write-time) ou par le mapper ORM (replay). Ils permettent à execute/undo de
@@ -83,19 +91,19 @@ export class EquipmentChangedEvent extends GameEvent {
   /**
    * Le wallet n'est plus jamais touché ici : il est dérivé de `Team.remainingBudget`
    * (cf. `CampaignParticipant.wallet`) — un achat/une vente modifie l'arbre d'entités
-   * (via createTransientEquipment/removeTransientEquipment/markSoldEntity/clearSoldEntity),
-   * ce qui suffit à faire varier le budget restant, donc le wallet dérivé, du bon montant
+   * (via createTransientEquipment/markSoldEntity/clearSoldEntity), ce qui suffit à
+   * faire varier le budget restant, donc le wallet dérivé, du bon montant
    * automatiquement.
    *
-   * VEHICULE reste sur l'ancien modèle (suppression complète à la revente, jamais flaguée
-   * "vendue") — `isSold` n'existe que sur Weapon/Improvement (cf. annulation vs revente,
-   * scopée à ces deux types pour préserver l'invariant de sécurité de la suppression
-   * physique d'un achat de la session, cf. Game.changeEquipment/canAccept en ATELIER).
+   * VEHICLE suit désormais le même modèle "flag isSold" que WEAPON/IMPROVEMENT/
+   * ADVANTAGE (`markSoldEntity`/`clearSoldEntity` ci-dessous) — `Vehicle.markSold()`
+   * cascade sur son équipement pas encore vendu (cf. sa doc, `team/domain/vehicle.ts`).
+   * `removeTransientEquipment` reste utilisé uniquement pour BUY (annulation d'achat,
+   * même session) — jamais pour SELL, quel que soit `entityType`.
    *
-   * execute()/undo() tranchent sur DEUX axes indépendants, volontairement séparés en deux
-   * `if` successifs plutôt qu'un seul enchaînement if/else-if/else : d'abord l'opération
-   * (BUY vs SELL), puis — seulement pour SELL — le type d'entité (VEHICLE vs le reste).
-   * BUY se comporte identiquement quel que soit le type d'entité, d'où le retour anticipé.
+   * execute()/undo() ne tranchent donc plus que sur UN seul axe (BUY vs SELL) —
+   * l'ancien second `if` sur `entityType === VEHICLE` a disparu avec la suppression
+   * physique qu'il déclenchait.
    */
   execute(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
@@ -103,13 +111,7 @@ export class EquipmentChangedEvent extends GameEvent {
       this.createTransientEquipment(p, -this.id);
       return;
     }
-    // SELL : VEHICULE reste sur le modèle "suppression complète" (ci-dessus) ;
-    // WEAPON/IMPROVEMENT passent au modèle "flag isSold" (revente pré-existante).
-    if (this.entityType === EquipmentEntityType.VEHICLE) {
-      this.removeTransientEquipment(p, this.targetEntityId!);
-    } else {
-      this.markSoldEntity(p, this.targetEntityId!);
-    }
+    this.markSoldEntity(p, this.targetEntityId!);
   }
 
   undo(participants: CampaignParticipant[]): void {
@@ -118,15 +120,10 @@ export class EquipmentChangedEvent extends GameEvent {
       this.removeTransientEquipment(p, -this.id);
       return;
     }
-    // SELL : miroir exact d'execute() ci-dessus.
-    if (this.entityType === EquipmentEntityType.VEHICLE) {
-      this.createTransientEquipment(p, this.targetEntityId!);
-    } else {
-      this.clearSoldEntity(p, this.targetEntityId!);
-    }
+    this.clearSoldEntity(p, this.targetEntityId!);
   }
 
-  /** Recrée l'entité transiente (Vehicle/Weapon/Improvement) avec l'id fourni (achat, ou annulation d'une revente VEHICULE). */
+  /** Recrée l'entité transiente (Vehicle/Weapon/Improvement/Advantage) avec l'id fourni — undo d'un achat (BUY) uniquement. */
   private createTransientEquipment(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
@@ -146,7 +143,14 @@ export class EquipmentChangedEvent extends GameEvent {
     }
   }
 
-  /** Retire l'entité transiente ciblée (annulation d'un achat, ou revente VEHICULE). */
+  /**
+   * Retire l'entité transiente ciblée — annulation d'un achat de CETTE session
+   * uniquement (undo de BUY, tous types d'entité confondus, VEHICLE compris). Une
+   * revente d'entité PRÉ-EXISTANTE ne passe plus jamais par ici (cf. `markSoldEntity`
+   * ci-dessous) — l'annulation cascade d'un véhicule acheté cette session emprunte un
+   * chemin entièrement différent (`Game.collectSessionEventsForVehicle`, suppression
+   * d'événements en base, jamais `undo()`).
+   */
   private removeTransientEquipment(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
@@ -165,14 +169,17 @@ export class EquipmentChangedEvent extends GameEvent {
   }
 
   /**
-   * Flague l'entité ciblée "vendue" (WEAPON/IMPROVEMENT/ADVANTAGE — revente pré-existante).
-   * VEHICLE n'apparaît jamais ici — `execute()` l'a déjà routé vers `removeTransientEquipment`
-   * avant cet appel ; `case` explicite plutôt que `default`, pour qu'un futur 5ᵉ
-   * `EquipmentEntityType` échoue bruyamment (switch non exhaustif) au lieu d'être
-   * silencieusement traité comme une amélioration.
+   * Flague l'entité ciblée "vendue" (revente pré-existante — les 4 types d'entité,
+   * VEHICLE compris depuis que `Vehicle` porte `isSold`, cf. `team/domain/vehicle.ts`).
+   * Pour VEHICLE, `targetVehicleId` est `null` (c'est le véhicule LUI-MÊME qui est
+   * ciblé, pas un véhicule hôte) — `entityId` (= `targetEntityId`) est donc l'id du
+   * véhicule à marquer vendu.
    */
   private markSoldEntity(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
+      case EquipmentEntityType.VEHICLE:
+        p.team.markVehicleSold(entityId);
+        break;
       case EquipmentEntityType.WEAPON:
         p.team.markWeaponSold(this.targetVehicleId!, entityId);
         break;
@@ -185,9 +192,12 @@ export class EquipmentChangedEvent extends GameEvent {
     }
   }
 
-  /** Undo de markSoldEntity — même raisonnement sur `case` explicite vs `default`. */
+  /** Undo de markSoldEntity — même raisonnement, VEHICLE compris. */
   private clearSoldEntity(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
+      case EquipmentEntityType.VEHICLE:
+        p.team.clearVehicleSold(entityId);
+        break;
       case EquipmentEntityType.WEAPON:
         p.team.clearWeaponSold(this.targetVehicleId!, entityId);
         break;
@@ -198,6 +208,17 @@ export class EquipmentChangedEvent extends GameEvent {
         p.team.clearAdvantageSold(this.targetVehicleId!, entityId);
         break;
     }
+  }
+
+  /**
+   * Cet événement cible-t-il ce véhicule ? Un événement dont l'entité EST le véhicule
+   * (BUY_VEHICLE/SELL_VEHICLE) n'a pas de `targetVehicleId` (il vaut `null` — c'est le
+   * véhicule hôte des ARMES/AMÉLIORATIONS/AVANTAGES qui est porté ici, pas lui-même) et
+   * ne matche donc jamais : c'est volontaire, `Game.collectSessionEventsForVehicle`
+   * ajoute déjà explicitement l'id de l'événement d'achat du véhicule lui-même.
+   */
+  override targetsVehicle(vehicleId: number): boolean {
+    return this.targetVehicleId === vehicleId;
   }
 
   describe(participants: readonly CampaignParticipant[]): string {

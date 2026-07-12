@@ -310,9 +310,43 @@ et, pour la spécificité des avantages,
     jamais. Reste visible sur la fiche véhicule (barré, badge "Vendu"), comme
     tout autre équipement revendu.
 
-  Scopé aux **armes, améliorations et avantages uniquement** — jamais aux
-  véhicules (invariant de sécurité de la suppression physique du `BUY`, cf.
-  commentaire sur `canAccept()` dans `evenement-tele-game.ts`/`escarmouche-game.ts`).
+  Étendu aux **véhicules entiers** : acheter puis équiper un véhicule (armes,
+  améliorations, avantages, séquelles) est possible dans la même session ou sur
+  plusieurs. Retirer un véhicule suit la même distinction annulation/revente que
+  les autres équipements, avec une nuance propre à son statut d'agrégat parent :
+  - **Acheté pendant la session d'atelier en cours** : annulation **cascade** —
+    l'événement d'achat du véhicule est supprimé, ET tout événement de cette
+    session qui le référence (armes/améliorations/avantages montés dessus,
+    séquelles ajoutées) l'est aussi, en une seule opération atomique. Sans cette
+    cascade, ces événements deviendraient orphelins (ils ciblent un véhicule qui
+    n'existe plus) et casseraient le PROCHAIN replay de la campagne
+    (`Team.findVehicle` lève alors une `DomainException`). Remboursement intégral,
+    invisible au journal — cf. `Game.collectSessionEventsForVehicle`.
+  - **Véhicule pré-existant** (construction d'équipe, ou atelier antérieur déjà
+    clôturé) : revente **par élément**, même règle que pour chaque pièce
+    d'équipement — châssis à moitié prix arrondi à l'inférieur, chaque arme/
+    amélioration encore active à moitié prix, chaque avantage à 0 (perte
+    totale). Les éléments déjà revendus individuellement ne sont pas
+    recomptés (déjà remboursés à leur propre vente) — cf. `Vehicle.resaleRefund`.
+    `Vehicle` porte désormais, comme `Weapon`/`Improvement`/`Advantage`, un flag
+    `isSold` : `markSold()` cascade sur toute arme/amélioration/avantage pas
+    encore vendu(e) (cohérence d'état — un véhicule vendu voit tout son
+    équipement vendu avec lui), et le châssis contribue son propre prix résiduel
+    `ceil(prix/2)` au coût du véhicule (`Vehicle.cost`), exactement comme
+    `Weapon.price`/`Improvement.price` pour une arme/amélioration individuelle.
+    Seule différence avec une arme/amélioration vendue : un véhicule vendu est
+    **filtré** de la liste exposée par l'atelier (`GetWorkshopUseCase`) — il
+    disparaît entièrement, plutôt que de rester visible barré avec un badge
+    "Vendu".
+
+    **Limitation connue** — `Game.changeEquipment()` ne vérifie le statut
+    "acheté cette session" (→ annulation 100 %, cf. ci-dessus) qu'au niveau du
+    véhicule LUI-MÊME pour une opération de vente du véhicule entier ; si le
+    véhicule est pré-existant mais qu'une arme/amélioration/avantage montée
+    dessus a été achetée PENDANT la session en cours, revendre le véhicule
+    entier la rembourse à moitié prix (règle "revente") au lieu du plein tarif
+    (règle "annulation"). Contournement actuel : vendre l'objet individuellement
+    avant de vendre le véhicule.
 
 Le critère de décision (BUY de cette session ou non) est déterminé côté serveur
 uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
@@ -393,12 +427,17 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier))
   plutôt qu'une entité séparée. La revente à moitié prix (p.170) et la distinction
   annulation-d'achat/revente sont désormais implémentées (cf.
-  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessous). **Reste
+  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessous), **étendues
+  aux véhicules entiers** : un bouton "+ Ajouter un véhicule" permet d'en acheter un
+  nouveau (parmi ceux du sponsor, payé via la cagnotte), et chaque véhicule de la liste
+  peut être vendu (véhicule pré-existant, revente par élément) ou son achat annulé
+  (véhicule acheté cette session, cascade sur tout son équipement — cf. ci-dessus). **Reste
   en Temps 2** (cf.
   [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
   enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
-  n'est aujourd'hui gardé que par la cagnotte), limite de 8 véhicules, et l'UI des
-  Chocs/séquelles/véhicules perdus. Le montage sur Tourelle, lui, n'est pas une
+  n'est aujourd'hui gardé que par la cagnotte, y compris pour l'achat d'un véhicule :
+  aucune vérification d'autorisation sponsor à l'écriture, seulement au listing), limite
+  de 8 véhicules, et l'UI des Chocs/séquelles/véhicules perdus. Le montage sur Tourelle, lui, n'est pas une
   fonctionnalité à part entière à ajouter en atelier : c'est une valeur d'orientation
   de l'arme (`Weapon.orientation = 'tourelle'`, cf.
   [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)), acheter une

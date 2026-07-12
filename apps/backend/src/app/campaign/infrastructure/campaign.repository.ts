@@ -118,6 +118,16 @@ export class CampaignRepository implements ICampaignRepository {
   }
 
   /**
+   * Cf. `ICampaignRepository.deleteEvents` — annulation cascade d'un véhicule acheté
+   * cette session. `Repository.delete` accepte un tableau d'ids directement : un seul
+   * `DELETE ... WHERE id IN (...)`, intrinsèquement atomique.
+   */
+  async deleteEvents(eventIds: number[]): Promise<void> {
+    if (eventIds.length === 0) return;
+    await this.gameEventRepo.delete(eventIds);
+  }
+
+  /**
    * Persiste les transitions structurelles de statut des parties
    * (PLANIFIE→ATELIER→JOUE), déclenchées par EnterAtelier/CloseAtelier/CloseCampaign.
    */

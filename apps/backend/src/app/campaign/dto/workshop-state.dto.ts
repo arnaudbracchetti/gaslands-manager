@@ -64,6 +64,12 @@ export interface WorkshopVehicleDto {
   weapons: WorkshopWeaponDto[];
   improvements: WorkshopImprovementDto[];
   advantages: WorkshopAdvantageDto[];
+  /** Montant qui serait remboursé à la revente (règle par élément — cf. `Vehicle.resaleRefund`).
+   *  Non pertinent si `purchasedThisSession=true` : dans ce cas, le retrait est une
+   *  annulation intégrale (100 %), pas une revente à moitié prix. */
+  resaleRefund: number;
+  /** Acheté pendant la session d'atelier en cours — retrait = annulation intégrale, pas revente. */
+  purchasedThisSession: boolean;
 }
 
 export interface WorkshopStateDto {

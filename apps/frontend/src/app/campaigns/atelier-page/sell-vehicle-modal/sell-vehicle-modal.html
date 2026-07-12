@@ -1,0 +1,53 @@
+<div class="svm-overlay" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+  <div class="svm-modal tb-grain">
+
+    <div class="svm-modal__tape"></div>
+
+    <div class="svm-modal__body">
+      <h3 class="svm-modal__title">{{ title() }}</h3>
+      <div class="svm-modal__vehicle-row">
+        <p class="svm-modal__vehicle-name">{{ summary().vehicleName }}</p>
+        @if (!summary().purchasedThisSession) {
+          <span class="svm-modal__vehicle-total">{{ summary().totalCost }} <img class="svm-icon" src="/icons/dollar.svg" alt="" /></span>
+        }
+      </div>
+
+      @if (summary().purchasedThisSession) {
+        <p class="svm-modal__message">
+          Ce véhicule a été acheté pendant cette session d'atelier — le retirer annule
+          intégralement son achat (et celui de tout équipement monté dessus depuis).
+        </p>
+      } @else {
+        <ul class="svm-modal__items">
+          <li class="svm-modal__item">
+            <span class="svm-modal__item-category">Châssis</span>
+            <span class="svm-modal__item-label">{{ summary().vehicleName }}</span>
+            <span class="svm-modal__item-price">{{ summary().chassisPrice }} <img class="svm-icon" src="/icons/dollar.svg" alt="" /></span>
+          </li>
+          @for (item of summary().items; track item.label + item.category) {
+            <li class="svm-modal__item">
+              <span class="svm-modal__item-category">{{ item.category }}</span>
+              <span class="svm-modal__item-label">{{ item.label }}</span>
+              <span class="svm-modal__item-price">{{ item.price }} <img class="svm-icon" src="/icons/dollar.svg" alt="" /></span>
+            </li>
+          }
+        </ul>
+      }
+
+      <div class="svm-modal__refund">
+        <span>{{ summary().purchasedThisSession ? 'Remboursement intégral' : 'Montant récupéré' }}</span>
+        <span class="svm-modal__refund-amount">{{ amount() }} <img class="svm-icon" src="/icons/dollar.svg" alt="" /></span>
+      </div>
+
+      <div class="svm-modal__actions">
+        <button class="svm-modal__cancel" type="button" (click)="cancelled.emit()">
+          Fermer
+        </button>
+        <button class="svm-modal__confirm" type="button" (click)="confirmed.emit()">
+          {{ confirmLabel() }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

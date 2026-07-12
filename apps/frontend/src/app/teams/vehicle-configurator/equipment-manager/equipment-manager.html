@@ -91,46 +91,64 @@
       </div>
 
       <section class="em-equipment__group">
-        <h3 class="em-equipment__title">Armes</h3>
-        @if (visibleWeapons().length === 0) {
-          <p class="em-status">
-            @if (availableWeapons().length === 0) {
-              Aucune arme disponible pour ce sponsor.
-            } @else {
-              Toutes les armes sont indisponibles — affichez-les pour voir pourquoi.
-            }
-          </p>
-        } @else {
-          <div class="em-equipment__list">
-            @for (weapon of visibleWeapons(); track weapon.nomInterne) {
-              <app-equipment-option
-                [option]="weapon"
-                [requiresOrientation]="weaponNeedsOrientation(weapon)"
-                (chosen)="addWeapon($event)" />
-            }
-          </div>
+        <button
+          type="button"
+          class="em-equipment__title"
+          [class.em-equipment__title--collapsed]="collapsedSections().has('weapons')"
+          (click)="toggleSection('weapons')">
+          Armes
+          <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+        </button>
+        @if (!collapsedSections().has('weapons')) {
+          @if (visibleWeapons().length === 0) {
+            <p class="em-status">
+              @if (availableWeapons().length === 0) {
+                Aucune arme disponible pour ce sponsor.
+              } @else {
+                Toutes les armes sont indisponibles — affichez-les pour voir pourquoi.
+              }
+            </p>
+          } @else {
+            <div class="em-equipment__list">
+              @for (weapon of visibleWeapons(); track weapon.nomInterne) {
+                <app-equipment-option
+                  [option]="weapon"
+                  [requiresOrientation]="weaponNeedsOrientation(weapon)"
+                  (chosen)="addWeapon($event)" />
+              }
+            </div>
+          }
         }
       </section>
 
       <section class="em-equipment__group">
-        <h3 class="em-equipment__title">Améliorations</h3>
-        @if (visibleImprovements().length === 0) {
-          <p class="em-status">
-            @if (availableImprovements().length === 0) {
-              Aucune amélioration disponible pour ce sponsor.
-            } @else {
-              Toutes les améliorations sont indisponibles — affichez-les pour voir pourquoi.
-            }
-          </p>
-        } @else {
-          <div class="em-equipment__list">
-            @for (improvement of visibleImprovements(); track improvement.nomInterne) {
-              <app-equipment-option
-                [option]="improvement"
-                [requiresOrientation]="improvementNeedsOrientation(improvement)"
-                (chosen)="addImprovement($event)" />
-            }
-          </div>
+        <button
+          type="button"
+          class="em-equipment__title"
+          [class.em-equipment__title--collapsed]="collapsedSections().has('improvements')"
+          (click)="toggleSection('improvements')">
+          Améliorations
+          <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+        </button>
+        @if (!collapsedSections().has('improvements')) {
+          @if (visibleImprovements().length === 0) {
+            <p class="em-status">
+              @if (availableImprovements().length === 0) {
+                Aucune amélioration disponible pour ce sponsor.
+              } @else {
+                Toutes les améliorations sont indisponibles — affichez-les pour voir pourquoi.
+              }
+            </p>
+          } @else {
+            <div class="em-equipment__list">
+              @for (improvement of visibleImprovements(); track improvement.nomInterne) {
+                <app-equipment-option
+                  [option]="improvement"
+                  [requiresOrientation]="improvementNeedsOrientation(improvement)"
+                  (chosen)="addImprovement($event)" />
+              }
+            </div>
+          }
         }
       </section>
 
@@ -141,34 +159,52 @@
         d'orientation pour un avantage : `requiresOrientation` toujours `false`.
       -->
       <section class="em-equipment__group">
-        <h3 class="em-equipment__title">Avantages — {{ sponsorCatalog().classes_avantage[0] }}</h3>
-        @if (advantagesCategoryA().length === 0) {
-          <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
-        } @else {
-          <div class="em-equipment__list">
-            @for (advantage of advantagesCategoryA(); track advantage.nomInterne) {
-              <app-equipment-option
-                [option]="advantage"
-                [requiresOrientation]="false"
-                (chosen)="addAdvantage($event)" />
-            }
-          </div>
+        <button
+          type="button"
+          class="em-equipment__title"
+          [class.em-equipment__title--collapsed]="collapsedSections().has('advantagesA')"
+          (click)="toggleSection('advantagesA')">
+          Avantages — {{ sponsorCatalog().classes_avantage[0] }}
+          <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+        </button>
+        @if (!collapsedSections().has('advantagesA')) {
+          @if (advantagesCategoryA().length === 0) {
+            <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
+          } @else {
+            <div class="em-equipment__list">
+              @for (advantage of advantagesCategoryA(); track advantage.nomInterne) {
+                <app-equipment-option
+                  [option]="advantage"
+                  [requiresOrientation]="false"
+                  (chosen)="addAdvantage($event)" />
+              }
+            </div>
+          }
         }
       </section>
 
       <section class="em-equipment__group">
-        <h3 class="em-equipment__title">Avantages — {{ sponsorCatalog().classes_avantage[1] }}</h3>
-        @if (advantagesCategoryB().length === 0) {
-          <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
-        } @else {
-          <div class="em-equipment__list">
-            @for (advantage of advantagesCategoryB(); track advantage.nomInterne) {
-              <app-equipment-option
-                [option]="advantage"
-                [requiresOrientation]="false"
-                (chosen)="addAdvantage($event)" />
-            }
-          </div>
+        <button
+          type="button"
+          class="em-equipment__title"
+          [class.em-equipment__title--collapsed]="collapsedSections().has('advantagesB')"
+          (click)="toggleSection('advantagesB')">
+          Avantages — {{ sponsorCatalog().classes_avantage[1] }}
+          <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+        </button>
+        @if (!collapsedSections().has('advantagesB')) {
+          @if (advantagesCategoryB().length === 0) {
+            <p class="em-status">Aucun avantage disponible dans cette catégorie.</p>
+          } @else {
+            <div class="em-equipment__list">
+              @for (advantage of advantagesCategoryB(); track advantage.nomInterne) {
+                <app-equipment-option
+                  [option]="advantage"
+                  [requiresOrientation]="false"
+                  (chosen)="addAdvantage($event)" />
+              }
+            </div>
+          }
         }
       </section>
     </div>

@@ -1,5 +1,6 @@
 import type { WeaponType } from './value-objects/weapon-type';
 import type { WeaponOrientation } from './team';
+import { DomainException } from '../../shared/domain/domain-exception';
 
 /**
  * Une arme montée sur un véhicule d'équipe (instance de jeu).
@@ -43,8 +44,15 @@ export class Weapon {
    * `markSold()`) — moitié prix arrondie à l'inférieur (p.170). Calculé sur `price`
    * pendant qu'il reflète encore le prix plein (`isSold` toujours faux à cet instant) :
    * floor(X/2) remboursé + ceil(X/2) résiduel (post-vente, cf. `price`) = X.
+   *
+   * Précondition imposée par la garde ci-dessous : appeler ce getter après `markSold()`
+   * lirait `price` déjà résiduel et renverrait une fraction erronée (ni 0 ni le montant
+   * initial), au lieu d'échouer bruyamment sur un appel invalide.
    */
   get resaleRefund(): number {
+    if (this._isSold) {
+      throw new DomainException('Cette arme est déjà vendue — son remboursement a déjà été calculé et crédité.');
+    }
     return Math.floor(this.price / 2);
   }
 

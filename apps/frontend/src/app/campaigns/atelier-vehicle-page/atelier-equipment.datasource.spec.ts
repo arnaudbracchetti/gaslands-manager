@@ -38,6 +38,8 @@ const workshop: WorkshopStateDto = {
       advantages: [
         { id: 3, nomInterne: 'expertise', price: 3, isSold: false, purchasedThisSession: false },
       ],
+      resaleRefund: 6,
+      purchasedThisSession: false,
     },
   ],
 };
