@@ -32,14 +32,27 @@ export class GetVehicleDetailUseCase {
       throw new Error(`Véhicule catalogue inconnu : "${vehicle.type.nomInterne}" (véhicule #${vehicle.id})`);
     }
 
-    const installed = vehicle.installedImprovements.map((i) => ({
+    // Collections BRUTES + flags : c'est la couche build (décorateurs/factory) qui décide
+    // de la contribution de chaque élément (intégré/vendu/perdu), plus un tri en amont.
+    const improvements = vehicle.improvements.map((i) => ({
       nom_interne: i.type.nomInterne,
       orientation: i.orientation ?? undefined,
+      isDefault: i.estDefaut,
+      isSold: i.isSold,
+      isLost: i.isLost,
     }));
 
-    const installedAdvantages = vehicle.installedAdvantages.map((a) => ({ nom_interne: a.type.nomInterne }));
+    const advantages = vehicle.advantages.map((a) => ({
+      nom_interne: a.type.nomInterne,
+      isSold: a.isSold,
+    }));
 
-    const build = this.buildFactory.create(catalogVehicule.toRaw(), installed, installedAdvantages);
+    const sequellas = vehicle.sequellas.map((s) => ({
+      nom_interne: s.type.nomInterne,
+      isSold: s.isSold,
+    }));
+
+    const build = this.buildFactory.create(catalogVehicule.toRaw(), improvements, advantages, sequellas);
 
     return {
       id: vehicle.id,

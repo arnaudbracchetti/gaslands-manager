@@ -32,6 +32,11 @@ export class ImprovementDecoratorFactory {
   };
 
   static wrap(inner: VehicleBuild, amelioration: Amelioration, instance: InstalledImprovement): VehicleBuild {
+    // Un équipement revendu ou perdu ne contribue à rien (ni stats ni règle de pose) :
+    // on le neutralise ici. Le 0 emplacement est porté par `totalEmplacements` (flag).
+    if (instance.isSold || instance.isLost) {
+      return new NeutralDecorator(inner, amelioration, instance);
+    }
     const Decorateur: DecoratorCtor =
       ImprovementDecoratorFactory.REGISTRE[amelioration.comportement ?? ''] ?? NeutralDecorator;
     return new Decorateur(inner, amelioration, instance);

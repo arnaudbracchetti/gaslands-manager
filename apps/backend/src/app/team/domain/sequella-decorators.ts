@@ -8,10 +8,10 @@
  * Chaque séquelle est identifiée par un `SequellaType` (Value Object résolu depuis le
  * catalogue `sequelle.yml` via `CatalogService`, même modèle que `WeaponType` /
  * `ImprovementType`). `Vehicle.addCampaignSequella(type, campaignId)` stocke le Value
- * Object ; `VehicleBuildFactory` (Partie 5) utilisera `type.nomInterne` pour retrouver
- * la factory dans `SEQUELLA_DECORATOR_FACTORIES` et instancier le décorateur au moment
- * du calcul des stats — non câblé aujourd'hui (`Vehicle.buildChain()` ne plie pas
- * encore les séquelles), ces classes existent en anticipation de ce futur chantier.
+ * Object ; `Vehicle.buildChain()` / `VehicleBuildFactory` plient ensuite ces décorateurs
+ * dans la chaîne (via `SequellaDecoratorFactory.wrap` ci-dessous) pour que leurs effets
+ * de stat s'appliquent aux stats effectives du véhicule — au même titre que les
+ * améliorations et les avantages.
  *
  * Différences avec ImprovementDecorator ordinaire :
  * - `emplacement: 0`  — les séquelles ne consomment pas d'emplacement
@@ -19,7 +19,12 @@
  *   write-time (`Vehicle.canAddSequella`), jamais au replay
  */
 
-import { ImprovementDecorator, type VehicleBuild, type VehicleStats } from './vehicle-build';
+import {
+  ImprovementDecorator,
+  type InstalledImprovement,
+  type VehicleBuild,
+  type VehicleStats,
+} from './vehicle-build';
 import type { SequellaType } from './value-objects/sequella-type';
 import type { Amelioration } from '../../catalog/catalog.interfaces';
 
@@ -109,16 +114,24 @@ export class SiegeIrrecuperableDecorator extends SequellaDecorator {
   }
 }
 
-// ── Registre de factories (Partie 5, non câblé aujourd'hui) ───────────────────
+// ── Décorateur neutre : séquelle sans effet chiffré ───────────────────────────
+
+/**
+ * Décorateur "par défaut" pour toute séquelle sans effet sur le profil chiffré (les 11
+ * séquelles `ATELIER` comportementales : Suicidaire, Impopulaire… — effet narratif ou
+ * de jeu, aucune stat modifiée). Mirroir de `NeutralDecorator`/`NeutralAdvantageDecorator`,
+ * corps vide intentionnel. Utilisé aussi pour neutraliser une séquelle vendue.
+ */
+export class NeutralSequellaDecorator extends SequellaDecorator {}
+
+// ── Registre de factories + fabrique ──────────────────────────────────────────
 
 export type SequellaFactory = (inner: VehicleBuild, sequellaType: SequellaType) => SequellaDecorator;
 
 /**
- * Mappe chaque `nom_interne` de séquelle à comportement mécanique vers sa factory de
- * décorateur — utilisée par `VehicleBuildFactory` (Partie 5, pas encore câblée dans
- * `Vehicle.buildChain()`) pour assembler la chaîne lors du calcul des stats en atelier.
- *
- * Usage prévu : `SEQUELLA_DECORATOR_FACTORIES.get(nomInterne)?.(currentBuild, type)`
+ * Mappe chaque `nom_interne` de séquelle à effet chiffré vers sa factory de décorateur.
+ * Les 4 séquelles imposées par la Table des Épaves modifient une stat ; les 11 autres
+ * n'en modifient aucune (repli sur `NeutralSequellaDecorator`, cf. `SequellaDecoratorFactory`).
  */
 export const SEQUELLA_DECORATOR_FACTORIES: ReadonlyMap<string, SequellaFactory> = new Map([
   ['moteur_endommage', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new MoteurEndommageDecorator(inner, type)],
@@ -126,3 +139,21 @@ export const SEQUELLA_DECORATOR_FACTORIES: ReadonlyMap<string, SequellaFactory> 
   ['blindage_arrache', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new BlindageArrachéDecorator(inner, type)],
   ['siege_irrecuperable', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new SiegeIrrecuperableDecorator(inner, type)],
 ]);
+
+/**
+ * Fabrique pure (mirroir d'`ImprovementDecoratorFactory`/`AdvantageDecoratorFactory`) :
+ * plie une séquelle dans la chaîne. Une séquelle vendue/perdue est neutralisée (aucun
+ * effet), une séquelle à effet chiffré prend son décorateur dédié, et toute autre tombe
+ * sur `NeutralSequellaDecorator`. Les séquelles ne consomment jamais d'emplacement
+ * (`emplacement: 0`) ni ne portent de règle de pose (`validate()` délègue), quel que
+ * soit le décorateur retenu.
+ */
+export class SequellaDecoratorFactory {
+  static wrap(inner: VehicleBuild, sequellaType: SequellaType, instance: InstalledImprovement): VehicleBuild {
+    if (instance.isSold || instance.isLost) {
+      return new NeutralSequellaDecorator(inner, sequellaType);
+    }
+    const factory = SEQUELLA_DECORATOR_FACTORIES.get(sequellaType.nomInterne);
+    return factory ? factory(inner, sequellaType) : new NeutralSequellaDecorator(inner, sequellaType);
+  }
+}

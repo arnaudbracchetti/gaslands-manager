@@ -476,20 +476,76 @@ describe('Vehicle.removeImprovement — miroir de removeWeapon (mêmes garanties
   });
 });
 
-describe('Vehicle.installedImprovements / installedAdvantages — exclusion défauts/vendus', () => {
-  it('installedImprovements exclut les améliorations estDefaut', () => {
-    const arceaux = new Improvement(1, makeImprovementType(), null, true);
-    const belier = new Improvement(2, makeImprovementType(), null, false);
-    const v = new Vehicle(1, 10, makeVehicleType(), [], [arceaux, belier]);
-    expect(v.installedImprovements.map((i) => i.id)).toEqual([2]);
+describe('Vehicle.buildChain — contribution portée par les flags (refactor)', () => {
+  // Sonde : Cascadeur exige une Manœuvrabilité EFFECTIVE ≥ 3 ; son verdict révèle donc
+  // ce que la chaîne a réellement plié (défauts, séquelles, objets vendus).
+  const cascadeur = (): AdvantageType => makeAdvantageType('cascadeur', 7, 'Audace', 'cascadeur');
+
+  // Véhicule Moyen, manœuvrabilité 3 : Cascadeur tout juste éligible sans modificateur.
+  function moyenManoeuvre3(): VehicleType {
+    return VehicleType.from({
+      nom: 'V', nom_interne: 'voiture', poids: 'Moyen',
+      carrosserie: 6, manoeuvrabilite: 3, vitesse_max: 6, equipage: 2,
+      emplacements: 10, prix: 12, description: '', regles: '', sponsors_autorises: [],
+    });
+  }
+  function moyenManoeuvre2(): VehicleType {
+    return VehicleType.from({
+      nom: 'Ambulance', nom_interne: 'ambulance', poids: 'Moyen',
+      carrosserie: 6, manoeuvrabilite: 2, vitesse_max: 5, equipage: 2,
+      emplacements: 10, prix: 12, description: '', regles: '', sponsors_autorises: [],
+    });
+  }
+
+  const directionEndommagee = SequellaType.from({
+    nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+  });
+  const suicidaire = SequellaType.from({
+    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
   });
 
-  it('installedAdvantages exclut les avantages revendus (isSold)', () => {
-    const a1 = new Advantage(1, makeAdvantageType('a1'));
-    const a2 = new Advantage(2, makeAdvantageType('a2'));
-    a2.markSold();
-    const v = new Vehicle(1, 10, makeVehicleType(), [], [], [a1, a2]);
-    expect(v.installedAdvantages.map((a) => a.id)).toEqual([1]);
+  it('séquelle câblée : "Direction endommagée" (-1) fait chuter la manœuvrabilité effective sous 3 → Cascadeur refusé', () => {
+    const v = new Vehicle(1, 10, moyenManoeuvre3(), [], []);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // 3 sans séquelle
+    v.addCampaignSequella(directionEndommagee, -1);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(false); // 3 - 1 = 2
+  });
+
+  it('séquelle vendue neutralisée : une "Direction endommagée" vendue ne réduit plus la manœuvrabilité', () => {
+    const v = new Vehicle(1, 10, moyenManoeuvre3(), [], []);
+    v.addCampaignSequella(directionEndommagee, -1);
+    v.markSequellaSold(-1);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // effet annulé → 3
+  });
+
+  it('séquelle sans effet chiffré ("Suicidaire") : repli Neutral, aucune stat modifiée', () => {
+    const v = new Vehicle(1, 10, moyenManoeuvre3(), [], []);
+    v.addCampaignSequella(suicidaire, -1);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // manœuvrabilité inchangée = 3
+  });
+
+  it('amélioration intégrée à effet chiffré : ses stats sont pliées (Chenilles estDefaut +1 → Cascadeur éligible)', () => {
+    // Chenilles INTÉGRÉE (estDefaut: true) : applique son +1 manœuvrabilité, sans consommer d'emplacement.
+    const chenillesDefaut = new Improvement(1, improvementType('chenilles', 'chenilles', 1), null, true);
+    const v = new Vehicle(1, 10, moyenManoeuvre2(), [], [chenillesDefaut]);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // 2 + 1 (défaut) = 3
+  });
+
+  it('avantage vendu neutralisé : un "Expertise" vendu ne réapplique pas son +1 manœuvrabilité', () => {
+    const expertiseVendu = new Advantage(1, makeAdvantageType('expertise', 3, 'Précision', 'expertise'));
+    expertiseVendu.markSold();
+    const v = new Vehicle(1, 10, moyenManoeuvre2(), [], [], [expertiseVendu]);
+    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(false); // +1 non appliqué → 2 < 3
+  });
+
+  it('régression isSold (amélioration) : une amélioration vendue ne consomme plus d\'emplacement dans la chaîne', () => {
+    // Capacité 2 ; une amélioration de 2 emplacements, VENDUE → slots libérés (0).
+    const vendue = new Improvement(1, makeImprovementType(4, 2), null, false);
+    vendue.markSold();
+    const v = new Vehicle(1, 10, makeVehicleType(2, 12), [], [vendue]);
+    // Ajouter une amélioration de 2 emplacements doit passer (l'objet vendu compte 0
+    // dans totalEmplacements ; avant le refactor, il sur-comptait et faisait échouer).
+    expect(v.canAddImprovement(makeImprovementType(4, 2), null, 100).ok).toBe(true);
   });
 });
 

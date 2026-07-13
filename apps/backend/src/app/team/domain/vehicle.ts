@@ -14,6 +14,7 @@ import { CatalogVehicleBuild } from './vehicle-build';
 import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
 import { AdvantageDecoratorFactory } from './advantage-decorator.factory';
+import { SequellaDecoratorFactory } from './sequella-decorators';
 import type { Amelioration, Avantage } from '../../catalog/catalog.interfaces';
 
 /** Les 4 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
@@ -73,19 +74,6 @@ export class Vehicle {
     return this._advantages;
   }
 
-  /**
-   * Améliorations réellement "installées" (achetées, hors profil de base `estDefaut`) -
-   * celles qui comptent pour les stats montées (`buildChain`) et tout récapitulatif de
-   * build. Prédicat centralisé ici pour ne pas être redupliqué côté use case.
-   */
-  get installedImprovements(): readonly Improvement[] {
-    return this._improvements.filter((i) => !i.estDefaut);
-  }
-
-  /** Avantages réellement acquis (hors ceux revendus) - miroir d'`installedImprovements`. */
-  get installedAdvantages(): readonly Advantage[] {
-    return this._advantages.filter((a) => !a.isSold);
-  }
 
   // ── Getters campagne ──────────────────────────────────────────────────────────
 
@@ -363,30 +351,44 @@ export class Vehicle {
 
   /**
    * Reconstruit la chaîne de décorateurs "véhicule monté" à partir de l'état de
-   * l'agrégat, afin de valider les règles de pose des améliorations ET des avantages.
-   * Les améliorations par défaut (`estDefaut`) sont exclues : hors pool d'emplacements
-   * (slots = 0 dans l'agrégat) et ne portant aucune de ces règles, les inclure
-   * fausserait le contrôle d'emplacements interne de la chaîne (`validateGenerique`,
-   * qui lit le prix catalogue brut).
+   * l'agrégat, afin de calculer les stats effectives et de valider les règles de pose.
    *
-   * Plie `_improvements` PUIS `_advantages`, PUIS le candidat testé (amélioration OU
-   * avantage — union discriminée, un seul des deux jamais fourni à la fois). Cet ordre
-   * garantit que les restrictions de pose d'un avantage (Cascadeur, Sur Deux Roues —
-   * Manœuvrabilité EFFECTIVE ≥ 3) voient le cumul des bonus de stats des couches du
-   * dessous, qu'ils viennent d'une amélioration (Chenilles) ou d'un autre avantage déjà
-   * acquis (Expertise).
+   * Toutes les collections sont passées BRUTES (`_sequellas`, `_improvements`,
+   * `_advantages`) — plus aucun tri en amont. Chaque instance porte ses flags
+   * (`isDefault`/`isSold`/`isLost`) ; ce sont les décorateurs/factories qui décident de
+   * la contribution : un équipement intégré applique ses stats sans consommer
+   * d'emplacement, un équipement vendu/perdu est neutralisé (cf. les trois factories).
+   *
+   * Ordre de pliage : `base → séquelles → améliorations → avantages`, puis le candidat
+   * testé (amélioration OU avantage — union discriminée, jamais les deux ; les séquelles
+   * ne sont jamais un candidat, `canAddSequella` ne passe pas par la chaîne). Les
+   * dommages permanents (séquelles) s'appliquent au châssis avant les bonus d'équipement,
+   * et sous les avantages pour que Cascadeur/Sur Deux Roues lisent la Manœuvrabilité
+   * EFFECTIVE (bornée `Math.max(1, …)`, donc l'ordre est signifiant). `baseStats` reste
+   * le profil catalogue brut.
    */
   private buildChain(
     candidate:
       | { improvement: { type: ImprovementType; orientation: Orientation | null } }
       | { advantage: { type: AdvantageType } },
   ): VehicleBuild {
-    const installedImprovements: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
-      ...this.installedImprovements
-        .map((i) => ({
-          raw: i.type.toRaw(),
-          instance: { nom_interne: i.type.nomInterne, orientation: i.orientation ?? undefined },
-        })),
+    const sequellas: ReadonlyArray<{ type: SequellaType; instance: InstalledImprovement }> =
+      this._sequellas.map((s) => ({
+        type: s.type,
+        instance: { nom_interne: s.type.nomInterne, isSold: s.isSold },
+      }));
+
+    const improvements: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
+      ...this._improvements.map((i) => ({
+        raw: i.type.toRaw(),
+        instance: {
+          nom_interne: i.type.nomInterne,
+          orientation: i.orientation ?? undefined,
+          isDefault: i.estDefaut,
+          isSold: i.isSold,
+          isLost: i.isLost,
+        },
+      })),
       ...('improvement' in candidate
         ? [
             {
@@ -400,19 +402,24 @@ export class Vehicle {
         : []),
     ];
 
-    const installedAdvantages: ReadonlyArray<{ raw: Avantage; instance: InstalledImprovement }> = [
-      ...this.installedAdvantages
-        .map((a) => ({ raw: a.type.toRaw(), instance: { nom_interne: a.type.nomInterne } })),
+    const advantages: ReadonlyArray<{ raw: Avantage; instance: InstalledImprovement }> = [
+      ...this._advantages.map((a) => ({
+        raw: a.type.toRaw(),
+        instance: { nom_interne: a.type.nomInterne, isSold: a.isSold },
+      })),
       ...('advantage' in candidate
         ? [{ raw: candidate.advantage.type.toRaw(), instance: { nom_interne: candidate.advantage.type.nomInterne } }]
         : []),
     ];
 
     let build: VehicleBuild = new CatalogVehicleBuild(this.type.toRaw());
-    for (const { raw, instance } of installedImprovements) {
+    for (const { type, instance } of sequellas) {
+      build = SequellaDecoratorFactory.wrap(build, type, instance);
+    }
+    for (const { raw, instance } of improvements) {
       build = ImprovementDecoratorFactory.wrap(build, raw, instance);
     }
-    for (const { raw, instance } of installedAdvantages) {
+    for (const { raw, instance } of advantages) {
       build = AdvantageDecoratorFactory.wrap(build, raw, instance);
     }
     return build;

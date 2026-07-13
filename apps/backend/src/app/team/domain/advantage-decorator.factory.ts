@@ -32,6 +32,11 @@ export class AdvantageDecoratorFactory {
   };
 
   static wrap(inner: VehicleBuild, avantage: Avantage, instance: InstalledImprovement): VehicleBuild {
+    // Un avantage revendu ne contribue à rien (ex. un Expertise vendu ne doit PAS
+    // réappliquer son +1 manœuvrabilité) : on le neutralise, comme les améliorations.
+    if (instance.isSold || instance.isLost) {
+      return new NeutralAdvantageDecorator(inner, avantage, instance);
+    }
     const Decorateur: AdvantageDecoratorCtor =
       AdvantageDecoratorFactory.REGISTRE[avantage.comportement ?? ''] ?? NeutralAdvantageDecorator;
     return new Decorateur(inner, avantage, instance);

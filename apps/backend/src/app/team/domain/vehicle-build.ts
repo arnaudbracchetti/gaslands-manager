@@ -92,10 +92,21 @@ export interface VehicleStatsSummary {
  * à blanc, cf. `canAddImprovement`). `orientation` n'a de sens que pour les améliorations
  * qui occupent une position directionnelle exclusive (Bélier, Bélier Explosif...) —
  * elle reste `undefined` pour toutes les autres.
+ *
+ * Les trois flags portent la règle « qu'est-ce qui contribue au build » AU NIVEAU DU
+ * BUILD (décorateur/factory), plutôt que par un tri fait en amont par l'appelant :
+ *  - `isDefault` (équipement intégré au profil de base, `estDefaut`) : applique quand
+ *    même ses stats, mais ne consomme AUCUN emplacement (il fait partie du châssis) ;
+ *  - `isSold` / `isLost` (revendu en atelier / perdu en campagne) : ne contribue à rien —
+ *    ni stats ni emplacement (la factory renvoie un décorateur neutre).
+ * Tous optionnels : absents ⇒ `false` (équipement acheté, actif, ordinaire).
  */
 export interface InstalledImprovement {
   nom_interne: string;
   orientation?: Orientation;
+  isDefault?: boolean;
+  isSold?: boolean;
+  isLost?: boolean;
 }
 
 /** Options fournies lors de l'ajout d'une amélioration, au-delà de son identité catalogue. */
@@ -271,9 +282,18 @@ export abstract class ImprovementDecorator implements VehicleBuild {
     return mine || this.inner.hasOrientationFor(type, o);
   }
 
-  /** Mon propre coût en emplacements, plus celui de tout ce qui est en dessous de moi. */
+  /**
+   * Mon propre coût en emplacements, plus celui de tout ce qui est en dessous de moi.
+   * Un équipement intégré (`isDefault`), revendu (`isSold`) ou perdu (`isLost`) ne
+   * consomme AUCUN emplacement — même règle que le getter `Improvement.slots` de
+   * l'entité, désormais portée ici plutôt qu'appliquée par un tri en amont.
+   */
   totalEmplacements(): number {
-    return this.amelioration.emplacement + this.inner.totalEmplacements();
+    const mien =
+      this.instance.isDefault || this.instance.isSold || this.instance.isLost
+        ? 0
+        : this.amelioration.emplacement;
+    return mien + this.inner.totalEmplacements();
   }
 
   /**
