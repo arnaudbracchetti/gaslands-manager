@@ -32,16 +32,12 @@ export class GetVehicleDetailUseCase {
       throw new Error(`Véhicule catalogue inconnu : "${vehicle.type.nomInterne}" (véhicule #${vehicle.id})`);
     }
 
-    const installed = vehicle.improvements
-      .filter((i) => !i.estDefaut)
-      .map((i) => ({
-        nom_interne: i.type.nomInterne,
-        orientation: i.orientation ?? undefined,
-      }));
+    const installed = vehicle.installedImprovements.map((i) => ({
+      nom_interne: i.type.nomInterne,
+      orientation: i.orientation ?? undefined,
+    }));
 
-    const installedAdvantages = vehicle.advantages
-      .filter((a) => !a.isSold)
-      .map((a) => ({ nom_interne: a.type.nomInterne }));
+    const installedAdvantages = vehicle.installedAdvantages.map((a) => ({ nom_interne: a.type.nomInterne }));
 
     const build = this.buildFactory.create(catalogVehicule.toRaw(), installed, installedAdvantages);
 

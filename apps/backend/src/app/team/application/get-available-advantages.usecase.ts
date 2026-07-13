@@ -2,7 +2,6 @@ import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { AdvantageType } from '../domain/value-objects/advantage-type';
 import type { AvailableAdvantageDto } from '../dto/available-advantage.dto';
-import { fail } from '../domain/team';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface GetAvailableAdvantagesQuery {
@@ -28,14 +27,10 @@ export class GetAvailableAdvantagesUseCase {
   @LogUseCase()
   async execute(query: GetAvailableAdvantagesQuery): Promise<AvailableAdvantageDto[]> {
     const team = await this.teamRepo.findByVehicleId(query.vehicleId, query.userId);
-    const vehicle = team.findVehicle(query.vehicleId);
-    const budget = team.remainingBudget;
     const advantageTypes = this.catalogRepo.getAdvantageTypesForSponsor(team.sponsor);
 
     return advantageTypes.map((at: AdvantageType): AvailableAdvantageDto => {
-      const verdict = team.isLocked
-        ? fail('Équipe verrouillée : campagne en cours')
-        : vehicle.canAddAdvantage(at, budget);
+      const verdict = team.canAddAdvantageToVehicle(query.vehicleId, at);
       return {
         nom: at.nom,
         nomInterne: at.nomInterne,

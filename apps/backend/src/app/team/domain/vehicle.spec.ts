@@ -353,6 +353,46 @@ describe('Vehicle.canAddWeapon/addWeapon — montage sur Tourelle (orientation \
   });
 });
 
+// Régression : RemoveImprovementUseCase levait autrefois un ForbiddenException (403)
+// dupliquant ce contrôle en amont de l'agrégat — l'agrégat le faisait déjà (400, comme
+// removeWeapon ci-dessus), mais rien ne le testait à ce niveau. Cf. [[feedback_business_rules_in_domain_only]].
+describe('Vehicle.removeImprovement — miroir de removeWeapon (mêmes garanties)', () => {
+  it('refuse de retirer une amélioration estDefaut (ex. Arceaux du Buggy)', () => {
+    const arceaux = new Improvement(1, makeImprovementType(), null, true);
+    const v = new Vehicle(1, 10, makeVehicleType(), [], [arceaux]);
+    expect(() => v.removeImprovement(1)).toThrow('intégrées au profil de base');
+  });
+
+  it('lève DomainException si l\'amélioration est introuvable', () => {
+    const v = makeVehicle();
+    expect(() => v.removeImprovement(999)).toThrow('introuvable');
+  });
+
+  it('retire normalement une amélioration achetée (estDefaut: false)', () => {
+    const belier = new Improvement(1, makeImprovementType(), null, false);
+    const v = new Vehicle(1, 10, makeVehicleType(), [], [belier]);
+    v.removeImprovement(1);
+    expect(v.improvements).toHaveLength(0);
+  });
+});
+
+describe('Vehicle.installedImprovements / installedAdvantages — exclusion défauts/vendus', () => {
+  it('installedImprovements exclut les améliorations estDefaut', () => {
+    const arceaux = new Improvement(1, makeImprovementType(), null, true);
+    const belier = new Improvement(2, makeImprovementType(), null, false);
+    const v = new Vehicle(1, 10, makeVehicleType(), [], [arceaux, belier]);
+    expect(v.installedImprovements.map((i) => i.id)).toEqual([2]);
+  });
+
+  it('installedAdvantages exclut les avantages revendus (isSold)', () => {
+    const a1 = new Advantage(1, makeAdvantageType('a1'));
+    const a2 = new Advantage(2, makeAdvantageType('a2'));
+    a2.markSold();
+    const v = new Vehicle(1, 10, makeVehicleType(), [], [], [a1, a2]);
+    expect(v.installedAdvantages.map((a) => a.id)).toEqual([1]);
+  });
+});
+
 // ── Avantages ──────────────────────────────────────────────────────────────────
 
 describe('Vehicle.cost — inclut les avantages', () => {

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { Vehicle } from '../domain/vehicle';
 import { DomainException } from '../domain/team';
@@ -12,8 +12,10 @@ export interface RemoveImprovementCommand {
 
 /**
  * Retire une amélioration achetée d'un véhicule.
- * Traduit DomainException en ForbiddenException pour les améliorations par défaut,
- * et en BadRequestException pour les autres erreurs métier.
+ * Toute règle de refus (amélioration introuvable, intégrée au profil de base...)
+ * est portée par l'agrégat (Vehicle.removeImprovement) - même chemin que
+ * RemoveWeaponUseCase : la DomainException est uniformément traduite en
+ * BadRequestException, sans contrôle métier dupliqué dans le use case.
  */
 export class RemoveImprovementUseCase {
   constructor(private readonly teamRepo: ITeamRepository) {}
@@ -21,21 +23,6 @@ export class RemoveImprovementUseCase {
   @LogUseCase()
   async execute(cmd: RemoveImprovementCommand): Promise<Vehicle> {
     const team = await this.teamRepo.findByVehicleId(cmd.vehicleId, cmd.userId);
-    const vehicle = team.findVehicle(cmd.vehicleId);
-
-    // Vérifier si c'est une amélioration par défaut avant de déléguer à l'agrégat,
-    // pour distinguer ForbiddenException (interdit) de BadRequestException (introuvable).
-    const imp = vehicle.improvements.find((i) => i.id === cmd.improvementId);
-    if (!imp) {
-      throw new BadRequestException(
-        `Amélioration #${cmd.improvementId} introuvable sur le véhicule #${cmd.vehicleId}`,
-      );
-    }
-    if (imp.estDefaut) {
-      throw new ForbiddenException(
-        `"${imp.type.nomInterne}" fait partie du profil de base de ce véhicule et ne peut pas être retirée.`,
-      );
-    }
 
     try {
       team.removeImprovementFromVehicle(cmd.vehicleId, cmd.improvementId);

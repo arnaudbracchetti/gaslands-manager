@@ -5,6 +5,7 @@ import { Weapon } from './weapon';
 import { Advantage } from './advantage';
 import { VehicleType } from './value-objects/vehicle-type';
 import { WeaponType } from './value-objects/weapon-type';
+import { ImprovementType } from './value-objects/improvement-type';
 import { AdvantageType } from './value-objects/advantage-type';
 import { DomainException } from './vehicle';
 
@@ -32,6 +33,13 @@ function makeAdvantageType(): AdvantageType {
   return AdvantageType.from({
     nom: 'Tireur d\'Élite', nom_interne: 'tireur_elite', categorie: 'Militaire',
     prix: 2, description: '', regles: '',
+  });
+}
+
+function makeImprovementType(): ImprovementType {
+  return ImprovementType.from({
+    nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1,
+    description: '', regles: '', sponsors_autorises: [], necessite_orientation: false,
   });
 }
 
@@ -155,6 +163,52 @@ describe('Team — verrouillage campagne', () => {
   it("les mutations campagne (addCampaignWeapon) restent autorisées même verrouillée", () => {
     const team = makeLockedTeam();
     expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', -1)).not.toThrow();
+  });
+});
+
+// Régression : la règle "équipe verrouillée bloque tout verdict de disponibilité" était
+// réimplémentée à l'identique dans 3 use cases (GetAvailable{Weapons,Improvements,
+// Advantages}UseCase) au lieu de vivre dans le domaine — cf. [[feedback_business_rules_in_domain_only]].
+describe('Team — canAddXToVehicle (verdict de disponibilité, sans mutation)', () => {
+  function makeLockedTeamWithVehicle(): Team {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    return new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle], true);
+  }
+
+  it('canAddWeaponToVehicle renvoie fail("Équipe verrouillée...") sans consulter l\'agrégat', () => {
+    const result = makeLockedTeamWithVehicle().canAddWeaponToVehicle(10, makeWeaponType(), 'avant');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('verrouillée');
+  });
+
+  it('canAddImprovementToVehicle renvoie fail("Équipe verrouillée...")', () => {
+    const result = makeLockedTeamWithVehicle().canAddImprovementToVehicle(10, makeImprovementType());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('verrouillée');
+  });
+
+  it('canAddAdvantageToVehicle renvoie fail("Équipe verrouillée...")', () => {
+    const result = makeLockedTeamWithVehicle().canAddAdvantageToVehicle(10, makeAdvantageType());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('verrouillée');
+  });
+
+  it('canAddWeaponToVehicle délègue à Vehicle.canAddWeapon quand l\'équipe n\'est pas verrouillée', () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    expect(team.canAddWeaponToVehicle(10, makeWeaponType(), 'avant').ok).toBe(true);
+  });
+
+  it('canAddImprovementToVehicle délègue à Vehicle.canAddImprovementInAnyOrientation', () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    expect(team.canAddImprovementToVehicle(10, makeImprovementType()).ok).toBe(true);
+  });
+
+  it('canAddAdvantageToVehicle délègue à Vehicle.canAddAdvantage', () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    expect(team.canAddAdvantageToVehicle(10, makeAdvantageType()).ok).toBe(true);
   });
 });
 

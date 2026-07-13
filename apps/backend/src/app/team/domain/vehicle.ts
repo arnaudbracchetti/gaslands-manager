@@ -73,6 +73,20 @@ export class Vehicle {
     return this._advantages;
   }
 
+  /**
+   * Améliorations réellement "installées" (achetées, hors profil de base `estDefaut`) -
+   * celles qui comptent pour les stats montées (`buildChain`) et tout récapitulatif de
+   * build. Prédicat centralisé ici pour ne pas être redupliqué côté use case.
+   */
+  get installedImprovements(): readonly Improvement[] {
+    return this._improvements.filter((i) => !i.estDefaut);
+  }
+
+  /** Avantages réellement acquis (hors ceux revendus) - miroir d'`installedImprovements`. */
+  get installedAdvantages(): readonly Advantage[] {
+    return this._advantages.filter((a) => !a.isSold);
+  }
+
   // ── Getters campagne ──────────────────────────────────────────────────────────
 
   get isLost(): boolean {
@@ -305,8 +319,7 @@ export class Vehicle {
       | { advantage: { type: AdvantageType } },
   ): VehicleBuild {
     const installedImprovements: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
-      ...this._improvements
-        .filter((i) => !i.estDefaut)
+      ...this.installedImprovements
         .map((i) => ({
           raw: i.type.toRaw(),
           instance: { nom_interne: i.type.nomInterne, orientation: i.orientation ?? undefined },
@@ -325,8 +338,7 @@ export class Vehicle {
     ];
 
     const installedAdvantages: ReadonlyArray<{ raw: Avantage; instance: InstalledImprovement }> = [
-      ...this._advantages
-        .filter((a) => !a.isSold)
+      ...this.installedAdvantages
         .map((a) => ({ raw: a.type.toRaw(), instance: { nom_interne: a.type.nomInterne } })),
       ...('advantage' in candidate
         ? [{ raw: candidate.advantage.type.toRaw(), instance: { nom_interne: candidate.advantage.type.nomInterne } }]

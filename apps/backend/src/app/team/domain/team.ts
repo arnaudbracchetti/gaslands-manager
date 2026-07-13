@@ -197,6 +197,18 @@ export class Team {
     vehicle.removeWeapon(weaponId);
   }
 
+  /**
+   * Verdict de disponibilité d'une arme pour ce véhicule (lecture, pas de mutation) —
+   * même règle de verrouillage que les mutations, mais renvoyée comme `RuleResult`
+   * plutôt que levée : un listing d'équipement disponible doit pouvoir afficher
+   * "indisponible" sans faire échouer la requête. Évite de dupliquer ce test dans
+   * chaque use case de listing (`GetAvailableWeaponsUseCase`…).
+   */
+  canAddWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: WeaponOrientation | null): RuleResult {
+    if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
+    return this.findVehicle(vehicleId).canAddWeapon(weaponType, orientation, this.remainingBudget);
+  }
+
   // ── Mutations Improvement (déléguées au Vehicle) ──────────────────────────────
 
   addImprovementToVehicle(vehicleId: number, improvementType: ImprovementType, orientation: Orientation | null): void {
@@ -211,6 +223,12 @@ export class Team {
     vehicle.removeImprovement(improvementId);
   }
 
+  /** Miroir de `canAddWeaponToVehicle` pour les améliorations — cf. sa doc. */
+  canAddImprovementToVehicle(vehicleId: number, improvementType: ImprovementType): RuleResult {
+    if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
+    return this.findVehicle(vehicleId).canAddImprovementInAnyOrientation(improvementType, this.remainingBudget);
+  }
+
   // ── Mutations Advantage (déléguées au Vehicle) ────────────────────────────────
 
   addAdvantageToVehicle(vehicleId: number, advantageType: AdvantageType): void {
@@ -223,6 +241,12 @@ export class Team {
     this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.removeAdvantage(advantageId);
+  }
+
+  /** Miroir de `canAddWeaponToVehicle` pour les avantages — cf. sa doc. */
+  canAddAdvantageToVehicle(vehicleId: number, advantageType: AdvantageType): RuleResult {
+    if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
+    return this.findVehicle(vehicleId).canAddAdvantage(advantageType, this.remainingBudget);
   }
 
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────

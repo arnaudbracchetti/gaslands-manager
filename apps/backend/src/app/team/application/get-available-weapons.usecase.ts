@@ -2,7 +2,6 @@ import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { WeaponType } from '../domain/value-objects/weapon-type';
 import type { AvailableWeaponDto } from '../dto/available-weapon.dto';
-import { fail } from '../domain/team';
 import { LogUseCase } from '../log-use-case.decorator';
 
 export interface GetAvailableWeaponsQuery {
@@ -25,14 +24,10 @@ export class GetAvailableWeaponsUseCase {
   @LogUseCase()
   async execute(query: GetAvailableWeaponsQuery): Promise<AvailableWeaponDto[]> {
     const team = await this.teamRepo.findByVehicleId(query.vehicleId, query.userId);
-    const vehicle = team.findVehicle(query.vehicleId);
-    const budget = team.remainingBudget;
     const weaponTypes = this.catalogRepo.getWeaponTypesForSponsor(team.sponsor);
 
     return weaponTypes.map((wt: WeaponType): AvailableWeaponDto => {
-      const result = team.isLocked
-        ? fail('Équipe verrouillée : campagne en cours')
-        : vehicle.canAddWeapon(wt, null, budget);
+      const result = team.canAddWeaponToVehicle(query.vehicleId, wt, null);
       return {
         nom: wt.nom,
         nomInterne: wt.nomInterne,
