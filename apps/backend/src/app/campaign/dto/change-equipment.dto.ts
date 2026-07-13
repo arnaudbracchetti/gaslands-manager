@@ -9,4 +9,6 @@ export class ChangeEquipmentDto {
   targetEntityId?: number | null;
   /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
   orientation?: WeaponOrientation | null;
+  /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — nom_interne de l'avantage gratuit choisi. */
+  freeAdvantageNomInterne?: string | null;
 }

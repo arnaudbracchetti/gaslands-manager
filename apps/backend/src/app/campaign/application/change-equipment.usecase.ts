@@ -20,6 +20,8 @@ export interface ChangeEquipmentCommand {
   targetEntityId?: number | null;
   /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
   orientation?: WeaponOrientation | null;
+  /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — nom_interne de l'avantage gratuit choisi. */
+  freeAdvantageNomInterne?: string | null;
 }
 
 /**
@@ -65,6 +67,16 @@ export class ChangeEquipmentUseCase {
       ? (this.catalog.getAdvantageType(cmd.nomInterne) ?? null)
       : null;
 
+    const resolvedSequellaType = cmd.entityType === EquipmentEntityType.SEQUELLE
+      ? (this.catalog.getSequellaType(cmd.nomInterne) ?? null)
+      : null;
+
+    // Uniquement pertinent pour BUY(SEQUELLE, 'dur_a_cuire') — `Game.changeEquipment`
+    // ignore ce champ silencieusement pour toute autre combinaison.
+    const resolvedFreeAdvantageType = cmd.freeAdvantageNomInterne
+      ? (this.catalog.getAdvantageType(cmd.freeAdvantageNomInterne) ?? null)
+      : null;
+
     try {
       const game = campaign.findAtelierGame();
       const result = game.changeEquipment(me, {
@@ -78,6 +90,8 @@ export class ChangeEquipmentUseCase {
         resolvedWeaponType,
         resolvedImprovementType,
         resolvedAdvantageType,
+        resolvedSequellaType,
+        resolvedFreeAdvantageType,
       });
       // Annulation d'achat de cette session : suppression pure d'un ou plusieurs événements
       // BUY (un seul pour WEAPON/IMPROVEMENT/ADVANTAGE, en cascade pour VEHICLE — cf.

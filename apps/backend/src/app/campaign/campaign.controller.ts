@@ -56,7 +56,6 @@ import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
-import { AddSequellaUseCase } from './application/add-sequella.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
@@ -81,7 +80,6 @@ import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
 import type { ContactResistanceDto } from './dto/contact-resistance.dto';
 import type { ChangeEquipmentDto } from './dto/change-equipment.dto';
 import type { WreckResolveDto } from './dto/wreck-resolve.dto';
-import type { AddSequellaDto } from './dto/add-sequella.dto';
 import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
 import type { AvailableWeaponDto } from '../team/dto/available-weapon.dto';
@@ -125,7 +123,6 @@ export class CampaignController {
     private readonly getStandingsUseCase: GetStandingsUseCase,
     private readonly changeEquipmentUseCase: ChangeEquipmentUseCase,
     private readonly wreckResolveUseCase: WreckResolveUseCase,
-    private readonly addSequellaUseCase: AddSequellaUseCase,
     private readonly getWorkshopUseCase: GetWorkshopUseCase,
     private readonly getWorkshopAvailableWeaponsUseCase: GetWorkshopAvailableWeaponsUseCase,
     private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
@@ -473,6 +470,7 @@ export class CampaignController {
       targetVehicleId: dto.targetVehicleId,
       targetEntityId: dto.targetEntityId,
       orientation: dto.orientation,
+      freeAdvantageNomInterne: dto.freeAdvantageNomInterne,
     });
   }
 
@@ -492,23 +490,6 @@ export class CampaignController {
       participantId: dto.participantId,
       vehicleId: dto.vehicleId,
       pendingFavoriDuPublic: dto.pendingFavoriDuPublic,
-    });
-  }
-
-  /** POST /api/campaigns/:id/events/sequella — séquelle permanente (partie en cours en ATELIER). */
-  @UseGuards(JwtAuthGuard)
-  @Post('campaigns/:id/events/sequella')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  addSequella(
-    @Request() req: AuthenticatedRequest,
-    @Param('id', ParseIntPipe) campaignId: number,
-    @Body() dto: AddSequellaDto,
-  ): Promise<void> {
-    return this.addSequellaUseCase.execute({
-      campaignId,
-      userId: req.user.id,
-      vehicleId: dto.vehicleId,
-      sequellaTypeNom: dto.sequellaTypeNom,
     });
   }
 

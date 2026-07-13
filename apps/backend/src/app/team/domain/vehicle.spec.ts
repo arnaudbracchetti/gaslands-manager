@@ -154,30 +154,130 @@ describe('Vehicle — champs transients de campagne', () => {
     });
   });
 
-  describe('addSequella / removeLastSequella', () => {
-    const moteur = SequellaType.from({ nom: 'Moteur endommagé', nom_interne: 'moteur_endommage', description: '', chocs_cost: 2 });
-    const direction = SequellaType.from({ nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', chocs_cost: 2 });
+  describe('addCampaignSequella / removeSequella', () => {
+    const moteur = SequellaType.from({
+      nom: 'Moteur endommagé', nom_interne: 'moteur_endommage', description: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+    });
+    const direction = SequellaType.from({
+      nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+    });
 
     it('sequellas est vide par défaut', () => {
       expect(makeVehicle().sequellas).toHaveLength(0);
     });
 
-    it('addSequella empile les SequellaType dans l\'ordre d\'application', () => {
+    it('addCampaignSequella empile les séquelles dans l\'ordre d\'application, avec l\'id fourni', () => {
       const v = makeVehicle();
-      v.addSequella(moteur);
-      v.addSequella(direction);
+      v.addCampaignSequella(moteur, -1);
+      v.addCampaignSequella(direction, -2);
       expect(v.sequellas).toHaveLength(2);
-      expect(v.sequellas[0].nomInterne).toBe('moteur_endommage');
-      expect(v.sequellas[1].nomInterne).toBe('direction_endommage');
+      expect(v.sequellas[0].type.nomInterne).toBe('moteur_endommage');
+      expect(v.sequellas[0].id).toBe(-1);
+      expect(v.sequellas[1].type.nomInterne).toBe('direction_endommage');
     });
 
-    it('removeLastSequella annule la dernière séquelle (undo)', () => {
+    it('removeSequella retire la séquelle ciblée par son id (undo d\'un achat)', () => {
       const v = makeVehicle();
-      v.addSequella(moteur);
-      v.addSequella(direction);
-      v.removeLastSequella();
+      v.addCampaignSequella(moteur, -1);
+      v.addCampaignSequella(direction, -2);
+      v.removeSequella(-2);
       expect(v.sequellas).toHaveLength(1);
-      expect(v.sequellas[0].nomInterne).toBe('moteur_endommage');
+      expect(v.sequellas[0].type.nomInterne).toBe('moteur_endommage');
+    });
+
+    it('removeSequella lève DomainException si la séquelle est introuvable', () => {
+      const v = makeVehicle();
+      expect(() => v.removeSequella(-1)).toThrow(DomainException);
+    });
+  });
+
+  describe('canAddSequella', () => {
+    const suicidaire = SequellaType.from({
+      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
+    });
+    const siegeIrrecuperable = SequellaType.from({
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+    });
+
+    it('rejette une séquelle TABLE_EPAVES (jamais achetable en atelier)', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      const result = v.canAddSequella(siegeIrrecuperable);
+      expect(result.ok).toBe(false);
+    });
+
+    it('rejette si les Chocs sont insuffisants', () => {
+      const v = makeVehicle();
+      expect(v.canAddSequella(suicidaire).ok).toBe(false);
+    });
+
+    it('rejette si la séquelle ATELIER est déjà active sur ce véhicule', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      v.addCampaignSequella(suicidaire, -1);
+      expect(v.canAddSequella(suicidaire).ok).toBe(false);
+    });
+
+    it('accepte une séquelle ATELIER avec Chocs suffisants et pas déjà acquise', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      expect(v.canAddSequella(suicidaire).ok).toBe(true);
+    });
+  });
+
+  describe('assertCanAddSequella', () => {
+    const suicidaire = SequellaType.from({
+      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
+    });
+    const durACuire = SequellaType.from({
+      nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', chocs_cost: 1, origine: 'ATELIER',
+    });
+    const avantageGratuit = makeAdvantageType('coriace');
+
+    it('lève DomainException quand le verdict canAddSequella échoue (Chocs insuffisants)', () => {
+      const v = makeVehicle();
+      expect(() => v.assertCanAddSequella(suicidaire, null)).toThrow(DomainException);
+    });
+
+    it('ne lève pas pour une séquelle ATELIER ordinaire valide (sans avantage gratuit)', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      expect(() => v.assertCanAddSequella(suicidaire, null)).not.toThrow();
+    });
+
+    it('lève pour "Dur à Cuire" si aucun avantage gratuit n\'est fourni', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      expect(() => v.assertCanAddSequella(durACuire, null)).toThrow(DomainException);
+      expect(() => v.assertCanAddSequella(durACuire, null)).toThrow('Dur à Cuire');
+    });
+
+    it('ne lève pas pour "Dur à Cuire" quand un avantage gratuit est fourni', () => {
+      const v = makeVehicle();
+      v.addChocs(5);
+      expect(() => v.assertCanAddSequella(durACuire, avantageGratuit)).not.toThrow();
+    });
+  });
+
+  describe('canRemoveSequella / hasActiveSequella', () => {
+    const legendeVivante = SequellaType.from({
+      nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', chocs_cost: 11, origine: 'ATELIER',
+    });
+
+    it('rejette la revente par défaut (pas de Légende Vivante active)', () => {
+      const v = makeVehicle();
+      expect(v.canRemoveSequella().ok).toBe(false);
+    });
+
+    it('autorise la revente si Légende Vivante est active sur ce véhicule', () => {
+      const v = makeVehicle();
+      v.addCampaignSequella(legendeVivante, -1);
+      expect(v.canRemoveSequella().ok).toBe(true);
+      expect(v.hasActiveSequella('legende_vivante')).toBe(true);
+    });
+
+    it('hasActiveSequella retourne false pour une séquelle absente', () => {
+      expect(makeVehicle().hasActiveSequella('legende_vivante')).toBe(false);
     });
   });
 });

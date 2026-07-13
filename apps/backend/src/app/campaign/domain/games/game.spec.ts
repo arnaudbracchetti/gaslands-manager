@@ -5,7 +5,6 @@ import { EscarmoucheGame } from './escarmouche-game';
 import { RankingAssignedEvent } from '../events/ranking-assigned.event';
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
-import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
@@ -69,8 +68,13 @@ function makeVehicleLostEvent(id = 9): VehicleLostEvent {
   return new VehicleLostEvent(id, 10, 1, id, 1);
 }
 
-function makeSequellaEvent(id = 4): SequellaAddedEvent {
-  return new SequellaAddedEvent(id, 10, 1, id, 1, 'moteur_endommage', 2);
+/** Séquelle imposée par la Table des Épaves — seule sous-catégorie d'EquipmentChangedEvent acceptée hors ATELIER. */
+function makeSequellaEquipmentEvent(id = 4): EquipmentChangedEvent {
+  return new EquipmentChangedEvent(
+    id, 10, 1, id,
+    EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
+    1, null, null, null, null, null, null,
+  );
 }
 
 function makeGatesCrossedEvent(id = 5): GatesCrossedEvent {
@@ -100,12 +104,12 @@ describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
     expect(game.canAccept(makeWalletEvent())).toBe(true);
   });
 
-  it('refuse EquipmentChangedEvent', () => {
+  it('refuse EquipmentChangedEvent (WEAPON — réservé à ATELIER)', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(false);
   });
 
-  it('accepte SequellaAddedEvent (séquelle imposée par la Table des Épaves)', () => {
-    expect(game.canAccept(makeSequellaEvent())).toBe(true);
+  it('accepte EquipmentChangedEvent SEQUELLE (imposée par la Table des Épaves, générée avant enterAtelier)', () => {
+    expect(game.canAccept(makeSequellaEquipmentEvent())).toBe(true);
   });
 
   it('accepte GatesCrossedEvent', () => {
@@ -136,8 +140,8 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(true);
   });
 
-  it('accepte SequellaAddedEvent', () => {
-    expect(game.canAccept(makeSequellaEvent())).toBe(true);
+  it('accepte EquipmentChangedEvent SEQUELLE (achat volontaire)', () => {
+    expect(game.canAccept(makeSequellaEquipmentEvent())).toBe(true);
   });
 
   it('refuse RankingAssignedEvent', () => {
@@ -160,7 +164,6 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
     ['RankingAssignedEvent', false, makeRankingEvent],
     ['WalletMovementEvent', false, makeWalletEvent],
     ['EquipmentChangedEvent', true, makeEquipmentEvent],
-    ['SequellaAddedEvent', true, makeSequellaEvent],
     ['GatesCrossedEvent', false, makeGatesCrossedEvent],
     ['VehicleDestroyedEvent', false, makeVehicleDestroyedEvent],
     ['ImprovementLostEvent', false, makeImprovementLostEvent],
@@ -187,8 +190,12 @@ describe('EscarmoucheGame — canAccept en PLANIFIE', () => {
     expect(game.canAccept(makeRankingEvent())).toBe(true);
   });
 
-  it('refuse EquipmentChangedEvent', () => {
+  it('refuse EquipmentChangedEvent (WEAPON — réservé à ATELIER)', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(false);
+  });
+
+  it('accepte EquipmentChangedEvent SEQUELLE (imposée par la Table des Épaves, générée avant enterAtelier)', () => {
+    expect(game.canAccept(makeSequellaEquipmentEvent())).toBe(true);
   });
 
   it('accepte GatesCrossedEvent', () => {
@@ -470,7 +477,7 @@ describe('Game — changeEquipment', () => {
 
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.VEHICLE, nomInterne: 'voiture',
-      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -485,7 +492,7 @@ describe('Game — changeEquipment', () => {
 
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.VEHICLE, nomInterne: 'voiture',
-      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('Cagnotte insuffisante');
   });
 
@@ -495,7 +502,7 @@ describe('Game — changeEquipment', () => {
 
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'inconnue',
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('inconnu');
   });
 
@@ -506,7 +513,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
       targetVehicleId: vehicle.id, targetEntityId: weapon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -526,7 +533,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: weapon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     const event = result.events[0] as EquipmentChangedEvent;
@@ -541,7 +548,7 @@ describe('Game — changeEquipment', () => {
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
       targetVehicleId: vehicle.id, targetEntityId: 999,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('introuvable');
   });
 
@@ -565,7 +572,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: -99,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([99]);
@@ -590,7 +597,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: -77,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -610,7 +617,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
       orientation: 'tourelle',
-      resolvedVehicleType: null, resolvedWeaponType: montable, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: montable, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     const event = result.events[0] as EquipmentChangedEvent;
@@ -624,7 +631,7 @@ describe('Game — changeEquipment', () => {
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
       orientation: 'tourelle',
-      resolvedVehicleType: null, resolvedWeaponType: makeWeaponType(), resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: makeWeaponType(), resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('ne peut pas être montée sur Tourelle');
   });
 
@@ -644,7 +651,7 @@ describe('Game — changeEquipment', () => {
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: canon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('intégrées au profil de base');
   });
 
@@ -658,7 +665,7 @@ describe('Game — changeEquipment', () => {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: 'tireur_elite',
       targetVehicleId: 1,
       resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
-      resolvedAdvantageType: makeAdvantageType(),
+      resolvedAdvantageType: makeAdvantageType(), resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -673,7 +680,7 @@ describe('Game — changeEquipment', () => {
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: 'inconnu',
       targetVehicleId: 1,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('inconnu');
   });
 
@@ -684,7 +691,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]); // avantage pré-existant (id positif) → revente, pas annulation
@@ -703,7 +710,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect((result.events[0] as EquipmentChangedEvent).nomInterne).toBe('tireur_elite');
@@ -716,7 +723,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
     result.events[0].execute(participants);
 
@@ -731,7 +738,7 @@ describe('Game — changeEquipment', () => {
     expect(() => game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: 999,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     })).toThrow('introuvable');
   });
 
@@ -756,7 +763,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
       targetVehicleId: vehicle.id, targetEntityId: -42,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([42]);
@@ -772,7 +779,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]); // véhicule pré-existant (id positif) → revente, pas annulation
@@ -826,7 +833,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
       targetEntityId: -50,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.events).toHaveLength(0);
@@ -847,7 +854,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
       targetEntityId: -77,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -869,7 +876,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
     // floor(12/2) châssis + floor(5/2) arme + floor(4/2) amélioration + floor_avantage(0) = 6+2+2+0 = 10.
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(10);
@@ -894,7 +901,7 @@ describe('Game — changeEquipment', () => {
     const result = game.changeEquipment(participant, {
       operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
     });
     result.events[0].execute([participant]);
     expect(weapon.isSold).toBe(true); // déjà vendue avant, inchangé

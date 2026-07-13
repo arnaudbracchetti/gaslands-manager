@@ -247,8 +247,8 @@ vraies parties (ancien design `AtelierGame`, abandonné — cf.
 - **`PLANIFIE → ATELIER`** (`POST .../games/:gameId/enter-atelier`,
   organisateur) : déclenché à la toute fin du wizard de fin de partie
   (écran 3, "Terminer"). Le résultat est enregistré, la phase garage
-  s'ouvre. Événements acceptés dès lors : `EquipmentChangedEvent`,
-  `SequellaAddedEvent` (achat volontaire, via `POST .../events/sequella`).
+  s'ouvre. Événement accepté dès lors : `EquipmentChangedEvent` (achat/revente
+  d'équipement **et** de séquelles `ATELIER`, cf. [§Séquelles](#séquelles)).
 - **Un seul atelier actif à la fois** par campagne : si une partie entre en
   atelier alors qu'une autre y est encore, **l'ancienne est automatiquement
   clôturée** (`ATELIER → JOUE`) — pas de blocage dur. La réponse
@@ -262,23 +262,26 @@ vraies parties (ancien design `AtelierGame`, abandonné — cf.
 - Une partie `JOUE` est figée : `Game.addEvent()` refuse tout événement, quel
   qu'il soit.
 
-Comme les événements d'atelier (`EquipmentChangedEvent`, `SequellaAddedEvent`)
-sont journalisés avec le `gameId` de la partie qui vient d'être jouée, le
-replay (`Campaign.replay()`, tri par `Game.order` puis par `eventOrder` interne
-à la partie) les reconstitue dans le bon ordre chronologique sans aucun
-mécanisme supplémentaire — contrairement à l'ancien design, qui nécessitait un
-`order` fractionnaire (`partie.order + 0.5`) pour positionner la fausse partie
-atelier entre deux vraies parties.
+Comme les événements d'atelier (`EquipmentChangedEvent`) sont journalisés avec
+le `gameId` de la partie qui vient d'être jouée, le replay (`Campaign.replay()`,
+tri par `Game.order` puis par `eventOrder` interne à la partie) les reconstitue
+dans le bon ordre chronologique sans aucun mécanisme supplémentaire —
+contrairement à l'ancien design, qui nécessitait un `order` fractionnaire
+(`partie.order + 0.5`) pour positionner la fausse partie atelier entre deux
+vraies parties.
 
-`SequellaAddedEvent` est accepté à la fois en `PLANIFIE` (séquelle imposée
-par la Table des Épaves, ligne "Siège irrécupérable" — coût 0, pas un achat)
-et en `ATELIER` (échange volontaire de Chocs contre une séquelle, via
-`AddSequellaUseCase`, coût variable selon le type de séquelle).
+`EquipmentChangedEvent(entityType: SEQUELLE)` est accepté à la fois en
+`PLANIFIE` (séquelle `TABLE_EPAVES` imposée par la Table des Épaves, ligne
+"Siège irrécupérable" — coût 0, pas un achat, cf. `evenement-tele-game.ts`/
+`escarmouche-game.ts` `canAccept()`) et en `ATELIER` (échange volontaire de
+Chocs contre une séquelle `ATELIER`, coût variable selon le type) — seule
+sous-catégorie d'`EquipmentChangedEvent` acceptée hors `ATELIER`, puisqu'elle
+est générée par le tirage (écran 3 du wizard) *avant* l'entrée en atelier.
 
-Les endpoints `POST .../events/equipment` et `POST .../events/sequella` ne
-prennent plus de `:gameId` en paramètre de route : le use case retrouve
-lui-même l'unique partie actuellement en `ATELIER` dans la campagne (erreur
-400 "Aucun atelier ouvert actuellement" si aucune).
+L'endpoint `POST .../events/equipment` ne prend plus de `:gameId` en paramètre
+de route : le use case retrouve lui-même l'unique partie actuellement en
+`ATELIER` dans la campagne (erreur 400 "Aucun atelier ouvert actuellement" si
+aucune).
 
 ---
 
@@ -378,6 +381,67 @@ directement sur le wallet — seule la mutation de l'entité (créée, ou flagu�
 
 ---
 
+## Séquelles
+
+> Conception détaillée :
+> [`docs/plans/2026-07-13-sequelles-design.md`](../plans/2026-07-13-sequelles-design.md).
+> Périmètre **backend uniquement** — aucune UI atelier ne les affiche encore
+> (pas de bouton d'achat, pas d'affichage des Chocs), cf.
+> [Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03).
+
+Une **Séquelle** (Gaslands, p.170) est un inconvénient permanent qu'un véhicule
+acquiert en échange de Chocs accumulés en partie — 15 au catalogue
+(`database_init/data/sequelle.yml`), chargées par `CatalogService` comme tout
+autre catalogue d'équipement. Chaque séquelle porte un champ `origine` :
+
+- **`TABLE_EPAVES`** (4 séquelles : `moteur_endommage`, `direction_endommage`,
+  `blindage_arrache`, `siege_irrecuperable`) — imposée automatiquement par un
+  tirage sur la Table des Épaves (coût toujours 0), jamais achetable
+  directement en atelier.
+- **`ATELIER`** (11 séquelles, dont Suicidaire, Impopulaire, Dingue, Lâche,
+  Vieille Blessure de Guerre, Vibrations, Convulsions, Maintenu par la Rouille,
+  Dur à Cuire, Légende Vivante) — achat volontaire contre des Chocs, en
+  échange dans le même mécanisme que les autres équipements (cf.
+  [Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessus) :
+  **entityType `SEQUELLE`** de `EquipmentChangedEvent`, monnaie `vehicle.chocs`
+  au lieu de la cagnotte du participant. `Vehicle.canAddSequella` garde
+  l'origine (rejette un achat direct d'une séquelle `TABLE_EPAVES`), l'unicité
+  (une même séquelle `ATELIER` ne peut être acquise deux fois) et les Chocs
+  suffisants.
+
+**Revente — fermée par défaut.** Contrairement aux armes/améliorations/
+avantages, la revente cross-session d'une séquelle est **rejetée** par
+`Vehicle.canRemoveSequella()`, sauf si le véhicule porte encore une séquelle
+`legende_vivante` active — sa présence ouvre alors la revente des autres
+séquelles de ce véhicule, y compris celles acquises lors d'une session
+d'atelier antérieure. L'annulation même-session, elle, suit la règle commune
+sans exception (toujours possible).
+
+**Dur à Cuire** — un seul événement porte les deux effets (achat de la
+séquelle **et** octroi d'un avantage gratuit de son choix) : `BUY(SEQUELLE,
+'dur_a_cuire')` crée la séquelle et, si `freeAdvantageNomInterne` est fourni,
+crée aussi l'avantage (`Advantage.grantedBySequellaNomInterne` le tagge).
+Annuler cet achat dans la même session défait les deux d'un coup (un seul
+événement supprimé du journal) ; le revendre (cross-session, via Légende
+Vivante) marque aussi l'avantage taggé vendu (`Vehicle.markGrantedAdvantageSold`,
+retrouvé par tag — pas par un id partagé entre événements).
+
+**Maintenu par la Rouille / Légende Vivante — effets permanents sur la Table
+des Épaves.** Les deux séquelles modifient le protocole de tirage
+(`WreckTable`) tant qu'elles restent actives sur le véhicule, sans aucune
+consommation :
+- **Légende Vivante** force la valeur du D6 à 1 à **chaque** tirage (le
+  randomizer n'est même pas appelé).
+- **Maintenu par la Rouille** déclenche un second tirage après le premier
+  (Chocs mis à jour entre les deux), sauf si le premier a déjà détruit le
+  véhicule.
+
+Les deux se composent sans se connaître (chaque tirage élémentaire vérifie
+Légende Vivante indépendamment) : un véhicule qui porte les deux séquelles
+obtient deux résultats "1", chacun avec son propre total de Chocs.
+
+---
+
 ## Hors scope de l'itération actuelle
 
 Réordonnancement du Programme (US-A4), visibilité partielle pour un `PENDING`,
@@ -452,12 +516,13 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   améliorations montées (jamais un choix de l'organisateur), et peut désormais
   cibler une amélioration (`ImprovementLostEvent`, mirroir de `WeaponLostEvent`),
   pas seulement une arme. « Siège irrécupérable » réutilise le pattern Décorateur
-  existant (`SiegeIrrecuperableDecorator`, réduit l'Équipage). Restent hors
+  existant (`SiegeIrrecuperableDecorator`, réduit l'Équipage). Reste hors
   périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (commentaire
-  explicite dans le code, pas un marqueur `TODO` littéral - nécessiterait de distinguer les deux lignes du livre),
-  les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double
-  lancer, « Légende Vivante » résultat forcé à 1), et toute garde anti-doublon
-  sur les séquelles.
+  explicite dans le code, pas un marqueur `TODO` littéral - nécessiterait de distinguer les deux lignes du livre).
+  Les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double
+  lancer, « Légende Vivante » résultat forcé à 1) et la garde anti-doublon sur les
+  séquelles `ATELIER` sont désormais implémentés — cf. [§Séquelles](#séquelles)
+  ci-dessous.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
   **automatique** : `Game.recordResult()` crédite tout participant hors du
   top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
@@ -623,6 +688,5 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
-| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`. `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
+| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
-| POST | `/api/campaigns/:id/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` — 204. Même résolution automatique de l'atelier courant que `/events/equipment` |

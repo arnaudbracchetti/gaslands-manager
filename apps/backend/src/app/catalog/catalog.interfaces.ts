@@ -156,6 +156,27 @@ export interface Avantage {
   // `necessite_orientation` (jamais requise) — contrairement à Amelioration/Arme.
 }
 
+/**
+ * Séquelle de véhicule telle que définie dans sequelle.yml (mode campagne — atelier).
+ * Contrairement aux 3 autres catalogues d'équipement, une séquelle n'est pas liée à un
+ * sponsor (aucun champ `sponsors_autorises`, aucune `categorie` — applicable à tout
+ * véhicule, quel que soit le sponsor de l'équipe).
+ */
+export interface Sequelle {
+  nom: string;
+  /** Identifiant technique stable (snake_case, sans accents), ex: "suicidaire", "dur_a_cuire". */
+  nom_interne: string;
+  description: string;
+  /** Coût en Chocs (monnaie du véhicule, distincte des Jerricans de l'équipe). */
+  chocs_cost: number;
+  /**
+   * Distingue un achat volontaire en atelier (`ATELIER`) d'une imposition automatique
+   * par un tirage de la Table des Épaves (`TABLE_EPAVES`, coût toujours 0) — une
+   * séquelle `TABLE_EPAVES` ne peut jamais être achetée directement en atelier.
+   */
+  origine: 'ATELIER' | 'TABLE_EPAVES';
+}
+
 // ── Type enrichi : sponsor avec relations pré-résolues ───────────────────────
 
 /**

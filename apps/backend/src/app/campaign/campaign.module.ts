@@ -55,7 +55,6 @@ import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
-import { AddSequellaUseCase } from './application/add-sequella.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
@@ -94,8 +93,8 @@ import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-worksho
     { provide: RANDOMIZER, useClass: RandomProvider },
     {
       provide: WreckTable,
-      useFactory: (r: IRandomizer) => new WreckTable(r),
-      inject: [RANDOMIZER],
+      useFactory: (r: IRandomizer, catalog: CatalogService) => new WreckTable(r, catalog),
+      inject: [RANDOMIZER, CatalogService],
     },
 
     // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────
@@ -225,12 +224,6 @@ import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-worksho
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, wreckTable: WreckTable) =>
         new WreckResolveUseCase(repo, replay, wreckTable),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, WreckTable],
-    },
-    {
-      provide: AddSequellaUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new AddSequellaUseCase(repo, replay),
-      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: GetWorkshopUseCase,

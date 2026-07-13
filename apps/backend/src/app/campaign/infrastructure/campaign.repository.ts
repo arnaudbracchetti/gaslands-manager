@@ -22,7 +22,6 @@ import type { WalletMovementEvent } from '../domain/events/wallet-movement.event
 import type { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import type { WeaponLostEvent } from '../domain/events/weapon-lost.event';
 import type { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
-import type { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import type { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
@@ -284,7 +283,7 @@ export class CampaignRepository implements ICampaignRepository {
     if ('amount' in e && 'reason' in e) {
       return { ...base, eventType: 'WALLET_MOVEMENT', amount: e['amount'] as number, walletReason: e['reason'] as string };
     }
-    if ('vehicleId' in e && !('diceRoll' in e) && !('sequellaTypeNom' in e) && !('operation' in e) && !('weaponId' in e)) {
+    if ('vehicleId' in e && !('diceRoll' in e) && !('operation' in e) && !('weaponId' in e)) {
       return { ...base, eventType: 'VEHICLE_LOST', vehicleId: e['vehicleId'] as number };
     }
     if ('weaponId' in e) {
@@ -300,14 +299,6 @@ export class CampaignRepository implements ICampaignRepository {
         chocsGained: e['chocsGained'] as number,
       };
     }
-    if ('sequellaTypeNom' in e) {
-      return {
-        ...base, eventType: 'SEQUELLA_ADDED',
-        vehicleId: e['vehicleId'] as number,
-        sequellaTypeNom: e['sequellaTypeNom'] as string,
-        chocsCost: e['chocsCost'] as number,
-      };
-    }
     if ('operation' in e) {
       return {
         ...base, eventType: 'EQUIPMENT_CHANGED',
@@ -318,6 +309,7 @@ export class CampaignRepository implements ICampaignRepository {
         targetVehicleId: e['targetVehicleId'] as number | null,
         targetEntityId: e['targetEntityId'] as number | null,
         orientation: e['orientation'] as string | null,
+        freeAdvantageNomInterne: e['freeAdvantageNomInterne'] as string | null,
       };
     }
     // ResistanceContactedEvent — pas de payload au-delà des champs de base

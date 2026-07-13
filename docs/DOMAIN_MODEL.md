@@ -9,10 +9,12 @@
 ## 1. Agrégat Team (Domain-Driven Design)
 
 Le module `team/` est l'agrégat DDD principal. `Team` est la racine ; `Vehicle`,
-`Weapon`, `Improvement` et `Advantage` sont des entités enfants dont le cycle de vie est
-entièrement contrôlé par la racine. Les **Value Objects** (`VehicleType`, `WeaponType`,
-`ImprovementType`, `AdvantageType`) enveloppent les données brutes du catalogue YAML et
-exposent une API métier typée.
+`Weapon`, `Improvement`, `Advantage` et `Sequella` sont des entités enfants dont le
+cycle de vie est entièrement contrôlé par la racine. Les **Value Objects**
+(`VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType`, `SequellaType`)
+enveloppent les données brutes du catalogue YAML et exposent une API métier typée.
+`Sequella` n'existe que côté mode campagne (créée exclusivement via
+`addCampaignSequella`, jamais à la construction d'équipe) — cf. §Séquelles ci-dessous.
 
 ```mermaid
 classDiagram
@@ -108,6 +110,18 @@ classDiagram
         +clearSold() void
     }
 
+    class Sequella {
+        <<Entity>>
+        +id : number
+        +type : SequellaType
+        -_isSold : boolean
+        +price : number
+        +resaleRefund : number
+        +isSold : boolean
+        +markSold() void
+        +clearSold() void
+    }
+
     class VehicleType {
         <<Value Object>>
         -raw : Vehicule
@@ -164,6 +178,18 @@ classDiagram
         +equals(other) boolean
     }
 
+    class SequellaType {
+        <<Value Object>>
+        -raw : Sequelle
+        +nomInterne : string
+        +nom : string
+        +description : string
+        +chocsCost : number
+        +origine : ATELIER|TABLE_EPAVES
+        +from(raw)$ SequellaType
+        +equals(other) boolean
+    }
+
     class DomainException {
         <<Exception>>
         +name : "DomainException"
@@ -174,10 +200,12 @@ classDiagram
     Vehicle "1" *-- "0..*" Weapon : possède
     Vehicle "1" *-- "0..*" Improvement : possède
     Vehicle "1" *-- "0..*" Advantage : possède
+    Vehicle "1" *-- "0..*" Sequella : possède
     Vehicle --> VehicleType : type
     Weapon --> WeaponType : type
     Improvement --> ImprovementType : type
     Advantage --> AdvantageType : type
+    Sequella --> SequellaType : type
     Team ..> DomainException : lève
     Vehicle ..> DomainException : lève
 ```
@@ -221,6 +249,17 @@ Expertise). `Advantage.price` retourne toujours `type.price`, jamais réduit mê
 `isSold: true` — c'est ce qui porte entièrement la règle de "perte totale" à la revente en
 atelier (aucun second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/
 `Improvement`). Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
+
+**Séquelles** : `Sequella` est un miroir quasi exact d'`Advantage` (mêmes mécaniques
+`isSold`/prix jamais réduit à la revente) — seule différence, sa monnaie est `vehicle.chocs`
+(compteur mutable propre au véhicule), pas le budget Jerricans de l'équipe. `Vehicle.canAddSequella`
+garde l'origine catalogue (`SequellaType.origine`, une séquelle `TABLE_EPAVES` ne peut être
+imposée que par un tirage de la Table des Épaves), l'unicité (comme `canAddAdvantage`) et les
+Chocs suffisants ; `Vehicle.canRemoveSequella` ferme par défaut la revente cross-session, sauf
+présence active de la séquelle `legende_vivante` sur le véhicule. Contrairement aux autres
+entités enfants, les mutations campagne d'une séquelle (`addCampaignSequella`, `markSequellaSold`…)
+sont journalisées via `EquipmentChangedEvent` (entityType `SEQUELLE`) plutôt qu'un événement dédié
+— cf. [§4 — Séquelles](#séquelles-event-sourcing) et [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles).
 
 **Revente d'un véhicule pré-existant en atelier** : `Vehicle` porte, comme
 `Weapon`/`Improvement`/`Advantage`, un flag `isSold` et un prix résiduel — le
@@ -335,20 +374,34 @@ classDiagram
         +description : string
     }
 
+    class Sequelle {
+        <<Catalogue>>
+        +nom : string
+        +nom_interne : string
+        +description : string
+        +chocs_cost : number
+        +origine : ATELIER|TABLE_EPAVES
+    }
+
     Sponsor "1" o-- "0..*" Vehicule : autorise
     Sponsor "1" o-- "0..*" Arme : autorise
     Sponsor "1" o-- "0..*" Amelioration : autorise
     Sponsor "1" o-- "0..*" Avantage : autorise (par categorie)
 ```
 
-Les quatre types `VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType` (§1)
-enveloppent respectivement `Vehicule`, `Arme`, `Amelioration` et `Avantage` via
-`static from(raw)`. **`Avantage` est résolu différemment des trois autres** : pas de champ
-`sponsors_autorises` — la relation Sponsor→Avantage passe par correspondance de
-`categorie` avec `Sponsor.classes_avantage[2]` (cf.
+`Sequelle` n'a **aucune** relation avec `Sponsor` — contrairement aux trois autres
+catalogues d'équipement (et même à `Avantage`, résolu par `categorie`), une séquelle
+est applicable à tout véhicule quel que soit le sponsor de l'équipe.
+
+Les cinq types `VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType`,
+`SequellaType` (§1) enveloppent respectivement `Vehicule`, `Arme`, `Amelioration`,
+`Avantage` et `Sequelle` via `static from(raw)`. **`Avantage` est résolu différemment
+des autres** : pas de champ `sponsors_autorises` — la relation Sponsor→Avantage passe
+par correspondance de `categorie` avec `Sponsor.classes_avantage[2]` (cf.
 [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total)).
-Le catalogue `Scenario` est géré par `ScenarioCatalogService` (même singleton pattern que
-`CatalogService`).
+`Sequelle` va plus loin : ni `sponsors_autorises` ni `categorie`, aucune résolution
+sponsor du tout (cf. ci-dessus). Le catalogue `Scenario` est géré par
+`ScenarioCatalogService` (même singleton pattern que `CatalogService`).
 
 ---
 
@@ -464,7 +517,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | WRECK_RESOLVED | SEQUELLA_ADDED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -478,15 +531,14 @@ erDiagram
         number chocsBefore "nullable"
         string wreckResult "nullable — DEBOSSELE|INDEMNE|ROUE_CABOSSEE|ARRACHEE|PIGNON_ENDOMMAGE|SIEGE_IRRECUPERABLE|CHASSIS_FRAGILISE|FAVORI_DU_PUBLIC|VEHICULE_DETRUIT"
         number chocsGained "nullable — peut être négatif (ligne DEBOSSELE)"
-        string sequellaTypeNom "nullable"
-        number chocsCost "nullable"
         string operation "nullable — BUY|SELL"
-        string entityType "nullable — VEHICLE|WEAPON|IMPROVEMENT|ADVANTAGE"
-        string nomInterne "nullable — EquipmentChanged"
+        string entityType "nullable — VEHICLE|WEAPON|IMPROVEMENT|ADVANTAGE|SEQUELLE"
+        string nomInterne "nullable — EquipmentChanged ; SEQUELLE : coût en Chocs, pas cagnotte"
         number cost "nullable"
         number targetVehicleId "nullable"
         number targetEntityId "nullable"
         string orientation "nullable — EquipmentChanged ; WEAPON : 5 valeurs dont 'tourelle' (coût x3)"
+        string freeAdvantageNomInterne "nullable — BUY SEQUELLE 'dur_a_cuire' uniquement, avantage gratuit accordé"
         date createdAt
     }
 ```
@@ -494,9 +546,16 @@ erDiagram
 **Clés logiques (pas de FK SQL)** : `VEHICLE.nomInterne` → `Vehicule.nom_interne`,
 `WEAPON.nomInterne` → `Arme.nom_interne`, `VEHICLE_IMPROVEMENT.nomInterne` →
 `Amelioration.nom_interne`, `VEHICLE_ADVANTAGE.nomInterne` → `Avantage.nom_interne`,
-`GAME.scenarioId` → `Scenario.nom_interne`, `GAME_EVENT.sequellaTypeNom` →
-`SequellaType.nom_interne` (registre en mémoire). Ces références pointent vers des
-données en mémoire, pas des tables SQL.
+`GAME.scenarioId` → `Scenario.nom_interne`, `GAME_EVENT.nomInterne` (quand
+`entityType = SEQUELLE`) → `Sequelle.nom_interne`, `GAME_EVENT.freeAdvantageNomInterne`
+→ `Avantage.nom_interne`. Ces références pointent vers des données en mémoire, pas
+des tables SQL.
+
+**Pas de table `VEHICLE_SEQUELLE`** : contrairement à `Weapon`/`Improvement`/`Advantage`
+(qui existent à la fois en table persistée — construction d'équipe — et en entité
+transiente D-S11 — atelier), une séquelle n'a **aucune** table SQL propre : elle
+n'existe que via `EquipmentChangedEvent` (entityType `SEQUELLE`) et le mécanisme
+transient D-S11 (`id = -event.id`), jamais créée à la construction d'équipe.
 
 **Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne.
 
@@ -569,7 +628,6 @@ classDiagram
         +contactResistance(participantId) GameEvent[]
         +recordWalletMovement(participantId, amount, reason) GameEvent[]
         +recordVehicleLost(participantId, vehicleId, weaponIds?) GameEvent[]
-        +addSequella(participant, vehicleId, sequellaTypeNom, chocsCost) GameEvent[]
         +journal() GameJournalEntry[]
     }
 
@@ -612,8 +670,10 @@ un seul atelier actif à la fois sur l'ensemble des parties de la campagne) et
 orchestration multi-parties (`replay`, cycle de vie, CRUD programme/participants).
 **La construction des événements d'une partie donnée vit sur `Game`, pas sur
 `Campaign`** : `recordResult`, `resolveWreck`, `creditFavoriDuPublicBonus`,
-`changeEquipment`, `contactResistance`, `recordWalletMovement`,
-`recordVehicleLost`, `addSequella`, `journal()` sont toutes des méthodes de
+`changeEquipment` (achat/revente d'équipement **et** de séquelles, un seul
+point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles)),
+`contactResistance`, `recordWalletMovement`,
+`recordVehicleLost`, `journal()` sont toutes des méthodes de
 `Game` — chacune reçoit en paramètre les `CampaignParticipant` dont elle a
 besoin (même convention que `GameEvent.execute(participants)`/
 `Game.apply(participants)`, qui ne détiennent pas non plus de référence
@@ -635,12 +695,15 @@ pas une entité séparée (cf.
 
 | Classe | Type | Statuts | Événements acceptés en PLANIFIE | Événements acceptés en ATELIER |
 |--------|------|---------|----------------------------------|----------------------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, SequellaAdded, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged, SequellaAdded |
-| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged, SequellaAdded |
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged (tout entityType) |
+| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged (tout entityType) |
 
-`SequellaAdded` est accepté dans les deux statuts : imposé par la Table des
-Épaves (ligne "Siège irrécupérable") en `PLANIFIE`, ou acheté volontairement
-contre des Chocs en `ATELIER`.
+`EquipmentChangedEvent` est la seule classe acceptée dans les deux statuts, mais
+pas pour les mêmes `entityType` : en `PLANIFIE`, seul `SEQUELLE` passe (séquelle
+`TABLE_EPAVES` imposée par la Table des Épaves, ligne "Siège irrécupérable" —
+générée par le tirage, *avant* l'entrée en atelier) ; `VEHICLE`/`WEAPON`/
+`IMPROVEMENT`/`ADVANTAGE`, et `SEQUELLE` `ATELIER` (achat volontaire contre des
+Chocs), restent exclusifs à `ATELIER`.
 
 Un seul `Game` en statut `ATELIER` à la fois par campagne : `enterAtelier`
 clôture automatiquement (`ATELIER → JOUE`) toute autre partie encore en
@@ -667,8 +730,8 @@ d'événements confondus.
 | `WeaponLostEvent` | `weapon.markLost()` | `weapon.clearLost()` |
 | `ImprovementLostEvent` | `improvement.markLost()` (mirroir `WeaponLostEvent`) | `improvement.clearLost()` |
 | `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) | `vehicle.addChocs(-n)` |
-| `SequellaAddedEvent` | `vehicle.addChocs(-cost)` + `addSequella` | `removeLastSequella` + `addChocs(+cost)` |
-| `EquipmentChangedEvent` | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon` ; SELL : inverse | Inverse de execute |
+| `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`) | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity` | Inverse de execute |
+| `EquipmentChangedEvent` (`entityType = SEQUELLE`) | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`) | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte |
 | `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
@@ -676,4 +739,39 @@ d'événements confondus.
 
 ### Entités transientes (D-S11)
 
-Les véhicules, armes, améliorations et avantages achetés en atelier **n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`, `WEAPON`, `VEHICLE_IMPROVEMENT`, `VEHICLE_ADVANTAGE`).
+Les véhicules, armes, améliorations, avantages et séquelles achetés en atelier
+**n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace
+négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec
+cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`,
+`WEAPON`, `VEHICLE_IMPROVEMENT`, `VEHICLE_ADVANTAGE` — aucune table pour
+`Sequella`, toujours transiente, cf. §3). Cas particulier Dur à Cuire : la
+séquelle et l'avantage gratuit qu'elle accorde partagent le **même** id
+(`-event.id`, un seul événement les crée tous les deux) — sans collision
+possible, ces deux entités vivant dans des collections distinctes
+(`vehicle.sequellas` / `vehicle.advantages`).
+
+### Séquelles (event-sourcing)
+
+Résumé de la partie event-sourcing du système de séquelles — conception
+complète : [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles) et
+[docs/plans/2026-07-13-sequelles-design.md](plans/2026-07-13-sequelles-design.md).
+
+- **Aucun événement dédié** : `SequellaAddedEvent` (et l'idée d'un
+  `SequellaRemovedEvent`, jamais implémentée) sont retirés — tout passe par
+  `EquipmentChangedEvent`, `entityType SEQUELLE`.
+- **Monnaie différente** : `vehicle.chocs`, pas `participant.wallet` — seule
+  exception à "le wallet n'est plus jamais touché" par un événement d'atelier.
+- **Revente gardée** : contrairement aux 4 autres `entityType`, la revente
+  cross-session d'une séquelle est rejetée par défaut
+  (`Vehicle.canRemoveSequella()`), sauf présence active de `legende_vivante`
+  sur le véhicule.
+- **Dur à Cuire** : un seul événement porte deux effets (séquelle + avantage
+  gratuit taggé `Advantage.grantedBySequellaNomInterne`) — annulation même
+  session atomique par construction (un seul événement supprimé du journal).
+- **Maintenu par la Rouille / Légende Vivante** : aucun événement spécifique —
+  deux modificateurs permanents de `WreckTable` (double tirage chaîné / D6
+  forcé à 1), lus par présence (`Vehicle.hasActiveSequella`) à chaque
+  résolution de la Table des Épaves.
+- **`WreckTable` gagne une dépendance `ICatalogRepository`** (résout
+  `siege_irrecuperable` pour construire l'`EquipmentChangedEvent` imposé),
+  en plus de son `IRandomizer` existant.

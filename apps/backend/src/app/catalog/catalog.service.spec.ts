@@ -392,6 +392,24 @@ avantages:
     regles: |
       - Manœuvrabilité effective d'au moins 3 requise.
 `,
+  'sequelle.yml': `
+sequelles:
+  - nom: "Siège irrécupérable"
+    nom_interne: "siege_irrecuperable"
+    description: "Valeur d'Équipage réduite de 1 (minimum 1)."
+    chocs_cost: 0
+    origine: "TABLE_EPAVES"
+  - nom: "Suicidaire"
+    nom_interne: "suicidaire"
+    description: "Ce véhicule ne peut pas rétrograder volontairement."
+    chocs_cost: 1
+    origine: "ATELIER"
+  - nom: "Dur à Cuire"
+    nom_interne: "dur_a_cuire"
+    description: "Accorde un avantage Dur à Cuire gratuit."
+    chocs_cost: 6
+    origine: "ATELIER"
+`,
 };
 
 // ── Sous-classe de test (Pattern Template Method) ─────────────────────────────

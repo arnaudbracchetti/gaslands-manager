@@ -23,9 +23,17 @@ export interface WorkshopWeaponDto {
 }
 
 export interface WorkshopSequellaDto {
+  id: number;
   nomInterne: string;
   nom: string;
+  /** Coût en Chocs (monnaie du véhicule, distincte de la cagnotte) — jamais réduit à la revente. */
   chocsCost: number;
+  /** ATELIER (achat volontaire) ou TABLE_EPAVES (imposée par un tirage, jamais achetable). */
+  origine: 'ATELIER' | 'TABLE_EPAVES';
+  /** Vendue (revente, toujours 0 remboursement) — reste visible, barrée, côté IHM. */
+  isSold: boolean;
+  /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
+  purchasedThisSession: boolean;
 }
 
 export interface WorkshopImprovementDto {

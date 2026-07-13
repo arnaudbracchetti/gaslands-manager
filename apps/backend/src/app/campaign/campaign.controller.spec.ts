@@ -68,7 +68,6 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // standings
       uc() as never,            // changeEquipment
       uc() as never,            // wreck
-      uc() as never,            // sequella
       uc() as never,            // workshop
       uc() as never,            // getWorkshopAvailableWeapons
       uc() as never,            // getWorkshopAvailableImprovements

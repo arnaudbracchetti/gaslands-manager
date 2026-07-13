@@ -25,6 +25,7 @@ import {
   Arme,
   Avantage,
   RawSponsor,
+  Sequelle,
   Sponsor,
   Vehicule,
 } from './catalog.interfaces';
@@ -33,6 +34,7 @@ import { VehicleType } from '../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../team/domain/value-objects/improvement-type';
 import { AdvantageType } from '../team/domain/value-objects/advantage-type';
+import { SequellaType } from '../team/domain/value-objects/sequella-type';
 
 @Injectable()
 export class CatalogService implements OnModuleInit, ICatalogRepository {
@@ -55,6 +57,7 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
   private allArmes: Arme[] = [];
   private allAmeliorations: Amelioration[] = [];
   private allAvantages: Avantage[] = [];
+  private allSequelles: Sequelle[] = [];
 
   /**
    * Lifecycle hook NestJS : appelé automatiquement après l'initialisation
@@ -85,6 +88,10 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
         'avantage.yml',
       ).avantages;
 
+      this.allSequelles = this.loadYaml<{ sequelles: Sequelle[] }>(
+        'sequelle.yml',
+      ).sequelles;
+
       // Étape 1bis : Convertir les champs Markdown (`description`/`regles`) en HTML.
       // Fait une seule fois ici, comme ContentService le fait pour les fichiers .md —
       // évite de refaire la conversion à chaque rendu côté frontend (cf. ARCHITECTURE.md §3.3).
@@ -108,6 +115,10 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
       for (const a of this.allAvantages) {
         a.description = this.toHtml(a.description);
         a.regles = this.toHtml(a.regles);
+      }
+      // Pas de champ `regles` pour une séquelle : la description EST l'effet complet.
+      for (const s of this.allSequelles) {
+        s.description = this.toHtml(s.description);
       }
 
       // Étape 2 : Construire la Map avec les relations pré-résolues.
@@ -140,7 +151,8 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
           `${this.allVehicules.length} véhicules, ` +
           `${this.allArmes.length} armes, ` +
           `${this.allAmeliorations.length} améliorations, ` +
-          `${this.allAvantages.length} avantages.`,
+          `${this.allAvantages.length} avantages, ` +
+          `${this.allSequelles.length} séquelles.`,
       );
     } catch (err: unknown) {
       // `unknown` : TypeScript force le narrowing avant usage.
@@ -232,6 +244,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
     return this.allAvantages;
   }
 
+  /** Retourne toutes les séquelles du catalogue (mode campagne — atelier). */
+  getAllSequelles(): Sequelle[] {
+    return this.allSequelles;
+  }
+
   // ── Recherches par nom_interne (clés étrangères logiques vers le catalogue) ──
   //
   // Le module Vehicle référence ses items catalogue par `nom_interne` (cf.
@@ -261,6 +278,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
     return this.allAvantages.find((a: Avantage) => a.nom_interne === nomInterne);
   }
 
+  /** Retourne une séquelle du catalogue par son nom_interne, ou undefined si inconnue. */
+  getSequelleByNomInterne(nomInterne: string): Sequelle | undefined {
+    return this.allSequelles.find((s: Sequelle) => s.nom_interne === nomInterne);
+  }
+
   // ── Implémentation ICatalogRepository — retourne des Value Objects du domaine ──
 
   getVehicleType(nomInterne: string): VehicleType | undefined {
@@ -281,6 +303,11 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
   getAdvantageType(nomInterne: string): AdvantageType | undefined {
     const raw = this.getAvantageByNomInterne(nomInterne);
     return raw ? AdvantageType.from(raw) : undefined;
+  }
+
+  getSequellaType(nomInterne: string): SequellaType | undefined {
+    const raw = this.getSequelleByNomInterne(nomInterne);
+    return raw ? SequellaType.from(raw) : undefined;
   }
 
   getVehicleTypesForSponsor(sponsorNom: string): VehicleType[] {

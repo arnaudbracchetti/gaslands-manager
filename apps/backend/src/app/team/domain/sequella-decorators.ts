@@ -5,20 +5,22 @@
  * Les séquelles étendent `ImprovementDecorator` et modifient les stats du véhicule
  * de façon permanente (dommages de campagne, non persistés — reconstruits au replay).
  *
- * Chaque séquelle est identifiée par un `SequellaType` (Value Object, même modèle
- * que `WeaponType` / `ImprovementType`). `Vehicle.addSequella(type)` stocke le Value
- * Object ; `VehicleBuildFactory` (Partie 5) utilise `type.nomInterne` pour retrouver
- * la factory dans `SEQUELLA_REGISTRY` et instancier le décorateur au moment du calcul
- * des stats.
+ * Chaque séquelle est identifiée par un `SequellaType` (Value Object résolu depuis le
+ * catalogue `sequelle.yml` via `CatalogService`, même modèle que `WeaponType` /
+ * `ImprovementType`). `Vehicle.addCampaignSequella(type, campaignId)` stocke le Value
+ * Object ; `VehicleBuildFactory` (Partie 5) utilisera `type.nomInterne` pour retrouver
+ * la factory dans `SEQUELLA_DECORATOR_FACTORIES` et instancier le décorateur au moment
+ * du calcul des stats — non câblé aujourd'hui (`Vehicle.buildChain()` ne plie pas
+ * encore les séquelles), ces classes existent en anticipation de ce futur chantier.
  *
  * Différences avec ImprovementDecorator ordinaire :
  * - `emplacement: 0`  — les séquelles ne consomment pas d'emplacement
  * - `validate()` délègue directement à `inner` — la validation se fait au
- *   write-time (`AddSequallaUseCase`), jamais au replay
+ *   write-time (`Vehicle.canAddSequella`), jamais au replay
  */
 
 import { ImprovementDecorator, type VehicleBuild, type VehicleStats } from './vehicle-build';
-import { SequellaType } from './value-objects/sequella-type';
+import type { SequellaType } from './value-objects/sequella-type';
 import type { Amelioration } from '../../catalog/catalog.interfaces';
 
 // ── Base commune ──────────────────────────────────────────────────────────────
@@ -55,48 +57,14 @@ abstract class SequellaDecorator extends ImprovementDecorator {
   }
 }
 
-// ── Types de séquelles (catalogue statique) ───────────────────────────────────
-// Compléter selon les règles officielles Gaslands Refuelled.
-
-export const SEQUELLA_MOTEUR_ENDOMMAGE = SequellaType.from({
-  nom: 'Moteur endommagé',
-  nom_interne: 'moteur_endommage',
-  description: 'Vitesse maximale réduite de 1 (minimum 1).',
-  chocs_cost: 2,
-});
-
-export const SEQUELLA_DIRECTION_ENDOMMAGE = SequellaType.from({
-  nom: 'Direction endommagée',
-  nom_interne: 'direction_endommage',
-  description: 'Manoeuvrabilité réduite de 1 (minimum 1).',
-  chocs_cost: 2,
-});
-
-export const SEQUELLA_BLINDAGE_ARRACHE = SequellaType.from({
-  nom: 'Blindage arraché',
-  nom_interne: 'blindage_arrache',
-  description: 'Carrosserie réduite de 2 (minimum 0).',
-  chocs_cost: 3,
-});
-
-/**
- * Imposée par la Table des Épaves (ligne 7, `SIEGE_IRRECUPERABLE`), jamais achetée en
- * Atelier — `WreckResolveUseCase` construit toujours son `SequellaAddedEvent` avec un
- * coût de 0 (le tirage l'impose gratuitement, contrairement à un échange volontaire).
- */
-export const SEQUELLA_SIEGE_IRRECUPERABLE = SequellaType.from({
-  nom: 'Siège irrécupérable',
-  nom_interne: 'siege_irrecuperable',
-  description: "Valeur d'Équipage réduite de 1 (minimum 1).",
-  chocs_cost: 0,
-});
-
 // ── Décorateurs concrets ──────────────────────────────────────────────────────
+// Le SequellaType (nom, description, coût) vient désormais du catalogue
+// (`sequelle.yml` via CatalogService), passé en paramètre plutôt que codé en dur.
 
 /** Moteur endommagé : vitesse maximale réduite de 1. */
 export class MoteurEndommageDecorator extends SequellaDecorator {
-  constructor(inner: VehicleBuild) {
-    super(inner, SEQUELLA_MOTEUR_ENDOMMAGE);
+  constructor(inner: VehicleBuild, sequellaType: SequellaType) {
+    super(inner, sequellaType);
   }
 
   override get stats(): VehicleStats {
@@ -107,8 +75,8 @@ export class MoteurEndommageDecorator extends SequellaDecorator {
 
 /** Direction endommagée : manoeuvrabilité réduite de 1 (minimum 1). */
 export class DirectionEndommageDecorator extends SequellaDecorator {
-  constructor(inner: VehicleBuild) {
-    super(inner, SEQUELLA_DIRECTION_ENDOMMAGE);
+  constructor(inner: VehicleBuild, sequellaType: SequellaType) {
+    super(inner, sequellaType);
   }
 
   override get stats(): VehicleStats {
@@ -119,8 +87,8 @@ export class DirectionEndommageDecorator extends SequellaDecorator {
 
 /** Blindage arraché : carrosserie réduite de 2 (minimum 0). */
 export class BlindageArrachéDecorator extends SequellaDecorator {
-  constructor(inner: VehicleBuild) {
-    super(inner, SEQUELLA_BLINDAGE_ARRACHE);
+  constructor(inner: VehicleBuild, sequellaType: SequellaType) {
+    super(inner, sequellaType);
   }
 
   override get stats(): VehicleStats {
@@ -131,8 +99,8 @@ export class BlindageArrachéDecorator extends SequellaDecorator {
 
 /** Siège irrécupérable : Équipage réduit de 1 (minimum 1). */
 export class SiegeIrrecuperableDecorator extends SequellaDecorator {
-  constructor(inner: VehicleBuild) {
-    super(inner, SEQUELLA_SIEGE_IRRECUPERABLE);
+  constructor(inner: VehicleBuild, sequellaType: SequellaType) {
+    super(inner, sequellaType);
   }
 
   override get stats(): VehicleStats {
@@ -141,21 +109,20 @@ export class SiegeIrrecuperableDecorator extends SequellaDecorator {
   }
 }
 
-// ── Registre ──────────────────────────────────────────────────────────────────
+// ── Registre de factories (Partie 5, non câblé aujourd'hui) ───────────────────
 
-export type SequellaFactory = (inner: VehicleBuild) => SequellaDecorator;
+export type SequellaFactory = (inner: VehicleBuild, sequellaType: SequellaType) => SequellaDecorator;
 
 /**
- * Mappe chaque `nom_interne` de séquelle vers :
- * - `type` : le `SequellaType` Value Object (stocké dans `Vehicle.sequellas` au replay)
- * - `factory` : la factory de décorateur (utilisée par `VehicleBuildFactory` en Partie 5
- *   pour assembler la chaîne lors du calcul des stats en atelier)
+ * Mappe chaque `nom_interne` de séquelle à comportement mécanique vers sa factory de
+ * décorateur — utilisée par `VehicleBuildFactory` (Partie 5, pas encore câblée dans
+ * `Vehicle.buildChain()`) pour assembler la chaîne lors du calcul des stats en atelier.
  *
- * Usage : `SEQUELLA_REGISTRY.get(nomInterne)?.factory(currentBuild)`
+ * Usage prévu : `SEQUELLA_DECORATOR_FACTORIES.get(nomInterne)?.(currentBuild, type)`
  */
-export const SEQUELLA_REGISTRY = new Map<string, { type: SequellaType; factory: SequellaFactory }>([
-  ['moteur_endommage', { type: SEQUELLA_MOTEUR_ENDOMMAGE, factory: (inner) => new MoteurEndommageDecorator(inner) }],
-  ['direction_endommage', { type: SEQUELLA_DIRECTION_ENDOMMAGE, factory: (inner) => new DirectionEndommageDecorator(inner) }],
-  ['blindage_arrache', { type: SEQUELLA_BLINDAGE_ARRACHE, factory: (inner) => new BlindageArrachéDecorator(inner) }],
-  ['siege_irrecuperable', { type: SEQUELLA_SIEGE_IRRECUPERABLE, factory: (inner) => new SiegeIrrecuperableDecorator(inner) }],
+export const SEQUELLA_DECORATOR_FACTORIES: ReadonlyMap<string, SequellaFactory> = new Map([
+  ['moteur_endommage', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new MoteurEndommageDecorator(inner, type)],
+  ['direction_endommage', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new DirectionEndommageDecorator(inner, type)],
+  ['blindage_arrache', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new BlindageArrachéDecorator(inner, type)],
+  ['siege_irrecuperable', (inner: VehicleBuild, type: SequellaType): SequellaDecorator => new SiegeIrrecuperableDecorator(inner, type)],
 ]);

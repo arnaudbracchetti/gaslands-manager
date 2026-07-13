@@ -1,0 +1,127 @@
+# Catalogue des séquelles de véhicule Gaslands (mode campagne — atelier, p.170)
+#
+# Ce fichier est chargé une seule fois au démarrage par CatalogService. Contrairement
+# aux armes/améliorations/avantages, une séquelle n'est liée à aucun sponsor (aucun
+# champ sponsors_autorises ni categorie) — applicable à tout véhicule.
+#
+# Structure de chaque entrée :
+#   nom          - Nom affiché dans l'UI
+#   nom_interne  - Identifiant technique stable (snake_case, sans accents)
+#   description  - Texte complet de l'effet (une séquelle n'a pas de règles séparées :
+#                  l'effet EST la description, contrairement aux autres catalogues)
+#   chocs_cost   - Coût en Chocs (monnaie du véhicule, distincte des Jerricans d'équipe).
+#                  0 pour les 4 séquelles imposées automatiquement (origine TABLE_EPAVES).
+#   origine      - ATELIER (achat volontaire, en échange de Chocs accumulés en partie)
+#                  ou TABLE_EPAVES (imposée par un tirage sur la Table des Épaves,
+#                  jamais achetable directement en atelier).
+#
+# 3 séquelles à comportement spécial, reconnues directement par leur nom_interne
+# (pas de champ dédié) : dur_a_cuire (accorde un avantage gratuit à l'achat),
+# maintenu_par_la_rouille (double tirage permanent sur la Table des Épaves),
+# legende_vivante (force chaque tirage à "1" + ouvre la revente cross-session
+# des autres séquelles, cf. docs/plans/2026-07-13-sequelles-design.md).
+
+sequelles:
+  # ── Séquelles mécaniques — imposées par la Table des Épaves (coût 0) ────────
+  - nom: Moteur endommagé
+    nom_interne: moteur_endommage
+    description: Vitesse maximale réduite de 1 (minimum 1).
+    chocs_cost: 0
+    origine: TABLE_EPAVES
+
+  - nom: Direction endommagée
+    nom_interne: direction_endommage
+    description: Manoeuvrabilité réduite de 1 (minimum 1).
+    chocs_cost: 0
+    origine: TABLE_EPAVES
+
+  - nom: Blindage arraché
+    nom_interne: blindage_arrache
+    description: Carrosserie réduite de 2 (minimum 0).
+    chocs_cost: 0
+    origine: TABLE_EPAVES
+
+  - nom: Siège irrécupérable
+    nom_interne: siege_irrecuperable
+    description: Valeur d'Équipage réduite de 1 (minimum 1).
+    chocs_cost: 0
+    origine: TABLE_EPAVES
+
+  # ── Séquelles volontaires — achetées en atelier contre des Chocs ────────────
+  - nom: Suicidaire
+    nom_interne: suicidaire
+    description: Ce véhicule ne peut pas rétrograder volontairement.
+    chocs_cost: 1
+    origine: ATELIER
+
+  - nom: Impopulaire
+    nom_interne: impopulaire
+    description: Ce véhicule doit payer un Vote du Public supplémentaire pour Revenir en Piste.
+    chocs_cost: 1
+    origine: ATELIER
+
+  - nom: Dingue
+    nom_interne: dingue
+    description: Ce véhicule ne peut pas utiliser les résultats Embrayage pour annuler des résultats Rotation ou Dérapage.
+    chocs_cost: 2
+    origine: ATELIER
+
+  - nom: Lâche
+    nom_interne: lache
+    description: Ce véhicule doit toujours annoncer une Esquive lors d'une Collision et il ne peut pas annoncer d'Éperonnage.
+    chocs_cost: 2
+    origine: ATELIER
+
+  - nom: Vieille Blessure de Guerre
+    nom_interne: vieille_blessure_de_guerre
+    description: Au début de chaque partie, lancez un D6. Sur un 1, ce véhicule ne peut pas participer à la partie.
+    chocs_cost: 3
+    origine: ATELIER
+
+  - nom: Vibrations
+    nom_interne: vibrations
+    description: Ce véhicule Perd le Contrôle dès 5 Jetons Danger au lieu de 6.
+    chocs_cost: 3
+    origine: ATELIER
+
+  - nom: Convulsions
+    nom_interne: convulsions
+    description: >-
+      Au début de la partie, vous devez informer vos adversaires lequel de vos pilotes
+      souffre de cette Séquelle. Une fois par partie, lorsque ce pilote est sur le point
+      de lancer ses Dés de Manœuvre, n'importe quel adversaire peut s'écrier
+      "Convulsions !". Cet adversaire peut alors lancer à votre place les Dés de
+      Manœuvre et choisir comment les résoudre. Le véhicule concerné ne peut pas
+      Tenter le Coup. Un pilote ne peut être affecté qu'une seule fois par partie par
+      les Convulsions.
+    chocs_cost: 4
+    origine: ATELIER
+
+  - nom: Maintenu par la Rouille
+    nom_interne: maintenu_par_la_rouille
+    description: >-
+      Lors de la séquence d'après-partie, lorsque vous lancez sur le Tableau des
+      Épaves, appliquez le premier résultat puis lancez à nouveau et appliquez
+      également le second résultat. Effet permanent — s'applique à chaque tirage
+      tant que cette séquelle reste active sur ce véhicule.
+    chocs_cost: 5
+    origine: ATELIER
+
+  - nom: Dur à Cuire
+    nom_interne: dur_a_cuire
+    description: >-
+      Ce véhicule peut immédiatement gagner l'avantage Dur à Cuire de son choix
+      gratuitement, même si ce pilote ne peut normalement pas y avoir accès.
+    chocs_cost: 6
+    origine: ATELIER
+
+  - nom: Légende Vivante
+    nom_interne: legende_vivante
+    description: >-
+      Lors de la séquence d'après-partie, lorsque vous lancez sur le Tableau des
+      Épaves, considérez votre résultat comme étant un "1". Effet permanent — s'applique
+      à chaque tirage tant que cette séquelle reste active sur ce véhicule. Sa présence
+      ouvre également la revente des autres séquelles de ce véhicule, même celles
+      acquises lors d'une session d'atelier antérieure.
+    chocs_cost: 11
+    origine: ATELIER

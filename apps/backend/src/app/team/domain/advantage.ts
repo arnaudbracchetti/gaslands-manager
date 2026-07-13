@@ -13,6 +13,13 @@ export class Advantage {
   constructor(
     readonly id: number,
     readonly type: AdvantageType,
+    /**
+     * Nom interne de la séquelle qui a accordé cet avantage gratuitement (ex.
+     * "dur_a_cuire"), ou `null` pour un avantage acheté normalement. Permet de
+     * retrouver cet avantage précis quand la séquelle qui l'a octroyé est revendue
+     * (cf. `Vehicle.markGrantedAdvantageSold`), sans recherche dans le journal.
+     */
+    readonly grantedBySequellaNomInterne: string | null = null,
   ) {}
 
   /**

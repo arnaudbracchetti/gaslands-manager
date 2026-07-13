@@ -1,27 +1,17 @@
-/**
- * Données brutes d'une séquelle de campagne.
- * Miroir de ce que sera éventuellement un YAML de catalogue — défini statiquement
- * dans `sequella-decorators.ts` (pas de fichier YAML dédié pour l'instant).
- */
-export interface RawSequella {
-  nom: string;
-  nom_interne: string;
-  description: string;
-  /** Nombre de Chocs nécessaires pour acquérir cette séquelle (validé par AddSequallaUseCase). */
-  chocs_cost: number;
-}
+import type { Sequelle } from '../../../catalog/catalog.interfaces';
 
 /**
- * Value Object représentant un type de séquelle de campagne.
+ * Value Object enveloppant une `Sequelle` brute du catalogue (`sequelle.yml`).
  *
- * Même pattern que WeaponType / ImprovementType : enveloppe des données brutes
- * et expose une API métier typée. Instances définies statiquement dans
- * `sequella-decorators.ts` (catalogue en mémoire).
+ * Miroir de `AdvantageType`, en plus léger : pas de `categorie`/`comportement`/`regles`
+ * ni de `toRaw()` — aucune séquelle n'est aujourd'hui pliée dans la chaîne de
+ * décorateurs de stats effectives (`Vehicle.buildChain`), réservé à une Partie 5
+ * future (cf. `sequella-decorators.ts`).
  */
 export class SequellaType {
-  private constructor(private readonly raw: RawSequella) {}
+  private constructor(private readonly raw: Sequelle) {}
 
-  static from(raw: RawSequella): SequellaType {
+  static from(raw: Sequelle): SequellaType {
     return new SequellaType(raw);
   }
 
@@ -37,9 +27,14 @@ export class SequellaType {
     return this.raw.description;
   }
 
-  /** Coût en Chocs pour acquérir cette séquelle (validé en write-time par AddSequallaUseCase). */
+  /** Coût en Chocs pour acquérir cette séquelle (0 pour une séquelle `TABLE_EPAVES`). */
   get chocsCost(): number {
     return this.raw.chocs_cost;
+  }
+
+  /** Distingue un achat volontaire en atelier d'une imposition automatique (Table des Épaves). */
+  get origine(): 'ATELIER' | 'TABLE_EPAVES' {
+    return this.raw.origine;
   }
 
   equals(other: SequellaType): boolean {

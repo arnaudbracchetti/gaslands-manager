@@ -2,10 +2,12 @@ import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
 import type { AdvantageType } from './value-objects/advantage-type';
+import type { SequellaType } from './value-objects/sequella-type';
 import { Vehicle, DomainException } from './vehicle';
 import { Weapon } from './weapon';
 import { Improvement } from './improvement';
 import { Advantage } from './advantage';
+import type { Sequella } from './sequella';
 
 // ── Résultat de validation ────────────────────────────────────────────────────
 
@@ -322,13 +324,28 @@ export class Team {
   }
 
   /** Ajoute un avantage transient sur un véhicule avec un id explicite (D-S11). */
-  addCampaignAdvantage(vehicleId: number, advantageType: AdvantageType, campaignId: number): Advantage {
-    return this.findVehicle(vehicleId).addCampaignAdvantage(advantageType, campaignId);
+  addCampaignAdvantage(
+    vehicleId: number,
+    advantageType: AdvantageType,
+    campaignId: number,
+    grantedBySequellaNomInterne: string | null = null,
+  ): Advantage {
+    return this.findVehicle(vehicleId).addCampaignAdvantage(advantageType, campaignId, grantedBySequellaNomInterne);
   }
 
   /** Retire un avantage par son id d'un véhicule spécifique (annulation d'achat en session courante). */
   removeCampaignAdvantage(vehicleId: number, advantageId: number): void {
     this.findVehicle(vehicleId).removeAdvantage(advantageId);
+  }
+
+  /** Ajoute une séquelle transiente sur un véhicule avec un id explicite (D-S11). */
+  addCampaignSequella(vehicleId: number, sequellaType: SequellaType, campaignId: number): Sequella {
+    return this.findVehicle(vehicleId).addCampaignSequella(sequellaType, campaignId);
+  }
+
+  /** Retire une séquelle par son id d'un véhicule spécifique (annulation d'achat en session courante). */
+  removeCampaignSequella(vehicleId: number, sequellaId: number): void {
+    this.findVehicle(vehicleId).removeSequella(sequellaId);
   }
 
   /**
@@ -375,6 +392,24 @@ export class Team {
 
   clearAdvantageSold(vehicleId: number, advantageId: number): void {
     this.findVehicle(vehicleId).clearAdvantageSold(advantageId);
+  }
+
+  /** Mirroir de markWeaponSold/clearWeaponSold pour les séquelles. */
+  markSequellaSold(vehicleId: number, sequellaId: number): void {
+    this.findVehicle(vehicleId).markSequellaSold(sequellaId);
+  }
+
+  clearSequellaSold(vehicleId: number, sequellaId: number): void {
+    this.findVehicle(vehicleId).clearSequellaSold(sequellaId);
+  }
+
+  /** Marque/démarque vendu l'avantage gratuit accordé par une séquelle (Dur à Cuire). */
+  markGrantedAdvantageSold(vehicleId: number, sequellaNomInterne: string): void {
+    this.findVehicle(vehicleId).markGrantedAdvantageSold(sequellaNomInterne);
+  }
+
+  clearGrantedAdvantageSold(vehicleId: number, sequellaNomInterne: string): void {
+    this.findVehicle(vehicleId).clearGrantedAdvantageSold(sequellaNomInterne);
   }
 
 }

@@ -7,12 +7,12 @@ import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
-import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
+import { EquipmentEntityType } from '../enums/equipment-change.enums';
 
 /**
  * Escarmouche — mêmes événements acceptés qu'un EvenementTeleGame.
@@ -42,7 +42,9 @@ export class EscarmoucheGame extends Game {
         event instanceof WeaponLostEvent ||
         event instanceof ImprovementLostEvent ||
         event instanceof WreckResolvedEvent ||
-        event instanceof SequellaAddedEvent || // séquelle imposée par la Table des Épaves (Siège irrécupérable)
+        // Séquelle imposée par la Table des Épaves (Siège irrécupérable) — cf. le même
+        // commentaire dans EvenementTeleGame.canAccept.
+        (event instanceof EquipmentChangedEvent && event.entityType === EquipmentEntityType.SEQUELLE) ||
         event instanceof ResistanceContactedEvent ||
         event instanceof GatesCrossedEvent ||
         event instanceof VehicleDestroyedEvent ||
@@ -53,7 +55,7 @@ export class EscarmoucheGame extends Game {
       // ⚠️ Cf. le même commentaire dans EvenementTeleGame.canAccept : la suppression
       // physique du BUY (annulation d'achat) n'est sûre que parce qu'aucun autre événement
       // accepté ici ne référence un weaponId/improvementId.
-      return event instanceof EquipmentChangedEvent || event instanceof SequellaAddedEvent;
+      return event instanceof EquipmentChangedEvent;
     }
     return false;
   }

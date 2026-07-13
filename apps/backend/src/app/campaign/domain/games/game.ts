@@ -10,7 +10,6 @@ import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
-import { SequellaAddedEvent } from '../events/sequella-added.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import type { WalletReason } from '../enums/wallet-reason.enum';
 import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from '../enums/weight-class.enum';
@@ -19,6 +18,7 @@ import type { VehicleType } from '../../../team/domain/value-objects/vehicle-typ
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
 import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
+import type { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import type { WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
@@ -265,13 +265,20 @@ export abstract class Game {
     let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
     let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
     let resolvedAdvantageType: AdvantageType | null = cmd.resolvedAdvantageType;
+    let resolvedSequellaType: SequellaType | null = cmd.resolvedSequellaType;
+    // Uniquement pertinent pour BUY(SEQUELLE, 'dur_a_cuire') — ignoré silencieusement
+    // pour toute autre combinaison plutôt que de rejeter un champ superflu.
+    const resolvedFreeAdvantageType: AdvantageType | null =
+      cmd.entityType === EquipmentEntityType.SEQUELLE && cmd.nomInterne === 'dur_a_cuire'
+        ? cmd.resolvedFreeAdvantageType
+        : null;
 
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
     } else if (cmd.operation === EquipmentOperation.SELL) {
       // Objet acheté PENDANT cette session d'atelier : annulation, vérifiée AVANT tout
       // calcul de remboursement (resolveSell lirait sinon un état sur le point de
-      // disparaître intégralement). Même contrôle pour les 4 types d'entité — seule la
+      // disparaître intégralement). Même contrôle pour les 5 types d'entité — seule la
       // liste d'ids à supprimer diffère (cascade pour VEHICLE, cf. collectSessionEventsForVehicle).
       const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
       if (buyEvent) {
@@ -294,6 +301,7 @@ export abstract class Game {
       resolvedWeaponType = sold.resolvedWeaponType;
       resolvedImprovementType = sold.resolvedImprovementType;
       resolvedAdvantageType = sold.resolvedAdvantageType;
+      resolvedSequellaType = sold.resolvedSequellaType;
     } else {
       throw new DomainException(`Opération d'équipement inconnue : "${cmd.operation}".`);
     }
@@ -303,9 +311,22 @@ export abstract class Game {
       cmd.operation, cmd.entityType, nomInterne, cost,
       cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, orientation,
       resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
+      resolvedSequellaType, resolvedFreeAdvantageType,
     );
 
-    if (cmd.operation === EquipmentOperation.BUY) participant.assertCanAfford(cost);
+    // SEQUELLE est réglée en Chocs (monnaie du véhicule) — pas la cagnotte — et porte
+    // sa propre garde de domaine (origine/unicité/Chocs suffisants), contrairement aux
+    // 4 autres types qui ne sont aujourd'hui gardés qu'au budget (limitation connue,
+    // cf. docs/spec/CAMPAIGN.md).
+    if (cmd.operation === EquipmentOperation.BUY) {
+      if (cmd.entityType === EquipmentEntityType.SEQUELLE) {
+        participant.team
+          .findVehicle(cmd.targetVehicleId!)
+          .assertCanAddSequella(resolvedSequellaType!, resolvedFreeAdvantageType);
+      } else {
+        participant.assertCanAfford(cost);
+      }
+    }
     this.addEvent(event);
 
     return { events: [event], deleteEventIds: [] };
@@ -380,19 +401,6 @@ export abstract class Game {
     return events;
   }
 
-  /**
-   * D4/E4 — Échange des Chocs contre une séquelle permanente en atelier. `chocsCost`
-   * est déjà résolu par l'appelant (registre des séquelles, `SEQUELLA_REGISTRY`,
-   * cf. `team/domain/sequella-decorators` — hors du domaine campagne).
-   * `SequellaAddedEvent.execute()` valide les Chocs disponibles via `vehicle.addChocs(-n)` ;
-   * si insuffisants, `DomainException` levée.
-   */
-  addSequella(participant: CampaignParticipant, vehicleId: number, sequellaTypeNom: string, chocsCost: number): GameEvent[] {
-    const event = new SequellaAddedEvent(0, this.id, participant.id, 0, vehicleId, sequellaTypeNom, chocsCost);
-    this.addEvent(event);
-    return [event];
-  }
-
   /** Journal complet de cette partie — chaque événement traduit en texte lisible. */
   journal(participants: readonly CampaignParticipant[]): GameJournalEntry[] {
     return this._events.map((e) => ({
@@ -456,6 +464,11 @@ export abstract class Game {
           throw new DomainException(`Avantage inconnu du catalogue : "${cmd.nomInterne}".`);
         }
         return cmd.resolvedAdvantageType.price;
+      case EquipmentEntityType.SEQUELLE:
+        if (!cmd.resolvedSequellaType) {
+          throw new DomainException(`Séquelle inconnue du catalogue : "${cmd.nomInterne}".`);
+        }
+        return cmd.resolvedSequellaType.chocsCost;
     }
   }
 
@@ -477,6 +490,7 @@ export abstract class Game {
     resolvedWeaponType: WeaponType | null;
     resolvedImprovementType: ImprovementType | null;
     resolvedAdvantageType: AdvantageType | null;
+    resolvedSequellaType: SequellaType | null;
   } {
     switch (cmd.entityType) {
       case EquipmentEntityType.VEHICLE: {
@@ -489,6 +503,7 @@ export abstract class Game {
           resolvedWeaponType: null,
           resolvedImprovementType: null,
           resolvedAdvantageType: null,
+          resolvedSequellaType: null,
         };
       }
       case EquipmentEntityType.WEAPON: {
@@ -511,6 +526,7 @@ export abstract class Game {
           resolvedWeaponType: weapon.type,
           resolvedImprovementType: null,
           resolvedAdvantageType: null,
+          resolvedSequellaType: null,
         };
       }
       case EquipmentEntityType.IMPROVEMENT: {
@@ -528,6 +544,7 @@ export abstract class Game {
           resolvedWeaponType: null,
           resolvedImprovementType: improvement.type,
           resolvedAdvantageType: null,
+          resolvedSequellaType: null,
         };
       }
       case EquipmentEntityType.ADVANTAGE: {
@@ -543,6 +560,25 @@ export abstract class Game {
           resolvedWeaponType: null,
           resolvedImprovementType: null,
           resolvedAdvantageType: advantage.type,
+          resolvedSequellaType: null,
+        };
+      }
+      case EquipmentEntityType.SEQUELLE: {
+        const vehicle = participant.team.findVehicle(cmd.targetVehicleId!);
+        const sequella = vehicle.sequellas.find((s) => s.id === cmd.targetEntityId);
+        if (!sequella) throw new DomainException(`Séquelle ${cmd.targetEntityId} introuvable.`);
+        // Revente fermée par défaut (contrairement aux 4 autres types) — cf. Vehicle.canRemoveSequella.
+        const canRemove = vehicle.canRemoveSequella();
+        if (!canRemove.ok) throw new DomainException(canRemove.reason);
+        return {
+          refund: sequella.resaleRefund,
+          nomInterne: sequella.type.nomInterne,
+          orientation: null,
+          resolvedVehicleType: null,
+          resolvedWeaponType: null,
+          resolvedImprovementType: null,
+          resolvedAdvantageType: null,
+          resolvedSequellaType: sequella.type,
         };
       }
     }

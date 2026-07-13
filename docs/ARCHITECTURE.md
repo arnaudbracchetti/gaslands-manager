@@ -259,13 +259,13 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (36 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
 | `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
-| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment`, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `addSequella`, `journal`) |
+| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
 | `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
-| `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine |
+| `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine. Dépend d'`ICatalogRepository` (résout la séquelle `siege_irrecuperable`) en plus d'`IRandomizer` — deux modificateurs permanents (`legende_vivante` force le D6 à 1, `maintenu_par_la_rouille` chaîne un second tirage), cf. §Séquelles ci-dessous |
 | `apps/backend/src/app/campaign/application/` | 26 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
@@ -281,7 +281,7 @@ Le module `campaign/` (fusion des ex-modules `season/` et `game/`) implémente u
 
 | Pattern | Rôle | Classes |
 |---------|------|---------|
-| **Command** | `GameEvent` — encapsule une mutation avec `execute()` / `undo()` | `RankingAssignedEvent`, `WalletMovementEvent`, `VehicleLostEvent`, `WeaponLostEvent`, `WreckResolvedEvent`, `SequellaAddedEvent`, `EquipmentChangedEvent`, `ResistanceContactedEvent` |
+| **Command** | `GameEvent` — encapsule une mutation avec `execute()` / `undo()` | `RankingAssignedEvent`, `WalletMovementEvent`, `VehicleLostEvent`, `WeaponLostEvent`, `WreckResolvedEvent`, `EquipmentChangedEvent` (`entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE`), `ResistanceContactedEvent` |
 | **Invoker** | `Game` — valide et journalise les événements via `canAccept` / `addEvent`, sensible à son statut courant (`PLANIFIE` vs `ATELIER`) | `EvenementTeleGame`, `EscarmoucheGame` |
 | **Receiver** | `CampaignParticipant` — porte les compteurs transients modifiés par chaque événement | `wallet`, `championshipPoints`, `resistancePoints`, état des véhicules/armes |
 
@@ -340,9 +340,35 @@ sans mécanisme supplémentaire (`order` fractionnaire) : voir
 #### Points d'attention
 
 - **`resistancePoints` secret** — jamais exposé dans `StandingsEntry` ni dans `GET /workshop`. Seul l'organisateur peut appeler `POST .../events/resistance`.
-- **D6 serveur** — l'aléatoire est isolé derrière l'interface `IRandomizer` (port hexagonal, `domain/randomizer.interface.ts`). L'adaptateur production est `RandomProvider` (`infrastructure/`). Dans les tests, on passe un `FixedRandomizer implements IRandomizer` directement au constructeur de `WreckTable` — aucun `protected`/sous-classe requis.
+- **D6 serveur** — l'aléatoire est isolé derrière l'interface `IRandomizer` (port hexagonal, `domain/randomizer.interface.ts`). L'adaptateur production est `RandomProvider` (`infrastructure/`). Dans les tests, on passe un `FixedRandomizer implements IRandomizer` directement au constructeur de `WreckTable` — aucun `protected`/sous-classe requis. `WreckTable` prend aussi un second paramètre `ICatalogRepository` (résolution de la séquelle `siege_irrecuperable`, cf. §Séquelles ci-dessous) : un test double minimal suffit, seul `getSequellaType` est appelé.
 - **Autorisation sans base de données** — les use cases campagne vérifient le rôle via `campaign.participants` (liste en mémoire après replay). Aucun accès SQL supplémentaire pour l'autorisation.
 - **`TEAM_REPOSITORY` exporté par `TeamModule`** — requis par `CampaignRepository` (infrastructure) pour charger l'état figé des équipes au moment du replay.
+
+#### Séquelles
+
+Catalogue unifié `database_init/data/sequelle.yml` (15 entrées), chargé par
+`CatalogService` comme tout autre catalogue d'équipement — champ `origine`
+(`ATELIER` | `TABLE_EPAVES`) distinguant achat volontaire et imposition
+automatique. `Sequella` (`team/domain/sequella.ts`) est une entité enfant de
+`Vehicle`, miroir exact d'`Advantage` (`id`, `type`, `isSold`, prix jamais
+réduit à la revente).
+
+Unifiée dans `EquipmentChangedEvent` (`entityType: SEQUELLE`) plutôt qu'un
+événement dédié — seules différences avec les 4 autres types : la monnaie
+débitée/créditée est `vehicle.chocs` (pas la cagnotte du participant, cf.
+`EquipmentChangedEvent.applyChocsDelta`), et la revente cross-session est
+gardée par `Vehicle.canRemoveSequella()` (fermée par défaut, ouverte par la
+présence de la séquelle `legende_vivante`). `Vehicle.canAddSequella()` garde
+origine/unicité/Chocs suffisants — appelée par `Game.changeEquipment()`,
+jamais par le use case (`ChangeEquipmentUseCase` reste une orchestration pure).
+
+Dur à Cuire est le seul cas à bundler deux effets dans un seul événement
+(séquelle + avantage gratuit taggé `Advantage.grantedBySequellaNomInterne`) —
+cf. [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles) pour le détail
+complet des 3 cas particuliers (Dur à Cuire, Maintenu par la Rouille, Légende
+Vivante) et [docs/plans/2026-07-13-sequelles-design.md](plans/2026-07-13-sequelles-design.md)
+pour la conception. `SequellaAddedEvent`/`AddSequellaUseCase`/`SEQUELLA_REGISTRY`
+(anciens mécanismes dédiés) sont retirés.
 
 ---
 

@@ -45,9 +45,13 @@ export class GetWorkshopUseCase {
       resaleRefund: v.resaleRefund,
       purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.VEHICLE, v.id) ?? false,
       sequellas: v.sequellas.map((s) => ({
-        nomInterne: s.nomInterne,
-        nom: s.nom,
-        chocsCost: s.chocsCost,
+        id: s.id,
+        nomInterne: s.type.nomInterne,
+        nom: s.type.nom,
+        chocsCost: s.type.chocsCost,
+        origine: s.type.origine,
+        isSold: s.isSold,
+        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.SEQUELLE, s.id) ?? false,
       })),
       weapons: v.weapons.map((w) => ({
         id: w.id,

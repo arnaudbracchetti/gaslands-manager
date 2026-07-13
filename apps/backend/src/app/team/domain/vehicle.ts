@@ -9,6 +9,7 @@ import { Improvement } from './improvement';
 import { Advantage } from './advantage';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { SequellaType } from './value-objects/sequella-type';
+import { Sequella } from './sequella';
 import { CatalogVehicleBuild } from './vehicle-build';
 import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
 import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
@@ -44,13 +45,12 @@ export class Vehicle {
   private _cascadeSoldAdvantageIds: number[] = [];
   private _chocs = 0;
   /**
-   * Séquelles actives sur ce véhicule, stockées comme Value Objects `SequellaType`.
-   * Même modèle que `WeaponType` / `ImprovementType` : les données métier de chaque
-   * séquelle sont portées par l'objet, pas par une clé string opaque.
+   * Séquelles actives sur ce véhicule (mode campagne). Entités enfants (`Sequella`),
+   * miroir d'`Advantage` — mêmes mécaniques `isSold`/prix jamais réduit (perte totale).
    * Maintenues en ordre d'application — instanciées en décorateurs par VehicleBuildFactory
-   * lors du calcul des stats (atelier).
+   * lors du calcul des stats (atelier, Partie 5, non câblé aujourd'hui).
    */
-  private readonly _sequellas: SequellaType[] = [];
+  private readonly _sequellas: Sequella[] = [];
 
   constructor(
     readonly id: number,
@@ -97,7 +97,7 @@ export class Vehicle {
     return this._chocs;
   }
 
-  get sequellas(): readonly SequellaType[] {
+  get sequellas(): readonly Sequella[] {
     return this._sequellas;
   }
 
@@ -261,6 +261,69 @@ export class Vehicle {
   }
 
   /**
+   * Règle d'achat d'une séquelle en atelier (mode campagne) : garde véhicule
+   * perdu/vendu, origine (une séquelle `TABLE_EPAVES` ne peut être imposée que par un
+   * tirage de la Table des Épaves, jamais achetée directement), unicité (comme
+   * `canAddAdvantage`, une même séquelle `ATELIER` ne peut être acquise deux fois),
+   * puis Chocs suffisants — monnaie propre au véhicule, distincte du budget Jerricans
+   * de l'équipe (`remainingBudget`), donc pas de paramètre budget ici.
+   */
+  canAddSequella(type: SequellaType): RuleResult {
+    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
+
+    if (type.origine !== 'ATELIER') {
+      return fail('Cette séquelle ne peut être imposée que par un tirage de la Table des Épaves');
+    }
+    if (this._sequellas.some((s) => !s.isSold && s.type.origine === 'ATELIER' && s.type.equals(type))) {
+      return fail(`"${type.nom}" est déjà acquise sur ce véhicule`);
+    }
+    if (type.chocsCost > this._chocs) {
+      return fail(`Chocs insuffisants (solde actuel : ${this._chocs}, coût : ${type.chocsCost})`);
+    }
+    return ok();
+  }
+
+  /**
+   * Garde d'achat d'une séquelle, version levée - pendant symétrique de
+   * `CampaignParticipant.assertCanAfford` (cagnotte) pour la monnaie Chocs : déroule le
+   * verdict `canAddSequella` et exige en plus, pour la séquelle "Dur à Cuire", que
+   * l'avantage gratuit bundlé ait été choisi (un seul événement porte les deux effets).
+   * Cette dernière règle vit ici plutôt que dans le use case - c'est un invariant de
+   * l'ajout de cette séquelle, pas de l'orchestration. Lève `DomainException` sinon.
+   */
+  assertCanAddSequella(type: SequellaType, freeAdvantageType: AdvantageType | null): void {
+    const result = this.canAddSequella(type);
+    if (!result.ok) throw new DomainException(result.reason);
+    if (type.nomInterne === 'dur_a_cuire' && !freeAdvantageType) {
+      throw new DomainException('Un avantage gratuit doit être choisi pour "Dur à Cuire".');
+    }
+  }
+
+  /**
+   * Règle de revente d'une séquelle pré-existante (hors session d'atelier en cours,
+   * cf. `Game.changeEquipment` pour la distinction annulation/revente). Contrairement
+   * à une arme/amélioration/avantage, cette revente est **fermée par défaut** — une
+   * séquelle représente un dommage ou trait permanent, pas un objet ordinaire. Elle ne
+   * s'ouvre que si ce véhicule porte encore la séquelle "Légende Vivante" active :
+   * son détenteur peut alors se défaire de ses anciennes séquelles.
+   */
+  canRemoveSequella(): RuleResult {
+    if (!this.hasActiveSequella('legende_vivante')) {
+      return fail(
+        'Cette séquelle ne peut pas être revendue : seule la présence de la séquelle ' +
+          '"Légende Vivante" sur ce véhicule ouvre la revente des séquelles pré-existantes.',
+      );
+    }
+    return ok();
+  }
+
+  /** Une séquelle de ce nom_interne est-elle active (non vendue) sur ce véhicule ? */
+  hasActiveSequella(nomInterne: string): boolean {
+    return this._sequellas.some((s) => !s.isSold && s.type.nomInterne === nomInterne);
+  }
+
+  /**
    * Verdict de disponibilité d'une amélioration ORIENTABLE, tolérant à l'arc précis :
    * on tente d'abord sans orientation (`null`), puis — si ça échoue potentiellement à
    * cause du seul "orientation requise" (Bélier…) — chaque arc à tour de rôle.
@@ -399,6 +462,17 @@ export class Vehicle {
     this._advantages.splice(index, 1);
   }
 
+  /**
+   * Retire une séquelle par son id — undo d'un achat (BUY) de cette session, mirroir
+   * de `removeAdvantage`. Une revente (SELL) d'une séquelle pré-existante ne passe
+   * jamais par ici : elle marque `isSold` (cf. `markSequellaSold`), ne retire rien.
+   */
+  removeSequella(sequellaId: number): void {
+    const index = this._sequellas.findIndex((s) => s.id === sequellaId);
+    if (index === -1) throw new DomainException('Séquelle introuvable sur ce véhicule');
+    this._sequellas.splice(index, 1);
+  }
+
   // ── Mutations campagne ────────────────────────────────────────────────────────
 
   /** Idempotent : marquer un véhicule déjà perdu n'a pas d'effet supplémentaire. */
@@ -484,6 +558,37 @@ export class Vehicle {
     this.findAdvantage(advantageId).clearSold();
   }
 
+  /** Mirroir de markWeaponSold/clearWeaponSold pour les séquelles — même mécanisme "perte totale" que les avantages. */
+  markSequellaSold(sequellaId: number): void {
+    this.findSequella(sequellaId).markSold();
+  }
+
+  clearSequellaSold(sequellaId: number): void {
+    this.findSequella(sequellaId).clearSold();
+  }
+
+  /**
+   * Marque vendu l'avantage gratuit accordé par la séquelle Dur à Cuire, s'il existe
+   * encore et n'est pas déjà vendu — appelé quand cette séquelle elle-même est revendue
+   * (cf. `EquipmentChangedEvent`, entityType SEQUELLE). Recherche par tag
+   * (`Advantage.grantedBySequellaNomInterne`), pas par id : cet avantage n'a pas
+   * d'existence propre côté appelant (créé dans le même événement que la séquelle).
+   */
+  markGrantedAdvantageSold(sequellaNomInterne: string): void {
+    const advantage = this._advantages.find(
+      (a) => a.grantedBySequellaNomInterne === sequellaNomInterne && !a.isSold,
+    );
+    advantage?.markSold();
+  }
+
+  /** Undo de markGrantedAdvantageSold. */
+  clearGrantedAdvantageSold(sequellaNomInterne: string): void {
+    const advantage = this._advantages.find(
+      (a) => a.grantedBySequellaNomInterne === sequellaNomInterne && a.isSold,
+    );
+    advantage?.clearSold();
+  }
+
   /**
    * Ajoute (ou retire si n < 0) des chocs sur ce véhicule.
    * Les chocs ne peuvent pas être négatifs : lève DomainException si le résultat
@@ -496,23 +601,6 @@ export class Vehicle {
     this._chocs += n;
   }
 
-  /**
-   * Enregistre une séquelle sur ce véhicule (mode campagne).
-   * Le Value Object `SequellaType` porte toutes les données métier (nom, coût en Chocs…).
-   * `VehicleBuildFactory` (Partie 5) utilise `sequellaType.nomInterne` pour instancier
-   * le décorateur correspondant via `SEQUELLA_REGISTRY`.
-   */
-  addSequella(sequellaType: SequellaType): void {
-    this._sequellas.push(sequellaType);
-  }
-
-  /**
-   * Annule la dernière séquelle ajoutée (undo d'événement campagne).
-   * Le replay étant ordonné, le dernier push est toujours la séquelle à défaire.
-   */
-  removeLastSequella(): void {
-    this._sequellas.pop();
-  }
 
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
 
@@ -556,11 +644,27 @@ export class Vehicle {
    * campagne). Miroir d'addCampaignImprovement : ne passe PAS par les règles
    * (canAddAdvantage) — cohérent avec la limitation "Temps 2" déjà en place pour
    * armes/améliorations en atelier (seule la cagnotte est gardée à l'écriture).
+   *
+   * `grantedBySequellaNomInterne` : renseigné uniquement pour l'avantage gratuit
+   * accordé par la séquelle Dur à Cuire (cf. `EquipmentChangedEvent`) — `null` pour
+   * un achat normal.
    */
-  addCampaignAdvantage(type: AdvantageType, campaignId: number): Advantage {
-    const advantage = new Advantage(campaignId, type);
+  addCampaignAdvantage(type: AdvantageType, campaignId: number, grantedBySequellaNomInterne: string | null = null): Advantage {
+    const advantage = new Advantage(campaignId, type, grantedBySequellaNomInterne);
     this._advantages.push(advantage);
     return advantage;
+  }
+
+  /**
+   * Ajoute une séquelle avec un id explicite (D-S11 : id négatif = entité transiente
+   * campagne) — mirroir d'addCampaignAdvantage. Ne passe PAS par `canAddSequella` :
+   * cette validation vit dans `Game.changeEquipment()`, appelée avant la construction
+   * de l'événement, jamais rejouée à l'écriture du replay (D-S11).
+   */
+  addCampaignSequella(type: SequellaType, campaignId: number): Sequella {
+    const sequella = new Sequella(campaignId, type);
+    this._sequellas.push(sequella);
+    return sequella;
   }
 
   // ── Helpers privés ────────────────────────────────────────────────────────────
@@ -581,6 +685,12 @@ export class Vehicle {
     const advantage = this._advantages.find((a) => a.id === id);
     if (!advantage) throw new DomainException('Avantage introuvable sur ce véhicule');
     return advantage;
+  }
+
+  private findSequella(id: number): Sequella {
+    const sequella = this._sequellas.find((s) => s.id === id);
+    if (!sequella) throw new DomainException('Séquelle introuvable sur ce véhicule');
+    return sequella;
   }
 }
 

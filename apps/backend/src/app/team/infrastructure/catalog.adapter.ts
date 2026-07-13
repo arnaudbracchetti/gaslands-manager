@@ -5,6 +5,7 @@ import type { VehicleType } from '../domain/value-objects/vehicle-type';
 import type { WeaponType } from '../domain/value-objects/weapon-type';
 import type { ImprovementType } from '../domain/value-objects/improvement-type';
 import type { AdvantageType } from '../domain/value-objects/advantage-type';
+import type { SequellaType } from '../domain/value-objects/sequella-type';
 
 /**
  * CatalogAdapter — implémentation de ICatalogRepository pour le module Team.
@@ -30,6 +31,10 @@ export class CatalogAdapter implements ICatalogRepository {
 
   getAdvantageType(nomInterne: string): AdvantageType | undefined {
     return this.catalogService.getAdvantageType(nomInterne);
+  }
+
+  getSequellaType(nomInterne: string): SequellaType | undefined {
+    return this.catalogService.getSequellaType(nomInterne);
   }
 
   getVehicleTypesForSponsor(sponsorNom: string): VehicleType[] {

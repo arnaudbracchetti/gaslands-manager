@@ -44,7 +44,7 @@ export class GameEventOrm {
   eventOrder!: number;
 
   /** Discriminant — valeurs : 'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' |
-   *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'SEQUELLA_ADDED' | 'EQUIPMENT_CHANGED' |
+   *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
    *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' */
   @Column()
   eventType!: string;
@@ -91,13 +91,6 @@ export class GameEventOrm {
   @Column({ type: 'int', nullable: true })
   chocsGained!: number | null;
 
-  // ── Payload : SequellaAddedEvent ───────────────────────────────────────────
-  @Column({ type: 'varchar', nullable: true })
-  sequellaTypeNom!: string | null;  // nom_interne de la séquelle
-
-  @Column({ type: 'int', nullable: true })
-  chocsCost!: number | null;
-
   // ── Payload : EquipmentChangedEvent ────────────────────────────────────────
   @Column({ type: 'varchar', nullable: true })
   operation!: string | null;      // 'BUY' | 'SELL'
@@ -121,6 +114,10 @@ export class GameEventOrm {
   // Tourelle, arc à 360°, coût ×3)
   @Column({ type: 'varchar', nullable: true })
   orientation!: string | null;
+
+  /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — nom_interne de l'avantage gratuit accordé. */
+  @Column({ type: 'varchar', nullable: true })
+  freeAdvantageNomInterne!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

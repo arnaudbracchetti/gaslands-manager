@@ -19,7 +19,6 @@ import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
-import { SequellaAddedEvent } from '../domain/events/sequella-added.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
@@ -35,6 +34,7 @@ import { VehicleType } from '../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 import { AdvantageType } from '../../team/domain/value-objects/advantage-type';
+import { SequellaType } from '../../team/domain/value-objects/sequella-type';
 
 import { DomainException } from '../../shared/domain/domain-exception';
 
@@ -129,9 +129,6 @@ export class CampaignMapper {
           orm.wreckResult as WreckResult, orm.chocsGained!,
         );
 
-      case 'SEQUELLA_ADDED':
-        return new SequellaAddedEvent(id, gameId, participantId, eventOrder, orm.vehicleId!, orm.sequellaTypeNom!, orm.chocsCost!);
-
       case 'EQUIPMENT_CHANGED':
         return this.toEquipmentChangedEvent(orm);
 
@@ -171,30 +168,54 @@ export class CampaignMapper {
     let resolvedWeaponType: WeaponType | null = null;
     let resolvedImprovementType: ImprovementType | null = null;
     let resolvedAdvantageType: AdvantageType | null = null;
+    let resolvedSequellaType: SequellaType | null = null;
 
-    if (entityType === EquipmentEntityType.VEHICLE) {
-      const raw = nomInterne ? this.catalog.getVehiculeByNomInterne(nomInterne) : undefined;
-      if (!raw && requireResolution) throw new DomainException(`Véhicule catalogue introuvable : "${nomInterne}"`);
-      resolvedVehicleType = raw ? VehicleType.from(raw) : null;
-    } else if (entityType === EquipmentEntityType.WEAPON) {
-      const raw = nomInterne ? this.catalog.getArmeByNomInterne(nomInterne) : undefined;
-      if (!raw && requireResolution) throw new DomainException(`Arme catalogue introuvable : "${nomInterne}"`);
-      resolvedWeaponType = raw ? WeaponType.from(raw) : null;
-    } else if (entityType === EquipmentEntityType.ADVANTAGE) {
-      const raw = nomInterne ? this.catalog.getAvantageByNomInterne(nomInterne) : undefined;
-      if (!raw && requireResolution) throw new DomainException(`Avantage catalogue introuvable : "${nomInterne}"`);
-      resolvedAdvantageType = raw ? AdvantageType.from(raw) : null;
-    } else {
-      const raw = nomInterne ? this.catalog.getAmeliorationByNomInterne(nomInterne) : undefined;
-      if (!raw && requireResolution) throw new DomainException(`Amélioration catalogue introuvable : "${nomInterne}"`);
-      resolvedImprovementType = raw ? ImprovementType.from(raw) : null;
+    switch (entityType) {
+      case EquipmentEntityType.VEHICLE: {
+        const raw = nomInterne ? this.catalog.getVehiculeByNomInterne(nomInterne) : undefined;
+        if (!raw && requireResolution) throw new DomainException(`Véhicule catalogue introuvable : "${nomInterne}"`);
+        resolvedVehicleType = raw ? VehicleType.from(raw) : null;
+        break;
+      }
+      case EquipmentEntityType.WEAPON: {
+        const raw = nomInterne ? this.catalog.getArmeByNomInterne(nomInterne) : undefined;
+        if (!raw && requireResolution) throw new DomainException(`Arme catalogue introuvable : "${nomInterne}"`);
+        resolvedWeaponType = raw ? WeaponType.from(raw) : null;
+        break;
+      }
+      case EquipmentEntityType.ADVANTAGE: {
+        const raw = nomInterne ? this.catalog.getAvantageByNomInterne(nomInterne) : undefined;
+        if (!raw && requireResolution) throw new DomainException(`Avantage catalogue introuvable : "${nomInterne}"`);
+        resolvedAdvantageType = raw ? AdvantageType.from(raw) : null;
+        break;
+      }
+      case EquipmentEntityType.IMPROVEMENT: {
+        const raw = nomInterne ? this.catalog.getAmeliorationByNomInterne(nomInterne) : undefined;
+        if (!raw && requireResolution) throw new DomainException(`Amélioration catalogue introuvable : "${nomInterne}"`);
+        resolvedImprovementType = raw ? ImprovementType.from(raw) : null;
+        break;
+      }
+      case EquipmentEntityType.SEQUELLE: {
+        const raw = nomInterne ? this.catalog.getSequelleByNomInterne(nomInterne) : undefined;
+        if (!raw && requireResolution) throw new DomainException(`Séquelle catalogue introuvable : "${nomInterne}"`);
+        resolvedSequellaType = raw ? SequellaType.from(raw) : null;
+        break;
+      }
     }
+
+    // Avantage gratuit accordé (Dur à Cuire) — best-effort, jamais requis : absent pour
+    // toute autre combinaison entityType/nomInterne (cf. EquipmentChangedEvent, doc de classe).
+    const freeAdvantageRaw = orm.freeAdvantageNomInterne
+      ? this.catalog.getAvantageByNomInterne(orm.freeAdvantageNomInterne)
+      : undefined;
+    const resolvedFreeAdvantageType = freeAdvantageRaw ? AdvantageType.from(freeAdvantageRaw) : null;
 
     return new EquipmentChangedEvent(
       orm.id, orm.gameId, orm.participantId, orm.eventOrder,
       operation, entityType, nomInterne, orm.cost!,
       orm.targetVehicleId, orm.targetEntityId, orientation,
       resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
+      resolvedSequellaType, resolvedFreeAdvantageType,
     );
   }
 }

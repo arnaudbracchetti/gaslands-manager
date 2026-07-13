@@ -2,6 +2,7 @@ import type { VehicleType } from './value-objects/vehicle-type';
 import type { WeaponType } from './value-objects/weapon-type';
 import type { ImprovementType } from './value-objects/improvement-type';
 import type { AdvantageType } from './value-objects/advantage-type';
+import type { SequellaType } from './value-objects/sequella-type';
 
 /**
  * Contrat d'accès au catalogue de jeu depuis la couche domaine de Team.
@@ -15,6 +16,8 @@ export interface ICatalogRepository {
   getWeaponType(nomInterne: string): WeaponType | undefined;
   getImprovementType(nomInterne: string): ImprovementType | undefined;
   getAdvantageType(nomInterne: string): AdvantageType | undefined;
+  /** Séquelle catalogue par son nom_interne — jamais scopée par sponsor (cf. `Sequelle`). */
+  getSequellaType(nomInterne: string): SequellaType | undefined;
   getVehicleTypesForSponsor(sponsorNom: string): VehicleType[];
   getWeaponTypesForSponsor(sponsorNom: string): WeaponType[];
   getImprovementTypesForSponsor(sponsorNom: string): ImprovementType[];

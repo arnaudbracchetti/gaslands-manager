@@ -1,4 +1,5 @@
 import type { IRandomizer } from '../randomizer.interface';
+import type { ICatalogRepository } from '../../../team/domain/catalog.repository.interface';
 import type { Vehicle } from '../../../team/domain/vehicle';
 import type { GameEvent } from '../events/game-event';
 import { WreckOutcome, type LostEquipment } from './wreck-outcome';
@@ -6,8 +7,10 @@ import { WreckResult } from '../enums/wreck-result.enum';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
-import { SequellaAddedEvent } from '../events/sequella-added.event';
+import { EquipmentChangedEvent } from '../events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
+import { DomainException } from '../../../shared/domain/domain-exception';
 
 export interface WreckTableResult {
   outcome: WreckOutcome;
@@ -18,14 +21,14 @@ export interface WreckTableResult {
  * Table des Épaves (Gaslands, p.168) — domain service.
  *
  * Encapsule l'intégralité du protocole de résolution :
- *   1. Lancer le D6 via `IRandomizer.roll(6)`
+ *   1. Lancer le D6 via `IRandomizer.roll(6)` (ou valeur forcée à 1, cf. Légende Vivante)
  *   2. Constituer le pool d'équipements éligibles (règle domaine)
  *   3. Tirer l'équipement perdu via `IRandomizer.pick(pool)` si ARRACHEE
  *   4. Calculer le tirage modifié et consulter la table
  *   5. Traduire le résultat en événements domaine (`gameId`, `participantId`)
  *
- * Si les règles évoluent (second jet, nouveau critère d'éligibilité, table étendue,
- * effet d'une nouvelle ligne), seule cette classe change — son interface publique
+ * Si les règles évoluent (nouveau critère d'éligibilité, table étendue, effet d'une
+ * nouvelle ligne), seule cette classe change — son interface publique
  * `resolve(vehicle, gameId, participantId)` reste stable.
  *
  * Tirage modifié = D6 + Chocs + modificateur de poids (Léger +1, Lourd −1).
@@ -35,22 +38,60 @@ export interface WreckTableResult {
  *   4    ROUE_CABOSSEE      +1
  *   5    ARRACHEE           +1 + équipement perdu (tiré au sort dans le pool)
  *   6    PIGNON_ENDOMMAGE   +1
- *   7    SIEGE_IRRECUPERABLE +2 → SequellaAddedEvent (Siège irrécupérable, coût 0)
+ *   7    SIEGE_IRRECUPERABLE +2 → BUY(SEQUELLE, 'siege_irrecuperable', coût 0)
  *   8    CHASSIS_FRAGILISE  +2
  *   9    FAVORI_DU_PUBLIC   +3
  *   10+  VEHICULE_DETRUIT    0  → VehicleLostEvent
+ *
+ * Deux séquelles modifient ce protocole de façon PERMANENTE (aucune consommation,
+ * tant qu'elles restent actives sur le véhicule) — deux modificateurs indépendants
+ * de l'opération élémentaire `rollOnce`, qui se composent sans se connaître :
+ *   - "legende_vivante" force la valeur du D6 à 1 à CHAQUE tirage (`rollOnce`).
+ *   - "maintenu_par_la_rouille" fait rejouer un second tirage après le premier, Chocs
+ *     mis à jour entre les deux (`resolve`) — sauf si le premier a déjà détruit le véhicule.
  */
 export class WreckTable {
-  constructor(private readonly random: IRandomizer) {}
+  constructor(
+    private readonly random: IRandomizer,
+    private readonly catalog: ICatalogRepository,
+  ) {}
 
   resolve(vehicle: Vehicle, gameId: number, participantId: number): WreckTableResult {
-    const diceRoll = this.random.roll(6);
+    const first = this.rollOnce(vehicle, vehicle.chocs, gameId, participantId);
+    const events = [...first.events];
+    let finalOutcome = first.outcome;
+
+    const rouilleActive = vehicle.hasActiveSequella('maintenu_par_la_rouille');
+    const alreadyDestroyed = first.outcome.wreckResult === WreckResult.VEHICULE_DETRUIT;
+    if (rouilleActive && !alreadyDestroyed) {
+      const chocsAfterFirst = vehicle.chocs + first.outcome.chocsGained;
+      const second = this.rollOnce(vehicle, chocsAfterFirst, gameId, participantId);
+      events.push(...second.events);
+      finalOutcome = second.outcome;
+    }
+
+    return { outcome: finalOutcome, events };
+  }
+
+  /**
+   * Un tirage élémentaire — D6 (ou 1 si Légende Vivante active) + Chocs + poids → ligne
+   * de la table → événements. Paramétré par `chocsBefore` (plutôt que de relire
+   * `vehicle.chocs`) pour permettre le chaînage de Maintenu par la Rouille, dont le
+   * second tirage doit utiliser les Chocs déjà mis à jour par le premier.
+   */
+  private rollOnce(
+    vehicle: Vehicle,
+    chocsBefore: number,
+    gameId: number,
+    participantId: number,
+  ): WreckTableResult {
+    const diceRoll = vehicle.hasActiveSequella('legende_vivante') ? 1 : this.random.roll(6);
     const pool = this.buildEquipmentPool(vehicle);
     const lostEquipment = pool.length > 0 ? this.random.pick(pool) : null;
-    const modifiedRoll = diceRoll + vehicle.chocs + this.weightModifier(vehicle.type.poids);
-    const { result, chocsGained } = this.lookupTable(modifiedRoll, vehicle.chocs);
+    const modifiedRoll = diceRoll + chocsBefore + this.weightModifier(vehicle.type.poids);
+    const { result, chocsGained } = this.lookupTable(modifiedRoll, chocsBefore);
     const finalLoss = result === WreckResult.ARRACHEE ? lostEquipment : null;
-    const outcome = new WreckOutcome(vehicle.id, diceRoll, vehicle.chocs, result, chocsGained, finalLoss);
+    const outcome = new WreckOutcome(vehicle.id, diceRoll, chocsBefore, result, chocsGained, finalLoss);
     return { outcome, events: this.buildEvents(outcome, gameId, participantId) };
   }
 
@@ -72,7 +113,17 @@ export class WreckTable {
     }
 
     if (outcome.wreckResult === WreckResult.SIEGE_IRRECUPERABLE) {
-      events.push(new SequellaAddedEvent(0, gameId, participantId, 0, outcome.vehicleId, 'siege_irrecuperable', 0));
+      const sequellaType = this.catalog.getSequellaType('siege_irrecuperable');
+      if (!sequellaType) {
+        throw new DomainException('Séquelle catalogue introuvable : "siege_irrecuperable".');
+      }
+      events.push(new EquipmentChangedEvent(
+        0, gameId, participantId, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
+        outcome.vehicleId, null, null,
+        null, null, null, null,
+        sequellaType, null,
+      ));
     }
 
     if (outcome.wreckResult === WreckResult.VEHICULE_DETRUIT) {

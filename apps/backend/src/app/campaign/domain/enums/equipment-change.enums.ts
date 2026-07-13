@@ -16,4 +16,6 @@ export enum EquipmentEntityType {
   WEAPON = 'WEAPON',
   IMPROVEMENT = 'IMPROVEMENT',
   ADVANTAGE = 'ADVANTAGE',
+  /** Séquelle permanente (mode campagne, p.170) — seule monnaie débitée : les Chocs du véhicule, pas la cagnotte. */
+  SEQUELLE = 'SEQUELLE',
 }

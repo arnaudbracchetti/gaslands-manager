@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { EquipmentChangedEvent } from './equipment-changed.event';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import {
   makeTestParticipant,
   makeTestParticipantWithAdvantage,
@@ -9,6 +10,18 @@ import {
   makeImprovementType,
   makeAdvantageType,
 } from '../test-helpers';
+
+function makeSequellaType(chocsCost = 1): SequellaType {
+  return SequellaType.from({
+    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: chocsCost, origine: 'ATELIER',
+  });
+}
+
+function makeDurACuireType(): SequellaType {
+  return SequellaType.from({
+    nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', chocs_cost: 6, origine: 'ATELIER',
+  });
+}
 
 describe('EquipmentChangedEvent — execute / undo', () => {
   describe('BUY — crée une entité transiente (id = -event.id), undo la retire', () => {
@@ -74,6 +87,91 @@ describe('EquipmentChangedEvent — execute / undo', () => {
 
       event.undo(participants);
       expect(vehicle.advantages.some((a) => a.id === -11)).toBe(false);
+    });
+
+    it('BUY SEQUELLE — débite les Chocs du véhicule (pas la cagnotte), crée la séquelle', () => {
+      const { team, vehicle, participant, participants } = makeTestParticipant();
+      vehicle.addChocs(5);
+      const remainingBudgetBefore = team.remainingBudget;
+      const event = new EquipmentChangedEvent(
+        21, 10, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'suicidaire', 1,
+        vehicle.id, null, null,
+        null, null, null, null, makeSequellaType(1),
+      );
+
+      event.execute(participants);
+      expect(vehicle.chocs).toBe(4);
+      expect(vehicle.sequellas.some((s) => s.id === -21)).toBe(true);
+      expect(team.remainingBudget).toBe(remainingBudgetBefore); // jamais touché par une séquelle
+
+      event.undo(participants);
+      expect(vehicle.chocs).toBe(5);
+      expect(vehicle.sequellas.some((s) => s.id === -21)).toBe(false);
+    });
+
+    it('BUY SEQUELLE "dur_a_cuire" — un seul événement crée la séquelle ET l\'avantage gratuit taggé', () => {
+      const { vehicle, participant, participants } = makeTestParticipant();
+      vehicle.addChocs(6);
+      const event = new EquipmentChangedEvent(
+        22, 10, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'dur_a_cuire', 6,
+        vehicle.id, null, null,
+        null, null, null, null, makeDurACuireType(), makeAdvantageType(),
+      );
+
+      event.execute(participants);
+      expect(vehicle.chocs).toBe(0);
+      expect(vehicle.sequellas.some((s) => s.id === -22)).toBe(true);
+      const granted = vehicle.advantages.find((a) => a.id === -22);
+      expect(granted).toBeDefined();
+      expect(granted?.grantedBySequellaNomInterne).toBe('dur_a_cuire');
+
+      event.undo(participants);
+      expect(vehicle.chocs).toBe(6);
+      expect(vehicle.sequellas.some((s) => s.id === -22)).toBe(false);
+      expect(vehicle.advantages.some((a) => a.id === -22)).toBe(false);
+    });
+  });
+
+  describe('SELL SEQUELLE — flag isSold, toujours 0 remboursement', () => {
+    it('execute marque isSold, ne crédite aucun Choc (refund=0) ; undo restaure', () => {
+      const { vehicle, participant, participants } = makeTestParticipant();
+      const sequella = vehicle.addCampaignSequella(makeSequellaType(1), 30);
+      const event = new EquipmentChangedEvent(
+        23, 10, participant.id, 0,
+        EquipmentOperation.SELL, EquipmentEntityType.SEQUELLE, 'suicidaire', 0,
+        vehicle.id, sequella.id, null,
+        null, null, null, null, makeSequellaType(1),
+      );
+
+      event.execute(participants);
+      expect(sequella.isSold).toBe(true);
+      expect(vehicle.chocs).toBe(0);
+
+      event.undo(participants);
+      expect(sequella.isSold).toBe(false);
+      expect(vehicle.chocs).toBe(0);
+    });
+
+    it('SELL "dur_a_cuire" — revend aussi l\'avantage gratuit taggé, retrouvé sans lien d\'id', () => {
+      const { vehicle, participant, participants } = makeTestParticipant();
+      const sequella = vehicle.addCampaignSequella(makeDurACuireType(), 30);
+      const granted = vehicle.addCampaignAdvantage(makeAdvantageType(), 31, 'dur_a_cuire');
+      const event = new EquipmentChangedEvent(
+        24, 10, participant.id, 0,
+        EquipmentOperation.SELL, EquipmentEntityType.SEQUELLE, 'dur_a_cuire', 0,
+        vehicle.id, sequella.id, null,
+        null, null, null, null, makeDurACuireType(),
+      );
+
+      event.execute(participants);
+      expect(sequella.isSold).toBe(true);
+      expect(granted.isSold).toBe(true);
+
+      event.undo(participants);
+      expect(sequella.isSold).toBe(false);
+      expect(granted.isSold).toBe(false);
     });
   });
 
@@ -204,6 +302,28 @@ describe('EquipmentChangedEvent — execute / undo', () => {
         null, makeWeaponType(),
       );
       expect(event.describe(participants)).toBe('Vente : Mitrailleuse avant, sur Voiture (2 jerricans)');
+    });
+
+    it('BUY SEQUELLE : monnaie affichée en "chocs", pas en jerricans', () => {
+      const { vehicle, participant, participants } = makeTestParticipant();
+      const event = new EquipmentChangedEvent(
+        25, 10, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'suicidaire', 1,
+        vehicle.id, null, null,
+        null, null, null, null, makeSequellaType(1),
+      );
+      expect(event.describe(participants)).toBe('Achat : Suicidaire sur Voiture (1 chocs)');
+    });
+
+    it('BUY SEQUELLE "dur_a_cuire" : mentionne l\'avantage gratuit accordé', () => {
+      const { vehicle, participant, participants } = makeTestParticipant();
+      const event = new EquipmentChangedEvent(
+        26, 10, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'dur_a_cuire', 6,
+        vehicle.id, null, null,
+        null, null, null, null, makeDurACuireType(), makeAdvantageType(),
+      );
+      expect(event.describe(participants)).toBe('Achat : Dur à Cuire sur Voiture, + avantage Tireur d\'Élite (6 chocs)');
     });
   });
 });

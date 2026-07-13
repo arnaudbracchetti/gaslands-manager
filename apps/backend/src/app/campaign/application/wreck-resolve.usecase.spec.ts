@@ -4,6 +4,8 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import type { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { WreckTable } from '../domain/wreck/wreck-table';
 import type { IRandomizer } from '../domain/randomizer.interface';
+import type { ICatalogRepository } from '../../team/domain/catalog.repository.interface';
+import { SequellaType } from '../../team/domain/value-objects/sequella-type';
 import { Campaign } from '../domain/campaign';
 import { CampaignParticipant } from '../domain/campaign-participant';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
@@ -19,6 +21,23 @@ class FixedRandomizer implements IRandomizer {
   roll(_sides: number): number { return this.fixedRoll; }
   pick<T>(pool: T[]): T { return pool[this.fixedPickIndex]; }
 }
+
+const SIEGE_IRRECUPERABLE = SequellaType.from({
+  nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+});
+
+/** Catalogue minimal — seule `getSequellaType('siege_irrecuperable')` est appelée par WreckTable. */
+const catalog: ICatalogRepository = {
+  getVehicleType: () => undefined,
+  getWeaponType: () => undefined,
+  getImprovementType: () => undefined,
+  getAdvantageType: () => undefined,
+  getSequellaType: (nomInterne: string) => (nomInterne === 'siege_irrecuperable' ? SIEGE_IRRECUPERABLE : undefined),
+  getVehicleTypesForSponsor: () => [],
+  getWeaponTypesForSponsor: () => [],
+  getImprovementTypesForSponsor: () => [],
+  getAdvantageTypesForSponsor: () => [],
+};
 
 /**
  * Régression du bug "écran 3 du wizard bloqué" : la partie doit rester PLANIFIE au
@@ -56,7 +75,7 @@ function makeFixture(wreckTable: WreckTable): {
 describe('WreckResolveUseCase', () => {
   it('résout une partie encore PLANIFIE sans lever (bug historique : addEvent refusait tout une fois JOUE)', async () => {
     // diceRoll=2, modifiedRoll=2 → INDEMNE
-    const { useCase, game } = makeFixture(new WreckTable(new FixedRandomizer(2)));
+    const { useCase, game } = makeFixture(new WreckTable(new FixedRandomizer(2), catalog));
     expect(game.status).toBe(GameStatus.PLANIFIE);
 
     const result = await useCase.execute({
@@ -69,7 +88,7 @@ describe('WreckResolveUseCase', () => {
 
   it('DEBOSSELE : une seule description (WreckResolvedEvent)', async () => {
     // diceRoll=1, modifiedRoll=1 → DEBOSSELE, chocsGained=0 (chocsBefore=0 → clamp min)
-    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(1)));
+    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(1), catalog));
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
@@ -79,7 +98,7 @@ describe('WreckResolveUseCase', () => {
 
   it('ARRACHEE avec une arme perdue : deux descriptions (WreckResolved + WeaponLost)', async () => {
     // diceRoll=5, modifiedRoll=5 → ARRACHEE, pickIndex=0 → weapon(id=10)
-    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(5, 0)));
+    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(5, 0), catalog));
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
@@ -89,7 +108,7 @@ describe('WreckResolveUseCase', () => {
 
   it('ARRACHEE avec une amélioration perdue : deux descriptions (WreckResolved + ImprovementLost)', async () => {
     // diceRoll=5, modifiedRoll=5 → ARRACHEE, pickIndex=1 → improvement(id=20)
-    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(5, 1)));
+    const { useCase } = makeFixture(new WreckTable(new FixedRandomizer(5, 1), catalog));
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
@@ -97,20 +116,20 @@ describe('WreckResolveUseCase', () => {
     expect(result.descriptions[1]).toBe('Amélioration perdue sur le véhicule Voiture : Blindage');
   });
 
-  it('SIEGE_IRRECUPERABLE : deux descriptions (WreckResolved + SequellaAdded)', async () => {
+  it('SIEGE_IRRECUPERABLE : deux descriptions (WreckResolved + EquipmentChangedEvent SEQUELLE)', async () => {
     // diceRoll=6, vehicle.addChocs(1) → modifiedRoll=7 → SIEGE_IRRECUPERABLE
-    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6)));
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
     vehicle.addChocs(1);
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toContain('Séquelle acquise');
+    expect(result.descriptions[1]).toContain('Siège irrécupérable');
   });
 
   it('VEHICULE_DETRUIT sans favori du public : deux descriptions (WreckResolved + VehicleLost)', async () => {
     // diceRoll=6, vehicle.addChocs(4) → modifiedRoll=10 → VEHICULE_DETRUIT
-    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6)));
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
     vehicle.addChocs(4);
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
@@ -121,7 +140,7 @@ describe('WreckResolveUseCase', () => {
 
   it('VEHICULE_DETRUIT avec favori du public en attente : trois descriptions (+ FavoriDuPublicBonus)', async () => {
     // diceRoll=6, vehicle.addChocs(4) → modifiedRoll=10 → VEHICULE_DETRUIT
-    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6)));
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
     vehicle.addChocs(4);
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1, pendingFavoriDuPublic: true,
@@ -132,7 +151,7 @@ describe('WreckResolveUseCase', () => {
 
   it('persiste tous les événements créés via appendEvents', async () => {
     // diceRoll=6, vehicle.addChocs(2) → modifiedRoll=8 → CHASSIS_FRAGILISE
-    const { useCase, vehicle, campaignRepo } = makeFixture(new WreckTable(new FixedRandomizer(6)));
+    const { useCase, vehicle, campaignRepo } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
     vehicle.addChocs(2);
     await useCase.execute({ campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1 });
     expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, expect.arrayContaining([

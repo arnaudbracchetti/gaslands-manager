@@ -2,6 +2,7 @@ import type { VehicleType } from '../../../team/domain/value-objects/vehicle-typ
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
 import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
+import type { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import type { WeaponOrientation } from '../../../team/domain/team';
 import type { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import type { GameEvent } from '../events/game-event';
@@ -43,6 +44,9 @@ export interface ChangeEquipmentInput {
   resolvedWeaponType: WeaponType | null;
   resolvedImprovementType: ImprovementType | null;
   resolvedAdvantageType: AdvantageType | null;
+  resolvedSequellaType: SequellaType | null;
+  /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — avantage gratuit choisi à l'achat. */
+  resolvedFreeAdvantageType: AdvantageType | null;
 }
 
 /** Une ligne du journal d'une partie — événement traduit en texte lisible. */
