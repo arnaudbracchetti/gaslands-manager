@@ -1,4 +1,4 @@
-import type { Orientation } from '../domain/vehicle-build';
+import type { Orientation } from '../domain/team';
 
 export interface VehicleImprovementDto {
   id: number;

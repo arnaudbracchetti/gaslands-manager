@@ -1,4 +1,6 @@
 import type { Avantage } from '../../../catalog/catalog.interfaces';
+import { resolveAdvantageBehavior } from '../behaviors/advantage-behaviors';
+import type { PlacementCandidate, PlacementContext, RuleResult } from '../behaviors/equipment-behavior';
 
 /**
  * Value Object enveloppant un `Avantage` brut du catalogue (`avantage.yml`).
@@ -43,6 +45,16 @@ export class AdvantageType {
 
   equals(other: AdvantageType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
+  }
+
+  /**
+   * Règle de pose (Strategy GoF, cf. `domain/behaviors/advantage-behaviors.ts`) — délègue
+   * au comportement résolu depuis `comportement`. Vit ici plutôt que sur `Advantage`
+   * (l'entité) : au moment de valider un CANDIDAT, aucune instance n'existe encore, seul
+   * son Type est disponible (cf. `Vehicle.canAddAdvantage`).
+   */
+  canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
+    return resolveAdvantageBehavior(this.comportement).canPlace(ctx, candidate);
   }
 
   /**

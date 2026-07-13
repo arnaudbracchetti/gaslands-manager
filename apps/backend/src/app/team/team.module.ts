@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CatalogModule } from '../catalog/catalog.module';
-import { CatalogService } from '../catalog/catalog.service';
 import { CampaignParticipantOrm } from '../campaign/infrastructure/entities/campaign-participant.entity';
 
 // ORM entities (nouvelle couche infrastructure)
@@ -17,10 +16,6 @@ import { WeaponOrm } from './infrastructure/entities/weapon.entity';
 import { CatalogAdapter } from './infrastructure/catalog.adapter';
 import { TeamMapper } from './infrastructure/team.mapper';
 import { TeamRepository } from './infrastructure/team.repository';
-
-// Factory (Pattern Decorator pour les stats de véhicule)
-import { VehicleBuildFactory } from './vehicle-build.factory';
-
 
 // Controllers
 import { TeamController } from './team.controller';
@@ -80,15 +75,6 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     // TeamRepository implémente ITeamRepository (decoré @Injectable, injecté via token)
     { provide: TEAM_REPOSITORY, useClass: TeamRepository },
 
-    // Factory des stats "véhicule monté" (Pattern Decorator). La fabrique de décorateurs
-    // (ImprovementDecoratorFactory) est désormais une classe pure du domaine à `wrap`
-    // statique — plus besoin de la fournir au conteneur.
-    {
-      provide: VehicleBuildFactory,
-      useFactory: (cs: CatalogService) => new VehicleBuildFactory(cs),
-      inject: [CatalogService],
-    },
-
     // ── Use cases — équipe ────────────────────────────────────────────────────
 
     {
@@ -126,9 +112,8 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     },
     {
       provide: GetVehicleDetailUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository, bf: VehicleBuildFactory) =>
-        new GetVehicleDetailUseCase(tr, cr, bf),
-      inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY, VehicleBuildFactory],
+      useFactory: (tr: ITeamRepository) => new GetVehicleDetailUseCase(tr),
+      inject: [TEAM_REPOSITORY],
     },
 
     // ── Use cases — armes ─────────────────────────────────────────────────────

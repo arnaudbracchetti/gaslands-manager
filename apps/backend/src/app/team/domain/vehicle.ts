@@ -10,12 +10,12 @@ import { Advantage } from './advantage';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { SequellaType } from './value-objects/sequella-type';
 import { Sequella } from './sequella';
-import { CatalogVehicleBuild } from './vehicle-build';
-import type { VehicleBuild, InstalledImprovement } from './vehicle-build';
-import { ImprovementDecoratorFactory } from './improvement-decorator.factory';
-import { AdvantageDecoratorFactory } from './advantage-decorator.factory';
-import { SequellaDecoratorFactory } from './sequella-decorators';
-import type { Amelioration, Avantage } from '../../catalog/catalog.interfaces';
+import type {
+  PlacementCandidate,
+  PlacementContext,
+  VehicleStats,
+  VehicleStatsSummary,
+} from './behaviors/equipment-behavior';
 
 /** Les 4 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
 const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
@@ -48,8 +48,8 @@ export class Vehicle {
   /**
    * Séquelles actives sur ce véhicule (mode campagne). Entités enfants (`Sequella`),
    * miroir d'`Advantage` — mêmes mécaniques `isSold`/prix jamais réduit (perte totale).
-   * Maintenues en ordre d'application — instanciées en décorateurs par VehicleBuildFactory
-   * lors du calcul des stats (atelier, Partie 5, non câblé aujourd'hui).
+   * Maintenues en ordre d'application — pliées en premier dans `effectiveStats` via une
+   * Strategy `SequellaBehavior` (cf. `domain/behaviors/sequella-behaviors.ts`).
    */
   private readonly _sequellas: Sequella[] = [];
 
@@ -129,20 +129,20 @@ export class Vehicle {
    * ci-dessous transforme ce bug silencieux en échec explicite.
    */
   get resaleRefund(): number {
+    
     if (this._isSold) {
       throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
     }
     const chassisRefund = Math.floor(this.type.price / 2);
+    
     const weaponsRefund = this._weapons
       .filter((w) => !w.isSold)
       .reduce((sum, w) => sum + w.resaleRefund, 0);
+    
     const improvementsRefund = this._improvements
       .filter((i) => !i.isSold)
       .reduce((sum, i) => sum + i.resaleRefund, 0);
-    // Avantages : resaleRefund vaut toujours 0 (perte totale), donc ce filtre ne change
-    // jamais la somme — mais il reste nécessaire : un avantage déjà vendu individuellement
-    // lève désormais une DomainException si on relit son resaleRefund (cf. Advantage.resaleRefund),
-    // même filtrage que weapons/improvements ci-dessus, pour la même raison.
+    
     const advantagesRefund = this._advantages
       .filter((a) => !a.isSold)
       .reduce((sum, a) => sum + a.resaleRefund, 0);
@@ -160,8 +160,111 @@ export class Vehicle {
     return weaponSlots + improvementSlots;
   }
 
+  /**
+   * Capacité effective moins emplacements consommés. La capacité n'est plus toujours
+   * `this.type.slots` brut : certaines améliorations (Remorque Moyenne/Lourde) l'augmentent
+   * via `applyStats` (cf. `domain/behaviors/improvement-behaviors.ts`) — `effectiveStats`
+   * plie l'état ACTUEL du véhicule (jamais le candidat en cours de test, cf.
+   * `canAddImprovement`/`canAddWeapon`, appelés avant tout `push` sur `_improvements`).
+   * Pour un véhicule sans amélioration de capacité, égal exactement à `type.slots`.
+   */
   private get availableSlots(): number {
-    return this.type.slots - this.usedSlots;
+    return this.effectiveStats.emplacements - this.usedSlots;
+  }
+
+  // ── Stats effectives et récapitulatif (remplace l'ancien Pattern Decorator) ───
+
+  /** Profil catalogue brut — jamais modifié par une séquelle/amélioration/avantage. */
+  get baseStats(): VehicleStats {
+    return {
+      nom_interne: this.type.nomInterne,
+      poids: this.type.poids,
+      carrosserie: this.type.carrosserie,
+      manoeuvrabilite: this.type.manoeuvrabilite,
+      vitesse_max: this.type.vitesseMax,
+      equipage: this.type.equipage,
+      emplacements: this.type.slots,
+    };
+  }
+
+  /**
+   * Profil effectif complet : base → séquelles actives → améliorations actives →
+   * avantages actifs. Un seul fold, dans cet ordre précis — les dommages permanents
+   * (séquelles) s'appliquent avant les bonus d'équipement, eux-mêmes avant les
+   * avantages, pour que Cascadeur/Sur Deux Roues (qui lisent la Manœuvrabilité
+   * effective) voient tout ce qui est déjà monté, sans exception de catégorie : aucune
+   * règle du jeu ne justifie qu'une catégorie reste invisible à une autre, donc TOUT
+   * appelant (validation d'une amélioration, d'un avantage, ou calcul de capacité) lit
+   * ce même état complet — jamais un fold partiel.
+   *
+   * Chaque entité délègue son propre effet à son `applyStats` (Strategy GoF, cf.
+   * `domain/behaviors/`) — `Vehicle` ne connaît plus le mécanisme de résolution, il se
+   * contente d'appeler `applyStats` sur chaque objet actif.
+   *
+   * `isDefault` (estDefaut, amélioration intégrée) N'EST PAS filtré : un équipement
+   * intégré applique quand même ses stats — seul `Vehicle.availableSlots` l'exclut des
+   * emplacements. `isSold`/`isLost` sont filtrés à chaque étape (séquelles : `isSold`
+   * uniquement, une séquelle ne se "perd" pas).
+   */
+  get effectiveStats(): VehicleStats {
+    const apresSequellas = this._sequellas
+      .filter((s) => !s.isSold)
+      .reduce((stats, s) => s.applyStats(stats), this.baseStats);
+
+    const apresAmeliorations = this._improvements
+      .filter((i) => !i.isSold && !i.isLost)
+      .reduce((stats, i) => i.applyStats(stats), apresSequellas);
+
+    return this._advantages
+      .filter((a) => !a.isSold)
+      .reduce((stats, a) => a.applyStats(stats), apresAmeliorations);
+  }
+
+  /**
+   * Récapitulatif affichable : une ligne par équipement (châssis compris), y compris les
+   * objets vendus/perdus — ils restent visibles par leur nom, sans effet sur les stats.
+   * Totalement découplé des Strategy (pur mapping de noms, jamais `applyStats`/`canPlace`).
+   */
+  describe(): VehicleStatsSummary[] {
+    return [
+      { nom: this.type.nom },
+      ...this._sequellas.map((s) => ({ nom: s.type.nom })),
+      ...this._improvements.map((i) => ({ nom: i.type.nom })),
+      ...this._advantages.map((a) => ({ nom: a.type.nom })),
+    ];
+  }
+
+  /**
+   * Contexte de validation pour un candidat amélioration de `comportement` donné :
+   * `installedCount`/`hasOrientation` sont scopés à ce SEUL comportement, calculés ici
+   * une fois pour toutes — aucune Strategy n'a besoin de connaître sa propre clé de
+   * registre pour se compter elle-même.
+   */
+  private buildImprovementPlacementContext(comportement: string | undefined): PlacementContext {
+    const active = this._improvements.filter((i) => !i.isSold && !i.isLost);
+    const same = active.filter((i) => i.type.comportement === comportement);
+    return {
+      baseStats: this.baseStats,
+      currentStats: this.effectiveStats,
+      installedCount: same.length,
+      hasOrientation: (o) => same.some((i) => i.orientation === o),
+      hasComportementAmong: (comportements) =>
+        active.some((i) => comportements.includes(i.type.comportement ?? '')),
+    };
+  }
+
+  /** Mirroir de `buildImprovementPlacementContext` pour les avantages (jamais d'orientation). */
+  private buildAdvantagePlacementContext(comportement: string | undefined): PlacementContext {
+    const active = this._advantages.filter((a) => !a.isSold);
+    const same = active.filter((a) => a.type.comportement === comportement);
+    return {
+      baseStats: this.baseStats,
+      currentStats: this.effectiveStats,
+      installedCount: same.length,
+      hasOrientation: () => false,
+      hasComportementAmong: (comportements) =>
+        active.some((a) => comportements.includes(a.type.comportement ?? '')),
+    };
   }
 
   // ── Règles publiques (pour GET /available-weapons et /available-improvements) ──
@@ -215,9 +318,12 @@ export class Vehicle {
     if (type.requiresOrientation && orientation === null) {
       return fail('Une orientation est requise pour cette amélioration');
     }
-    // Règles de pose spécifiques à l'amélioration (incompatibilités véhicule, unicité,
-    // orientation exclusive, équipage max…), portées par la chaîne de décorateurs Gaslands.
-    const placement = this.buildChain({ improvement: { type, orientation } }).validate();
+    // Règle de pose spécifique à ce SEUL comportement (incompatibilité véhicule, unicité,
+    // orientation exclusive, équipage max…) — Strategy GoF, déléguée par `type` lui-même
+    // (cf. `ImprovementType.canPlace`) ; invoquée une seule fois pour le candidat, jamais
+    // de re-validation des couches déjà montées.
+    const candidate: PlacementCandidate = { nomInterne: type.nomInterne, nom: type.nom, orientation };
+    const placement = type.canPlace(this.buildImprovementPlacementContext(type.comportement), candidate);
     if (!placement.ok) return fail(placement.reason);
     return ok();
   }
@@ -225,12 +331,12 @@ export class Vehicle {
   /**
    * Règle de pose d'un avantage : garde véhicule perdu, budget, puis UNICITÉ (un même
    * avantage ne peut être acquis qu'une fois par véhicule — règle générique, propre aux
-   * avantages, vérifiée ici plutôt que dans un décorateur puisqu'elle s'applique à TOUS
+   * avantages, vérifiée ici plutôt que dans une Strategy puisqu'elle s'applique à TOUS
    * les avantages, pas à un `comportement` particulier). Pas de check d'emplacements
    * (un avantage n'en occupe jamais), pas de paramètre orientation (jamais requise).
-   * Délègue ensuite à la chaîne de décorateurs pour les 2 restrictions spécifiques
-   * (Cascadeur, Sur Deux Roues) — la chaîne inclut aussi les améliorations déjà montées,
-   * pour que ces restrictions lisent la Manœuvrabilité EFFECTIVE (cf. buildChain).
+   * Délègue ensuite à la Strategy du candidat pour les 2 restrictions spécifiques
+   * (Cascadeur, Sur Deux Roues), qui lisent la Manœuvrabilité EFFECTIVE (améliorations
+   * ET avantages déjà montés, cf. `buildAdvantagePlacementContext`/`effectiveStats`).
    */
   canAddAdvantage(type: AdvantageType, remainingBudget: number): RuleResult {
     if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
@@ -243,7 +349,8 @@ export class Vehicle {
     if (this._advantages.some((a) => !a.isSold && a.type.equals(type))) {
       return fail(`"${type.nom}" est déjà acquis sur ce véhicule`);
     }
-    const placement = this.buildChain({ advantage: { type } }).validate();
+    const candidate: PlacementCandidate = { nomInterne: type.nomInterne, nom: type.nom, orientation: null };
+    const placement = type.canPlace(this.buildAdvantagePlacementContext(type.comportement), candidate);
     if (!placement.ok) return fail(placement.reason);
     return ok();
   }
@@ -316,25 +423,6 @@ export class Vehicle {
    * on tente d'abord sans orientation (`null`), puis — si ça échoue potentiellement à
    * cause du seul "orientation requise" (Bélier…) — chaque arc à tour de rôle.
    *
-   * ⚠️ Quand un arc fonctionne, on ne renvoie PAS l'`ok()` de cet arc : l'appelant
-   * (listing) n'a fait que sonder, il n'a pas choisi cette orientation pour de vrai.
-   * On renvoie `direct` (l'échec initial "orientation requise") — c'est ce signal,
-   * pas un `ok()` muet, que le frontend utilise pour savoir qu'il doit encore
-   * demander l'arc à l'utilisateur avant tout ajout réel (même contrat que pour
-   * les armes, cf. `GetAvailableWeaponsUseCase`/`equipment-manager.ts`). Un `ok()`
-   * ici aurait fait sauter cette étape et provoqué un ajout sans orientation,
-   * rejeté ensuite par `canAddImprovement` à l'écriture.
-   * Disponible (verdict final `ok()`) seulement quand AUCUNE orientation n'est
-   * requise ; sinon toujours `fail('Une orientation est requise…')` tant qu'AU
-   * MOINS un arc passe, et la dernière raison d'échec si tous les arcs sont pris
-   * — les autres règles de pose (incompatibilité véhicule, unicité, équipage
-   * max…) grisent bien l'option puisqu'elles échouent quel que soit l'arc testé.
-   *
-   * Règle de LECTURE (verdict "cette amélioration est-elle proposable ?"), distincte de
-   * `canAddImprovement` (règle d'ÉCRITURE pour un arc déjà choisi par l'appelant) — les
-   * deux composent, cette méthode ne fait que sonder la première pour construire un
-   * verdict agrégé. Utilisée par les use cases de listing (équipe ET atelier) : ne pas
-   * dupliquer `ORIENTATIONS_A_SONDER` ni cette boucle côté application.
    */
   canAddImprovementInAnyOrientation(type: ImprovementType, remainingBudget: number): RuleResult {
     const direct = this.canAddImprovement(type, null, remainingBudget);
@@ -347,82 +435,6 @@ export class Vehicle {
       last = result;
     }
     return last;
-  }
-
-  /**
-   * Reconstruit la chaîne de décorateurs "véhicule monté" à partir de l'état de
-   * l'agrégat, afin de calculer les stats effectives et de valider les règles de pose.
-   *
-   * Toutes les collections sont passées BRUTES (`_sequellas`, `_improvements`,
-   * `_advantages`) — plus aucun tri en amont. Chaque instance porte ses flags
-   * (`isDefault`/`isSold`/`isLost`) ; ce sont les décorateurs/factories qui décident de
-   * la contribution : un équipement intégré applique ses stats sans consommer
-   * d'emplacement, un équipement vendu/perdu est neutralisé (cf. les trois factories).
-   *
-   * Ordre de pliage : `base → séquelles → améliorations → avantages`, puis le candidat
-   * testé (amélioration OU avantage — union discriminée, jamais les deux ; les séquelles
-   * ne sont jamais un candidat, `canAddSequella` ne passe pas par la chaîne). Les
-   * dommages permanents (séquelles) s'appliquent au châssis avant les bonus d'équipement,
-   * et sous les avantages pour que Cascadeur/Sur Deux Roues lisent la Manœuvrabilité
-   * EFFECTIVE (bornée `Math.max(1, …)`, donc l'ordre est signifiant). `baseStats` reste
-   * le profil catalogue brut.
-   */
-  private buildChain(
-    candidate:
-      | { improvement: { type: ImprovementType; orientation: Orientation | null } }
-      | { advantage: { type: AdvantageType } },
-  ): VehicleBuild {
-    const sequellas: ReadonlyArray<{ type: SequellaType; instance: InstalledImprovement }> =
-      this._sequellas.map((s) => ({
-        type: s.type,
-        instance: { nom_interne: s.type.nomInterne, isSold: s.isSold },
-      }));
-
-    const improvements: ReadonlyArray<{ raw: Amelioration; instance: InstalledImprovement }> = [
-      ...this._improvements.map((i) => ({
-        raw: i.type.toRaw(),
-        instance: {
-          nom_interne: i.type.nomInterne,
-          orientation: i.orientation ?? undefined,
-          isDefault: i.estDefaut,
-          isSold: i.isSold,
-          isLost: i.isLost,
-        },
-      })),
-      ...('improvement' in candidate
-        ? [
-            {
-              raw: candidate.improvement.type.toRaw(),
-              instance: {
-                nom_interne: candidate.improvement.type.nomInterne,
-                orientation: candidate.improvement.orientation ?? undefined,
-              },
-            },
-          ]
-        : []),
-    ];
-
-    const advantages: ReadonlyArray<{ raw: Avantage; instance: InstalledImprovement }> = [
-      ...this._advantages.map((a) => ({
-        raw: a.type.toRaw(),
-        instance: { nom_interne: a.type.nomInterne, isSold: a.isSold },
-      })),
-      ...('advantage' in candidate
-        ? [{ raw: candidate.advantage.type.toRaw(), instance: { nom_interne: candidate.advantage.type.nomInterne } }]
-        : []),
-    ];
-
-    let build: VehicleBuild = new CatalogVehicleBuild(this.type.toRaw());
-    for (const { type, instance } of sequellas) {
-      build = SequellaDecoratorFactory.wrap(build, type, instance);
-    }
-    for (const { raw, instance } of improvements) {
-      build = ImprovementDecoratorFactory.wrap(build, raw, instance);
-    }
-    for (const { raw, instance } of advantages) {
-      build = AdvantageDecoratorFactory.wrap(build, raw, instance);
-    }
-    return build;
   }
 
   // ── Mutations ─────────────────────────────────────────────────────────────────

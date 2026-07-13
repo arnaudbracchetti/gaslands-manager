@@ -4,9 +4,9 @@ import type { Sequelle } from '../../../catalog/catalog.interfaces';
  * Value Object enveloppant une `Sequelle` brute du catalogue (`sequelle.yml`).
  *
  * Miroir de `AdvantageType`, en plus léger : pas de `categorie`/`comportement`/`regles`
- * ni de `toRaw()` — les séquelles sont pliées dans la chaîne de décorateurs
- * (`Vehicle.buildChain` via `SequellaDecoratorFactory`, cf. `sequella-decorators.ts`) en
- * passant directement le `SequellaType`, jamais la donnée brute du catalogue.
+ * ni de `toRaw()` — les séquelles sont pliées via la Strategy `SequellaBehavior`
+ * (`Vehicle.effectiveStats`, cf. `domain/behaviors/sequella-behaviors.ts`) en passant
+ * directement le `SequellaType`, jamais la donnée brute du catalogue.
  */
 export class SequellaType {
   private constructor(private readonly raw: Sequelle) {}

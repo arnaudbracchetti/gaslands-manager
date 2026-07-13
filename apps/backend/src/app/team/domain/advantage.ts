@@ -1,5 +1,7 @@
 import type { AdvantageType } from './value-objects/advantage-type';
 import { DomainException } from '../../shared/domain/domain-exception';
+import { resolveAdvantageBehavior } from './behaviors/advantage-behaviors';
+import type { VehicleStats } from './behaviors/equipment-behavior';
 
 /**
  * Un avantage acquis sur un véhicule d'équipe (instance de jeu). Entité enfant de
@@ -53,6 +55,16 @@ export class Advantage {
   /** Toujours 0 — un avantage n'occupe jamais d'emplacement. */
   get slots(): number {
     return 0;
+  }
+
+  /**
+   * Effet pur sur le profil accumulé jusque-là (Strategy GoF, cf.
+   * `domain/behaviors/advantage-behaviors.ts`) — délègue au comportement résolu depuis
+   * `type.comportement`. `canPlace`, lui, vit sur `AdvantageType` (nécessaire avant même
+   * qu'une instance existe, cf. `Vehicle.canAddAdvantage`).
+   */
+  applyStats(current: VehicleStats): VehicleStats {
+    return resolveAdvantageBehavior(this.type.comportement).applyStats(current);
   }
 
   get isSold(): boolean {

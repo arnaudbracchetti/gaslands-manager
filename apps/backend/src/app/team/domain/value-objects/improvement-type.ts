@@ -1,4 +1,6 @@
 import type { Amelioration } from '../../../catalog/catalog.interfaces';
+import { resolveImprovementBehavior } from '../behaviors/improvement-behaviors';
+import type { PlacementCandidate, PlacementContext, RuleResult } from '../behaviors/equipment-behavior';
 
 export class ImprovementType {
   private constructor(private readonly raw: Amelioration) {}
@@ -41,6 +43,16 @@ export class ImprovementType {
 
   equals(other: ImprovementType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
+  }
+
+  /**
+   * Règle de pose (Strategy GoF, cf. `domain/behaviors/improvement-behaviors.ts`) — délègue
+   * au comportement résolu depuis `comportement`. Vit ici plutôt que sur `Improvement`
+   * (l'entité) : au moment de valider un CANDIDAT, aucune instance n'existe encore, seul
+   * son Type est disponible (cf. `Vehicle.canAddImprovement`).
+   */
+  canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
+    return resolveImprovementBehavior(this.comportement).canPlace(ctx, candidate);
   }
 
   /**

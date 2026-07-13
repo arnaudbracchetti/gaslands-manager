@@ -378,6 +378,91 @@ describe('Vehicle.canAddImprovement — règles de pose (chaîne Decorator)', ()
     const r = v.canAddImprovement(improvementType('belier', 'belier', 1), 'avant', 100);
     expect(r.ok).toBe(true);
   });
+
+  it('une paire de Chenilles VENDUE ne compte plus pour l\'unicité — en remonter une nouvelle est autorisé', () => {
+    const vendue = new Improvement(1, improvementType('chenilles', 'chenilles', 1), null, false);
+    vendue.markSold();
+    const v = vehicleWith([vendue]);
+    const r = v.canAddImprovement(improvementType('chenilles', 'chenilles', 1), null, 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('membre d\'équipage : le seuil (baseStats.equipage) n\'est pas réduit par une séquelle, contrairement à la valeur testée', () => {
+    const siegeIrrecuperable = SequellaType.from({
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+    });
+    const crew = (): Improvement => new Improvement(0, improvementType('membre_equipage', 'membre_equipage', 0), null, false);
+    // Sans séquelle, 2 membres existants + candidat donnent un effectif de 5 > seuil 4 (base×2)
+    // → refusé (cf. le test « refuse un membre d'équipage au-delà du double » ci-dessus).
+    // Avec Siège Irrécupérable (-1 équipage), l'effectif tombe à 4 = seuil → autorisé, alors que
+    // le SEUIL lui-même reste ancré sur `baseStats.equipage` (2), jamais réduit par la séquelle.
+    const v = vehicleWith([crew(), crew()], { equipage: 2 });
+    v.addCampaignSequella(siegeIrrecuperable, -1);
+    const r = v.canAddImprovement(improvementType('membre_equipage', 'membre_equipage', 0), null, 100);
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe('Vehicle — Remorques (capacité extensible via applyStats)', () => {
+  it('Remorque Moyenne refusée sur un véhicule de Poids Léger', () => {
+    const v = vehicleWith([], { poids: 'Léger' });
+    const r = v.canAddImprovement(improvementType('remorque_moyenne', 'remorque_moyenne', 0), null, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Remorque Moyenne');
+  });
+
+  it('Remorque Moyenne acceptée sur un véhicule de Poids Moyen', () => {
+    const v = vehicleWith([], { poids: 'Moyen' });
+    const r = v.canAddImprovement(improvementType('remorque_moyenne', 'remorque_moyenne', 0), null, 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('Remorque Lourde refusée sur un véhicule de Poids Moyen', () => {
+    const v = vehicleWith([], { poids: 'Moyen' });
+    const r = v.canAddImprovement(improvementType('remorque_lourde', 'remorque_lourde', 0), null, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('Remorque Lourde');
+  });
+
+  it('Remorque Lourde acceptée sur un véhicule de Poids Lourd', () => {
+    const v = vehicleWith([], { poids: 'Lourd' });
+    const r = v.canAddImprovement(improvementType('remorque_lourde', 'remorque_lourde', 0), null, 100);
+    expect(r.ok).toBe(true);
+  });
+
+  it('une seule remorque par véhicule — Remorque Moyenne montée bloque la Remorque Lourde', () => {
+    const moyenne = new Improvement(1, improvementType('remorque_moyenne', 'remorque_moyenne', 0), null, false);
+    const v = vehicleWith([moyenne], { poids: 'Lourd' });
+    const r = v.canAddImprovement(improvementType('remorque_lourde', 'remorque_lourde', 0), null, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('une seule remorque');
+  });
+
+  it('une seule remorque par véhicule — Remorque Lourde montée bloque la Remorque Moyenne', () => {
+    const lourde = new Improvement(1, improvementType('remorque_lourde', 'remorque_lourde', 0), null, false);
+    const v = vehicleWith([lourde], { poids: 'Lourd' });
+    const r = v.canAddImprovement(improvementType('remorque_moyenne', 'remorque_moyenne', 0), null, 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('une seule remorque');
+  });
+
+  it('la Remorque Moyenne augmente la capacité effective disponible (+1 emplacement)', () => {
+    // Capacité totale 1, entièrement consommée par un premier objet — la Remorque elle-même
+    // coûte 0 emplacement au catalogue, donc son propre ajout ne dépend jamais de la capacité.
+    const filler = new Improvement(1, makeImprovementType(4, 1), null, false);
+    const v = vehicleWith([filler], { poids: 'Moyen', emplacements: 1 });
+
+    // Sans remorque : plus aucun emplacement disponible pour un second objet de 1 slot.
+    const refuse = v.canAddImprovement(makeImprovementType(4, 1), null, 100);
+    expect(refuse.ok).toBe(false);
+    if (!refuse.ok) expect(refuse.reason).toBe('Emplacements insuffisants sur ce véhicule');
+
+    v.addImprovement(improvementType('remorque_moyenne', 'remorque_moyenne', 0), null, 100);
+
+    // Après la Remorque (+1), la capacité effective passe à 2 — le second objet devient acceptable.
+    const accepte = v.canAddImprovement(makeImprovementType(4, 1), null, 100);
+    expect(accepte.ok).toBe(true);
+  });
 });
 
 describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilité (listing)', () => {

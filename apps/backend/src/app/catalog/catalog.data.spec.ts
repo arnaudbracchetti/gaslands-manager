@@ -29,8 +29,8 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CatalogService } from './catalog.service';
-import { ImprovementDecoratorFactory } from '../team/domain/improvement-decorator.factory';
-import { AdvantageDecoratorFactory } from '../team/domain/advantage-decorator.factory';
+import { IMPROVEMENT_BEHAVIORS } from '../team/domain/behaviors/improvement-behaviors';
+import { ADVANTAGE_BEHAVIORS } from '../team/domain/behaviors/advantage-behaviors';
 import type { Sponsor, Vehicule, Arme, Amelioration, Avantage } from './catalog.interfaces';
 
 // ── Sous-classe avec chemin absolu vers les vrais fichiers ─────────────────────
@@ -361,25 +361,25 @@ describe('Relations sponsor — cohérence des données résolues', () => {
 
 // ── 6. Cohérence comportement ↔ registre de décorateurs ───────────────────────
 //
-// Le module Vehicle (Pattern Decorator, cf. apps/backend/src/app/vehicle/) relie
-// chaque amélioration à sa règle métier via une seule clé déclarée en YAML :
-// `comportement: "<clé>"`. ImprovementDecoratorFactory.REGISTRE traduit cette clé
-// en classe à instancier. Le risque, structurellement invisible à l'exécution :
-// si quelqu'un ajoute ou renomme un `comportement` dans amelioration.yml SANS
-// l'enregistrer côté code, `wrap()` retombe silencieusement sur `NeutralDecorator`
+// Le module Vehicle (Strategy GoF, cf. apps/backend/src/app/team/domain/behaviors/)
+// relie chaque amélioration à sa règle métier via une seule clé déclarée en YAML :
+// `comportement: "<clé>"`. IMPROVEMENT_BEHAVIORS traduit cette clé en Strategy à
+// invoquer. Le risque, structurellement invisible à l'exécution : si quelqu'un ajoute
+// ou renomme un `comportement` dans amelioration.yml SANS l'enregistrer côté code,
+// `resolveImprovementBehavior()` retombe silencieusement sur le comportement neutre
 // — l'amélioration s'achète normalement, mais SA RÈGLE ne s'applique jamais. Ce
 // test transforme cette dégradation silencieuse en échec explicite, dès le chargement.
 
-describe('comportement — cohérence YAML ↔ ImprovementDecoratorFactory.REGISTRE', () => {
-  it('tout `comportement` déclaré dans amelioration.yml correspond à une entrée du REGISTRE', () => {
+describe('comportement — cohérence YAML ↔ IMPROVEMENT_BEHAVIORS', () => {
+  it('tout `comportement` déclaré dans amelioration.yml correspond à une entrée du registre', () => {
     const comportementsDeclares = ameliorations
       .map((a) => a.comportement)
       .filter((c): c is string => c !== undefined);
 
     for (const comportement of comportementsDeclares) {
       expect(
-        ImprovementDecoratorFactory.REGISTRE[comportement],
-        `Le comportement "${comportement}" est déclaré dans amelioration.yml mais absent du REGISTRE`,
+        IMPROVEMENT_BEHAVIORS[comportement],
+        `Le comportement "${comportement}" est déclaré dans amelioration.yml mais absent du registre`,
       ).toBeDefined();
     }
   });
@@ -524,16 +524,16 @@ describe('Avantages — catégories cohérentes avec sponsors.yml (classes_avant
   });
 });
 
-describe('Avantages — comportement ↔ AdvantageDecoratorFactory.REGISTRE', () => {
-  it('tout `comportement` déclaré dans avantage.yml correspond à une entrée du REGISTRE', () => {
+describe('Avantages — comportement ↔ ADVANTAGE_BEHAVIORS', () => {
+  it('tout `comportement` déclaré dans avantage.yml correspond à une entrée du registre', () => {
     const comportementsDeclares = avantages
       .map((a) => a.comportement)
       .filter((c): c is string => c !== undefined);
 
     for (const comportement of comportementsDeclares) {
       expect(
-        AdvantageDecoratorFactory.REGISTRE[comportement],
-        `Le comportement "${comportement}" est déclaré dans avantage.yml mais absent du REGISTRE`,
+        ADVANTAGE_BEHAVIORS[comportement],
+        `Le comportement "${comportement}" est déclaré dans avantage.yml mais absent du registre`,
       ).toBeDefined();
     }
   });

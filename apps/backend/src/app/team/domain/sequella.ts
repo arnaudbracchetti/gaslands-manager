@@ -1,5 +1,7 @@
 import type { SequellaType } from './value-objects/sequella-type';
 import { DomainException } from '../../shared/domain/domain-exception';
+import { resolveSequellaBehavior } from './behaviors/sequella-behaviors';
+import type { VehicleStats } from './behaviors/equipment-behavior';
 
 /**
  * Une séquelle acquise sur un véhicule d'équipe (mode campagne). Entité enfant de
@@ -34,6 +36,18 @@ export class Sequella {
 
   get isSold(): boolean {
     return this._isSold;
+  }
+
+  /**
+   * Effet pur sur le profil accumulé jusque-là (Strategy GoF, cf.
+   * `domain/behaviors/sequella-behaviors.ts`) — délègue au comportement résolu depuis
+   * `type.nomInterne` (les séquelles n'ont pas de champ `comportement`). Pas de
+   * `canPlace` symétrique : une séquelle n'est jamais validée via ce mécanisme
+   * (`Vehicle.canAddSequella` reste indépendant, cf. sa doc) — asymétrie volontaire,
+   * pas un oubli.
+   */
+  applyStats(current: VehicleStats): VehicleStats {
+    return resolveSequellaBehavior(this.type.nomInterne).applyStats(current);
   }
 
   /** Idempotent : marquer une séquelle déjà vendue n'a pas d'effet supplémentaire. */

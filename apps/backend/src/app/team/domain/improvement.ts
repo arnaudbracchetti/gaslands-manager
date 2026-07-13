@@ -1,6 +1,8 @@
 import type { ImprovementType } from './value-objects/improvement-type';
 import type { Orientation } from './team';
 import { DomainException } from '../../shared/domain/domain-exception';
+import { resolveImprovementBehavior } from './behaviors/improvement-behaviors';
+import type { VehicleStats } from './behaviors/equipment-behavior';
 
 /**
  * Une amélioration montée sur un véhicule d'équipe (instance de jeu).
@@ -48,6 +50,19 @@ export class Improvement {
   get slots(): number {
     if (this.estDefaut || this._isLost || this._isSold) return 0;
     return this.type.slots;
+  }
+
+  /**
+   * Effet pur sur le profil accumulé jusque-là (Strategy GoF, cf.
+   * `domain/behaviors/improvement-behaviors.ts`) — délègue au comportement résolu
+   * depuis `type.comportement`. Contrairement à `canPlace` (porté par `ImprovementType`,
+   * nécessaire avant même qu'une instance existe), cette méthode vit ici : elle
+   * s'applique toujours à une amélioration déjà montée, une instance existe donc
+   * systématiquement (cf. `Vehicle.effectiveStats`, qui ne l'invoque que sur les
+   * améliorations actives, `!isSold && !isLost`).
+   */
+  applyStats(current: VehicleStats): VehicleStats {
+    return resolveImprovementBehavior(this.type.comportement).applyStats(current);
   }
 
   get isLost(): boolean {

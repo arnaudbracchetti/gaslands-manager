@@ -417,6 +417,7 @@ ameliorations_vehicules:
 
   - nom: "Remorque Moyenne"
     nom_interne: "remorque_moyenne"
+    comportement: "remorque_moyenne"
     prix: 8
     emplacement: 0
     necessite_orientation: false
@@ -434,6 +435,7 @@ ameliorations_vehicules:
 
   - nom: "Remorque Lourde"
     nom_interne: "remorque_lourde"
+    comportement: "remorque_lourde"
     prix: 12
     emplacement: 0
     necessite_orientation: false
