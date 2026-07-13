@@ -515,8 +515,8 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   d'équipement (`ARRACHEE`) est tirée aléatoirement dans le pool armes +
   améliorations montées (jamais un choix de l'organisateur), et peut désormais
   cibler une amélioration (`ImprovementLostEvent`, mirroir de `WeaponLostEvent`),
-  pas seulement une arme. « Siège irrécupérable » réutilise le pattern Décorateur
-  existant (`SiegeIrrecuperableDecorator`, réduit l'Équipage). Reste hors
+  pas seulement une arme. « Siège irrécupérable » réutilise le mécanisme Strategy
+  existant (`SiegeIrrecuperableBehavior`, réduit l'Équipage). Reste hors
   périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (commentaire
   explicite dans le code, pas un marqueur `TODO` littéral - nécessiterait de distinguer les deux lignes du livre).
   Les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double

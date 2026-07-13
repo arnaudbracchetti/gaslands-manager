@@ -160,207 +160,262 @@ sequenceDiagram
 
 ---
 
-## 4. Pattern Décorateur - `VehicleBuild`
+## 4. Pattern Strategy - `EquipmentBehavior`
 
-C'est le cœur du système de validation. Chaque amélioration ou avantage installé
-**enveloppe** la chaîne courante et peut modifier les statistiques et les règles de
-validation. Fichier de référence :
-[`domain/vehicle-build.ts`](../apps/backend/src/app/team/domain/vehicle-build.ts) -
-le fichier lui-même porte un commentaire d'en-tête détaillé sur le raisonnement de
-conception ; cette section en donne la vue d'ensemble.
+C'est le cœur du système de validation. Chaque comportement de jeu (Chenilles, Bélier,
+Cascadeur, Remorque Moyenne…) est une petite classe **stateless**, invoquée directement
+par `Vehicle` sur l'état qu'il lui fournit - contrairement à un ancien Pattern Decorator
+(chaîne d'objets qui s'enveloppent les uns les autres), remplacé courant juillet 2026
+pour éliminer une capacité fixe non extensible et simplifier le mécanisme. Fichiers de
+référence : [`domain/behaviors/equipment-behavior.ts`](../apps/backend/src/app/team/domain/behaviors/equipment-behavior.ts)
+(contrat + base commune) et les 3 fichiers `*-behaviors.ts` par famille (améliorations,
+avantages, séquelles) - chacun porte un commentaire d'en-tête ; cette section en donne la
+vue d'ensemble.
 
 ### 4.1 Hiérarchie de classes
 
 ```mermaid
 classDiagram
-    class VehicleBuild {
+    class EquipmentBehavior {
         <<interface>>
-        +baseStats VehicleStats
-        +stats VehicleStats
-        +validate() RuleResult
-        +totalEmplacements() number
-        +countByType(ctor) number
-        +hasOrientationFor(ctor, orientation) boolean
-        +describe() VehicleStatsSummary[]
+        +applyStats(current) VehicleStats
+        +canPlace(ctx, candidate) RuleResult
     }
 
-    class CatalogVehicleBuild {
-        -catalogue Vehicule
-        +baseStats VehicleStats
-        +stats VehicleStats
-        +validate() RuleResult  "retourne toujours ok()"
-        +totalEmplacements() number  "toujours 0"
-    }
-
-    class ImprovementDecorator {
+    class EquipmentBehaviorBase {
         <<abstract>>
-        #inner VehicleBuild
-        #amelioration Amelioration
-        #instance InstalledImprovement
-        +stats VehicleStats       "délègue à inner, sauf override"
-        +validate() RuleResult    "Template Method"
-        #validateSelf() RuleResult  "à surcharger, ok() par défaut"
-        +totalEmplacements() number "amelioration.emplacement + inner"
+        +applyStats(current) VehicleStats  "identité par défaut"
+        +canPlace(ctx, candidate) RuleResult  "ok() par défaut"
     }
 
-    class ChenillesDecorator {
-        +stats VehicleStats  "vitesse_max-1, manoeuvrabilite+1"
-        #validateSelf()      "unique ; incompatible char_assaut/helicoptere/gyrocoptere"
+    class ChenillesBehavior {
+        +applyStats  "vitesse_max-1, manoeuvrabilite+1"
+        +canPlace    "unique ; incompatible char_assaut/helicoptere/gyrocoptere"
     }
 
-    class BelierDecorator {
-        #validateSelf()      "orientation obligatoire, unique par orientation"
+    class BelierBehavior {
+        +canPlace    "unique PAR ORIENTATION (lit candidate.orientation)"
     }
 
-    class BelierExplosifDecorator {
-        #validateSelf()      "orientation obligatoire, unique par orientation"
+    class BelierExplosifBehavior {
+        +canPlace    "poids Léger interdit ; unique par véhicule"
     }
 
-    class MembreEquipageDecorator {
-        +stats VehicleStats  "equipage+1"
-        #validateSelf()      "max = 2x equipage initial"
+    class MembreEquipageBehavior {
+        +applyStats  "equipage+1"
+        +canPlace    "max = 2x equipage initial (baseStats), testé sur l'effectif+candidat"
     }
 
-    class BlindageDecorator {
-        +stats VehicleStats  "carrosserie+2"
-        #validateSelf()      "toujours ok - cumulable sans limite"
+    class BlindageBehavior {
+        +applyStats  "carrosserie+2"
+        "aucun canPlace propre - cumulable sans limite"
     }
 
-    class EquipementMishkinDecorator {
-        #validateSelf()      "unique par véhicule (comportement mishkin_exclusif)"
+    class MishkinExclusifBehavior {
+        +canPlace    "unique par véhicule"
     }
 
-    class NeutralDecorator {
-        "aucun override - décorateur par défaut, sans effet ni règle propre"
+    class RemorqueMoyenneBehavior {
+        +applyStats  "emplacements+1"
+        +canPlace    "poids Léger interdit ; une seule remorque (toutes comportements confondus)"
     }
 
-    class AdvantageDecorator {
-        <<abstract, extends ImprovementDecorator>>
-        "construit un Amelioration factice depuis l'Avantage réel"
+    class RemorqueLourdeBehavior {
+        +applyStats  "emplacements+3"
+        +canPlace    "poids Lourd requis ; une seule remorque"
     }
 
-    class NeutralAdvantageDecorator {
-        "69 des 72 avantages - purement descriptifs"
+    class NeutralEquipmentBehavior {
+        "aucun override - comportement par défaut, sans effet ni règle propre"
     }
 
-    class ExpertiseDecorator {
-        +stats VehicleStats  "manoeuvrabilite+1"
+    class ExpertiseBehavior {
+        +applyStats  "manoeuvrabilite+1"
     }
 
-    class CascadeurDecorator {
-        #validateSelf()  "poids Leger/Moyen requis, manoeuvrabilite EFFECTIVE >= 3"
+    class CascadeurBehavior {
+        +canPlace  "poids Leger/Moyen requis, manoeuvrabilite EFFECTIVE >= 3"
     }
 
-    class SurDeuxRouesDecorator {
-        #validateSelf()  "manoeuvrabilite EFFECTIVE >= 3, tout poids"
+    class SurDeuxRouesBehavior {
+        +canPlace  "manoeuvrabilite EFFECTIVE >= 3, tout poids"
     }
 
-    VehicleBuild <|.. CatalogVehicleBuild
-    VehicleBuild <|.. ImprovementDecorator
-    ImprovementDecorator <|-- ChenillesDecorator
-    ImprovementDecorator <|-- BelierDecorator
-    ImprovementDecorator <|-- BelierExplosifDecorator
-    ImprovementDecorator <|-- MembreEquipageDecorator
-    ImprovementDecorator <|-- BlindageDecorator
-    ImprovementDecorator <|-- EquipementMishkinDecorator
-    ImprovementDecorator <|-- NeutralDecorator
-    ImprovementDecorator <|-- AdvantageDecorator
-    AdvantageDecorator <|-- NeutralAdvantageDecorator
-    AdvantageDecorator <|-- ExpertiseDecorator
-    AdvantageDecorator <|-- CascadeurDecorator
-    AdvantageDecorator <|-- SurDeuxRouesDecorator
+    class SequellaBehavior {
+        <<interface, plus étroite>>
+        +applyStats(current) VehicleStats
+        "PAS de canPlace - une séquelle n'est jamais validée via ce mécanisme"
+    }
+
+    EquipmentBehavior <|.. EquipmentBehaviorBase
+    EquipmentBehaviorBase <|-- ChenillesBehavior
+    EquipmentBehaviorBase <|-- BelierBehavior
+    EquipmentBehaviorBase <|-- BelierExplosifBehavior
+    EquipmentBehaviorBase <|-- MembreEquipageBehavior
+    EquipmentBehaviorBase <|-- BlindageBehavior
+    EquipmentBehaviorBase <|-- MishkinExclusifBehavior
+    EquipmentBehaviorBase <|-- RemorqueMoyenneBehavior
+    EquipmentBehaviorBase <|-- RemorqueLourdeBehavior
+    EquipmentBehaviorBase <|-- NeutralEquipmentBehavior
+    EquipmentBehaviorBase <|-- ExpertiseBehavior
+    EquipmentBehaviorBase <|-- CascadeurBehavior
+    EquipmentBehaviorBase <|-- SurDeuxRouesBehavior
 ```
 
-`AdvantageDecorator` (`domain/advantage-decorators.ts`) hérite directement
-d'`ImprovementDecorator` : il construit un `Amelioration` catalogue factice depuis
-l'`Avantage` réel (`emplacement: 0`, pas de `sponsors_autorises`) - même technique que
-`SequellaDecorator`, qui fait déjà ceci pour un concept hors catalogue `amelioration.yml`.
-Cela permet de réutiliser tel quel le Template Method `validate()` et le calcul de
-`stats` sans dupliquer la classe abstraite.
+Aucune classe ne référence une autre via un champ `inner` (contrairement à l'ancien
+Decorator) : chaque `XxxBehavior` est une feuille isolée, et **une seule instance de
+chaque classe suffit pour toute l'application** (les registres, cf. §4.4, stockent des
+singletons) - il n'y a plus jamais de `new XxxBehavior(inner, ...)` à chaque validation.
+`SequellaBehavior` porte une interface volontairement plus étroite (pas de `canPlace`) :
+les séquelles ne sont jamais validées via ce mécanisme, `Vehicle.canAddSequella` reste
+un chemin de validation indépendant (origine/unicité/Chocs).
 
-### 4.2 Deux mécanismes de construction de la chaîne
+### 4.2 Un seul mécanisme de fold - `Vehicle.effectiveStats`
 
-Contrairement à une factory unique, deux mécanismes coexistent aujourd'hui pour des
-raisons différentes :
+Contrairement à l'ancien système (deux mécanismes distincts - `Vehicle.buildChain()`
+pour la validation, `VehicleBuildFactory` `@Injectable` pour l'affichage), il n'y en a
+plus qu'un seul aujourd'hui : `Vehicle.effectiveStats` (`domain/vehicle.ts`), un getter
+qui plie directement les 3 collections de l'agrégat via `reduce()` - aucune classe
+séparée, aucun service NestJS dédié à instancier :
 
-| Mécanisme | Où | Rôle |
-|---|---|---|
-| `Vehicle.buildChain()` | privé, dans l'agrégat (`domain/vehicle.ts`) | Reconstruit la chaîne depuis l'état courant de l'agrégat pour **valider une pose candidate** (`canAddImprovement`/`canAddAdvantage`) - plie `_improvements` (hors `estDefaut`) PUIS `_advantages` (hors vendus) PUIS le candidat testé |
-| `VehicleBuildFactory` | `@Injectable` NestJS (`team/vehicle-build.factory.ts`) | Calcule les **stats effectives** d'un véhicule pour l'affichage/atelier campagne (ex. décorateurs de séquelles), sans lien avec une validation de pose en cours |
+```typescript
+get effectiveStats(): VehicleStats {
+  const apresSequellas = this._sequellas
+    .filter((s) => !s.isSold)
+    .reduce((stats, s) => s.applyStats(stats), this.baseStats);
 
-`buildChain()` plie *améliorations puis avantages* dans cet ordre précis : les deux
-avantages à comportement mécanique (Cascadeur, Sur Deux Roues) doivent lire la
-Manœuvrabilité **effective**, c'est-à-dire après le bonus d'une amélioration déjà montée
-(Chenilles) ou d'un autre avantage déjà acquis (Expertise) - d'où la nécessité de plier
-les deux collections dans la même chaîne, dans cet ordre, avant le candidat en cours de
-test.
+  const apresAmeliorations = this._improvements
+    .filter((i) => !i.isSold && !i.isLost)
+    .reduce((stats, i) => i.applyStats(stats), apresSequellas);
 
-```
-CatalogVehicleBuild("voiture")
-  ↑ enveloppé par
-BelierDecorator(orientation="avant")
-  ↑ enveloppé par
-BlindageDecorator
-  ↑ enveloppé par
-ExpertiseDecorator (avantage)
-  ↑ enveloppé par
-CascadeurDecorator (avantage candidat, en cours de validation)
+  return this._advantages
+    .filter((a) => !a.isSold)
+    .reduce((stats, a) => a.applyStats(stats), apresAmeliorations);
+}
 ```
 
-Appeler `build.stats` retourne les statistiques **cumulées** depuis le bas de la chaîne.
-Appeler `build.validate()` déclenche le **Template Method** à chaque niveau (règle
-générique d'emplacements, puis `validateSelf()` spécifique, puis délégation vers `inner`) -
-voir le commentaire détaillé de `ImprovementDecorator.validate()` dans le fichier source.
+Ordre figé - **séquelles → améliorations → avantages** : les deux avantages à
+comportement mécanique (Cascadeur, Sur Deux Roues) doivent lire la Manœuvrabilité
+**effective**, c'est-à-dire après le bonus d'une amélioration déjà montée (Chenilles),
+d'une séquelle (dommage permanent), ou d'un autre avantage déjà acquis (Expertise) - d'où
+le pliage successif des 3 collections dans cet ordre précis. Aucune règle du jeu ne
+justifie qu'une catégorie reste invisible à une autre : `effectiveStats` est donc l'état
+**complet** consulté par tout appelant (validation d'une amélioration, d'un avantage, ou
+calcul de capacité `availableSlots`) - jamais un fold partiel.
 
-### 4.3 `baseStats` vs `stats` - différence critique
+`Vehicle` ne référence jamais directement `resolveImprovementBehavior`/
+`resolveAdvantageBehavior`/`resolveSequellaBehavior` : chaque entité/Type délègue lui-même
+(cf. §4.5) - le mécanisme Strategy est invisible depuis l'agrégat.
+
+### 4.3 `baseStats` vs `effectiveStats` - différence critique
 
 | Propriété | Valeur | Usage |
 |-----------|--------|-------|
-| `baseStats` | Profil d'origine du catalogue | "quel type de véhicule ?" (`nom_interne === 'char_assaut'`) |
-| `stats` | Profil après accumulation des décorateurs | Affichage, validation "équipage max = 2× initial", Manœuvrabilité effective (Cascadeur/Sur Deux Roues) |
+| `baseStats` | Profil d'origine du catalogue (`emplacements` inclus) | "quel type de véhicule ?" (`nom_interne === 'char_assaut'`), seuil de `MembreEquipageBehavior` |
+| `effectiveStats` | Profil après accumulation de tout ce qui est monté | Affichage, validation "équipage max = 2× initial", Manœuvrabilité effective (Cascadeur/Sur Deux Roues), capacité effective (`availableSlots`) |
 
-Tous les décorateurs **délèguent** `baseStats` vers `inner` sans le modifier - seul
-`CatalogVehicleBuild` le détient.
+`baseStats` ne change jamais, quelle que soit la couche qui le consulte - c'est un
+simple getter sur `Vehicle`, projection directe de `this.type` (aucune classe séparée ne
+le porte, contrairement à `CatalogVehicleBuild` dans l'ancien système).
 
-### 4.4 Sélection du décorateur - clé `comportement` YAML
+### 4.4 Sélection du comportement - clé `comportement` YAML
 
-Le champ `comportement` dans le YAML d'amélioration ou d'avantage détermine quelle classe
-instancier, **indépendamment du `nom_interne`**. C'est ce qui permet aux variantes sponsor
-d'avoir le même comportement de validation à prix différent :
+Le champ `comportement` dans le YAML d'amélioration ou d'avantage détermine quelle
+Strategy invoquer, **indépendamment du `nom_interne`**. C'est ce qui permet aux variantes
+sponsor d'avoir le même comportement de validation à prix différent :
 
 ```yaml
-# Deux entrées YAML, une seule classe de décorateur
+# Deux entrées YAML, une seule Strategy
 - nom: "Bélier"
   nom_interne: belier
-  comportement: belier    # → BelierDecorator
+  comportement: belier    # → BelierBehavior
   prix: 4
 
 - nom: "Bélier (Slime)"
   nom_interne: belier_slime
-  comportement: belier    # → BelierDecorator identique
+  comportement: belier    # → BelierBehavior identique
   prix: 2
 ```
 
-Registre des améliorations (`domain/improvement-decorator.factory.ts`) :
+Registre des améliorations (`domain/behaviors/improvement-behaviors.ts`,
+`IMPROVEMENT_BEHAVIORS` + `resolveImprovementBehavior`) :
 
 ```
-chenilles          → ChenillesDecorator
-membre_equipage    → MembreEquipageDecorator
-belier             → BelierDecorator
-belier_explosif    → BelierExplosifDecorator
-blindage           → BlindageDecorator
-mishkin_exclusif   → EquipementMishkinDecorator
-(autre/absent)     → NeutralDecorator
+chenilles          → ChenillesBehavior
+membre_equipage    → MembreEquipageBehavior
+belier             → BelierBehavior
+belier_explosif    → BelierExplosifBehavior
+blindage           → BlindageBehavior
+mishkin_exclusif   → MishkinExclusifBehavior
+remorque_moyenne   → RemorqueMoyenneBehavior
+remorque_lourde    → RemorqueLourdeBehavior
+(autre/absent)     → NEUTRAL_EQUIPMENT_BEHAVIOR
 ```
 
-Registre des avantages (`domain/advantage-decorator.factory.ts`) :
+Registre des avantages (`domain/behaviors/advantage-behaviors.ts`,
+`ADVANTAGE_BEHAVIORS` + `resolveAdvantageBehavior`) :
 
 ```
-expertise          → ExpertiseDecorator
-cascadeur          → CascadeurDecorator
-sur_deux_roues     → SurDeuxRouesDecorator
-(autre/absent)     → NeutralAdvantageDecorator   (69 des 72 avantages)
+expertise          → ExpertiseBehavior
+cascadeur          → CascadeurBehavior
+sur_deux_roues     → SurDeuxRouesBehavior
+(autre/absent)     → NEUTRAL_EQUIPMENT_BEHAVIOR   (69 des 72 avantages)
 ```
+
+Registre des séquelles (`domain/behaviors/sequella-behaviors.ts`,
+`SEQUELLA_BEHAVIORS` - une `Map`, clé = `nom_interne` et non `comportement`, les
+séquelles n'ayant pas ce champ au catalogue) :
+
+```
+moteur_endommage       → MoteurEndommageBehavior
+direction_endommage    → DirectionEndommageBehavior
+blindage_arrache       → BlindageArracheBehavior
+siege_irrecuperable    → SiegeIrrecuperableBehavior
+(autre/absent)         → comportement neutre   (11 des 15 séquelles)
+```
+
+### 4.5 `canPlace` sur le Type, `applyStats` sur l'Instance
+
+Ni `Vehicle` ni les use cases n'appellent directement `resolveImprovementBehavior(...)` -
+chaque objet du domaine délègue lui-même à la Strategy résolue depuis son propre
+`comportement`, mais **pas au même niveau** selon la méthode :
+
+| Méthode | Portée par | Pourquoi |
+|---|---|---|
+| `canPlace(ctx, candidate)` | `ImprovementType`/`AdvantageType` (Value Object) | Au moment de valider un **candidat**, aucune instance `Improvement`/`Advantage` n'existe encore - seul son Type est disponible (`Vehicle.canAddImprovement`/`canAddAdvantage`) |
+| `applyStats(current)` | `Improvement`/`Advantage`/`Sequella` (entité) | S'applique toujours à un équipement **déjà monté** - une instance existe systématiquement (cf. le fold `effectiveStats` ci-dessus) ; cohérent avec `price`/`slots`/`resaleRefund`, déjà des méthodes d'instance qui lisent `this.type` |
+
+```typescript
+// value-objects/improvement-type.ts
+canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
+  return resolveImprovementBehavior(this.comportement).canPlace(ctx, candidate);
+}
+
+// improvement.ts (entité)
+applyStats(current: VehicleStats): VehicleStats {
+  return resolveImprovementBehavior(this.type.comportement).applyStats(current);
+}
+```
+
+`Sequella` n'a que `applyStats` (pas de `canPlace` sur `SequellaType` - asymétrie
+volontaire, cf. §4.1).
+
+### 4.6 Unicité transversale - `PlacementContext.hasComportementAmong`
+
+Certaines règles de pose doivent traverser **plusieurs** `comportement` différents - ex.
+« un véhicule ne peut être équipé que d'une seule remorque », vraie qu'il s'agisse de
+Remorque Moyenne ou Remorque Lourde ensemble, pas seulement de deux Remorques Moyennes.
+`PlacementContext` expose une méthode générique pour ça :
+
+```typescript
+hasComportementAmong(comportements: readonly string[]): boolean
+```
+
+C'est la Strategy qui fournit la liste des comportements "frères" (elle seule la
+connaît) ; `Vehicle` exécute juste la recherche sur l'état qu'il possède déjà - aucune
+classe n'a besoin de connaître ou répéter sa propre clé de registre pour se compter
+elle-même (`installedCount`/`hasOrientation`, scopés à un seul comportement, suivent le
+même principe).
 
 ---
 
@@ -400,7 +455,7 @@ sequenceDiagram
     Note over EM: Même logique pour available-improvements
     API_I-->>EM: AvailableImprovementDto[]
 
-    Note over EM: Les avantages n'ont ni orientation ni emplacement -<br/>le verdict combine budget + unicité + décorateurs (Cascadeur/Sur Deux Roues)
+    Note over EM: Les avantages n'ont ni orientation ni emplacement -<br/>le verdict combine budget + unicité + Strategy (Cascadeur/Sur Deux Roues)
     API_A-->>EM: AvailableAdvantageDto[]
 
     EM->>EM: Affiche catalogue<br/>✅ disponible → bouton Ajouter<br/>⚠️ raison "orientation requise" → sélecteur (armes/améliorations seulement)<br/>❌ autre raison → grisé + message
@@ -438,13 +493,13 @@ pas) puis l'agrégat lui-même.
 ```
 1. Véhicule perdu/vendu                → fail
 2. Budget de l'équipe insuffisant       → fail
-3. Emplacements insuffisants (contrôle global armes+améliorations,
-   porté par l'agrégat car la chaîne de décorateurs ne connaît
-   que les améliorations) → fail
+3. Emplacements insuffisants (contrôle global armes+améliorations, porté par
+   l'agrégat via `availableSlots` - capacité EFFECTIVE, pas figée : certaines
+   améliorations, ex. Remorque Moyenne/Lourde, l'augmentent, cf. §6) → fail
 4. Orientation requise mais absente     → fail
-5. Règles de pose spécifiques (chaîne de décorateurs Gaslands :
-   incompatibilité véhicule, unicité, orientation exclusive,
-   équipage max...) → fail
+5. Règle de pose spécifique à ce SEUL comportement (Strategy GoF, déléguée par
+   `ImprovementType.canPlace` - incompatibilité véhicule, unicité, orientation
+   exclusive, équipage max...) → fail
 ```
 
 **Couche agrégat, avantages (`Vehicle.canAddAdvantage`)** :
@@ -453,7 +508,7 @@ pas) puis l'agrégat lui-même.
 1. Véhicule perdu/vendu                        → fail
 2. Budget de l'équipe insuffisant               → fail
 3. Unicité (déjà acquis et pas encore revendu)  → fail
-4. Règles de pose spécifiques (chaîne de décorateurs :
+4. Règle de pose spécifique (Strategy GoF, déléguée par `AdvantageType.canPlace` :
    Cascadeur poids+manœuvrabilité, Sur Deux Roues manœuvrabilité) → fail
    (jamais de contrôle d'emplacement ni d'orientation - un avantage
    n'en a pas)
@@ -516,10 +571,30 @@ sequenceDiagram
 armes **et** améliorations. Ce n'est pas deux pools séparés. Les avantages n'y
 participent **jamais** (`AdvantageType` n'expose aucune notion de slot).
 
+### Capacité EFFECTIVE, pas fixe - Remorques
+
+Depuis juillet 2026, N n'est plus toujours `this.type.slots` (catalogue, fixe) : deux
+améliorations (Remorque Moyenne +1, Remorque Lourde +3, cf.
+[spec/VEHICLES.md](spec/VEHICLES.md#améliorations-de-véhicule-19-au-total)) augmentent la
+capacité totale du véhicule remorqueur. `emplacements` fait donc partie de `VehicleStats`
+(cf. §4.3) et se plie exactement comme carrosserie/manœuvrabilité/etc. via `applyStats` -
+aucun mécanisme séparé pour la capacité :
+
+```typescript
+class RemorqueMoyenneBehavior extends EquipmentBehaviorBase {
+  override applyStats(current: VehicleStats): VehicleStats {
+    return { ...current, emplacements: current.emplacements + 1 };
+  }
+  // + canPlace : poids Léger interdit, une seule remorque (cf. §4.6)
+}
+```
+
 ### Calcul backend
 
 `Vehicle.usedSlots` (`domain/vehicle.ts`) est une simple somme, sans aucune distinction
-pour une arme montée sur Tourelle :
+pour une arme montée sur Tourelle. `availableSlots`, lui, lit désormais la capacité
+**effective** (`effectiveStats.emplacements`, cf. §4.2) plutôt que `type.slots` brut -
+pour un véhicule sans amélioration de capacité, les deux valeurs restent identiques :
 
 ```typescript
 get usedSlots(): number {
@@ -529,7 +604,7 @@ get usedSlots(): number {
 }
 
 private get availableSlots(): number {
-  return this.type.slots - this.usedSlots;
+  return this.effectiveStats.emplacements - this.usedSlots;
 }
 ```
 
@@ -563,6 +638,18 @@ leur synthèse d'affichage force `emplacement: 0` avant transmission à `Equipme
 
 Ce signal alimente la barre de progression « Emplacements » dans l'UI - la source de
 vérité reste le backend, mais le frontend donne un retour visuel immédiat.
+
+> **⚠️ Limitation connue - `emplacementsTotal` ne reflète pas le bonus des Remorques.**
+> `EquipmentManager.emplacementsTotal` (signal `computed`) lit
+> `this.chosenVehicule()?.emplacements` - la valeur **catalogue brute** du véhicule,
+> jamais la capacité effective (`Vehicle.effectiveStats.emplacements`, cf. ci-dessus).
+> Sur un véhicule équipé d'une Remorque Moyenne/Lourde, le backend accepte donc plus
+> d'équipement que ce que la barre de progression affiche comme total - source de
+> vérité correcte côté serveur (l'ajout réussit), mais affichage frontend trompeur
+> (barre qui semble dépasser 100%, ou capacité affichée inférieure à la réalité).
+> Correctif nécessaire : faire remonter `emplacementsTotal` depuis la réponse serveur
+> (`VehicleDetailDto.baseStats`/`stats`, qui portent déjà `emplacements`) plutôt que de
+> le recalculer depuis le seul catalogue côté client.
 
 ---
 
@@ -733,28 +820,30 @@ Ce DTO est ce que tous les endpoints d'écriture (`POST /vehicles`, `POST/DELETE
 
 ### Améliorations
 
-| Comportement YAML | Décorateur | Modificateur de stats | Règles de validation |
+| Comportement YAML | Strategy | Modificateur de stats | Règles de validation |
 |---|---|---|---|
-| `chenilles` | `ChenillesDecorator` | `vitesse_max-1`, `manoeuvrabilite+1` | Unique par véhicule ; interdit sur `char_assaut`, `helicoptere`, `gyrocoptere` |
-| `belier` | `BelierDecorator` | - | Orientation **obligatoire** ; un seul Bélier par orientation |
-| `belier_explosif` | `BelierExplosifDecorator` | - | Orientation **obligatoire** ; un seul Bélier Explosif par orientation |
-| `membre_equipage` | `MembreEquipageDecorator` | `equipage+1` | Max = 2× équipage initial (ex : Voiture équipage 1 → max 2) |
-| `blindage` | `BlindageDecorator` | `carrosserie+2` | Cumulable sans limite - aucune règle spécifique |
-| `mishkin_exclusif` | `EquipementMishkinDecorator` | - | Un seul équipement Mishkin par véhicule |
-| `neutre` / absent | `NeutralDecorator` | - | Aucune règle - pose libre dans la limite des emplacements |
+| `chenilles` | `ChenillesBehavior` | `vitesse_max-1`, `manoeuvrabilite+1` | Unique par véhicule ; interdit sur `char_assaut`, `helicoptere`, `gyrocoptere` |
+| `belier` | `BelierBehavior` | - | Orientation **obligatoire** ; un seul Bélier par orientation |
+| `belier_explosif` | `BelierExplosifBehavior` | - | Orientation **obligatoire** ; un seul Bélier Explosif par orientation |
+| `membre_equipage` | `MembreEquipageBehavior` | `equipage+1` | Max = 2× équipage initial (ex : Voiture équipage 1 → max 2) |
+| `blindage` | `BlindageBehavior` | `carrosserie+2` | Cumulable sans limite - aucune règle spécifique |
+| `mishkin_exclusif` | `MishkinExclusifBehavior` | - | Un seul équipement Mishkin par véhicule |
+| `remorque_moyenne` | `RemorqueMoyenneBehavior` | `emplacements+1` | Poids Moyen/Lourd requis ; une seule remorque (toutes comportements confondus, cf. §4.6) |
+| `remorque_lourde` | `RemorqueLourdeBehavior` | `emplacements+3` | Poids Lourd requis ; une seule remorque |
+| `neutre` / absent | comportement neutre | - | Aucune règle - pose libre dans la limite des emplacements |
 
 ### Avantages (72 au total, 12 catégories - cf. [spec/VEHICLES.md](spec/VEHICLES.md#avantages-de-véhicule-72-au-total))
 
-| Comportement YAML | Décorateur | Modificateur de stats | Règles de validation |
+| Comportement YAML | Strategy | Modificateur de stats | Règles de validation |
 |---|---|---|---|
-| `expertise` | `ExpertiseDecorator` | `manoeuvrabilite+1` en permanence | Aucune restriction de pose |
-| `cascadeur` | `CascadeurDecorator` | - | Réservé aux véhicules Poids Léger/Moyen (pas Lourd) ; manœuvrabilité **effective** (après bonus déjà montés) ≥ 3 |
-| `sur_deux_roues` | `SurDeuxRouesDecorator` | - | Manœuvrabilité **effective** ≥ 3 (pas de restriction de poids) |
-| absent (69/72 avantages) | `NeutralAdvantageDecorator` | - | Purement descriptif, aucune règle propre |
+| `expertise` | `ExpertiseBehavior` | `manoeuvrabilite+1` en permanence | Aucune restriction de pose |
+| `cascadeur` | `CascadeurBehavior` | - | Réservé aux véhicules Poids Léger/Moyen (pas Lourd) ; manœuvrabilité **effective** (après bonus déjà montés) ≥ 3 |
+| `sur_deux_roues` | `SurDeuxRouesBehavior` | - | Manœuvrabilité **effective** ≥ 3 (pas de restriction de poids) |
+| absent (69/72 avantages) | comportement neutre | - | Purement descriptif, aucune règle propre |
 
 Un avantage n'a par ailleurs **jamais** d'emplacement ni d'orientation (cf. §6/§7.bis), et
 sa règle d'unicité (un même avantage ne peut être acquis qu'une fois par véhicule) est
-portée par l'agrégat lui-même (`Vehicle.canAddAdvantage`), pas par un décorateur - elle
+portée par l'agrégat lui-même (`Vehicle.canAddAdvantage`), pas par une Strategy - elle
 s'applique à tous les avantages indistinctement, pas à un `comportement` particulier.
 
 ### Orientation des armes
@@ -849,19 +938,19 @@ sequenceDiagram
 | Fichier | Rôle |
 |---------|------|
 | `apps/backend/src/app/team/domain/team.ts` | Agrégat racine `Team` + types `Orientation`/`WeaponOrientation`/`RuleResult` |
-| `apps/backend/src/app/team/domain/vehicle.ts` | Entité enfant `Vehicle` - `canAddWeapon`/`canAddImprovement`/`canAddAdvantage`, `usedSlots`, `buildChain()` |
+| `apps/backend/src/app/team/domain/vehicle.ts` | Entité enfant `Vehicle` - `canAddWeapon`/`canAddImprovement`/`canAddAdvantage`, `usedSlots`, `effectiveStats` |
 | `apps/backend/src/app/team/domain/weapon.ts` | Entité enfant `Weapon` - `price` (x3 Tourelle), `slots`, `orientation` |
-| `apps/backend/src/app/team/domain/improvement.ts` | Entité enfant `Improvement` |
-| `apps/backend/src/app/team/domain/advantage.ts` | Entité enfant `Advantage` - `price` (jamais réduit, perte totale à la revente) |
-| `apps/backend/src/app/team/domain/vehicle-build.ts` | Interface `VehicleBuild` + `CatalogVehicleBuild` + `ImprovementDecorator` (Template Method) + `NeutralDecorator` |
-| `apps/backend/src/app/team/domain/improvement-decorators.ts` | Décorateurs concrets d'améliorations (Chenilles, Bélier, Bélier Explosif, Membre d'Équipage, Blindage, Mishkin) |
-| `apps/backend/src/app/team/domain/advantage-decorators.ts` | `AdvantageDecorator` + décorateurs concrets d'avantages (Neutral, Expertise, Cascadeur, Sur Deux Roues) |
-| `apps/backend/src/app/team/domain/improvement-decorator.factory.ts` | Registre `comportement` → décorateur d'amélioration |
-| `apps/backend/src/app/team/domain/advantage-decorator.factory.ts` | Registre `comportement` → décorateur d'avantage |
+| `apps/backend/src/app/team/domain/improvement.ts` | Entité enfant `Improvement` - `applyStats` (délègue à la Strategy résolue) |
+| `apps/backend/src/app/team/domain/advantage.ts` | Entité enfant `Advantage` - `price` (jamais réduit, perte totale à la revente), `applyStats` |
+| `apps/backend/src/app/team/domain/sequella.ts` | Entité enfant `Sequella` - `applyStats` (pas de `canPlace`, cf. §4.1/§4.5) |
+| `apps/backend/src/app/team/domain/behaviors/equipment-behavior.ts` | Contrat Strategy `EquipmentBehavior`/`EquipmentBehaviorBase`, types `VehicleStats`/`PlacementContext`/`PlacementCandidate` |
+| `apps/backend/src/app/team/domain/behaviors/improvement-behaviors.ts` | 8 classes concrètes d'amélioration (dont Remorque Moyenne/Lourde) + `IMPROVEMENT_BEHAVIORS` + `resolveImprovementBehavior` |
+| `apps/backend/src/app/team/domain/behaviors/advantage-behaviors.ts` | 3 classes concrètes d'avantage (Expertise, Cascadeur, Sur Deux Roues) + `ADVANTAGE_BEHAVIORS` + `resolveAdvantageBehavior` |
+| `apps/backend/src/app/team/domain/behaviors/sequella-behaviors.ts` | Interface `SequellaBehavior` (plus étroite) + 4 classes à effet chiffré + `SEQUELLA_BEHAVIORS` (Map par `nom_interne`) + `resolveSequellaBehavior` |
 | `apps/backend/src/app/team/domain/value-objects/vehicle-type.ts` | Value Object enveloppant `Vehicule` (catalogue) |
 | `apps/backend/src/app/team/domain/value-objects/weapon-type.ts` | Value Object enveloppant `Arme` - `montableSurTourelle`, `requiresOrientation` |
-| `apps/backend/src/app/team/domain/value-objects/improvement-type.ts` | Value Object enveloppant `Amelioration` |
-| `apps/backend/src/app/team/domain/value-objects/advantage-type.ts` | Value Object enveloppant `Avantage` - pas de `slots` ni `requiresOrientation` |
+| `apps/backend/src/app/team/domain/value-objects/improvement-type.ts` | Value Object enveloppant `Amelioration` - `canPlace` (délègue à la Strategy résolue) |
+| `apps/backend/src/app/team/domain/value-objects/advantage-type.ts` | Value Object enveloppant `Avantage` - pas de `slots` ni `requiresOrientation`, `canPlace` |
 | `apps/backend/src/app/team/domain/catalog.repository.interface.ts` | Contrat `ICatalogRepository` (Dependency Inversion) |
 | `apps/backend/src/app/team/domain/team.repository.interface.ts` | Contrat `ITeamRepository` |
 | `apps/backend/src/app/team/application/` | 16 use cases (add/remove vehicle-weapon-improvement-advantage, get-available-*, get-team-summaries, get-vehicle-detail, create/update/remove-team) |
@@ -869,7 +958,6 @@ sequenceDiagram
 | `apps/backend/src/app/team/infrastructure/team-http.mapper.ts` | Mapping agrégat domaine → DTO HTTP sérialisable |
 | `apps/backend/src/app/team/infrastructure/team.repository.ts` | Implémentation TypeORM d'`ITeamRepository` |
 | `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
-| `apps/backend/src/app/team/vehicle-build.factory.ts` | `VehicleBuildFactory` (`@Injectable`) - stats effectives hors validation de pose (atelier/campagne) |
 | `apps/backend/src/app/team/team.controller.ts` | Routes équipe (`/teams`) |
 | `apps/backend/src/app/team/vehicle-team.controller.ts` | Routes véhicules d'une équipe (`/teams/:teamId/vehicles`) |
 | `apps/backend/src/app/team/vehicle.controller.ts` | Routes véhicule/améliorations/avantages (`/vehicles/:id/...`) |

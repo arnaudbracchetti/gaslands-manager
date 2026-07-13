@@ -58,6 +58,7 @@ classDiagram
         -_weapons : Weapon[]
         -_improvements : Improvement[]
         -_advantages : Advantage[]
+        -_sequellas : Sequella[]
         -_isSold : boolean
         +weapons : readonly Weapon[]
         +improvements : readonly Improvement[]
@@ -65,6 +66,9 @@ classDiagram
         +cost : number
         +usedSlots : number
         +isSold : boolean
+        +baseStats : VehicleStats
+        +effectiveStats : VehicleStats
+        +describe() VehicleStatsSummary[]
         +canAddWeapon(type, orientation, budget) RuleResult
         +canAddImprovement(type, orientation, budget) RuleResult
         +canAddAdvantage(type, budget) RuleResult
@@ -96,6 +100,7 @@ classDiagram
         +estDefaut : boolean
         +price : number
         +slots : number
+        +applyStats(current) VehicleStats
     }
 
     class Advantage {
@@ -106,6 +111,7 @@ classDiagram
         +price : number
         +slots : number
         +isSold : boolean
+        +applyStats(current) VehicleStats
         +markSold() void
         +clearSold() void
     }
@@ -118,6 +124,7 @@ classDiagram
         +price : number
         +resaleRefund : number
         +isSold : boolean
+        +applyStats(current) VehicleStats
         +markSold() void
         +clearSold() void
     }
@@ -161,9 +168,11 @@ classDiagram
         +nom : string
         +slots : number
         +price : number
+        +comportement : string | undefined
         +requiresOrientation : boolean
         +from(raw)$ ImprovementType
         +equals(other) boolean
+        +canPlace(ctx, candidate) RuleResult
     }
 
     class AdvantageType {
@@ -176,6 +185,7 @@ classDiagram
         +comportement : string | undefined
         +from(raw)$ AdvantageType
         +equals(other) boolean
+        +canPlace(ctx, candidate) RuleResult
     }
 
     class SequellaType {
@@ -233,22 +243,26 @@ si une arme peut être montée ainsi — tous les sponsors l'acceptent.
 lisent directement le champ catalogue `necessite_orientation` (`Arme`/`Amelioration`,
 booléen obligatoire) — ni l'un ni l'autre n'est dérivé (`WeaponType` ne dérive plus de
 son `type` catalogue, il n'existe d'ailleurs plus de getter `isEquipage`) ou codé en dur
-(les décorateurs `BelierDecorator`/`BelierExplosifDecorator`, seuls jusque-là à exiger une
+(les Strategy `BelierBehavior`/`BelierExplosifBehavior`, seuls jusque-là à exiger une
 orientation, ont perdu leur vérification manuelle au profit d'une garde générique dans
 `Vehicle.canAddImprovement`, symétrique à celle déjà en place sur `canAddWeapon`). Détail
 des valeurs catalogue : [spec/VEHICLES.md](spec/VEHICLES.md#orientation-requise-champ-catalogue-necessite_orientation).
 
-**Avantages** : `Advantage` réutilise le même pattern Décorateur que `Improvement`
-(`AdvantageDecorator extends ImprovementDecorator`, construit un `Amelioration` factice
-depuis l'`Avantage` réel — précédent direct : `SequellaDecorator`, qui fait déjà ceci pour
-un concept hors catalogue `amelioration.yml`). `Vehicle.buildChain()` plie
-**améliorations puis avantages** dans la même chaîne avant le candidat en cours de
-validation — nécessaire pour que les 2 avantages à comportement mécanique (Cascadeur, Sur
-Deux Roues) voient la Manœuvrabilité **effective** après tout bonus déjà monté (Chenilles,
-Expertise). `Advantage.price` retourne toujours `type.price`, jamais réduit même
-`isSold: true` — c'est ce qui porte entièrement la règle de "perte totale" à la revente en
-atelier (aucun second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/
-`Improvement`). Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
+**Calcul des stats effectives et validation de pose — Pattern Strategy** : `Vehicle`
+calcule ses stats effectives (`effectiveStats`, un seul `reduce()` par famille — séquelles
+puis améliorations puis avantages, cf. [VEHICLE_SYSTEM.md §4](VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior))
+et valide la pose d'un candidat via de petites classes Strategy stateless
+(`EquipmentBehavior`, une par `comportement` de jeu — Chenilles, Bélier, Cascadeur,
+Remorque Moyenne…), remplaçant un ancien Pattern Decorator (chaîne d'objets qui
+s'enveloppent) courant juillet 2026. `canPlace(ctx, candidate)` est porté par
+`ImprovementType`/`AdvantageType` (le Value Object — un candidat n'a pas encore
+d'instance au moment de sa validation) ; `applyStats(current)` est porté par
+`Improvement`/`Advantage`/`Sequella` (l'entité — un équipement déjà monté a toujours une
+instance), cohérent avec `price`/`slots`/`resaleRefund` déjà présents à cet endroit.
+`Advantage.price` retourne toujours `type.price`, jamais réduit même `isSold: true` —
+c'est ce qui porte entièrement la règle de "perte totale" à la revente en atelier (aucun
+second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/`Improvement`).
+Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
 
 **Séquelles** : `Sequella` est un miroir quasi exact d'`Advantage` (mêmes mécaniques
 `isSold`/prix jamais réduit à la revente) — seule différence, sa monnaie est `vehicle.chocs`

@@ -110,8 +110,8 @@ dur au cas par cas (améliorations).
 - **Améliorations** : `true` uniquement pour le Bélier (et sa variante Slime) et
   le Bélier Explosif ; `false` pour toutes les autres. `ImprovementType.requiresOrientation`
   lit directement ce champ — remplace l'ancienne vérification codée en dur dans
-  `BelierDecorator`/`BelierExplosifDecorator` (`improvement-decorators.ts`), désormais
-  appliquée en amont par `Vehicle.canAddImprovement` (garde générique, symétrique
+  `BelierBehavior`/`BelierExplosifBehavior` (`domain/behaviors/improvement-behaviors.ts`),
+  désormais appliquée en amont par `Vehicle.canAddImprovement` (garde générique, symétrique
   à celle déjà en place sur `Vehicle.canAddWeapon`).
 
 Le frontend ne consulte pas ce champ directement pour piloter l'affichage du
@@ -162,6 +162,17 @@ Nitro ↔ sa variante Idris, Blindage ↔ Micro-Blindage (Verney).
 | Remorque Moyenne | 8 | 0 | +1 emplacement pour le véhicule remorqueur, exclusif **Rusty** |
 | Remorque Lourde | 12 | 0 | +3 emplacements, réservée aux véhicules Lourds, exclusif **Rusty** |
 
+**Remorque Moyenne/Lourde — capacité effective, pas fixe** : ces deux améliorations
+augmentent réellement la capacité en emplacements du véhicule remorqueur (`+1`/`+3`),
+via le même mécanisme Strategy que les autres comportements d'amélioration (`applyStats`
+sur `VehicleStats.emplacements`, cf. ARCHITECTURE.md §3.4). La règle « un véhicule ne peut
+être équipé que d'une seule remorque » (p.170) est appliquée de façon **croisée** entre
+Remorque Moyenne et Remorque Lourde (monter l'une interdit l'autre) — **Remorque Légère**
+et **Remorque de Transport** restent hors de ce contrôle (aucun `comportement` déclaré au
+catalogue, aucun effet numérique documenté pour elles au-delà du thème), donc les cumuler
+avec Remorque Moyenne/Lourde n'est aujourd'hui pas bloqué - limitation connue, pas une
+régression (ces deux améliorations n'avaient de toute façon aucune règle appliquée avant).
+
 ### Améliorations et armes par défaut
 
 Certains véhicules ont un équipement **intégré à leur profil de base** : présent dès
@@ -203,8 +214,8 @@ améliorations. `avantage.yml` (`database_init/data/`) ne référence donc jamai
 un sponsor.
 
 **Comportement mécanique réel** : 69 des 72 avantages sont purement descriptifs (texte
-affiché, `comportement` absent). 3 exceptions, portées par le même mécanisme de décorateur
-que les améliorations (`AdvantageDecorator`, § voir ARCHITECTURE.md) :
+affiché, `comportement` absent). 3 exceptions, portées par le même mécanisme Strategy
+que les améliorations (`AdvantageType.canPlace`, cf. ARCHITECTURE.md §3.4) :
 
 | Avantage | Catégorie | Effet |
 |---|---|---|
