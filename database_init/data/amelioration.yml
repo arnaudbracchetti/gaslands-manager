@@ -348,15 +348,7 @@ ameliorations_vehicules:
       - Ce déplacement dévié n'occasionne pas de Collision.
     sponsors_autorises:
       - "Mishkin"
-      - "Slime"
-      - "La Geôlière"
-      - "Scarlett"
-      - "La Patrouille de l'Autoroute"
-      - "Verney"
-      - "Maxxine"
-      - "L'Ordre Infernal"
-      - "Beverly, le Diable de l'Autoroute"
-      - "Rusty et ses Trafiquants d'Alcool"
+      
 
   # ── Améliorations exclusives — La Patrouille de l'Autoroute ───────────────
   - nom: "Mégaphone"

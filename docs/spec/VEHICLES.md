@@ -12,9 +12,9 @@ Au démarrage du serveur, le backend charge un **catalogue complet** depuis des 
 
 Le catalogue contient :
 - **13 sponsors** — chacun avec ses classes d'avantage et ses règles spéciales
-- **16 véhicules** — répartis en Léger / Moyen / Lourd, avec leurs statistiques complètes
-- **41 armes** — de type base, avancée, équipage ou largable
-- **10 améliorations** — modifications de véhicule
+- **22 véhicules** — répartis en Léger / Moyen / Lourd, avec leurs statistiques complètes (dont 6 variantes "(Prison)" exclusives à La Geôlière)
+- **38 armes** — de type base, avancée, équipage ou largable
+- **19 améliorations** — modifications de véhicule (dont 4 variantes sponsor à comportement identique, prix/emplacement différents)
 - **72 avantages** — 12 catégories de style (6 chacune), cf. §Avantages de véhicule ci-dessous
 
 **Clé du modèle** : chaque sponsor expose directement la liste des véhicules, armes et améliorations qu'il est autorisé à utiliser. Cette relation est calculée au démarrage et stockée dans une `Map` pour un accès instantané. **Exception** : la liste des avantages d'un sponsor n'est **pas** résolue via un champ `sponsors_autorises` (les avantages n'en portent pas) mais par correspondance de catégorie — cf. §Avantages de véhicule.
@@ -31,7 +31,7 @@ Le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:t
 
 **Détail d'un équipement** : toute la carte d'une arme ou d'une amélioration (`equipment-option`) est cliquable et ouvre une popup (`EquipmentDetailModal`) — nom, coût, emplacement, description, règles complètes, et raison de refus éventuelle. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
-**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`VehicleService.getRemainingBudget`), qui marque `disponible: false` toute arme/amélioration dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : coché au moment de l'ajout d'une arme (case « Monter sur Tourelle », visible si `Arme.montable_tourelle`), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
+**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`Team.remainingBudget`, getter de l'agrégat), qui marque `disponible: false` toute arme/amélioration/avantage dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : choisi au moment de l'ajout d'une arme (bouton « Tourelle x3 », visible si `Arme.montable_tourelle`, au même endroit que les 4 arcs de tir), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
 
 ---
 
@@ -72,28 +72,28 @@ Le sponsor est choisi **une seule fois à la création de l'équipe** et déterm
 - Exception : une arme **montée sur Tourelle** coûte **3× son prix catalogue** (`Weapon.orientation = 'tourelle'`, choisi à l'achat)
 - Le total ne doit pas dépasser le budget
 
-**Application** : `VehicleService.getRemainingBudget` calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration dont le prix dépasse ce restant est marquée `disponible: false`. Le montage sur Tourelle est un choix fait au moment même de l'ajout de l'arme (case à cocher, visible si `Arme.montable_tourelle`) — l'agrégat `Vehicle.canAddWeapon`/`addWeapon` refuse (`DomainException` → HTTP 400) l'ajout si le coût ×3 dépasse le budget restant. Il n'y a plus d'« assignation » différée : changer l'arme montée sur une Tourelle consiste à revendre l'arme actuelle (cf. §Annulation d'achat vs revente, [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente), pour l'atelier) puis en acheter une nouvelle avec la case cochée.
+**Application** : `Team.remainingBudget` (getter de l'agrégat) calcule le budget restant de l'équipe (tous véhicules confondus). Toute arme/amélioration/avantage dont le prix dépasse ce restant est marquée `disponible: false`. Le montage sur Tourelle est un choix fait au moment même de l'ajout de l'arme (bouton « Tourelle x3 », visible si `Arme.montable_tourelle`) — l'agrégat `Vehicle.canAddWeapon`/`addWeapon` refuse (`DomainException` → HTTP 400) l'ajout si le coût ×3 dépasse le budget restant. Il n'y a plus d'« assignation » différée : changer l'arme montée sur une Tourelle consiste à revendre l'arme actuelle (cf. §Annulation d'achat vs revente, [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente), pour l'atelier) puis en acheter une nouvelle avec le bouton Tourelle.
 
-### Véhicules (16 au total)
+### Véhicules (22 au total)
 
-| Catégorie | Exemples | Coût |
-|-----------|---------|------|
-| **Léger** | Dragster, Moto, Buggy, Moto avec side-car | 5–8 jerricans |
-| **Moyen** | Voiture, Voiture de sport, Camion, Ambulance, Gyrocoptère, Camion à glaces | 8–20 jerricans |
-| **Lourd** | Monster Truck, Camion Lourd, Bus, Hélicoptère*, Char d'assaut*, Forteresse Mobile | 25–40 jerricans |
+| Catégorie | Nombre | Exemples | Coût |
+|-----------|--------|---------|------|
+| **Léger** | 4 | Dragster, Moto, Buggy, Moto avec side-car | 5–8 jerricans |
+| **Moyen** | 12 | Voiture, Voiture de sport, Camion, Ambulance, Gyrocoptère, Camion à glaces (chacun avec une variante "(Prison)" exclusive à La Geôlière) | 8–20 jerricans |
+| **Lourd** | 6 | Monster Truck, Camion Lourd, Bus, Hélicoptère*, Char d'assaut*, Forteresse Mobile | 25–40 jerricans |
 
 *Hélicoptère et Char d'assaut : **Rutherford uniquement**.
 
-### Armes (41 au total)
+### Armes (38 au total)
 
 | Type | Nombre | Exemples |
 |------|--------|---------|
-| `base` | 4 | Pistolet, Mitrailleuse, Mitrailleuse Lourde, Minigun |
+| `base` | 3 | Mitrailleuse, Mitrailleuse Lourde, Minigun |
 | `avancée` | 18 | BFG, Lance-Flammes, Canon de 125mm, Canon à Arc Électrique* |
-| `équipage` | 11 | Grenades, Cocktails Molotov, Fusil à Pompe, Pistolet Mitrailleur |
+| `équipage` | 9 | Grenades, Cocktails Molotov, Fusil à Pompe, Pistolet Mitrailleur |
 | `largable` | 8 | Largueur de Mines, Largueur d'Huile, Auto-Tourelle, Bombes Téléguidées |
 
-*Canon à Arc Électrique et 5 autres armes électroniques : **Mishkin uniquement**.
+*Canon à Arc Électrique et 5 autres armes électroniques (Brouilleur Électromagnétique, Canon Gravitationnel, Marteleur, Rayon Désintégrateur, Super Amplificateur Cinétique) : **Mishkin uniquement**.
 
 ### Orientation requise (champ catalogue `necessite_orientation`)
 
@@ -133,20 +133,34 @@ l'acceptent, seule l'arme elle-même porte la restriction. Pour changer l'arme m
 sur Tourelle : revendre l'arme actuelle puis en acheter une nouvelle avec la case
 cochée (cf. `Weapon.price`, `Vehicle.canAddWeapon`/`addWeapon`).
 
-### Améliorations de véhicule (10 au total)
+### Améliorations de véhicule (19 au total)
+
+4 des 19 sont des **variantes sponsor** d'une amélioration existante (même `comportement`,
+prix et/ou emplacement différents - même principe que les variantes d'armes/véhicules,
+cf. §1) : Bélier ↔ Bélier (Slime), Membre d'Équipage Supplémentaire ↔ sa variante Scarlett,
+Nitro ↔ sa variante Idris, Blindage ↔ Micro-Blindage (Verney).
 
 | Amélioration | Coût | Emplacement | Note |
 |---|---|---|---|
 | Arceaux | 4 | 1 | Ignore les dégâts de tonneau |
-| Bélier | 4 | 1 | +2 dés en éperonnage |
-| Bélier Explosif | 3 | 0 | Premier éperonnage +6 dés, risque retour |
+| Bélier | 4 | 1 | +2 dés en éperonnage, orientation requise |
+| Bélier (Slime) | 4 | 0 | Variante Slime du Bélier - même effet, 0 emplacement au lieu de 1 |
+| Bélier Explosif | 3 | 0 | Premier éperonnage +6 dés, risque retour, orientation requise |
 | Blindage | 4 | 1 | +2 carrosserie, cumulable |
 | Catapulte Improvisée | 2 | 1 | Portée étendue pour armes largables |
 | Chenilles | 4 | 1 | +1 manoeuvrabilité, tout-terrain |
 | Membre d'Équipage Supplémentaire | 4 | 0 | +1 équipier |
+| Membre d'Équipage Supplémentaire (Scarlett) | 2 | 0 | Variante demi-prix, exclusif **Scarlett** |
 | Nitro | 6 | 0 | Accélération forcée |
+| Nitro (Idris) | 3 | 0 | Variante demi-prix, danger plafonné à 3, exclusif **Idris** |
 | Réacteur Nucléaire Expérimental | 5 | 0 | **Mishkin uniquement** |
 | Téléporteur Expérimental | 7 | 0 | **Mishkin uniquement** |
+| Mégaphone | 2 | 0 | Étend la règle Sirène à tout véhicule adverse, exclusif **La Patrouille de l'Autoroute** |
+| Micro-Blindage | 6 | 0 | Variante de Blindage (0 emplacement contre prix plus élevé), exclusif **Verney** |
+| Remorque de Transport | 0 | 0 | Gratuite pour véhicules à remorque, exclusif **Rusty** |
+| Remorque Légère | 4 | 0 | Remorque à accès limité, exclusif **Rusty** |
+| Remorque Moyenne | 8 | 0 | +1 emplacement pour le véhicule remorqueur, exclusif **Rusty** |
+| Remorque Lourde | 12 | 0 | +3 emplacements, réservée aux véhicules Lourds, exclusif **Rusty** |
 
 ### Améliorations et armes par défaut
 
@@ -159,7 +173,8 @@ la création, sans coût, et **non retirable**.
 | Char d'assaut | Canon de 125mm monté sur Tourelle (arme) | Canon principal — non détachable, non réassignable |
 
 Modélisées par `VehicleImprovement.estDefaut = true` (Buggy) ou `Weapon.estDefaut = true`
-(Char d'assaut, mirroir sur l'arme), insérées automatiquement par `VehicleService.create()`
+(Char d'assaut, mirroir sur l'arme), lues via les getters `VehicleType.defaultImprovements`/
+`defaultWeaponNomInterne` et insérées automatiquement par `AddVehicleUseCase`
 depuis `ameliorations_defaut`/`arme_defaut` du catalogue YAML. Elles n'apparaissent pas
 dans le calcul du budget ni dans le pool d'emplacements — seul le badge 🔒 *Intégré* les
 identifie dans l'UI.
@@ -244,7 +259,12 @@ L'entité `Vehicle` représente un véhicule **appartenant à une équipe** (ins
 
 **Comportement des améliorations par défaut (`estDefaut: true`)** :
 - **Coût zéro** — `prix = 0` dans le DTO.
-- **Non supprimables** — `DELETE /api/vehicles/:id/improvements/:id` retourne HTTP **403**.
+- **Non supprimables** — `DELETE /api/vehicles/:id/improvements/:id` retourne HTTP **400**.
+  La règle vit entièrement dans l'agrégat (`Vehicle.removeImprovement` lève une
+  `DomainException` si `estDefaut`), traduite en `BadRequestException` par
+  `RemoveImprovementUseCase` - même chemin, uniforme, que pour une arme `estDefaut`
+  (`DELETE /api/weapons/:id` ci-dessous). Toute règle de gestion vit dans le domaine :
+  aucun contrôle dupliqué ni exception distincte au niveau du use case.
 - **Hors pool d'emplacements** — ne consomment pas de slot achetable.
 - **Affichage UI** — le badge 🔒 *Intégré* remplace le bouton *Retirer*.
 
@@ -316,7 +336,7 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 | GET | `/api/vehicles/:id` | JWT | Détail "monté" d'un véhicule (stats + récapitulatif, cf. `VehicleBuild`) |
 | GET | `/api/vehicles/:id/available-improvements` | JWT | Améliorations du sponsor avec verdict de disponibilité |
 | POST | `/api/vehicles/:id/improvements` | JWT | Ajouter une amélioration (validation puis persistance) |
-| DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration — **HTTP 403** si `estDefaut: true`, **HTTP 204** sinon |
+| DELETE | `/api/vehicles/:id/improvements/:improvementId` | JWT | Retirer une amélioration — **HTTP 400** si `estDefaut: true` (`DomainException` → `BadRequestException`), **HTTP 200** + `VehicleDto` sinon |
 | GET | `/api/vehicles/:id/available-advantages` | JWT | Avantages du sponsor avec verdict de disponibilité (budget + unicité, et Cascadeur/Sur Deux Roues via `canAddAdvantage`) |
 | POST | `/api/vehicles/:id/advantages` | JWT | Ajouter un avantage (validation puis persistance, jamais d'orientation) |
 | DELETE | `/api/vehicles/:id/advantages/:advantageId` | JWT | Retirer un avantage |

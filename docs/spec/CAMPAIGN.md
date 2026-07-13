@@ -453,8 +453,8 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   cibler une amélioration (`ImprovementLostEvent`, mirroir de `WeaponLostEvent`),
   pas seulement une arme. « Siège irrécupérable » réutilise le pattern Décorateur
   existant (`SiegeIrrecuperableDecorator`, réduit l'Équipage). Restent hors
-  périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (TODO
-  explicite dans le code — nécessiterait de distinguer les deux lignes du livre),
+  périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (commentaire
+  explicite dans le code, pas un marqueur `TODO` littéral - nécessiterait de distinguer les deux lignes du livre),
   les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double
   lancer, « Légende Vivante » résultat forcé à 1), et toute garde anti-doublon
   sur les séquelles.
@@ -498,7 +498,7 @@ campagne — modifiable (`teamId`) tant que la campagne est `EN_CONSTRUCTION`.
 | `id` | number | PK, auto-incrémenté |
 | `campaignId` | number | FK → Campaign (`CASCADE`) |
 | `userId` | number | FK → User (`CASCADE`) |
-| `teamId` | number | FK → Team (`CASCADE`) |
+| `teamId` | number \| null | FK → Team (`CASCADE`), nullable - un organisateur peut créer une campagne sans engager d'équipe immédiatement |
 | `status` | `'PENDING' \| 'VALIDATED' \| 'REJECTED'` | défaut `PENDING` |
 | `isOrganizer` | boolean | défaut `false` |
 | `isLocked` | boolean | défaut `false` — posé pour `EN_COURS`, aucune logique d'application pour l'instant |
@@ -525,7 +525,7 @@ Le statut porte aussi la phase garage post-partie (`ATELIER`) — cf.
 | `scenarioId` | string \| null | référence `Scenario.nom_interne` |
 | `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` | |
 | `status` | `'PLANIFIE' \| 'ATELIER' \| 'JOUE'` | `PLANIFIE → ATELIER` (`enter-atelier`) `→ JOUE` (`close-atelier`, manuel ou auto) |
-| `order` | number | `double precision` — auto-append MAX+1 |
+| `order` | number | `double precision` — auto-append MAX+1. Colonne SQL sous-jacente nommée `displayOrder` (`@Column({ name: 'displayOrder' })`) - c'est ce nom que reflète l'ERD de [DOMAIN_MODEL.md](../DOMAIN_MODEL.md), alors que la propriété TypeScript exposée par l'entité est `order` |
 | `playedAt` | Date \| null | horodatage du passage à `ATELIER` — null tant que `PLANIFIE` |
 | `createdAt` / `updatedAt` | Date | auto |
 
@@ -620,9 +620,9 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
 | POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`. `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
 | POST | `/api/campaigns/:id/events/sequella` | JWT | Séquelle permanente `{ vehicleId, sequellaTypeNom }` — 204. Même résolution automatique de l'atelier courant que `/events/equipment` |
