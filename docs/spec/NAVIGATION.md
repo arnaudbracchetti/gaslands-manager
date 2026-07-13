@@ -23,6 +23,7 @@
 | `/campaigns/:id/atelier/vehicles/:vehicleId` | JWT | Configuration d'équipement d'un véhicule d'atelier — réutilise `EquipmentManager` (même composant que côté équipe) via `AtelierEquipmentDataSource` ; achat/retrait armes + améliorations depuis la cagnotte. Atteinte depuis la liste ci-dessus (mode campagne — Temps 1, **implémenté**). La liste elle-même permet en plus l'achat d'un nouveau véhicule et la vente/annulation d'un véhicule existant (cf. [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente)) |
 | `/login` | Public | Page de connexion |
 | `/register` | Public | Page d'inscription |
+| `/admin/users` | JWT + admin (`adminGuard`) | Gestion des comptes utilisateurs — lister, activer/désactiver, supprimer (**implémenté**, cf. [AUTH.md](AUTH.md#administration-des-comptes)) |
 
 ---
 

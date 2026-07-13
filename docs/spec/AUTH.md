@@ -11,7 +11,7 @@
 |------|-------|
 | **Visiteur** (non connecté) | Lecture des pages Règles, Véhicules, Armes. Accès à la page d'accueil. |
 | **Utilisateur connecté** (`role: "user"`) | Toutes les pages visiteur + gestion complète de ses propres équipes, véhicules et armes. |
-| **Administrateur** (`role: "admin"`) | Toutes les pages utilisateur connecté. Compte unique, créé/synchronisé automatiquement au démarrage du serveur (cf. "Compte administrateur" ci-dessous). Aucune fonctionnalité réservée à ce rôle n'est implémentée pour l'instant — `role` est posé en fondation pour un futur `RolesGuard`. |
+| **Administrateur** (`role: "admin"`) | Toutes les pages utilisateur connecté, plus la gestion des comptes (`/admin/users`, cf. "Administration des comptes" ci-dessous). Compte unique, créé/synchronisé automatiquement au démarrage du serveur (cf. "Compte administrateur" ci-dessous). |
 
 Chaque utilisateur ne peut voir et modifier que ses propres données.
 
@@ -46,6 +46,25 @@ cf. ARCHITECTURE.md §3.3) garantit l'existence d'un unique utilisateur `role: "
 
 ---
 
+## Administration des comptes
+
+Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masquage de lien) :
+
+- **Backend** : `UsersController` (`GET /api/users`, `DELETE /api/users/:id`,
+  `PATCH /api/users/:id/active`) porte `@UseGuards(JwtAuthGuard, RolesGuard)` +
+  `@Roles(UserRole.ADMIN)` au niveau du controller. `RolesGuard` lit les rôles requis
+  via `Reflector` et lève `ForbiddenException` (403) si `request.user.role` n'y figure
+  pas — générique (`@Roles(...)` accepte plusieurs rôles), pas spécifique à l'admin.
+  `UserService.remove`/`setActive` interdisent en plus qu'un admin s'auto-supprime ou
+  se désactive lui-même.
+- **Frontend** : la route `/admin/users` (`AdminUsers`, cf.
+  [COMPONENTS.md](../COMPONENTS.md#adminusers--adminusers-)) déclare
+  `canActivate: [authGuard, adminGuard]` — `adminGuard` vérifie explicitement
+  `authService.currentUser()?.role === 'admin'` et redirige vers `/home` sinon
+  (`authGuard` ne vérifie que la connexion, pas le rôle).
+
+---
+
 ## Modèle de données — `User`
 
 | Champ | Type | Contraintes |
@@ -68,3 +87,6 @@ cf. ARCHITECTURE.md §3.3) garantit l'existence d'un unique utilisateur `role: "
 | POST | `/api/auth/register` | Non | Création de compte |
 | POST | `/api/auth/login` | Non | Connexion, retourne JWT |
 | GET | `/api/auth/me` | JWT | Retourne l'utilisateur courant |
+| GET | `/api/users` | JWT + admin | Liste tous les comptes (`RolesGuard`) |
+| DELETE | `/api/users/:id` | JWT + admin | Supprime un compte (auto-suppression interdite) |
+| PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte (auto-désactivation interdite) |
