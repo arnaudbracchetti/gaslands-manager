@@ -117,7 +117,7 @@ flakiness connue) : @docs/E2E_TESTING.md — guide pratique, commande par comman
 
 **TypeScript** : typage explicite strict imposé par ESLint (`explicit-function-return-type`, `no-explicit-any`). Exception : variables locales et `*.spec.ts`. ESLint rejettera le code non conforme.
 
-**`switch` sur un type union/enum fermé — pas de `default` pour une valeur connue** : quand un `switch` porte sur un type dont toutes les valeurs sont connues à la compilation (union littérale, enum), n'utiliser `default` que pour un véritable "reste" invalide (ex. une valeur brute non typée venant de la DB ou d'un fichier YAML, à rejeter). Si `default` route en réalité vers UNE valeur précise du type fermé (ex. le seul cas restant après les autres `case`), écrire ce `case` explicitement — sinon l'ajout d'une nouvelle valeur au type serait silencieusement absorbée par `default` au lieu d'échouer bruyamment (switch non exhaustif) ou d'être traitée explicitement. TypeScript reconnaît un `switch` exhaustif sans `default` dès que tous les cas d'un type fermé sont couverts — pas besoin de branche `never` explicite pour en bénéficier.
+**`switch`** Évitez default pour les valeurs valides d'un type fermé. Listez chaque case explicitement pour que TypeScript valide automatiquement l'exhaustivité, et réservez default uniquement au rejet des données externes invalides.
 
 **NestJS — `import type`** : `import type` est réservé aux interfaces pures et aux DTOs. Pour toute classe instanciée par le conteneur NestJS (use cases, services, repositories), utiliser `import { X }` — `emitDecoratorMetadata` émet `Object` pour les `import type`, ce qui cause `UnknownDependenciesException` au démarrage.
 
