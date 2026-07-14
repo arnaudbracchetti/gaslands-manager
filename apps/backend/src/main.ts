@@ -21,7 +21,7 @@ async function bootstrap(): Promise<void> {
   const port: number = parseInt(process.env.PORT ?? '3000', 10);
 
   // '0.0.0.0' force l'écoute sur toutes les interfaces IPv4, nécessaire
-  // pour que le proxy de dev (apps/frontend/proxy.conf.json) accède au backend.
+  // pour que le proxy de dev (apps/frontend/proxy.conf.cjs) accède au backend.
   await app.listen(port, '0.0.0.0');
   Logger.log(`🚀 Backend Gaslands démarré sur http://localhost:${port}/api`);
 }
