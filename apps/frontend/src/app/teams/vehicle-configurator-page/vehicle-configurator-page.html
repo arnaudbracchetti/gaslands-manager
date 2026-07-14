@@ -4,10 +4,21 @@
 -->
 <div class="vcp-page">
 
-  <app-breadcrumb [crumbs]="breadcrumbs()" />
+  <div class="vcp-top">
+    <app-breadcrumb [crumbs]="breadcrumbs()" />
 
-  <div class="vcp-header">
-    <h1>{{ vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement du véhicule" }}</h1>
+    <div class="vcp-header">
+      <h1>{{ vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement du véhicule" }}</h1>
+      @if (hasEquipmentManager()) {
+        <button class="vcp-toggle" type="button" (click)="toggleShowUnavailable()">
+          @if (showUnavailable()) {
+            Masquer les indisponibles
+          } @else {
+            Afficher les indisponibles ({{ hiddenCount() }})
+          }
+        </button>
+      }
+    </div>
   </div>
 
   @if (loading()) {

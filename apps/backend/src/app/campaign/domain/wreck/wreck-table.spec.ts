@@ -25,13 +25,13 @@ class FixedRandomizer implements IRandomizer {
 }
 
 const SIEGE_IRRECUPERABLE = SequellaType.from({
-  nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+  nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
 });
 const MAINTENU_PAR_LA_ROUILLE = SequellaType.from({
-  nom: 'Maintenu par la Rouille', nom_interne: 'maintenu_par_la_rouille', description: '', chocs_cost: 5, origine: 'ATELIER',
+  nom: 'Maintenu par la Rouille', nom_interne: 'maintenu_par_la_rouille', description: '', regles: '', chocs_cost: 5, origine: 'ATELIER',
 });
 const LEGENDE_VIVANTE = SequellaType.from({
-  nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', chocs_cost: 11, origine: 'ATELIER',
+  nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '', chocs_cost: 11, origine: 'ATELIER',
 });
 
 /** Catalogue minimal — seule `getSequellaType('siege_irrecuperable')` est appelée par WreckTable. */

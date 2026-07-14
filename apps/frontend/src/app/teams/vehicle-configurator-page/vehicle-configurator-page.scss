@@ -1,19 +1,26 @@
 .vcp-page {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 16px 24px 24px;
+}
+
+// Regroupe le fil d'Ariane ET la bande titre dans UN seul bloc sticky — sans ce
+// wrapper commun, seul `.vcp-header` restait fixe au scroll et le fil d'Ariane
+// (rendu juste au-dessus, hors de ce bloc) disparaissait dès qu'on faisait défiler.
+.vcp-top {
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: var(--tb-bitume);
+  padding-top: 6px;
 }
 
 .vcp-header {
   display: flex;
   align-items: center;
   gap: 20px;
-  position: sticky;
-  top: 64px;
-  z-index: 40;
-  background: var(--tb-bitume);
-  padding: 16px 0;
-  margin-bottom: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
   border-bottom: 2px solid var(--border-rust);
 
   h1 {
@@ -26,10 +33,41 @@
   }
 }
 
+// Filtre catalogue — remonté depuis `EquipmentManager` (`showUnavailable`/
+// `hiddenCount`, exposés via `viewChild()` en chaîne à travers `VehicleConfigurator`)
+// dans la bande fixe, plutôt que dans le catalogue qui scrolle. Repris visuellement
+// de l'ancien `.em-toggle` (equipment-manager.scss) — l'encapsulation de vue
+// Angular empêche de le réutiliser tel quel depuis ce composant.
+.vcp-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+  }
+}
+
 @media (max-width: 760px) {
-  .vcp-header {
+  .vcp-top {
     position: static;
     background: none;
+    padding-top: 0;
+  }
+
+  .vcp-header {
     padding: 0;
     margin-bottom: 32px;
     border-bottom: none;

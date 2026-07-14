@@ -116,9 +116,9 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
         a.description = this.toHtml(a.description);
         a.regles = this.toHtml(a.regles);
       }
-      // Pas de champ `regles` pour une séquelle : la description EST l'effet complet.
       for (const s of this.allSequelles) {
         s.description = this.toHtml(s.description);
+        s.regles = this.toHtml(s.regles);
       }
 
       // Étape 2 : Construire la Map avec les relations pré-résolues.

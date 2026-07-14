@@ -31,6 +31,7 @@ import {
 } from '@angular/core';
 import { Sponsor } from '../../../../catalog/catalog.model';
 import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
+import type { WorkshopSequellaDto } from '../../../../campaigns/workshop.model';
 
 @Component({
   selector: 'app-mounted-equipment',
@@ -47,6 +48,31 @@ export class MountedEquipment {
 
   /** Avantages acquis — jamais d'orientation, jamais d'emplacement. */
   advantages: InputSignal<VehicleAdvantage[]> = input.required<VehicleAdvantage[]>();
+
+  /**
+   * Séquelles acquises — atelier campagne uniquement, absent (`[]`) en
+   * construction d'équipe. `WorkshopSequellaDto.nom` est déjà le nom affiché
+   * (contrairement à `nomInterne` pour armes/améliorations/avantages) : pas de
+   * résolution catalogue nécessaire pour cette 4ᵉ catégorie.
+   */
+  sequellas: InputSignal<WorkshopSequellaDto[]> = input<WorkshopSequellaDto[]>([]);
+
+  /**
+   * `true` si le véhicule porte encore une "Légende Vivante" active — débloque
+   * la revente cross-session des AUTRES séquelles pré-existantes (mirroir de
+   * `Vehicle.canRemoveSequella()` côté backend). Calculé par `EquipmentManager`
+   * depuis `sequellas()`, pas ici (pure fonction de l'input, mais la logique
+   * métier reste centralisée côté smart component).
+   */
+  sequellaResaleUnlocked: InputSignal<boolean> = input<boolean>(false);
+
+  /**
+   * Affiche la section "Séquelles" — gate EXPLICITE plutôt qu'inférée d'un
+   * tableau vide (mirroir de `chocs: number | null` sur `VehicleCostSummary`) :
+   * `false` par défaut, jamais activée par `VehicleConfigurator` (construction
+   * d'équipe, où les séquelles n'existent pas).
+   */
+  showSequellas: InputSignal<boolean> = input<boolean>(false);
 
   /** Catalogue du sponsor — nécessaire pour résoudre noms/emplacements affichés. */
   sponsorCatalog: InputSignal<Sponsor> = input.required<Sponsor>();
@@ -67,6 +93,9 @@ export class MountedEquipment {
 
   /** Demande de retrait d'un avantage — mirroir de `weaponRemoved`/`improvementRemoved`. */
   advantageRemoved: OutputEmitterRef<VehicleAdvantage> = output<VehicleAdvantage>();
+
+  /** Demande de retrait d'une séquelle (annulation ou revente) — mirroir des 3 outputs ci-dessus. */
+  sequellaRemoved: OutputEmitterRef<WorkshopSequellaDto> = output<WorkshopSequellaDto>();
 
   // ── Filtre "masquer les équipements vendus/détruits" ────────────────────────
   // Filtre d'affichage pur sur des données déjà reçues — état local à ce
@@ -93,8 +122,13 @@ export class MountedEquipment {
     this.advantages().filter((a): boolean => !!a.sold).length,
   );
 
+  /** Mirroir de `soldAdvantagesCount` pour les séquelles (`isSold`, pas `sold` — DTO atelier brut). */
+  soldSequellasCount: Signal<number> = computed((): number =>
+    this.sequellas().filter((s): boolean => s.isSold).length,
+  );
+
   hiddenSoldCount: Signal<number> = computed((): number =>
-    this.soldWeaponsCount() + this.soldImprovementsCount() + this.soldAdvantagesCount(),
+    this.soldWeaponsCount() + this.soldImprovementsCount() + this.soldAdvantagesCount() + this.soldSequellasCount(),
   );
 
   visibleWeapons: Signal<Weapon[]> = computed((): Weapon[] => {
@@ -113,6 +147,13 @@ export class MountedEquipment {
     const all = this.advantages();
     if (this.showSold()) return all;
     return all.filter((a): boolean => !a.sold);
+  });
+
+  /** Mirroir de `visibleAdvantages` pour les séquelles. */
+  visibleSequellas: Signal<WorkshopSequellaDto[]> = computed((): WorkshopSequellaDto[] => {
+    const all = this.sequellas();
+    if (this.showSold()) return all;
+    return all.filter((s): boolean => !s.isSold);
   });
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────

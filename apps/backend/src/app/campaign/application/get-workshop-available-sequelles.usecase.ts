@@ -52,6 +52,7 @@ export class GetWorkshopAvailableSequellesUseCase {
         nomInterne: st.nomInterne,
         chocsCost: st.chocsCost,
         description: st.description,
+        regles: st.regles,
         disponible: verdict.ok,
         raison: verdict.ok ? undefined : verdict.reason,
       };

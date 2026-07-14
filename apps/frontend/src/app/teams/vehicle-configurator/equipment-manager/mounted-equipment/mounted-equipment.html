@@ -152,3 +152,48 @@
     </ul>
   }
 </section>
+
+<!-- ── Séquelles acquises — atelier campagne uniquement ── -->
+@if (showSequellas()) {
+  <section class="me-group">
+    <h4 class="me-group-title">Séquelles ({{ sequellas().length }})</h4>
+    @if (sequellas().length === 0) {
+      <p class="me-status">Aucune séquelle acquise.</p>
+    } @else if (visibleSequellas().length === 0) {
+      <p class="me-status">Toutes les séquelles de ce véhicule ont été revendues — affichez-les pour les consulter.</p>
+    } @else {
+      <ul class="me-list">
+        @for (sequella of visibleSequellas(); track sequella.id) {
+          <li class="me-item" [class.me-item--sold]="sequella.isSold" [attr.title]="sequella.isSold ? 'Revendue (atelier) — perte totale de Chocs' : null">
+            @if (sequella.isSold) {
+              <span class="me-item__watermark">Vendue</span>
+            }
+            <span class="me-name" [class.me-name--sold]="sequella.isSold">
+              {{ sequella.nom }}
+            </span>
+            <span class="me-badges">
+              <span class="me-badge" title="Coût en Chocs (jamais réduit à la revente)">
+                💥 {{ sequella.chocsCost }}
+              </span>
+            </span>
+            @if (!sequella.isSold && !locked()) {
+              @if (sequella.purchasedThisSession || sequellaResaleUnlocked()) {
+                <button
+                  class="me-remove"
+                  type="button"
+                  title="Retirer cette séquelle"
+                  (click)="sequellaRemoved.emit(sequella)">
+                  Retirer
+                </button>
+              } @else {
+                <span class="me-locked" title="Revente fermée — seule la présence de 'Légende Vivante' sur ce véhicule l'ouvre">
+                  🔒
+                </span>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

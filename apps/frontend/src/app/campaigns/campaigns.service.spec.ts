@@ -335,7 +335,7 @@ describe('CampaignsService', () => {
   describe('getWorkshopAvailableSequelles()', () => {
     it('effectue GET /api/campaigns/:id/workshop/vehicles/:vId/available-sequelles', () => {
       const sequelles: AvailableSequellaDto[] = [
-        { nom: 'Suicidaire', nomInterne: 'suicidaire', chocsCost: 1, description: '', disponible: true },
+        { nom: 'Suicidaire', nomInterne: 'suicidaire', chocsCost: 1, description: '', regles: '', disponible: true },
       ];
       let result: AvailableSequellaDto[] | undefined;
 

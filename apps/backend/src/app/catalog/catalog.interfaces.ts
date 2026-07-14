@@ -166,7 +166,10 @@ export interface Sequelle {
   nom: string;
   /** Identifiant technique stable (snake_case, sans accents), ex: "suicidaire", "dur_a_cuire". */
   nom_interne: string;
+  /** Phrase d'ambiance courte, affichée sur la carte catalogue. */
   description: string;
+  /** Effet mécanique précis (Markdown) — affiché uniquement dans la modale de détail. */
+  regles: string;
   /** Coût en Chocs (monnaie du véhicule, distincte des Jerricans de l'équipe). */
   chocs_cost: number;
   /**

@@ -44,7 +44,8 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
-import { Sponsor, Vehicule } from '../../../catalog/catalog.model';
+import { Sponsor, Vehicule, Avantage } from '../../../catalog/catalog.model';
+import { CatalogService } from '../../../catalog/catalog.service';
 import { EQUIPMENT_DATA_SOURCE, BudgetView, EquipmentDataSource } from '../equipment-data-source';
 import {
   AvailableImprovementDto,
@@ -62,11 +63,27 @@ import { TeamBudget } from './team-budget/team-budget';
 import { VehicleCostSummary } from './vehicle-cost-summary/vehicle-cost-summary';
 import { MountedEquipment } from './mounted-equipment/mounted-equipment';
 import { ConfirmModal } from '../../../shared/confirm-modal/confirm-modal';
+import { SequellaAdvantagePicker } from './sequella-advantage-picker/sequella-advantage-picker';
+import { SequellaDetailModal } from './sequella-detail-modal/sequella-detail-modal';
+import { CampaignsService } from '../../../campaigns/campaigns.service';
+import type { AvailableSequellaDto, WorkshopSequellaDto } from '../../../campaigns/workshop.model';
+
+const DUR_A_CUIRE = 'dur_a_cuire';
+const LEGENDE_VIVANTE = 'legende_vivante';
+const DUR_A_CUIRE_CATEGORIE = 'Dur à Cuire';
 
 @Component({
   selector: 'app-equipment-manager',
   standalone: true,
-  imports: [EquipmentOption, TeamBudget, VehicleCostSummary, MountedEquipment, ConfirmModal],
+  imports: [
+    EquipmentOption,
+    TeamBudget,
+    VehicleCostSummary,
+    MountedEquipment,
+    ConfirmModal,
+    SequellaAdvantagePicker,
+    SequellaDetailModal,
+  ],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',
 })
@@ -76,6 +93,15 @@ export class EquipmentManager {
    * composant ignore s'il parle au backend équipe (CRUD) ou atelier (event-sourcing).
    */
   private dataSource: EquipmentDataSource = inject(EQUIPMENT_DATA_SOURCE);
+
+  /**
+   * Injectés DIRECTEMENT (pas via `EquipmentDataSource`) — les séquelles n'ont pas
+   * d'équivalent côté construction d'équipe (monnaie Chocs, pas de cagnotte/jerricans),
+   * donc pas de second contexte à abstraire. Utilisés uniquement quand `campaignId()`
+   * est renseigné (atelier) — inertes en construction d'équipe.
+   */
+  private campaignsService: CampaignsService = inject(CampaignsService);
+  private catalogService: CatalogService = inject(CatalogService);
 
   // ── Inputs / Outputs ────────────────────────────────────────────────────────
 
@@ -126,6 +152,28 @@ export class EquipmentManager {
    */
   vehicleChanged: OutputEmitterRef<Vehicle> = output<Vehicle>();
 
+  /**
+   * `null` en construction d'équipe (`VehicleConfigurator` ne le renseigne jamais) —
+   * sa présence active tout le sous-système séquelles : chargement du catalogue
+   * disponible, section catalogue "Séquelles" (droite), 4ᵉ groupe "Séquelles" dans
+   * `MountedEquipment` (gauche). Les séquelles n'existent qu'en atelier campagne.
+   */
+  campaignId: InputSignal<number | null> = input<number | null>(null);
+
+  /** Chocs accumulés par ce véhicule — transmis tel quel à `VehicleCostSummary`. */
+  chocs: InputSignal<number | null> = input<number | null>(null);
+
+  /** Séquelles acquises par ce véhicule — transmises telles quelles à `MountedEquipment`. */
+  sequellas: InputSignal<WorkshopSequellaDto[]> = input<WorkshopSequellaDto[]>([]);
+
+  /**
+   * Émis après CHAQUE achat/retrait de séquelle réussi — signal SANS payload,
+   * contrairement à `vehicleChanged` : chocs/séquelles vivent hors du modèle
+   * `Vehicle` reçu par ce composant (`mapWorkshopVehicleToVehicle` les ignore),
+   * le parent doit donc recharger tout l'état d'atelier plutôt que remplacer `vehicle`.
+   */
+  sequellaChanged: OutputEmitterRef<void> = output<void>();
+
   // ── Équipement disponible (catalogues filtrés + verdicts) ───────────────────
 
   availableWeapons: WritableSignal<AvailableWeaponDto[]> = signal<AvailableWeaponDto[]>([]);
@@ -133,6 +181,21 @@ export class EquipmentManager {
   availableAdvantages: WritableSignal<AvailableAdvantageDto[]> = signal<AvailableAdvantageDto[]>([]);
   loadingEquipment: WritableSignal<boolean> = signal(false);
   equipmentError: WritableSignal<string> = signal('');
+
+  // ── Séquelles disponibles (atelier uniquement) ───────────────────────────────
+
+  availableSequellas: WritableSignal<AvailableSequellaDto[]> = signal<AvailableSequellaDto[]>([]);
+  loadingSequellas: WritableSignal<boolean> = signal(false);
+  sequellaError: WritableSignal<string> = signal('');
+
+  /** Séquelle dont la modale de détail est ouverte — `null` si fermée. */
+  detailsSequella: WritableSignal<AvailableSequellaDto | null> = signal<AvailableSequellaDto | null>(null);
+
+  /** Avantages de catégorie "Dur à Cuire" (6, tous sponsors confondus) — chargés une fois. */
+  durACuireAdvantages: WritableSignal<Avantage[]> = signal<Avantage[]>([]);
+
+  /** Séquelle en attente de choix d'avantage gratuit — non-null ⇒ le picker est ouvert. */
+  pendingDurACuireNomInterne: WritableSignal<string | null> = signal<string | null>(null);
 
   // ── Confirmations de retrait ────────────────────────────────────────────────
 
@@ -144,6 +207,9 @@ export class EquipmentManager {
 
   /** Avantage en attente de confirmation de retrait (null = aucun) */
   pendingRemoveAdvantage: WritableSignal<VehicleAdvantage | null> = signal<VehicleAdvantage | null>(null);
+
+  /** Séquelle en attente de confirmation de retrait (annulation ou revente) — mirroir des 3 ci-dessus. */
+  pendingRemoveSequella: WritableSignal<WorkshopSequellaDto | null> = signal<WorkshopSequellaDto | null>(null);
 
   // ── Filtrage des options définitivement indisponibles ───────────────────────
 
@@ -181,9 +247,14 @@ export class EquipmentManager {
     return this.availableAdvantages().filter((a): boolean => !a.disponible).length;
   });
 
+  /** Mirroir de `hiddenAdvantagesCount` pour les séquelles (jamais d'orientation, refus toujours définitif — Chocs insuffisants). */
+  hiddenSequellasCount: Signal<number> = computed((): number => {
+    return this.availableSequellas().filter((s): boolean => !s.disponible).length;
+  });
+
   /** Total toutes catégories confondues — affiché dans le libellé du bouton. */
   hiddenCount: Signal<number> = computed((): number => {
-    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount() + this.hiddenAdvantagesCount();
+    return this.hiddenWeaponsCount() + this.hiddenImprovementsCount() + this.hiddenAdvantagesCount() + this.hiddenSequellasCount();
   });
 
   /**
@@ -211,6 +282,22 @@ export class EquipmentManager {
     const all = this.availableAdvantages();
     if (this.showUnavailable()) return all;
     return all.filter((a): boolean => a.disponible);
+  });
+
+  /** Mirroir de `visibleAdvantages` pour les séquelles. */
+  visibleSequellas: Signal<AvailableSequellaDto[]> = computed((): AvailableSequellaDto[] => {
+    const all = this.availableSequellas();
+    if (this.showUnavailable()) return all;
+    return all.filter((s): boolean => s.disponible);
+  });
+
+  /**
+   * `true` si le véhicule porte encore une "Légende Vivante" active (`!isSold`) —
+   * débloque la revente cross-session des AUTRES séquelles pré-existantes, mirroir
+   * exact de `Vehicle.canRemoveSequella()` côté backend. Pure fonction de `sequellas()`.
+   */
+  sequellaResaleUnlocked: Signal<boolean> = computed((): boolean => {
+    return this.sequellas().some((s): boolean => !s.isSold && s.nomInterne === LEGENDE_VIVANTE);
   });
 
   /**
@@ -397,6 +484,32 @@ export class EquipmentManager {
       this.vehicle();
       this.loadAvailableEquipment();
     });
+
+    // Séquelles — même schéma que ci-dessus, actif uniquement en atelier
+    // (`campaignId() !== null`). Aucun rechargement manuel après achat/vente :
+    // le parent réémet un nouveau `vehicle` après tout succès (`sequellaChanged`
+    // → parent recharge le workshop → nouvel input `vehicle`), ce qui refait
+    // déjà tourner cet effet.
+    effect((): void => {
+      this.vehicle();
+      if (this.campaignId() !== null) {
+        this.loadAvailableSequellas();
+      }
+    });
+
+    // Catalogue "Dur à Cuire" — chargé une fois, indépendamment du véhicule, si
+    // le contexte atelier est actif.
+    effect((): void => {
+      if (this.campaignId() === null) return;
+      this.catalogService.getAllAvantages().subscribe({
+        next: (all: Avantage[]): void => {
+          this.durACuireAdvantages.set(all.filter((a): boolean => a.categorie === DUR_A_CUIRE_CATEGORIE));
+        },
+        // Non bloquant : si le catalogue d'avantages échoue à charger, le picker
+        // Dur à Cuire affichera une liste vide plutôt que de bloquer tout l'atelier.
+        error: (): void => undefined,
+      });
+    });
   }
 
   // ── Chargement de l'équipement disponible ───────────────────────────────────
@@ -426,6 +539,25 @@ export class EquipmentManager {
       error: (): void => {
         this.equipmentError.set('Impossible de charger les équipements disponibles. Réessayez.');
         this.loadingEquipment.set(false);
+      },
+    });
+  }
+
+  private loadAvailableSequellas(): void {
+    const campaignId = this.campaignId();
+    if (campaignId === null) return;
+
+    this.loadingSequellas.set(true);
+    this.sequellaError.set('');
+
+    this.campaignsService.getWorkshopAvailableSequelles(campaignId, this.vehicle().id).subscribe({
+      next: (list: AvailableSequellaDto[]): void => {
+        this.availableSequellas.set(list);
+        this.loadingSequellas.set(false);
+      },
+      error: (): void => {
+        this.sequellaError.set('Impossible de charger les séquelles disponibles. Réessayez.');
+        this.loadingSequellas.set(false);
       },
     });
   }
@@ -551,6 +683,101 @@ export class EquipmentManager {
         this.equipmentError.set(err.error?.message ?? 'Impossible de retirer cet avantage. Réessayez.');
       },
     });
+  }
+
+  // ── Séquelles — achat/retrait (atelier uniquement, monnaie Chocs) ───────────
+  // Ne passe PAS par `EquipmentDataSource` (limité à armes/améliorations/avantages,
+  // monnaie jerricans) : appelle directement `CampaignsService.changeEquipment`,
+  // comme l'ancien `SequellaManager`.
+
+  /** Clic sur la carte séquelle — ouvre la modale de détail (description + règles). */
+  openSequellaDetails(sequella: AvailableSequellaDto): void {
+    this.detailsSequella.set(sequella);
+  }
+
+  closeSequellaDetails(): void {
+    this.detailsSequella.set(null);
+  }
+
+  /** Clic sur "Acquérir" — Dur à Cuire ouvre d'abord le picker, les autres achètent directement. */
+  onAcquireSequella(sequella: AvailableSequellaDto): void {
+    if (sequella.nomInterne === DUR_A_CUIRE) {
+      this.pendingDurACuireNomInterne.set(DUR_A_CUIRE);
+      return;
+    }
+    this.buySequella(sequella.nomInterne, null);
+  }
+
+  /** Le picker a confirmé un choix — achète Dur à Cuire avec l'avantage gratuit bundlé. */
+  onDurACuireAdvantagePicked(freeAdvantageNomInterne: string): void {
+    this.pendingDurACuireNomInterne.set(null);
+    this.buySequella(DUR_A_CUIRE, freeAdvantageNomInterne);
+  }
+
+  onDurACuireAdvantagePickerCancelled(): void {
+    this.pendingDurACuireNomInterne.set(null);
+  }
+
+  private buySequella(nomInterne: string, freeAdvantageNomInterne: string | null): void {
+    const campaignId = this.campaignId();
+    if (campaignId === null) return;
+
+    this.sequellaError.set('');
+
+    this.campaignsService.changeEquipment(campaignId, {
+      operation: 'BUY',
+      entityType: 'SEQUELLE',
+      nomInterne,
+      targetVehicleId: this.vehicle().id,
+      targetEntityId: null,
+      orientation: null,
+      freeAdvantageNomInterne,
+    }).subscribe({
+      next: (): void => this.sequellaChanged.emit(),
+      error: (err: HttpErrorResponse): void => {
+        this.sequellaError.set(err.error?.message ?? 'Impossible d\'acquérir cette séquelle. Réessayez.');
+      },
+    });
+  }
+
+  removeSequella(sequella: WorkshopSequellaDto): void {
+    if (this.locked()) return;
+    this.pendingRemoveSequella.set(sequella);
+  }
+
+  onConfirmRemoveSequella(): void {
+    const sequella = this.pendingRemoveSequella();
+    this.pendingRemoveSequella.set(null);
+    if (!sequella) return;
+
+    const campaignId = this.campaignId();
+    if (campaignId === null) return;
+
+    this.sequellaError.set('');
+
+    this.campaignsService.changeEquipment(campaignId, {
+      operation: 'SELL',
+      entityType: 'SEQUELLE',
+      nomInterne: '',
+      targetVehicleId: this.vehicle().id,
+      targetEntityId: sequella.id,
+      orientation: null,
+    }).subscribe({
+      next: (): void => this.sequellaChanged.emit(),
+      error: (err: HttpErrorResponse): void => {
+        this.sequellaError.set(err.error?.message ?? 'Impossible de retirer cette séquelle. Réessayez.');
+      },
+    });
+  }
+
+  /** Texte de confirmation — annulation (session en cours) vs revente (perte totale, comme un avantage). */
+  sequellaRemovalMessage(sequella: WorkshopSequellaDto): string {
+    if (sequella.purchasedThisSession) return `Annuler l'achat de "${sequella.nom}" ?`;
+    return `Revendre "${sequella.nom}" ? Aucun remboursement (perte totale de Chocs).`;
+  }
+
+  sequellaRemovalConfirmLabel(): string {
+    return 'Retirer';
   }
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────

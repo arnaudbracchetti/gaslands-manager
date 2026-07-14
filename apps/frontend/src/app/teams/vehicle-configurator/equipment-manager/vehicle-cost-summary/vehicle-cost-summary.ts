@@ -39,4 +39,12 @@ export class VehicleCostSummary {
 
   /** Coût total du véhicule — base + équipement monté. */
   coutTotal: InputSignal<number> = input.required<number>();
+
+  /**
+   * Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles.
+   * `null` en construction d'équipe (jamais renseigné par `VehicleConfigurator`,
+   * cf. `EquipmentManager`) : la ligne "Chocs" est alors absente plutôt qu'affichée
+   * à 0, ce concept n'existant pas hors du mode campagne.
+   */
+  chocs: InputSignal<number | null> = input<number | null>(null);
 }

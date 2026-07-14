@@ -11,7 +11,7 @@
  *   - `edit`             → /teams/:teamId/edit (TeamEditPage)
  * `TeamEditPage` passe `returnTo=edit` lors de la navigation vers cette page.
  */
-import { Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, Signal, WritableSignal, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Team } from '../team.model';
 import { TeamsService } from '../teams.service';
@@ -56,6 +56,26 @@ export class VehicleConfiguratorPage implements OnInit {
     }
     return [{ label: 'Mes Équipes', route: ['/teams'] }, { label: current }];
   });
+
+  /**
+   * Référence à `VehicleConfigurator` (via `viewChild()`, traverse le
+   * `@else if (team(); as t)` qui garde l'enfant). Chaîne un niveau de plus
+   * jusqu'à `EquipmentManager` (`VehicleConfigurator.equipmentManagerRef`)
+   * pour piloter le filtre catalogue depuis `.vcp-header` — même pattern que
+   * `AtelierVehiclePage`.
+   */
+  readonly vehicleConfiguratorRef: Signal<VehicleConfigurator | undefined> = viewChild(VehicleConfigurator);
+  readonly hasEquipmentManager: Signal<boolean> = computed(
+    (): boolean => !!this.vehicleConfiguratorRef()?.equipmentManagerRef(),
+  );
+  readonly showUnavailable: Signal<boolean> = computed(
+    (): boolean => this.vehicleConfiguratorRef()?.showUnavailable() ?? false,
+  );
+  readonly hiddenCount: Signal<number> = computed((): number => this.vehicleConfiguratorRef()?.hiddenCount() ?? 0);
+
+  toggleShowUnavailable(): void {
+    this.vehicleConfiguratorRef()?.toggleShowUnavailable();
+  }
 
   ngOnInit(): void {
     const teamId = Number(this.route.snapshot.paramMap.get('teamId'));

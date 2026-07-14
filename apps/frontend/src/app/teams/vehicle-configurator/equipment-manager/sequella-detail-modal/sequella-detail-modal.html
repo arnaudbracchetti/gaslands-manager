@@ -1,0 +1,44 @@
+<!--
+  SequellaDetailModal — overlay de détail d'une séquelle (cf. en-tête .ts).
+
+  Structure calquée sur EquipmentDetailModal (.edm-*) : fond semi-transparent plein
+  écran (.sdm-overlay) + boîte centrale (.sdm-modal). Le clic sur l'overlay émet
+  `closed` ; `$event.stopPropagation()` sur la boîte empêche qu'un clic À
+  L'INTÉRIEUR ne remonte jusqu'à l'overlay et ne ferme la popup par erreur.
+-->
+<div class="sdm-overlay" role="dialog" aria-modal="true" [attr.aria-label]="sequella().nom"
+     (click)="closed.emit()">
+  <div class="sdm-modal" (click)="$event.stopPropagation()">
+
+    <header class="sdm-modal__header">
+      <h3 class="sdm-modal__name">{{ sequella().nom }}</h3>
+      <span class="sdm-modal__badge" title="Coût en Chocs">
+        💥 {{ sequella().chocsCost }}
+      </span>
+    </header>
+
+    @if (sequella().description) {
+      <!-- [innerHTML] : description/regles convertis en HTML au chargement du
+           catalogue (CatalogService.onModuleInit, marked). -->
+      <div class="sdm-modal__description" [innerHTML]="sequella().description"></div>
+    }
+
+    @if (sequella().regles) {
+      <section class="sdm-modal__regles">
+        <h4 class="sdm-modal__regles-title">Règles</h4>
+        <div [innerHTML]="sequella().regles"></div>
+      </section>
+    }
+
+    @if (!sequella().disponible) {
+      <p class="sdm-modal__reason">{{ sequella().raison }}</p>
+    }
+
+    <div class="sdm-modal__actions">
+      <button class="sdm-modal__cancel" type="button" (click)="closed.emit()">
+        Annuler
+      </button>
+    </div>
+
+  </div>
+</div>

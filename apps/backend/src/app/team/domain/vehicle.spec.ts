@@ -156,10 +156,10 @@ describe('Vehicle — champs transients de campagne', () => {
 
   describe('addCampaignSequella / removeSequella', () => {
     const moteur = SequellaType.from({
-      nom: 'Moteur endommagé', nom_interne: 'moteur_endommage', description: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+      nom: 'Moteur endommagé', nom_interne: 'moteur_endommage', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
     });
     const direction = SequellaType.from({
-      nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+      nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
     });
 
     it('sequellas est vide par défaut', () => {
@@ -193,10 +193,10 @@ describe('Vehicle — champs transients de campagne', () => {
 
   describe('canAddSequella', () => {
     const suicidaire = SequellaType.from({
-      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
+      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
     });
     const siegeIrrecuperable = SequellaType.from({
-      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
     });
 
     it('rejette une séquelle TABLE_EPAVES (jamais achetable en atelier)', () => {
@@ -227,10 +227,10 @@ describe('Vehicle — champs transients de campagne', () => {
 
   describe('assertCanAddSequella', () => {
     const suicidaire = SequellaType.from({
-      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
+      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
     });
     const durACuire = SequellaType.from({
-      nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', chocs_cost: 1, origine: 'ATELIER',
+      nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
     });
     const avantageGratuit = makeAdvantageType('coriace');
 
@@ -261,7 +261,7 @@ describe('Vehicle — champs transients de campagne', () => {
 
   describe('canRemoveSequella / hasActiveSequella', () => {
     const legendeVivante = SequellaType.from({
-      nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', chocs_cost: 11, origine: 'ATELIER',
+      nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '', chocs_cost: 11, origine: 'ATELIER',
     });
 
     it('rejette la revente par défaut (pas de Légende Vivante active)', () => {
@@ -389,7 +389,7 @@ describe('Vehicle.canAddImprovement — règles de pose (chaîne Decorator)', ()
 
   it('membre d\'équipage : le seuil (baseStats.equipage) n\'est pas réduit par une séquelle, contrairement à la valeur testée', () => {
     const siegeIrrecuperable = SequellaType.from({
-      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
     });
     const crew = (): Improvement => new Improvement(0, improvementType('membre_equipage', 'membre_equipage', 0), null, false);
     // Sans séquelle, 2 membres existants + candidat donnent un effectif de 5 > seuil 4 (base×2)
@@ -583,10 +583,10 @@ describe('Vehicle.buildChain — contribution portée par les flags (refactor)',
   }
 
   const directionEndommagee = SequellaType.from({
-    nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+    nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
   });
   const suicidaire = SequellaType.from({
-    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: 1, origine: 'ATELIER',
+    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
   });
 
   it('séquelle câblée : "Direction endommagée" (-1) fait chuter la manœuvrabilité effective sous 3 → Cascadeur refusé', () => {

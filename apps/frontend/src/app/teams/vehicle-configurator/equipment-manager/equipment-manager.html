@@ -50,18 +50,23 @@
         [emplacementsTotal]="emplacementsTotal()"
         [coutBase]="coutBase()"
         [coutEquipement]="coutEquipement()"
-        [coutTotal]="coutTotal()" />
+        [coutTotal]="coutTotal()"
+        [chocs]="chocs()" />
     </div>
 
     <app-mounted-equipment
       [weapons]="vehicle().weapons"
       [improvements]="vehicle().improvements"
       [advantages]="vehicle().advantages"
+      [sequellas]="sequellas()"
+      [sequellaResaleUnlocked]="sequellaResaleUnlocked()"
+      [showSequellas]="campaignId() !== null"
       [sponsorCatalog]="sponsorCatalog()"
       [locked]="locked()"
       (weaponRemoved)="removeWeapon($event)"
       (improvementRemoved)="removeImprovement($event)"
-      (advantageRemoved)="removeAdvantage($event)" />
+      (advantageRemoved)="removeAdvantage($event)"
+      (sequellaRemoved)="removeSequella($event)" />
 
   </section>
 
@@ -72,22 +77,14 @@
     <div class="em-equipment">
 
       <!--
-        Barre de filtre — masque par défaut les options DÉFINITIVEMENT
-        indisponibles (cf. doc de `showUnavailable`/`visibleWeapons`). Les
-        options nécessitant juste une orientation restent toujours visibles.
+        Le filtre "Afficher les indisponibles" (masque par défaut les options
+        DÉFINITIVEMENT indisponibles, cf. doc de `showUnavailable`/`visibleWeapons`)
+        est piloté depuis la bande d'en-tête fixe de la page parente (`.vcp-header`),
+        pas ici — cf. `showUnavailable`/`hiddenCount`, champs publics exposés via
+        `viewChild()` par `AtelierVehiclePage`/`VehicleConfigurator`.
       -->
       <div class="em-equipment__toolbar">
         <span class="em-equipment__toolbar-label">Catalogue disponible</span>
-        <button
-          class="em-toggle"
-          type="button"
-          (click)="showUnavailable.set(!showUnavailable())">
-          @if (showUnavailable()) {
-            Masquer les indisponibles
-          } @else {
-            Afficher les indisponibles ({{ hiddenCount() }})
-          }
-        </button>
       </div>
 
       <section class="em-equipment__group">
@@ -96,8 +93,8 @@
           class="em-equipment__title"
           [class.em-equipment__title--collapsed]="collapsedSections().has('weapons')"
           (click)="toggleSection('weapons')">
-          Armes
           <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+          Armes
         </button>
         @if (!collapsedSections().has('weapons')) {
           @if (visibleWeapons().length === 0) {
@@ -127,8 +124,8 @@
           class="em-equipment__title"
           [class.em-equipment__title--collapsed]="collapsedSections().has('improvements')"
           (click)="toggleSection('improvements')">
-          Améliorations
           <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+          Améliorations
         </button>
         @if (!collapsedSections().has('improvements')) {
           @if (visibleImprovements().length === 0) {
@@ -164,8 +161,8 @@
           class="em-equipment__title"
           [class.em-equipment__title--collapsed]="collapsedSections().has('advantagesA')"
           (click)="toggleSection('advantagesA')">
-          Avantages — {{ sponsorCatalog().classes_avantage[0] }}
           <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+          Avantages — {{ sponsorCatalog().classes_avantage[0] }}
         </button>
         @if (!collapsedSections().has('advantagesA')) {
           @if (advantagesCategoryA().length === 0) {
@@ -189,8 +186,8 @@
           class="em-equipment__title"
           [class.em-equipment__title--collapsed]="collapsedSections().has('advantagesB')"
           (click)="toggleSection('advantagesB')">
-          Avantages — {{ sponsorCatalog().classes_avantage[1] }}
           <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+          Avantages — {{ sponsorCatalog().classes_avantage[1] }}
         </button>
         @if (!collapsedSections().has('advantagesB')) {
           @if (advantagesCategoryB().length === 0) {
@@ -207,6 +204,73 @@
           }
         }
       </section>
+
+      <!--
+        ═══ Séquelles — atelier campagne uniquement (`campaignId() !== null`) ═══
+        Monnaie Chocs (pas jerricans) : carte dédiée plutôt que `<app-equipment-option>`
+        (badges $/emplacement codés en dur, inadaptés). Réutilise le toggle
+        "Afficher les indisponibles" déjà en place pour les 3 autres catégories.
+      -->
+      @if (campaignId() !== null) {
+        <section class="em-equipment__group">
+          <button
+            type="button"
+            class="em-equipment__title"
+            [class.em-equipment__title--collapsed]="collapsedSections().has('sequellas')"
+            (click)="toggleSection('sequellas')">
+            <span class="em-equipment__chevron" aria-hidden="true">▾</span>
+            Séquelles
+          </button>
+          @if (!collapsedSections().has('sequellas')) {
+            @if (sequellaError()) {
+              <p class="em-status em-status--error">{{ sequellaError() }}</p>
+            }
+            @if (loadingSequellas()) {
+              <p class="em-status em-status--loading">Chargement des séquelles…</p>
+            } @else if (visibleSequellas().length === 0) {
+              <p class="em-status">
+                @if (availableSequellas().length === 0) {
+                  Aucune séquelle disponible.
+                } @else {
+                  Toutes les séquelles sont indisponibles — affichez-les pour voir pourquoi.
+                }
+              </p>
+            } @else {
+              <div class="em-equipment__list">
+                @for (sequella of visibleSequellas(); track sequella.nomInterne) {
+                  <div
+                    class="em-sequella-card"
+                    [class.em-sequella-card--unavailable]="!sequella.disponible"
+                    (click)="openSequellaDetails(sequella)">
+                    <div class="em-sequella-card__header">
+                      <span class="em-sequella-card__name">{{ sequella.nom }}</span>
+                      <span class="em-sequella-card__badge" title="Coût en Chocs">
+                        💥 {{ sequella.chocsCost }}
+                      </span>
+                    </div>
+                    <!-- [innerHTML] : description convertie en HTML au chargement du catalogue (marked). -->
+                    <div class="em-sequella-card__description" [innerHTML]="sequella.description"></div>
+                    @if (!sequella.disponible) {
+                      <p class="em-sequella-card__reason">{{ sequella.raison }}</p>
+                    } @else {
+                      <button
+                        class="em-sequella-card__acquire"
+                        type="button"
+                        (click)="$event.stopPropagation(); onAcquireSequella(sequella)">
+                        Acquérir
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (detailsSequella(); as ds) {
+                <app-sequella-detail-modal [sequella]="ds" (closed)="closeSequellaDetails()" />
+              }
+            }
+          }
+        </section>
+      }
     </div>
   }
 
@@ -238,6 +302,22 @@
       cancelLabel="Fermer"
       (confirmed)="onConfirmRemoveAdvantage()"
       (cancelled)="pendingRemoveAdvantage.set(null)" />
+  }
+
+  @if (pendingRemoveSequella()) {
+    <app-confirm-modal
+      [message]="sequellaRemovalMessage(pendingRemoveSequella()!)"
+      [confirmLabel]="sequellaRemovalConfirmLabel()"
+      cancelLabel="Fermer"
+      (confirmed)="onConfirmRemoveSequella()"
+      (cancelled)="pendingRemoveSequella.set(null)" />
+  }
+
+  @if (pendingDurACuireNomInterne()) {
+    <app-sequella-advantage-picker
+      [advantages]="durACuireAdvantages()"
+      (confirmed)="onDurACuireAdvantagePicked($event)"
+      (cancelled)="onDurACuireAdvantagePickerCancelled()" />
   }
 
 </div>

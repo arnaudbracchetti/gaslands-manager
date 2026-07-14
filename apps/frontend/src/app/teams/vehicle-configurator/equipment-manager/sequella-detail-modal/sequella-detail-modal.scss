@@ -1,0 +1,167 @@
+.sdm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.sdm-modal {
+  background: var(--metal-sheen);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-stamp-lg);
+}
+
+.sdm-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sdm-modal__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// Même style que .em-sequella-card__badge (badge Chocs, pas de jerricans/emplacement).
+.sdm-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(230, 180, 28, 0.1);
+  border: 1px solid rgba(230, 180, 28, 0.28);
+  color: var(--tb-danger);
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sdm-modal__description {
+  ::ng-deep p, ::ng-deep ul, ::ng-deep li {
+    margin: 0;
+    font-family: var(--font-text);
+    font-weight: 300;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  ::ng-deep ul {
+    padding-left: 1.2em;
+  }
+}
+
+.sdm-modal__regles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sdm-modal__regles-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+
+  & + div {
+    ::ng-deep p {
+      margin: 0;
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--tb-os);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    ::ng-deep ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    ::ng-deep li {
+      font-family: var(--font-text);
+      font-weight: 300;
+      color: var(--tb-os);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding-left: 14px;
+      position: relative;
+
+      &::before {
+        content: '›';
+        position: absolute;
+        left: 0;
+        color: var(--tb-danger);
+        font-weight: 700;
+      }
+    }
+
+    ::ng-deep strong {
+      color: var(--tb-os);
+      font-weight: 600;
+    }
+  }
+}
+
+.sdm-modal__reason {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--tb-rouille-lt);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+.sdm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sdm-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  padding: 8px 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-os);
+    color: var(--tb-os);
+  }
+}

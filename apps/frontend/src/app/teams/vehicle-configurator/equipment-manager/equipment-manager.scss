@@ -87,7 +87,6 @@
   margin: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   width: 100%;
   background: none;
@@ -104,7 +103,8 @@
 }
 
 .em-equipment__chevron {
-  font-size: 0.8rem;
+  font-size: 1.3rem;
+  line-height: 1;
   color: var(--text-dim);
   transition: transform 160ms;
 }
@@ -136,11 +136,87 @@
   letter-spacing: 0.08em;
 }
 
-.em-toggle {
+// ─── Cartes séquelles — monnaie Chocs, pas de badge $/emplacement ─────────────
+// Structure calquée sur `.option__*` (equipment-option.scss), pas réutilisée
+// directement : badges $ et emplacement de `<app-equipment-option>` sont codés
+// en dur pour les jerricans, inadaptés à la monnaie Chocs des séquelles.
+
+.em-sequella-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--metal-sheen);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: border-color 160ms;
+
+  &:hover {
+    border-color: var(--tb-danger);
+  }
+
+  &--unavailable {
+    opacity: 0.7;
+  }
+}
+
+.em-sequella-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.em-sequella-card__name {
+  font-family: var(--font-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.em-sequella-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(230, 180, 28, 0.08);
+  border: 1px solid rgba(230, 180, 28, 0.25);
+  color: var(--tb-danger);
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.em-sequella-card__description {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+
+  // Le HTML généré par `marked` porte déjà ses propres balises (<p>, <ul>...).
+  ::ng-deep p {
+    margin: 0 0 4px;
+  }
+}
+
+.em-sequella-card__reason {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--tb-rouille-lt);
+}
+
+.em-sequella-card__acquire {
+  align-self: flex-start;
   background: transparent;
   border: 1px solid var(--border-rust);
-  color: var(--text-dim);
-  padding: 4px 12px;
+  color: var(--tb-os);
+  padding: 4px 14px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -148,10 +224,10 @@
   letter-spacing: 0.08em;
   cursor: pointer;
   transition: border-color 160ms, color 160ms;
-  white-space: nowrap;
 
   &:hover {
     border-color: var(--tb-danger);
     color: var(--tb-danger);
   }
 }
+

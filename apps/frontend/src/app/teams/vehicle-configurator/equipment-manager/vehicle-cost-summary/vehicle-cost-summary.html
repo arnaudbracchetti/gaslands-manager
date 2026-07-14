@@ -9,6 +9,12 @@
   <app-slot-gauge [used]="emplacementsUtilises()" [total]="emplacementsTotal()" size="md" />
 </div>
 
+@if (chocs() !== null) {
+  <div class="vcs-chocs" title="Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles">
+    💥 Chocs : <strong>{{ chocs() }}</strong>
+  </div>
+}
+
 <div class="vcs-cost">
   <p class="vcs-cost-row">
     <span>Base</span>

@@ -692,21 +692,22 @@ describe('EquipmentManager', () => {
       expect(component.hiddenCount()).toBe(2);
     });
 
-    it('le bouton de filtre affiche le nombre d\'options masquées et les rend visibles au clic', () => {
+    it('showUnavailable() masque/affiche les options indisponibles dans le catalogue rendu', () => {
+      // Le bouton de filtre lui-même vit désormais dans la bande d'en-tête fixe
+      // de la page parente (`.vcp-header`, piloté via `viewChild()` — cf.
+      // `AtelierVehiclePage`/`VehicleConfiguratorPage`), pas dans le template
+      // d'`EquipmentManager` : on exerce donc directement le signal public
+      // `showUnavailable`, comme le ferait le bouton distant.
       const el = fixture.nativeElement as HTMLElement;
-      const toggle = el.querySelector('.em-toggle') as HTMLButtonElement;
 
-      expect(toggle.textContent).toContain('Afficher les indisponibles (2)');
       expect(el.textContent).not.toContain('BFG');
       expect(el.textContent).not.toContain('Nitro');
       // L'option orientable, elle, reste visible même filtre actif.
       expect(el.textContent).toContain('Lance-Flammes');
 
-      toggle.click();
+      component.showUnavailable.set(true);
       fixture.detectChanges();
 
-      expect(component.showUnavailable()).toBe(true);
-      expect(toggle.textContent).toContain('Masquer les indisponibles');
       expect(el.textContent).toContain('BFG');
       expect(el.textContent).toContain('Nitro');
     });

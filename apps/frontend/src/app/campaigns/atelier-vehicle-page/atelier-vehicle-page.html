@@ -1,9 +1,20 @@
 <div class="vcp-page">
 
-  <app-breadcrumb [crumbs]="breadcrumbs()" />
+  <div class="vcp-top">
+    <app-breadcrumb [crumbs]="breadcrumbs()" />
 
-  <div class="vcp-header">
-    <h1>{{ vehicleName() || 'Gestion de l\'équipement' }}</h1>
+    <div class="vcp-header">
+      <h1>{{ vehicleName() || 'Gestion de l\'équipement' }}</h1>
+      @if (equipmentManagerRef()) {
+        <button class="vcp-toggle" type="button" (click)="toggleShowUnavailable()">
+          @if (showUnavailable()) {
+            Masquer les indisponibles
+          } @else {
+            Afficher les indisponibles ({{ hiddenCount() }})
+          }
+        </button>
+      }
+    </div>
   </div>
 
   @if (loading()) {
@@ -17,14 +28,11 @@
         [sponsorCatalog]="catalog"
         [budget]="budget()"
         [allowResale]="true"
-        (vehicleChanged)="onVehicleChanged()"
-      />
-    }
-    @if (targetWorkshopVehicle(); as workshopVehicle) {
-      <app-sequella-manager
         [campaignId]="campaignId"
-        [vehicle]="workshopVehicle"
-        (changed)="onVehicleChanged()"
+        [chocs]="targetWorkshopVehicle()?.chocs ?? null"
+        [sequellas]="targetWorkshopVehicle()?.sequellas ?? []"
+        (vehicleChanged)="onVehicleChanged()"
+        (sequellaChanged)="onVehicleChanged()"
       />
     }
   }

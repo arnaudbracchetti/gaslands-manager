@@ -13,13 +13,13 @@ import {
 
 function makeSequellaType(chocsCost = 1): SequellaType {
   return SequellaType.from({
-    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', chocs_cost: chocsCost, origine: 'ATELIER',
+    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: chocsCost, origine: 'ATELIER',
   });
 }
 
 function makeDurACuireType(): SequellaType {
   return SequellaType.from({
-    nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', chocs_cost: 6, origine: 'ATELIER',
+    nom: 'Dur à Cuire', nom_interne: 'dur_a_cuire', description: '', regles: '', chocs_cost: 6, origine: 'ATELIER',
   });
 }
 

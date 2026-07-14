@@ -70,7 +70,10 @@ export interface AvailableSequellaDto {
   nom: string;
   nomInterne: string;
   chocsCost: number;
+  /** Phrase d'ambiance courte, affichée sur la carte catalogue. */
   description: string;
+  /** Effet mécanique précis (Markdown→HTML) — affiché uniquement dans la modale de détail. */
+  regles: string;
   disponible: boolean;
   raison?: string;
 }

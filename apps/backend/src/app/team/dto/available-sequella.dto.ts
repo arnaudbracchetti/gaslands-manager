@@ -4,6 +4,7 @@ export interface AvailableSequellaDto {
   /** Coût en Chocs (monnaie du véhicule, distincte de la cagnotte). */
   chocsCost: number;
   description: string;
+  regles: string;
   disponible: boolean;
   raison?: string;
 }

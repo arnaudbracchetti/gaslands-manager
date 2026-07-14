@@ -17,7 +17,7 @@
  * partagé — même gabarit `.vcp-page`/`.vcp-header` (repris tel quel, cf.
  * `vehicle-configurator-page.scss`) que `VehicleConfiguratorPage` côté équipe.
  */
-import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, Signal, WritableSignal, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { CatalogService } from '../../catalog/catalog.service';
@@ -29,12 +29,11 @@ import { WorkshopStateDto, WorkshopVehicleDto, mapWorkshopVehicleToVehicle } fro
 import { AtelierEquipmentDataSource } from './atelier-equipment.datasource';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { buildVehicleSummary } from '../../teams/vehicle-summary';
-import { SequellaManager } from './sequella-manager/sequella-manager';
 
 @Component({
   selector: 'app-atelier-vehicle-page',
   standalone: true,
-  imports: [EquipmentManager, Breadcrumb, SequellaManager],
+  imports: [EquipmentManager, Breadcrumb],
   providers: [
     AtelierEquipmentDataSource,
     { provide: EQUIPMENT_DATA_SOURCE, useExisting: AtelierEquipmentDataSource },
@@ -72,8 +71,8 @@ export class AtelierVehiclePage implements OnInit {
   /**
    * Le véhicule ciblé, sous sa forme BRUTE `WorkshopVehicleDto` — contrairement à
    * `vehicle` ci-dessus (traduit pour `EquipmentManager`, cf. `mapWorkshopVehicleToVehicle`
-   * qui ignore `chocs`/`sequellas`), c'est la forme dont `SequellaManager` a besoin :
-   * lui seul porte encore ces deux champs.
+   * qui ignore `chocs`/`sequellas`), c'est la seule forme qui porte encore ces deux
+   * champs, transmis à `EquipmentManager` via ses inputs `chocs`/`sequellas`.
    */
   targetWorkshopVehicle: Signal<WorkshopVehicleDto | null> = computed((): WorkshopVehicleDto | null => {
     return (this.workshop()?.vehicles ?? []).find((v: WorkshopVehicleDto): boolean => v.id === this.vehicleId) ?? null;
@@ -108,6 +107,24 @@ export class AtelierVehiclePage implements OnInit {
       usedByOthers: totalAllCost - thisCost,
     };
   });
+
+  /**
+   * Référence à `EquipmentManager` (via `viewChild()`, pas une variable de
+   * référence de template — celle-ci traverse les `@if`/`@else if` imbriqués
+   * qui gardent l'enfant, contrairement à un `#ref` de template dont la portée
+   * est limitée à son bloc). Sert à exposer `showUnavailable`/`hiddenCount`
+   * (déjà publics sur `EquipmentManager`) dans `.vcp-header`, qui est rendu en
+   * dehors de ces blocs.
+   */
+  readonly equipmentManagerRef: Signal<EquipmentManager | undefined> = viewChild(EquipmentManager);
+  readonly showUnavailable: Signal<boolean> = computed(
+    (): boolean => this.equipmentManagerRef()?.showUnavailable() ?? false,
+  );
+  readonly hiddenCount: Signal<number> = computed((): number => this.equipmentManagerRef()?.hiddenCount() ?? 0);
+
+  toggleShowUnavailable(): void {
+    this.equipmentManagerRef()?.showUnavailable.update((v: boolean): boolean => !v);
+  }
 
   breadcrumbs: Signal<BreadcrumbItem[]> = computed((): BreadcrumbItem[] => [
     { label: 'Mes Campagnes', route: ['/campaigns'] },

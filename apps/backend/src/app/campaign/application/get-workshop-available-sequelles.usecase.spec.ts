@@ -9,13 +9,13 @@ import { CampaignState } from '../domain/enums/campaign.enums';
 import { makeTestParticipant } from '../domain/test-helpers';
 
 const SUICIDAIRE = SequellaType.from({
-  nom: 'Suicidaire', nom_interne: 'suicidaire', description: 'Texte.', chocs_cost: 1, origine: 'ATELIER',
+  nom: 'Suicidaire', nom_interne: 'suicidaire', description: 'Texte.', regles: '', chocs_cost: 1, origine: 'ATELIER',
 });
 const LEGENDE_VIVANTE = SequellaType.from({
-  nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: 'Texte.', chocs_cost: 11, origine: 'ATELIER',
+  nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: 'Texte.', regles: '', chocs_cost: 11, origine: 'ATELIER',
 });
 const SIEGE_IRRECUPERABLE = SequellaType.from({
-  nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: 'Texte.', chocs_cost: 0, origine: 'TABLE_EPAVES',
+  nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: 'Texte.', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
 });
 
 function makeFixture(chocs = 0) {

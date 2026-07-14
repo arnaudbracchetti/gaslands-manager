@@ -34,6 +34,18 @@
   vertical-align: -2px;
 }
 
+.vcs-chocs {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+
+  strong {
+    color: var(--tb-danger);
+  }
+}
+
 .vcs-cost {
   display: flex;
   flex-direction: column;

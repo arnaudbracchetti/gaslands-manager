@@ -46,6 +46,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 // HttpErrorResponse : type Angular pour les erreurs HTTP — `err.error?.message`
 // extrait le corps JSON de la réponse d'erreur (cf. `register.ts`/`login.ts`,
@@ -174,6 +175,22 @@ export class VehicleConfigurator implements OnInit {
    * `EquipmentManager` en mode édition.
    */
   locked: Signal<boolean> = computed((): boolean => this.team().isLockedByCampaign ?? false);
+
+  /**
+   * Référence à `EquipmentManager` (via `viewChild()`, traverse le `@if (vehicle(); as v)`
+   * qui garde l'enfant, cf. `equipment-manager.html`) — expose `showUnavailable`/
+   * `hiddenCount` (déjà publics sur `EquipmentManager`) à `VehicleConfiguratorPage`,
+   * qui pilote le filtre catalogue depuis sa propre bande d'en-tête fixe.
+   */
+  readonly equipmentManagerRef: Signal<EquipmentManager | undefined> = viewChild(EquipmentManager);
+  readonly showUnavailable: Signal<boolean> = computed(
+    (): boolean => this.equipmentManagerRef()?.showUnavailable() ?? false,
+  );
+  readonly hiddenCount: Signal<number> = computed((): number => this.equipmentManagerRef()?.hiddenCount() ?? 0);
+
+  toggleShowUnavailable(): void {
+    this.equipmentManagerRef()?.showUnavailable.update((v: boolean): boolean => !v);
+  }
 
   // ── Cycle de vie ─────────────────────────────────────────────────────────────
 

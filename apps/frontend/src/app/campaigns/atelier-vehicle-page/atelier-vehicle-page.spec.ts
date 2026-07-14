@@ -11,7 +11,8 @@
  * Ce qui EST testé ici, spécifique à cette page :
  *   - résolution de `campaignId`/`vehicleId` depuis les paramètres de route
  *   - véhicule introuvable dans le workshop
- *   - câblage `[vehicle]`/`[sponsorCatalog]`/`[budget]`/`[allowResale]="true"` vers `<app-equipment-manager>`
+ *   - câblage `[vehicle]`/`[sponsorCatalog]`/`[budget]`/`[allowResale]="true"`/
+ *     `[campaignId]`/`[chocs]`/`[sequellas]` vers `<app-equipment-manager>`
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
@@ -154,11 +155,9 @@ describe('AtelierVehiclePage', () => {
     expect(el.textContent).toContain('Camion');
   });
 
-  it('rend <app-sequella-manager> avec le véhicule sous sa forme WorkshopVehicleDto (chocs/sequellas)', () => {
+  it('transmet chocs/sequellas du véhicule (WorkshopVehicleDto) à <app-equipment-manager>', () => {
     createFixture('3', '5');
 
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('app-sequella-manager')).toBeTruthy();
     expect(component.targetWorkshopVehicle()?.id).toBe(5);
     expect(component.targetWorkshopVehicle()?.chocs).toBe(0);
   });
