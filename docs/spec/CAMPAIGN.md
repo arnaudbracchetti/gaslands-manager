@@ -351,6 +351,23 @@ et, pour la spécificité des avantages,
     (règle "annulation"). Contournement actuel : vendre l'objet individuellement
     avant de vendre le véhicule.
 
+    **À faire — annulation non rejouée contre les événements suivants** :
+    annuler un achat (suppression de l'événement `BUY` du journal, cf.
+    ci-dessus) ne vérifie jamais que les événements de la même session
+    intervenus APRÈS lui restent légaux une fois cet événement retiré.
+    Exemple concret : achat d'une Remorque Moyenne (+1 emplacement) suivi de
+    l'achat d'une arme qui consomme précisément cet emplacement supplémentaire
+    — annuler l'achat de la remorque retire l'événement sans recalculer les
+    emplacements, et le véhicule se retrouve avec une arme montée qui dépasse
+    sa capacité réelle, sans qu'aucune règle ne le détecte ni ne le bloque.
+    Correctif à envisager : `Game.changeEquipment()` (ou le use case
+    `ChangeEquipmentUseCase`) devrait, avant de supprimer l'événement `BUY`,
+    rejouer les événements de la session postérieurs à celui-ci sur l'état
+    résultant et rejeter l'annulation (erreur explicite à l'utilisateur) si
+    l'un d'eux devient illégal (emplacements dépassés, orientation requise
+    manquante, etc.) — plutôt que de laisser un véhicule dans un état
+    incohérent après coup.
+
 Le critère de décision (BUY de cette session ou non) est déterminé côté serveur
 uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
 même endpoint `POST .../events/equipment`, sans savoir laquelle des deux
@@ -385,19 +402,30 @@ directement sur le wallet — seule la mutation de l'entité (créée, ou flagu�
 
 > Conception détaillée (mécanique backend) :
 > [`docs/plans/2026-07-13-sequelles-design.md`](../plans/2026-07-13-sequelles-design.md).
-> L'atelier expose désormais une IHM dédiée — composant `SequellaManager` (cf.
-> [COMPONENTS.md](../COMPONENTS.md)), rendu à côté d'`EquipmentManager` sur
-> `AtelierVehiclePage` (pas une section de celui-ci : la monnaie Chocs et les
-> règles d'achat/revente d'une séquelle sont totalement distinctes du budget
-> Jerricans) — achat, annulation même-session, revente cross-session gardée par
-> Légende Vivante, et un picker dédié (`SequellaAdvantagePicker`) pour le choix
-> de l'avantage gratuit de Dur à Cuire. Cf.
+> L'atelier expose désormais une IHM intégrée directement à `EquipmentManager`
+> (cf. [COMPONENTS.md](../COMPONENTS.md)) — 4ᵉ catégorie d'équipement, gated par
+> son input `campaignId`, au même niveau qu'Armes/Améliorations/Avantages
+> (carte catalogue à droite, ligne montée dans `MountedEquipment` à gauche) —
+> achat, annulation même-session, revente cross-session gardée par Légende
+> Vivante, et un picker dédié (`SequellaAdvantagePicker`) pour le choix de
+> l'avantage gratuit de Dur à Cuire. Cf.
 > [Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03).
 
 Une **Séquelle** (Gaslands, p.170) est un inconvénient permanent qu'un véhicule
 acquiert en échange de Chocs accumulés en partie — 14 au catalogue
 (`database_init/data/sequelle.yml`), chargées par `CatalogService` comme tout
 autre catalogue d'équipement. Chaque séquelle porte un champ `origine` :
+
+**Description courte / règles détaillées** : comme les armes, améliorations et
+avantages, chaque séquelle porte désormais deux champs catalogue distincts —
+`description` (phrase d'ambiance courte, affichée sur la carte catalogue) et
+`regles` (effet mécanique précis, Markdown, affiché uniquement dans une modale
+de détail ouverte au clic sur la carte). Même modèle d'interaction que les 3
+autres catégories d'équipement (`EquipmentOption` → `EquipmentDetailModal`),
+via un composant dédié `SequellaDetailModal` (cf.
+[COMPONENTS.md](../COMPONENTS.md#sequelladetailmodal--teamsvehicle-configuratorequipment-managersequella-detail-modal))
+— la carte séquelle reste `em-sequella-card` (dédiée, monnaie Chocs plutôt que
+jerricans/emplacement) plutôt que de basculer sur `EquipmentOption`.
 
 - **`TABLE_EPAVES`** (4 séquelles : `moteur_endommage`, `direction_endommage`,
   `blindage_arrache`, `siege_irrecuperable`) — imposée automatiquement par un
@@ -525,8 +553,9 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)), acheter une
   arme montée sur Tourelle en atelier passe par le `POST .../events/equipment` **existant**
   (`orientation: 'tourelle'` dans le corps), sans endpoint ni événement dédié.
-  **L'UI des Chocs et séquelles est désormais implémentée** (`SequellaManager`, cf.
-  [§Séquelles](#séquelles) ci-dessus) — retiré du périmètre Temps 2 restant.
+  **L'UI des Chocs et séquelles est désormais implémentée**, intégrée à
+  `EquipmentManager` (cf. [§Séquelles](#séquelles) ci-dessus) — retiré du
+  périmètre Temps 2 restant.
 - **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
   (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
   `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
@@ -543,6 +572,29 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   lancer, « Légende Vivante » résultat forcé à 1) et la garde anti-doublon sur les
   séquelles `ATELIER` sont désormais implémentés — cf. [§Séquelles](#séquelles)
   ci-dessous.
+- **Wizard de fin de partie — Escarmouche non couverte** — le
+  [wizard de fin de partie](#wizard-de-fin-de-partie) à 3 écrans
+  (`GameResultWizard`) a été conçu et implémenté pour les parties
+  `EVENEMENT_TELE` (classement, portes franchies, désignation des épaves,
+  Table des Épaves). Une partie `ESCARMOUCHE` porte des règles de fin de
+  partie différentes (Gaslands p.167) et n'a **pas** sa propre séquence — à
+  concevoir et implémenter séparément, probablement un wizard dédié ou des
+  écrans conditionnés par `Game.type`, plutôt que de réutiliser tel quel celui
+  de l'Événement Télévisé.
+- **Lancement de partie — non implémenté** — il n'existe aujourd'hui aucune
+  action explicite de "démarrage" d'une partie `PLANIFIE`. À ajouter : un
+  écran/bouton "Lancer la partie" qui affiche à chaque participant présent les
+  points de vote du public qu'il gagne en tout début de partie, calculés
+  depuis son classement courant (`standings()`) — mécanique distincte des
+  Points de Championnat déjà crédités en fin de partie. Cette action devrait
+  aussi **fermer immédiatement l'atelier actuellement ouvert** sur la
+  campagne, s'il y en a un (`ATELIER → JOUE`, même effet que
+  `CloseAtelierUseCase`), plutôt que d'attendre que la partie suivante entre
+  elle-même en atelier pour le clôturer automatiquement (comportement actuel
+  d'`EnterAtelierUseCase`, cf. [Cycle de vie d'une partie et phase
+  Atelier](#cycle-de-vie-dune-partie-et-phase-atelier)). Objectif : garantir
+  qu'aucun atelier ne reste ouvert pendant qu'une partie est en cours de jeu,
+  du lancement jusqu'à l'enregistrement de son résultat.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
   **automatique** : `Game.recordResult()` crédite tout participant hors du
   top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran

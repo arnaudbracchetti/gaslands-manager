@@ -64,4 +64,15 @@ API Endpoints Contenu :
 
 ### Export (futur)
 
-- Fiche récapitulative d'une équipe au format imprimable (HTML/PDF)
+- Fiche récapitulative d'une équipe au format imprimable (HTML/PDF) — synthèse
+  de tous les véhicules (statistiques effectives, armes/améliorations/avantages
+  montés, séquelles) destinée à servir de feuille de référence physique
+  pendant une partie de Gaslands, sans avoir à rouvrir l'application
+
+### Documentation utilisateur (futur)
+
+- Rédiger une documentation destinée aux joueurs (pas aux développeurs) qui
+  présente l'ensemble des fonctionnalités de l'application — équipes,
+  construction de véhicule, campagnes, Programme Télé, atelier, Table des
+  Épaves, séquelles, etc. — distincte de la documentation technique
+  (`docs/`), pensée pour un utilisateur découvrant l'outil
