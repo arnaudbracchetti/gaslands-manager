@@ -13,6 +13,9 @@ export interface WorkshopWeaponDto {
    *  ×3, immuable après achat). */
   orientation: string | null;
   price: number;
+  /** Emplacements consommés (résiduel) — `0` si estDefaut/isLost/isSold, valeur catalogue
+   *  sinon. Résolu côté backend (`Weapon.slots`), mirroir de `WorkshopImprovementDto.emplacement`. */
+  emplacement: number;
   /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut). */
   estDefaut: boolean;
   isLost: boolean;

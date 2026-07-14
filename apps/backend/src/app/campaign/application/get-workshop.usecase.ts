@@ -63,6 +63,10 @@ export class GetWorkshopUseCase {
         // second reste toujours le prix plein — cause du bug (prix affiché jamais réduit,
         // et budget total gonflé côté frontend qui resomme ce même prix erroné).
         price: w.price,
+        // Résiduel (0 si estDefaut/isLost/isSold) — mirroir de `imp.slots` ci-dessous.
+        // Sans ce champ, l'IHM reconstruisait le slot depuis le catalogue, aveugle à
+        // isSold : une arme vendue affichait encore son emplacement plein.
+        emplacement: w.slots,
         estDefaut: w.estDefaut,
         isLost: w.isLost,
         isSold: w.isSold,

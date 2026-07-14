@@ -303,6 +303,7 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 | Champ (DTO) | Type | Description |
 |-------------|------|-------------|
 | `prix` | number | `0` si `estDefaut` ; sinon prix catalogue, ×3 si `orientation === 'tourelle'`. Calculé via getter sur l'entité hydratée. |
+| `emplacement` | number | Emplacements consommés (résiduel), via getter `Weapon.slots` : `0` si `estDefaut`, perdue (`isLost`) ou vendue (`isSold`) — l'emplacement est alors libéré —, valeur catalogue sinon. Mirroir de `VehicleImprovement.emplacement` : l'IHM (`MountedEquipment`) le lit tel quel, sans reconsulter le catalogue (donc sans reperdre l'état vendu/perdu). |
 
 ### `VehicleAdvantage` _(entité DB — module Vehicle)_
 

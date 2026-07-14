@@ -29,8 +29,8 @@ const workshop: WorkshopStateDto = {
       chocs: 0,
       sequellas: [],
       weapons: [
-        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
-        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, emplacement: 2, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
       ],
       improvements: [
         { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },

@@ -39,6 +39,7 @@ const mockWeapon: Weapon = {
   vehicleId: 100,
   createdAt: '2026-01-01T00:00:01.000Z',
   prix: 4,
+  emplacement: 1, // résiduel résolu côté backend (Weapon.slots) — plus de résolution catalogue
   estDefaut: false,
 };
 
@@ -61,6 +62,7 @@ const mockWeaponTourelle: Weapon = {
   vehicleId: 100,
   createdAt: '2026-01-01T00:00:03.000Z',
   prix: 54, // 3 × 18 (BFG)
+  emplacement: 2, // slot catalogue du BFG (le montage Tourelle ne change que le coût)
   estDefaut: false,
 };
 
@@ -69,6 +71,7 @@ const mockWeaponDefaut: Weapon = {
   ...mockWeaponTourelle,
   id: 202,
   prix: 0,
+  emplacement: 0, // estDefaut ⇒ hors pool d'emplacements (Weapon.slots)
   estDefaut: true,
 };
 
@@ -130,7 +133,8 @@ describe('MountedEquipment', () => {
     expect(el.textContent).toContain('Blindage');
 
     const badges = el.querySelectorAll('.me-badge');
-    // Arme montée (mitrailleuse) : prix 4, emplacement résolu via le catalogue = 1.
+    // Arme montée (mitrailleuse) : prix 4, emplacement 1 — lu directement sur le DTO
+    // (`weapon.emplacement`), plus de résolution catalogue.
     expect(badges[0].textContent).toContain('4');
     expect(badges[1].textContent).toContain('1');
     // Amélioration montée (blindage) : prix 4, emplacement 1 (déjà résolu par le DTO).
@@ -140,15 +144,13 @@ describe('MountedEquipment', () => {
     expect(el.querySelectorAll('.me-remove')).toHaveLength(2);
   });
 
-  it('résout le nom et l\'emplacement d\'une arme via le catalogue, avec repli sur le nomInterne/0', () => {
+  it('résout le nom d\'une arme/amélioration via le catalogue, avec repli sur le nomInterne', () => {
     setInputs([], []);
 
     expect(component.resolveWeaponName('mitrailleuse')).toBe('Mitrailleuse');
     expect(component.resolveWeaponName('inconnue')).toBe('inconnue');
     expect(component.resolveImprovementName('blindage')).toBe('Blindage');
     expect(component.resolveImprovementName('inconnue')).toBe('inconnue');
-    expect(component.resolveWeaponSlot('mitrailleuse')).toBe(1);
-    expect(component.resolveWeaponSlot('inconnue')).toBe(0);
   });
 
   // ── Badge 🔒 Intégré ─────────────────────────────────────────────────────────
@@ -188,6 +190,20 @@ describe('MountedEquipment', () => {
     expect(el.querySelector('.me-remove')).toBeNull();
     // Reste visible malgré la vente — traçabilité.
     expect(el.textContent).toContain('Mitrailleuse');
+  });
+
+  it('arme vendue : slot résiduel 0 (lu sur le DTO) + tooltips prix/slot "résiduel après revente"', () => {
+    // Backend : Weapon.slots ⇒ 0 quand vendue (emplacement libéré), prix ⇒ résiduel.
+    setInputs([{ ...mockWeapon, sold: true, emplacement: 0, prix: 2 }], []);
+    component.showSold.set(true);
+    fixture.detectChanges();
+
+    const badges = fixture.nativeElement.querySelectorAll('.me-badge');
+    // badges[0] = prix résiduel, badges[1] = slot résiduel (0).
+    expect(badges[0].textContent).toContain('2');
+    expect(badges[0].getAttribute('title')).toBe('Coût résiduel après revente');
+    expect(badges[1].textContent).toContain('0');
+    expect(badges[1].getAttribute('title')).toBe('Emplacement(s) occupé(s) après la revente');
   });
 
   it('affiche le filigrane "Vendu" pour une amélioration vendue, sans bouton Retirer', () => {
@@ -234,6 +250,19 @@ describe('MountedEquipment', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.me-badge-defaut')?.textContent).toContain('Intégré');
     expect(el.querySelector('.me-remove')).toBeNull();
+  });
+
+  it('équipement intégré (estDefaut) : tooltips prix/slot explicatifs, estDefaut prime sur Tourelle et vente', () => {
+    // Arme intégrée (Canon de 125mm : estDefaut ET Tourelle) + amélioration intégrée.
+    setInputs([mockWeaponDefaut], [{ ...mockImprovement, estDefaut: true }]);
+
+    const badges = fixture.nativeElement.querySelectorAll('.me-badge');
+    // Arme intégrée : prix 0 / slot 0, tooltips "intégré" (pas "×3" malgré la Tourelle).
+    expect(badges[0].getAttribute('title')).toBe('Équipement intégré au profil de base — gratuit');
+    expect(badges[1].getAttribute('title')).toBe('Équipement intégré au profil de base — aucun emplacement consommé');
+    // Amélioration intégrée : mêmes tooltips.
+    expect(badges[2].getAttribute('title')).toBe('Équipement intégré au profil de base — gratuit');
+    expect(badges[3].getAttribute('title')).toBe('Équipement intégré au profil de base — aucun emplacement consommé');
   });
 
   // ── Outputs ─────────────────────────────────────────────────────────────────

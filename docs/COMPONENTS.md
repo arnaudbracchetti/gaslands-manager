@@ -604,7 +604,7 @@ Affiche les armes, améliorations **et avantages** actuellement montés/acquis s
 | `weapons` | `Weapon[]` | — | Armes montées |
 | `improvements` | `VehicleImprovement[]` | — | Améliorations montées |
 | `advantages` | `VehicleAdvantage[]` | — | Avantages acquis (jamais d'orientation ni d'emplacement) |
-| `sponsorCatalog` | `Sponsor` | — | Pour résoudre les noms et emplacements depuis les `nomInterne` |
+| `sponsorCatalog` | `Sponsor` | — | Pour résoudre les **noms** affichés depuis les `nomInterne` (les emplacements sont lus directement sur le DTO — `weapon.emplacement`/`improvement.emplacement`, résiduel résolu côté backend, `0` une fois l'équipement vendu) |
 
 **Outputs**
 

@@ -38,7 +38,7 @@ const mockCatalog: Sponsor = {
 
 function buildWeapon(overrides: Partial<WorkshopWeaponDto> = {}): WorkshopWeaponDto {
   return {
-    id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', price: 5,
+    id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', price: 5, emplacement: 1,
     estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false,
     ...overrides,
   };

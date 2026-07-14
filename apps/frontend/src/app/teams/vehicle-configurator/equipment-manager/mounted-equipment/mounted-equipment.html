@@ -36,13 +36,13 @@
             }
           </span>
           <span class="me-badges">
-            <span class="me-badge" [attr.title]="weapon.orientation === 'tourelle' ? 'Coût en jerricans (Tourelle incluse, ×3)' : 'Coût en jerricans'">
+            <span class="me-badge" [attr.title]="weaponPriceTitle(weapon)">
               <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
               {{ weapon.prix }}
             </span>
-            <span class="me-badge" title="Emplacements requis">
+            <span class="me-badge" [attr.title]="weaponSlotTitle(weapon)">
               <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
-              {{ resolveWeaponSlot(weapon.nomInterne) }}
+              {{ weapon.emplacement }}
             </span>
           </span>
           @if (weapon.estDefaut) {
@@ -85,11 +85,11 @@
             }
           </span>
           <span class="me-badges">
-            <span class="me-badge" title="Coût en jerricans">
+            <span class="me-badge" [attr.title]="improvementPriceTitle(improvement)">
               <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
               {{ improvement.prix }}
             </span>
-            <span class="me-badge" title="Emplacements requis">
+            <span class="me-badge" [attr.title]="improvementSlotTitle(improvement)">
               <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
               {{ improvement.emplacement }}
             </span>
@@ -133,7 +133,7 @@
             {{ resolveAdvantageName(advantage.nomInterne) }}
           </span>
           <span class="me-badges">
-            <span class="me-badge" title="Coût en jerricans">
+            <span class="me-badge" [attr.title]="advantage.sold ? 'Coût résiduel après revente' : 'Coût en jerricans'">
               <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
               {{ advantage.prix }}
             </span>

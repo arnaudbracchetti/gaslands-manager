@@ -97,7 +97,7 @@ function buildWeapon(
 ): Weapon {
   return {
     id: 1, nomInterne, orientation: montageTourelle ? 'tourelle' : 'avant', vehicleId: 1,
-    createdAt: '2025-01-01T00:00:00.000Z', prix, estDefaut, sold, lost,
+    createdAt: '2025-01-01T00:00:00.000Z', prix, emplacement: estDefaut || sold || lost ? 0 : 1, estDefaut, sold, lost,
   };
 }
 

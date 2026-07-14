@@ -30,15 +30,16 @@ function makeFixture() {
 }
 
 describe('GetWorkshopUseCase', () => {
-  it('expose le prix catalogue plein tant que l\'arme n\'est pas vendue', async () => {
+  it('expose le prix catalogue plein et l\'emplacement catalogue tant que l\'arme n\'est pas vendue', async () => {
     const { useCase } = makeFixture();
     const dto = await useCase.execute({ campaignId: 1, userId: 42 });
 
     expect(dto.vehicles[0].weapons[0].price).toBe(5);
+    expect(dto.vehicles[0].weapons[0].emplacement).toBe(1); // slot catalogue (makeWeaponType)
     expect(dto.vehicles[0].weapons[0].isSold).toBe(false);
   });
 
-  it('expose le prix résiduel (ceil(prix/2)), PAS le prix catalogue, une fois l\'arme vendue', async () => {
+  it('expose le prix résiduel (ceil(prix/2)) ET l\'emplacement libéré (0) une fois l\'arme vendue', async () => {
     const { useCase, weapon } = makeFixture();
     weapon.markSold();
 
@@ -47,6 +48,7 @@ describe('GetWorkshopUseCase', () => {
     const weaponDto = dto.vehicles[0].weapons[0];
     expect(weaponDto.isSold).toBe(true);
     expect(weaponDto.price).toBe(3); // ceil(5/2), pas 5 (prix catalogue brut)
+    expect(weaponDto.emplacement).toBe(0); // Weapon.slots ⇒ 0 quand vendue (emplacement libéré)
   });
 
   it('expose l\'orientation \'tourelle\' sur les armes (coût ×3 déjà appliqué par price)', async () => {

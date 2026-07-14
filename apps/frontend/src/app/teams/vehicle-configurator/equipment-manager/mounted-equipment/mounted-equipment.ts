@@ -7,9 +7,11 @@
  *
  * Purement présentationnel : reçoit `weapons`/`improvements` (entité brute du
  * véhicule) et le `sponsorCatalog` déjà chargé par le parent — nécessaire pour
- * résoudre les noms/emplacements affichés depuis `nomInterne` (mirroir exact
- * de `resolveWeaponName`/`resolveImprovementName`/`resolveWeaponSlot`,
- * déplacées ici telles quelles depuis `EquipmentManager`).
+ * résoudre les noms affichés depuis `nomInterne` (mirroir exact de
+ * `resolveWeaponName`/`resolveImprovementName`, déplacées ici telles quelles
+ * depuis `EquipmentManager`). Les emplacements, eux, sont lus directement sur le
+ * DTO (`weapon.emplacement`/`improvement.emplacement`, résiduel résolu côté
+ * backend) — plus de résolution catalogue, qui était aveugle à l'état vendu.
  *
  * Chaque action utilisateur (retrait) est émise via `output()` — c'est
  * `EquipmentManager` (le parent) qui demande confirmation (`window.confirm`)
@@ -139,13 +141,42 @@ export class MountedEquipment {
     return this.sponsorCatalog().avantages.find((a): boolean => a.nom_interne === nomInterne)?.nom ?? nomInterne;
   }
 
-  /**
-   * Résout l'emplacement consommé par une arme montée depuis le catalogue —
-   * mirroir de `resolveWeaponName`. Nécessaire pour le badge 🔧 des lignes
-   * "Armes" : `Weapon` (DTO) ne porte pas `emplacement`, contrairement à
-   * `VehicleImprovement` qui l'expose déjà résolu.
-   */
-  resolveWeaponSlot(nomInterne: string): number {
-    return this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === nomInterne)?.emplacement ?? 0;
+  // ── Tooltips des badges prix/emplacement ─────────────────────────────────────
+  // Le montant/slot affiché vaut `0` dans deux situations où un chiffre nu prête à
+  // confusion : équipement INTÉGRÉ au profil de base (`estDefaut` — gratuit, hors pool
+  // d'emplacements) et équipement VENDU en atelier (prix résiduel, emplacement libéré).
+  // Ces méthodes explicitent le sens du chiffre. `estDefaut` prime sur `sold` (un
+  // équipement intégré n'est jamais revendable) — et, pour une arme, sur le montage
+  // Tourelle (le Canon de 125mm du Char d'assaut est intégré ET sur Tourelle, mais son
+  // prix affiché est 0 : c'est « intégré, gratuit » qui doit s'afficher, pas « ×3 »).
+
+  /** Tooltip du badge prix d'une arme montée. */
+  weaponPriceTitle(weapon: Weapon): string {
+    if (weapon.estDefaut) return 'Équipement intégré au profil de base — gratuit';
+    if (weapon.sold) return 'Coût résiduel après revente';
+    return weapon.orientation === 'tourelle'
+      ? 'Coût en jerricans (Tourelle incluse, ×3)'
+      : 'Coût en jerricans';
+  }
+
+  /** Tooltip du badge emplacement d'une arme montée — mirroir de `weaponPriceTitle`. */
+  weaponSlotTitle(weapon: Weapon): string {
+    if (weapon.estDefaut) return 'Équipement intégré au profil de base — aucun emplacement consommé';
+    if (weapon.sold) return 'Emplacement(s) occupé(s) après la revente';
+    return 'Emplacements requis';
+  }
+
+  /** Tooltip du badge prix d'une amélioration posée — mirroir de `weaponPriceTitle` (pas de cas Tourelle). */
+  improvementPriceTitle(improvement: VehicleImprovement): string {
+    if (improvement.estDefaut) return 'Équipement intégré au profil de base — gratuit';
+    if (improvement.sold) return 'Coût résiduel après revente';
+    return 'Coût en jerricans';
+  }
+
+  /** Tooltip du badge emplacement d'une amélioration posée — mirroir de `weaponSlotTitle`. */
+  improvementSlotTitle(improvement: VehicleImprovement): string {
+    if (improvement.estDefaut) return 'Équipement intégré au profil de base — aucun emplacement consommé';
+    if (improvement.sold) return 'Emplacement(s) occupé(s) après la revente';
+    return 'Emplacements requis';
   }
 }

@@ -186,7 +186,7 @@ describe('VehicleService', () => {
       const equipped: Vehicle = {
         ...mockVehicle,
         improvements: [{ id: 1, nomInterne: 'blindage', orientation: null, vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', estDefaut: false, prix: 4, emplacement: 1 }],
-        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2, estDefaut: false }],
+        weapons: [{ id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', vehicleId: 7, createdAt: '2025-01-01T00:00:00.000Z', prix: 2, emplacement: 1, estDefaut: false }],
       };
 
       service.getAllForTeam(3).subscribe((vehicles) => { result = vehicles; });

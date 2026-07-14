@@ -80,6 +80,13 @@ export interface Weapon {
   createdAt: string;
   /** Prix de l'arme en Jerricans, résolu depuis le catalogue côté backend (×3 si montée sur Tourelle). */
   prix: number;
+  /**
+   * Emplacements consommés (résiduel), résolu côté backend (`Weapon.slots`) — `0` pour
+   * une arme intégrée (`estDefaut`), perdue (`lost`) ou vendue (`sold`), valeur catalogue
+   * sinon. Mirroir de `VehicleImprovement.emplacement` : le frontend le lit sans consulter
+   * le catalogue (donc sans reperdre l'état vendu/perdu, cf. `MountedEquipment`).
+   */
+  emplacement: number;
   /** Intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut). */
   estDefaut: boolean;
   /** Cf. `VehicleImprovement.sold`/`purchasedThisSession`/`lost` — même usage, atelier uniquement. */

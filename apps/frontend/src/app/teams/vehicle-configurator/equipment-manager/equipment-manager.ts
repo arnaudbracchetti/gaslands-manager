@@ -554,10 +554,11 @@ export class EquipmentManager {
   }
 
   // ── Résolution d'affichage (nomInterne → nom) ────────────────────────────────
-  // `resolveWeaponSlot` a été déplacée dans `MountedEquipment` (seul composant
-  // qui l'utilise désormais, via son input `sponsorCatalog`). `resolveWeaponName`/
-  // `resolveImprovementName` restent ICI en plus de leur copie dans
-  // `MountedEquipment` : `EquipmentManager` en a besoin pour le texte des
+  // Le badge slot des armes ne passe plus par une résolution catalogue : l'IHM lit
+  // désormais `weapon.emplacement` (résiduel résolu côté backend, `0` une fois vendue),
+  // mirroir des améliorations — l'ex-`resolveWeaponSlot` a donc disparu.
+  // `resolveWeaponName`/`resolveImprovementName` restent ICI en plus de leur copie
+  // dans `MountedEquipment` : `EquipmentManager` en a besoin pour le texte des
   // confirmations `window.confirm` (`removeWeapon`/`removeImprovement`), une
   // responsabilité que `MountedEquipment` (purement présentationnel) n'a pas.
 

@@ -45,6 +45,8 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
       vehicleId: vehicle.id,
       createdAt: new Date(0),
       prix: w.price,
+      // Résiduel (0 si estDefaut/isLost/isSold) — mirroir de `imp.slots` ci-dessus.
+      emplacement: w.slots,
       estDefaut: w.estDefaut,
     }),
   );
