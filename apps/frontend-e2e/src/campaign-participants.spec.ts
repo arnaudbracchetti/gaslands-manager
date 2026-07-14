@@ -25,8 +25,12 @@ test.describe('Campagnes — Gestion des participants', () => {
     await expect(page.locator('.invite-link__code')).not.toHaveText('');
 
     // navigator.clipboard.writeText ne résout (et ne bascule `copied`) que si
-    // la permission est accordée — cf. invite-link.ts, copyCode().
-    await context.grantPermissions(['clipboard-write'], { origin: 'http://localhost:4200' });
+    // la permission est accordée — cf. invite-link.ts, copyCode(). L'origine doit être
+    // celle réellement servie (FRONTEND_PORT, cf. playwright.config.ts) — jamais
+    // supposer 4200 en dur : ce spec tourne aussi sur le port dédié 4201 (ports
+    // auto-gérés, cf. skill e2e-testing/RUNNING.md), où un mismatch d'origine fait
+    // échouer silencieusement `writeText()` (NotAllowedError, jamais catché).
+    await context.grantPermissions(['clipboard-write'], { origin: new URL(page.url()).origin });
     await page.locator('.invite-link__copy').click();
     await expect(page.locator('.invite-link__copy')).toHaveText('✅ Copié !');
 
