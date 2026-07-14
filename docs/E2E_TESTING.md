@@ -1,154 +1,56 @@
-# Gaslands Manager — Exécuter les tests E2E (guide pratique)
+# Gaslands Manager — Couverture e2e & helpers (document vivant)
 
-> Prérequis d'environnement et procédure exacte pour lancer `backend-e2e` et
-> `frontend-e2e` sur une machine ou un conteneur neuf, jusqu'au bout.
-> Complète [TESTING.md](TESTING.md) (qui documente l'*architecture* de
-> l'infra e2e — `global-setup.ts`, base `gaslands_test`, helpers) : ce
-> document-ci répond à *quelles commandes taper, dans quel ordre, et quoi
-> faire quand ça casse*. Mettre à jour dès qu'un nouveau piège d'environnement
-> est découvert (nouvelle distro, nouvelle version de Playwright…).
-
----
-
-## 1. `backend-e2e` (Vitest + axios)
-
-Contrairement à `frontend-e2e`, cette suite **ne démarre pas son propre backend** —
-`global-setup.ts` se contente d'attendre qu'un serveur réponde déjà sur le port 3000
-(`GET /api/catalog/sponsors`). Il faut donc le démarrer manuellement au préalable :
-
-```bash
-# Terminal 1 — laisser tourner
-npx nx serve backend
-# attendre la ligne "🚀 Backend Gaslands démarré sur http://localhost:3000/api"
-
-# Terminal 2
-npx nx e2e backend-e2e
-```
-
-Lancer directement `npx nx e2e backend-e2e` sans backend déjà démarré échoue avec
-`Le backend n'a pas démarré dans les 30s` (cf. Troubleshooting §3).
+> **Document vivant** : ce fichier recense l'état courant de la couverture e2e
+> (`apps/frontend-e2e/src/*.spec.ts`) et des helpers partagés (`support/*.ts`). Il
+> évolue à chaque ajout/suppression de spec ou de helper — le skill Claude Code
+> `e2e-testing` le tient à jour lui-même à chaque nouveau test généré (branche `new`,
+> cf. `.claude/skills/e2e-testing/WRITING.md` §"Après avoir écrit le test"). Si vous
+> ajoutez un spec ou un helper manuellement (sans passer par le skill), mettez ce
+> fichier à jour au même titre que le code.
+>
+> Pour tout le reste — commandes, prérequis d'environnement, infrastructure technique,
+> pièges, troubleshooting, cadre de décision e2e-vs-unitaire — voir le skill
+> `e2e-testing` (`.claude/skills/e2e-testing/SKILL.md`, `RUNNING.md`, `WRITING.md`).
 
 ---
 
-## 2. `frontend-e2e` (Playwright)
+## Carte de couverture (`apps/frontend-e2e/src/*.spec.ts`)
 
-### 2.1 Prérequis — navigateurs
+Vérifier ici avant d'écrire un nouveau spec - étendre un scénario existant plutôt que de
+dupliquer une inscription/création de campagne complète.
 
-```bash
-npx playwright install chromium firefox webkit
-```
-
-Sur une distro plus récente que la dernière officiellement supportée par la version de
-Playwright installée (ex. Ubuntu 26.04 au moment d'écrire ces lignes, alors que
-Playwright 1.60 ne connaît qu'Ubuntu ≤ 24.04), l'installation refuse de démarrer :
-
-```
-ERROR: Playwright does not support chromium on ubuntu26.04-x64
-```
-
-Contournement — forcer la détection vers la dernière LTS supportée (télécharge le build
-de repli, compatible glibc) :
-
-```bash
-PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 npx playwright install chromium firefox webkit
-```
-
-### 2.2 Prérequis — bibliothèques système (Linux headless)
-
-**Chromium et Firefox n'ont besoin d'aucune bibliothèque supplémentaire** sur une image
-Ubuntu standard récente (validé sur Ubuntu 26.04 minimal, sans aucun paquet installé au
-préalable — `npx playwright install chromium`/`firefox` ne signalent aucune dépendance
-manquante).
-
-**WebKit**, en revanche, réclame une longue liste de bibliothèques GTK/GStreamer/ICU/flite.
-Sur Ubuntu 24.04/25.x :
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-  libgtk-4-1 libgraphene-1.0-0 \
-  libicu74 libxml2 libxslt1.1 \
-  libevent-2.1-7 libopus0 \
-  libgstreamer-plugins-base1.0-0 libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0 \
-  libflite1 \
-  libwebpdemux2 libwebpmux3 libwebp7 libavif16 \
-  libharfbuzz-icu0 libjpeg8 \
-  libwayland-server0 libmanette-0.2-0 \
-  libenchant-2-2 libhyphen0 libsecret-1-0 \
-  libwoff2dec1.0.2 libgles2 libx264-164
-```
-
-Sur Ubuntu 26.04, plusieurs de ces paquets ont changé de nom suite à un bump de soname
-majeur — la commande ci-dessus échoue intégralement (voir piège ci-dessous) :
-
-| Paquet attendu (Ubuntu 24.04) | Paquet réel (Ubuntu 26.04) |
+| Spec | Couvre |
 |---|---|
-| `libicu74` | `libicu78` |
-| `libevent-2.1-7` | `libevent-2.1-7t64` |
-| `libx264-164` | `libx264-165` |
-| `libxml2` (fournit `libxml2.so.2`) | **aucun** — `libxml2-16` ne fournit que `.so.16`, ABI incompatible |
-| `libwoff2dec1.0.2` | **aucun paquet équivalent dans les dépôts** |
+| `teams.spec.ts` | Pilote CRUD équipe/véhicule (création, renommage, sponsor/description/budget, verrouillage sponsor, suppression équipe/véhicule en cascade) - preuve de concept du harnais entier |
+| `vehicle-equipment.spec.ts` | Armes/améliorations, cas particulier de la Tourelle (assignation/désassignation/retrait, coût ×3), garde de budget |
+| `sponsor-catalog.spec.ts` | Filtrage du catalogue véhicules/armes par sponsor |
+| `campaign-program.spec.ts` | Pilote campagne - création (équipe engagée dès la création), ajout d'une partie au Programme Télé, wizard de fin de partie en bout en bout (classement → désignation des épaves → résolution automatique de la Table des Épaves → "Terminer"), vérification `PLANIFIE → ATELIER` |
+| `campaign-participants.spec.ts` | Invitation/validation/refus/promotion (2 contextes navigateur) |
+| `campaign-wreck-designation.spec.ts` | Écran de désignation des épaves (véhicules réels) |
+| `campaign-atelier.spec.ts` | Boutique atelier - cagnotte dérivée, achat/annulation/revente |
+| `campaign-atelier-sequella.spec.ts` | Séquelles en atelier - limité au cas déterministe (chocs=0) |
+| `campaign-journal.spec.ts` | `GameJournalModal`, accessible à tout participant validé |
+| `example.spec.ts` | Scaffold d'origine (titre de la page d'accueil) |
 
-**Conséquence** : sur Ubuntu 26.04 (ou toute distro dont libxml2/ICU ont dépassé les
-sonames attendus par le build WebKit précompilé de Playwright), **WebKit ne peut pas
-être satisfait via `apt`** — vérifié, ce n'est pas une histoire de nom de paquet mal
-orthographié : `libxml2.so.2` n'existe simplement plus dans les dépôts de cette distro.
-Deux options :
+`backend-e2e` : un seul fichier, `src/backend/backend.spec.ts`.
 
-1. **Se limiter à Chromium + Firefox** (suffisant pour la couverture actuelle du
-   projet, cf. §2.3) — c'est le choix retenu quand WebKit est indisponible.
-2. **Image Docker officielle** `mcr.microsoft.com/playwright:v1.60.0-noble` (fige
-   Ubuntu 24.04, libs garanties correctes) si WebKit est réellement nécessaire (CI par
-   exemple).
+## Helpers partagés (`apps/frontend-e2e/src/support/`)
 
-### 2.3 Lancer la suite
+| Fichier | Rôle |
+|---------|------|
+| `auth.ts` | `registerTestUser()`/`login()` - un utilisateur frais par test, isolation garantie |
+| `teams.ts` | `createTeam`, `setSponsor`, `addVehicle`, `createTeamWithVehicles`, `openEquipmentManager`, `optionCard`, `saveAndWait` (attend la réponse `PUT /api/teams/:id` avant tout `page.reload()` - nécessaire car `TeamEditPage.saveField()` sauvegarde au blur sans aucun signal visuel de fin d'écriture) |
+| `campaigns.ts` | `createCampaign`, `addGame`, `runResultWizard`, `waitForEquipmentEvent`, `inviteAndValidateParticipant` |
+| `db.ts` | Crée `gaslands_test` si absente, puis vide (`TRUNCATE ... CASCADE`) toutes les tables applicatives - état propre garanti à chaque run |
+| `backend-process.ts` | `spawn`/`kill` d'un backend dédié avec `DATABASE_NAME=gaslands_test`, `PORT=3000` ; attend un healthcheck (`GET /api/catalog/sponsors`) avant de rendre la main |
+| `global-setup.ts` | Orchestre `db.ts` puis `backend-process.ts`, dans cet ordre précis |
+| `global-teardown.ts` | Arrête le backend de test en fin de run |
 
-Le backend de test réutilise le port 3000 (proxy Angular,
-`apps/frontend/proxy.conf.json`) — il ne peut pas cohabiter avec un backend de dev déjà
-lancé sur ce port :
+## `data-testid` ajoutés
 
-```bash
-./dev.sh --kill   # ou Ctrl+C sur le process ./dev.sh, ou tuer manuellement (cf. §3)
-
-# Suite complète (3 navigateurs — échoue si WebKit est indisponible, cf. §2.2)
-npx nx e2e frontend-e2e
-
-# Limité à Chromium + Firefox (contournement WebKit)
-npx nx e2e frontend-e2e -- --project=chromium --project=firefox
-```
-
-Sur une distro non officiellement supportée (§2.1), préfixer avec
-`PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` (même valeur qu'à l'installation) —
-sinon la suite refuse de démarrer avec la même erreur `does not support`.
-
-### 2.4 Flakiness connue — Firefox en exécution parallèle
-
-`campaign-program.spec.ts` (et occasionnellement `teams.spec.ts`) peut échouer
-sporadiquement **sur `[firefox]` uniquement** lors d'un run multi-tests en parallèle,
-avec un timeout dans `registerTestUser()` :
-
-```
-Error: expect(page).toHaveURL(/\/home/) failed
-Received string: "http://localhost:4200/register"
-```
-
-Rejoué seul (`-g "<titre exact du test>" --project=firefox`), il passe
-systématiquement — course entre workers sur le formulaire d'inscription (chaque test
-crée son propre utilisateur via `registerTestUser()`), pas une régression du code
-testé. **Un échec isolé sur `[firefox]` qui disparaît en isolation n'est pas un signal
-d'alerte** ; un échec qui persiste en isolation, ou qui apparaît aussi sur `[chromium]`,
-en est un.
-
----
-
-## 3. Troubleshooting
-
-| Symptôme | Cause | Fix |
-|---|---|---|
-| `backend-e2e` : « No test files found » puis « Le backend n'a pas démarré dans les 30s » | Aucun backend ne tourne sur `:3000` | Démarrer `npx nx serve backend` dans un terminal séparé, attendre le healthcheck, puis relancer `backend-e2e` (§1) |
-| `frontend-e2e` : « Le backend de test n'a pas démarré dans les 30s … occupe déjà le port 3000 » | Un process `nx serve backend` **orphelin** d'un run précédent tient encore le port | `lsof -i :3000 -sTCP:LISTEN` pour trouver les PID, puis tuer **toute la chaîne** (`npm exec` → `nx` → `node`), pas seulement le process Node final — sinon des enfants survivent et retiennent le port |
-| `browserType.launch: Executable doesn't exist at .../pw_run.sh` | Navigateurs Playwright non installés dans ce conteneur | `npx playwright install <browser>` (§2.1) |
-| `ERROR: Playwright does not support chromium on ubuntuXX.04-x64` | Distro plus récente que la dernière officiellement supportée par cette version de Playwright | `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` (ou la LTS la plus proche) avant `install` **et** avant `e2e` (§2.1) |
-| `apt-get install` échoue avec `Unable to locate package` sur un nom de la liste WebKit | Renommage de paquet suite à un bump de soname (ICU, libx264…) sur une distro très récente | Chercher le nom réel via `apt-cache search <lib>` / `apt list \| grep <lib>`, cf. tableau §2.2. Si `libxml2`/`libwoff2dec` restent introuvables, WebKit est un cul-de-sac sur cette distro — repli sur §2.2 option 1 ou 2 |
-| `apt-get install` échoue sur **un seul** nom de paquet, mais le log affiche « Note, selecting X instead of Y » pour d'autres avant l'erreur | **Toute la transaction a échoué** — `apt-get` n'installe **rien** si un seul nom de la liste est introuvable, même les paquets « sélectionnés avec succès » listés avant l'erreur | Corriger tous les noms fautifs (tableau §2.2) puis relancer la commande complète en une seule fois ; vérifier avec `dpkg -l \| grep <paquet>` que l'installation a bien eu lieu avant de reprendre |
-| Un test échoue uniquement sur `[firefox]` dans un run multi-navigateurs, mais passe rejoué seul | Flakiness liée aux workers Playwright en parallèle (§2.4) | Rejouer avec `-g "<titre exact>" --project=firefox` avant de conclure à une régression |
+Deux `data-testid` ajoutés pour fiabiliser des sélecteurs autrement ambigus (Teams/
+Vehicles) : `tam-weapon-{nomInterne}` (`tourelle-assignment-modal.html`) et
+`vehicle-card-manage`/`vehicle-card-delete` (`vehicle-summary-card.html`). **Aucun
+`data-testid`** dans les templates Campaigns : sélecteurs par rôle/label/texte français
+exact - ex. bouton "Enregistrer" nécessitant `exact: true` pour ne pas matcher
+"Enregistrement...".

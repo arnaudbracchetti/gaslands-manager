@@ -55,9 +55,12 @@ Tous les composants sont chargés à la demande via `loadComponent`. Routes déf
 
 ### 2.4 Proxy de développement
 
-```json
-// apps/frontend/proxy.conf.json
-{ "/api": { "target": "http://localhost:3000", "secure": false } }
+```js
+// apps/frontend/proxy.conf.cjs - module CommonJS (pas du JSON statique) pour lire
+// BACKEND_PORT au démarrage du dev-server (défaut 3000, cf. skill e2e-testing
+// - lancer frontend-e2e sur un backend de test isolé sans arrêter dev.sh).
+const backendPort = process.env.BACKEND_PORT || '3000';
+module.exports = { '/api': { target: `http://localhost:${backendPort}`, secure: false } };
 ```
 
 ### 2.5 Composants
@@ -73,7 +76,7 @@ Tous les composants sont chargés à la demande via `loadComponent`. Routes déf
 | `apps/frontend/src/app/auth/auth.service.ts` | State utilisateur (signals), login/logout |
 | `apps/frontend/src/app/auth/auth.interceptor.ts` | Injection automatique du token JWT |
 | `apps/frontend/src/app/auth/auth.guard.ts` | Protection des routes privées |
-| `apps/frontend/proxy.conf.json` | Proxy dev : `/api` → backend |
+| `apps/frontend/proxy.conf.cjs` | Proxy dev : `/api` → backend, port configurable via `BACKEND_PORT` |
 | `apps/frontend/src/app/catalog/catalog.service.ts` | Données publiques du catalogue (`/api/catalog/sponsors`) |
 
 ---
@@ -428,15 +431,15 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 
 > ⚠️ Installer les navigateurs Playwright avant le premier lancement : `npx playwright
 > install` — sur une distro non officiellement supportée ou pour le détail des
-> bibliothèques système requises (WebKit notamment), voir
-> [E2E_TESTING.md](E2E_TESTING.md).
+> bibliothèques système requises (WebKit notamment), voir le skill `e2e-testing`
+> (`.claude/skills/e2e-testing/SKILL.md`).
 
 ### Règle
 
 > **Tout nouveau module NestJS** → tests unitaires service + controller.
 > **Tout nouveau service Angular** → tests unitaires.
 
-Patterns de test backend/frontend et détail complet de l'infrastructure e2e
-(base `gaslands_test` dédiée, backend isolé, couverture actuelle) :
-[TESTING.md](TESTING.md). Guide pratique pour lancer les e2e (prérequis
-d'environnement, commandes, troubleshooting) : [E2E_TESTING.md](E2E_TESTING.md).
+Patterns de test **unitaires** backend/frontend : [TESTING.md](TESTING.md). Tout ce
+qui est **e2e** (infrastructure, base `gaslands_test` dédiée, backend isolé,
+couverture actuelle, commandes, prérequis d'environnement, pièges,
+troubleshooting) : skill `e2e-testing` (`.claude/skills/e2e-testing/SKILL.md`).
