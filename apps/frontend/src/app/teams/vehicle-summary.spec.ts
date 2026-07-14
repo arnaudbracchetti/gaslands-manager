@@ -118,6 +118,10 @@ function buildVehicle(
   weapons: Weapon[],
   improvements: VehicleImprovement[],
   advantages: VehicleAdvantage[] = [],
+  // Résolu côté backend (`Vehicle.effectiveStats.emplacements`) — égal à
+  // `mockVehiculeCatalogue.emplacements` (3) par défaut, en l'absence de toute
+  // amélioration de capacité (Remorque Moyenne/Lourde) montée.
+  emplacementsTotal = 3,
 ): Vehicle {
   return {
     id: 1,
@@ -127,6 +131,7 @@ function buildVehicle(
     weapons,
     advantages,
     createdAt: '2025-01-01T00:00:00.000Z',
+    emplacementsTotal,
   };
 }
 
@@ -243,10 +248,25 @@ describe('buildVehicleSummary', () => {
 
   // ── Emplacements ──────────────────────────────────────────────────────────
 
-  it('expose emplacementsTotal depuis le catalogue (Vehicule.emplacements)', () => {
+  it('expose emplacementsTotal fourni par le véhicule (backend), pas la fiche catalogue', () => {
     const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
 
-    expect(summary.emplacementsTotal).toBe(3); // mockVehiculeCatalogue.emplacements
+    expect(summary.emplacementsTotal).toBe(3); // valeur par défaut de buildVehicle()
+  });
+
+  /**
+   * Régression IHM : `emplacementsTotal` doit toujours refléter `vehicle.emplacementsTotal`
+   * (résolu côté backend, bonus Remorque Moyenne/Lourde inclus), JAMAIS être recalculé
+   * depuis `Vehicule.emplacements` (fiche catalogue statique, ici figée à 3). Bug corrigé :
+   * la jauge d'emplacements de `TeamCard`/`VehicleSummaryCard` restait bloquée sur la
+   * capacité de base et ne bougeait jamais quand une remorque augmentant la capacité
+   * était montée.
+   */
+  it('reflète emplacementsTotal du véhicule même quand il diffère de la fiche catalogue (bonus Remorque)', () => {
+    const vehicle = buildVehicle([], [], [], /* emplacementsTotal */ 4);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.emplacementsTotal).toBe(4);
   });
 
   it('emplacementsUtilises = 0 pour un véhicule "nu"', () => {

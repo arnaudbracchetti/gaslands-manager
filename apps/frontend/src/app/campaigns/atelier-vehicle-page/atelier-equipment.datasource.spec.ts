@@ -40,6 +40,7 @@ const workshop: WorkshopStateDto = {
       ],
       resaleRefund: 6,
       purchasedThisSession: false,
+      emplacementsTotal: 5,
     },
   ],
 };
@@ -53,6 +54,9 @@ describe('mapWorkshopVehicleToVehicle', () => {
     expect(v.weapons[0].orientation).toBe('avant');
     expect(v.improvements[0].prix).toBe(4);
     expect(v.improvements[0].emplacement).toBe(1);
+    // Régression IHM (remorques) : la capacité EFFECTIVE (bonus remorque inclus,
+    // résolue côté backend) doit être propagée telle quelle, jamais recalculée.
+    expect(v.emplacementsTotal).toBe(5);
   });
 
   it('conserve l\'orientation \'tourelle\' pour une arme montée sur Tourelle', () => {

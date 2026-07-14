@@ -639,17 +639,17 @@ leur synthèse d'affichage force `emplacement: 0` avant transmission à `Equipme
 Ce signal alimente la barre de progression « Emplacements » dans l'UI - la source de
 vérité reste le backend, mais le frontend donne un retour visuel immédiat.
 
-> **⚠️ Limitation connue - `emplacementsTotal` ne reflète pas le bonus des Remorques.**
-> `EquipmentManager.emplacementsTotal` (signal `computed`) lit
-> `this.chosenVehicule()?.emplacements` - la valeur **catalogue brute** du véhicule,
-> jamais la capacité effective (`Vehicle.effectiveStats.emplacements`, cf. ci-dessus).
-> Sur un véhicule équipé d'une Remorque Moyenne/Lourde, le backend accepte donc plus
-> d'équipement que ce que la barre de progression affiche comme total - source de
-> vérité correcte côté serveur (l'ajout réussit), mais affichage frontend trompeur
-> (barre qui semble dépasser 100%, ou capacité affichée inférieure à la réalité).
-> Correctif nécessaire : faire remonter `emplacementsTotal` depuis la réponse serveur
-> (`VehicleDetailDto.baseStats`/`stats`, qui portent déjà `emplacements`) plutôt que de
-> le recalculer depuis le seul catalogue côté client.
+**Correctif appliqué - `emplacementsTotal` reflète désormais le bonus des Remorques.**
+`EquipmentManager.emplacementsTotal` (signal `computed`) lisait auparavant
+`this.chosenVehicule()?.emplacements` - la valeur **catalogue brute** du véhicule, jamais
+la capacité effective (`Vehicle.effectiveStats.emplacements`, cf. ci-dessus) : sur un
+véhicule équipé d'une Remorque Moyenne/Lourde, le backend acceptait plus d'équipement que
+ce que la barre de progression affichait comme total. `VehicleDto`/`WorkshopVehicleDto`
+(`team-http.mapper.ts`/`GetWorkshopUseCase`) exposent désormais un champ
+`emplacementsTotal: vehicle.effectiveStats.emplacements`, calculé une seule fois côté
+backend ; le frontend (`EquipmentManager.emplacementsTotal`, `buildVehicleSummary` dans
+`teams/vehicle-summary.ts`, et `mapWorkshopVehicleToVehicle` côté atelier) le lit
+directement au lieu de le recalculer depuis le catalogue statique.
 
 ---
 

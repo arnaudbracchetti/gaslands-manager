@@ -277,9 +277,17 @@ export class EquipmentManager {
     return catalog.vehicules.find((v): boolean => v.nom_interne === this.vehicle().nomInterne) ?? null;
   });
 
-  /** Capacité totale du véhicule — résolue depuis le catalogue (l'entité brute ne la porte pas). */
+  /**
+   * Capacité totale EFFECTIVE du véhicule — fournie directement par le backend
+   * (`Vehicle.emplacementsTotal`, résolu depuis `Vehicle.effectiveStats.emplacements`
+   * côté agrégat). NE PAS la recalculer depuis `chosenVehicule()?.emplacements` (fiche
+   * catalogue statique) : cette valeur ignore le bonus d'emplacements apporté par une
+   * Remorque Moyenne (+1) ou Remorque Lourde (+3) déjà montée — bug corrigé (la jauge
+   * affichait une capacité figée à la base catalogue, jamais mise à jour par ces
+   * améliorations).
+   */
   emplacementsTotal: Signal<number> = computed((): number => {
-    return this.chosenVehicule()?.emplacements ?? 0;
+    return this.vehicle().emplacementsTotal;
   });
 
   /** Emplacements actuellement consommés — somme des deux pools (armes + améliorations), partagés. */

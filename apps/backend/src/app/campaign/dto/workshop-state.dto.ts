@@ -78,6 +78,12 @@ export interface WorkshopVehicleDto {
   resaleRefund: number;
   /** Acheté pendant la session d'atelier en cours — retrait = annulation intégrale, pas revente. */
   purchasedThisSession: boolean;
+  /**
+   * Capacité totale EFFECTIVE en emplacements — base catalogue + bonus des améliorations
+   * montées qui l'augmentent (Remorque Moyenne +1, Remorque Lourde +3, cf.
+   * `Vehicle.effectiveStats`). Mirroir de `VehicleDto.emplacementsTotal` (module `team`).
+   */
+  emplacementsTotal: number;
 }
 
 export interface WorkshopStateDto {

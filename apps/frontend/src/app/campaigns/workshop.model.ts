@@ -78,6 +78,12 @@ export interface WorkshopVehicleDto {
   resaleRefund: number;
   /** Acheté pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /**
+   * Capacité totale EFFECTIVE en emplacements — base catalogue + bonus des
+   * améliorations montées qui l'augmentent (Remorque Moyenne +1, Remorque Lourde +3).
+   * Mirroir de `Vehicle.emplacementsTotal` (construction d'équipe).
+   */
+  emplacementsTotal: number;
 }
 
 export interface WorkshopStateDto {
@@ -118,6 +124,7 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
     nomInterne: w.nomInterne,
     teamId: 0,
     createdAt: '',
+    emplacementsTotal: w.emplacementsTotal,
     weapons: w.weapons.map(
       (x: WorkshopWeaponDto): Weapon => ({
         id: x.id,

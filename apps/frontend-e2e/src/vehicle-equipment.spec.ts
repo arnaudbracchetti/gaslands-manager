@@ -256,6 +256,60 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
     await expect(page.getByText('Aucune arme montée.')).toBeVisible();
   });
 
+  // ── Remorque Moyenne/Lourde — capacité effective, pas fixe (cf. VEHICLES.md) ──
+  // Sponsor Rusty et ses Trafiquants d'Alcool : seul sponsor autorisant ces deux
+  // améliorations. Régression : la jauge d'emplacements (`.vcs-slots .slot-gauge`,
+  // title "{used}/{total} emplacements utilisés") doit refléter le bonus de capacité
+  // (+1 Remorque Moyenne / +3 Remorque Lourde) — avant correctif, le total restait
+  // figé sur la capacité catalogue brute du véhicule, qu'on pose ou retire la Remorque.
+
+  test('monter une Remorque Moyenne augmente la jauge d\'emplacements totale (+1)', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-remorque-moyenne'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, {
+      sponsor: "Rusty et ses Trafiquants d'Alcool",
+      vehicleNames: ['Camion à glaces'],
+    });
+    await openEquipmentManager(page);
+
+    const gauge = page.locator('.vcs-slots .slot-gauge');
+    await expect(gauge).toHaveAttribute('title', '0/2 emplacements utilisés');
+
+    await optionCard(page, 'Remorque Moyenne').getByRole('button', { name: 'Ajouter' }).click();
+
+    await expect(gauge).toHaveAttribute('title', '0/3 emplacements utilisés');
+  });
+
+  test('retirer une Remorque Moyenne fait revenir la jauge au total standard', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Jabassa',
+      email: uniqueEmail('e2e-equip-remorque-moyenne-remove'),
+      password: 'test1234',
+    });
+
+    await createTeamWithVehicles(page, {
+      sponsor: "Rusty et ses Trafiquants d'Alcool",
+      vehicleNames: ['Camion à glaces'],
+    });
+    await openEquipmentManager(page);
+
+    const gauge = page.locator('.vcs-slots .slot-gauge');
+    await optionCard(page, 'Remorque Moyenne').getByRole('button', { name: 'Ajouter' }).click();
+    await expect(gauge).toHaveAttribute('title', '0/3 emplacements utilisés');
+
+    await page.locator('.me-item').filter({ hasText: 'Remorque Moyenne' })
+      .getByRole('button', { name: 'Retirer', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Retirer', exact: true }).click();
+
+    await expect(gauge).toHaveAttribute('title', '0/2 emplacements utilisés');
+  });
+
   // ── Avantages (catégorie distincte des armes/améliorations) ─────────────────
   // Sponsor par défaut = Rutherford, classes_avantage = ["Dur à Cuire", "Militaire"]
   // (cf. sponsors.yml) — les 2 sections affichées dans EquipmentManager.

@@ -85,6 +85,7 @@ const mockCreatedVehicle: Vehicle = {
   weapons: [],
   advantages: [],
   createdAt: '2026-01-01T00:00:00.000Z',
+  emplacementsTotal: 4,
 };
 
 // Second véhicule de l'équipe — sert à vérifier l'isolement par `.find()` en mode édition.
@@ -96,6 +97,7 @@ const mockOtherVehicle: Vehicle = {
   weapons: [],
   advantages: [],
   createdAt: '2026-01-02T00:00:00.000Z',
+  emplacementsTotal: 4,
 };
 
 describe('VehicleConfigurator', () => {

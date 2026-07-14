@@ -42,7 +42,12 @@ export interface VehicleSummary {
    * fourni par le backend dans `VehicleImprovement.emplacement`).
    */
   emplacementsUtilises: number;
-  /** Emplacements totaux du véhicule selon son profil catalogue (`Vehicule.emplacements`). */
+  /**
+   * Capacité totale EFFECTIVE en emplacements, telle que résolue par le backend
+   * (`Vehicle.emplacementsTotal`) — base catalogue + bonus des améliorations montées
+   * qui l'augmentent (Remorque Moyenne +1, Remorque Lourde +3). PAS la seule fiche
+   * catalogue statique (`Vehicule.emplacements`), qui ignore ce bonus.
+   */
   emplacementsTotal: number;
   /**
    * Noms affichables des équipements montés (armes + améliorations non-défaut),
@@ -155,7 +160,7 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
     nom: vehiculeCatalogue?.nom ?? vehicle.nomInterne,
     cout,
     emplacementsUtilises,
-    emplacementsTotal: vehiculeCatalogue?.emplacements ?? 0,
+    emplacementsTotal: vehicle.emplacementsTotal,
     equipements,
   };
 }

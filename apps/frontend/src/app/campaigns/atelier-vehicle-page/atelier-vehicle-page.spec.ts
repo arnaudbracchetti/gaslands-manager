@@ -78,6 +78,7 @@ const mockWorkshop: WorkshopStateDto = {
       advantages: [],
       resaleRefund: 8,
       purchasedThisSession: false,
+      emplacementsTotal: 4,
     },
   ],
 };

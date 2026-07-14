@@ -106,6 +106,10 @@ const mockVehicle: Vehicle = {
   weapons: [],
   advantages: [],
   createdAt: '2026-01-01T00:00:00.000Z',
+  // Résolu côté backend (`Vehicle.effectiveStats.emplacements`) — égal à
+  // `mockVehicule.emplacements` (4) en l'absence de toute amélioration de capacité
+  // (Remorque Moyenne/Lourde) montée.
+  emplacementsTotal: 4,
 };
 
 // Véhicule équipé d'une arme — utilisé pour la section "Équipement actuel" et
@@ -291,9 +295,23 @@ describe('EquipmentManager', () => {
 
   // ── Calcul des emplacements (pool partagé armes + améliorations) ───────────
 
-  it('calcule les emplacements totaux depuis le catalogue et 0 utilisé pour un véhicule nu', () => {
+  it('expose emplacementsTotal fourni par le véhicule (backend) et 0 utilisé pour un véhicule nu', () => {
     expect(component.emplacementsTotal()).toBe(4);
     expect(component.emplacementsUtilises()).toBe(0);
+  });
+
+  /**
+   * Régression IHM : `emplacementsTotal` doit toujours refléter `vehicle().emplacementsTotal`
+   * (résolu côté backend, bonus Remorque Moyenne/Lourde inclus), JAMAIS être recalculé
+   * depuis la fiche catalogue statique (`chosenVehicule()?.emplacements`, ici figée à 4 pour
+   * "camion"). Bug corrigé : la jauge d'emplacements restait bloquée sur la capacité de
+   * base et ne bougeait jamais quand une remorque augmentant la capacité était montée.
+   */
+  it('reflète emplacementsTotal du véhicule même quand il diffère de la fiche catalogue (bonus Remorque)', () => {
+    fixture.componentRef.setInput('vehicle', { ...mockVehicle, emplacementsTotal: 5 });
+    fixture.detectChanges();
+
+    expect(component.emplacementsTotal()).toBe(5);
   });
 
   it('recalcule les emplacements utilisés en fonction des armes ET améliorations montées (pool partagé)', () => {

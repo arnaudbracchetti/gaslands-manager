@@ -8,7 +8,9 @@ import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType 
 import { Team } from '../../team/domain/team';
 import { Vehicle } from '../../team/domain/vehicle';
 import { Weapon } from '../../team/domain/weapon';
+import { Improvement } from '../../team/domain/improvement';
 import { WeaponType } from '../../team/domain/value-objects/weapon-type';
+import { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 
 /**
  * Régression : `weapons[].price` doit refléter le prix RÉSIDUEL une fois l'arme
@@ -137,5 +139,42 @@ describe('GetWorkshopUseCase', () => {
     expect(dto.wallet).toBe(39);
     expect(weapon.isSold).toBe(true);
     expect(improvement.isSold).toBe(true);
+  });
+
+  /**
+   * Régression IHM : `emplacementsTotal` doit refléter la capacité EFFECTIVE du
+   * véhicule (`Vehicle.effectiveStats.emplacements`), pas seulement la fiche
+   * catalogue brute — sans amélioration de capacité montée, les deux coïncident
+   * (4, cf. `makeVehicleType()`).
+   */
+  it('expose emplacementsTotal = capacité catalogue de base sans amélioration de capacité', async () => {
+    const { useCase } = makeFixture();
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].emplacementsTotal).toBe(4);
+  });
+
+  it('expose emplacementsTotal augmenté du bonus d\'une Remorque Moyenne montée (+1)', async () => {
+    const remorqueMoyenneType = ImprovementType.from({
+      nom: 'Remorque Moyenne', nom_interne: 'remorque_moyenne',
+      prix: 8, emplacement: 0, description: '', regles: '', sponsors_autorises: [],
+      comportement: 'remorque_moyenne', necessite_orientation: false,
+    });
+    const remorque = new Improvement(20, remorqueMoyenneType, null, false);
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], [remorque]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    // 4 (base, makeVehicleType) + 1 (bonus Remorque Moyenne) = 5.
+    expect(dto.vehicles[0].emplacementsTotal).toBe(5);
   });
 });

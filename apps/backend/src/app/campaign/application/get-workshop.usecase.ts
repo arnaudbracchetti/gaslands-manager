@@ -44,6 +44,7 @@ export class GetWorkshopUseCase {
       chocs: v.chocs,
       resaleRefund: v.resaleRefund,
       purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.VEHICLE, v.id) ?? false,
+      emplacementsTotal: v.effectiveStats.emplacements,
       sequellas: v.sequellas.map((s) => ({
         id: s.id,
         nomInterne: s.type.nomInterne,

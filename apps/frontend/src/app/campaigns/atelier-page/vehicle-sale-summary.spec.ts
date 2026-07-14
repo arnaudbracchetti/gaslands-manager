@@ -63,6 +63,7 @@ function buildVehicle(overrides: Partial<WorkshopVehicleDto> = {}): WorkshopVehi
   return {
     id: 1, nomInterne: 'camion', price: 12, isLost: false, chocs: 0, sequellas: [],
     weapons: [], improvements: [], advantages: [], resaleRefund: 6, purchasedThisSession: false,
+    emplacementsTotal: 3,
     ...overrides,
   };
 }

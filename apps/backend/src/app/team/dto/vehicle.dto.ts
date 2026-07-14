@@ -10,4 +10,11 @@ export interface VehicleDto {
   improvements: VehicleImprovementDto[];
   weapons: WeaponDto[];
   advantages: VehicleAdvantageDto[];
+  /**
+   * Capacité totale EFFECTIVE en emplacements — base catalogue + bonus des améliorations
+   * montées qui l'augmentent (Remorque Moyenne +1, Remorque Lourde +3, cf.
+   * `Vehicle.effectiveStats`). Jamais égale à la seule fiche catalogue statique dès
+   * qu'une telle amélioration est montée.
+   */
+  emplacementsTotal: number;
 }

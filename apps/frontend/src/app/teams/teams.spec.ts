@@ -78,6 +78,7 @@ const mockVehicle: Vehicle = {
   weapons: [],
   advantages: [],
   createdAt: '2025-01-01T00:00:00.000Z',
+  emplacementsTotal: 3,
 };
 
 describe('Teams Component', () => {

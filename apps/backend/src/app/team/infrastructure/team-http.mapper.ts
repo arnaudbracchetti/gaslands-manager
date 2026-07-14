@@ -67,5 +67,6 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
     improvements,
     weapons,
     advantages,
+    emplacementsTotal: vehicle.effectiveStats.emplacements,
   };
 }

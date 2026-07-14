@@ -123,6 +123,14 @@ export interface Vehicle {
   weapons: Weapon[];
   advantages: VehicleAdvantage[];
   createdAt: string;
+  /**
+   * Capacité totale EFFECTIVE en emplacements — base catalogue + bonus des
+   * améliorations montées qui l'augmentent (Remorque Moyenne +1, Remorque Lourde
+   * +3, cf. backend `Vehicle.effectiveStats`). Toujours résolue côté backend :
+   * ne JAMAIS la recalculer depuis le seul catalogue statique (`Vehicule.emplacements`),
+   * qui ignore ce bonus.
+   */
+  emplacementsTotal: number;
 }
 
 /** Corps de `POST /api/teams/:teamId/vehicles` — miroir de `CreateVehicleDto`. */
