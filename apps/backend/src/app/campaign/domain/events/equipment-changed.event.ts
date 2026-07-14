@@ -18,7 +18,10 @@ export { EquipmentOperation, EquipmentEntityType };
  * des ids BDD positifs).
  *
  * Champs selon l'opération :
- * - BUY_VEHICLE     : targetVehicleId=null, targetEntityId=null  → crée Vehicle id=-this.id
+ * - BUY_VEHICLE     : targetVehicleId=null, targetEntityId=null  → crée Vehicle id=-this.id,
+ *                     PLUS son équipement intégré éventuel (`resolvedDefaultImprovementTypes`/
+ *                     `resolvedDefaultWeaponType`, `estDefaut: true`), avec des ids dérivés de
+ *                     -this.id par offset (cf. `Team.addCampaignVehicle`) — jamais d'événement séparé
  * - BUY_WEAPON      : targetVehicleId=vehicleId, targetEntityId=null → crée Weapon id=-this.id
  * - BUY_IMPROVEMENT : targetVehicleId=vehicleId, targetEntityId=null → crée Improvement id=-this.id
  * - BUY_SEQUELLE    : targetVehicleId=vehicleId, targetEntityId=null → crée Sequella id=-this.id ;
@@ -96,6 +99,15 @@ export class EquipmentChangedEvent extends GameEvent {
     private readonly resolvedSequellaType: SequellaType | null = null,
     /** Renseigné uniquement pour BUY(SEQUELLE, 'dur_a_cuire') — avantage gratuit choisi à l'achat. */
     private readonly resolvedFreeAdvantageType: AdvantageType | null = null,
+    /**
+     * BUY_VEHICLE uniquement — équipement intégré du véhicule (`estDefaut: true`),
+     * résolu par l'appelant depuis `resolvedVehicleType.defaultImprovements`/
+     * `.defaultWeaponNomInterne` (même principe que `resolvedFreeAdvantageType` pour
+     * Dur à Cuire : un seul événement, plusieurs entités créées). Reproduit en atelier
+     * ce que `AddVehicleUseCase` fait déjà pour la construction d'équipe.
+     */
+    private readonly resolvedDefaultImprovementTypes: ImprovementType[] = [],
+    private readonly resolvedDefaultWeaponType: WeaponType | null = null,
   ) {
     super(id, gameId, participantId, eventOrder);
   }
@@ -152,7 +164,12 @@ export class EquipmentChangedEvent extends GameEvent {
   private createTransientEquipment(p: CampaignParticipant, entityId: number): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
-        p.team.addCampaignVehicle(this.resolvedVehicleType!, entityId);
+        p.team.addCampaignVehicle(
+          this.resolvedVehicleType!,
+          entityId,
+          this.resolvedDefaultImprovementTypes,
+          this.resolvedDefaultWeaponType,
+        );
         break;
       case EquipmentEntityType.WEAPON:
         p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, entityId);

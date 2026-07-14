@@ -312,6 +312,7 @@ export abstract class Game {
       cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, orientation,
       resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
       resolvedSequellaType, resolvedFreeAdvantageType,
+      cmd.resolvedDefaultImprovementTypes ?? [], cmd.resolvedDefaultWeaponType ?? null,
     );
 
     // SEQUELLE est réglée en Chocs (monnaie du véhicule) — pas la cagnotte — et porte

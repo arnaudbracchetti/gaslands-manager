@@ -4,6 +4,7 @@ import { CampaignReplayService } from '../infrastructure/campaign-replay.service
 import { DomainException } from '../../shared/domain/domain-exception';
 import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import type { WeaponOrientation } from '../../team/domain/team';
+import type { ImprovementType } from '../../team/domain/value-objects/improvement-type';
 import type { CatalogService } from '../../catalog/catalog.service';
 import { assertParticipant } from './authorization.helpers';
 
@@ -55,6 +56,18 @@ export class ChangeEquipmentUseCase {
       ? (this.catalog.getVehicleType(cmd.nomInterne) ?? null)
       : null;
 
+    // Équipement intégré du véhicule (estDefaut: true) — symétrique à AddVehicleUseCase
+    // côté construction d'équipe. Résolu uniquement pour BUY(VEHICLE) ; ignoré pour
+    // toute autre combinaison (resolvedVehicleType est alors null).
+    const resolvedDefaultImprovementTypes = resolvedVehicleType
+      ? resolvedVehicleType.defaultImprovements
+          .map((nomInterne) => this.catalog.getImprovementType(nomInterne))
+          .filter((t): t is ImprovementType => t != null)
+      : [];
+    const resolvedDefaultWeaponType = resolvedVehicleType?.defaultWeaponNomInterne
+      ? (this.catalog.getWeaponType(resolvedVehicleType.defaultWeaponNomInterne) ?? null)
+      : null;
+
     const resolvedWeaponType = cmd.entityType === EquipmentEntityType.WEAPON
       ? (this.catalog.getWeaponType(cmd.nomInterne) ?? null)
       : null;
@@ -92,6 +105,8 @@ export class ChangeEquipmentUseCase {
         resolvedAdvantageType,
         resolvedSequellaType,
         resolvedFreeAdvantageType,
+        resolvedDefaultImprovementTypes,
+        resolvedDefaultWeaponType,
       });
       // Annulation d'achat de cette session : suppression pure d'un ou plusieurs événements
       // BUY (un seul pour WEAPON/IMPROVEMENT/ADVANTAGE, en cascade pour VEHICLE — cf.

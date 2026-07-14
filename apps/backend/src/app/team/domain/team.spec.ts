@@ -17,6 +17,16 @@ function makeVehicleType(): VehicleType {
   });
 }
 
+/** Véhicule catalogue avec équipement intégré — mirroir du Buggy/Char d'assaut réels. */
+function makeVehicleTypeWithDefaults(): VehicleType {
+  return VehicleType.from({
+    nom: 'Buggy', nom_interne: 'buggy', poids: 'Léger',
+    carrosserie: 4, manoeuvrabilite: 5, vitesse_max: 7, equipage: 1,
+    emplacements: 2, prix: 6, description: '', regles: '', sponsors_autorises: [],
+    ameliorations_defaut: ['arceaux'],
+  });
+}
+
 function makeWeaponType(): WeaponType {
   return WeaponType.from({
     nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
@@ -163,6 +173,63 @@ describe('Team — verrouillage campagne', () => {
   it("les mutations campagne (addCampaignWeapon) restent autorisées même verrouillée", () => {
     const team = makeLockedTeam();
     expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', -1)).not.toThrow();
+  });
+});
+
+describe('Team.addCampaignVehicle — équipement par défaut (achat en atelier)', () => {
+  it('sans défauts catalogue, le véhicule reste nu (comportement inchangé)', () => {
+    const team = makeTeam();
+    const vehicle = team.addCampaignVehicle(makeVehicleType(), -5);
+    expect(vehicle.weapons).toHaveLength(0);
+    expect(vehicle.improvements).toHaveLength(0);
+  });
+
+  it("reproduit l'amélioration par défaut du véhicule (estDefaut, prix 0, non retirable)", () => {
+    const team = makeTeam();
+    const arceaux = makeImprovementType();
+    const vehicle = team.addCampaignVehicle(makeVehicleTypeWithDefaults(), -5, [arceaux]);
+    expect(vehicle.improvements).toHaveLength(1);
+    expect(vehicle.improvements[0].estDefaut).toBe(true);
+    expect(vehicle.improvements[0].price).toBe(0);
+    expect(() => vehicle.removeImprovement(vehicle.improvements[0].id)).toThrow(DomainException);
+  });
+
+  it("reproduit l'arme par défaut montée sur Tourelle (estDefaut, prix 0)", () => {
+    const team = makeTeam();
+    const canon = makeWeaponType();
+    const vehicle = team.addCampaignVehicle(makeVehicleType(), -5, [], canon);
+    expect(vehicle.weapons).toHaveLength(1);
+    expect(vehicle.weapons[0].estDefaut).toBe(true);
+    expect(vehicle.weapons[0].orientation).toBe('tourelle');
+    expect(vehicle.weapons[0].price).toBe(0);
+  });
+
+  it("l'id de l'équipement par défaut est distinct de l'id du véhicule et déterministe", () => {
+    const team = makeTeam();
+    const arceaux = makeImprovementType();
+    const canon = makeWeaponType();
+    const vehicle = team.addCampaignVehicle(makeVehicleTypeWithDefaults(), -5, [arceaux], canon);
+    expect(vehicle.id).toBe(-5);
+    expect(vehicle.improvements[0].id).not.toBe(vehicle.id);
+    expect(vehicle.weapons[0].id).not.toBe(vehicle.id);
+    expect(vehicle.improvements[0].id).not.toBe(vehicle.weapons[0].id);
+
+    // Rejoué une seconde fois (même campaignId) : mêmes ids — condition nécessaire
+    // à la reconstruction déterministe au replay (D-S11).
+    const team2 = makeTeam();
+    const vehicle2 = team2.addCampaignVehicle(makeVehicleTypeWithDefaults(), -5, [arceaux], canon);
+    expect(vehicle2.improvements[0].id).toBe(vehicle.improvements[0].id);
+    expect(vehicle2.weapons[0].id).toBe(vehicle.weapons[0].id);
+  });
+
+  it("les ids dérivés de deux véhicules différents ne collisionnent jamais", () => {
+    const team = makeTeam();
+    const arceaux = makeImprovementType();
+    const canon = makeWeaponType();
+    const v1 = team.addCampaignVehicle(makeVehicleTypeWithDefaults(), -5, [arceaux], canon);
+    const v2 = team.addCampaignVehicle(makeVehicleTypeWithDefaults(), -6, [arceaux], canon);
+    expect(v1.improvements[0].id).not.toBe(v2.improvements[0].id);
+    expect(v1.weapons[0].id).not.toBe(v2.weapons[0].id);
   });
 });
 

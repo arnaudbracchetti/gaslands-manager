@@ -55,6 +55,16 @@ export interface UpdateTeamCommand {
  * contexte complet (budget réel, sponsor) pour appliquer les règles correctement.
  */
 export class Team {
+  /**
+   * Offsets constants pour les ids transients de l'équipement par défaut d'un véhicule
+   * acheté en atelier (D-S11) — cf. `addCampaignVehicle`. `GAME_EVENT.id` est un
+   * `@PrimaryGeneratedColumn()` Postgres `integer` (max ~2 147 483 647) : un offset de
+   * 10/20 milliards place ces ids dans un espace qu'aucun `-event.id` réel ne peut
+   * jamais atteindre — garantie d'unicité mathématique, pas probabiliste.
+   */
+  private static readonly DEFAULT_WEAPON_ID_OFFSET = 10_000_000_000;
+  private static readonly DEFAULT_IMPROVEMENT_ID_OFFSET = 20_000_000_000;
+
   constructor(
     readonly id: number,
     readonly userId: number,
@@ -275,9 +285,28 @@ export class Team {
   /**
    * Ajoute un véhicule transient avec un id explicite (D-S11).
    * id négatif = entité campagne identifiée par -eventId (distincte des ids BDD).
+   *
+   * Reproduit l'équipement par défaut du véhicule (`defaultImprovementTypes`/
+   * `defaultWeaponType`, résolus par l'appelant depuis `VehicleType.defaultImprovements`/
+   * `.defaultWeaponNomInterne`) — symétrique à `addVehicle` (construction d'équipe).
+   * Leurs ids transients sont dérivés de `campaignId` via un offset constant (cf.
+   * `DEFAULT_WEAPON_ID_OFFSET`/`DEFAULT_IMPROVEMENT_ID_OFFSET`), distincts de l'id du
+   * véhicule lui-même (qui doit rester exactement `campaignId`, contrat exploité par
+   * `Game.findSameSessionPurchase`/`collectSessionEventsForVehicle`).
    */
-  addCampaignVehicle(vehicleType: VehicleType, campaignId: number): Vehicle {
-    const vehicle = new Vehicle(campaignId, this.id, vehicleType, [], []);
+  addCampaignVehicle(
+    vehicleType: VehicleType,
+    campaignId: number,
+    defaultImprovementTypes: ImprovementType[] = [],
+    defaultWeaponType: WeaponType | null = null,
+  ): Vehicle {
+    const defaultImprovements = defaultImprovementTypes.map(
+      (type, index) => new Improvement(campaignId - Team.DEFAULT_IMPROVEMENT_ID_OFFSET - index, type, null, true),
+    );
+    const defaultWeapons = defaultWeaponType
+      ? [new Weapon(campaignId - Team.DEFAULT_WEAPON_ID_OFFSET, defaultWeaponType, 'tourelle', true)]
+      : [];
+    const vehicle = new Vehicle(campaignId, this.id, vehicleType, defaultWeapons, defaultImprovements);
     this._vehicles.push(vehicle);
     return vehicle;
   }

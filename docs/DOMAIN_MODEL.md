@@ -764,6 +764,20 @@ séquelle et l'avantage gratuit qu'elle accorde partagent le **même** id
 possible, ces deux entités vivant dans des collections distinctes
 (`vehicle.sequellas` / `vehicle.advantages`).
 
+**Équipement par défaut d'un véhicule acheté en atelier** : un second cas de
+plusieurs entités créées par un seul événement `BUY_VEHICLE` — le véhicule lui-même
+GARDE `id = -event.id` (contrat exploité par `Game.findSameSessionPurchase`/
+`collectSessionEventsForVehicle`), mais son amélioration/arme intégrée
+(`estDefaut: true`, résolues depuis `VehicleType.defaultImprovements`/
+`.defaultWeaponNomInterne`) reçoit un id dérivé par **offset constant**
+(`Team.DEFAULT_IMPROVEMENT_ID_OFFSET`/`DEFAULT_WEAPON_ID_OFFSET`, cf.
+`Team.addCampaignVehicle`) plutôt que `-event.id` directement — nécessaire car
+ces entités vivent dans des collections où d'AUTRES événements (`BUY_WEAPON`/
+`BUY_IMPROVEMENT`) déposent déjà des entités à `-leur_event.id`. L'offset
+(10/20 milliards) dépasse la capacité de la colonne `GAME_EVENT.id`
+(Postgres `integer`, max ~2,147,483,647) : aucune collision possible avec un id
+d'événement réel, garantie mathématique plutôt que probabiliste.
+
 ### Séquelles (event-sourcing)
 
 Résumé de la partie event-sourcing du système de séquelles — conception

@@ -41,6 +41,31 @@ describe('EquipmentChangedEvent — execute / undo', () => {
       expect(team.vehicles.some((v) => v.id === -7)).toBe(false);
     });
 
+    it("BUY VEHICLE avec équipement par défaut — crée AUSSI l'amélioration/arme intégrée (estDefaut)", () => {
+      const { team, participant, participants } = makeTestParticipant();
+      const event = new EquipmentChangedEvent(
+        27, 10, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'buggy', 6,
+        null, null, null,
+        makeVehicleType(), null, null, null, null, null,
+        [makeImprovementType()], makeWeaponType(),
+      );
+
+      event.execute(participants);
+      const vehicle = team.vehicles.find((v) => v.id === -27)!;
+      expect(vehicle).toBeDefined();
+      expect(vehicle.improvements).toHaveLength(1);
+      expect(vehicle.improvements[0].estDefaut).toBe(true);
+      expect(vehicle.improvements[0].price).toBe(0);
+      expect(vehicle.weapons).toHaveLength(1);
+      expect(vehicle.weapons[0].estDefaut).toBe(true);
+      expect(vehicle.weapons[0].orientation).toBe('tourelle');
+      expect(vehicle.weapons[0].price).toBe(0);
+
+      event.undo(participants);
+      expect(team.vehicles.some((v) => v.id === -27)).toBe(false);
+    });
+
     it('BUY WEAPON', () => {
       const { vehicle, participant, participants } = makeTestParticipant();
       const event = new EquipmentChangedEvent(

@@ -495,8 +495,13 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   aux véhicules entiers** : un bouton "+ Ajouter un véhicule" permet d'en acheter un
   nouveau (parmi ceux du sponsor, payé via la cagnotte), et chaque véhicule de la liste
   peut être vendu (véhicule pré-existant, revente par élément) ou son achat annulé
-  (véhicule acheté cette session, cascade sur tout son équipement — cf. ci-dessus). **Reste
-  en Temps 2** (cf.
+  (véhicule acheté cette session, cascade sur tout son équipement — cf. ci-dessus).
+  L'achat d'un véhicule en atelier applique aussi son équipement intégré éventuel
+  (`estDefaut: true`, gratuit, non retirable — Arceaux du Buggy, Canon de 125mm sur
+  Tourelle du Char d'assaut, cf. [VEHICLES.md — Améliorations et armes par
+  défaut](VEHICLES.md#améliorations-et-armes-par-défaut)), symétriquement à la
+  construction d'équipe (`AddVehicleUseCase`) — corrige un bug où un véhicule acheté
+  en atelier restait "nu". **Reste en Temps 2** (cf.
   [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
   enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
   n'est aujourd'hui gardé que par la cagnotte, y compris pour l'achat d'un véhicule :

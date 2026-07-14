@@ -47,6 +47,14 @@ export interface ChangeEquipmentInput {
   resolvedSequellaType: SequellaType | null;
   /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — avantage gratuit choisi à l'achat. */
   resolvedFreeAdvantageType: AdvantageType | null;
+  /**
+   * BUY(VEHICLE) uniquement — équipement intégré du véhicule (`estDefaut: true`),
+   * résolu par le use case depuis `resolvedVehicleType.defaultImprovements`/
+   * `.defaultWeaponNomInterne` (symétrique à `AddVehicleUseCase` côté construction
+   * d'équipe). Vide/`null` pour toute autre combinaison.
+   */
+  resolvedDefaultImprovementTypes?: ImprovementType[];
+  resolvedDefaultWeaponType?: WeaponType | null;
 }
 
 /** Une ligne du journal d'une partie — événement traduit en texte lisible. */

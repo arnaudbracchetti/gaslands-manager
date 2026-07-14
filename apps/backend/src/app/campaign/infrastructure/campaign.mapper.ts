@@ -210,12 +210,26 @@ export class CampaignMapper {
       : undefined;
     const resolvedFreeAdvantageType = freeAdvantageRaw ? AdvantageType.from(freeAdvantageRaw) : null;
 
+    // Équipement intégré du véhicule (estDefaut: true), best-effort comme le reste de ce
+    // mapper — absent pour toute combinaison autre que BUY_VEHICLE (cf. EquipmentChangedEvent).
+    const resolvedDefaultImprovementTypes = resolvedVehicleType
+      ? resolvedVehicleType.defaultImprovements
+          .map((n) => this.catalog.getAmeliorationByNomInterne(n))
+          .filter((raw): raw is NonNullable<typeof raw> => raw != null)
+          .map((raw) => ImprovementType.from(raw))
+      : [];
+    const defaultWeaponRaw = resolvedVehicleType?.defaultWeaponNomInterne
+      ? this.catalog.getArmeByNomInterne(resolvedVehicleType.defaultWeaponNomInterne)
+      : undefined;
+    const resolvedDefaultWeaponType = defaultWeaponRaw ? WeaponType.from(defaultWeaponRaw) : null;
+
     return new EquipmentChangedEvent(
       orm.id, orm.gameId, orm.participantId, orm.eventOrder,
       operation, entityType, nomInterne, orm.cost!,
       orm.targetVehicleId, orm.targetEntityId, orientation,
       resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
       resolvedSequellaType, resolvedFreeAdvantageType,
+      resolvedDefaultImprovementTypes, resolvedDefaultWeaponType,
     );
   }
 }
