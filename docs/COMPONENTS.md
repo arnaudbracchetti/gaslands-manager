@@ -148,6 +148,8 @@ graph TD
         GameJournalModal
         AtelierPage["AtelierPage (smart)"]
         AtelierVehiclePage["AtelierVehiclePage (smart)"]
+        SequellaManager["SequellaManager (smart)"]
+        SequellaAdvantagePicker
     end
 
     subgraph Admin
@@ -195,6 +197,9 @@ graph TD
     AtelierPage -.->|navigate| AtelierVehiclePage
     AtelierVehiclePage --> EquipmentManager
     AtelierVehiclePage --> Breadcrumb
+    AtelierVehiclePage --> SequellaManager
+    SequellaManager --> ConfirmModal
+    SequellaManager --> SequellaAdvantagePicker
     GameResultWizard --> RankingStep
     GameResultWizard --> WreckDesignationStep
     GameResultWizard --> WreckResolutionStep
@@ -1117,7 +1122,7 @@ Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affich
 
 ### `AtelierVehiclePage` — `campaigns/atelier-vehicle-page/` 🧠
 
-Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Achat/retrait d'armes et d'améliorations, et revente à moitié prix, sont implémentés — y compris le montage sur Tourelle, une simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) et non une opération séparée ; hors périmètre : Chocs/séquelles, épaves (cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
+Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Achat/retrait d'armes et d'améliorations, et revente à moitié prix, sont implémentés — y compris le montage sur Tourelle, une simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) et non une opération séparée. Sous `EquipmentManager`, cette page rend aussi `SequellaManager` (cf. ci-dessous) pour la gestion des Chocs/séquelles — hors périmètre : uniquement les épaves (véhicules perdus, cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
 
 | | |
 |---|---|
@@ -1125,11 +1130,63 @@ Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affich
 | **Type** | Smart |
 | **Route** | `/campaigns/:id/atelier/vehicles/:vehicleId` |
 | **Services** | `ActivatedRoute`, `CampaignsService`, `CatalogService` |
-| **Compose** | `Breadcrumb`, `EquipmentManager` (via `AtelierEquipmentDataSource` fournie au niveau du composant) |
+| **Compose** | `Breadcrumb`, `EquipmentManager` (via `AtelierEquipmentDataSource` fournie au niveau du composant), `SequellaManager` |
 
-**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged` pour rafraîchir cagnotte + budget.
+**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route, traduit pour `EquipmentManager`), `targetWorkshopVehicle` (computed — le MÊME véhicule sous sa forme brute `WorkshopVehicleDto`, seule forme qui porte encore `chocs`/`sequellas`, transmise à `SequellaManager`), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged`/`changed` (émis par `EquipmentManager` ou `SequellaManager`) pour rafraîchir cagnotte + budget + Chocs.
 
-> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise.
+> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise. `SequellaManager` n'a PAS besoin de cette abstraction : les séquelles n'existent que côté atelier (aucun second contexte "construction d'équipe" à supporter), donc il injecte directement `CampaignsService`/`CatalogService`.
+
+---
+
+### `SequellaManager` — `campaigns/atelier-vehicle-page/sequella-manager/` 🧠
+
+Gestion des séquelles (afflictions, p.170) d'un véhicule d'atelier — rendu à côté d'`EquipmentManager` sur `AtelierVehiclePage`, PAS une section de celui-ci : la monnaie (`vehicle.chocs`, compteur par véhicule gagné via la Table des Épaves) et les règles d'achat/annulation/revente sont totalement distinctes du budget Jerricans que gère `EquipmentManager`. Affiche le solde de Chocs, la liste des séquelles ATELIER achetables (`GET .../workshop/vehicles/:vehicleId/available-sequelles`, verdict `disponible`/`raison` mirroir des avantages) et les séquelles déjà acquises (`vehicle().sequellas`). Achat direct en un clic pour la plupart des séquelles ; **Dur à Cuire** ouvre d'abord `SequellaAdvantagePicker` (choix d'un avantage gratuit) avant l'achat. Retrait : annulation même-session toujours proposée (`purchasedThisSession`) ; revente cross-session gardée par `resaleUnlocked` (présence active de la séquelle "Légende Vivante" sur le véhicule — mirroir de `Vehicle.canRemoveSequella` côté backend), avec perte totale de Chocs (aucun remboursement, comme un avantage revendu).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-sequella-manager` |
+| **Type** | Smart |
+| **Services** | `CampaignsService`, `CatalogService` |
+| **Compose** | `ConfirmModal`, `SequellaAdvantagePicker` |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `campaignId` | `number` | — | Campagne courante (routes `/api/campaigns/:id/...`) |
+| `vehicle` | `WorkshopVehicleDto` | — | Le véhicule d'atelier COURANT, forme brute (seule à porter `chocs`/`sequellas`) |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|--------------|
+| `changed` | `void` | Émis après achat/annulation/revente réussi — le parent recharge le workshop |
+
+**Signals clés** : `availableSequelles`, `loading`, `error`, `durACuireAdvantages` (chargé une fois via `CatalogService.getAllAvantages()`, filtré `categorie === 'Dur à Cuire'` — indépendant du véhicule), `pendingDurACuireNomInterne` (picker ouvert si non-null), `pendingRemove`, `resaleUnlocked` (computed).
+
+---
+
+### `SequellaAdvantagePicker` — `campaigns/atelier-vehicle-page/sequella-manager/sequella-advantage-picker/`
+
+Modale de choix de l'avantage gratuit accordé par la séquelle Dur à Cuire. Composant dumb, structure calquée sur `ChangeTeamModal` (fond semi-transparent, boîte centrale, liste sélectionnable par radio, actions Valider/Annuler) — reçoit la liste déjà filtrée aux 6 avantages de catégorie "Dur à Cuire" (tous sponsors confondus — la règle du livre les accorde même hors accès normal du sponsor), sélection locale, "Valider" désactivé tant qu'aucun choix n'est fait.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-sequella-advantage-picker` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `advantages` | `Avantage[]` | — | Les 6 avantages de catégorie "Dur à Cuire", déjà filtrés par `SequellaManager` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|--------------|
+| `confirmed` | `string` | `nom_interne` de l'avantage choisi |
+| `cancelled` | `void` | Fermeture sans choix |
 
 ---
 

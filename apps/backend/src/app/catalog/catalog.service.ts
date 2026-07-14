@@ -325,4 +325,13 @@ export class CatalogService implements OnModuleInit, ICatalogRepository {
   getAdvantageTypesForSponsor(sponsorNom: string): AdvantageType[] {
     return (this.getSponsor(sponsorNom)?.avantages ?? []).map(AdvantageType.from);
   }
+
+  /**
+   * Retourne toutes les séquelles du catalogue, enveloppées en `SequellaType`.
+   * Jamais scopée par sponsor — contrairement aux avantages/armes/améliorations,
+   * une séquelle s'applique à tout véhicule quel que soit le sponsor de l'équipe.
+   */
+  getAllSequellaTypes(): SequellaType[] {
+    return this.allSequelles.map(SequellaType.from);
+  }
 }

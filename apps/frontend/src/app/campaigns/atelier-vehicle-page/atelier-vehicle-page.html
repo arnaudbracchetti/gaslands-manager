@@ -20,6 +20,13 @@
         (vehicleChanged)="onVehicleChanged()"
       />
     }
+    @if (targetWorkshopVehicle(); as workshopVehicle) {
+      <app-sequella-manager
+        [campaignId]="campaignId"
+        [vehicle]="workshopVehicle"
+        (changed)="onVehicleChanged()"
+      />
+    }
   }
 
 </div>

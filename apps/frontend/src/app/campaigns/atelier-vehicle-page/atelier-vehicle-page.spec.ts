@@ -92,9 +92,10 @@ describe('AtelierVehiclePage', () => {
     getWorkshopAvailableWeapons: ReturnType<typeof vi.fn>;
     getWorkshopAvailableImprovements: ReturnType<typeof vi.fn>;
     getWorkshopAvailableAdvantages: ReturnType<typeof vi.fn>;
+    getWorkshopAvailableSequelles: ReturnType<typeof vi.fn>;
     changeEquipment: ReturnType<typeof vi.fn>;
   };
-  let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn> };
+  let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn>; getAllAvantages: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockCampaignsService = {
@@ -103,10 +104,12 @@ describe('AtelierVehiclePage', () => {
       getWorkshopAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableImprovements: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableAdvantages: vi.fn().mockReturnValue(of([])),
+      getWorkshopAvailableSequelles: vi.fn().mockReturnValue(of([])),
       changeEquipment: vi.fn().mockReturnValue(of(undefined)),
     };
     mockCatalogService = {
       getSponsorByName: vi.fn().mockReturnValue(of(mockSponsorCatalog)),
+      getAllAvantages: vi.fn().mockReturnValue(of([])),
     };
   });
 
@@ -149,6 +152,15 @@ describe('AtelierVehiclePage', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('app-equipment-manager')).toBeTruthy();
     expect(el.textContent).toContain('Camion');
+  });
+
+  it('rend <app-sequella-manager> avec le véhicule sous sa forme WorkshopVehicleDto (chocs/sequellas)', () => {
+    createFixture('3', '5');
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-sequella-manager')).toBeTruthy();
+    expect(component.targetWorkshopVehicle()?.id).toBe(5);
+    expect(component.targetWorkshopVehicle()?.chocs).toBe(0);
   });
 
   it("affiche une erreur si le véhicule n'existe pas dans le workshop", () => {

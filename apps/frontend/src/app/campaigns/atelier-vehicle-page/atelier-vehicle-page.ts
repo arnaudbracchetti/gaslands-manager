@@ -25,15 +25,16 @@ import { Sponsor } from '../../catalog/catalog.model';
 import { Vehicle } from '../../teams/vehicle-configurator/vehicle-builder.model';
 import { BudgetView, EQUIPMENT_DATA_SOURCE } from '../../teams/vehicle-configurator/equipment-data-source';
 import { EquipmentManager } from '../../teams/vehicle-configurator/equipment-manager/equipment-manager';
-import { WorkshopStateDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
+import { WorkshopStateDto, WorkshopVehicleDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
 import { AtelierEquipmentDataSource } from './atelier-equipment.datasource';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { buildVehicleSummary } from '../../teams/vehicle-summary';
+import { SequellaManager } from './sequella-manager/sequella-manager';
 
 @Component({
   selector: 'app-atelier-vehicle-page',
   standalone: true,
-  imports: [EquipmentManager, Breadcrumb],
+  imports: [EquipmentManager, Breadcrumb, SequellaManager],
   providers: [
     AtelierEquipmentDataSource,
     { provide: EQUIPMENT_DATA_SOURCE, useExisting: AtelierEquipmentDataSource },
@@ -66,6 +67,16 @@ export class AtelierVehiclePage implements OnInit {
   /** Le véhicule ciblé par la route, une fois le workshop chargé. */
   vehicle: Signal<Vehicle | null> = computed((): Vehicle | null => {
     return this.allVehicles().find((v: Vehicle): boolean => v.id === this.vehicleId) ?? null;
+  });
+
+  /**
+   * Le véhicule ciblé, sous sa forme BRUTE `WorkshopVehicleDto` — contrairement à
+   * `vehicle` ci-dessus (traduit pour `EquipmentManager`, cf. `mapWorkshopVehicleToVehicle`
+   * qui ignore `chocs`/`sequellas`), c'est la forme dont `SequellaManager` a besoin :
+   * lui seul porte encore ces deux champs.
+   */
+  targetWorkshopVehicle: Signal<WorkshopVehicleDto | null> = computed((): WorkshopVehicleDto | null => {
+    return (this.workshop()?.vehicles ?? []).find((v: WorkshopVehicleDto): boolean => v.id === this.vehicleId) ?? null;
   });
 
   /** Nom affiché du véhicule, résolu depuis le catalogue (repli sur `nomInterne`). */

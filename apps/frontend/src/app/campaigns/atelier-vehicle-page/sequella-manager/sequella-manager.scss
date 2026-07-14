@@ -1,0 +1,226 @@
+// SequellaManager — mêmes tokens que mounted-equipment.scss/equipment-option.scss
+// (.me-*/.option__*) pour cohérence visuelle, préfixe .sm-* propre à ce composant.
+
+:host {
+  display: block;
+  margin-top: 24px;
+}
+
+.sm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-rust);
+}
+
+.sm__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sm__chocs {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+
+  strong {
+    color: var(--tb-danger);
+  }
+}
+
+.sm__error {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--tb-rouille-lt);
+}
+
+.sm__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sm__group-title {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sm__status {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.sm__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm__item {
+  position: relative; // contient le filigrane .sm__item__watermark
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--metal-sheen);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+
+  &--unavailable {
+    opacity: 0.7;
+  }
+
+  &--owned {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  &--sold {
+    filter: grayscale(0.4);
+    opacity: 0.75;
+  }
+}
+
+.sm__item__watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: var(--tb-rouille-lt);
+  opacity: 0.65;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1px var(--tb-rouille-deep);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sm__item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sm__name {
+  font-family: var(--font-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  &--sold {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+}
+
+.sm__description {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+
+  // Le HTML généré par `marked` porte déjà ses propres balises (<p>, <ul>...).
+  ::ng-deep p {
+    margin: 0 0 4px;
+  }
+}
+
+.sm__reason {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--tb-rouille-lt);
+}
+
+.sm__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(230, 180, 28, 0.08);
+  border: 1px solid rgba(230, 180, 28, 0.25);
+  color: var(--tb-danger);
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sm__acquire {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--border-rust);
+  color: var(--tb-os);
+  padding: 4px 14px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+  }
+}
+
+.sm__remove {
+  background: transparent;
+  border: 1px solid rgba(162, 58, 28, 0.45);
+  color: var(--tb-rouille-lt);
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(162, 58, 28, 0.15);
+    border-color: var(--tb-rouille);
+  }
+}
+
+.sm__locked {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  cursor: help;
+}

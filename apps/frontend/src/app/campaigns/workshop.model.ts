@@ -52,9 +52,27 @@ export interface WorkshopImprovementDto {
 }
 
 export interface WorkshopSequellaDto {
+  id: number;
   nomInterne: string;
   nom: string;
+  /** Coût en Chocs (monnaie du véhicule, distincte de la cagnotte) — jamais réduit à la revente. */
   chocsCost: number;
+  /** ATELIER (achat volontaire) ou TABLE_EPAVES (imposée par un tirage, jamais achetable). */
+  origine: 'ATELIER' | 'TABLE_EPAVES';
+  /** Vendue (revente, toujours 0 remboursement) — reste visible, barrée, côté IHM. */
+  isSold: boolean;
+  /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
+  purchasedThisSession: boolean;
+}
+
+/** Verdict de disponibilité d'une séquelle ATELIER — miroir de `AvailableAdvantageDto`. */
+export interface AvailableSequellaDto {
+  nom: string;
+  nomInterne: string;
+  chocsCost: number;
+  description: string;
+  disponible: boolean;
+  raison?: string;
 }
 
 export interface WorkshopAdvantageDto {
@@ -101,7 +119,7 @@ export interface WorkshopStateDto {
 // ── Achat / revente (POST /api/campaigns/:id/events/equipment) ────────────────
 
 export type EquipmentOperation = 'BUY' | 'SELL';
-export type EquipmentEntityType = 'VEHICLE' | 'WEAPON' | 'IMPROVEMENT' | 'ADVANTAGE';
+export type EquipmentEntityType = 'VEHICLE' | 'WEAPON' | 'IMPROVEMENT' | 'ADVANTAGE' | 'SEQUELLE';
 
 /** Corps de `POST /api/campaigns/:id/events/equipment` — miroir de `ChangeEquipmentDto`. */
 export interface ChangeEquipmentDto {
@@ -113,6 +131,8 @@ export interface ChangeEquipmentDto {
   targetEntityId?: number | null;
   /** WEAPON : 5 valeurs possibles (dont `'tourelle'` — arc à 360°, coût ×3). */
   orientation?: WeaponOrientation | null;
+  /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — nom_interne de l'avantage gratuit choisi. */
+  freeAdvantageNomInterne?: string | null;
 }
 
 /**

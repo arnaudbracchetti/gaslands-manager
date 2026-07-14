@@ -14,6 +14,7 @@ import { TestBed } from '@angular/core/testing';
 import { CampaignsService } from './campaigns.service';
 import { Campaign, CampaignSummary } from './campaign.model';
 import { CampaignParticipant, StandingsEntry } from './campaign-participant.model';
+import type { AvailableSequellaDto } from './workshop.model';
 
 const mockCampaign: Campaign = {
   id: 1,
@@ -326,6 +327,26 @@ describe('CampaignsService', () => {
       req.flush(standings);
 
       expect(result).toEqual(standings);
+    });
+  });
+
+  // ── getWorkshopAvailableSequelles() ──────────────────────────────────────
+
+  describe('getWorkshopAvailableSequelles()', () => {
+    it('effectue GET /api/campaigns/:id/workshop/vehicles/:vId/available-sequelles', () => {
+      const sequelles: AvailableSequellaDto[] = [
+        { nom: 'Suicidaire', nomInterne: 'suicidaire', chocsCost: 1, description: '', disponible: true },
+      ];
+      let result: AvailableSequellaDto[] | undefined;
+
+      service.getWorkshopAvailableSequelles(1, 5).subscribe((s) => { result = s; });
+
+      const req = httpMock.expectOne('/api/campaigns/1/workshop/vehicles/5/available-sequelles');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(sequelles);
+
+      expect(result).toEqual(sequelles);
     });
   });
 });

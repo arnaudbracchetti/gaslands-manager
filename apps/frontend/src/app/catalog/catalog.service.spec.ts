@@ -13,7 +13,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CatalogService } from './catalog.service';
-import { Sponsor } from './catalog.model';
+import { Avantage, Sponsor } from './catalog.model';
 import { SponsorInfo } from '../teams/team.model';
 
 // Sponsor "allégé" (vue carousel) — réponse fictive de GET /api/catalog/sponsors
@@ -91,6 +91,26 @@ describe('CatalogService', () => {
       const req = httpMock.expectOne('/api/catalog/sponsors/La%20Ge%C3%B4li%C3%A8re');
       expect(req.request.method).toBe('GET');
       req.flush(mockSponsor);
+    });
+  });
+
+  // ── getAllAvantages() ───────────────────────────────────────────────────────
+
+  describe('getAllAvantages()', () => {
+    it('effectue GET /api/catalog/avantages et retourne la liste complète (tous sponsors confondus)', () => {
+      const mockAvantage: Avantage = {
+        nom: 'Baril de Poudre', nom_interne: 'baril_de_poudre', categorie: 'Dur à Cuire',
+        prix: 0, description: '', regles: '',
+      };
+      let result: Avantage[] | undefined;
+
+      service.getAllAvantages().subscribe((avantages) => { result = avantages; });
+
+      const req = httpMock.expectOne('/api/catalog/avantages');
+      expect(req.request.method).toBe('GET');
+      req.flush([mockAvantage]);
+
+      expect(result).toEqual([mockAvantage]);
     });
   });
 });

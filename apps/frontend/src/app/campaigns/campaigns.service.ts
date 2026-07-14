@@ -22,7 +22,7 @@ import type {
   EnterAtelierResultDto,
   GameJournalEntryDto,
 } from './game.model';
-import type { WorkshopStateDto, ChangeEquipmentDto } from './workshop.model';
+import type { WorkshopStateDto, ChangeEquipmentDto, AvailableSequellaDto } from './workshop.model';
 import type {
   AvailableWeaponDto,
   AvailableImprovementDto,
@@ -309,6 +309,16 @@ export class CampaignsService {
   getWorkshopAvailableAdvantages(campaignId: number, vehicleId: number): Observable<AvailableAdvantageDto[]> {
     return this.http.get<AvailableAdvantageDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-advantages`,
+    );
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/vehicles/:vId/available-sequelles →
+   * séquelles ATELIER avec verdict (monnaie Chocs, pas la cagnotte).
+   */
+  getWorkshopAvailableSequelles(campaignId: number, vehicleId: number): Observable<AvailableSequellaDto[]> {
+    return this.http.get<AvailableSequellaDto[]>(
+      `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-sequelles`,
     );
   }
 

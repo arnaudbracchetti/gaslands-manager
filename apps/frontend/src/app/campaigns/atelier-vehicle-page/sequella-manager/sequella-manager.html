@@ -1,0 +1,96 @@
+<!--
+  SequellaManager — gestion des séquelles d'un véhicule d'atelier (cf. en-tête .ts).
+  Trois blocs : solde de Chocs, séquelles achetables, séquelles acquises.
+-->
+<section class="sm">
+  <h3 class="sm__title">Séquelles</h3>
+
+  <div class="sm__chocs" title="Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles">
+    💥 Chocs : <strong>{{ vehicle().chocs }}</strong>
+  </div>
+
+  @if (error()) {
+    <p class="sm__error">{{ error() }}</p>
+  }
+
+  <!-- ── Séquelles achetables (origine ATELIER uniquement) ── -->
+  <div class="sm__group">
+    <h4 class="sm__group-title">Disponibles</h4>
+    @if (loading()) {
+      <p class="sm__status">Chargement…</p>
+    } @else if (availableSequelles().length === 0) {
+      <p class="sm__status">Aucune séquelle disponible.</p>
+    } @else {
+      <ul class="sm__list">
+        @for (sequella of availableSequelles(); track sequella.nomInterne) {
+          <li class="sm__item" [class.sm__item--unavailable]="!sequella.disponible">
+            <div class="sm__item-header">
+              <span class="sm__name">{{ sequella.nom }}</span>
+              <span class="sm__badge" title="Coût en Chocs">
+                💥 {{ sequella.chocsCost }}
+              </span>
+            </div>
+            <!-- [innerHTML] : description convertie en HTML au chargement du catalogue (marked). -->
+            <div class="sm__description" [innerHTML]="sequella.description"></div>
+            @if (!sequella.disponible) {
+              <p class="sm__reason">{{ sequella.raison }}</p>
+            } @else {
+              <button class="sm__acquire" type="button" (click)="onAcquireClicked(sequella)">
+                Acquérir
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <!-- ── Séquelles déjà acquises ── -->
+  <div class="sm__group">
+    <h4 class="sm__group-title">Acquises ({{ vehicle().sequellas.length }})</h4>
+    @if (vehicle().sequellas.length === 0) {
+      <p class="sm__status">Aucune séquelle acquise.</p>
+    } @else {
+      <ul class="sm__list">
+        @for (sequella of vehicle().sequellas; track sequella.id) {
+          <li class="sm__item sm__item--owned" [class.sm__item--sold]="sequella.isSold"
+              [attr.title]="sequella.isSold ? 'Revendue — perte totale de Chocs' : null">
+            @if (sequella.isSold) {
+              <span class="sm__item__watermark">Vendue</span>
+            }
+            <span class="sm__name" [class.sm__name--sold]="sequella.isSold">{{ sequella.nom }}</span>
+            <span class="sm__badge" title="Coût en Chocs (jamais réduit à la revente)">
+              💥 {{ sequella.chocsCost }}
+            </span>
+            @if (!sequella.isSold) {
+              @if (canRemove(sequella)) {
+                <button class="sm__remove" type="button" (click)="removeSequella(sequella)">
+                  Retirer
+                </button>
+              } @else {
+                <span class="sm__locked" title="Revente fermée — seule la présence de 'Légende Vivante' sur ce véhicule l'ouvre">
+                  🔒
+                </span>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+@if (pendingDurACuireNomInterne()) {
+  <app-sequella-advantage-picker
+    [advantages]="durACuireAdvantages()"
+    (confirmed)="onAdvantagePicked($event)"
+    (cancelled)="onAdvantagePickerCancelled()" />
+}
+
+@if (pendingRemove(); as sequella) {
+  <app-confirm-modal
+    [message]="removalMessage(sequella)"
+    confirmLabel="Retirer"
+    (confirmed)="onConfirmRemove()"
+    (cancelled)="pendingRemove.set(null)" />
+}

@@ -12,7 +12,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SponsorInfo } from '../teams/team.model';
-import { Sponsor } from './catalog.model';
+import { Avantage, Sponsor } from './catalog.model';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
@@ -49,5 +49,18 @@ export class CatalogService {
    */
   getSponsorByName(nom: string): Observable<Sponsor> {
     return this.http.get<Sponsor>(`/api/catalog/sponsors/${encodeURIComponent(nom)}`);
+  }
+
+  /**
+   * GET /api/catalog/avantages
+   *
+   * Retourne les 72 avantages du catalogue, TOUS sponsors confondus (pas de filtrage
+   * serveur par catégorie). Utilisé par le picker "avantage gratuit" de la séquelle
+   * Dur à Cuire : la règle (p.170) offre un avantage de la catégorie "Dur à Cuire"
+   * même si le sponsor de l'équipe n'y a normalement pas accès — le filtrage par
+   * catégorie se fait donc côté appelant, pas côté sponsor.
+   */
+  getAllAvantages(): Observable<Avantage[]> {
+    return this.http.get<Avantage[]>('/api/catalog/avantages');
   }
 }
