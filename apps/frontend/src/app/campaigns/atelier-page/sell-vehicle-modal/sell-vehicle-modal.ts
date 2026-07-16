@@ -13,11 +13,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { VehicleSaleSummary } from '../vehicle-sale-summary';
+import { Icon } from '../../../shared/icon/icon';
 
 @Component({
   selector: 'app-sell-vehicle-modal',
   standalone: true,
-  imports: [],
+  imports: [Icon],
   templateUrl: './sell-vehicle-modal.html',
   styleUrl: './sell-vehicle-modal.scss',
 })

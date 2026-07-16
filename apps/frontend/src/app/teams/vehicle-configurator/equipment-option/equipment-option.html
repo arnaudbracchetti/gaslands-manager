@@ -33,11 +33,11 @@
     <span class="option__name" [title]="option().nom">{{ option().nom }}</span>
     <div class="option__badges">
       <span class="option__badge" title="Coût en jerricans">
-        <img class="option__badge-icon" src="/icons/dollar.svg" alt="" />
+        <app-icon concept="argent" size="xs" />
         {{ option().prix }}
       </span>
       <span class="option__badge" title="Emplacements requis">
-        <img class="option__badge-icon" src="/icons/wrench.svg" alt="" />
+        <app-icon concept="atelier" size="xs" />
         {{ option().emplacement }}
       </span>
     </div>

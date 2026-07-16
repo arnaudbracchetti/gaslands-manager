@@ -68,11 +68,6 @@
     white-space: nowrap;
   }
 
-  &__badge-icon {
-    width: 13px;
-    height: 13px;
-  }
-
   &__description {
     ::ng-deep p, ::ng-deep ul, ::ng-deep li {
       font-family: var(--font-text);

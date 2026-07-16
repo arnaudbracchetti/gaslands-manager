@@ -21,11 +21,12 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Game, Scenario, CreateGameDto } from '../game.model';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-game-form',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, Icon],
   templateUrl: './game-form.html',
   styleUrl: './game-form.scss',
 })

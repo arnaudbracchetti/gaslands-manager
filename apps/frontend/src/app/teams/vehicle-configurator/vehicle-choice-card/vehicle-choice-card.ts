@@ -14,11 +14,12 @@
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { Vehicule } from '../../../catalog/catalog.model';
 import { SlotGauge } from '../../../shared/slot-gauge/slot-gauge';
+import { Icon } from '../../../shared/icon/icon';
 
 @Component({
   selector: 'app-vehicle-choice-card',
   standalone: true,
-  imports: [SlotGauge],
+  imports: [SlotGauge, Icon],
   templateUrl: './vehicle-choice-card.html',
   styleUrl: './vehicle-choice-card.scss',
 })

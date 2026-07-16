@@ -29,6 +29,7 @@ import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
+import { Icon } from '../../shared/icon/icon';
 
 const STATE_LABELS: Record<CampaignState, string> = {
   EN_CONSTRUCTION: 'En construction',
@@ -39,7 +40,7 @@ const STATE_LABELS: Record<CampaignState, string> = {
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [ParticipantList, CampaignProgram, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb],
+  imports: [ParticipantList, CampaignProgram, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb, Icon],
   templateUrl: './campaign-detail.html',
   styleUrl: './campaign-detail.scss',
 })

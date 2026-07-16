@@ -5,7 +5,7 @@
     <h2>📺 Programme Télé</h2>
     @if (canManage() && !anyModalOpen()) {
       <button type="button" class="btn-primary campaign-program__add" (click)="openCreate()">
-        ➕ Ajouter une partie
+        <app-icon concept="ajouter" size="sm" /> Ajouter une partie
       </button>
     }
   </div>

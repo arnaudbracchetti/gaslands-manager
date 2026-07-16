@@ -3,7 +3,13 @@
      [attr.aria-label]="isEdit() ? 'Modifier la partie' : 'Nouvelle partie'">
   <div class="gf-modal">
 
-    <h3>@if (isEdit()) { ✏️ Modifier la partie } @else { ➕ Nouvelle partie }</h3>
+    <h3>
+      @if (isEdit()) {
+        <app-icon concept="modifier" size="md" /> Modifier la partie
+      } @else {
+        <app-icon concept="ajouter" size="md" /> Nouvelle partie
+      }
+    </h3>
 
     @if (formError()) {
       <div class="form-error">{{ formError() }}</div>

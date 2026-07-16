@@ -3,7 +3,7 @@
   <app-breadcrumb [crumbs]="breadcrumbs()" />
 
   <div class="atp-header">
-    <h1>🔧 Atelier</h1>
+    <h1><app-icon concept="atelier" size="xl" /> Atelier</h1>
   </div>
 
   @if (loading()) {
@@ -26,7 +26,8 @@
             [index]="i + 1"
             [showDelete]="true"
             [deleteTitle]="sellTitleFor(summary.id)"
-            [deleteIcon]="sellIconFor(summary.id)"
+            [deleteIconConcept]="sellIconConceptFor(summary.id)"
+            [deleteIconFallback]="sellIconFallbackFor(summary.id)"
             (manageClicked)="onManage($event)"
             (deleteClicked)="onSellRequested($event)"
           />

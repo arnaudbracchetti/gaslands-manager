@@ -13,11 +13,12 @@
  */
 import { Component, InputSignal, input } from '@angular/core';
 import { SlotGauge } from '../../../../shared/slot-gauge/slot-gauge';
+import { Icon } from '../../../../shared/icon/icon';
 
 @Component({
   selector: 'app-vehicle-cost-summary',
   standalone: true,
-  imports: [SlotGauge],
+  imports: [SlotGauge, Icon],
   templateUrl: './vehicle-cost-summary.html',
   styleUrl: './vehicle-cost-summary.scss',
 })

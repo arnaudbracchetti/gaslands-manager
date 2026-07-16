@@ -32,10 +32,12 @@ import {
 import { Sponsor } from '../../../../catalog/catalog.model';
 import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
 import type { WorkshopSequellaDto } from '../../../../campaigns/workshop.model';
+import { Icon } from '../../../../shared/icon/icon';
 
 @Component({
   selector: 'app-mounted-equipment',
   standalone: true,
+  imports: [Icon],
   templateUrl: './mounted-equipment.html',
   styleUrl: './mounted-equipment.scss',
 })

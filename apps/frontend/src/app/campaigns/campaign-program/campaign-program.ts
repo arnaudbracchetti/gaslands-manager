@@ -39,11 +39,12 @@ import { GameForm } from '../game-form/game-form';
 import { GameResultWizard } from '../game-result-wizard/game-result-wizard';
 import { GameJournalModal } from '../game-journal-modal/game-journal-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-campaign-program',
   standalone: true,
-  imports: [GameList, GameForm, GameResultWizard, GameJournalModal, ConfirmModal],
+  imports: [GameList, GameForm, GameResultWizard, GameJournalModal, ConfirmModal, Icon],
   templateUrl: './campaign-program.html',
   styleUrl: './campaign-program.scss',
 })

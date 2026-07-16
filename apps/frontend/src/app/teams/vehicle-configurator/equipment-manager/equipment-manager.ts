@@ -67,6 +67,7 @@ import { SequellaAdvantagePicker } from './sequella-advantage-picker/sequella-ad
 import { SequellaDetailModal } from './sequella-detail-modal/sequella-detail-modal';
 import { CampaignsService } from '../../../campaigns/campaigns.service';
 import type { AvailableSequellaDto, WorkshopSequellaDto } from '../../../campaigns/workshop.model';
+import { Icon } from '../../../shared/icon/icon';
 
 const DUR_A_CUIRE = 'dur_a_cuire';
 const LEGENDE_VIVANTE = 'legende_vivante';
@@ -83,6 +84,7 @@ const DUR_A_CUIRE_CATEGORIE = 'Dur à Cuire';
     ConfirmModal,
     SequellaAdvantagePicker,
     SequellaDetailModal,
+    Icon,
   ],
   templateUrl: './equipment-manager.html',
   styleUrl: './equipment-manager.scss',

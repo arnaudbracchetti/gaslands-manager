@@ -14,11 +14,12 @@ import {
   output,
 } from '@angular/core';
 import { Game } from '../game.model';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-game-list',
   standalone: true,
-  imports: [],
+  imports: [Icon],
   templateUrl: './game-list.html',
   styleUrl: './game-list.scss',
 })

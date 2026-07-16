@@ -45,13 +45,15 @@ import { FormsModule } from '@angular/forms';
 import { Team, CreateTeamDto, SponsorInfo, DEFAULT_CANS } from '../team.model';
 import { SponsorCarousel } from '../sponsor-carousel/sponsor-carousel';
 import { CatalogService } from '../../catalog/catalog.service';
+import { Icon } from '../../shared/icon/icon';
+import { IconConcept } from '../../shared/icon/icon-sheet.map';
 
 @Component({
   selector: 'app-team-form',
   standalone: true,
   // FormsModule : pour [ngModel] sur les champs nom, cans et description.
   // SponsorCarousel : carousel de sélection du sponsor (remplace le <select>).
-  imports: [FormsModule, SponsorCarousel],
+  imports: [FormsModule, SponsorCarousel, Icon],
   templateUrl: './team-form.html',
   styleUrl: './team-form.scss',
 })
@@ -100,9 +102,14 @@ export class TeamForm implements OnInit {
   /** Message d'erreur de validation locale */
   formError: WritableSignal<string> = signal('');
 
-  /** Titre calculé selon le mode : création ou édition */
-  formTitle: Signal<string> = computed((): string =>
-    this.team() ? '✏️ Modifier l\'équipe' : '➕ Nouvelle équipe',
+  /** Icône du titre calculée selon le mode : création ou édition */
+  formIconConcept: Signal<IconConcept> = computed((): IconConcept =>
+    this.team() ? 'modifier' : 'ajouter',
+  );
+
+  /** Texte du titre calculé selon le mode : création ou édition */
+  formTitleText: Signal<string> = computed((): string =>
+    this.team() ? 'Modifier l\'équipe' : 'Nouvelle équipe',
   );
 
   // ── État du catalogue ────────────────────────────────────────────────────────

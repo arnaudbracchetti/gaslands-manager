@@ -20,11 +20,12 @@ import { CampaignSummary } from '../campaign.model';
 import { TeamsService } from '../../teams/teams.service';
 import { Team, CreateTeamDto } from '../../teams/team.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-campaign-join',
   standalone: true,
-  imports: [FormsModule, QuickTeamCreate, RouterLink],
+  imports: [FormsModule, QuickTeamCreate, RouterLink, Icon],
   templateUrl: './campaign-join.html',
   styleUrl: './campaign-join.scss',
 })

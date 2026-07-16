@@ -6,9 +6,9 @@
     [attr.title]="showSold() ? 'Masquer les équipements vendus' : 'Afficher les équipements vendus (' + hiddenSoldCount() + ')'"
     (click)="showSold.set(!showSold())">
     @if (showSold()) {
-      🙈
+      <app-icon concept="recherche" size="md" />
     } @else {
-      👁 {{ hiddenSoldCount() }}
+      <app-icon concept="recherche" size="md" /> {{ hiddenSoldCount() }}
     }
   </button>
 }
@@ -37,17 +37,17 @@
           </span>
           <span class="me-badges">
             <span class="me-badge" [attr.title]="weaponPriceTitle(weapon)">
-              <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+              <app-icon concept="argent" size="xs" />
               {{ weapon.prix }}
             </span>
             <span class="me-badge" [attr.title]="weaponSlotTitle(weapon)">
-              <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+              <app-icon concept="atelier" size="xs" />
               {{ weapon.emplacement }}
             </span>
           </span>
           @if (weapon.estDefaut) {
             <span class="me-badge-defaut" title="Fait partie du profil de base de ce véhicule">
-              🔒 Intégré
+              <app-icon concept="verrouille" size="xs" /> Intégré
             </span>
           } @else if (!weapon.sold && !locked()) {
             <button
@@ -86,11 +86,11 @@
           </span>
           <span class="me-badges">
             <span class="me-badge" [attr.title]="improvementPriceTitle(improvement)">
-              <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+              <app-icon concept="argent" size="xs" />
               {{ improvement.prix }}
             </span>
             <span class="me-badge" [attr.title]="improvementSlotTitle(improvement)">
-              <img class="me-badge-icon" src="/icons/wrench.svg" alt="" />
+              <app-icon concept="atelier" size="xs" />
               {{ improvement.emplacement }}
             </span>
           </span>
@@ -98,7 +98,7 @@
             <span
               class="me-badge-defaut"
               title="Fait partie du profil de base de ce véhicule">
-              🔒 Intégré
+              <app-icon concept="verrouille" size="xs" /> Intégré
             </span>
           } @else if (!improvement.sold && !locked()) {
             <button
@@ -134,7 +134,7 @@
           </span>
           <span class="me-badges">
             <span class="me-badge" [attr.title]="advantage.sold ? 'Coût résiduel après revente' : 'Coût en jerricans'">
-              <img class="me-badge-icon" src="/icons/dollar.svg" alt="" />
+              <app-icon concept="argent" size="xs" />
               {{ advantage.prix }}
             </span>
           </span>
@@ -173,7 +173,7 @@
             </span>
             <span class="me-badges">
               <span class="me-badge" title="Coût en Chocs (jamais réduit à la revente)">
-                💥 {{ sequella.chocsCost }}
+                <app-icon concept="chocs" size="xs" /> {{ sequella.chocsCost }}
               </span>
             </span>
             @if (!sequella.isSold && !locked()) {
@@ -187,7 +187,7 @@
                 </button>
               } @else {
                 <span class="me-locked" title="Revente fermée — seule la présence de 'Légende Vivante' sur ce véhicule l'ouvre">
-                  🔒
+                  <app-icon concept="verrouille" size="xs" />
                 </span>
               }
             }

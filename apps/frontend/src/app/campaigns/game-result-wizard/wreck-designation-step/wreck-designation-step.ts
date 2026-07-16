@@ -15,6 +15,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Icon } from '../../../shared/icon/icon';
 import type { CampaignParticipant } from '../../campaign-participant.model';
 import type {
   DestroyedVehicleDto,
@@ -47,7 +48,7 @@ interface VehicleRow {
 @Component({
   selector: 'app-wreck-designation-step',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Icon],
   templateUrl: './wreck-designation-step.html',
   styleUrl: './wreck-designation-step.scss',
 })

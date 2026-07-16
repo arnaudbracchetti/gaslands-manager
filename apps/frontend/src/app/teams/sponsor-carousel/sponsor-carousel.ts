@@ -40,12 +40,13 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NgClass } from '@angular/common';
 import { marked } from 'marked';
 import { SponsorInfo } from '../team.model';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-sponsor-carousel',
   standalone: true,
   // NgClass : utilisé pour conditionner la classe .locked sur la carte sponsor
-  imports: [NgClass],
+  imports: [NgClass, Icon],
   templateUrl: './sponsor-carousel.html',
   styleUrl: './sponsor-carousel.scss',
 })

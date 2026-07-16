@@ -10,7 +10,7 @@
     <span>Utilisé</span>
     <span>
       {{ coutEquipeTotal() }} / {{ budgetEquipe() }}
-      <img class="tb-icon" src="/icons/dollar.svg" alt="" />
+      <app-icon concept="argent" size="xs" />
     </span>
   </p>
   <div class="tb-bar">
@@ -22,10 +22,10 @@
   <p class="tb-row tb-row--total" [class.tb-row--over]="budgetDepasse()">
     @if (budgetDepasse()) {
       <span>Dépassement</span>
-      <span>{{ -budgetRestant() }} <img class="tb-icon" src="/icons/dollar.svg" alt="" /></span>
+      <span>{{ -budgetRestant() }} <app-icon concept="argent" size="xs" /></span>
     } @else {
       <span>Restant</span>
-      <span>{{ budgetRestant() }} <img class="tb-icon" src="/icons/dollar.svg" alt="" /></span>
+      <span>{{ budgetRestant() }} <app-icon concept="argent" size="xs" /></span>
     }
   </p>
 </div>

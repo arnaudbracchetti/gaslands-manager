@@ -10,11 +10,12 @@ import { Component, InputSignal, Signal, computed, input } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Campaign } from '../campaign.model';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-campaign-card',
   standalone: true,
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, Icon],
   templateUrl: './campaign-card.html',
   styleUrl: './campaign-card.scss',
 })

@@ -3,6 +3,10 @@
   <span class="invite-link__label">Code d'invitation :</span>
   <code class="invite-link__code">{{ inviteCode() }}</code>
   <button class="invite-link__copy" type="button" (click)="copyCode()">
-    {{ copied() ? '✅ Copié !' : '📋 Copier' }}
+    @if (copied()) {
+      <app-icon concept="valide" size="sm" /> Copié !
+    } @else {
+      <app-icon concept="copier" size="sm" /> Copier
+    }
   </button>
 </div>

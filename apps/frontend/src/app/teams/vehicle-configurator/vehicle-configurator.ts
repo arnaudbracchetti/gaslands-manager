@@ -62,11 +62,12 @@ import { EQUIPMENT_DATA_SOURCE, BudgetView } from './equipment-data-source';
 import { TeamEquipmentDataSource } from './team-equipment.datasource';
 import { VehicleChoiceCard } from './vehicle-choice-card/vehicle-choice-card';
 import { EquipmentManager } from './equipment-manager/equipment-manager';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-vehicle-configurator',
   standalone: true,
-  imports: [VehicleChoiceCard, EquipmentManager],
+  imports: [VehicleChoiceCard, EquipmentManager, Icon],
   // Câblage de l'abstraction pour ce contexte : le configurateur d'équipe fournit
   // l'implémentation "construction d'équipe" de la source de données ; `EquipmentManager`
   // (enfant) la reçoit via le token, sans savoir laquelle (cf. `EquipmentDataSource`).

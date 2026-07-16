@@ -12,10 +12,10 @@
         <div class="wrs__item-header">
           <span class="wrs__vehicle-name">{{ vehicleLabel(entry.vehicleId) }}</span>
           @if (destroyerLabel(entry.vehicleId); as destroyer) {
-            <span class="wrs__destroyer-badge">💥 Détruit par {{ destroyer }}</span>
+            <span class="wrs__destroyer-badge"><app-icon concept="chocs" size="sm" /> Détruit par {{ destroyer }}</span>
           }
           @if (entry.pendingFavoriDuPublic) {
-            <span class="wrs__favori-badge">⭐ Favori du public en attente</span>
+            <span class="wrs__favori-badge"><app-icon concept="favori_public" size="sm" /> Favori du public en attente</span>
           }
         </div>
 

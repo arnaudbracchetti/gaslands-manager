@@ -1,0 +1,15 @@
+<span
+  class="app-icon"
+  role="img"
+  [attr.aria-label]="alt() || null"
+  [attr.aria-hidden]="alt() ? null : true"
+  [style.width.px]="sizePx()"
+  [style.height.px]="sizePx()">
+  <span
+    class="app-icon__glyph"
+    [style.width.px]="glyph().width"
+    [style.height.px]="glyph().height"
+    [style.background-size]="glyph().backgroundSize"
+    [style.background-position]="glyph().backgroundPosition">
+  </span>
+</span>

@@ -17,7 +17,7 @@
           [class.participant-list__badge--pending]="participant.status === 'PENDING'"
           [class.participant-list__badge--rejected]="participant.status === 'REJECTED'">
           @if (participant.isOrganizer) {
-            ★ Organisateur
+            <app-icon concept="organisateur" size="sm" /> Organisateur
           } @else if (participant.status === 'PENDING') {
             ◷ En attente
           } @else if (participant.status === 'REJECTED') {
@@ -27,7 +27,7 @@
           }
         </span>
         @if (participant.status === 'VALIDATED') {
-          <span class="participant-list__points">🏆 {{ pointsFor(participant) }} PC</span>
+          <span class="participant-list__points"><app-icon concept="points_championnat" size="sm" /> {{ pointsFor(participant) }} PC</span>
         }
       </div>
 
@@ -38,7 +38,7 @@
           @if (canChangeTeam()) {
             <button class="participant-list__change-team" type="button"
               (click)="changeTeam.emit()">
-              ✏️ Changer d'équipe
+              <app-icon concept="modifier" size="sm" /> Changer d'équipe
             </button>
           }
           <!-- Gérer son équipe — disponible dès qu'une équipe est engagée -->

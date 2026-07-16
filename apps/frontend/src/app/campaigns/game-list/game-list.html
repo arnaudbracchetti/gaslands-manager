@@ -21,10 +21,10 @@
       @if (canModify(game)) {
         <div class="game-list__actions">
           <button type="button" class="game-list__edit" (click)="editGame.emit(game)">
-            ✏️ Modifier
+            <app-icon concept="modifier" size="sm" /> Modifier
           </button>
           <button type="button" class="game-list__delete" (click)="deleteGame.emit(game)">
-            🗑 Supprimer
+            <app-icon concept="supprimer" size="sm" /> Supprimer
           </button>
         </div>
       }
@@ -37,13 +37,13 @@
 
       @if (isAtelier(game)) {
         <button type="button" class="game-list__atelier" (click)="openAtelier.emit(game)">
-          🔧 Atelier
+          <app-icon concept="atelier" size="sm" /> Atelier
         </button>
       }
 
       @if (hasJournal(game)) {
         <button type="button" class="game-list__journal" (click)="openJournal.emit(game)">
-          📜 Journal
+          <app-icon concept="journal" size="sm" /> Journal
         </button>
       }
 

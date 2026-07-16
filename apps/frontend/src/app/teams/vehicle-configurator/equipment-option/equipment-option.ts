@@ -29,11 +29,12 @@
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import { EquipmentChoice, EquipmentOption as EquipmentOptionDto, Orientation, WeaponOrientation } from '../vehicle-builder.model';
 import { EquipmentDetailModal } from './equipment-detail-modal/equipment-detail-modal';
+import { Icon } from '../../../shared/icon/icon';
 
 @Component({
   selector: 'app-equipment-option',
   standalone: true,
-  imports: [EquipmentDetailModal],
+  imports: [EquipmentDetailModal, Icon],
   templateUrl: './equipment-option.html',
   styleUrl: './equipment-option.scss',
 })

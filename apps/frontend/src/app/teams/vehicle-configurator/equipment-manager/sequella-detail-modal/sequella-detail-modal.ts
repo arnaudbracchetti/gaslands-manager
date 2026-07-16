@@ -14,11 +14,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { AvailableSequellaDto } from '../../../../campaigns/workshop.model';
+import { Icon } from '../../../../shared/icon/icon';
 
 @Component({
   selector: 'app-sequella-detail-modal',
   standalone: true,
-  imports: [],
+  imports: [Icon],
   templateUrl: './sequella-detail-modal.html',
   styleUrl: './sequella-detail-modal.scss',
 })

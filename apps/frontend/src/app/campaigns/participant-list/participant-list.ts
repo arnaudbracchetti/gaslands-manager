@@ -19,11 +19,12 @@
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CampaignParticipant } from '../campaign-participant.model';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-participant-list',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, Icon],
   templateUrl: './participant-list.html',
   styleUrl: './participant-list.scss',
 })

@@ -25,11 +25,12 @@ import { FormsModule } from '@angular/forms';
 import { Team, CreateTeamDto } from '../../teams/team.model';
 import { CreateCampaignDto } from '../campaign.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [FormsModule, QuickTeamCreate],
+  imports: [FormsModule, QuickTeamCreate, Icon],
   templateUrl: './campaign-form.html',
   styleUrl: './campaign-form.scss',
 })

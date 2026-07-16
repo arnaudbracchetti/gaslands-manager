@@ -17,7 +17,7 @@
 
     @if (isLocked()) {
       <div class="tep-locked-banner">
-        🔒 Cette équipe est verrouillée : elle participe à une campagne qui n'est plus en construction.
+        <app-icon concept="verrouille" size="sm" /> Cette équipe est verrouillée : elle participe à une campagne qui n'est plus en construction.
       </div>
     }
 
@@ -83,7 +83,7 @@
               (ngModelChange)="formCans.set(+$event)"
               (blur)="saveField('cans')"
               [disabled]="isLocked()" />
-            <span class="tep-budget-icon" aria-hidden="true">🥫</span>
+            <app-icon class="tep-budget-icon" concept="argent" size="md" />
           </div>
           <!-- Barre budget utilisé -->
           <div class="tep-budget-bar-row">
@@ -160,7 +160,7 @@
             <span
               class="tep-budget-context__value"
               [class.tep-budget-context__value--over]="budgetRestant() < 0">
-              {{ budgetRestant() >= 0 ? budgetRestant() : 0 }} / {{ formCans() }} 🥫
+              {{ budgetRestant() >= 0 ? budgetRestant() : 0 }} / {{ formCans() }} <app-icon concept="argent" size="sm" />
             </span>
           </div>
         }
@@ -184,7 +184,7 @@
         <!-- Bouton suppression équipe -->
         <div class="tep-danger-zone">
           <button class="btn-action btn-action--delete" (click)="deleteTeam()" [disabled]="isLocked()">
-            🗑 Supprimer l'équipe
+            <app-icon concept="supprimer" size="sm" /> Supprimer l'équipe
           </button>
         </div>
 

@@ -1,0 +1,16 @@
+.app-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.app-icon__glyph {
+  display: block;
+  background-image: url('/icons/icon-sheet.png');
+  background-repeat: no-repeat;
+  // background-size et background-position calculés par icône (cf. icon.ts)
+  // — les rectangles de découpe n'ont pas tous les mêmes proportions. Les
+  // dimensions de cet élément correspondent exactement au rectangle mis à
+  // l'échelle : aucun débordement possible vers le contenu voisin du sprite.
+}

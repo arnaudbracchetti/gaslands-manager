@@ -38,11 +38,13 @@ import { WorkshopStateDto, WorkshopVehicleDto, mapWorkshopVehicleToVehicle } fro
 import { buildVehicleSaleSummary, VehicleSaleSummary } from './vehicle-sale-summary';
 import { SellVehicleModal } from './sell-vehicle-modal/sell-vehicle-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
+import { Icon } from '../../shared/icon/icon';
+import { IconConcept } from '../../shared/icon/icon-sheet.map';
 
 @Component({
   selector: 'app-atelier-page',
   standalone: true,
-  imports: [VehicleSummaryCard, VehicleChoiceCard, SellVehicleModal, Breadcrumb],
+  imports: [VehicleSummaryCard, VehicleChoiceCard, SellVehicleModal, Breadcrumb, Icon],
   templateUrl: './atelier-page.html',
   styleUrl: './atelier-page.scss',
 })
@@ -154,9 +156,15 @@ export class AtelierPage implements OnInit {
     return this.isPurchasedThisSession(vehicleId) ? "Annuler l'achat de ce véhicule" : 'Vendre ce véhicule';
   }
 
-  /** Icône du bouton — mirroir de `sellTitleFor`. */
-  sellIconFor(vehicleId: number): string {
-    return this.isPurchasedThisSession(vehicleId) ? '↩️' : '💰';
+  /** Icône du bouton pour une vente réelle — `null` pour une annulation (pas
+   *  d'icône peinte correspondante, cf. `sellIconFallbackFor`). */
+  sellIconConceptFor(vehicleId: number): IconConcept | null {
+    return this.isPurchasedThisSession(vehicleId) ? null : 'argent';
+  }
+
+  /** Texte brut utilisé uniquement pour l'annulation d'achat (↩️). */
+  sellIconFallbackFor(vehicleId: number): string {
+    return this.isPurchasedThisSession(vehicleId) ? '↩️' : '';
   }
 
   private isPurchasedThisSession(vehicleId: number): boolean {

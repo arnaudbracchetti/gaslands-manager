@@ -11,21 +11,21 @@
 
 @if (chocs() !== null) {
   <div class="vcs-chocs" title="Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles">
-    💥 Chocs : <strong>{{ chocs() }}</strong>
+    <app-icon concept="chocs" size="sm" /> Chocs : <strong>{{ chocs() }}</strong>
   </div>
 }
 
 <div class="vcs-cost">
   <p class="vcs-cost-row">
     <span>Base</span>
-    <span>{{ coutBase() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+    <span>{{ coutBase() }} <app-icon concept="argent" size="xs" /></span>
   </p>
   <p class="vcs-cost-row">
     <span>+ Équipement</span>
-    <span>{{ coutEquipement() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+    <span>{{ coutEquipement() }} <app-icon concept="argent" size="xs" /></span>
   </p>
   <p class="vcs-cost-row vcs-cost-row--total">
     <span>Total</span>
-    <span>{{ coutTotal() }} <img class="vcs-icon" src="/icons/dollar.svg" alt="" /></span>
+    <span>{{ coutTotal() }} <app-icon concept="argent" size="xs" /></span>
   </p>
 </div>

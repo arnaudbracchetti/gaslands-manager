@@ -2,7 +2,7 @@
 <div class="team-form-card">
 
   <!-- Titre dynamique : "Nouvelle équipe" ou "Modifier l'équipe" -->
-  <h2>{{ formTitle() }}</h2>
+  <h2><app-icon [concept]="formIconConcept()" size="lg" /> {{ formTitleText() }}</h2>
 
   <!-- Erreur de validation locale (ex : nom manquant) -->
   @if (formError()) {

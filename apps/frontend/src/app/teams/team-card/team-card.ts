@@ -11,11 +11,12 @@ import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, outp
 import { Team } from '../team.model';
 import { VehicleSummary } from '../vehicle-summary';
 import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-team-card',
   standalone: true,
-  imports: [SlotGauge],
+  imports: [SlotGauge, Icon],
   templateUrl: './team-card.html',
   styleUrl: './team-card.scss',
 })

@@ -13,7 +13,7 @@
     </div>
   } @else if (error()) {
     <div class="error">
-      <span>⚠️ {{ error() }}</span>
+      <span><app-icon concept="avertissement" size="sm" /> {{ error() }}</span>
     </div>
   } @else {
     <!--

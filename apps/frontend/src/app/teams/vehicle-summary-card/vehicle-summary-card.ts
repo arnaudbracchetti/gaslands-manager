@@ -8,11 +8,13 @@ import { Component, Signal, computed, input, output } from '@angular/core';
 import { SlicePipe, UpperCasePipe } from '@angular/common';
 import { VehicleSummary } from '../vehicle-summary';
 import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
+import { Icon } from '../../shared/icon/icon';
+import { IconConcept } from '../../shared/icon/icon-sheet.map';
 
 @Component({
   selector: 'app-vehicle-summary-card',
   standalone: true,
-  imports: [SlicePipe, UpperCasePipe, SlotGauge],
+  imports: [SlicePipe, UpperCasePipe, SlotGauge, Icon],
   templateUrl: './vehicle-summary-card.html',
   styleUrl: './vehicle-summary-card.scss',
 })
@@ -29,8 +31,13 @@ export class VehicleSummaryCard {
    *  adapté par l'atelier ("Vendre ce véhicule"/"Annuler l'achat"). */
   deleteTitle = input<string>('Supprimer ce véhicule');
 
-  /** Icône du bouton — 🗑 par défaut, adaptée par l'atelier (ex. 💰 pour une vente). */
-  deleteIcon = input<string>('🗑');
+  /** Icône du bouton — `supprimer` (poubelle) par défaut, adaptée par l'atelier
+   *  (ex. `argent` pour une vente). */
+  deleteIconConcept = input<IconConcept | null>('supprimer');
+
+  /** Texte brut utilisé UNIQUEMENT si `deleteIconConcept` est `null` — seul cas
+   *  restant : annulation d'achat en atelier (↩️, aucune icône peinte correspondante). */
+  deleteIconFallback = input<string>('');
 
   /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
   indexFormate: Signal<string> = computed(() =>

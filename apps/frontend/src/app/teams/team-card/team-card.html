@@ -17,7 +17,7 @@
   <div class="team-card__info">
     <span class="team-card__badge">{{ team().sponsor }}</span>
     <span class="team-card__cans">
-      {{ team().cans }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+      {{ team().cans }} <app-icon concept="argent" size="xs" alt="jerricans" />
     </span>
   </div>
 
@@ -27,7 +27,7 @@
       <span class="team-card__budget-label">Dépensé</span>
       <span class="team-card__budget-value">
         {{ coutVehiclesTotal() }} / {{ team().cans }}
-        <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+        <app-icon concept="argent" size="xs" alt="jerricans" />
         @if (budgetDepasse()) {
           <span class="team-card__budget-alert">▲</span>
         }
@@ -59,7 +59,7 @@
             <span class="team-card__vehicle-name">{{ vehicle.nom }}</span>
             <span class="team-card__vehicle-stats">
               <span class="team-card__vehicle-cost">
-                {{ vehicle.cout }} <img class="team-card__icon" src="/icons/dollar.svg" alt="jerricans" />
+                {{ vehicle.cout }} <app-icon concept="argent" size="xs" alt="jerricans" />
               </span>
               <app-slot-gauge [used]="vehicle.emplacementsUtilises" [total]="vehicle.emplacementsTotal" />
               <span class="team-card__vehicle-arrow" aria-hidden="true">~</span>

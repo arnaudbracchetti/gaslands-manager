@@ -15,11 +15,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { EquipmentOption as EquipmentOptionDto } from '../../vehicle-builder.model';
+import { Icon } from '../../../../shared/icon/icon';
 
 @Component({
   selector: 'app-equipment-detail-modal',
   standalone: true,
-  imports: [],
+  imports: [Icon],
   templateUrl: './equipment-detail-modal.html',
   styleUrl: './equipment-detail-modal.scss',
 })

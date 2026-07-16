@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import { Icon } from '../shared/icon/icon';
 
 // ── Qu'est-ce qu'un Signal ? ────────────────────────────────
 // Un signal est un conteneur de valeur réactif : quand sa valeur
@@ -15,7 +16,7 @@ import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core
   standalone: true,
   // Avec les signals et la nouvelle syntaxe @if/@for, CommonModule
   // n'est plus nécessaire — tout est intégré dans Angular core.
-  imports: [],
+  imports: [Icon],
   templateUrl: './rules.html',
   styleUrl: './rules.scss',
 })

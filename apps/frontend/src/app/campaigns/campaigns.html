@@ -3,7 +3,7 @@
 
   <!-- En-tête avec titre et boutons d'action -->
   <div class="campaigns-header">
-    <h1>🏆 Mes Saisons</h1>
+    <h1><app-icon concept="points_championnat" size="xl" /> Mes Saisons</h1>
     <div class="campaigns-header__actions">
       <button class="btn-secondary" type="button" (click)="openJoin()">⌗ Rejoindre via code</button>
       <button class="btn-primary btn-add" type="button" (click)="openCreate()">+ Créer une saison</button>
@@ -23,7 +23,7 @@
   } @else if (campaigns().length === 0) {
     <!-- État vide -->
     <div class="campaigns-empty">
-      <p class="campaigns-empty__icon">🏁</p>
+      <p class="campaigns-empty__icon"><app-icon concept="drapeau" size="xxl" /></p>
       <p class="campaigns-empty__title">Aucune saison pour l'instant</p>
       <p class="campaigns-empty__subtitle">Créez votre première saison ou rejoignez-en une !</p>
       <button class="btn-primary" type="button" (click)="openCreate()">

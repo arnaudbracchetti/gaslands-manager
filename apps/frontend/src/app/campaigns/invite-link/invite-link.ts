@@ -8,11 +8,12 @@
  * via un signal et `setTimeout` (pas besoin de remonter l'info au parent).
  */
 import { Component, InputSignal, WritableSignal, input, signal } from '@angular/core';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-invite-link',
   standalone: true,
-  imports: [],
+  imports: [Icon],
   templateUrl: './invite-link.html',
   styleUrl: './invite-link.scss',
 })

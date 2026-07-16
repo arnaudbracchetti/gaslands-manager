@@ -13,6 +13,7 @@
  */
 import { Component, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Icon } from '../../../shared/icon/icon';
 import type {
   WreckOutcomeDto,
   WreckResult,
@@ -22,7 +23,7 @@ import type {
 @Component({
   selector: 'app-wreck-resolution-step',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, Icon],
   templateUrl: './wreck-resolution-step.html',
   styleUrl: './wreck-resolution-step.scss',
 })

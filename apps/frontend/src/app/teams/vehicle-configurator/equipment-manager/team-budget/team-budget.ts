@@ -9,10 +9,12 @@
  * plat, `input.required<T>()`).
  */
 import { Component, InputSignal, input } from '@angular/core';
+import { Icon } from '../../../../shared/icon/icon';
 
 @Component({
   selector: 'app-team-budget',
   standalone: true,
+  imports: [Icon],
   templateUrl: './team-budget.html',
   styleUrl: './team-budget.scss',
 })

@@ -44,11 +44,12 @@ import { Sponsor } from '../../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
 import { SponsorCarousel } from '../sponsor-carousel/sponsor-carousel';
 import { VehicleSummaryCard } from '../vehicle-summary-card/vehicle-summary-card';
+import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-team-edit-page',
   standalone: true,
-  imports: [FormsModule, ConfirmModal, SponsorCarousel, VehicleSummaryCard, Breadcrumb],
+  imports: [FormsModule, ConfirmModal, SponsorCarousel, VehicleSummaryCard, Breadcrumb, Icon],
   templateUrl: './team-edit-page.html',
   styleUrl: './team-edit-page.scss',
 })

@@ -5,7 +5,7 @@
   @if (submitted()) {
     <div class="campaign-join-success">
       <div class="campaign-join-success__card">
-        <div class="campaign-join-success__icon">✓</div>
+        <div class="campaign-join-success__icon"><app-icon concept="valide" size="xxl" /></div>
         <h1>Demande envoyée !</h1>
         <p class="campaign-join-success__campaign">{{ summary()!.name }}</p>
         @if (submittedTeamName()) {
@@ -20,7 +20,7 @@
   <!-- Étape 1/2 : chargement, erreur ou formulaire -->
   } @else {
 
-    <h1>🏁 Rejoindre une saison</h1>
+    <h1><app-icon concept="drapeau" size="lg" /> Rejoindre une saison</h1>
 
     @if (loading()) {
       <div class="campaign-join-loading">

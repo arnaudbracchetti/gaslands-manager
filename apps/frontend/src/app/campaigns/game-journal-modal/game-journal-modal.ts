@@ -10,6 +10,7 @@
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type { Game, GameJournalEntryDto } from '../game.model';
+import { Icon } from '../../shared/icon/icon';
 
 /** Événements d'un participant, regroupés et gardés dans l'ordre chronologique. */
 export interface JournalGroup {
@@ -22,7 +23,7 @@ export interface JournalGroup {
 @Component({
   selector: 'app-game-journal-modal',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, Icon],
   templateUrl: './game-journal-modal.html',
   styleUrl: './game-journal-modal.scss',
 })

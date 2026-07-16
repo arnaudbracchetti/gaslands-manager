@@ -18,7 +18,7 @@
         {{ stateLabel() }}
       </span>
       @if (isOrganizer()) {
-        <span class="campaign-detail-role-badge">🏆 Organisateur</span>
+        <span class="campaign-detail-role-badge"><app-icon concept="organisateur" size="sm" /> Organisateur</span>
       }
     </div>
 
@@ -120,7 +120,7 @@
         <h3>Zone dangereuse</h3>
         <p>Cette action est définitive et supprime la saison pour tous les participants.</p>
         <button type="button" class="campaign-detail-delete" (click)="deleteCampaign()">
-          🗑 Supprimer la saison
+          <app-icon concept="supprimer" size="sm" /> Supprimer la saison
         </button>
       </section>
     }

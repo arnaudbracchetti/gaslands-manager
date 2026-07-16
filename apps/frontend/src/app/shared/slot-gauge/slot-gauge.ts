@@ -14,13 +14,20 @@
  *   md — 13×13 px  (récapitulatif du configurateur)
  *   lg — 16×16 px  (affichage proéminent)
  */
-import { Component, InputSignal, input } from '@angular/core';
+import { Component, InputSignal, Signal, computed, input } from '@angular/core';
+import { Icon } from '../icon/icon';
+import { IconSize } from '../icon/icon-sizes';
 
 export type SlotGaugeSize = 'sm' | 'md' | 'lg';
+
+/** Taille nommée de l'icône `atelier` (emplacements), dérivée de la taille de la jauge —
+ *  réutilise l'échelle standard `IconSize` plutôt qu'une échelle de pixels locale. */
+const ICON_SIZE: Record<SlotGaugeSize, IconSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 @Component({
   selector: 'app-slot-gauge',
   standalone: true,
+  imports: [Icon],
   templateUrl: './slot-gauge.html',
   styleUrl: './slot-gauge.scss',
 })
@@ -36,6 +43,9 @@ export class SlotGauge {
    * Défaut : 'sm' (taille compacte adaptée aux listes).
    */
   size: InputSignal<SlotGaugeSize> = input<SlotGaugeSize>('sm');
+
+  /** Taille nommée de l'icône `atelier`, dérivée de `size()`. */
+  iconSize: Signal<IconSize> = computed((): IconSize => ICON_SIZE[this.size()]);
 
   /**
    * Génère un tableau d'indices [0, 1, …, total - 1] pour que le @for du

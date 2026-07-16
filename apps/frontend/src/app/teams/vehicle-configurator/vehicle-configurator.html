@@ -56,7 +56,7 @@
 
       @if (locked()) {
         <p class="vc-status vc-status--error">
-          🔒 Équipe verrouillée — impossible d'ajouter un véhicule.
+          <app-icon concept="verrouille" size="sm" /> Équipe verrouillée — impossible d'ajouter un véhicule.
         </p>
       } @else if (creatingVehicle()) {
         <p class="vc-status vc-status--loading">Création du véhicule…</p>

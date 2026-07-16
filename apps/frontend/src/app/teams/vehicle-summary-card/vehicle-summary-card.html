@@ -11,7 +11,7 @@
     <div class="tep-vehicle-card__meta">
       <div class="tep-vehicle-card__cost">
         {{ vehicle().cout }}
-        <img class="tep-icon" src="/icons/dollar.svg" alt="jerricans" />
+        <app-icon concept="argent" size="md" alt="jerricans" />
       </div>
       <div class="tep-vehicle-card__slots">
         <span class="tep-vehicle-card__slots-label">EMP.</span>
@@ -51,7 +51,11 @@
         data-testid="vehicle-card-delete"
         (click)="deleteClicked.emit(vehicle())"
         [title]="deleteTitle()">
-        {{ deleteIcon() }}
+        @if (deleteIconConcept()) {
+          <app-icon [concept]="deleteIconConcept()!" size="md" />
+        } @else {
+          {{ deleteIconFallback() }}
+        }
       </button>
     }
   </div>

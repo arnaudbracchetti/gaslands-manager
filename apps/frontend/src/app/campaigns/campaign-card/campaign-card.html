@@ -23,7 +23,7 @@
   <div class="campaign-card__info">
     <!-- Badge de rôle -->
     @if (campaign().myRole === 'organizer') {
-      <span class="campaign-card__badge campaign-card__badge--organizer">★ Organisateur</span>
+      <span class="campaign-card__badge campaign-card__badge--organizer"><app-icon concept="organisateur" size="sm" /> Organisateur</span>
     } @else if (isPending()) {
       <span class="campaign-card__badge campaign-card__badge--pending">◷ En attente</span>
     } @else {
@@ -34,7 +34,7 @@
 
     <!-- Alerte demandes à valider (organisateur) -->
     @if (campaign().myRole === 'organizer' && pendingRequestsCount() > 0) {
-      <span class="campaign-card__badge campaign-card__badge--alert">⚠️ {{ pendingRequestsCount() }} à valider</span>
+      <span class="campaign-card__badge campaign-card__badge--alert"><app-icon concept="avertissement" size="sm" /> {{ pendingRequestsCount() }} à valider</span>
     }
 
     <span class="campaign-card__participants">

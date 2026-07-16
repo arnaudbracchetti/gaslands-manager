@@ -57,7 +57,7 @@ describe('TeamForm', () => {
   // ── Titre ──────────────────────────────────────────────────────────────────
 
   it('affiche "Nouvelle équipe" en mode création (team = null)', () => {
-    expect(component.formTitle()).toContain('Nouvelle équipe');
+    expect(component.formTitleText()).toContain('Nouvelle équipe');
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('h2')?.textContent).toContain('Nouvelle équipe');
   });
@@ -66,7 +66,7 @@ describe('TeamForm', () => {
     fixture.componentRef.setInput('team', mockTeam);
     fixture.detectChanges();
 
-    expect(component.formTitle()).toContain('Modifier');
+    expect(component.formTitleText()).toContain('Modifier');
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('h2')?.textContent).toContain('Modifier');
   });
