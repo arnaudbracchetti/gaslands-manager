@@ -1,0 +1,28 @@
+.documentation-chapter-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+
+  app-breadcrumb {
+    display: block;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 40px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.error {
+  color: var(--tb-rouille-lt);
+}
+
+// .markdown-content elle-même est stylée globalement (apps/frontend/src/styles.scss)
+// — son contenu vient de [innerHTML], jamais compilé par Angular, donc jamais
+// atteint par un style de composant scopé (encapsulation "emulated").

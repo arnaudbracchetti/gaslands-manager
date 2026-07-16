@@ -90,7 +90,7 @@ Fil d'ariane de navigation. Les items avec `route` sont des `RouterLink`, les au
 |-----|------|--------|-------------|
 | `crumbs` | `BreadcrumbItem[]` | — | Liste `{ label: string; route?: string[] }` |
 
-Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`.
+Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`, `AtelierPage`, `AtelierVehiclePage`, `Documentation`, `DocumentationChapter`.
 
 ---
 
@@ -249,16 +249,45 @@ Page d'accueil publique avec présentation et liens vers les sections.
 
 ---
 
-### `Rules` — `rules/`
+### `Documentation` — `documentation/`
 
-Charge les règles du jeu depuis `GET /api/content/regles` (Markdown → HTML) et les affiche via `[innerHTML]`.
+Sommaire de la documentation utilisateur (remplace l'ancien `Rules`, cf. [`docs/plans/2026-07-16-documentation-utilisateur-design.md`](plans/2026-07-16-documentation-utilisateur-design.md)). Charge l'intro (`GET /api/content/docs/index`) et, indépendamment, le sommaire ordonné (`GET /api/content/docs`) pour générer la liste des chapitres programmatiquement — jamais codée en dur dans `index.md`, seule source de vérité pour l'ordre/titres.
 
 | | |
 |---|---|
-| **Sélecteur** | `app-rules` |
+| **Sélecteur** | `app-documentation` |
 | **Type** | Smart |
-| **Route** | `/rules` |
+| **Route** | `/documentation` |
 | **Services** | `HttpClient` |
+| **Compose** | `DocLinksDirective`, `Breadcrumb` |
+
+Fil d'ariane statique (un seul maillon, "Documentation", non cliquable — le sommaire est déjà la racine de la section).
+
+---
+
+### `DocumentationChapter` — `documentation/documentation-chapter/`
+
+Un chapitre de la documentation utilisateur. S'abonne à `route.paramMap` (pas `route.snapshot.params`) : Angular réutilise cette même instance de composant en naviguant d'un chapitre à un autre (même route paramétrée), un snapshot lu une seule fois dans `ngOnInit` ne verrait jamais le changement de `:slug`. Le fil d'ariane ("Documentation" › titre du chapitre, `computed()` sur le titre chargé) remplace l'ancien lien "← Retour au sommaire" — même destination, cohérent avec le reste de l'appli où le fil d'ariane porte seul la navigation de retour.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-documentation-chapter` |
+| **Type** | Smart |
+| **Route** | `/documentation/:slug` |
+| **Services** | `HttpClient`, `ActivatedRoute` |
+| **Compose** | `DocLinksDirective`, `Breadcrumb` |
+
+---
+
+### `DocLinksDirective` — `documentation/doc-links.directive.ts`
+
+Directive attributaire (`appDocLinks`), pas un composant — appliquée au conteneur `[innerHTML]` de `Documentation` et `DocumentationChapter`. Le contenu injecté n'étant jamais compilé par Angular, un `<a>` qu'il contient n'est jamais reconnu par `routerLink` ; cette directive écoute les clics par délégation d'événement sur le conteneur et prend la main uniquement sur les liens internes vers `/documentation/...` (`preventDefault` + `Router.navigateByUrl`), pour une navigation SPA sans rechargement. Les ancres `#section` same-page n'ont besoin d'aucune interception (défilement natif du navigateur).
+
+| | |
+|---|---|
+| **Sélecteur** | `[appDocLinks]` |
+| **Type** | Directive (attributaire) |
+| **Services** | `Router` |
 
 ---
 

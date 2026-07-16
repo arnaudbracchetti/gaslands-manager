@@ -54,6 +54,7 @@ Lire si nécéssaire avant toute modification — mettre à jour après chaque c
 - @docs/ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
 - @docs/DOMAIN_MODEL.md — diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global
 - @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
+- @content/docs/*.md — documentation **utilisateur** (accessible via `/documentation`) : comportement observable de l'application du point de vue joueur — jamais les choix d'implémentation ni l'historique des changements. Mettre à jour le chapitre concerné après tout changement de comportement visible par l'utilisateur (nouvel écran → penser aussi à `data.docSlug` dans `app.routes.ts`, cf. `docs/plans/2026-07-16-documentation-utilisateur-design.md`).
 
 ---
 

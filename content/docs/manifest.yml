@@ -1,0 +1,16 @@
+# Ordre canonique des chapitres de la documentation utilisateur.
+# Source unique de vérité pour l'ordre et les titres affichés dans le
+# sommaire (/documentation) — modifier cette liste pour réordonner ou
+# renommer un chapitre, aucun autre endroit du code n'a besoin de changer.
+- slug: equipes
+  title: Équipes
+- slug: construction-vehicule
+  title: Construire et équiper un véhicule
+- slug: campagnes
+  title: Campagnes
+- slug: programme-tele
+  title: Programme Télé
+- slug: atelier
+  title: Atelier
+- slug: sequelles
+  title: Chocs et Séquelles

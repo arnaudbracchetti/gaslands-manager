@@ -22,24 +22,31 @@ export const appRoutes: Route[] = [
     // canActivate : le guard authGuard est exécuté avant de charger le composant.
     // Si l'utilisateur n'est pas connecté, il est redirigé vers /login.
     canActivate: [authGuard],
+    // data.docSlug : chapitre de documentation utilisateur lié depuis le shell
+    // (app.ts lit la route active la plus profonde) pour le lien "❓ Aide sur
+    // cet écran" — cf. docs/plans/2026-07-16-documentation-utilisateur-design.md.
+    data: { docSlug: 'equipes' },
   },
   {
     path: 'campaigns',
     loadComponent: () =>
       import('./campaigns/campaigns').then((m) => m.Campaigns),
     canActivate: [authGuard],
+    data: { docSlug: 'campagnes' },
   },
   {
     path: 'campaigns/join/:code',
     loadComponent: () =>
       import('./campaigns/campaign-join/campaign-join').then((m) => m.CampaignJoin),
     canActivate: [authGuard],
+    data: { docSlug: 'campagnes' },
   },
   {
     path: 'campaigns/:id',
     loadComponent: () =>
       import('./campaigns/campaign-detail/campaign-detail').then((m) => m.CampaignDetail),
     canActivate: [authGuard],
+    data: { docSlug: 'campagnes' },
   },
   // Atelier campagne (phase garage post-partie) — liste des véhicules de l'équipe
   // engagée ; la configuration d'un véhicule se fait sur la route dédiée ci-dessous
@@ -49,6 +56,7 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./campaigns/atelier-page/atelier-page').then((m) => m.AtelierPage),
     canActivate: [authGuard],
+    data: { docSlug: 'atelier' },
   },
   // Configuration d'équipement d'un véhicule de l'atelier — réutilise EquipmentManager
   // via AtelierEquipmentDataSource (fournie au niveau de ce composant).
@@ -57,6 +65,7 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./campaigns/atelier-vehicle-page/atelier-vehicle-page').then((m) => m.AtelierVehiclePage),
     canActivate: [authGuard],
+    data: { docSlug: 'atelier' },
   },
   // ─── Édition d'une équipe (hub : infos + véhicules) ────────────────────────
   // Déclarée AVANT les routes vehicles pour éviter tout conflit de paramètres.
@@ -65,6 +74,7 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./teams/team-edit-page/team-edit-page').then((m) => m.TeamEditPage),
     canActivate: [authGuard],
+    data: { docSlug: 'equipes' },
   },
   // ─── Configuration de véhicule (page dédiée, ex-modale) ────────────────────
   // Deux routes vers le même composant : 'new' (segment littéral) DOIT être
@@ -75,12 +85,14 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./teams/vehicle-configurator-page/vehicle-configurator-page').then((m) => m.VehicleConfiguratorPage),
     canActivate: [authGuard],
+    data: { docSlug: 'construction-vehicule' },
   },
   {
     path: 'teams/:teamId/vehicles/:vehicleId',
     loadComponent: () =>
       import('./teams/vehicle-configurator-page/vehicle-configurator-page').then((m) => m.VehicleConfiguratorPage),
     canActivate: [authGuard],
+    data: { docSlug: 'construction-vehicule' },
   },
   {
     path: 'vehicles',
@@ -92,10 +104,24 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./weapons/weapons').then((m) => m.Weapons),
   },
+  // ─── Documentation utilisateur ──────────────────────────────────────────────
+  // Remplace l'ancienne page /rules (règles du jeu Gaslands) : documente
+  // désormais le fonctionnement de l'application elle-même, pas les règles du
+  // livre. Publique (pas d'authGuard), comme /rules avant elle. Pas de piège
+  // d'ordre ici (contrairement à 'new' vs ':vehicleId' plus haut) : 'documentation'
+  // (un seul segment) et 'documentation/:slug' (deux segments) ne peuvent jamais
+  // matcher la même URL.
   {
-    path: 'rules',
+    path: 'documentation',
     loadComponent: () =>
-      import('./rules/rules').then((m) => m.Rules),
+      import('./documentation/documentation').then((m) => m.Documentation),
+  },
+  {
+    path: 'documentation/:slug',
+    loadComponent: () =>
+      import('./documentation/documentation-chapter/documentation-chapter').then(
+        (m) => m.DocumentationChapter,
+      ),
   },
   // ─── Administration (réservé aux admins) ───────────────────────────────────
   {

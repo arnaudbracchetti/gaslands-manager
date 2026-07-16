@@ -11,9 +11,15 @@
     }
     <li><a routerLink="/vehicles" routerLinkActive="active">Véhicules</a></li>
     <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
-    <li><a routerLink="/rules" routerLinkActive="active">Règles</a></li>
+    <li><a routerLink="/documentation" routerLinkActive="active"><app-icon concept="journal" size="sm" /> Documentation</a></li>
     @if (authService.currentUser()?.role === 'admin') {
       <li><a routerLink="/admin/users" routerLinkActive="active">Utilisateurs</a></li>
+    }
+    @if (docSlug(); as slug) {
+      <!-- Aide contextuelle : présente uniquement sur les écrans qui déclarent
+           data.docSlug dans app.routes.ts, pointe directement sur le chapitre
+           concerné plutôt que sur le sommaire général ci-dessus. -->
+      <li><a [routerLink]="['/documentation', slug]" class="navbar-help">❓ Aide sur cet écran</a></li>
     }
   </ul>
 

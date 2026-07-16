@@ -279,6 +279,18 @@ body {
       border-bottom-color: var(--tb-danger);
     }
   }
+
+  // Aide contextuelle (app.html) : action secondaire, distincte des entrées
+  // de navigation principales — même taille de police, mais plus discrète
+  // tant qu'on ne survole pas.
+  a.navbar-help {
+    color: var(--text-dim);
+    opacity: 0.75;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 }
 
 main {
@@ -512,6 +524,127 @@ main {
 
     &:hover {
       text-decoration: underline;
+    }
+  }
+}
+
+// ─── Contenu Markdown → HTML (documentation utilisateur) ──────────────────────
+//
+// Doit être GLOBAL, pas dans le .scss d'un composant : le HTML est injecté
+// via [innerHTML] (DocsService → Documentation/DocumentationChapter), donc
+// jamais compilé par Angular. L'encapsulation de vue "emulated" (le mode par
+// défaut) ne scope les styles qu'aux éléments que le template du composant a
+// lui-même rendus (attribut _ngcontent-xyz) — les descendants de
+// [innerHTML] ne le reçoivent jamais et restent invisibles à un .scss
+// scopé : constaté à l'usage, seules les propriétés héritables du sélecteur
+// racine (font-family, color, line-height) semblaient "fonctionner", en
+// réalité par simple héritage CSS, pas parce que les règles imbriquées
+// matchaient. Même raison que .navbar ci-dessus est déjà globale (app.scss
+// est vide) plutôt que dans un .scss de composant.
+.markdown-content {
+  font-family: var(--font-text);
+  font-weight: 300;
+  color: var(--text-body);
+  line-height: 1.7;
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 400;
+    color: var(--tb-danger);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-shadow: var(--shadow-stamp-lg);
+  }
+
+  h2 {
+    font-family: var(--font-text);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--tb-os);
+    margin: 2rem 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 2px solid var(--border-rust);
+    padding-bottom: 0.5rem;
+  }
+
+  h3 {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin: 1.5rem 0 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  p {
+    margin-bottom: 1rem;
+  }
+
+  ul, ol {
+    margin: 1rem 0 1rem 1.5rem;
+
+    li { margin-bottom: 0.4rem; }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+
+    th {
+      background: var(--tb-metal-2);
+      color: var(--tb-danger);
+      padding: 10px 16px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-hair);
+    }
+
+    tr:hover td {
+      background: var(--tb-bitume-4);
+    }
+  }
+
+  strong {
+    color: var(--tb-os);
+    font-weight: 600;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--tb-metal-1);
+    border: 1px solid var(--border-hair);
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    font-size: 0.88em;
+    color: var(--tb-danger);
+  }
+
+  // Liens internes entre chapitres (interceptés par DocLinksDirective) et
+  // ancres #section. --text-accent (rouille, ton terre cuite discret) plutôt
+  // que --tb-danger (or vif, réservé aux signaux/CTA) : un lien inline au
+  // milieu d'un paragraphe de prose n'est pas un avertissement, et la
+  // couleur "danger" y devenait criarde et gênait la lecture du texte
+  // environnant — --text-accent est le token sémantique déjà prévu à cet
+  // effet dans la charte, resté inutilisé jusqu'ici.
+  a {
+    color: var(--text-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--tb-rouille-lt);
     }
   }
 }

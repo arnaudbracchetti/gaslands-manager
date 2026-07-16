@@ -3,7 +3,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './auth/auth.interceptor';
 import { appRoutes } from './app.routes';
@@ -19,7 +19,13 @@ export const appConfig: ApplicationConfig = {
     // qui interceptait toutes les opérations async du navigateur.
     provideZonelessChangeDetection(),
 
-    provideRouter(appRoutes),
+    // withInMemoryScrolling({ anchorScrolling: 'enabled' }) : sans cette option,
+    // le Router met bien à jour l'URL avec un fragment (#section) mais ne fait
+    // jamais défiler la page jusqu'à l'élément portant cet id — nécessaire pour
+    // les ancres de la documentation utilisateur (cf. DocsService.withHeadingIds).
+    // scrollPositionRestoration reste au défaut ('disabled') : comportement de
+    // scroll inchangé pour toutes les autres routes de l'appli.
+    provideRouter(appRoutes, withInMemoryScrolling({ anchorScrolling: 'enabled' })),
     // withInterceptors([...]) enregistre nos intercepteurs HTTP fonctionnels.
     // authInterceptor ajoute automatiquement le JWT dans chaque requête.
     provideHttpClient(withInterceptors([authInterceptor])),

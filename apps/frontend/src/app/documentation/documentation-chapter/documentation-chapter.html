@@ -1,0 +1,20 @@
+<div class="documentation-chapter-page">
+
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
+
+  @if (loading()) {
+    <div class="loading">
+      <span>⏳ Chargement...</span>
+    </div>
+  } @else if (error()) {
+    <div class="error">
+      <span><app-icon concept="avertissement" size="sm" /> {{ error() }}</span>
+    </div>
+  } @else {
+    <!-- [innerHTML] injecte le HTML généré depuis content/docs/<slug>.md.
+         appDocLinks intercepte les clics sur les liens internes vers un
+         autre chapitre, pour une navigation SPA sans rechargement. -->
+    <article class="markdown-content" [innerHTML]="html()" appDocLinks></article>
+  }
+
+</div>

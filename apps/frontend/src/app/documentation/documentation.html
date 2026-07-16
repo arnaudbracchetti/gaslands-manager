@@ -1,0 +1,33 @@
+<div class="documentation-page">
+
+  <app-breadcrumb [crumbs]="breadcrumbs" />
+
+  @if (loading()) {
+    <div class="loading">
+      <span>⏳ Chargement de la documentation...</span>
+    </div>
+  } @else if (error()) {
+    <div class="error">
+      <span><app-icon concept="avertissement" size="sm" /> {{ error() }}</span>
+    </div>
+  } @else {
+    <!-- [innerHTML] injecte le HTML généré depuis content/docs/index.md.
+         appDocLinks intercepte les clics sur les liens internes vers un
+         chapitre, pour une navigation SPA sans rechargement. -->
+    <article class="markdown-content" [innerHTML]="html()" appDocLinks></article>
+
+    @if (chapters().length > 0) {
+      <nav class="chapter-list">
+        <h2>Chapitres</h2>
+        <ul>
+          @for (chapter of chapters(); track chapter.slug) {
+            <li>
+              <a [routerLink]="['/documentation', chapter.slug]">{{ chapter.title }}</a>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+  }
+
+</div>

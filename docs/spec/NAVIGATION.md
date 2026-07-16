@@ -10,7 +10,8 @@
 | Route | Accès | État |
 |-------|-------|------|
 | `/home` | Public | Page d'accueil avec présentation et liens vers les sections |
-| `/rules` | Public | Affichage des règles du jeu (Markdown → HTML) |
+| `/documentation` | Public | Documentation utilisateur — sommaire (intro + liste des chapitres, **implémenté**) |
+| `/documentation/:slug` | Public | Documentation utilisateur — un chapitre (**implémenté**, cf. §Documentation utilisateur ci-dessous) |
 | `/vehicles` | Public | Page véhicules (placeholder) |
 | `/weapons` | Public | Page armes (placeholder) |
 | `/teams` | JWT | Gestion des équipes (**implémenté**) |
@@ -29,24 +30,66 @@
 
 ## Contenu Markdown statique
 
-Les pages informatives sont servies depuis des fichiers `.md` du dossier `content/` :
+Deux mécanismes distincts servent du Markdown converti en HTML, tous deux
+via `ContentController` (`apps/backend/src/app/content/`) :
 
-| Slug | Fichier | Contenu |
-|------|---------|---------|
-| `regles` | `content/regles.md` | Règles générales du jeu, notion de sponsor et de budget |
-| `vehicules` | `content/vehicules.md` | Types de véhicules disponibles et leurs caractéristiques |
-| `armes` | `content/armes.md` | Armes disponibles et leurs statistiques |
+- **Pages de référence isolées** (`content/*.md`, à plat) : `vehicules.md` et
+  `armes.md` — non branchés à une route aujourd'hui (réservés au backlog
+  §Frontend — Consultation du catalogue ci-dessous, cf. `ContentService`).
+- **Documentation utilisateur** (`content/docs/*.md`, ordonnée) — voir
+  section dédiée ci-dessous (`DocsService`).
 
-Le backend convertit le Markdown en HTML (`marked`) et l'expose via `GET /api/content/:slug`. Le frontend affiche ce HTML brut via `[innerHTML]` dans le composant `Rules`.
+Pour ajouter une page de référence isolée : créer `content/<slug>.md` →
+disponible immédiatement via `GET /api/content/<slug>`, sans redémarrer le
+backend (aucune route frontend ne consomme ce mécanisme actuellement).
 
-Pour ajouter du contenu : créer `content/<slug>.md` → disponible immédiatement sans redémarrer le backend.
-
-API Endpoints Contenu :
+API Endpoints Contenu (pages de référence isolées) :
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/content` | Non | Liste des slugs disponibles |
 | GET | `/api/content/:slug` | Non | Contenu HTML + titre |
+
+---
+
+## Documentation utilisateur
+
+Remplace l'ancienne page `/rules` (règles du jeu Gaslands, sourcées du
+livre) : documente désormais le **fonctionnement de l'application**
+elle-même — équipes, construction de véhicule, campagnes, Programme Télé,
+Atelier, Chocs et Séquelles — pas les règles du jeu de plateau, supposées
+déjà connues du lecteur. Conception complète :
+[`docs/plans/2026-07-16-documentation-utilisateur-design.md`](../plans/2026-07-16-documentation-utilisateur-design.md).
+
+- **Chapitres** (`content/docs/*.md`) : `index` (intro, hors sommaire),
+  `equipes`, `construction-vehicule`, `campagnes`, `programme-tele`,
+  `atelier`, `sequelles` — ordre et titres canoniques dans
+  `content/docs/manifest.yml`, chargé une seule fois au démarrage par
+  `DocsService` (pattern singleton en mémoire, même famille que
+  `CatalogService`/`ScenarioCatalogService`, cf. ARCHITECTURE.md §3.3). Le
+  contenu de chaque chapitre, lui, est relu à chaque requête — pas de
+  redémarrage nécessaire pour corriger une phrase.
+- **Ancres internes** : chaque titre du HTML rendu reçoit un `id` slugifié
+  (accents retirés) ajouté par `DocsService`, `marked` (v18) n'en générant
+  plus par défaut — permet des liens `#section`, y compris depuis un autre
+  chapitre (ex. `/documentation/atelier#table-des-epaves`).
+- **Navigation fluide** : les liens internes entre chapitres, écrits en dur
+  dans le Markdown source (`/documentation/<slug>`), sont interceptés par
+  `DocLinksDirective` (délégation d'événement sur le conteneur `[innerHTML]`)
+  pour naviguer via le Router Angular sans rechargement de page — un `<a>`
+  injecté en HTML brut n'est sinon jamais reconnu par `routerLink`.
+- **Aide contextuelle** : les routes concernées de `app.routes.ts` portent
+  `data: { docSlug: '<slug>' }` ; le shell global (`app.ts`/`app.html`, déjà
+  rendu sur tout écran) en déduit le lien "❓ Aide sur cet écran" de la
+  navbar, pointant directement sur le chapitre pertinent — sans qu'aucun
+  composant d'écran n'ait à le savoir lui-même.
+
+API Endpoints Contenu (documentation utilisateur) :
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| GET | `/api/content/docs` | Non | Sommaire ordonné (`{slug, title}[]`) |
+| GET | `/api/content/docs/:slug` | Non | Contenu HTML + titre d'un chapitre |
 
 ---
 
@@ -69,10 +112,3 @@ API Endpoints Contenu :
   montés, séquelles) destinée à servir de feuille de référence physique
   pendant une partie de Gaslands, sans avoir à rouvrir l'application
 
-### Documentation utilisateur (futur)
-
-- Rédiger une documentation destinée aux joueurs (pas aux développeurs) qui
-  présente l'ensemble des fonctionnalités de l'application — équipes,
-  construction de véhicule, campagnes, Programme Télé, atelier, Table des
-  Épaves, séquelles, etc. — distincte de la documentation technique
-  (`docs/`), pensée pour un utilisateur découvrant l'outil
