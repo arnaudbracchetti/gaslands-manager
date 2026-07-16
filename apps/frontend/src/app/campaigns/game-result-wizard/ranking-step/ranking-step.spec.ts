@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { RankingStep } from './ranking-step';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import type { Game } from '../../game.model';
@@ -30,7 +29,6 @@ describe('RankingStep', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RankingStep],
-      providers: [provideNoopAnimations()],
     }).compileComponents();
     fixture = TestBed.createComponent(RankingStep);
     component = fixture.componentInstance;

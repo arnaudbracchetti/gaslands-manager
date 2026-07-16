@@ -13,7 +13,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 
@@ -61,7 +61,7 @@ describe('AuthService', () => {
         AuthService,
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([]),
+        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     });
 
@@ -175,7 +175,7 @@ describe('AuthService', () => {
           AuthService,
           provideHttpClient(),
           provideHttpClientTesting(),
-          provideRouter([]),
+          { provide: Router, useValue: { navigate: vi.fn() } },
         ],
       });
 
@@ -199,7 +199,7 @@ describe('AuthService', () => {
           AuthService,
           provideHttpClient(),
           provideHttpClientTesting(),
-          provideRouter([]),
+          { provide: Router, useValue: { navigate: vi.fn() } },
         ],
       });
 
@@ -226,7 +226,7 @@ describe('AuthService', () => {
           AuthService,
           provideHttpClient(),
           provideHttpClientTesting(),
-          provideRouter([]),
+          { provide: Router, useValue: { navigate: vi.fn() } },
         ],
       });
 

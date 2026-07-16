@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { GameResultWizard } from './game-result-wizard';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import type { Game, RecordResultDto, WreckResolveRequestDto } from '../game.model';
@@ -34,7 +33,6 @@ describe('GameResultWizard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [GameResultWizard],
-      providers: [provideNoopAnimations()],
     }).compileComponents();
     fixture = TestBed.createComponent(GameResultWizard);
     component = fixture.componentInstance;

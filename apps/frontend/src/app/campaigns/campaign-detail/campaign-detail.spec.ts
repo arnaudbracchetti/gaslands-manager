@@ -15,6 +15,7 @@ import { Campaign } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
+import { TeamsService } from '../../teams/teams.service';
 
 const mockCampaign: Campaign = {
   id: 1,
@@ -63,6 +64,7 @@ describe('CampaignDetail', () => {
   };
   let mockAuthService: { currentUser: ReturnType<typeof signal<User | null>> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
+  let mockTeamsService: { getAll: ReturnType<typeof vi.fn> };
 
   function configure(campaignId = '1'): void {
     TestBed.configureTestingModule({
@@ -72,6 +74,7 @@ describe('CampaignDetail', () => {
         { provide: CampaignsService, useValue: mockCampaignsService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: Router, useValue: mockRouter },
+        { provide: TeamsService, useValue: mockTeamsService },
         { provide: ActivatedRoute, useValue: { snapshot: { params: { id: campaignId } } } },
       ],
     });
@@ -92,6 +95,7 @@ describe('CampaignDetail', () => {
     };
     mockAuthService = { currentUser: signal<User | null>(mockCurrentUser) };
     mockRouter = { navigate: vi.fn() };
+    mockTeamsService = { getAll: vi.fn().mockReturnValue(of([])) };
   });
 
   afterEach(() => vi.clearAllMocks());
