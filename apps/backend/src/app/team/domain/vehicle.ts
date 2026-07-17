@@ -216,7 +216,7 @@ export class Vehicle {
       .reduce((stats, i) => i.applyStats(stats), apresSequellas);
 
     return this._advantages
-      .filter((a) => !a.isSold)
+      .filter((a) => !a.isSold && !a.isLost)
       .reduce((stats, a) => a.applyStats(stats), apresAmeliorations);
   }
 
@@ -255,7 +255,7 @@ export class Vehicle {
 
   /** Mirroir de `buildImprovementPlacementContext` pour les avantages (jamais d'orientation). */
   private buildAdvantagePlacementContext(comportement: string | undefined): PlacementContext {
-    const active = this._advantages.filter((a) => !a.isSold);
+    const active = this._advantages.filter((a) => !a.isSold && !a.isLost);
     const same = active.filter((a) => a.type.comportement === comportement);
     return {
       baseStats: this.baseStats,
@@ -346,7 +346,7 @@ export class Vehicle {
     if (type.price > remainingBudget) {
       return fail('Budget de l\'équipe insuffisant');
     }
-    if (this._advantages.some((a) => !a.isSold && a.type.equals(type))) {
+    if (this._advantages.some((a) => !a.isSold && !a.isLost && a.type.equals(type))) {
       return fail(`"${type.nom}" est déjà acquis sur ce véhicule`);
     }
     const candidate: PlacementCandidate = { nomInterne: type.nomInterne, nom: type.nom, orientation: null };

@@ -6,7 +6,7 @@ assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-04T10:16:40.793Z"
+modified: "2026-07-17T00:00:00.000Z"
 completedAt: null
 labels: ["mode-campagne", "degats-sequelles"]
 order: "a3"
@@ -25,9 +25,9 @@ tricher.
 - [x] Étant donné le total, quand l'appli consulte le Tableau des Épaves, alors la
       ligne obtenue est enregistrée (dé, résultat, chocs gagnés) et retournée à
       l'organisateur au moment de l'appel.
-- [ ] Étant donné un résultat « Arrachée », quand il s'applique, alors une
+- [x] Étant donné un résultat « Arrachée », quand il s'applique, alors une
       arme **ou une amélioration** est marquée perdue.
-- [ ] Étant donné un résultat « Siège irrécupérable », quand il s'applique, alors
+- [x] Étant donné un résultat « Siège irrécupérable », quand il s'applique, alors
       l'équipage du véhicule est réduit de 1 (borné à 1 minimum) via une séquelle.
 - [ ] Étant donné un résultat « Véhicule détruit, pilote mort », quand il
       s'applique, alors le véhicule disparaît des vues actives.
@@ -55,3 +55,10 @@ résultats réelle du jeu est fortement simplifiée et plusieurs effets manquent
   `blindage_arrache`) ne réduit l'équipage.
 - « Véhicule détruit » ne fait que poser un flag `isLost: true` — `GetWorkshopUseCase`
   continue de renvoyer le véhicule dans la liste, il ne « disparaît » d'aucune vue.
+
+## Vérification code (2026-07-17)
+
+Mise à jour majeure depuis 2026-07-03 — la table est désormais à **9 résultats distincts** (`WreckResult` enum : `DEBOSSELE`, `INDEMNE`, `ROUE_CABOSSEE`, `ARRACHEE`, `PIGNON_ENDOMMAGE`, `SIEGE_IRRECUPERABLE`, `CHASSIS_FRAGILISE`, `FAVORI_DU_PUBLIC`, `VEHICULE_DETRUIT`), pas 3 génériques. Les 3 critères cochés sont confirmés implémentés :
+- Arrachée : `ImprovementLostEvent` existe désormais en plus de `WeaponLostEvent` (et couvre bien une amélioration).
+- Siège irrécupérable : `SiegeIrrecuperableBehavior` réduit l'Équipage du véhicule via le mécanisme Strategy.
+Dernier critère : « véhicule détruit disparaît des vues actives » reste non coché — vérifié par lecture directe de `get-workshop.usecase.ts` : `isLost` est exposé sur le véhicule mais la liste n'est **pas filtrée** (contrairement au filtrage des véhicules **vendus** qui, eux, disparaissent). Limitation documentée dans `docs/spec/CAMPAIGN.md#limitations-connues`.

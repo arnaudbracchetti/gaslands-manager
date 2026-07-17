@@ -111,6 +111,8 @@ export interface VehicleAdvantage {
   /** Cf. `VehicleImprovement.sold`/`purchasedThisSession` — même usage, atelier uniquement. */
   sold?: boolean;
   purchasedThisSession?: boolean;
+  /** Perdue via la Table des Épaves (atelier uniquement, jamais posé à la construction d'équipe). */
+  lost?: boolean;
 }
 
 /**

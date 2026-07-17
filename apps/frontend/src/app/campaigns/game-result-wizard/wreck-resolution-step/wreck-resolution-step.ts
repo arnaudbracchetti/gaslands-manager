@@ -125,19 +125,19 @@ export class WreckResolutionStep {
       case 'FAVORI_DU_PUBLIC':
         return 'Cochez « Favori du public » à la prochaine désignation de ce véhicule '
           + 'si le tirage suivant le détruit — +5 PC seront alors crédités.';
-      case 'PIGNON_ENDOMMAGE':
-        return 'Perte d\'une amélioration au hasard — non implémenté (aucune amélioration perdue).';
       default:
         return null;
     }
   }
 
-  /** Libellé de l'équipement perdu (ligne ARRACHEE), s'il y en a un. */
+  /** Libellé de l'équipement perdu (ligne ARRACHEE ou PIGNON_ENDOMMAGE), s'il y en a un. */
   lostEquipmentLabel(outcome: WreckOutcomeDto): string | null {
     if (!outcome.lostEquipment) return null;
     return outcome.lostEquipment.kind === 'weapon'
       ? `Arme #${outcome.lostEquipment.id} perdue`
-      : `Amélioration #${outcome.lostEquipment.id} perdue`;
+      : outcome.lostEquipment.kind === 'improvement'
+      ? `Amélioration #${outcome.lostEquipment.id} perdue`
+      : `Avantage #${outcome.lostEquipment.id} perdu`;
   }
 
   onComplete(): void {

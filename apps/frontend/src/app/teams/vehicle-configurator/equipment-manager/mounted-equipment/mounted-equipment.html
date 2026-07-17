@@ -23,9 +23,11 @@
   } @else {
     <ul class="me-list">
       @for (weapon of visibleWeapons(); track weapon.id) {
-        <li class="me-item" [class.me-item--sold]="weapon.sold" [attr.title]="weapon.sold ? 'Revendue (atelier)' : null">
+        <li class="me-item" [class.me-item--sold]="weapon.sold || weapon.lost" [attr.title]="weapon.sold ? 'Revendue (atelier)' : weapon.lost ? 'Perdue (Table des Épaves)' : null">
           @if (weapon.sold) {
             <span class="me-item__watermark">Vendu</span>
+          } @else if (weapon.lost) {
+            <span class="me-item__watermark">Perdu</span>
           }
           <span class="me-name" [class.me-name--sold]="weapon.sold">
             {{ resolveWeaponName(weapon.nomInterne) }}
@@ -49,7 +51,7 @@
             <span class="me-badge-defaut" title="Fait partie du profil de base de ce véhicule">
               <app-icon concept="verrouille" size="xs" /> Intégré
             </span>
-          } @else if (!weapon.sold && !locked()) {
+          } @else if (!weapon.sold && !weapon.lost && !locked()) {
             <button
               class="me-remove"
               type="button"
@@ -74,9 +76,11 @@
   } @else {
     <ul class="me-list">
       @for (improvement of visibleImprovements(); track improvement.id) {
-        <li class="me-item" [class.me-item--sold]="improvement.sold" [attr.title]="improvement.sold ? 'Revendue (atelier)' : null">
+        <li class="me-item" [class.me-item--sold]="improvement.sold || improvement.lost" [attr.title]="improvement.sold ? 'Revendue (atelier)' : improvement.lost ? 'Perdue (Table des Épaves)' : null">
           @if (improvement.sold) {
             <span class="me-item__watermark">Vendu</span>
+          } @else if (improvement.lost) {
+            <span class="me-item__watermark">Perdu</span>
           }
           <span class="me-name" [class.me-name--sold]="improvement.sold">
             {{ resolveImprovementName(improvement.nomInterne) }}
@@ -100,7 +104,7 @@
               title="Fait partie du profil de base de ce véhicule">
               <app-icon concept="verrouille" size="xs" /> Intégré
             </span>
-          } @else if (!improvement.sold && !locked()) {
+          } @else if (!improvement.sold && !improvement.lost && !locked()) {
             <button
               class="me-remove"
               type="button"
@@ -125,9 +129,11 @@
   } @else {
     <ul class="me-list">
       @for (advantage of visibleAdvantages(); track advantage.id) {
-        <li class="me-item" [class.me-item--sold]="advantage.sold" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : null">
+        <li class="me-item" [class.me-item--sold]="advantage.sold || advantage.lost" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : advantage.lost ? 'Perdu (Table des Épaves) — aucun remboursement' : null">
           @if (advantage.sold) {
             <span class="me-item__watermark">Vendu</span>
+          } @else if (advantage.lost) {
+            <span class="me-item__watermark">Perdu</span>
           }
           <span class="me-name" [class.me-name--sold]="advantage.sold">
             {{ resolveAdvantageName(advantage.nomInterne) }}
@@ -138,7 +144,7 @@
               {{ advantage.prix }}
             </span>
           </span>
-          @if (!advantage.sold && !locked()) {
+          @if (!advantage.sold && !advantage.lost && !locked()) {
             <button
               class="me-remove"
               type="button"

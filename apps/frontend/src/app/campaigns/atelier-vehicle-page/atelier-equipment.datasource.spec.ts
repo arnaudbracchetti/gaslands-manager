@@ -36,7 +36,7 @@ const workshop: WorkshopStateDto = {
         { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
       ],
       advantages: [
-        { id: 3, nomInterne: 'expertise', price: 3, isSold: false, purchasedThisSession: false },
+        { id: 3, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false },
       ],
       resaleRefund: 6,
       purchasedThisSession: false,

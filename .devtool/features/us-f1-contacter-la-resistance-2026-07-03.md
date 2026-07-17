@@ -5,7 +5,7 @@ priority: "low"
 assignee: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-03T19:41:13.716Z"
+modified: "2026-07-17T00:00:00.000Z"
 completedAt: null
 labels: ["mode-campagne", "resistance"]
 order: "aA"
@@ -47,3 +47,7 @@ Repassée de `done` à `backlog` — 1 critère sur 4 seulement tient pleinement
   (commentaire "exclu (D-S4)" en ligne 14), alors qu'il s'agit de la vue du
   participant sur **sa propre** équipe. Résultat : aucun endpoint ne permet
   aujourd'hui à un joueur de lire ses propres Points de Résistance.
+
+## Vérification code (2026-07-17)
+
+Le mécanisme réellement livré diffère de la story d'origine — le crédit de +3 PR est désormais **automatique** (`Game.recordResult()`, tout participant hors du top `ceil(n/2)`, `docs/spec/CAMPAIGN.md#limitations-connues`), pas une action volontaire de "contacter la Résistance" gatée par "0 PC marqué". Les 2 premiers critères Gherkin décrivent donc une interaction qui ne correspond plus au code. Les critères ne sont pas cochés pour cette raison (ils visent un appel volontaire qui n'existe plus). Le 4ᵉ critère (lire ses propres PR) reste non satisfait et bien d'actualité : confirmé qu'aucun endpoint n'expose `resistancePoints`, même au propriétaire (`GetWorkshopUseCase` l'exclut aussi, pas seulement `StandingsEntry`). À reformuler dans une future passe pour aligner avec l'implémentation actuelle (crédit auto) et relever le manque de consultation des PR par le propriétaire.

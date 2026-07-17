@@ -83,6 +83,7 @@ export interface WorkshopAdvantageDto {
   nomInterne: string;
   /** Ne baisse jamais avec `isSold` (perte totale à la revente, cf. `Advantage.price`). */
   price: number;
+  isLost: boolean;
   isSold: boolean;
   purchasedThisSession: boolean;
 }
@@ -188,6 +189,7 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
         vehicleId: w.id,
         createdAt: '',
         prix: x.price,
+        lost: x.isLost,
         sold: x.isSold,
         purchasedThisSession: x.purchasedThisSession,
       }),

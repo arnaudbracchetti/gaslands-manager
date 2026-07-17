@@ -1,12 +1,12 @@
 ---
 id: "us-e1-designer-les-vehicules-devenus-epaves-2026-07-03"
-status: "backlog"
+status: "done"
 priority: "high"
 assignee: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-03T19:41:13.716Z"
-completedAt: null
+modified: "2026-07-17T00:00:00.000Z"
+completedAt: "2026-07-17T00:00:00.000Z"
 labels: ["mode-campagne", "degats-sequelles"]
 order: "a6"
 ---
@@ -18,10 +18,10 @@ une partie, afin de déclencher la résolution du Tableau des Épaves.
 
 ## Critères d'acceptation
 
-- [ ] Étant donné l'étape 3 de l'enregistrement, quand je coche un véhicule comme
+- [x] Étant donné l'étape 3 de l'enregistrement, quand je coche un véhicule comme
       Épave, alors un outcome distinct (`becameWreck = true`) est créé, séparé de
-      la résolution elle-même.
-- [ ] Étant donné un véhicule non coché, quand la partie est validée, alors aucune
+      la résolution elle-même. (Impl. équivalente : `WreckDesignationStep` séparant désignation/résolution)
+- [x] Étant donné un véhicule non coché, quand la partie est validée, alors aucune
       résolution d'Épave ne lui est appliquée.
 
 ## Vérification code (2026-07-03)
@@ -42,3 +42,7 @@ existent à la place :
 « Cocher un véhicule comme Épave » reviendrait en pratique à appeler directement
 `events/wreck` (qui résout tout de suite, pas juste désigne), ce qui ne correspond
 pas au modèle Gherkin de la story. À reformuler une fois le flux cible clarifié.
+
+## Vérification code (2026-07-17)
+
+Implémenté via le wizard (commit 2026-07-04, affiné 2026-07-17) — l'écran 5 `WreckDesignationStep` sépare désormais explicitement la **désignation** (Intact / Détruit par / Mis en épave seul) de la **résolution** (écran 6, automatique, lancers D6). L'intention métier est satisfaite même si le champ littéral `becameWreck` n'existe pas — implémentation équivalente via `wreckedVehicles` et le flux deux écrans. Les 2 critères Gherkin correspondent au comportement observé.

@@ -176,9 +176,9 @@ export type WreckResult =
   | 'FAVORI_DU_PUBLIC'
   | 'VEHICULE_DETRUIT';
 
-/** Équipement perdu à la ligne ARRACHEE — miroir de LostEquipment (backend). */
+/** Équipement perdu à la ligne ARRACHEE (arme/amélioration) ou PIGNON_ENDOMMAGE (avantage) — miroir de LostEquipment (backend). */
 export interface LostEquipmentDto {
-  kind: 'weapon' | 'improvement';
+  kind: 'weapon' | 'improvement' | 'advantage';
   id: number;
 }
 

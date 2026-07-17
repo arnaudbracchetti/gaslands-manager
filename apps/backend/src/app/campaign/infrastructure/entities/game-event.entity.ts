@@ -78,6 +78,12 @@ export class GameEventOrm {
   @Column({ type: 'int', nullable: true })
   weaponId!: number | null;
 
+  @Column({ type: 'int', nullable: true })
+  improvementId!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  advantageId!: number | null;
+
   // ── Payload : WreckResolvedEvent ───────────────────────────────────────────
   @Column({ type: 'int', nullable: true })
   diceRoll!: number | null;

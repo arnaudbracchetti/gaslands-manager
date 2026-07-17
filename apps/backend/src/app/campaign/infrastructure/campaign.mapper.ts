@@ -18,6 +18,8 @@ import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import { WeaponLostEvent } from '../domain/events/weapon-lost.event';
+import { ImprovementLostEvent } from '../domain/events/improvement-lost.event';
+import { AdvantageLostEvent } from '../domain/events/advantage-lost.event';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
 import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
@@ -121,6 +123,12 @@ export class CampaignMapper {
 
       case 'WEAPON_LOST':
         return new WeaponLostEvent(id, gameId, participantId, eventOrder, orm.weaponId!);
+
+      case 'IMPROVEMENT_LOST':
+        return new ImprovementLostEvent(id, gameId, participantId, eventOrder, orm.improvementId!);
+
+      case 'ADVANTAGE_LOST':
+        return new AdvantageLostEvent(id, gameId, participantId, eventOrder, orm.advantageId!);
 
       case 'WRECK_RESOLVED':
         return new WreckResolvedEvent(

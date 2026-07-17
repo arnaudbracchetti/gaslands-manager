@@ -612,22 +612,24 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   **L'UI des Chocs et séquelles est désormais implémentée**, intégrée à
   `EquipmentManager` (cf. [§Séquelles](#séquelles) ci-dessus) — retiré du
   périmètre Temps 2 restant.
-- **Table des Épaves (US-E1–E4)** — la table complète à 9 lignes est implémentée
+- **Table des Épaves (US-E1–E5)** — la table complète à 9 lignes est implémentée
   (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
   `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
   `VEHICULE_DETRUIT`), avec le tirage D6 serveur et les Chocs dérivés (cf.
-  [wizard de fin de partie](#wizard-de-fin-de-partie) ci-dessous). Toute perte
-  d'équipement (`ARRACHEE`) est tirée aléatoirement dans le pool armes +
-  améliorations montées (jamais un choix de l'organisateur), et peut désormais
-  cibler une amélioration (`ImprovementLostEvent`, mirroir de `WeaponLostEvent`),
-  pas seulement une arme. « Siège irrécupérable » réutilise le mécanisme Strategy
-  existant (`SiegeIrrecuperableBehavior`, réduit l'Équipage). Reste hors
-  périmètre : la perte d'amélioration sur la ligne « Pignon endommagé » (commentaire
-  explicite dans le code, pas un marqueur `TODO` littéral - nécessiterait de distinguer les deux lignes du livre).
-  Les modificateurs de séquelle spéciaux (« Maintenu par la Rouille » double
-  lancer, « Légende Vivante » résultat forcé à 1) et la garde anti-doublon sur les
-  séquelles `ATELIER` sont désormais implémentés — cf. [§Séquelles](#séquelles)
-  ci-dessous.
+  [wizard de fin de partie](#wizard-de-fin-de-partie) ci-dessous). **Deux
+  tirages indépendants** : `ARRACHEE` tire aléatoirement dans le pool armes +
+  améliorations montées et peut cibler une amélioration (`ImprovementLostEvent`,
+  mirroir de `WeaponLostEvent`), jamais un choix de l'organisateur ; `PIGNON_ENDOMMAGE`
+  tire aléatoirement dans le pool des avantages montés (`AdvantageLostEvent`,
+  nouveau type d'événement). Un avantage perdu libère la contrainte d'unicité
+  (rachetable ultérieurement en atelier). **Bugfix persistance** : `ImprovementLostEvent`
+  (utilisé par `ARRACHEE` depuis le départ) s'écrivait sous forme de `RESISTANCE_CONTACTED`
+  dans la base — persistance corrigée via colonnes `improvementId` et `advantageId`
+  dans `GameEventOrm`. « Siège irrécupérable » réutilise le mécanisme Strategy
+  existant (`SiegeIrrecuperableBehavior`, réduit l'Équipage). Les modificateurs de
+  séquelle spéciaux (« Maintenu par la Rouille » double lancer, « Légende Vivante »
+  résultat forcé à 1) et la garde anti-doublon sur les séquelles `ATELIER` sont
+  désormais implémentés — cf. [§Séquelles](#séquelles) ci-dessous.
 - **Lancement de partie — non implémenté** — il n'existe aujourd'hui aucune
   action explicite de "démarrage" d'une partie `PLANIFIE`. À ajouter : un
   écran/bouton "Lancer la partie" qui affiche à chaque participant présent les

@@ -1,12 +1,12 @@
 ---
 id: "us-e3-chocs-derives-et-modificateurs-de-tirage-2026-07-03"
-status: "backlog"
+status: "done"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-03T19:41:13.716Z"
-completedAt: null
+modified: "2026-07-17T00:00:00.000Z"
+completedAt: "2026-07-17T00:00:00.000Z"
 labels: ["mode-campagne", "degats-sequelles"]
 order: "a8"
 ---
@@ -21,11 +21,11 @@ respectée.
 
 - [x] Étant donné un véhicule, quand je consulte ses Chocs, alors ils sont dérivés
       (Σ chocs gagnés − Σ coût des séquelles), jamais stockés en colonne.
-- [ ] Étant donné un véhicule avec « Maintenu par la Rouille », quand il devient
+- [x] Étant donné un véhicule avec « Maintenu par la Rouille », quand il devient
       Épave, alors le résolveur applique deux lancers au lieu d'un (p.169).
-- [ ] Étant donné un véhicule avec « Légende Vivante », quand il devient Épave,
+- [x] Étant donné un véhicule avec « Légende Vivante », quand il devient Épave,
       alors le résolveur force le résultat à « 1 » avant application (p.169).
-- [ ] Étant donné une Séquelle de pure règle de table (Vibrations, Suicidaire…),
+- [x] Étant donné une Séquelle de pure règle de table (Vibrations, Suicidaire…),
       quand elle est présente, alors elle est affichée en rappel mais n'altère
       aucun calcul de l'appli.
 
@@ -43,3 +43,7 @@ Repassée de `done` à `backlog` : la formule de Chocs dérivés est bien implé
   (`moteur_endommage`, `direction_endommage`, `blindage_arrache`), toutes des
   altérations de statistiques — aucune catégorie « affichage seul / pure règle de
   table » n'existe dans `SequellaType`.
+
+## Vérification code (2026-07-17)
+
+Implémenté — la conception séquelles du 2026-07-13 a livré les 2 modificateurs manquants : Légende Vivante force le D6 à 1 à chaque tirage (`WreckTable`, cf. `docs/spec/CAMPAIGN.md#séquelles`), Maintenu par la Rouille déclenche un second tirage chaîné. Les séquelles purement descriptives (Vibrations, Suicidaire...) n'ont pas de `comportement` donc n'altèrent aucun calcul — 4ᵉ critère aussi satisfait. Tous les critères sont cochés.

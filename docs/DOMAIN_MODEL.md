@@ -531,7 +531,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -539,6 +539,7 @@ erDiagram
         number vehicleId "nullable"
         number weaponId "nullable"
         number improvementId "nullable — ImprovementLostEvent"
+        number advantageId "nullable — AdvantageLostEvent"
         number gatesCrossed "nullable — GatesCrossedEvent (US-B2)"
         string weightClass "nullable — VehicleDestroyedEvent : LEGER|MOYEN|LOURD|FORTERESSE (US-B2)"
         number diceRoll "nullable — WreckResolved"
@@ -667,6 +668,7 @@ classDiagram
         +vehicleIsLost : boolean
         +weaponLostId : number|null
         +improvementLostId : number|null
+        +advantageLostId : number|null
     }
 
     Campaign "1" *-- "0..*" CampaignParticipant
@@ -743,6 +745,7 @@ d'événements confondus.
 | `VehicleLostEvent` | `vehicle.markLost()` | `vehicle.clearLost()` |
 | `WeaponLostEvent` | `weapon.markLost()` | `weapon.clearLost()` |
 | `ImprovementLostEvent` | `improvement.markLost()` (mirroir `WeaponLostEvent`) | `improvement.clearLost()` |
+| `AdvantageLostEvent` | `advantage.markLost()` (mirroir `WeaponLostEvent`/`ImprovementLostEvent`) | `advantage.clearLost()` |
 | `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) | `vehicle.addChocs(-n)` |
 | `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`) | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity` | Inverse de execute |
 | `EquipmentChangedEvent` (`entityType = SEQUELLE`) | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`) | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte |

@@ -289,6 +289,12 @@ export class CampaignRepository implements ICampaignRepository {
     if ('weaponId' in e) {
       return { ...base, eventType: 'WEAPON_LOST', weaponId: e['weaponId'] as number };
     }
+    if ('improvementId' in e) {
+      return { ...base, eventType: 'IMPROVEMENT_LOST', improvementId: e['improvementId'] as number };
+    }
+    if ('advantageId' in e) {
+      return { ...base, eventType: 'ADVANTAGE_LOST', advantageId: e['advantageId'] as number };
+    }
     if ('diceRoll' in e) {
       return {
         ...base, eventType: 'WRECK_RESOLVED',

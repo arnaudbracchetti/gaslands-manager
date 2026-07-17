@@ -118,10 +118,9 @@ export class MountedEquipment {
     this.improvements().filter((i): boolean => !!i.sold || !!i.lost).length,
   );
 
-  /** Mirroir de `soldWeaponsCount`/`soldImprovementsCount` — un avantage ne porte pas `lost`
-   *  (pas de mécanisme de perte via la Table des Épaves pour les avantages aujourd'hui). */
+  /** Mirroir de `soldWeaponsCount`/`soldImprovementsCount` pour les avantages. */
   soldAdvantagesCount: Signal<number> = computed((): number =>
-    this.advantages().filter((a): boolean => !!a.sold).length,
+    this.advantages().filter((a): boolean => !!a.sold || !!a.lost).length,
   );
 
   /** Mirroir de `soldAdvantagesCount` pour les séquelles (`isSold`, pas `sold` — DTO atelier brut). */
@@ -148,7 +147,7 @@ export class MountedEquipment {
   visibleAdvantages: Signal<VehicleAdvantage[]> = computed((): VehicleAdvantage[] => {
     const all = this.advantages();
     if (this.showSold()) return all;
-    return all.filter((a): boolean => !a.sold);
+    return all.filter((a): boolean => !a.sold && !a.lost);
   });
 
   /** Mirroir de `visibleAdvantages` pour les séquelles. */

@@ -92,6 +92,7 @@ export class GetWorkshopUseCase {
         // a.price ne baisse jamais avec isSold (perte totale, cf. Advantage.price) —
         // contrairement à weapons/improvements, pas de prix résiduel à distinguer ici.
         price: a.price,
+        isLost: a.isLost,
         isSold: a.isSold,
         purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.ADVANTAGE, a.id) ?? false,
       })),

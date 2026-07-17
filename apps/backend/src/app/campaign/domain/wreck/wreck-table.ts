@@ -7,6 +7,7 @@ import { WreckResult } from '../enums/wreck-result.enum';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
+import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
@@ -78,6 +79,10 @@ export class WreckTable {
    * de la table → événements. Paramétré par `chocsBefore` (plutôt que de relire
    * `vehicle.chocs`) pour permettre le chaînage de Maintenu par la Rouille, dont le
    * second tirage doit utiliser les Chocs déjà mis à jour par le premier.
+   *
+   * Deux tirages indépendants : équipement (ARRACHEE — arme/amélioration) et
+   * avantage (PIGNON_ENDOMMAGE). Le résultat de la table détermine laquelle des
+   * deux pertes s'applique (jamais les deux en même temps).
    */
   private rollOnce(
     vehicle: Vehicle,
@@ -86,11 +91,16 @@ export class WreckTable {
     participantId: number,
   ): WreckTableResult {
     const diceRoll = vehicle.hasActiveSequella('legende_vivante') ? 1 : this.random.roll(6);
-    const pool = this.buildEquipmentPool(vehicle);
-    const lostEquipment = pool.length > 0 ? this.random.pick(pool) : null;
+    const equipmentPool = this.buildEquipmentPool(vehicle);
+    const lostEquipment = equipmentPool.length > 0 ? this.random.pick(equipmentPool) : null;
+    const advantagePool = this.buildAdvantagePool(vehicle);
+    const lostAdvantage = advantagePool.length > 0 ? this.random.pick(advantagePool) : null;
     const modifiedRoll = diceRoll + chocsBefore + this.weightModifier(vehicle.type.poids);
     const { result, chocsGained } = this.lookupTable(modifiedRoll, chocsBefore);
-    const finalLoss = result === WreckResult.ARRACHEE ? lostEquipment : null;
+    const finalLoss =
+      result === WreckResult.ARRACHEE ? lostEquipment :
+      result === WreckResult.PIGNON_ENDOMMAGE ? lostAdvantage :
+      null;
     const outcome = new WreckOutcome(vehicle.id, diceRoll, chocsBefore, result, chocsGained, finalLoss);
     return { outcome, events: this.buildEvents(outcome, gameId, participantId) };
   }
@@ -110,6 +120,10 @@ export class WreckTable {
 
     if (outcome.wreckResult === WreckResult.ARRACHEE && outcome.improvementLostId !== null) {
       events.push(new ImprovementLostEvent(0, gameId, participantId, 0, outcome.improvementLostId));
+    }
+
+    if (outcome.wreckResult === WreckResult.PIGNON_ENDOMMAGE && outcome.advantageLostId !== null) {
+      events.push(new AdvantageLostEvent(0, gameId, participantId, 0, outcome.advantageLostId));
     }
 
     if (outcome.wreckResult === WreckResult.SIEGE_IRRECUPERABLE) {
@@ -147,6 +161,16 @@ export class WreckTable {
         .filter((i) => !i.estDefaut && !i.isLost && !i.isSold)
         .map((i) => ({ kind: 'improvement' as const, id: i.id })),
     ];
+  }
+
+  /**
+   * Avantages non perdus et non vendus — tirage indépendant pour PIGNON_ENDOMMAGE.
+   * Un objet vendu n'est plus effectif sur le véhicule — inutile de le tirer au sort.
+   */
+  private buildAdvantagePool(vehicle: Vehicle): NonNullable<LostEquipment>[] {
+    return vehicle.advantages
+      .filter((a) => !a.isSold && !a.isLost)
+      .map((a) => ({ kind: 'advantage' as const, id: a.id }));
   }
 
   private lookupTable(

@@ -1,12 +1,13 @@
 import { WreckResult } from '../enums/wreck-result.enum';
 
 /**
- * Équipement perdu à la ligne ARRACHEE — `null` pour toute autre ligne, ou si le
- * véhicule n'a aucun équipement éligible (aucune arme ni amélioration montée).
+ * Équipement perdu à la ligne ARRACHEE (arme/amélioration) ou PIGNON_ENDOMMAGE
+ * (avantage) — `null` pour toute autre ligne, ou si le véhicule n'a aucun
+ * équipement éligible (aucune arme/amélioration/avantage monté).
  * Champ sérialisé tel quel (pas un getter) : le frontend en a besoin pour afficher
  * ce qui a été perdu.
  */
-export type LostEquipment = { kind: 'weapon' | 'improvement'; id: number } | null;
+export type LostEquipment = { kind: 'weapon' | 'improvement' | 'advantage'; id: number } | null;
 
 /**
  * Snapshot du résultat d'un lancer sur la Table des Épaves — Value Object pur.
@@ -36,5 +37,9 @@ export class WreckOutcome {
 
   get improvementLostId(): number | null {
     return this.lostEquipment?.kind === 'improvement' ? this.lostEquipment.id : null;
+  }
+
+  get advantageLostId(): number | null {
+    return this.lostEquipment?.kind === 'advantage' ? this.lostEquipment.id : null;
   }
 }

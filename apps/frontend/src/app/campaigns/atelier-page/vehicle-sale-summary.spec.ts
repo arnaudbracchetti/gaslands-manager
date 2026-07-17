@@ -54,7 +54,7 @@ function buildImprovement(overrides: Partial<WorkshopImprovementDto> = {}): Work
 
 function buildAdvantage(overrides: Partial<WorkshopAdvantageDto> = {}): WorkshopAdvantageDto {
   return {
-    id: 1, nomInterne: 'expertise', price: 3, isSold: false, purchasedThisSession: false,
+    id: 1, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false,
     ...overrides,
   };
 }

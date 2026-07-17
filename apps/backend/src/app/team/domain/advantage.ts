@@ -11,6 +11,7 @@ import type { VehicleStats } from './behaviors/equipment-behavior';
  */
 export class Advantage {
   private _isSold = false;
+  private _isLost = false;
 
   constructor(
     readonly id: number,
@@ -80,8 +81,22 @@ export class Advantage {
     this._isSold = false;
   }
 
+  get isLost(): boolean {
+    return this._isLost;
+  }
+
+  /** Marque cet avantage comme perdu (ex. Table des Épaves, résultat PIGNON_ENDOMMAGE). */
+  markLost(): void {
+    this._isLost = true;
+  }
+
+  clearLost(): void {
+    this._isLost = false;
+  }
+
   /** Remet l'état campagne à zéro — appelé par Vehicle/Team.clearCampaignState() au début du replay. */
   clearCampaignState(): void {
     this._isSold = false;
+    this._isLost = false;
   }
 }
