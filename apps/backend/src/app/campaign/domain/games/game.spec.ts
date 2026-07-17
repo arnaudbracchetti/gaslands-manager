@@ -8,6 +8,7 @@ import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
+import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
@@ -89,6 +90,10 @@ function makeImprovementLostEvent(id = 7): ImprovementLostEvent {
   return new ImprovementLostEvent(id, 10, 1, id, 2);
 }
 
+function makeAdvantageLostEvent(id = 14): AdvantageLostEvent {
+  return new AdvantageLostEvent(id, 10, 1, id, 3);
+}
+
 function makeFavoriDuPublicBonusEvent(id = 8): FavoriDuPublicBonusEvent {
   return new FavoriDuPublicBonusEvent(id, 10, 1, id, 2, 5);
 }
@@ -167,6 +172,7 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
     ['GatesCrossedEvent', false, makeGatesCrossedEvent],
     ['VehicleDestroyedEvent', false, makeVehicleDestroyedEvent],
     ['ImprovementLostEvent', false, makeImprovementLostEvent],
+    ['AdvantageLostEvent', false, makeAdvantageLostEvent],
     ['FavoriDuPublicBonusEvent', false, makeFavoriDuPublicBonusEvent],
     ['ResistanceContactedEvent', false, () => new ResistanceContactedEvent(11, 10, 1, 11)],
     ['WeaponLostEvent', false, () => new WeaponLostEvent(12, 10, 1, 12, 10)],

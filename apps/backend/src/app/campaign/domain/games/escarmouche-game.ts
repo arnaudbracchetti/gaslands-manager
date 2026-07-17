@@ -6,6 +6,7 @@ import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
+import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../events/gates-crossed.event';
@@ -41,6 +42,7 @@ export class EscarmoucheGame extends Game {
         event instanceof VehicleLostEvent ||
         event instanceof WeaponLostEvent ||
         event instanceof ImprovementLostEvent ||
+        event instanceof AdvantageLostEvent ||
         event instanceof WreckResolvedEvent ||
         // Séquelle imposée par la Table des Épaves (Siège irrécupérable) — cf. le même
         // commentaire dans EvenementTeleGame.canAccept.

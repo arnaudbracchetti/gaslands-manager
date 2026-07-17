@@ -22,6 +22,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { CampaignState } from '../campaign.model';
@@ -166,8 +167,10 @@ export class CampaignProgram implements OnInit {
         this.games.set(games);
         this.loading.set(false);
       },
-      error: () => {
-        this.error.set('Erreur lors du chargement du programme.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du chargement du programme.';
+        console.error(msg);
+        this.error.set(msg);
         this.loading.set(false);
       },
     });
@@ -205,9 +208,11 @@ export class CampaignProgram implements OnInit {
         this.editingGame.set(null);
         this.loadGames();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors de l\'enregistrement de la partie.';
+        console.error(msg);
         this.saving.set(false);
-        this.error.set('Erreur lors de l\'enregistrement de la partie.');
+        this.error.set(msg);
       },
     });
   }
@@ -259,8 +264,11 @@ export class CampaignProgram implements OnInit {
         this.wizardResultRecorded.set(updatedGame);
         this.loadGames();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors de l\'enregistrement du résultat.';
+        console.error(msg);
         this.savingResult.set(false);
+        this.error.set(msg);
       },
     });
   }
@@ -277,9 +285,10 @@ export class CampaignProgram implements OnInit {
         this.incomeResults.set(map);
         this.resolving.set(false);
       },
-      error: () => {
-        console.error('Échec du tirage de revenu.');
-        this.error.set('Erreur lors du tirage du revenu de base.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du tirage du revenu de base.';
+        console.error(msg);
+        this.error.set(msg);
         this.resolving.set(false);
       },
     });
@@ -300,9 +309,10 @@ export class CampaignProgram implements OnInit {
         this.wreckDescriptions.set(descriptions);
         this.resolving.set(false);
       },
-      error: () => {
-        console.error('Échec du tirage sur la Table des Épaves.');
-        this.error.set('Erreur lors du tirage sur la Table des Épaves.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du tirage sur la Table des Épaves.';
+        console.error(msg);
+        this.error.set(msg);
         this.resolving.set(false);
       },
     });
@@ -326,9 +336,10 @@ export class CampaignProgram implements OnInit {
         this.loadGames();
         this.resultRecorded.emit();
       },
-      error: () => {
-        console.error('Échec de l\'entrée en atelier de la partie.');
-        this.error.set('Erreur lors du passage en atelier de la partie.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du passage en atelier de la partie.';
+        console.error(msg);
+        this.error.set(msg);
         this.finalizingGame.set(false);
       },
     });
@@ -357,9 +368,10 @@ export class CampaignProgram implements OnInit {
         this.closeWizard();
         this.loadGames();
       },
-      error: () => {
-        console.error('Échec de l\'annulation du résultat.');
-        this.error.set('Erreur lors de l\'annulation du résultat.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors de l\'annulation du résultat.';
+        console.error(msg);
+        this.error.set(msg);
         this.resettingResult.set(false);
       },
     });
@@ -384,8 +396,10 @@ export class CampaignProgram implements OnInit {
         this.journalEntries.set(entries);
         this.loadingJournal.set(false);
       },
-      error: () => {
-        this.error.set('Erreur lors du chargement du journal de la partie.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du chargement du journal de la partie.';
+        console.error(msg);
+        this.error.set(msg);
         this.loadingJournal.set(false);
       },
     });
@@ -417,7 +431,11 @@ export class CampaignProgram implements OnInit {
 
     this.campaignsService.deleteGame(this.campaignId(), game.id).subscribe({
       next: () => this.loadGames(),
-      error: () => this.error.set('Erreur lors de la suppression de la partie.'),
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors de la suppression de la partie.';
+        console.error(msg);
+        this.error.set(msg);
+      },
     });
   }
 }
