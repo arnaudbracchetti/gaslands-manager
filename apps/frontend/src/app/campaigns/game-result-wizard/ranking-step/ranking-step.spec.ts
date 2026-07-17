@@ -20,6 +20,8 @@ const mockGame: Game = {
   playedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
+  franchissementPortes: true,
+  gainJerricans: false,
 };
 
 describe('RankingStep', () => {
@@ -33,42 +35,22 @@ describe('RankingStep', () => {
     fixture = TestBed.createComponent(RankingStep);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('game', mockGame);
-    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('presentParticipants', mockParticipants);
     fixture.componentRef.setInput('saving', false);
     fixture.detectChanges();
   });
 
-  it('affiche tous les participants avec checkbox décochée', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes).toHaveLength(3);
-    checkboxes.forEach((cb: HTMLInputElement) => expect(cb.checked).toBe(false));
+  it('initialise l\'ordre depuis presentParticipants()', () => {
+    expect(component.orderedParticipants().map((p) => p.id)).toEqual([1, 2, 3]);
   });
 
-  it('cocher un participant le déplace dans la zone de classement', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
+  it('se ré-initialise si presentParticipants() change', () => {
+    fixture.componentRef.setInput('presentParticipants', [mockParticipants[2], mockParticipants[0]]);
     fixture.detectChanges();
-    expect(component.presentParticipants().length).toBe(1);
+    expect(component.orderedParticipants().map((p) => p.id)).toEqual([3, 1]);
   });
 
-  it('décocher un participant le retire de la zone de classement', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    fixture.detectChanges();
-    checkboxes[0].click();
-    fixture.detectChanges();
-    expect(component.presentParticipants().length).toBe(0);
-  });
-
-  it('bouton Suivant désactivé si aucune équipe cochée', () => {
-    const submitBtn: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
-    expect(submitBtn.disabled).toBe(true);
-  });
-
-  it('bouton Suivant actif si au moins une équipe cochée', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    fixture.detectChanges();
+  it('bouton Suivant actif dès qu\'il y a des présents', () => {
     const submitBtn: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
     expect(submitBtn.disabled).toBe(false);
   });
@@ -77,17 +59,22 @@ describe('RankingStep', () => {
     const emitted: any[] = [];
     outputToObservable(component.next).subscribe(v => emitted.push(v));
 
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    checkboxes[1].click();
-    fixture.detectChanges();
-
     fixture.nativeElement.querySelector('button[type="submit"]').click();
     fixture.detectChanges();
 
     expect(emitted).toHaveLength(1);
-    expect(emitted[0][0]).toMatchObject({ participantId: 1, rank: 1 });
-    expect(emitted[0][1]).toMatchObject({ participantId: 2, rank: 2 });
+    expect(emitted[0]).toEqual([
+      { participantId: 1, rank: 1 },
+      { participantId: 2, rank: 2 },
+      { participantId: 3, rank: 3 },
+    ]);
+  });
+
+  it('back émet void', () => {
+    const emitted: unknown[] = [];
+    outputToObservable(component.back).subscribe(() => emitted.push(true));
+    component.onBack();
+    expect(emitted).toHaveLength(1);
   });
 
   it('formCancel émet void au clic Annuler', () => {
@@ -98,16 +85,10 @@ describe('RankingStep', () => {
   });
 
   it('badge classé/non-classé correct : 3 présents → 2 classés', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
-    fixture.detectChanges();
     expect(component.classifiedCount()).toBe(2);
   });
 
   it('pointsForRank applique le barème 10/5/2/1 pour un Événement Télé', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
-    fixture.detectChanges();
     expect(component.pointsForRank(1)).toBe(10);
     expect(component.pointsForRank(2)).toBe(5);
     expect(component.pointsForRank(3)).toBe(0);
@@ -115,74 +96,22 @@ describe('RankingStep', () => {
 
   it('pointsForRank est toujours 0 pour une Escarmouche', () => {
     fixture.componentRef.setInput('game', { ...mockGame, type: 'ESCARMOUCHE' });
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    fixture.detectChanges();
     expect(component.pointsForRank(1)).toBe(0);
   });
 
   it('moveUp/moveDown permutent les entrées adjacentes', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
-    fixture.detectChanges();
-
     component.moveDown(0);
-    expect(component.presentParticipants().map(p => p.id)).toEqual([2, 1, 3]);
+    expect(component.orderedParticipants().map(p => p.id)).toEqual([2, 1, 3]);
 
     component.moveUp(1);
-    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
+    expect(component.orderedParticipants().map(p => p.id)).toEqual([1, 2, 3]);
   });
 
   it('moveUp/moveDown sont des no-op aux bornes de la liste', () => {
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    [0, 1, 2].forEach(i => { checkboxes[i].click(); });
-    fixture.detectChanges();
-
     component.moveUp(0);
-    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
+    expect(component.orderedParticipants().map(p => p.id)).toEqual([1, 2, 3]);
 
     component.moveDown(2);
-    expect(component.presentParticipants().map(p => p.id)).toEqual([1, 2, 3]);
-  });
-
-  it('cocher/décocher un participant émet presentParticipantsChanged avec les ids présents', () => {
-    const emitted: number[][] = [];
-    outputToObservable(component.presentParticipantsChanged).subscribe(v => emitted.push(v));
-
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    checkboxes[1].click();
-    fixture.detectChanges();
-
-    expect(emitted).toEqual([[1], [1, 2]]);
-  });
-
-  it('next inclut gatesCrossed quand renseigné', () => {
-    const emitted: any[] = [];
-    outputToObservable(component.next).subscribe(v => emitted.push(v));
-
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    fixture.detectChanges();
-
-    component.setGatesCrossed(1, '3');
-    fixture.nativeElement.querySelector('button[type="submit"]').click();
-    fixture.detectChanges();
-
-    expect(emitted[0][0]).toMatchObject({ participantId: 1, gatesCrossed: 3 });
-  });
-
-  it('next omet gatesCrossed quand à 0', () => {
-    const emitted: any[] = [];
-    outputToObservable(component.next).subscribe(v => emitted.push(v));
-
-    const checkboxes = fixture.nativeElement.querySelectorAll('input[type="checkbox"]');
-    checkboxes[0].click();
-    fixture.detectChanges();
-
-    fixture.nativeElement.querySelector('button[type="submit"]').click();
-    fixture.detectChanges();
-
-    expect(emitted[0][0].gatesCrossed).toBeUndefined();
+    expect(component.orderedParticipants().map(p => p.id)).toEqual([1, 2, 3]);
   });
 });

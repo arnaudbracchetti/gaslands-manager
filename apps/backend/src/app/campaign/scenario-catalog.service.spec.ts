@@ -16,10 +16,14 @@ scenarios:
     nom_interne: "course_de_la_mort"
     type: "EVENEMENT_TELE"
     description: "Une **course** classique."
+    franchissement_portes: true
+    gain_jerricans: false
   - nom: "Embuscade"
     nom_interne: "embuscade"
     type: "ESCARMOUCHE"
     description: "Un piège tendu."
+    franchissement_portes: false
+    gain_jerricans: true
 `;
 
 class TestScenarioCatalogService extends ScenarioCatalogService {
@@ -57,5 +61,15 @@ describe('ScenarioCatalogService', () => {
 
   it('conserve le type Escarmouche', () => {
     expect(service.getByNomInterne('embuscade')?.type).toBe(GameType.ESCARMOUCHE);
+  });
+
+  it('charge le flag franchissement_portes', () => {
+    expect(service.getByNomInterne('course_de_la_mort')?.franchissement_portes).toBe(true);
+    expect(service.getByNomInterne('embuscade')?.franchissement_portes).toBe(false);
+  });
+
+  it('charge le flag gain_jerricans', () => {
+    expect(service.getByNomInterne('course_de_la_mort')?.gain_jerricans).toBe(false);
+    expect(service.getByNomInterne('embuscade')?.gain_jerricans).toBe(true);
   });
 });

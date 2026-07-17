@@ -12,6 +12,18 @@
     margin: 0;
   }
 
+  &__income-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tb-os);
+    margin: 0 0 0.6rem;
+  }
+
   &__list {
     list-style: none;
     padding: 0;
@@ -121,6 +133,7 @@
   &__actions {
     display: flex;
     justify-content: flex-end;
+    gap: 0.75rem;
 
     button {
       width: auto;

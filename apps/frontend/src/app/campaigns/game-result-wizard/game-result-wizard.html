@@ -1,4 +1,4 @@
-<!-- Wizard de fin de partie : 3 écrans séquentiels, en popup -->
+<!-- Wizard de fin de partie : étapes variables (E/ET), en popup -->
 @let scenarioName = game().scenarioName;
 <div class="grw-overlay" role="dialog" aria-modal="true"
      [attr.aria-label]="'Fin de partie - ' + scenarioName">
@@ -6,46 +6,73 @@
     <h3 class="grw-modal__title">🎯 Fin de partie - {{ scenarioName }}</h3>
 
     <ol class="grw-modal__steps">
-      <li [class.grw-modal__step--active]="currentStep() === 1" [class.grw-modal__step--done]="currentStep() > 1">
-        1. Classement
-      </li>
-      <li [class.grw-modal__step--active]="currentStep() === 2" [class.grw-modal__step--done]="currentStep() > 2">
-        2. Épaves infligées
-      </li>
-      <li [class.grw-modal__step--active]="currentStep() === 3">
-        3. Table des Épaves
-      </li>
+      @for (stepId of activeSteps(); track stepId; let i = $index) {
+        <li [class.grw-modal__step--active]="currentStepIndex() === i"
+            [class.grw-modal__step--done]="currentStepIndex() > i">
+          {{ i + 1 }}. {{ stepLabel(stepId) }}
+        </li>
+      }
     </ol>
 
     <div class="grw-modal__body">
-      @switch (currentStep()) {
-        @case (1) {
-          <app-ranking-step
-            [game]="game()"
+      @switch (currentStepId()) {
+        @case ('presence') {
+          <app-presence-step
             [participants]="participants()"
-            [saving]="false"
-            (next)="onRankingNext($event)"
+            [saving]="saving()"
+            (next)="onPresenceNext($event)"
             (presentParticipantsChanged)="onPresentParticipantsChanged($event)"
             (formCancel)="onCancel()" />
         }
-        @case (2) {
-          <app-wreck-designation-step
-            [presentParticipants]="presentParticipantsForDesignation()"
-            [participantVehicles]="participantVehicles()"
-            [saving]="saving()"
-            (next)="onDesignationNext($event)"
-            (back)="onDesignationBack()"
+        @case ('ranking') {
+          <app-ranking-step
+            [game]="game()"
+            [presentParticipants]="presentParticipants()"
+            [saving]="false"
+            (next)="onRankingNext($event)"
+            (back)="goBack()"
             (formCancel)="onCancel()" />
         }
-        @case (3) {
+        @case ('gates') {
+          <app-gates-step
+            [participants]="rankedParticipants()"
+            [saving]="false"
+            (next)="onGatesNext($event)"
+            (back)="goBack()"
+            (formCancel)="onCancel()" />
+        }
+        @case ('jerricans') {
+          <app-jerricans-step
+            [participants]="presentParticipants()"
+            [saving]="false"
+            (next)="onJerricansNext($event)"
+            (back)="goBack()"
+            (formCancel)="onCancel()" />
+        }
+        @case ('designation') {
+          <app-wreck-designation-step
+            [presentParticipants]="presentParticipants()"
+            [participantVehicles]="participantVehicles()"
+            [showFavoriDuPublic]="game().type === 'EVENEMENT_TELE'"
+            [saving]="saving()"
+            (next)="onDesignationNext($event)"
+            (back)="goBack()"
+            (formCancel)="onCancel()" />
+        }
+        @case ('resolution') {
           <app-wreck-resolution-step
             [wreckedVehicles]="wreckedVehicles()"
             [vehicleLabels]="vehicleLabels()"
             [destroyedBy]="destroyedBy()"
             [outcomes]="wreckOutcomes()"
             [descriptions]="wreckDescriptions()"
+            [showIncome]="game().type !== 'EVENEMENT_TELE'"
+            [presentParticipants]="presentParticipants()"
+            [incomeResults]="incomeResults()"
             [finalizing]="finalizingGame()"
-            (completed)="onWreckCompleted()" />
+            [resetting]="resetting()"
+            (completed)="onWreckCompleted()"
+            (formCancel)="onCancel()" />
         }
       }
     </div>

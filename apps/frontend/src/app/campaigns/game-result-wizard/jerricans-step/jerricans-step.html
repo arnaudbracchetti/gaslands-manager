@@ -1,0 +1,32 @@
+<!-- Écran Jerricans du wizard de fin de partie : butin manuel de scénario -->
+<div class="jst">
+  <p class="jst__hint">Jerricans gagnés par équipe (butin de scénario, 0 si aucun) :</p>
+
+  <ul class="jst__list">
+    @for (participant of participants(); track participant.id) {
+      <li class="jst__item">
+        <span class="jst__team">{{ participant.teamName }}</span>
+        <input
+          type="number"
+          min="0"
+          class="jst__input"
+          [value]="amountFor(participant.id)"
+          (change)="setAmount(participant.id, $any($event.target).value)"
+          [disabled]="saving()"
+        />
+      </li>
+    }
+  </ul>
+
+  <div class="jst__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onBack()">
+      Retour
+    </button>
+    <button type="submit" class="btn-primary" [disabled]="saving()" (click)="onNext()">
+      Suivant
+    </button>
+  </div>
+</div>

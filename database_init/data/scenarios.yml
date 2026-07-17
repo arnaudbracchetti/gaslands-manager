@@ -8,12 +8,17 @@
 # par `nom_interne` (clé étrangère logique vers ce catalogue).
 #
 # Structure de chaque entrée :
-#   nom          — Nom affiché dans l'UI
-#   nom_interne  — Identifiant technique stable (snake_case, sans accents)
-#   type         — Type de partie par défaut : EVENEMENT_TELE | ESCARMOUCHE
-#                  • EVENEMENT_TELE : partie majeure du calendrier (Points de Championnat)
-#                  • ESCARMOUCHE    : partie libre sur les Terres Dévastées
-#   description  — Texte libre affiché dans l'UI (Markdown → HTML au chargement)
+#   nom                     — Nom affiché dans l'UI
+#   nom_interne             — Identifiant technique stable (snake_case, sans accents)
+#   type                    — Type de partie par défaut : EVENEMENT_TELE | ESCARMOUCHE
+#                             • EVENEMENT_TELE : partie majeure du calendrier (Points de Championnat)
+#                             • ESCARMOUCHE    : partie libre sur les Terres Dévastées
+#   description             — Texte libre affiché dans l'UI (Markdown → HTML au chargement)
+#   franchissement_portes   — Le wizard de fin de partie propose-t-il la saisie des portes
+#                             franchies (Événement Télévisé uniquement) ?
+#   gain_jerricans          — Le wizard de fin de partie propose-t-il la saisie manuelle
+#                             d'un butin de jerricans (scénario de pillage) ? Indépendant du
+#                             revenu de base D6 par participant, propre aux Escarmouches.
 #
 # Source : livre de règles Gaslands Refuelled, mode Saison Télévisée (p.162-170).
 
@@ -23,49 +28,69 @@ scenarios:
     nom_interne: "course_de_la_mort"
     type: "EVENEMENT_TELE"
     description: "Une course classique à travers les Terres Dévastées : franchissez les portes dans l'ordre pour marquer, le premier à boucler le circuit l'emporte."
+    franchissement_portes: true
+    gain_jerricans: false
 
   - nom: "Le Convoi"
     nom_interne: "le_convoi"
     type: "EVENEMENT_TELE"
     description: "Un véhicule de transport lourdement chargé doit traverser la zone. Une équipe l'escorte, les autres tentent de le détruire ou de le piller."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "Capture de Territoire"
     nom_interne: "capture_de_territoire"
     type: "EVENEMENT_TELE"
     description: "Plusieurs zones de contrôle sont disputées sur le champ de bataille. Tenez-les le plus longtemps possible pour accumuler des points."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "L'Arène"
     nom_interne: "l_arene"
     type: "EVENEMENT_TELE"
     description: "Combat à mort en espace clos. Pas de portes, pas d'objectif : seule la destruction des adversaires compte."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "Le Carnage Sponsorisé"
     nom_interne: "carnage_sponsorise"
     type: "EVENEMENT_TELE"
     description: "L'événement vedette de la saison. Objectifs multiples, public déchaîné et récompenses majorées pour les exploits les plus spectaculaires."
+    franchissement_portes: false
+    gain_jerricans: false
 
   # ── Escarmouches (Terres Dévastées) ─────────────────────────────────────────
   - nom: "Embuscade"
     nom_interne: "embuscade"
     type: "ESCARMOUCHE"
     description: "Une équipe tend un piège à une autre sur une route isolée des Terres Dévastées. Rencontre rapide et brutale."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "Pillage de Convoi"
     nom_interne: "pillage_de_convoi"
     type: "ESCARMOUCHE"
     description: "Un dépôt de carburant abandonné attire les charognards. Récupérez le maximum de jerricans avant que les autres ne s'en emparent."
+    franchissement_portes: false
+    gain_jerricans: true
 
   - nom: "Poursuite sur l'Autoroute"
     nom_interne: "poursuite_autoroute"
     type: "ESCARMOUCHE"
     description: "Une course-poursuite effrénée sur les ruines d'une autoroute. Distancez vos poursuivants ou rattrapez votre proie."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "Point d'Eau"
     nom_interne: "point_d_eau"
     type: "ESCARMOUCHE"
     description: "Une source rare au milieu du désert. Les équipes s'affrontent pour le contrôle de ce point vital."
+    franchissement_portes: false
+    gain_jerricans: false
 
   - nom: "Razzia Nocturne"
     nom_interne: "razzia_nocturne"
     type: "ESCARMOUCHE"
     description: "Un raid mené à la nuit tombée sur un campement ennemi. Visibilité réduite, tension maximale."
+    franchissement_portes: false
+    gain_jerricans: false

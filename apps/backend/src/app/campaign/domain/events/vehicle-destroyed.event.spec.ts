@@ -42,4 +42,10 @@ describe('VehicleDestroyedEvent — execute / undo', () => {
     const event = new VehicleDestroyedEvent(1, 10, 1, 1, 999, WeightClass.LOURD, 3);
     expect(event.describe([])).toBe('Véhicule ennemi détruit : #999 — Lourd (+3 PC)');
   });
+
+  it('describe() omet le suffixe PC quand championshipPoints = 0 (trace Escarmouche)', () => {
+    const { participant, participants, vehicle } = makeTestParticipant();
+    const event = new VehicleDestroyedEvent(1, 10, participant.id, 1, vehicle.id, WeightClass.LOURD, 0);
+    expect(event.describe(participants)).toBe('Véhicule ennemi détruit : Voiture (Les Furieux) — Lourd');
+  });
 });

@@ -1,59 +1,103 @@
-<!-- Écran 3 du wizard de fin de partie : synthèse automatique de la Table des Épaves -->
+<!-- Dernier écran du wizard de fin de partie : synthèse automatique des revenus + Table des Épaves -->
 <div class="wrs">
   <p class="wrs__hint">
-    Résolution automatique — le serveur lance le D6 et tire l'équipement perdu le cas
-    échéant pour chaque véhicule mis en épave. Aucune action requise.
+    Résolution automatique — le serveur lance le D6
+    @if (showIncome()) { pour le revenu de chaque équipe et }
+    tire l'équipement perdu le cas échéant pour chaque véhicule mis en épave. Aucune action requise.
   </p>
 
-  <ul class="wrs__list">
-    @for (entry of wreckedVehicles(); track entry.vehicleId) {
-      @let outcome = outcomeFor(entry.vehicleId);
-      <li class="wrs__item">
-        <div class="wrs__item-header">
-          <span class="wrs__vehicle-name">{{ vehicleLabel(entry.vehicleId) }}</span>
-          @if (destroyerLabel(entry.vehicleId); as destroyer) {
-            <span class="wrs__destroyer-badge"><app-icon concept="chocs" size="sm" /> Détruit par {{ destroyer }}</span>
-          }
-          @if (entry.pendingFavoriDuPublic) {
-            <span class="wrs__favori-badge"><app-icon concept="favori_public" size="sm" /> Favori du public en attente</span>
-          }
-        </div>
-
-        @if (!outcome) {
-          <p class="wrs__pending">🎲 Résolution en cours…</p>
-        } @else {
-          <div class="wrs__outcome" [class.wrs__outcome--destroyed]="outcome.wreckResult === 'VEHICULE_DETRUIT'">
-            <span class="wrs__outcome-roll">D6 = {{ outcome.diceRoll }} + {{ outcome.chocsBefore }} chocs</span>
-            <span class="wrs__outcome-result">{{ resultLabel(outcome.wreckResult) }}</span>
-            @if (outcome.chocsGained !== 0) {
-              <span class="wrs__outcome-chocs" [class.wrs__outcome-chocs--negative]="outcome.chocsGained < 0">
-                {{ outcome.chocsGained > 0 ? '+' : '' }}{{ outcome.chocsGained }} choc(s)
-              </span>
-            }
-            @if (lostEquipmentLabel(outcome); as lost) {
-              <span class="wrs__outcome-lost">{{ lost }}</span>
-            }
-            @if (reminderFor(outcome.wreckResult); as reminder) {
-              <p class="wrs__outcome-reminder">{{ reminder }}</p>
-            }
-            @if (descriptionsFor(entry.vehicleId); as descriptions) {
-              <ul class="wrs__outcome-events">
-                @for (line of descriptions; track line) {
-                  <li>{{ line }}</li>
+  @if (showIncome()) {
+    <div class="wrs__income">
+      <h4 class="wrs__income-title"><app-icon concept="argent" size="sm" /> Revenus</h4>
+      <ul class="wrs__list">
+        @for (participant of presentParticipants(); track participant.id) {
+          @let income = incomeResultFor(participant.id);
+          <li class="wrs__item">
+            <div class="wrs__item-header">
+              <span class="wrs__vehicle-name">{{ participant.teamName }}</span>
+            </div>
+            @if (!income) {
+              <p class="wrs__pending">🎲 Tirage en cours…</p>
+            } @else {
+              <div class="wrs__outcome">
+                <span class="wrs__outcome-result">+{{ income.amount }} jerricans</span>
+                @if (income.descriptions; as descriptions) {
+                  <ul class="wrs__outcome-events">
+                    @for (line of descriptions; track line) {
+                      <li>{{ line }}</li>
+                    }
+                  </ul>
                 }
-              </ul>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="wrs__wrecks">
+    @if (showIncome()) {
+      <h4 class="wrs__income-title"><app-icon concept="chocs" size="sm" /> Épaves</h4>
+    }
+    <ul class="wrs__list">
+      @for (entry of wreckedVehicles(); track entry.vehicleId) {
+        @let outcome = outcomeFor(entry.vehicleId);
+        <li class="wrs__item">
+          <div class="wrs__item-header">
+            <span class="wrs__vehicle-name">{{ vehicleLabel(entry.vehicleId) }}</span>
+            @if (destroyerLabel(entry.vehicleId); as destroyer) {
+              <span class="wrs__destroyer-badge"><app-icon concept="chocs" size="sm" /> Détruit par {{ destroyer }}</span>
+            }
+            @if (entry.pendingFavoriDuPublic) {
+              <span class="wrs__favori-badge"><app-icon concept="favori_public" size="sm" /> Favori du public en attente</span>
             }
           </div>
-        }
-      </li>
-    }
-  </ul>
+
+          @if (!outcome) {
+            <p class="wrs__pending">🎲 Résolution en cours…</p>
+          } @else {
+            <div class="wrs__outcome" [class.wrs__outcome--destroyed]="outcome.wreckResult === 'VEHICULE_DETRUIT'">
+              <span class="wrs__outcome-roll">D6 = {{ outcome.diceRoll }} + {{ outcome.chocsBefore }} chocs</span>
+              <span class="wrs__outcome-result">{{ resultLabel(outcome.wreckResult) }}</span>
+              @if (outcome.chocsGained !== 0) {
+                <span class="wrs__outcome-chocs" [class.wrs__outcome-chocs--negative]="outcome.chocsGained < 0">
+                  {{ outcome.chocsGained > 0 ? '+' : '' }}{{ outcome.chocsGained }} choc(s)
+                </span>
+              }
+              @if (lostEquipmentLabel(outcome); as lost) {
+                <span class="wrs__outcome-lost">{{ lost }}</span>
+              }
+              @if (reminderFor(outcome.wreckResult); as reminder) {
+                <p class="wrs__outcome-reminder">{{ reminder }}</p>
+              }
+              @if (descriptionsFor(entry.vehicleId); as descriptions) {
+                <ul class="wrs__outcome-events">
+                  @for (line of descriptions; track line) {
+                    <li>{{ line }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  </div>
 
   <div class="wrs__actions">
     <button
       type="button"
+      class="btn-secondary"
+      [disabled]="resetting() || finalizing()"
+      (click)="onCancel()"
+    >
+      {{ resetting() ? 'Annulation…' : 'Annuler' }}
+    </button>
+    <button
+      type="button"
       class="btn-primary"
-      [disabled]="!allResolved() || finalizing()"
+      [disabled]="!allResolved() || finalizing() || resetting()"
       (click)="onComplete()"
     >
       {{ finalizing() ? 'Finalisation…' : 'Terminer' }}

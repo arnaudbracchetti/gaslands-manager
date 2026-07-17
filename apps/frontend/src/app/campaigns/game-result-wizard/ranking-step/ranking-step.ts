@@ -1,18 +1,21 @@
 /**
- * Composant RankingStep — écran 1 du wizard de fin de partie : classement des
- * équipes présentes et portes franchies (exploit, US-B2).
+ * Composant RankingStep — écran Classement du wizard de fin de partie
+ * (Événement Télévisé uniquement) : ordonne par glisser-déposer les équipes
+ * présentes (déjà sélectionnées à l'écran Présence, cf. `PresenceStep`).
  *
- * Composant "dumb" : reçoit les participants via `input()`, émet un
- * `RankingEntry[]` via `output()` une fois validé. Aucun appel HTTP ici.
+ * Composant "dumb" : reçoit les présents déjà choisis via `input()` (ordre de
+ * présence, servant de point de départ), émet un `RankingEntry[]` via
+ * `output()` une fois validé. Aucun appel HTTP ici. Les portes franchies sont
+ * saisies séparément (écran Portes, cf. `GatesStep`).
  *
- * Drag-and-drop via Angular CDK (`@angular/cdk/drag-drop`) pour réordonner
- * la liste des présents. `moveItemInArray` modifie une copie du tableau, puis
- * le signal `presentParticipants` est remis à jour (pattern zoneless obligatoire).
+ * Drag-and-drop via Angular CDK (`@angular/cdk/drag-drop`). `moveItemInArray`
+ * modifie une copie du tableau, puis le signal `orderedParticipants` est remis
+ * à jour (pattern zoneless obligatoire).
  *
  * Règle de classement : seuls les `ceil(n/2)` premiers sont "classés".
  * Ex. : 3 présents → 2 classés ; 4 présents → 2 classés ; 5 → 3 classés.
  */
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   CdkDragDrop,
@@ -43,8 +46,8 @@ export class RankingStep {
   /** Partie dont on saisit le résultat - fournit le type (barème PC) et le scénario. */
   game = input.required<Game>();
 
-  /** Participants VALIDATED de la campagne — source de la liste de présence. */
-  participants = input.required<CampaignParticipant[]>();
+  /** Participants présents, déjà sélectionnés à l'écran Présence (ordre de départ). */
+  presentParticipants = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de l'API. */
   saving = input<boolean>(false);
@@ -54,56 +57,35 @@ export class RankingStep {
   /** Émis avec le classement une fois l'étape validée. */
   next = output<RankingEntry[]>();
 
+  /** Émis pour revenir à l'écran Présence. */
+  back = output<void>();
+
   /** Émis quand l'utilisateur annule sans soumettre. */
   formCancel = output<void>();
 
-  /**
-   * Émis à chaque changement de la liste des présents — permet au parent de
-   * récupérer leurs véhicules courants (écran 2 : désignation des épaves) sans
-   * que ce composant ait à connaître de service HTTP.
-   */
-  presentParticipantsChanged = output<number[]>();
-
   // ── État interne ─────────────────────────────────────────────────────────────
 
-  /**
-   * Participants cochés comme présents, dans l'ordre de classement.
-   * L'index dans ce tableau détermine le rang (index 0 = rang 1).
-   */
-  presentParticipants = signal<CampaignParticipant[]>([]);
-
-  /** Portes franchies par participant (exploit, US-B2) — clé = participantId. */
-  gatesCrossed = signal<Map<number, number>>(new Map());
+  /** Copie réordonnable de `presentParticipants()` — initialisée à chaque changement de l'input. */
+  orderedParticipants = signal<CampaignParticipant[]>([]);
 
   /**
    * Nombre d'équipes "classées" : ceil(n/2) des présents.
    * Les autres sont "non classés" (hors points de championnat).
    */
   classifiedCount = computed<number>(() =>
-    Math.ceil(this.presentParticipants().length / 2),
+    Math.ceil(this.orderedParticipants().length / 2),
   );
 
+  constructor() {
+    // Pré-remplit l'ordre de départ depuis la présence (cf. COMPONENTS.md — effect()
+    // pour réagir à un input() Signal). Se ré-exécute si l'utilisateur revient sur
+    // l'écran Présence puis re-soumet une sélection différente.
+    effect(() => {
+      this.orderedParticipants.set([...this.presentParticipants()]);
+    });
+  }
+
   // ── Méthodes publiques ───────────────────────────────────────────────────────
-
-  /** Indique si un participant est dans la liste des présents. */
-  isPresent(participant: CampaignParticipant): boolean {
-    return this.presentParticipants().some((p) => p.id === participant.id);
-  }
-
-  /**
-   * Coche/décoche un participant.
-   * - Cocher : ajoute en fin de liste des présents.
-   * - Décocher : retire de la liste.
-   */
-  togglePresent(participant: CampaignParticipant): void {
-    const current = this.presentParticipants();
-    if (this.isPresent(participant)) {
-      this.presentParticipants.set(current.filter((p) => p.id !== participant.id));
-    } else {
-      this.presentParticipants.set([...current, participant]);
-    }
-    this.presentParticipantsChanged.emit(this.presentParticipants().map((p) => p.id));
-  }
 
   /**
    * Callback CDK Drag-and-Drop : met à jour l'ordre de la liste après un glisser.
@@ -111,9 +93,9 @@ export class RankingStep {
    * pour ne pas violer l'immuabilité du signal.
    */
   drop(event: CdkDragDrop<CampaignParticipant[]>): void {
-    const list = [...this.presentParticipants()];
+    const list = [...this.orderedParticipants()];
     moveItemInArray(list, event.previousIndex, event.currentIndex);
-    this.presentParticipants.set(list);
+    this.orderedParticipants.set(list);
   }
 
   /** Vrai si le participant à l'index donné est parmi les "classés". */
@@ -135,43 +117,30 @@ export class RankingStep {
   /** Fait remonter d'un rang le participant à l'index donné (no-op en tête de liste). */
   moveUp(index: number): void {
     if (index <= 0) return;
-    const list = [...this.presentParticipants()];
+    const list = [...this.orderedParticipants()];
     moveItemInArray(list, index, index - 1);
-    this.presentParticipants.set(list);
+    this.orderedParticipants.set(list);
   }
 
   /** Fait descendre d'un rang le participant à l'index donné (no-op en fin de liste). */
   moveDown(index: number): void {
-    if (index >= this.presentParticipants().length - 1) return;
-    const list = [...this.presentParticipants()];
+    if (index >= this.orderedParticipants().length - 1) return;
+    const list = [...this.orderedParticipants()];
     moveItemInArray(list, index, index + 1);
-    this.presentParticipants.set(list);
-  }
-
-  /** Portes franchies saisies pour un participant (0 si non renseigné). */
-  gatesCrossedFor(participantId: number): number {
-    return this.gatesCrossed().get(participantId) ?? 0;
-  }
-
-  /** Met à jour le nombre de portes franchies d'un participant. */
-  setGatesCrossed(participantId: number, value: string): void {
-    const parsed = Math.max(0, Number(value) || 0);
-    const map = new Map(this.gatesCrossed());
-    map.set(participantId, parsed);
-    this.gatesCrossed.set(map);
+    this.orderedParticipants.set(list);
   }
 
   /** Construit et émet le classement de l'étape. */
   onNext(): void {
-    const results: RankingEntry[] = this.presentParticipants().map((p, i) => {
-      const gates = this.gatesCrossedFor(p.id);
-      return {
-        participantId: p.id,
-        rank: i + 1,
-        gatesCrossed: gates > 0 ? gates : undefined,
-      };
-    });
+    const results: RankingEntry[] = this.orderedParticipants().map((p, i) => ({
+      participantId: p.id,
+      rank: i + 1,
+    }));
     this.next.emit(results);
+  }
+
+  onBack(): void {
+    this.back.emit();
   }
 
   /** Émet l'événement d'annulation. */

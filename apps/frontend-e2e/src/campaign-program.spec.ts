@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser } from './support/auth';
 import { createTeam } from './support/teams';
-import { createCampaign, addGame, runResultWizard } from './support/campaigns';
+import { createCampaign, addGame, runResultWizard, addBystanderParticipant } from './support/campaigns';
 
 /**
  * Flux pilote e2e : mode campagne — Programme Télé et wizard de fin de partie.
@@ -17,10 +17,13 @@ import { createCampaign, addGame, runResultWizard } from './support/campaigns';
  * c'est précisément ce que ce test vérifie (régression du bug de badge
  * "Planifiée" affiché à tort pour une partie en ATELIER).
  *
- * Aucun véhicule n'est ajouté à l'équipe engagée : l'écran 2 du wizard
- * (désignation des épaves) n'a alors rien à afficher, tous les véhicules
- * restent implicitement "Intact" — ce qui laisse l'écran 3 s'activer
- * immédiatement ("Terminer" actif dès l'arrivée, aucune épave à résoudre).
+ * Deux participants engagés (une partie à un seul participant est refusée
+ * dès l'écran Présence du wizard, cf. `PresenceStep` — bouton "Suivant"
+ * désactivé tant que moins de deux équipes ne sont cochées). Le second
+ * participant est purement un figurant ici : aucun véhicule dans aucune des
+ * deux équipes, l'écran Désignation n'a donc rien à afficher, ce qui laisse
+ * l'écran Résolution s'activer immédiatement ("Terminer" actif dès
+ * l'arrivée, aucune épave à résoudre).
  *
  * Le pilotage générique (création de saison, ajout de partie, traversée du
  * wizard) est délégué à `support/campaigns.ts` — réutilisé tel quel par les
@@ -28,7 +31,7 @@ import { createCampaign, addGame, runResultWizard } from './support/campaigns';
  * spécifiques (badges, disparition du bouton, persistance au reload).
  */
 test.describe('Campagnes — Programme Télé et wizard de fin de partie', () => {
-  test('crée une saison, planifie une partie, saisit son résultat et la fait entrer en atelier', async ({ page }) => {
+  test('crée une saison, planifie une partie, saisit son résultat et la fait entrer en atelier', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -41,12 +44,14 @@ test.describe('Campagnes — Programme Télé et wizard de fin de partie', () =>
 
     await createCampaign(page, { name: 'Saison E2E Atelier', teamName });
 
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'campaign-program');
+
     await addGame(page);
 
     const gameItem = page.locator('.game-list__item').first();
     await expect(gameItem.locator('.game-list__badge--status')).toHaveText('Planifiée');
 
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     // ── Le wizard se ferme, la partie affiche désormais le statut Atelier ───
     await expect(page.getByRole('button', { name: 'Terminer' })).toHaveCount(0);
@@ -58,5 +63,7 @@ test.describe('Campagnes — Programme Télé et wizard de fin de partie', () =>
     // La persistance se vérifie par un rechargement complet de la page.
     await page.reload();
     await expect(gameItem.locator('.game-list__badge--status')).toHaveText('Atelier');
+
+    await joineeContext.close();
   });
 });

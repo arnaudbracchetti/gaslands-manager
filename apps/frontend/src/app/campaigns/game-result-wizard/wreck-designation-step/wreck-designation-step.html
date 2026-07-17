@@ -2,8 +2,10 @@
 <div class="wds">
   <p class="wds__hint">
     Pour chaque véhicule, indiquez s'il a été mis en épave — par un adversaire ou seul
-    (foncé dans un mur). Cochez « Favori du public » s'il porte déjà ce bonus en attente
-    d'une partie précédente.
+    (foncé dans un mur).
+    @if (showFavoriDuPublic()) {
+      Cochez « Favori du public » s'il porte déjà ce bonus en attente d'une partie précédente.
+    }
   </p>
 
   @if (allVehicles().length === 0) {
@@ -67,7 +69,7 @@
           </select>
         }
 
-        @if (state.status !== 'intact') {
+        @if (state.status !== 'intact' && showFavoriDuPublic()) {
           <label class="wds__favori-checkbox">
             <input
               type="checkbox"

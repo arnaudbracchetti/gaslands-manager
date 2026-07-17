@@ -61,6 +61,8 @@ describe('CampaignController (câblage)', () => {
       uc(7) as never,           // updateGame
       uc() as never,            // removeGame
       recordResultUseCase as never,
+      uc() as never,            // resetResult
+      uc() as never,            // rollIncome
       uc() as never,            // getParticipantVehicles
       uc() as never,            // recordWallet
       uc() as never,            // recordVehicleLost

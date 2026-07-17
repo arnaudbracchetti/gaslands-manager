@@ -12,33 +12,6 @@
     margin: 0 0 0.5rem;
   }
 
-  &__participants {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  &__participant-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    font-family: var(--font-text);
-    color: var(--tb-os);
-
-    input[type='checkbox'] {
-      accent-color: var(--tb-danger);
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-  }
-
-  &__user {
-    font-size: 0.85rem;
-    color: var(--text-dim);
-  }
-
   &__list {
     list-style: none;
     padding: 0;
@@ -88,48 +61,6 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-  }
-
-  &__exploit-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    width: 100%;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--tb-metal-2);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-
-    input[type='number'] {
-      width: 6rem;
-      background: var(--tb-bitume);
-      border: 1px solid var(--border-rust);
-      color: var(--tb-os);
-      padding: 8px 12px;
-      border-radius: var(--r-sm);
-      font-family: var(--font-text);
-      font-size: 0.9rem;
-      text-transform: none;
-      letter-spacing: normal;
-
-      @include bp.mobile {
-        width: 100%;
-      }
-
-      &:focus {
-        outline: none;
-        border-color: var(--tb-danger);
-        box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.15);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
   }
 
   &__handle {

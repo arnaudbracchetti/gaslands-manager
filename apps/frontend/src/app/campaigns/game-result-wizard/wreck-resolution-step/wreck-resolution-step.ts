@@ -1,20 +1,24 @@
 /**
- * Composant WreckResolutionStep — écran 3 du wizard de fin de partie : synthèse
- * automatique de la Table des Épaves pour chaque véhicule désigné à l'écran 2.
+ * Composant WreckResolutionStep — dernier écran du wizard de fin de partie :
+ * synthèse automatique des revenus (Escarmouche uniquement) et de la Table des
+ * Épaves pour chaque véhicule désigné à l'écran précédent.
  *
  * Composant "dumb" : aucun appel HTTP ici (convention du projet, cf. COMPONENTS.md).
- * Le tirage D6 est entièrement serveur et entièrement automatique — aucun bouton,
- * aucun sélecteur. `GameResultWizard` (parent) déclenche un tirage par véhicule via
- * un `effect()` dès l'arrivée sur cet écran ; ce composant se contente d'afficher,
- * pour chaque véhicule, un indicateur "en cours" tant qu'aucun résultat n'est reçu,
- * puis la synthèse des événements survenus (`outcome` + `descriptions`) une fois
- * reçue via les inputs `outcomes`/`descriptions`, alimentés par le parent en retour
- * de `CampaignsService.resolveWreck()`.
+ * Les tirages D6 (revenu et épaves) sont entièrement serveur et entièrement
+ * automatiques — aucun bouton, aucun sélecteur. `GameResultWizard` (parent)
+ * déclenche un tirage à la fois via un `effect()` dès l'arrivée sur cet écran
+ * (revenus d'abord si `showIncome`, puis épaves) ; ce composant se contente
+ * d'afficher, pour chaque entrée, un indicateur "en cours" tant qu'aucun résultat
+ * n'est reçu, puis la synthèse une fois reçue via les inputs `incomeResults`/
+ * `outcomes`+`descriptions`, alimentés par le parent en retour de
+ * `CampaignsService.rollIncome()`/`resolveWreck()`.
  */
 import { Component, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Icon } from '../../../shared/icon/icon';
+import type { CampaignParticipant } from '../../campaign-participant.model';
 import type {
+  RollIncomeResultDto,
   WreckOutcomeDto,
   WreckResult,
   WreckedVehicleEntry,
@@ -48,15 +52,32 @@ export class WreckResolutionStep {
   /** Vrai pendant que la finalisation (clic "Terminer") est en cours. */
   finalizing = input<boolean>(false);
 
+  /** Vrai pendant qu'une annulation (clic "Annuler", DELETE .../results) est en cours. */
+  resetting = input<boolean>(false);
+
+  /**
+   * Affiche la section "Revenus" — Escarmouche uniquement (gate explicite, même
+   * principe que `EquipmentManager.showSequellas`, cf. COMPONENTS.md).
+   */
+  showIncome = input<boolean>(false);
+
+  /** Participants présents — source de la section "Revenus" (Escarmouche uniquement). */
+  presentParticipants = input<CampaignParticipant[]>([]);
+
+  /** Résultats de revenu reçus, clé = participantId — alimenté par le parent après chaque tirage. */
+  incomeResults = input<ReadonlyMap<number, RollIncomeResultDto>>(new Map());
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   completed = output<void>();
+  formCancel = output<void>();
 
   // ── Calculs ──────────────────────────────────────────────────────────────────
 
-  /** Vrai quand tous les véhicules désignés ont un résultat. */
+  /** Vrai quand tous les revenus (si affichés) et tous les véhicules désignés ont un résultat. */
   allResolved = computed<boolean>(() =>
-    this.wreckedVehicles().every((v) => this.outcomes().has(v.vehicleId)),
+    (!this.showIncome() || this.presentParticipants().every((p) => this.incomeResults().has(p.id)))
+    && this.wreckedVehicles().every((v) => this.outcomes().has(v.vehicleId)),
   );
 
   // ── Méthodes publiques ───────────────────────────────────────────────────────
@@ -71,6 +92,10 @@ export class WreckResolutionStep {
 
   outcomeFor(vehicleId: number): WreckOutcomeDto | undefined {
     return this.outcomes().get(vehicleId);
+  }
+
+  incomeResultFor(participantId: number): RollIncomeResultDto | undefined {
+    return this.incomeResults().get(participantId);
   }
 
   descriptionsFor(vehicleId: number): string[] {
@@ -118,5 +143,9 @@ export class WreckResolutionStep {
   onComplete(): void {
     if (!this.allResolved()) return;
     this.completed.emit();
+  }
+
+  onCancel(): void {
+    this.formCancel.emit();
   }
 }

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser, uniqueEmail } from './support/auth';
 import { createTeamWithVehicles, openEquipmentManager, optionCard } from './support/teams';
-import { createCampaign, addGame, runResultWizard, openAtelier, waitForEquipmentEvent } from './support/campaigns';
+import { createCampaign, addGame, runResultWizard, openAtelier, waitForEquipmentEvent, addBystanderParticipant } from './support/campaigns';
 
 /**
  * Atelier campagne (boutique d'équipement à cagnotte dérivée) — cf.
@@ -14,7 +14,7 @@ import { createCampaign, addGame, runResultWizard, openAtelier, waitForEquipment
  * du point de vue de l'atelier) = 2 → cagnotte de départ = 40.
  */
 test.describe('Campagnes — Atelier', () => {
-  test('achat Tourelle, annulation même session, revente pré-existante, achat amélioration', async ({ page }) => {
+  test('achat Tourelle, annulation même session, revente pré-existante, achat amélioration', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -35,8 +35,9 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Mitrailleuse' })).toBeVisible();
 
     const campaignId = await createCampaign(page, { name: 'Saison E2E Atelier Boutique', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-shop');
     await addGame(page);
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (véhicule) - 2 (Mitrailleuse) = 40.
@@ -94,9 +95,11 @@ test.describe('Campagnes — Atelier', () => {
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
     await expect(page.locator('.atp-wallet-value')).toHaveText('37 jerricans'); // 41 - 4
+
+    await joineeContext.close();
   });
 
-  test('avantage : achat + annulation même session, puis revente pré-existante à perte totale', async ({ page }) => {
+  test('avantage : achat + annulation même session, puis revente pré-existante à perte totale', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -116,8 +119,9 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Tireur d\'Élite' })).toBeVisible();
 
     const campaignId = await createCampaign(page, { name: 'Saison E2E Atelier Avantages', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-advantage');
     await addGame(page);
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (véhicule) - 2 (Tireur d'Élite) = 40.
@@ -162,9 +166,11 @@ test.describe('Campagnes — Atelier', () => {
     // Aucun remboursement — la cagnotte reste à 40 (contrairement à la moitié-prix
     // récupérée pour une arme/amélioration revendue).
     await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+
+    await joineeContext.close();
   });
 
-  test('grille AtelierPage — plusieurs véhicules, bouton d\'ajout de véhicule présent', async ({ page }) => {
+  test('grille AtelierPage — plusieurs véhicules, bouton d\'ajout de véhicule présent', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -176,8 +182,9 @@ test.describe('Campagnes — Atelier', () => {
     await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces', 'Ambulance'] });
 
     await createCampaign(page, { name: 'Saison E2E Atelier Garage', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-grid');
     await addGame(page);
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(2);
@@ -188,9 +195,11 @@ test.describe('Campagnes — Atelier', () => {
 
     await page.getByTestId('vehicle-card-manage').nth(1).click();
     await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier\/vehicles\/\d+$/);
+
+    await joineeContext.close();
   });
 
-  test('achat d\'un véhicule en atelier, équipement dans la même session, puis annulation cascade intégrale', async ({ page }) => {
+  test('achat d\'un véhicule en atelier, équipement dans la même session, puis annulation cascade intégrale', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -202,8 +211,9 @@ test.describe('Campagnes — Atelier', () => {
     await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
 
     const campaignId = await createCampaign(page, { name: 'Saison E2E Atelier Achat', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-buy-cancel');
     await addGame(page);
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (Camion à glaces, sans équipement) = 42.
@@ -253,9 +263,11 @@ test.describe('Campagnes — Atelier', () => {
     await page.reload();
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(1);
     await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans');
+
+    await joineeContext.close();
   });
 
-  test('revente d\'un véhicule pré-existant en atelier — règle par élément (moitié prix)', async ({ page }) => {
+  test('revente d\'un véhicule pré-existant en atelier — règle par élément (moitié prix)', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Atelier',
@@ -279,8 +291,9 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Arceaux' })).toBeVisible();
 
     await createCampaign(page, { name: 'Saison E2E Atelier Revente Véhicule', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-sell-vehicle');
     await addGame(page);
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     // Cagnotte de départ : 50 - 8 (véhicule) - 2 (Mitrailleuse) - 4 (Arceaux) = 36.
@@ -295,5 +308,7 @@ test.describe('Campagnes — Atelier', () => {
 
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(0);
     await expect(page.locator('.atp-wallet-value')).toHaveText('43 jerricans'); // 36 + 7
+
+    await joineeContext.close();
   });
 });

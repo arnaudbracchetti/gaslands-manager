@@ -44,6 +44,8 @@ import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
+import { ResetResultUseCase } from './application/reset-result.usecase';
+import { RollIncomeUseCase } from './application/roll-income.usecase';
 import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event sourcing (Parties 4-5)
@@ -170,6 +172,18 @@ import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
         new RecordResultUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: ResetResultUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new ResetResultUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: RollIncomeUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, r: IRandomizer) =>
+        new RollIncomeUseCase(repo, replay, r),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, RANDOMIZER],
     },
     {
       provide: GetParticipantVehiclesUseCase,

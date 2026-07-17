@@ -64,6 +64,13 @@ export class WreckDesignationStep {
   /** Vrai pendant que le parent attend la réponse de l'API (classement en cours d'enregistrement). */
   saving = input<boolean>(false);
 
+  /**
+   * Affiche la case "Favori du public" — Événement Télévisé uniquement (bonus PC,
+   * cf. spec/CAMPAIGN.md). Toujours `false` pour une Escarmouche : le picker
+   * destructeur reste actif dans les deux cas, seule cette case est masquée.
+   */
+  showFavoriDuPublic = input<boolean>(true);
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   next = output<WreckDesignationResult>();

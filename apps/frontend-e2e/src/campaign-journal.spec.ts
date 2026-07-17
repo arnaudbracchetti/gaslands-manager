@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser, uniqueEmail } from './support/auth';
 import { createTeam } from './support/teams';
-import { createCampaign, addGame, inviteAndValidateParticipant } from './support/campaigns';
+import { createCampaign, addGame, completePreDesignationSteps, inviteAndValidateParticipant } from './support/campaigns';
 
 /**
  * Journal d'une partie (`GameJournalModal`) — jamais ouvert par aucun test
@@ -40,9 +40,7 @@ test.describe('Campagnes — Journal de partie', () => {
 
     await addGame(page);
     await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
-    await page.locator('.rst__participant-row').filter({ hasText: organizerTeam }).locator('input[type="checkbox"]').check();
-    await page.locator('.rst__participant-row').filter({ hasText: joineeTeam }).locator('input[type="checkbox"]').check();
-    await page.getByRole('button', { name: 'Suivant — désigner les épaves' }).click();
+    await completePreDesignationSteps(page, [organizerTeam, joineeTeam]);
 
     const recordResultResponse = page.waitForResponse(
       (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games\/\d+\/results$/.test(r.url()),
@@ -65,17 +63,17 @@ test.describe('Campagnes — Journal de partie', () => {
     const { organizerTeam, joineeTeam, joineeContext } = await setUpGameInAtelier(page, browser, 'organizer');
 
     const gameItem = page.locator('.game-list__item').first();
-    await expect(gameItem.getByRole('button', { name: '📜 Journal' })).toBeVisible();
+    await expect(gameItem.getByRole('button', { name: 'Journal' })).toBeVisible();
 
     const journalResponse = page.waitForResponse(
       (r) => r.request().method() === 'GET' && /\/api\/campaigns\/\d+\/games\/\d+\/journal$/.test(r.url()),
     );
-    await gameItem.getByRole('button', { name: '📜 Journal' }).click();
+    await gameItem.getByRole('button', { name: 'Journal' }).click();
     await journalResponse;
 
     const modal = page.getByRole('dialog', { name: 'Journal de la partie' });
     await expect(modal).toBeVisible();
-    await expect(modal.locator('.gjm-modal__title')).toContainText('📜 Journal');
+    await expect(modal.locator('.gjm-modal__title')).toContainText('Journal');
 
     await expect(modal.locator('.gjm-group')).toHaveCount(2);
     const organizerGroup = modal.locator('.gjm-group').filter({ hasText: organizerTeam });
@@ -97,8 +95,8 @@ test.describe('Campagnes — Journal de partie', () => {
 
     await joineePage.goto(`/campaigns/${campaignId}`);
     const gameItem = joineePage.locator('.game-list__item').first();
-    await expect(gameItem.getByRole('button', { name: '📜 Journal' })).toBeVisible();
-    await gameItem.getByRole('button', { name: '📜 Journal' }).click();
+    await expect(gameItem.getByRole('button', { name: 'Journal' })).toBeVisible();
+    await gameItem.getByRole('button', { name: 'Journal' }).click();
 
     const modal = joineePage.getByRole('dialog', { name: 'Journal de la partie' });
     await expect(modal).toBeVisible();

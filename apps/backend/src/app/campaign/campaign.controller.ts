@@ -45,6 +45,8 @@ import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
+import { ResetResultUseCase } from './application/reset-result.usecase';
+import { RollIncomeUseCase } from './application/roll-income.usecase';
 import { GetParticipantVehiclesUseCase } from './application/get-participant-vehicles.usecase';
 
 // Use cases event-sourcing (Parties 4-5, inchangés)
@@ -81,6 +83,8 @@ import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
 import type { ContactResistanceDto } from './dto/contact-resistance.dto';
 import type { ChangeEquipmentDto } from './dto/change-equipment.dto';
 import type { WreckResolveDto } from './dto/wreck-resolve.dto';
+import type { RollIncomeDto } from './dto/roll-income.dto';
+import type { RollIncomeResult } from './application/roll-income.usecase';
 import type { StandingsResponseDto } from './dto/standings-response.dto';
 import type { WorkshopStateDto } from './dto/workshop-state.dto';
 import type { AvailableWeaponDto } from '../team/dto/available-weapon.dto';
@@ -115,6 +119,8 @@ export class CampaignController {
     private readonly updateGameUseCase: UpdateGameUseCase,
     private readonly removeGameUseCase: RemoveGameUseCase,
     private readonly recordResultUseCase: RecordResultUseCase,
+    private readonly resetResultUseCase: ResetResultUseCase,
+    private readonly rollIncomeUseCase: RollIncomeUseCase,
     private readonly getParticipantVehiclesUseCase: GetParticipantVehiclesUseCase,
     // Event sourcing
     private readonly recordWalletUseCase: RecordWalletMovementUseCase,
@@ -325,8 +331,26 @@ export class CampaignController {
       gameId,
       userId: req.user.id,
       results: dto.results,
+      jerricanGains: dto.jerricanGains,
+      destroyedVehicles: dto.destroyedVehicles,
     });
     return this.query.getGame(id, gameId);
+  }
+
+  /**
+   * DELETE /api/campaigns/:id/games/:gameId/results — annule le wizard de fin de partie
+   * en cours de résolution (organisateur, partie PLANIFIE) : supprime tous les
+   * événements déjà journalisés (classement, exploits, revenus, épaves).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete('campaigns/:id/games/:gameId/results')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  resetResult(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+  ): Promise<void> {
+    return this.resetResultUseCase.execute({ campaignId: id, gameId, userId: req.user.id });
   }
 
   /** GET /api/campaigns/:id/games — programme trié (participant VALIDATED). */
@@ -489,6 +513,26 @@ export class CampaignController {
       targetEntityId: dto.targetEntityId,
       orientation: dto.orientation,
       freeAdvantageNomInterne: dto.freeAdvantageNomInterne,
+    });
+  }
+
+  /**
+   * POST /api/campaigns/:id/games/:gameId/events/income — revenu de base Escarmouche
+   * (1D6 serveur, organisateur), différé en fin de wizard avec les tirages d'épaves.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/games/:gameId/events/income')
+  rollIncome(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Body() dto: RollIncomeDto,
+  ): Promise<RollIncomeResult> {
+    return this.rollIncomeUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+      participantId: dto.participantId,
     });
   }
 

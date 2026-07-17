@@ -8,7 +8,7 @@
  * déjà sur (ou navigable depuis) la page `/campaigns/:id` correspondante.
  */
 import { Page, Browser, BrowserContext, Locator, expect } from '@playwright/test';
-import { registerTestUser, TestUser } from './auth';
+import { registerTestUser, uniqueEmail, TestUser } from './auth';
 import { createTeam } from './teams';
 
 /**
@@ -38,13 +38,15 @@ export async function createCampaign(page: Page, options: { name: string; teamNa
 }
 
 /**
- * Ajoute une partie au Programme Télé (bouton "➕ Ajouter une partie", suppose
- * l'utilisateur déjà sur `/campaigns/:id`). `scenarioIndex` sélectionne le
- * scénario du catalogue par position (1 = premier, défaut — cohérent avec le
- * test pilote `campaign-program.spec.ts`).
+ * Ajoute une partie au Programme Télé (bouton "Ajouter une partie" — icône SVG
+ * `app-icon` depuis la migration emoji→icônes, cf. commit `17d95b8`, le nom
+ * accessible ne porte donc plus l'emoji), suppose l'utilisateur déjà sur
+ * `/campaigns/:id`. `scenarioIndex` sélectionne le scénario du catalogue par
+ * position (1 = premier, défaut — cohérent avec le test pilote
+ * `campaign-program.spec.ts`).
  */
 export async function addGame(page: Page, options?: { scenarioIndex?: number }): Promise<void> {
-  await page.getByRole('button', { name: '➕ Ajouter une partie' }).click();
+  await page.getByRole('button', { name: 'Ajouter une partie' }).click();
   await page.getByLabel('Scénario').selectOption({ index: options?.scenarioIndex ?? 1 });
 
   const createGameResponse = page.waitForResponse(
@@ -55,8 +57,44 @@ export async function addGame(page: Page, options?: { scenarioIndex?: number }):
 }
 
 /**
- * Sélectionne le statut d'un véhicule à l'écran 2 du wizard (désignation des
- * épaves) — `li.wds__item` scopé par nom de véhicule. Les 3 statuts radio sont
+ * Coche les équipes présentes (écran Présence, toujours la première étape du
+ * wizard) puis avance à travers les écrans intermédiaires à ÉTAPES VARIABLES
+ * (Classement, Portes, Jerricans — dépendent du type de partie et des
+ * métadonnées du scénario, cf. `GameResultWizard.activeSteps`) jusqu'à l'écran
+ * Désignation des épaves. Un simple clic "Suivant" suffit à chaque écran
+ * intermédiaire : aucune saisie n'y est requise pour les besoins des tests e2e
+ * (l'ordre du classement et les valeurs de portes/jerricans n'affectent aucune
+ * assertion existante). Boucle bornée (5 itérations max) détectant l'arrivée
+ * sur l'écran Désignation via `.wds__list`/`.wds__empty`.
+ */
+export async function completePreDesignationSteps(page: Page, teamNames: string[]): Promise<void> {
+  for (const teamName of teamNames) {
+    const row = page.locator('.pst__participant-row').filter({ hasText: teamName });
+    await row.locator('input[type="checkbox"]').check();
+  }
+  await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+
+  // `.count()` lit le DOM instantanément, sans attendre — juste après un clic
+  // "Suivant", Angular n'a pas forcément fini de re-rendre l'écran suivant, ce
+  // qui peut faire lire un état obsolète (encore l'ancien écran) et déclencher
+  // un clic "Suivant" de trop, jamais résolu une fois l'écran Désignation déjà
+  // atteint (son bouton n'est plus "Suivant" seul mais "Suivant — résoudre les
+  // épaves"). `waitFor` avec un timeout court, lui, attend réellement le
+  // re-rendu avant de conclure qu'on n'a pas encore atteint la Désignation.
+  const designationMarker = page.locator('.wds__list, .wds__empty').first();
+  for (let i = 0; i < 5; i++) {
+    const reachedDesignation = await designationMarker
+      .waitFor({ state: 'visible', timeout: 1500 })
+      .then(() => true)
+      .catch(() => false);
+    if (reachedDesignation) return;
+    await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+  }
+}
+
+/**
+ * Sélectionne le statut d'un véhicule à l'écran Désignation des épaves du
+ * wizard — `li.wds__item` scopé par nom de véhicule. Les 3 statuts radio sont
  * "Intact"/"Détruit par…"/"Mis en épave seul" (le "…" est l'ellipse Unicode
  * U+2026, pas trois points). Si `status: 'destroyed'`, `destroyerTeamName`
  * sélectionne le destructeur dans `select.wds__destroyer-select` (liste les
@@ -81,18 +119,18 @@ export async function designateWreck(
 }
 
 /**
- * Pilote entièrement le wizard de fin de partie (3 écrans) depuis le bouton
- * "🎯 Saisir les rangs" jusqu'à l'entrée en Atelier ("Terminer").
+ * Pilote entièrement le wizard de fin de partie (étapes variables E/ET)
+ * depuis le bouton "🎯 Saisir les rangs" jusqu'à l'entrée en Atelier ("Terminer").
  *
- * `teamNames` : équipes à cocher présentes à l'écran 1 (classement — l'ordre
- * de classement lui-même n'a pas d'importance pour les specs qui utilisent ce
- * helper, seul le fait d'être présent compte).
- * `wreckDesignations` : désignations à l'écran 2 — absent/vide reproduit le
- * chemin "équipe sans véhicule" du test pilote (rien à désigner).
+ * `teamNames` : équipes à cocher présentes à l'écran Présence (l'ordre de
+ * classement lui-même n'a pas d'importance pour les specs qui utilisent ce
+ * helper, seul le fait d'être présent compte — cf. `completePreDesignationSteps`).
+ * `wreckDesignations` : désignations à l'écran Désignation — absent/vide
+ * reproduit le chemin "équipe sans véhicule" du test pilote (rien à désigner).
  *
- * Écran 3 : AUCUNE assertion sur la valeur du tirage D6 (non déterministe
- * côté serveur, cf. plan) — seulement qu'un résultat quelconque est apparu
- * pour chaque véhicule désigné, puis que "Terminer" devient actif.
+ * Écran Résolution : AUCUNE assertion sur la valeur du tirage D6 (non
+ * déterministe côté serveur, cf. plan) — seulement qu'un résultat quelconque
+ * est apparu pour chaque véhicule désigné, puis que "Terminer" devient actif.
  */
 export async function runResultWizard(
   page: Page,
@@ -107,12 +145,7 @@ export async function runResultWizard(
   },
 ): Promise<void> {
   await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
-
-  for (const teamName of options.teamNames) {
-    const row = page.locator('.rst__participant-row').filter({ hasText: teamName });
-    await row.locator('input[type="checkbox"]').check();
-  }
-  await page.getByRole('button', { name: 'Suivant — désigner les épaves' }).click();
+  await completePreDesignationSteps(page, options.teamNames);
 
   const recordResultResponse = page.waitForResponse(
     (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games\/\d+\/results$/.test(r.url()),
@@ -137,9 +170,9 @@ export async function runResultWizard(
   await enterAtelierResponse;
 }
 
-/** Ouvre l'atelier depuis le bouton "🔧 Atelier" d'une partie en statut ATELIER. */
+/** Ouvre l'atelier depuis le bouton "Atelier" (icône SVG) d'une partie en statut ATELIER. */
 export async function openAtelier(page: Page): Promise<void> {
-  await page.getByRole('button', { name: '🔧 Atelier' }).click();
+  await page.getByRole('button', { name: 'Atelier' }).click();
   await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier$/);
 }
 
@@ -213,4 +246,33 @@ export async function inviteAndValidateParticipant(
   await validateResponse;
 
   return { joineeContext, joineePage };
+}
+
+/**
+ * Invite un second participant "figurant" (sans véhicule) dans la campagne de
+ * l'organisateur — uniquement pour satisfaire le minimum de deux équipes
+ * présentes exigé par l'écran Présence du wizard de fin de partie
+ * (`PresenceStep` : bouton "Suivant" désactivé tant que moins de deux équipes
+ * ne sont cochées, une partie à un seul participant n'est pas enregistrable).
+ * Pure délégation à `inviteAndValidateParticipant` avec une identité fixe —
+ * `suffix` distingue l'email d'un test à l'autre (isolation, cf. `uniqueEmail`).
+ * Retourne le nom d'équipe du figurant (à inclure dans `teamNames`) et son
+ * contexte navigateur (à fermer en fin de test, `context.close()`).
+ */
+export async function addBystanderParticipant(
+  page: Page,
+  browser: Browser,
+  suffix: string,
+): Promise<{ teamName: string; context: BrowserContext }> {
+  const teamName = 'Escouade Figurante';
+  const { joineeContext } = await inviteAndValidateParticipant(page, browser, {
+    joineeUser: {
+      firstName: 'Max',
+      lastName: 'Figurant',
+      email: uniqueEmail(`e2e-bystander-${suffix}`),
+      password: 'test1234',
+    },
+    joineeTeamName: teamName,
+  });
+  return { teamName, context: joineeContext };
 }

@@ -728,9 +728,9 @@ atelier.
 Chaque `GameEvent` implémente aussi `describe(): string` — une ligne de texte en
 français résumant l'événement (ex. `"Classé 1 (+10 PC)"`,
 `"Table des Épaves : Arrachée (D6=5+0 chocs, +1 choc(s))"`). Utilisée par la
-synthèse de l'écran 3 du wizard de fin de partie (cf.
+synthèse de l'écran Résolution du wizard de fin de partie (cf.
 [`docs/spec/CAMPAIGN.md`](spec/CAMPAIGN.md#wizard-de-fin-de-partie)) : `WreckResolveUseCase`
-renvoie `descriptions: string[]` (une par événement créé par un tirage) ; et
+et `RollIncomeUseCase` renvoient `descriptions: string[]` (une par événement créé) ; et
 par `Game.journal()` (cf.
 [spec/CAMPAIGN.md — Journal d'une partie](spec/CAMPAIGN.md#journal-dune-partie)),
 qui traduit **tout** le journal d'une partie pour affichage, tous types

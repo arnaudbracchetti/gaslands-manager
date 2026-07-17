@@ -31,7 +31,7 @@
 | Mode campagne — Table des Épaves (D6 serveur, 9 lignes, pertes aléatoires) | ✅ Implémenté (US-E1–E3), y compris les modificateurs spéciaux Maintenu par la Rouille/Légende Vivante |
 | Mode campagne — Séquelles (14 au catalogue, achat contre des Chocs en atelier) | ✅ Implémenté, backend et UI (catalogue, garde d'unicité/origine, Dur à Cuire avec choix d'avantage gratuit, Rouille, Légende Vivante — cf. [spec/CAMPAIGN.md](spec/CAMPAIGN.md#séquelles)) |
 | Mode campagne — Points de Résistance (mécanique secrète) | 🟡 Partiel — crédit automatique implémenté (US-F1), aucune lecture possible par le joueur lui-même |
-| Mode campagne — Wizard de fin de partie (classement → épaves → Table des Épaves) | ✅ Implémenté — remplace l'ancienne modale unique |
+| Mode campagne — Wizard de fin de partie (étapes variables E/ET : présence, classement, portes, jerricans, épaves, résolution) | ✅ Implémenté — couvre Événement Télévisé et Escarmouche (revenu de base D6) |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
 | Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |

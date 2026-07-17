@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser, uniqueEmail } from './support/auth';
 import { createTeamWithVehicles } from './support/teams';
-import { createCampaign, addGame, designateWreck, inviteAndValidateParticipant } from './support/campaigns';
+import { createCampaign, addGame, completePreDesignationSteps, designateWreck, addBystanderParticipant, inviteAndValidateParticipant } from './support/campaigns';
 
 /**
  * Désignation des épaves (écran 2 du wizard de fin de partie) avec de VRAIS
@@ -14,7 +14,7 @@ import { createCampaign, addGame, designateWreck, inviteAndValidateParticipant }
  * résultat quelconque est apparu.
  */
 test.describe('Campagnes — Désignation des épaves', () => {
-  test('"Mis en épave seul" + "Favori du public" en solo', async ({ page }) => {
+  test('"Mis en épave seul" + "Favori du public" en solo', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Epave',
@@ -22,25 +22,31 @@ test.describe('Campagnes — Désignation des épaves', () => {
       password: 'test1234',
     });
 
+    // "Solo" désigne ici le véhicule (mis en épave seul, sans destructeur) —
+    // pas le nombre de participants à la partie : une partie à un seul
+    // participant est refusée dès l'écran Présence (`PresenceStep`, minimum
+    // deux équipes cochées). Le second participant est un pur figurant, sans
+    // véhicule.
     const teamName = 'Escouade Épave Solo';
     await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
     await createCampaign(page, { name: 'Saison E2E Épave Solo', teamName });
+
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'wreck-solo');
+
     await addGame(page);
 
-    // ── Écran 1 : présence ──────────────────────────────────────────────────
+    // ── Présence + écrans intermédiaires variables ──────────────────────────
     await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
-    const participantRow = page.locator('.rst__participant-row').filter({ hasText: teamName });
-    await participantRow.locator('input[type="checkbox"]').check();
-    await page.getByRole('button', { name: 'Suivant — désigner les épaves' }).click();
+    await completePreDesignationSteps(page, [teamName, joineeTeamName]);
 
-    // ── Écran 2 : désignation — "Mis en épave seul" + Favori du public ──────
+    // ── Désignation — "Mis en épave seul" + Favori du public ────────────────
     const vehicleItem = page.locator('.wds__item').filter({ hasText: 'Camion à glaces' });
     await expect(vehicleItem).toBeVisible();
     await designateWreck(page, 'Camion à glaces', 'alone');
 
     const favoriCheckbox = vehicleItem.locator('.wds__favori-checkbox');
     await expect(favoriCheckbox).toBeVisible();
-    await expect(favoriCheckbox).toContainText('⭐ Favori du public (partie précédente)');
+    await expect(favoriCheckbox).toContainText('Favori du public (partie précédente)');
     await favoriCheckbox.locator('input[type="checkbox"]').check();
 
     const recordResultResponse = page.waitForResponse(
@@ -49,7 +55,7 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await page.getByRole('button', { name: 'Suivant — résoudre les épaves' }).click();
     await recordResultResponse;
 
-    // ── Écran 3 : résolution automatique — résultat quelconque, jamais précis ──
+    // ── Résolution automatique — résultat quelconque, jamais précis ──
     await expect(page.locator('.wrs__outcome')).toBeVisible({ timeout: 15000 });
     const terminerButton = page.getByRole('button', { name: 'Terminer' });
     await expect(terminerButton).toBeEnabled({ timeout: 15000 });
@@ -59,6 +65,8 @@ test.describe('Campagnes — Désignation des épaves', () => {
     );
     await terminerButton.click();
     await enterAtelierResponse;
+
+    await joineeContext.close();
   });
 
   test('"Détruit par…" désigne un AUTRE participant, jamais soi-même', async ({ page, browser }) => {
@@ -87,15 +95,11 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await page.goto(`/campaigns/${campaignId}`);
     await addGame(page);
 
-    // ── Écran 1 : les deux équipes présentes ────────────────────────────────
+    // ── Les deux équipes présentes + écrans intermédiaires variables ───────
     await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
-    await page.locator('.rst__participant-row').filter({ hasText: organizerTeam })
-      .locator('input[type="checkbox"]').check();
-    await page.locator('.rst__participant-row').filter({ hasText: joineeTeam })
-      .locator('input[type="checkbox"]').check();
-    await page.getByRole('button', { name: 'Suivant — désigner les épaves' }).click();
+    await completePreDesignationSteps(page, [organizerTeam, joineeTeam]);
 
-    // ── Écran 2 : le véhicule de l'organisateur est "Détruit par…" l'autre ──
+    // ── Le véhicule de l'organisateur est "Détruit par…" l'autre ────────────
     const vehicleItem = page.locator('.wds__item').filter({ hasText: 'Camion à glaces' });
     await vehicleItem.locator('label').filter({ hasText: 'Détruit par…' }).locator('input[type="radio"]').check();
 
@@ -110,7 +114,7 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await page.getByRole('button', { name: 'Suivant — résoudre les épaves' }).click();
     await recordResultResponse;
 
-    // ── Écran 3 : résultat quelconque, badge du destructeur affiché ─────────
+    // ── Résolution — résultat quelconque, badge du destructeur affiché ─────────
     const resolvedItem = page.locator('.wrs__item').filter({ hasText: 'Camion à glaces' });
     await expect(resolvedItem.locator('.wrs__destroyer-badge')).toContainText(joineeTeam);
     await expect(resolvedItem.locator('.wrs__outcome')).toBeVisible({ timeout: 15000 });

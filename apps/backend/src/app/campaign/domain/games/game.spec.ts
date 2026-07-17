@@ -420,6 +420,73 @@ describe('Game — recordResult', () => {
       ], [p1]),
     ).toThrow('introuvable');
   });
+
+  it('refuse le classement pour une Escarmouche (pas de PC de classement)', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    expect(() => game.recordResult([{ participantId: 1, rank: 1 }], [p1])).toThrow('Événement Télévisé');
+  });
+});
+
+describe('Game — rollBaseIncome (Escarmouche)', () => {
+  it('crédite le D6 tiré en jerricans (WalletMovementEvent RECOMPENSE)', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const randomizer = { roll: (): number => 4, pick: <T>(pool: T[]): T => pool[0] };
+
+    const events = game.rollBaseIncome(1, randomizer);
+
+    expect(events).toHaveLength(1);
+    const event = events[0] as WalletMovementEvent;
+    expect(event).toBeInstanceOf(WalletMovementEvent);
+    expect(event.amount).toBe(4);
+    expect(event.reason).toBe(WalletReason.RECOMPENSE);
+    expect(event.participantId).toBe(1);
+  });
+});
+
+describe('Game — recordJerricanGains (Escarmouche)', () => {
+  it('crée un WalletMovementEvent par participant', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordJerricanGains([
+      { participantId: 1, amount: 5 },
+      { participantId: 2, amount: 2 },
+    ]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(2);
+    expect(events.find((e) => e.participantId === 1)?.amount).toBe(5);
+    expect(events.find((e) => e.participantId === 2)?.amount).toBe(2);
+    expect(events.every((e) => e.reason === WalletReason.RECOMPENSE)).toBe(true);
+  });
+});
+
+describe('Game — recordDestroyedVehicleTraces (Escarmouche)', () => {
+  it('crée un VehicleDestroyedEvent à 0 PC par véhicule, poids dérivé du véhicule réel', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const lourdVehicle = new Vehicle(56, 3, makeVehicleType('Lourd'), [], []);
+    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [lourdVehicle]);
+    p2.attachTeam(team);
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordDestroyedVehicleTraces(
+      [{ destroyerId: 1, vehicleId: 56 }],
+      [p1, p2],
+    ) as VehicleDestroyedEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].participantId).toBe(1);
+    expect(events[0].vehicleId).toBe(56);
+    expect(events[0].championshipPoints).toBe(0);
+  });
+
+  it('rejette un vehicleId introuvable dans aucune équipe', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    expect(() =>
+      game.recordDestroyedVehicleTraces([{ destroyerId: 1, vehicleId: 999 }], [p1]),
+    ).toThrow('introuvable');
+  });
 });
 
 describe('Game — resolveWreck', () => {

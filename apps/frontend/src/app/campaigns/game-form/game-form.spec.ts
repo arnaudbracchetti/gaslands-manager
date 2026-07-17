@@ -10,8 +10,14 @@ import { GameForm } from './game-form';
 import { Game, Scenario, CreateGameDto } from '../game.model';
 
 const mockScenarios: Scenario[] = [
-  { nom: 'La Course de la Mort', nom_interne: 'course_de_la_mort', type: 'EVENEMENT_TELE', description: '' },
-  { nom: 'Embuscade', nom_interne: 'embuscade', type: 'ESCARMOUCHE', description: '' },
+  {
+    nom: 'La Course de la Mort', nom_interne: 'course_de_la_mort', type: 'EVENEMENT_TELE', description: '',
+    franchissement_portes: true, gain_jerricans: false,
+  },
+  {
+    nom: 'Embuscade', nom_interne: 'embuscade', type: 'ESCARMOUCHE', description: '',
+    franchissement_portes: false, gain_jerricans: false,
+  },
 ];
 
 const mockGame: Game = {
@@ -25,6 +31,8 @@ const mockGame: Game = {
   playedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
+  franchissementPortes: false,
+  gainJerricans: false,
 };
 
 describe('GameForm', () => {

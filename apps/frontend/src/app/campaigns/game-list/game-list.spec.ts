@@ -21,6 +21,8 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     playedAt: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
+    franchissementPortes: true,
+    gainJerricans: false,
     ...overrides,
   };
 }

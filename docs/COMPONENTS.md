@@ -144,7 +144,10 @@ graph TD
         GameList
         GameForm
         GameResultWizard
+        PresenceStep
         RankingStep
+        GatesStep
+        JerricansStep
         WreckDesignationStep
         WreckResolutionStep
         GameJournalModal
@@ -199,7 +202,10 @@ graph TD
     AtelierPage -.->|navigate| AtelierVehiclePage
     AtelierVehiclePage --> EquipmentManager
     AtelierVehiclePage --> Breadcrumb
+    GameResultWizard --> PresenceStep
     GameResultWizard --> RankingStep
+    GameResultWizard --> GatesStep
+    GameResultWizard --> JerricansStep
     GameResultWizard --> WreckDesignationStep
     GameResultWizard --> WreckResolutionStep
     AdminUsers --> ConfirmModal
@@ -903,7 +909,7 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 |-----|------|-------------|
 | `resultRecorded` | `void` | Émis après l'enregistrement réussi d'un résultat de partie — signale au parent que les PC ont changé, pour rafraîchir le classement affiché par `ParticipantList` (composant frère, sans lien direct) |
 
-**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`), `journalGame`, `journalEntries`, `loadingJournal` (état du journal d'une partie, cf. `GameJournalModal`).
+**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`), `journalGame`, `journalEntries`, `loadingJournal` (état du journal d'une partie, cf. `GameJournalModal`), `recordingGame`, `wizardResultRecorded`, `wreckOutcomes`, `wreckDescriptions`, `incomeResults`, `resolving` (verrou revenu/épave, un tirage à la fois), `finalizingGame`, `resettingResult` (état du wizard de fin de partie, cf. `GameResultWizard`).
 
 ---
 
@@ -964,45 +970,98 @@ Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type
 
 ### `GameResultWizard` — `campaigns/game-result-wizard/`
 
-Orchestrateur du wizard de fin de partie (remplace l'ancienne modale unique `GameResultForm`) — 3 écrans séquentiels : classement (`RankingStep`) → désignation des épaves (`WreckDesignationStep`) → résolution de la Table des Épaves (`WreckResolutionStep`). Affiché via `CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`. Document de conception : [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md).
+Orchestrateur du wizard de fin de partie — **étapes variables**, pilotées par le type de
+partie (Événement Télévisé/Escarmouche) et les métadonnées du scénario
+(`franchissementPortes`/`gainJerricans`) : jusqu'à 6 écrans possibles (Présence →
+Classement → Portes → Jerricans → Désignation des épaves → Résolution), jamais tous
+affichés en même temps (`activeSteps` computed). Affiché via `CampaignProgram` pour les
+parties `PLANIFIE` en `EN_COURS`. Documents de conception :
+[`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
+(conception initiale, 3 écrans) puis
+[`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
+(refonte à étapes variables + parcours Escarmouche).
+
+**Persistance différée** : les 5 premiers écrans sont de l'état purement client (rien
+n'est envoyé au serveur) — le lot accumulé (classement+exploits pour un ET, ou
+jerricans+destructions à 0 PC pour une Escarmouche) n'est construit et émis
+(`batchReady`) qu'à la transition Désignation → Résolution.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-game-result-wizard` |
 | **Type** | Dumb |
-| **Compose** | `RankingStep`, `WreckDesignationStep`, `WreckResolutionStep` |
+| **Compose** | `PresenceStep`, `RankingStep`, `GatesStep`, `JerricansStep`, `WreckDesignationStep`, `WreckResolutionStep` |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `game` | `Game` | — | Partie dont on saisit le résultat |
+| `game` | `Game` | — | Partie dont on saisit le résultat — `type`/`franchissementPortes`/`gainJerricans` déterminent `activeSteps` |
 | `participants` | `CampaignParticipant[]` | — | Participants `VALIDATED` de la campagne |
 | `saving` | `boolean` | `false` | Désactive les boutons pendant `recordResult()` |
-| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour l'écran 2 |
-| `resultRecorded` | `Game \| null` | `null` | Non-null une fois `recordResult()` résolu — fait avancer le wizard vers l'écran 3 (`effect()`). La partie reste `PLANIFIE` à ce stade — la finalisation JOUE n'a lieu qu'à `wizardCompleted` |
-| `wreckOutcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats de tirage reçus, clé = `vehicleId` |
-| `wreckDescriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`), clé = `vehicleId` |
-| `rollingWreck` | `boolean` | `false` | Verrou "un tirage à la fois" — consommé par l'`effect()` de déclenchement automatique de l'écran 3, plus par aucun bouton (il n'y en a plus) |
+| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour l'écran Désignation |
+| `resultRecorded` | `Game \| null` | `null` | Non-null une fois `recordResult()` résolu — fait avancer le wizard vers l'écran Résolution (`effect()`). La partie reste `PLANIFIE` à ce stade — la finalisation JOUE n'a lieu qu'à `wizardCompleted` |
+| `wreckOutcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats de tirage d'épave reçus, clé = `vehicleId` |
+| `wreckDescriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage d'épave (`GameEvent.describe()`), clé = `vehicleId` |
+| `incomeResults` | `ReadonlyMap<number, RollIncomeResultDto>` | `new Map()` | Résultats de revenu de base Escarmouche reçus, clé = `participantId` |
+| `resolving` | `boolean` | `false` | Verrou "un tirage à la fois" (revenu ou épave) — consommé par l'`effect()` de déclenchement automatique de l'écran Résolution |
 | `finalizingGame` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `enterAtelier()` |
+| `resetting` | `boolean` | `false` | Désactive "Annuler" à l'écran Résolution pendant l'appel à `resetResult()` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement (écran 1) — le parent recharge `participantVehicles` en réponse |
-| `rankingSubmitted` | `RecordResultDto` | Classement + exploits validés, émis à la transition écran 2 → 3 |
-| `wreckRollRequested` | `WreckResolveRequestDto` | Demande de tirage automatique, un véhicule à la fois (écran 3) — émis par un `effect()` interne, plus par un clic utilisateur |
-| `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran 3, "Terminer") — le parent appelle `enterAtelier()` à ce signal, **c'est le seul moment où la partie passe PLANIFIE → ATELIER** |
-| `formCancel` | `void` | Annulation (uniquement possible avant la soumission du classement) |
+| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement (écran Présence) — le parent recharge `participantVehicles` en réponse |
+| `batchReady` | `RecordResultDto` | Lot accumulé (classement+exploits ET, ou jerricans+destructions Escarmouche), émis à la transition Désignation → Résolution |
+| `incomeRollRequested` | `number` | Demande de tirage de revenu automatique, un participant présent à la fois (écran Résolution, Escarmouche) — émis par un `effect()` interne |
+| `wreckRollRequested` | `WreckResolveRequestDto` | Demande de tirage d'épave automatique, un véhicule à la fois (écran Résolution, après les revenus le cas échéant) — émis par un `effect()` interne |
+| `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran Résolution, "Terminer") — le parent appelle `enterAtelier()` à ce signal, **c'est le seul moment où la partie passe PLANIFIE → ATELIER** |
+| `formCancel` | `void` | Annulation, à tout moment — le parent (`CampaignProgram`) décide seul si un reset serveur est nécessaire, selon que `wizardResultRecorded` est déjà non-null |
 
-Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `resolveWreck()` et `enterAtelier()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran 2) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]".
+Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `rollIncome()`, `resolveWreck()`, `resetResult()` et `enterAtelier()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions`/`incomeResults` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran Désignation) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]", et `activeSteps`/`currentStepId`/`rankedParticipants` pour piloter la navigation.
+
+---
+
+### `PresenceStep` — `campaigns/game-result-wizard/presence-step/`
+
+Premier écran du wizard, toujours affiché : cases à cocher des participants `VALIDATED`
+présents à la partie. Extrait de l'ancien `RankingStep` (qui combinait présence et
+classement) — l'ordre de coche sert de point de départ à `RankingStep` pour un Événement
+Télévisé ; pour une Escarmouche (pas de classement), c'est directement l'ensemble des
+présents. Bouton "Suivant" désactivé tant que moins de deux équipes sont cochées
+(`hasMinimumPresence` computed, `MIN_PRESENT = 2`) — une partie oppose toujours au moins
+deux participants, jamais une partie en solo ; un avertissement (`.pst__hint--warning`)
+s'affiche dès qu'une seule équipe est cochée.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-presence-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `participants` | `CampaignParticipant[]` | — | Participants `VALIDATED` de la campagne |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `number[]` | Ids présents (ordre de coche), une fois l'étape validée |
+| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement |
+| `formCancel` | `void` | Annulation |
 
 ---
 
 ### `RankingStep` — `campaigns/game-result-wizard/ranking-step/`
 
-Écran 1 du wizard : présence, ordre par glisser-déposer (CDK), portes franchies (exploit, US-B2). Inchangé dans son fonctionnement par rapport à l'ancien `GameResultForm`, simplement extrait en sous-composant dédié.
+Écran Classement — **Événement Télévisé uniquement**, absent du parcours Escarmouche.
+Ordonne par glisser-déposer (CDK) les participants déjà sélectionnés à l'écran Présence
+(reçus en `input()`, la présence elle-même n'est plus gérée ici). Les portes franchies
+ont été extraites vers `GatesStep`, son propre écran.
 
 | | |
 |---|---|
@@ -1014,22 +1073,79 @@ Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `Campaign
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `game` | `Game` | — | Fournit le type (barème PC) et le scénario |
-| `participants` | `CampaignParticipant[]` | — | Source de la liste de présence |
+| `presentParticipants` | `CampaignParticipant[]` | — | Participants déjà choisis à l'écran Présence (ordre de départ, réordonnable) |
 | `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `next` | `RankingEntry[]` | Classement + portes franchies, une fois l'étape validée |
-| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement |
+| `next` | `RankingEntry[]` | Classement (`{ participantId, rank }`), une fois l'étape validée |
+| `back` | `void` | Retour à l'écran Présence |
+| `formCancel` | `void` | Annulation |
+
+---
+
+### `GatesStep` — `campaigns/game-result-wizard/gates-step/`
+
+Écran Portes franchies — **Événement Télévisé, uniquement si le scénario porte
+`franchissement_portes`**. Extrait de l'ancien champ intégré à `RankingStep` : saisie du
+nombre de portes franchies (exploit, US-B2) par équipe classée, dans l'ordre du rang.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-gates-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `participants` | `CampaignParticipant[]` | — | Participants classés à l'écran Classement, dans l'ordre du rang |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `GatesEntry[]` | `{ participantId, gatesCrossed }[]` — uniquement les participants avec `gatesCrossed > 0` |
+| `back` | `void` | Retour à l'écran Classement |
+| `formCancel` | `void` | Annulation |
+
+---
+
+### `JerricansStep` — `campaigns/game-result-wizard/jerricans-step/`
+
+Écran Jerricans — affiché **si le scénario porte `gain_jerricans`** (butin manuel, tout
+type de partie). Saisie du nombre de jerricans gagnés par équipe présente, indépendant du
+revenu de base D6 par participant (Escarmouche, tiré automatiquement à l'écran
+Résolution) — les deux se cumulent.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-jerricans-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `participants` | `CampaignParticipant[]` | — | Participants présents à la partie |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `JerricanGainDto[]` | `{ participantId, amount }[]` — uniquement les participants avec `amount > 0` |
+| `back` | `void` | Retour à l'écran précédent (Classement/Portes pour un ET, Présence pour une Escarmouche) |
 | `formCancel` | `void` | Annulation |
 
 ---
 
 ### `WreckDesignationStep` — `campaigns/game-result-wizard/wreck-designation-step/`
 
-Écran 2 du wizard : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul) et si un bonus "Favori du public" est en attente. C'est ici que se fait désormais la saisie "véhicules ennemis détruits" (US-B2), auparavant sur l'écran de classement.
+Écran Désignation des épaves : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul). Le picker destructeur reste actif pour les deux types de partie ; la case "Favori du public" (bonus PC, ET uniquement) est masquée pour une Escarmouche via `showFavoriDuPublic`. C'est ici que se fait la saisie "véhicules ennemis détruits" (US-B2, tout type de partie — 0 PC pour une Escarmouche, tracé au journal uniquement).
 
 | | |
 |---|---|
@@ -1040,29 +1156,34 @@ Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `Campaign
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `presentParticipants` | `CampaignParticipant[]` | — | Participants retenus à l'écran 1 |
+| `presentParticipants` | `CampaignParticipant[]` | — | Participants retenus à l'écran Présence |
 | `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant présent |
+| `showFavoriDuPublic` | `boolean` | `true` | Affiche la case "Favori du public" (bonus PC, Événement Télévisé uniquement) — masquée pour une Escarmouche |
 | `saving` | `boolean` | `false` | Désactive les boutons pendant `recordResult()` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `next` | `WreckDesignationResult` | `{ destroyedVehicles, wreckedVehicles }` — le premier alimente `RecordResultDto` (PC d'exploit), le second pilote l'écran 3 |
-| `back` | `void` | Retour à l'écran 1 (rien n'est encore persisté) |
+| `next` | `WreckDesignationResult` | `{ destroyedVehicles, wreckedVehicles }` — le premier alimente `RecordResultDto` (converti en forme nichée ou à plat selon le type de partie par `GameResultWizard`), le second pilote l'écran Résolution |
+| `back` | `void` | Retour à l'écran précédent (rien n'est encore persisté) |
 | `formCancel` | `void` | Annulation |
 
 ---
 
 ### `WreckResolutionStep` — `campaigns/game-result-wizard/wreck-resolution-step/`
 
-Écran 3 du wizard : **synthèse automatique**, sans bouton ni sélecteur. Les tirages D6
-sont déclenchés par `GameResultWizard` (un `effect()`, un véhicule à la fois) dès
-l'arrivée sur cet écran ; ce composant se contente d'afficher, pour chaque véhicule
-désigné à l'écran 2, un indicateur "en cours" puis le résultat reçu (Chocs, perte
-d'équipement, lignes `descriptions`, "Détruit par [participant]" le cas échéant).
-"Terminer" n'est actif que lorsque tous les véhicules ont un résultat ; son clic
-déclenche l'entrée en atelier de la partie côté parent (`enterAtelier()`).
+Dernier écran du wizard : **synthèse automatique**, sans bouton ni sélecteur (hors
+Annuler/Terminer). Les tirages D6 sont déclenchés par `GameResultWizard` (un `effect()`,
+un à la fois) dès l'arrivée sur cet écran — d'abord les **revenus** (Escarmouche
+uniquement, un par participant présent, section "Revenus" gated par `showIncome`), puis
+les **épaves** (tout type de partie, un par véhicule désigné à l'écran précédent).
+Affiche, pour chaque entrée, un indicateur "en cours" puis le résultat reçu (jerricans
+gagnés, ou Chocs/perte d'équipement/lignes `descriptions`/"Détruit par [participant]").
+"Terminer" n'est actif que lorsque tous les revenus (si affichés) et tous les véhicules
+ont un résultat ; son clic déclenche l'entrée en atelier de la partie côté parent
+(`enterAtelier()`). "Annuler" reste disponible sur cet écran (contrairement aux
+versions précédentes) — déclenche un reset serveur côté parent.
 
 | | |
 |---|---|
@@ -1073,18 +1194,23 @@ déclenche l'entrée en atelier de la partie côté parent (`enterAtelier()`).
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `wreckedVehicles` | `WreckedVehicleEntry[]` | — | Véhicules désignés à l'écran 2 |
+| `wreckedVehicles` | `WreckedVehicleEntry[]` | — | Véhicules désignés à l'écran précédent |
 | `vehicleLabels` | `ReadonlyMap<number, string>` | `new Map()` | Libellé "nom (équipe)" par véhicule, résolu par le parent |
 | `destroyedBy` | `ReadonlyMap<number, string>` | `new Map()` | Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent |
-| `outcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats reçus, clé = `vehicleId` |
-| `descriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage (`GameEvent.describe()`) |
+| `outcomes` | `ReadonlyMap<number, WreckOutcomeDto>` | `new Map()` | Résultats d'épave reçus, clé = `vehicleId` |
+| `descriptions` | `ReadonlyMap<number, string[]>` | `new Map()` | Lignes de texte décrivant les événements de chaque tirage d'épave (`GameEvent.describe()`) |
+| `showIncome` | `boolean` | `false` | Affiche la section "Revenus" — gate explicite, Escarmouche uniquement (même principe que `EquipmentManager.showSequellas`) |
+| `presentParticipants` | `CampaignParticipant[]` | `[]` | Source de la section "Revenus" (Escarmouche uniquement) |
+| `incomeResults` | `ReadonlyMap<number, RollIncomeResultDto>` | `new Map()` | Résultats de revenu reçus, clé = `participantId` |
 | `finalizing` | `boolean` | `false` | Désactive "Terminer" pendant l'appel à `enterAtelier()` |
+| `resetting` | `boolean` | `false` | Désactive "Annuler" pendant l'appel à `resetResult()` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `completed` | `void` | Clic sur "Terminer" (uniquement si tous les véhicules ont un résultat) |
+| `completed` | `void` | Clic sur "Terminer" (uniquement si tous les revenus/véhicules ont un résultat) |
+| `formCancel` | `void` | Clic sur "Annuler" |
 
 ---
 

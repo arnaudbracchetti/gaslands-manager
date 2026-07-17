@@ -12,6 +12,29 @@ export class RecordResultItemDto {
   destroyedVehicles?: DestroyedVehicleDto[];
 }
 
+/** Butin manuel de jerricans (scénario `gain_jerricans`) — Escarmouche uniquement. */
+export class JerricanGainDto {
+  participantId!: number;
+  amount!: number;
+}
+
+/**
+ * Véhicule ennemi détruit hors classement (Escarmouche) — trace journal uniquement,
+ * 0 Point de Championnat (contrairement à `DestroyedVehicleDto`, imbriqué sous
+ * `RecordResultItemDto.destroyedVehicles` pour un Événement Télévisé).
+ */
+export class EscarmoucheDestroyedVehicleDto {
+  destroyerId!: number;
+  vehicleId!: number;
+}
+
+/**
+ * Corps de `POST .../results`. Les trois champs sont indépendants et optionnels :
+ * `results` (classement + exploits) n'est envoyé que pour un Événement Télévisé ;
+ * `jerricanGains`/`destroyedVehicles` (à plat) uniquement pour une Escarmouche.
+ */
 export class RecordResultDto {
-  results!: RecordResultItemDto[];
+  results?: RecordResultItemDto[];
+  jerricanGains?: JerricanGainDto[];
+  destroyedVehicles?: EscarmoucheDestroyedVehicleDto[];
 }

@@ -14,7 +14,10 @@ import { CampaignsService } from '../campaigns.service';
 import { Game, Scenario } from '../game.model';
 
 const mockScenarios: Scenario[] = [
-  { nom: 'La Course de la Mort', nom_interne: 'course_de_la_mort', type: 'EVENEMENT_TELE', description: '' },
+  {
+    nom: 'La Course de la Mort', nom_interne: 'course_de_la_mort', type: 'EVENEMENT_TELE', description: '',
+    franchissement_portes: true, gain_jerricans: false,
+  },
 ];
 
 const mockGame: Game = {
@@ -28,6 +31,8 @@ const mockGame: Game = {
   playedAt: null,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
+  franchissementPortes: true,
+  gainJerricans: false,
 };
 
 describe('CampaignProgram Component', () => {
@@ -41,6 +46,8 @@ describe('CampaignProgram Component', () => {
     deleteGame: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
     recordResult: ReturnType<typeof vi.fn>;
+    resetResult: ReturnType<typeof vi.fn>;
+    rollIncome: ReturnType<typeof vi.fn>;
     getParticipantVehicles: ReturnType<typeof vi.fn>;
     resolveWreck: ReturnType<typeof vi.fn>;
     enterAtelier: ReturnType<typeof vi.fn>;
@@ -56,6 +63,8 @@ describe('CampaignProgram Component', () => {
       deleteGame: vi.fn().mockReturnValue(of(undefined)),
       getParticipants: vi.fn().mockReturnValue(of([])),
       recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'PLANIFIE' })),
+      resetResult: vi.fn().mockReturnValue(of(undefined)),
+      rollIncome: vi.fn().mockReturnValue(of({ amount: 4, descriptions: ['+4 jerricans (Récompense)'] })),
       getParticipantVehicles: vi.fn().mockReturnValue(of([
         { participantId: 1, vehicles: [{ vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' }] },
       ])),
@@ -189,10 +198,36 @@ describe('CampaignProgram Component', () => {
     expect(component.recordingGame()).toEqual(game);
   });
 
-  it('onWizardCancelled remet recordingGame à null', () => {
+  it('onWizardCancelled remet recordingGame à null sans appel réseau si rien n\'a été persisté', () => {
     component.recordingGame.set({ id: 1 } as any);
     component.onWizardCancelled();
     expect(component.recordingGame()).toBeNull();
+    expect(mockService.resetResult).not.toHaveBeenCalled();
+  });
+
+  it('onWizardCancelled appelle resetResult si un lot a déjà été persisté (wizardResultRecorded non-null)', () => {
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+    component.onBatchReady({ results: [] }); // alimente wizardResultRecorded
+
+    component.onWizardCancelled();
+
+    expect(mockService.resetResult).toHaveBeenCalledWith(1, 10);
+    expect(component.recordingGame()).toBeNull();
+    expect(component.resettingResult()).toBe(false);
+  });
+
+  it('onWizardCancelled affiche une erreur et laisse le wizard ouvert si resetResult échoue', () => {
+    mockService.resetResult.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+    component.onBatchReady({ results: [] });
+
+    component.onWizardCancelled();
+
+    expect(component.error()).not.toBe('');
+    expect(component.recordingGame()).toBe(mockGame);
+    expect(component.resettingResult()).toBe(false);
   });
 
   it('onPresentParticipantsChanged charge les véhicules des participants indiqués', () => {
@@ -213,14 +248,14 @@ describe('CampaignProgram Component', () => {
     expect(component.participantVehicles().size).toBe(0);
   });
 
-  it('onRankingSubmitted enregistre le classement et alimente wizardResultRecorded (sans émettre resultRecorded)', () => {
+  it('onBatchReady enregistre le lot et alimente wizardResultRecorded (sans émettre resultRecorded)', () => {
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 
     let emittedCount = 0;
     outputToObservable(component.resultRecorded).subscribe(() => { emittedCount++; });
 
-    component.onRankingSubmitted({ results: [] });
+    component.onBatchReady({ results: [] });
 
     expect(mockService.recordResult).toHaveBeenCalledWith(1, 10, { results: [] });
     expect(component.wizardResultRecorded()).toEqual({ ...mockGame, status: 'PLANIFIE' });
@@ -232,9 +267,30 @@ describe('CampaignProgram Component', () => {
     fixture.detectChanges();
     component.recordingGame.set(mockGame);
 
-    component.onRankingSubmitted({ results: [] });
+    component.onBatchReady({ results: [] });
 
     expect(component.wizardResultRecorded()).toBeNull();
+  });
+
+  it('onIncomeRollRequested appelle rollIncome et alimente incomeResults', () => {
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    component.onIncomeRollRequested(1);
+
+    expect(mockService.rollIncome).toHaveBeenCalledWith(1, 10, { participantId: 1 });
+    expect(component.incomeResults().get(1)).toMatchObject({ amount: 4 });
+  });
+
+  it('onIncomeRollRequested affiche une erreur en cas d\'échec', () => {
+    mockService.rollIncome.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    component.recordingGame.set(mockGame);
+
+    component.onIncomeRollRequested(1);
+
+    expect(component.error()).not.toBe('');
+    expect(component.resolving()).toBe(false);
   });
 
   it('onWreckRollRequested appelle resolveWreck et alimente wreckOutcomes/wreckDescriptions', () => {
@@ -256,7 +312,7 @@ describe('CampaignProgram Component', () => {
     component.onWreckRollRequested({ participantId: 1, vehicleId: 100, pendingFavoriDuPublic: false });
 
     expect(component.error()).not.toBe('');
-    expect(component.rollingWreck()).toBe(false);
+    expect(component.resolving()).toBe(false);
   });
 
   it('onWizardCompleted fait entrer la partie en atelier puis émet resultRecorded et ferme le wizard', () => {

@@ -25,6 +25,10 @@ export interface Game {
   playedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Le wizard de fin de partie propose-t-il la saisie des portes franchies ? (ET uniquement) */
+  franchissementPortes: boolean;
+  /** Le wizard de fin de partie propose-t-il la saisie manuelle d'un butin de jerricans ? */
+  gainJerricans: boolean;
 }
 
 /** Un scénario du catalogue, retourné par GET /api/catalog/scenarios */
@@ -34,6 +38,8 @@ export interface Scenario {
   type: GameType;
   /** Description en HTML (Markdown converti côté backend) */
   description: string;
+  franchissement_portes: boolean;
+  gain_jerricans: boolean;
 }
 
 /** Corps de la requête POST /api/campaigns/:id/games */
@@ -77,19 +83,45 @@ export interface DestroyedVehicleDto {
 }
 
 /**
- * Classement d'un participant saisi à l'écran 1 du wizard de fin de partie —
- * état purement client, avant fusion avec les épaves infligées (écran 2) pour
- * former le `RecordResultDto` final.
+ * Ordre d'un participant, saisi à l'écran Classement du wizard de fin de partie
+ * (Événement Télévisé uniquement) — état purement client. Les portes franchies
+ * sont saisies séparément (écran Portes, cf. `GatesEntry`).
  */
 export interface RankingEntry {
   participantId: number;
   rank: number;
-  gatesCrossed?: number;
 }
 
-/** Corps de la requête POST /api/campaigns/:id/games/:gameId/results */
+/** Portes franchies saisies à l'écran Portes (exploit, US-B2 — ET uniquement). */
+export interface GatesEntry {
+  participantId: number;
+  gatesCrossed: number;
+}
+
+/** Butin manuel de jerricans saisi à l'écran Jerricans (scénario `gain_jerricans`). */
+export interface JerricanGainDto {
+  participantId: number;
+  amount: number;
+}
+
+/**
+ * Véhicule ennemi détruit hors classement (Escarmouche) — trace journal
+ * uniquement, 0 Point de Championnat. Forme à plat, distincte de
+ * `DestroyedVehicleDto` (imbriqué sous `results[]` pour un Événement Télévisé).
+ */
+export interface EscarmoucheDestroyedVehicleDto {
+  destroyerId: number;
+  vehicleId: number;
+}
+
+/**
+ * Corps de la requête POST /api/campaigns/:id/games/:gameId/results. Les trois
+ * champs sont indépendants : `results` (classement + exploits) n'est envoyé que
+ * pour un Événement Télévisé ; `jerricanGains`/`destroyedVehicles` (à plat)
+ * uniquement pour une Escarmouche.
+ */
 export interface RecordResultDto {
-  results: {
+  results?: {
     participantId: number;
     rank: number;
     /** Portes franchies (exploit, US-B2) — omis/0 si aucune. */
@@ -97,6 +129,19 @@ export interface RecordResultDto {
     /** Véhicules ennemis détruits (exploit, US-B2) — omis si aucun. */
     destroyedVehicles?: DestroyedVehicleDto[];
   }[];
+  jerricanGains?: JerricanGainDto[];
+  destroyedVehicles?: EscarmoucheDestroyedVehicleDto[];
+}
+
+/** Corps de POST .../events/income — revenu de base Escarmouche (1D6 serveur). */
+export interface RollIncomeRequestDto {
+  participantId: number;
+}
+
+/** Réponse de POST .../events/income. */
+export interface RollIncomeResultDto {
+  amount: number;
+  descriptions: string[];
 }
 
 /**

@@ -168,5 +168,28 @@ describe('CampaignQueryService', () => {
 
       expect(games[0].scenarioName).toBe('La Porte');
     });
+
+    it('résout franchissementPortes/gainJerricans via le catalogue', async () => {
+      participantRepo.findOne.mockResolvedValue({ id: 1 });
+      gameRepo.find.mockResolvedValue([{ id: 7, campaignId: 1, scenarioId: 'course', status: 'PLANIFIE' }]);
+      scenarioCatalog.getByNomInterne.mockReturnValue({
+        nom: 'La Course', franchissement_portes: true, gain_jerricans: false,
+      });
+
+      const games = await service.findGames(1, 42);
+
+      expect(games[0].franchissementPortes).toBe(true);
+      expect(games[0].gainJerricans).toBe(false);
+    });
+
+    it('retombe sur false quand le scénario est introuvable', async () => {
+      participantRepo.findOne.mockResolvedValue({ id: 1 });
+      gameRepo.find.mockResolvedValue([{ id: 7, campaignId: 1, scenarioId: null, status: 'PLANIFIE' }]);
+
+      const games = await service.findGames(1, 42);
+
+      expect(games[0].franchissementPortes).toBe(false);
+      expect(games[0].gainJerricans).toBe(false);
+    });
   });
 });

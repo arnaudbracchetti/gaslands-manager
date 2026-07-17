@@ -81,4 +81,56 @@ describe('WreckResolutionStep', () => {
     expect(component.reminderFor('CHASSIS_FRAGILISE')).not.toBeNull();
     expect(component.reminderFor('INDEMNE')).toBeNull();
   });
+
+  it('formCancel émet void au clic Annuler', () => {
+    const emitted: unknown[] = [];
+    outputToObservable(component.formCancel).subscribe(() => emitted.push(true));
+    component.onCancel();
+    expect(emitted).toHaveLength(1);
+  });
+});
+
+describe('WreckResolutionStep — revenu Escarmouche (showIncome)', () => {
+  let fixture: ComponentFixture<WreckResolutionStep>;
+  let component: WreckResolutionStep;
+
+  const mockPresent = [
+    { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
+    { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [WreckResolutionStep],
+    }).compileComponents();
+    fixture = TestBed.createComponent(WreckResolutionStep);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('wreckedVehicles', []);
+    fixture.componentRef.setInput('showIncome', true);
+    fixture.componentRef.setInput('presentParticipants', mockPresent);
+    fixture.detectChanges();
+  });
+
+  it('allResolved reste faux tant que les revenus ne sont pas tous reçus (aucune épave à résoudre)', () => {
+    expect(component.allResolved()).toBe(false);
+  });
+
+  it('allResolved devient vrai une fois tous les revenus reçus', () => {
+    fixture.componentRef.setInput('incomeResults', new Map([
+      [1, { amount: 4, descriptions: ['+4 jerricans'] }],
+      [2, { amount: 2, descriptions: ['+2 jerricans'] }],
+    ]));
+    expect(component.allResolved()).toBe(true);
+  });
+
+  it('incomeResultFor résout le résultat reçu, undefined sinon', () => {
+    fixture.componentRef.setInput('incomeResults', new Map([[1, { amount: 4, descriptions: [] }]]));
+    expect(component.incomeResultFor(1)).toEqual({ amount: 4, descriptions: [] });
+    expect(component.incomeResultFor(2)).toBeUndefined();
+  });
+
+  it('n\'affecte pas allResolved quand showIncome est faux (défaut)', () => {
+    fixture.componentRef.setInput('showIncome', false);
+    expect(component.allResolved()).toBe(true); // aucune épave, aucun revenu requis
+  });
 });

@@ -1,0 +1,62 @@
+@use '../../../shared/styles/breakpoints' as bp;
+
+.pst {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__hint {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin: 0 0 0.5rem;
+
+    &--warning {
+      color: var(--tb-danger);
+    }
+  }
+
+  &__participants {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__participant-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-family: var(--font-text);
+    color: var(--tb-os);
+
+    input[type='checkbox'] {
+      accent-color: var(--tb-danger);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+  }
+
+  &__user {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+
+    button {
+      width: auto;
+      padding: 10px 24px;
+    }
+
+    @include bp.mobile {
+      button {
+        flex: 1;
+      }
+    }
+  }
+}

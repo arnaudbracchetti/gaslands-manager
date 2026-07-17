@@ -1,0 +1,36 @@
+<!-- Écran 1 du wizard de fin de partie : présence -->
+<div class="pst">
+  <p class="pst__hint">Cochez les équipes présentes à la partie :</p>
+  <div class="pst__participants">
+    @for (participant of participants(); track participant.id) {
+      <label class="pst__participant-row">
+        <input
+          type="checkbox"
+          [checked]="isPresent(participant)"
+          (change)="togglePresent(participant)"
+          [disabled]="saving()"
+        />
+        <span>{{ participant.teamName }}</span>
+        <span class="pst__user">({{ participant.userName }})</span>
+      </label>
+    }
+  </div>
+
+  @if (presentCount() > 0 && !hasMinimumPresence()) {
+    <p class="pst__hint pst__hint--warning">Il faut au moins deux équipes présentes pour enregistrer une partie.</p>
+  }
+
+  <div class="pst__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button
+      type="submit"
+      class="btn-primary"
+      [disabled]="!hasMinimumPresence() || saving()"
+      (click)="onNext()"
+    >
+      Suivant
+    </button>
+  </div>
+</div>

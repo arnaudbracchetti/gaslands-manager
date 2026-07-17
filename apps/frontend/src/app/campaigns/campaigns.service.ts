@@ -21,6 +21,8 @@ import type {
   WreckResolveResultDto,
   EnterAtelierResultDto,
   GameJournalEntryDto,
+  RollIncomeRequestDto,
+  RollIncomeResultDto,
 } from './game.model';
 import type { WorkshopStateDto, ChangeEquipmentDto, AvailableSequellaDto } from './workshop.model';
 import type {
@@ -202,6 +204,27 @@ export class CampaignsService {
    */
   getGameResults(campaignId: number, gameId: number): Observable<GameResult[]> {
     return this.http.get<GameResult[]>(`/api/campaigns/${campaignId}/games/${gameId}/results`);
+  }
+
+  /**
+   * DELETE /api/campaigns/:id/games/:gameId/results → annule le wizard de fin de
+   * partie en cours de résolution (partie PLANIFIE, organisateur) : supprime tous
+   * les événements déjà journalisés (classement, exploits, revenus, épaves).
+   */
+  resetResult(campaignId: number, gameId: number): Observable<void> {
+    return this.http.delete<void>(`/api/campaigns/${campaignId}/games/${gameId}/results`);
+  }
+
+  /**
+   * POST /api/campaigns/:id/games/:gameId/events/income → revenu de base
+   * Escarmouche (1D6 serveur, organisateur), différé en fin de wizard avec les
+   * tirages de la Table des Épaves.
+   */
+  rollIncome(campaignId: number, gameId: number, dto: RollIncomeRequestDto): Observable<RollIncomeResultDto> {
+    return this.http.post<RollIncomeResultDto>(
+      `/api/campaigns/${campaignId}/games/${gameId}/events/income`,
+      dto,
+    );
   }
 
   /**

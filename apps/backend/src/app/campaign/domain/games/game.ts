@@ -11,9 +11,10 @@ import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
-import type { WalletReason } from '../enums/wallet-reason.enum';
+import { WalletReason } from '../enums/wallet-reason.enum';
 import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from '../enums/weight-class.enum';
 import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
+import type { IRandomizer } from '../randomizer.interface';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
@@ -140,6 +141,12 @@ export abstract class Game {
   recordResult(rankings: RankingInput[], participants: readonly CampaignParticipant[]): GameEvent[] {
     if (this._status !== GameStatus.PLANIFIE) {
       throw new DomainException('Cette partie a déjà été jouée.');
+    }
+    // Le classement (rangs, PC, Résistance) n'existe que pour les Événements Télévisés —
+    // une Escarmouche utilise `recordJerricanGains`/`recordDestroyedVehicleTraces` à la
+    // place (revenu D6 + trace de destruction sans PC, cf. spec/CAMPAIGN.md).
+    if (this.type !== 'EVENEMENT_TELE') {
+      throw new DomainException('Le classement ne s\'enregistre que pour un Événement Télévisé.');
     }
 
     // Rangs uniques et consécutifs à partir de 1.
@@ -384,6 +391,32 @@ export abstract class Game {
   }
 
   /**
+   * Escarmouche uniquement — revenu de base : un jet de D6 crédité en jerricans à un
+   * participant présent. Différé en fin de wizard (phase de résolution), tiré une fois
+   * par participant, en même temps que les tirages de la Table des Épaves — même aléa
+   * serveur autoritaire (cf. spec/CAMPAIGN.md — Wizard de fin de partie). Délègue
+   * entièrement à `recordWalletMovement` une fois le dé tiré : aucune règle propre à
+   * porter au-delà de "revenu = 1D6".
+   */
+  rollBaseIncome(participantId: number, randomizer: IRandomizer): GameEvent[] {
+    const amount = randomizer.roll(6);
+    return this.recordWalletMovement(participantId, amount, WalletReason.RECOMPENSE);
+  }
+
+  /**
+   * Escarmouche uniquement — butin manuel de jerricans (scénario `gain_jerricans`),
+   * saisi par l'organisateur et cumulable avec le revenu de base (`rollBaseIncome`).
+   * Boucle sur `recordWalletMovement`, comme `recordResult` boucle sur les rangs.
+   */
+  recordJerricanGains(gains: { participantId: number; amount: number }[]): GameEvent[] {
+    const events: GameEvent[] = [];
+    for (const gain of gains) {
+      events.push(...this.recordWalletMovement(gain.participantId, gain.amount, WalletReason.RECOMPENSE));
+    }
+    return events;
+  }
+
+  /**
    * Enregistre la perte d'un véhicule (et optionnellement de ses armes) pendant
    * cette partie.
    */
@@ -402,6 +435,29 @@ export abstract class Game {
     return events;
   }
 
+  /**
+   * Escarmouche uniquement — trace la destruction de véhicules ennemis dans le journal,
+   * SANS effet sur les PC (contrairement à l'exploit ET de `recordResult`,
+   * `championshipPoints` figé à 0). Le poids est dérivé côté serveur depuis le véhicule
+   * réel (jamais transmis par l'appelant), même garde que `recordResult` — réutilise
+   * `VehicleDestroyedEvent`, aucun nouveau type d'événement.
+   */
+  recordDestroyedVehicleTraces(
+    destroyed: { destroyerId: number; vehicleId: number }[],
+    participants: readonly CampaignParticipant[],
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+    for (const d of destroyed) {
+      const weightClass = weightClassFromPoids(
+        this.findVehicleTypeAcrossParticipants(participants, d.vehicleId).poids,
+      );
+      const event = new VehicleDestroyedEvent(0, this.id, d.destroyerId, 0, d.vehicleId, weightClass, 0);
+      this.addEvent(event);
+      events.push(event);
+    }
+    return events;
+  }
+
   /** Journal complet de cette partie — chaque événement traduit en texte lisible. */
   journal(participants: readonly CampaignParticipant[]): GameJournalEntry[] {
     return this._events.map((e) => ({
@@ -411,10 +467,25 @@ export abstract class Game {
     }));
   }
 
+  /**
+   * Ids de TOUS les événements de cette partie — pour annuler le wizard de fin de
+   * partie en cours de résolution (persistance différée, cf. spec/CAMPAIGN.md).
+   * Réservé à une partie encore PLANIFIE : au-delà, la partie est entrée en atelier
+   * (`enterAtelier`) et porte déjà des événements d'atelier qu'un reset ne doit pas
+   * effacer silencieusement.
+   */
+  resultEventIdsForReset(): number[] {
+    if (this._status !== GameStatus.PLANIFIE) {
+      throw new DomainException('Seule une partie PLANIFIE peut être réinitialisée.');
+    }
+    return this._events.map((e) => e.id);
+  }
+
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
+  // this.type === 'EVENEMENT_TELE' garanti par la garde en tête de recordResult
+  // (seul appelant) — aucune Escarmouche n'atteint jamais ce calcul.
   private computePoints(rank: number, classified: number): number {
-    if (this.type !== 'EVENEMENT_TELE') return 0;  // ESCARMOUCHE et autres : aucun PC
     if (rank > classified) return 0;
     return POINTS_TABLE[rank - 1] ?? 0;
   }

@@ -1,0 +1,33 @@
+<!-- Écran Portes franchies du wizard de fin de partie (Événement Télévisé) -->
+<div class="gts">
+  <p class="gts__hint">Nombre de portes franchies par équipe (0 si aucune) :</p>
+
+  <ul class="gts__list">
+    @for (participant of participants(); track participant.id; let i = $index) {
+      <li class="gts__item">
+        <span class="gts__rank">{{ i + 1 }}</span>
+        <span class="gts__team">{{ participant.teamName }}</span>
+        <input
+          type="number"
+          min="0"
+          class="gts__input"
+          [value]="gatesCrossedFor(participant.id)"
+          (change)="setGatesCrossed(participant.id, $any($event.target).value)"
+          [disabled]="saving()"
+        />
+      </li>
+    }
+  </ul>
+
+  <div class="gts__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onBack()">
+      Retour
+    </button>
+    <button type="submit" class="btn-primary" [disabled]="saving()" (click)="onNext()">
+      Suivant
+    </button>
+  </div>
+</div>

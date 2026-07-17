@@ -30,6 +30,7 @@ import { Game, Scenario, CreateGameDto } from '../game.model';
 import type {
   ParticipantVehiclesDto,
   RecordResultDto,
+  RollIncomeResultDto,
   WreckOutcomeDto,
   WreckResolveRequestDto,
   GameJournalEntryDto,
@@ -110,10 +111,14 @@ export class CampaignProgram implements OnInit {
   wreckOutcomes: WritableSignal<ReadonlyMap<number, WreckOutcomeDto>> = signal(new Map());
   /** Lignes de texte décrivant les événements de chaque tirage, clé = vehicleId. */
   wreckDescriptions: WritableSignal<ReadonlyMap<number, string[]>> = signal(new Map());
-  /** Vrai pendant qu'une requête resolveWreck est en cours. */
-  rollingWreck: WritableSignal<boolean> = signal(false);
+  /** Résultats de revenu Escarmouche reçus, clé = participantId. */
+  incomeResults: WritableSignal<ReadonlyMap<number, RollIncomeResultDto>> = signal(new Map());
+  /** Vrai pendant qu'une requête rollIncome/resolveWreck est en cours (un tirage à la fois). */
+  resolving: WritableSignal<boolean> = signal(false);
   /** Vrai pendant que la finalisation (fin du wizard) est en cours. */
   finalizingGame: WritableSignal<boolean> = signal(false);
+  /** Vrai pendant qu'une annulation à l'écran Résolution (DELETE .../results) est en cours. */
+  resettingResult: WritableSignal<boolean> = signal(false);
 
   /** Partie dont le journal est consulté (null = modale fermée). */
   journalGame: WritableSignal<Game | null> = signal<Game | null>(null);
@@ -214,6 +219,7 @@ export class CampaignProgram implements OnInit {
     this.wizardResultRecorded.set(null);
     this.wreckOutcomes.set(new Map());
     this.wreckDescriptions.set(new Map());
+    this.incomeResults.set(new Map());
   }
 
   /**
@@ -238,8 +244,12 @@ export class CampaignProgram implements OnInit {
     });
   }
 
-  /** Appelé quand l'écran 2 (désignation des épaves) est soumis — enregistre le classement. */
-  onRankingSubmitted(dto: RecordResultDto): void {
+  /**
+   * Appelé quand l'écran Désignation des épaves est soumis — persiste le lot
+   * accumulé (classement + exploits pour un Événement Télévisé, ou jerricans/
+   * destructions pour une Escarmouche, cf. `GameResultWizard.buildRecordResultDto`).
+   */
+  onBatchReady(dto: RecordResultDto): void {
     const game = this.recordingGame();
     if (!game) return;
     this.savingResult.set(true);
@@ -255,11 +265,31 @@ export class CampaignProgram implements OnInit {
     });
   }
 
-  /** Déclenché automatiquement par le wizard (écran 3) pour chaque véhicule désigné en épave. */
+  /** Déclenché automatiquement par le wizard (écran Résolution) pour chaque participant présent (Escarmouche). */
+  onIncomeRollRequested(participantId: number): void {
+    const game = this.recordingGame();
+    if (!game) return;
+    this.resolving.set(true);
+    this.campaignsService.rollIncome(this.campaignId(), game.id, { participantId }).subscribe({
+      next: (result) => {
+        const map = new Map(this.incomeResults());
+        map.set(participantId, result);
+        this.incomeResults.set(map);
+        this.resolving.set(false);
+      },
+      error: () => {
+        console.error('Échec du tirage de revenu.');
+        this.error.set('Erreur lors du tirage du revenu de base.');
+        this.resolving.set(false);
+      },
+    });
+  }
+
+  /** Déclenché automatiquement par le wizard (écran Résolution) pour chaque véhicule désigné en épave. */
   onWreckRollRequested(dto: WreckResolveRequestDto): void {
     const game = this.recordingGame();
     if (!game) return;
-    this.rollingWreck.set(true);
+    this.resolving.set(true);
     this.campaignsService.resolveWreck(this.campaignId(), game.id, dto).subscribe({
       next: (result) => {
         const outcomes = new Map(this.wreckOutcomes());
@@ -268,12 +298,12 @@ export class CampaignProgram implements OnInit {
         const descriptions = new Map(this.wreckDescriptions());
         descriptions.set(result.outcome.vehicleId, result.descriptions);
         this.wreckDescriptions.set(descriptions);
-        this.rollingWreck.set(false);
+        this.resolving.set(false);
       },
       error: () => {
         console.error('Échec du tirage sur la Table des Épaves.');
         this.error.set('Erreur lors du tirage sur la Table des Épaves.');
-        this.rollingWreck.set(false);
+        this.resolving.set(false);
       },
     });
   }
@@ -292,11 +322,7 @@ export class CampaignProgram implements OnInit {
     this.campaignsService.enterAtelier(this.campaignId(), game.id).subscribe({
       next: () => {
         this.finalizingGame.set(false);
-        this.recordingGame.set(null);
-        this.participantVehicles.set(new Map());
-        this.wizardResultRecorded.set(null);
-        this.wreckOutcomes.set(new Map());
-        this.wreckDescriptions.set(new Map());
+        this.closeWizard();
         this.loadGames();
         this.resultRecorded.emit();
       },
@@ -308,10 +334,44 @@ export class CampaignProgram implements OnInit {
     });
   }
 
-  /** Ferme le wizard sans enregistrer (uniquement possible avant la soumission du classement). */
+  /**
+   * Annule le wizard. Avant que le lot (classement/jerricans/destructions) ne
+   * soit persisté, il n'y a rien à défaire côté serveur — fermeture immédiate.
+   * Une fois persisté (`wizardResultRecorded` non-null, écran Résolution atteint),
+   * "Annuler" doit défaire ce qui a déjà été écrit (classement, exploits, revenus,
+   * tirages d'épaves) : `ResetResultUseCase` (`DELETE .../results`) supprime tous
+   * les événements de la partie en une seule opération, cf. spec/CAMPAIGN.md —
+   * Persistance différée.
+   */
   onWizardCancelled(): void {
+    const game = this.recordingGame();
+    const wasPersisted = this.wizardResultRecorded() !== null;
+    if (!game || !wasPersisted) {
+      this.closeWizard();
+      return;
+    }
+    this.resettingResult.set(true);
+    this.campaignsService.resetResult(this.campaignId(), game.id).subscribe({
+      next: () => {
+        this.resettingResult.set(false);
+        this.closeWizard();
+        this.loadGames();
+      },
+      error: () => {
+        console.error('Échec de l\'annulation du résultat.');
+        this.error.set('Erreur lors de l\'annulation du résultat.');
+        this.resettingResult.set(false);
+      },
+    });
+  }
+
+  private closeWizard(): void {
     this.recordingGame.set(null);
     this.participantVehicles.set(new Map());
+    this.wizardResultRecorded.set(null);
+    this.wreckOutcomes.set(new Map());
+    this.wreckDescriptions.set(new Map());
+    this.incomeResults.set(new Map());
   }
 
   /** Ouvre le journal d'une partie (ATELIER ou JOUE) — accessible à tout participant. */

@@ -120,4 +120,17 @@ describe('WreckDesignationStep', () => {
     component.onCancel();
     expect(emitted).toHaveLength(1);
   });
+
+  it('showFavoriDuPublic vaut true par défaut (Événement Télévisé)', () => {
+    component.setStatus(100, 'alone');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.wds__favori-checkbox')).toBeTruthy();
+  });
+
+  it('masque la case Favori du public quand showFavoriDuPublic est faux (Escarmouche)', () => {
+    fixture.componentRef.setInput('showFavoriDuPublic', false);
+    component.setStatus(100, 'alone');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.wds__favori-checkbox')).toBeNull();
+  });
 });

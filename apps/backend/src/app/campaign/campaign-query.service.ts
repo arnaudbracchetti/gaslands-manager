@@ -287,6 +287,8 @@ export class CampaignQueryService {
     return {
       ...game,
       scenarioName: scenario?.nom ?? game.scenarioId ?? '',
+      franchissementPortes: scenario?.franchissement_portes ?? false,
+      gainJerricans: scenario?.gain_jerricans ?? false,
     };
   }
 }

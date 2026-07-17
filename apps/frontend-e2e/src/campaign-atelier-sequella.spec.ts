@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { registerTestUser, uniqueEmail } from './support/auth';
 import { createTeamWithVehicles } from './support/teams';
-import { createCampaign, addGame, runResultWizard, openAtelier } from './support/campaigns';
+import { createCampaign, addGame, runResultWizard, openAtelier, addBystanderParticipant } from './support/campaigns';
 
 /**
  * Atelier campagne — séquelles (cf. docs/spec/CAMPAIGN.md §Séquelles).
@@ -24,7 +24,7 @@ import { createCampaign, addGame, runResultWizard, openAtelier } from './support
  * "Chocs insuffisants" est correctement rendu pour chaque séquelle.
  */
 test.describe('Campagnes — Atelier — Séquelles', () => {
-  test('affiche le solde de Chocs à 0 et grise toutes les séquelles disponibles (Chocs insuffisants)', async ({ page }) => {
+  test('affiche le solde de Chocs à 0 et grise toutes les séquelles disponibles (Chocs insuffisants)', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Sequelles',
@@ -36,10 +36,11 @@ test.describe('Campagnes — Atelier — Séquelles', () => {
     await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] });
 
     await createCampaign(page, { name: 'Saison E2E Atelier Séquelles', teamName });
+    const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'atelier-sequelles');
     await addGame(page);
     // Aucune désignation d'épave : le véhicule engagé n'est jamais mis en
     // épave, donc son solde de Chocs reste garanti à 0 (pas de tirage D6).
-    await runResultWizard(page, { teamNames: [teamName] });
+    await runResultWizard(page, { teamNames: [teamName, joineeTeamName] });
 
     await openAtelier(page);
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -66,5 +67,7 @@ test.describe('Campagnes — Atelier — Séquelles', () => {
     // Aucune séquelle acquise sur un véhicule fraîchement engagé.
     const ownedGroup = page.locator('.sm__group').nth(1);
     await expect(ownedGroup).toContainText('Aucune séquelle acquise.');
+
+    await joineeContext.close();
   });
 });

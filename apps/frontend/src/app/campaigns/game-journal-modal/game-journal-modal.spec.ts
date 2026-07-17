@@ -20,6 +20,8 @@ const mockGame: Game = {
   playedAt: '2026-07-01T00:00:00.000Z',
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
+  franchissementPortes: true,
+  gainJerricans: false,
 };
 
 const mockEntries: GameJournalEntryDto[] = [

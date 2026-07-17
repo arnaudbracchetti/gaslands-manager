@@ -99,9 +99,12 @@ reste du module Campaign.
 
 ## Exploits de partie (mode campagne — US-B2)
 
-En plus du classement (US-B1), l'organisateur saisit sur le **même écran** (même
-soumission `POST .../results`) les exploits réalisés par chaque participant
-présent — Course à la Mort, p.167 :
+En plus du classement (US-B1), l'organisateur saisit les exploits réalisés par
+chaque participant présent — Course à la Mort, p.167 — dans la **même
+soumission** `POST .../results` que le classement (converge dans
+`RecordResultDto.results`, même si le wizard de fin de partie les répartit
+aujourd'hui sur des écrans séparés, cf. [§Wizard de fin de
+partie](#wizard-de-fin-de-partie)) :
 
 - **Portes franchies** : +1 PC par porte, saisie en nombre libre par participant
   (`gatesCrossed`, optionnel — 0/absent si aucune).
@@ -125,9 +128,11 @@ présent — Course à la Mort, p.167 :
   campagne, pas de notion de "véhicules engagés pour la partie" séparée du
   roster) — exposée par `GET .../participant-vehicles` (cf. table
   d'endpoints ci-dessous).
-- Les **jerricans gagnés par exploit sont hors scope** de cette US : restent
-  saisis manuellement via l'endpoint cagnotte existant
-  (`WalletReason.RECOMPENSE`).
+- Les **jerricans gagnés par exploit restent hors scope** de cette US
+  spécifique (portes/véhicules détruits) : traités séparément par le butin
+  manuel de scénario et le revenu de base Escarmouche, tous deux intégrés au
+  wizard de fin de partie (cf. [§Wizard de fin de
+  partie](#wizard-de-fin-de-partie)), via le même `WalletReason.RECOMPENSE`.
 
 **Modèle event-sourcing** : deux nouveaux types d'événement, journalisés par
 `Game.recordResult` en plus du `RankingAssignedEvent` — `GatesCrossedEvent`
@@ -143,62 +148,113 @@ du journal** : `Campaign.standings()` ne change pas, elle lit déjà
 
 ## Wizard de fin de partie
 
-L'enregistrement du résultat d'une partie (`EN_COURS`) est un **wizard à 3
-écrans séquentiels** (`GameResultWizard`, remplace l'ancienne modale unique),
-document de conception : [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md).
+L'enregistrement du résultat d'une partie (`EN_COURS`) est un **wizard à
+étapes variables** (`GameResultWizard`), pilotées par le type de partie
+(`EVENEMENT_TELE`/`ESCARMOUCHE`) et par les métadonnées du scénario
+(`Scenario.franchissement_portes`/`gain_jerricans`) — jusqu'à 6 écrans
+possibles, jamais tous affichés en même temps. Documents de conception :
+[`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
+(conception initiale, 3 écrans, Événement Télévisé uniquement) puis
+[`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
+(refonte à étapes variables, ajout du parcours Escarmouche).
 
-1. **Classement** (`RankingStep`) — inchangé : présence, ordre par
-   glisser-déposer, portes franchies (US-B2).
-2. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
+| # | Écran | Composant | Visible si |
+|---|-------|-----------|-----------|
+| 1 | Présence | `PresenceStep` | toujours |
+| 2 | Classement | `RankingStep` | `EVENEMENT_TELE` uniquement |
+| 3 | Portes franchies | `GatesStep` | `EVENEMENT_TELE` **et** `franchissement_portes` |
+| 4 | Jerricans (butin manuel) | `JerricansStep` | `gain_jerricans` |
+| 5 | Désignation des épaves | `WreckDesignationStep` | toujours |
+| 6 | Résolution (revenu + épaves) | `WreckResolutionStep` | toujours |
+
+1. **Présence** (`PresenceStep`) — cases à cocher des participants
+   `VALIDATED`, toujours le premier écran. Émet la liste des présents (ordre
+   de coche), qui alimente `participant-vehicles` pour l'écran Désignation
+   et sert de point de départ à l'écran Classement. **Minimum deux équipes**
+   cochées pour continuer (bouton "Suivant" désactivé sinon, avertissement
+   affiché) — une partie n'oppose jamais un seul participant.
+2. **Classement** (`RankingStep`, Événement Télévisé uniquement) — ordre par
+   glisser-déposer des présents (la présence elle-même a été déplacée à
+   l'écran 1). Absent pour une Escarmouche, qui n'attribue jamais de PC de
+   classement (`Game.recordResult` rejette d'ailleurs tout appel hors
+   Événement Télévisé, cf. §Exploits ci-dessus).
+3. **Portes franchies** (`GatesStep`, Événement Télévisé + scénario
+   `franchissement_portes`) — extrait de l'ancien champ intégré à
+   `RankingStep`, désormais son propre écran, gated par le scénario (tous les
+   Événements Télévisés n'ont pas de portes, ex. "L'Arène").
+4. **Jerricans** (`JerricansStep`, scénario `gain_jerricans`) — butin manuel
+   de scénario (ex. pillage de convoi), indépendant du revenu de base D6 de
+   l'écran 6 (Escarmouche) — les deux se cumulent.
+5. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
    des équipes présentes : *Intact* / *Détruit par [participant]* / *Mis en
-   épave seul*, plus une case "Favori du public (partie précédente)". C'est ici
-   (et non plus à l'écran classement) que le picker "véhicules ennemis
-   détruits" de l'US-B2 est saisi — le contrat backend (`destroyedVehicles`
-   dans `RecordResultDto`, `{ vehicleId }` uniquement) est inchangé depuis
-   l'écran classement, seul son point d'entrée UI a bougé.
-   Cet écran soumet aussi le classement (`POST .../results`) : les événements
-   de classement/exploits/résistance (US-F1) sont journalisés à cette étape,
-   **mais la partie reste `PLANIFIE`** — voir ci-dessous.
-3. **Résolution de la Table des Épaves** (`WreckResolutionStep`) — **synthèse
-   automatique**, sans aucun bouton ni sélecteur : dès l'arrivée sur cet écran,
-   un tirage D6 serveur est déclenché automatiquement pour chaque véhicule
-   désigné à l'écran 2 (`POST .../events/wreck`), un par un. Pour chaque
-   véhicule, l'écran affiche le résultat (Chocs, perte d'équipement, etc.) dès
-   qu'il est reçu, plus la ligne "Détruit par [participant]" si applicable
-   (donnée capturée à l'écran 2). Si un véhicule est confirmé "Favori du
-   public" et que le tirage donne `VEHICULE_DETRUIT`, +5 PC sont crédités à son
-   propriétaire (`FavoriDuPublicBonusEvent`). Le bouton "Terminer" (actif une
-   fois tous les tirages reçus) appelle `POST .../enter-atelier` — **c'est à
-   ce moment, et seulement à ce moment, que la partie passe `PLANIFIE →
-   ATELIER`**, ouvrant la phase garage post-partie *sur cette même partie*
-   (plus d'entité séparée, cf. §Cycle de vie ci-dessous).
+   épave seul*. Le picker destructeur reste actif pour les deux types de
+   partie ; la case "Favori du public" (bonus PC, ET uniquement) est masquée
+   pour une Escarmouche (`showFavoriDuPublic` input). Cet écran soumet le lot
+   accumulé (`POST .../results`) — les événements de classement/exploits/
+   résistance (ET) ou de jerricans/destructions à 0 PC (Escarmouche) sont
+   journalisés à cette étape, **mais la partie reste `PLANIFIE`** — voir
+   ci-dessous.
+6. **Résolution** (`WreckResolutionStep`) — **synthèse automatique**, sans
+   aucun bouton ni sélecteur : dès l'arrivée sur cet écran, un `effect()`
+   déclenche les tirages serveur un par un — d'abord le **revenu de base**
+   (Escarmouche uniquement, 1D6 par participant présent, `POST
+   .../events/income`), puis la **Table des Épaves** (tout type de partie,
+   `POST .../events/wreck`, un par véhicule désigné à l'écran précédent).
+   Chaque résultat s'affiche dès qu'il est reçu, plus la ligne "Détruit par
+   [participant]" si applicable (donnée capturée à l'écran 5). Si un véhicule
+   est confirmé "Favori du public" et que le tirage donne `VEHICULE_DETRUIT`,
+   +5 PC sont crédités à son propriétaire (`FavoriDuPublicBonusEvent`, ET
+   uniquement — la case n'existe pas côté Escarmouche). Le bouton "Terminer"
+   (actif une fois tous les tirages reçus) appelle `POST .../enter-atelier` —
+   **c'est à ce moment, et seulement à ce moment, que la partie passe
+   `PLANIFIE → ATELIER`**, ouvrant la phase garage post-partie *sur cette
+   même partie* (pas d'entité séparée, cf. §Cycle de vie ci-dessous).
 
 **Pourquoi l'entrée en atelier est déplacée en fin de wizard** : faire entrer
-la partie en atelier dès l'écran 2 rendait l'écran 3 structurellement
-impossible — une fois la partie hors `PLANIFIE`, `Game.addEvent()` refuse tout
-événement de classement/épaves (y compris les tirages de la Table des
-Épaves), et rien ne permettait de sortir du wizard bloqué. L'entrée en atelier
-est donc désormais une action explicite et séparée (`EnterAtelierUseCase`),
-déclenchée uniquement à la fin complète du wizard — cohérent avec l'intention
-du document de conception d'origine.
+la partie en atelier avant l'écran de résolution rendrait ce dernier
+structurellement impossible — une fois la partie hors `PLANIFIE`,
+`Game.addEvent()` refuse tout événement de classement/épaves/revenus, et rien
+ne permettrait de sortir du wizard bloqué. L'entrée en atelier est donc une
+action explicite et séparée (`EnterAtelierUseCase`), déclenchée uniquement à
+la fin complète du wizard.
 
-Retour en arrière possible entre écrans 1 et 2 (rien n'est encore persisté) ;
-plus au-delà de l'écran 2 une fois le classement soumis avec succès (choix de
-conception conservé, l'écran 3 n'ayant plus d'action manuelle à annuler).
+**Persistance différée et annulation** : les écrans 1 à 5 sont de l'état
+purement client — rien n'est envoyé au serveur avant l'arrivée sur l'écran 6
+(Résolution). "Précédent" et "Annuler" restent donc libres jusque-là, sans
+aucun appel réseau à défaire. Le lot accumulé (classement + exploits pour un
+Événement Télévisé, ou jerricans + destructions pour une Escarmouche,
+construit par `GameResultWizard.buildRecordResultDto`) n'est envoyé qu'à la
+transition écran 5 → écran 6. Une fois sur l'écran 6, "Annuler" reste
+disponible mais déclenche un **reset serveur** complet
+(`DELETE .../games/:gameId/results`, `ResetResultUseCase` — supprime tous les
+événements déjà journalisés sur cette partie, classement/exploits/revenus/
+épaves compris, en une seule opération atomique via `Game.resultEventIdsForReset`,
+réservé à une partie encore `PLANIFIE`) ; "Précédent" n'est en revanche plus
+disponible à ce stade (l'écran 6 n'a plus d'action manuelle de retour à
+défaire, cf. `WreckResolutionStep`, formCancel).
+
+Côté frontend, `CampaignProgram.onWizardCancelled()` décide seul, sans que
+`GameResultWizard` ait à le savoir, si un reset est nécessaire — en observant
+si `wizardResultRecorded` (signal local, alimenté par la réponse de
+`POST .../results`) est non-null au moment du clic "Annuler" : c'est le seul
+signal distinguant "rien n'a encore été persisté" de "le lot de l'écran 5 a
+déjà été écrit".
 
 **Description textuelle des événements** : chaque `GameEvent` expose une
 méthode `describe(): string` (une ligne de texte en français résumant
 l'événement — ex. `"Classé 1 (+10 PC)"`, `"Table des Épaves : Arrachée
-(D6=5+0 chocs, +1 choc(s))"`). `POST .../events/wreck` renvoie ces lignes
-(`descriptions: string[]`, une par événement généré par ce tirage) et
-`WreckResolutionStep` les affiche telles quelles sous chaque véhicule.
+(D6=5+0 chocs, +1 choc(s))"`, `"+4 jerricans (Récompense)"`). `POST
+.../events/wreck` et `POST .../events/income` renvoient ces lignes
+(`descriptions: string[]`, une par événement généré) et `WreckResolutionStep`
+les affiche telles quelles sous chaque entrée (véhicule ou participant).
 
 **Limitation connue** : si l'utilisateur quitte le wizard (ou recharge la
-page) entre la soumission de l'écran 2 et le clic "Terminer" de l'écran 3, la
+page) entre la soumission de l'écran 5 et le clic "Terminer" de l'écran 6, la
 partie reste `PLANIFIE` (par design) et réapparaît comme "à enregistrer" —
-mais rouvrir le wizard et resoumettre le classement créerait des événements
-`RankingAssignedEvent`/etc. en double (aucune garde d'idempotence, cohérent
-avec les autres lacunes déjà documentées de ce module, ex. séquelles).
+rouvrir le wizard sans passer par "Annuler" (donc sans déclencher le reset
+serveur) et resoumettre le lot créerait des événements en double (aucune
+garde d'idempotence, cohérent avec les autres lacunes déjà documentées de ce
+module, ex. séquelles).
 
 ---
 
@@ -572,15 +628,6 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   lancer, « Légende Vivante » résultat forcé à 1) et la garde anti-doublon sur les
   séquelles `ATELIER` sont désormais implémentés — cf. [§Séquelles](#séquelles)
   ci-dessous.
-- **Wizard de fin de partie — Escarmouche non couverte** — le
-  [wizard de fin de partie](#wizard-de-fin-de-partie) à 3 écrans
-  (`GameResultWizard`) a été conçu et implémenté pour les parties
-  `EVENEMENT_TELE` (classement, portes franchies, désignation des épaves,
-  Table des Épaves). Une partie `ESCARMOUCHE` porte des règles de fin de
-  partie différentes (Gaslands p.167) et n'a **pas** sa propre séquence — à
-  concevoir et implémenter séparément, probablement un wizard dédié ou des
-  écrans conditionnés par `Game.type`, plutôt que de réutiliser tel quel celui
-  de l'Événement Télévisé.
 - **Lancement de partie — non implémenté** — il n'existe aujourd'hui aucune
   action explicite de "démarrage" d'une partie `PLANIFIE`. À ajouter : un
   écran/bouton "Lancer la partie" qui affiche à chaque participant présent les
@@ -671,12 +718,18 @@ Le statut porte aussi la phase garage post-partie (`ATELIER`) — cf.
 | Champ (DTO) | Type | Description |
 |-------------|------|-------------|
 | `scenarioName` | string | Libellé du scénario résolu depuis `ScenarioCatalogService`. |
+| `franchissementPortes` | boolean | Flag du scénario résolu (mirroir de `scenarioName`) — pilote l'affichage de l'écran Portes du wizard de fin de partie, cf. [§Wizard de fin de partie](#wizard-de-fin-de-partie). |
+| `gainJerricans` | boolean | Flag du scénario résolu — pilote l'affichage de l'écran Jerricans du wizard. |
 
 ### `Scenario` _(catalogue en mémoire, pas en base)_
 
 Chargé depuis `database_init/data/scenarios.yml` au démarrage par
 `ScenarioCatalogService`. Champs : `nom`, `nom_interne`, `type`
-(`EVENEMENT_TELE` \| `ESCARMOUCHE`), `description` (Markdown → HTML au chargement).
+(`EVENEMENT_TELE` \| `ESCARMOUCHE`), `description` (Markdown → HTML au
+chargement), `franchissement_portes` (boolean — l'écran Portes du wizard de
+fin de partie n'apparaît que si vrai, Événement Télévisé uniquement),
+`gain_jerricans` (boolean — l'écran Jerricans du wizard n'apparaît que si vrai,
+tout type de partie).
 
 ---
 
@@ -719,17 +772,20 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistrer le résultat (`{ results: [{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }] }`, organisateur) — `weightClass` n'est **pas** transmis, dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). — **ne finalise plus la partie** (reste `PLANIFIE`, cf. §Wizard de fin de partie). Crée des `RankingAssignedEvent` + `GatesCrossedEvent`/`VehicleDestroyedEvent` (exploits, US-B2) via `Game.recordResult` (convergence event-sourcing) |
+| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistre le lot accumulé par le wizard (organisateur). `results` (classement + exploits, `{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }[]`) est optionnel — Événement Télévisé uniquement, `Game.recordResult` rejette (400) tout appel avec `results` sur une Escarmouche. `jerricanGains` (`{ participantId, amount }[]`) et `destroyedVehicles` (à plat, `{ destroyerId, vehicleId }[]`) sont optionnels — Escarmouche uniquement (`Game.recordJerricanGains`/`recordDestroyedVehicleTraces`, ce dernier à **0 PC**, trace journal uniquement). `weightClass` n'est jamais transmis, toujours dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). Ne finalise pas la partie (reste `PLANIFIE`, cf. §Wizard de fin de partie) |
+| DELETE | `/api/campaigns/:id/games/:gameId/results` | JWT | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) |
-| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran 3, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
+| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) |
+| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
 | POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/journal` | JWT | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie) |
 
-> Ce sont ces trois routes (`/results`, `/participant-vehicles`, `/enter-atelier`) — plus
-> `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) — que consomme le frontend
-> Angular pour le wizard de fin de partie. La forme de réponse de `/results` (`Game`,
-> statut désormais `PLANIFIE`) est inchangée malgré la bascule vers l'event-sourcing.
+> Ce sont ces routes (`/results` POST/DELETE, `/participant-vehicles`, `/events/income`,
+> `/enter-atelier`) — plus `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) —
+> que consomme le frontend Angular pour le wizard de fin de partie. La forme de réponse de
+> `POST /results` (`Game`, statut désormais `PLANIFIE`) est inchangée malgré la bascule
+> vers l'event-sourcing.
 
 ### Résultats et classement — endpoints event-sourcing (Partie 4)
 
@@ -762,4 +818,4 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles` | JWT | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture) |
 | POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
-| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran 3 du wizard — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
+| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |

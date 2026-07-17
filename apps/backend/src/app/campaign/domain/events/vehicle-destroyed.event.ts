@@ -36,7 +36,10 @@ export class VehicleDestroyedEvent extends GameEvent {
   describe(participants: readonly CampaignParticipant[]): string {
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
     const label = found ? `${found.vehicle.type.nom} (${found.team.name})` : `#${this.vehicleId}`;
-    return `Véhicule ennemi détruit : ${label} — ${WEIGHT_CLASS_LABELS[this.weightClass]} (+${this.championshipPoints} PC)`;
+    // Escarmouche (Game.recordDestroyedVehicleTraces) fige toujours 0 PC : la destruction
+    // reste tracée dans le journal, sans afficher un gain de PC inexistant.
+    const suffix = this.championshipPoints > 0 ? ` (+${this.championshipPoints} PC)` : '';
+    return `Véhicule ennemi détruit : ${label} — ${WEIGHT_CLASS_LABELS[this.weightClass]}${suffix}`;
   }
 }
 

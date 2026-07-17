@@ -19,4 +19,8 @@ export interface Scenario {
   type: GameType;
   /** Texte libre affiché dans l'UI — converti de Markdown en HTML au chargement */
   description: string;
+  /** Le wizard de fin de partie propose-t-il la saisie des portes franchies ? */
+  franchissement_portes: boolean;
+  /** Le wizard de fin de partie propose-t-il la saisie manuelle d'un butin de jerricans ? */
+  gain_jerricans: boolean;
 }
