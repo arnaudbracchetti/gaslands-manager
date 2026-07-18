@@ -305,6 +305,30 @@
   &:hover { background: var(--tb-rouille-lt); }
 }
 
+.tep-export-sheet {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.tep-btn-export-sheet {
+  background: none;
+  border: 1px solid var(--border-rust);
+  color: var(--tb-os);
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+  }
+}
 
 .tep-budget-context {
   display: flex;

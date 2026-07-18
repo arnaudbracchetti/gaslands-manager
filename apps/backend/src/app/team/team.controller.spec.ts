@@ -12,6 +12,7 @@ import { GetTeamSummariesUseCase } from './application/get-team-summaries.usecas
 import { CreateTeamUseCase } from './application/create-team.usecase';
 import { UpdateTeamUseCase } from './application/update-team.usecase';
 import { RemoveTeamUseCase } from './application/remove-team.usecase';
+import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 import type { TeamSummaryDto } from './domain/team.repository.interface';
 
 const mockUser = { id: 42, email: 'test@test.com' };
@@ -36,6 +37,7 @@ describe('TeamController', () => {
   const mockCreate = { execute: vi.fn() };
   const mockUpdate = { execute: vi.fn() };
   const mockRemove = { execute: vi.fn() };
+  const mockGetSheet = { execute: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -45,6 +47,7 @@ describe('TeamController', () => {
         { provide: CreateTeamUseCase, useValue: mockCreate },
         { provide: UpdateTeamUseCase, useValue: mockUpdate },
         { provide: RemoveTeamUseCase, useValue: mockRemove },
+        { provide: GetTeamSheetUseCase, useValue: mockGetSheet },
       ],
     }).compile();
 
@@ -94,6 +97,17 @@ describe('TeamController', () => {
       await controller.remove(1, mockRequest as never);
 
       expect(mockRemove.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42 });
+    });
+  });
+
+  describe('getSheet()', () => {
+    it('délègue à GetTeamSheetUseCase avec teamId et userId', async () => {
+      mockGetSheet.execute.mockResolvedValue('<!doctype html>...');
+
+      const result = await controller.getSheet(1, mockRequest as never);
+
+      expect(mockGetSheet.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42 });
+      expect(result).toBe('<!doctype html>...');
     });
   });
 });

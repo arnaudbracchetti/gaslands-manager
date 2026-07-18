@@ -31,7 +31,7 @@ import * as path from 'path';
 import { CatalogService } from './catalog.service';
 import { IMPROVEMENT_BEHAVIORS } from '../team/domain/behaviors/improvement-behaviors';
 import { ADVANTAGE_BEHAVIORS } from '../team/domain/behaviors/advantage-behaviors';
-import type { Sponsor, Vehicule, Arme, Amelioration, Avantage } from './catalog.interfaces';
+import type { Sponsor, Vehicule, Arme, Amelioration, Avantage, Sequelle } from './catalog.interfaces';
 
 // ── Sous-classe avec chemin absolu vers les vrais fichiers ─────────────────────
 //
@@ -71,6 +71,7 @@ let vehicules: Vehicule[];
 let armes: Arme[];
 let ameliorations: Amelioration[];
 let avantages: Avantage[];
+let sequelles: Sequelle[];
 let sponsorNoms: Set<string>;
 
 beforeAll(() => {
@@ -85,6 +86,7 @@ beforeAll(() => {
   armes = service.getAllArmes();
   ameliorations = service.getAllAmeliorations();
   avantages = service.getAllAvantages();
+  sequelles = service.getAllSequelles();
 
   // Ensemble des noms de sponsors pour vérifier les références croisées
   sponsorNoms = new Set(sponsors.map((s) => s.nom));
@@ -543,5 +545,52 @@ describe('Avantages — comportement ↔ ADVANTAGE_BEHAVIORS', () => {
     expect(comportementsDeclares.map((a) => a.comportement).sort()).toEqual([
       'cascadeur', 'expertise', 'sur_deux_roues',
     ]);
+  });
+});
+
+// ── 9. munitions / effet_court — champs de la fiche d'équipe exportable ──────
+//
+// Ces deux champs optionnels alimentent la colonne "Effet" de la fiche véhicule
+// exportable (cf. docs/plans/2026-07-18-fiche-vehicule-*.md) : `munitions` (armes
+// ET améliorations à usage limité — ex. Bélier Explosif, Nitro — cases à cocher)
+// et `effet_court` (armes/améliorations/avantages/séquelles, libellé 1-2 mots).
+// Contrairement à necessite_orientation, ces champs restent optionnels — une
+// entrée sans `effet_court` dégrade proprement sur la fiche (renvoi de règle
+// seul, cf. team-sheet.renderer.ts) plutôt que de planter. Ces tests ne
+// verrouillent donc pas une présence à 100%, seulement le FORMAT des valeurs
+// déjà déclarées, pour détecter une saisie invalide dès le chargement.
+
+describe('munitions — format des valeurs déclarées (armes.yml + amelioration.yml)', () => {
+  it('tout `munitions` déclaré est un entier positif', () => {
+    for (const item of [...armes, ...ameliorations]) {
+      if (item.munitions !== undefined) {
+        expect(
+          Number.isInteger(item.munitions) && item.munitions > 0,
+          `"${item.nom}" déclare munitions=${item.munitions}, attendu un entier positif`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('au moins une arme déclare des munitions (sinon le test ci-dessus serait vide de sens)', () => {
+    expect(armes.filter((a) => a.munitions !== undefined).length).toBeGreaterThan(0);
+  });
+
+  it('au moins une amélioration à usage limité (Bélier Explosif, Nitro) déclare des munitions', () => {
+    expect(ameliorations.filter((a) => a.munitions !== undefined).length).toBeGreaterThan(0);
+  });
+});
+
+describe('effet_court — format des valeurs déclarées (4 catalogues)', () => {
+  it('tout `effet_court` déclaré est une chaîne non vide', () => {
+    const tous = [...armes, ...ameliorations, ...avantages, ...sequelles];
+    for (const item of tous) {
+      if (item.effet_court !== undefined) {
+        expect(
+          item.effet_court.trim().length > 0,
+          `"${item.nom}" déclare un effet_court vide`,
+        ).toBe(true);
+      }
+    }
   });
 });

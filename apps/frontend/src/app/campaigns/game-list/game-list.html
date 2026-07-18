@@ -39,6 +39,9 @@
         <button type="button" class="game-list__atelier" (click)="openAtelier.emit(game)">
           <app-icon concept="atelier" size="sm" /> Atelier
         </button>
+        <button type="button" class="game-list__export" (click)="exportSheet.emit(game)">
+          <app-icon concept="copier" size="sm" /> Fiche d'équipe
+        </button>
       }
 
       @if (hasJournal(game)) {

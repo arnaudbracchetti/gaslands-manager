@@ -305,6 +305,16 @@ export class CampaignsService {
   }
 
   /**
+   * GET /api/campaigns/:id/sheet → fiche d'équipe exportable (document HTML complet,
+   * imprimable en A4) de l'équipe engagée du participant connecté — chocs/séquelles
+   * réels inclus (état après replay complet). `responseType: 'text'` : la réponse
+   * est du HTML brut, pas du JSON.
+   */
+  getTeamSheet(campaignId: number): Observable<string> {
+    return this.http.get(`/api/campaigns/${campaignId}/sheet`, { responseType: 'text' });
+  }
+
+  /**
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-weapons → armes du
    * sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget =
    * cagnotte du participant). Même forme que le verdict "construction d'équipe".

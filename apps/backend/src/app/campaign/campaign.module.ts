@@ -59,6 +59,7 @@ import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
+import { GetCampaignTeamSheetUseCase } from './application/get-campaign-team-sheet.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-workshop-available-advantages.usecase';
@@ -250,6 +251,11 @@ import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop
     {
       provide: GetWorkshopUseCase,
       useFactory: (replay: CampaignReplayService) => new GetWorkshopUseCase(replay),
+      inject: [CampaignReplayService],
+    },
+    {
+      provide: GetCampaignTeamSheetUseCase,
+      useFactory: (replay: CampaignReplayService) => new GetCampaignTeamSheetUseCase(replay),
       inject: [CampaignReplayService],
     },
     {

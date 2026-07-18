@@ -23,6 +23,7 @@ describe('CampaignController (câblage)', () => {
   let getWorkshopAvailableAdvantagesUseCase: ReturnType<typeof uc>;
   let getWorkshopAvailableSequellesUseCase: ReturnType<typeof uc>;
   let renameCampaignVehicleUseCase: ReturnType<typeof uc>;
+  let getCampaignTeamSheetUseCase: ReturnType<typeof uc>;
   let controller: CampaignController;
 
   beforeEach(() => {
@@ -47,6 +48,7 @@ describe('CampaignController (câblage)', () => {
     getWorkshopAvailableAdvantagesUseCase = uc(['avantage']);
     getWorkshopAvailableSequellesUseCase = uc(['sequelle']);
     renameCampaignVehicleUseCase = uc(undefined);
+    getCampaignTeamSheetUseCase = uc('<!doctype html>...');
 
     controller = new CampaignController(
       query as never,
@@ -75,6 +77,7 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // changeEquipment
       uc() as never,            // wreck
       uc() as never,            // workshop
+      getCampaignTeamSheetUseCase as never,
       uc() as never,            // getWorkshopAvailableWeapons
       uc() as never,            // getWorkshopAvailableImprovements
       getWorkshopAvailableAdvantagesUseCase as never,
@@ -153,5 +156,11 @@ describe('CampaignController (câblage)', () => {
     expect(renameCampaignVehicleUseCase.execute).toHaveBeenCalledWith({
       campaignId: 1, userId: 42, vehicleId: 5, nom: 'La Teigne',
     });
+  });
+
+  it('getSheet délègue à GetCampaignTeamSheetUseCase avec campaignId/userId', async () => {
+    const result = await controller.getSheet(req as never, 1);
+    expect(getCampaignTeamSheetUseCase.execute).toHaveBeenCalledWith({ campaignId: 1, userId: 42 });
+    expect(result).toBe('<!doctype html>...');
   });
 });

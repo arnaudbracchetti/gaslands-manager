@@ -105,10 +105,3 @@ API Endpoints Contenu (documentation utilisateur) :
 - Vue d'ensemble de toutes les équipes de l'utilisateur
 - Accès rapide à chaque équipe et ses véhicules
 
-### Export (futur)
-
-- Fiche récapitulative d'une équipe au format imprimable (HTML/PDF) — synthèse
-  de tous les véhicules (statistiques effectives, armes/améliorations/avantages
-  montés, séquelles) destinée à servir de feuille de référence physique
-  pendant une partie de Gaslands, sans avoir à rouvrir l'application
-

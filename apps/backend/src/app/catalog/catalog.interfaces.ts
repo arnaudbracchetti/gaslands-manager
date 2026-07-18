@@ -89,6 +89,19 @@ export interface Arme {
    * d'où un champ posé arme par arme plutôt qu'une règle générique sur `type`.
    */
   necessite_orientation: boolean;
+  /**
+   * Nombre de munitions de départ, quand cette arme en est dotée (sinon absent —
+   * arc illimité). Jusqu'ici cette information n'existait qu'en texte libre dans
+   * `regles` (ex. "**3 Munitions**.") ; ce champ la rend exploitable par la fiche
+   * d'équipe exportable (cases à cocher, une par munition).
+   */
+  munitions?: number;
+  /**
+   * Libellé très court (1-2 mots, ex. "Blitz", "Arc 360°") résumant l'effet ou le
+   * thème de cette arme pour la fiche d'équipe exportable (colonne "Effet") — un
+   * simple aide-mémoire, le détail complet reste dans `regles`.
+   */
+  effet_court?: string;
 }
 
 /** Amélioration de véhicule telle que définie dans amelioration.yml */
@@ -125,6 +138,18 @@ export interface Amelioration {
    * du sélecteur de direction côté frontend.
    */
   necessite_orientation: boolean;
+  /**
+   * Nombre d'utilisations de départ, quand cette amélioration en est dotée (sinon
+   * absent = illimité) — ex. Bélier Explosif et Nitro (toutes variantes sponsor),
+   * chacun limité à 1 utilisation ("1 munition" en texte libre dans `regles`
+   * jusqu'ici). Même mécanique que `Arme.munitions`, cf. sa doc.
+   */
+  munitions?: number;
+  /**
+   * Libellé très court (1-2 mots) résumant l'effet ou le thème de cette amélioration
+   * pour la fiche d'équipe exportable (colonne "Effet") — cf. `Arme.effet_court`.
+   */
+  effet_court?: string;
 }
 
 /** Avantage de véhicule tel que défini dans avantage.yml */
@@ -154,6 +179,11 @@ export interface Avantage {
   comportement?: string;
   // Pas de `emplacement` (toujours 0, aucun avantage n'occupe de slot) ni
   // `necessite_orientation` (jamais requise) — contrairement à Amelioration/Arme.
+  /**
+   * Libellé très court (1-2 mots) résumant l'effet ou le thème de cet avantage
+   * pour la fiche d'équipe exportable (colonne "Effet") — cf. `Arme.effet_court`.
+   */
+  effet_court?: string;
 }
 
 /**
@@ -178,6 +208,11 @@ export interface Sequelle {
    * séquelle `TABLE_EPAVES` ne peut jamais être achetée directement en atelier.
    */
   origine: 'ATELIER' | 'TABLE_EPAVES';
+  /**
+   * Libellé très court (1-2 mots) résumant l'effet de cette séquelle pour la fiche
+   * d'équipe exportable (colonne "Effet") — cf. `Arme.effet_court`.
+   */
+  effet_court?: string;
 }
 
 // ── Type enrichi : sponsor avec relations pré-résolues ───────────────────────

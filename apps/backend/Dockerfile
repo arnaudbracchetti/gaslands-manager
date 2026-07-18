@@ -66,6 +66,12 @@ COPY --from=builder /app/node_modules ./node_modules
 # la variable d'environnement CONTENT_DIR (définie dans docker-compose.yml)
 COPY --from=builder /app/content ./content
 
+# ── Copie des assets statiques (ex. logo en filigrane de la fiche d'équipe) ──
+# Lus depuis process.cwd()/assets par team-sheet.renderer.ts - même convention
+# que CONTENT_DIR ci-dessus, sans variable d'environnement (chemin fixe, un seul
+# fichier pour l'instant).
+COPY --from=builder /app/assets ./assets
+
 # Port exposé par le serveur NestJS
 EXPOSE 3000
 

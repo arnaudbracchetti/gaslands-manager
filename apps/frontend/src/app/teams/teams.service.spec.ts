@@ -134,4 +134,22 @@ describe('TeamsService', () => {
       expect(completed).toBe(true);
     });
   });
+
+  // ── getSheet() ───────────────────────────────────────────────────────────
+
+  describe('getSheet()', () => {
+    it('effectue GET /api/teams/:id/sheet en responseType text et retourne le HTML brut', () => {
+      let result: string | undefined;
+
+      service.getSheet(1).subscribe((html) => { result = html; });
+
+      const req = httpMock.expectOne('/api/teams/1/sheet');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('text');
+
+      req.flush('<!doctype html><html></html>');
+
+      expect(result).toBe('<!doctype html><html></html>');
+    });
+  });
 });

@@ -375,6 +375,8 @@ classDiagram
         +sponsors_autorises : string[]
         +montable_tourelle : boolean | undefined
         +necessite_orientation : boolean
+        +munitions : number | undefined
+        +effet_court : string | undefined
     }
 
     class Amelioration {
@@ -388,6 +390,8 @@ classDiagram
         +sponsors_autorises : string[]
         +comportement : string
         +necessite_orientation : boolean
+        +munitions : number | undefined
+        +effet_court : string | undefined
     }
 
     class Avantage {
@@ -399,6 +403,7 @@ classDiagram
         +description : string
         +regles : string
         +comportement : string | undefined
+        +effet_court : string | undefined
     }
 
     class Scenario {
@@ -416,6 +421,7 @@ classDiagram
         +description : string
         +chocs_cost : number
         +origine : ATELIER|TABLE_EPAVES
+        +effet_court : string | undefined
     }
 
     Sponsor "1" o-- "0..*" Vehicule : autorise
@@ -437,6 +443,20 @@ par correspondance de `categorie` avec `Sponsor.classes_avantage[2]` (cf.
 `Sequelle` va plus loin : ni `sponsors_autorises` ni `categorie`, aucune résolution
 sponsor du tout (cf. ci-dessus). Le catalogue `Scenario` est géré par
 `ScenarioCatalogService` (même singleton pattern que `CatalogService`).
+
+**`munitions`/`effet_court`** (fiche d'équipe exportable, cf.
+[spec/TEAMS.md](spec/TEAMS.md#fiche-déquipe-exportable)) : deux champs optionnels
+purement présentationnels, sans effet sur aucune règle métier — contrairement à
+`necessite_orientation` (obligatoire, dérive une vraie règle de pose). `munitions`
+existe sur `Arme` **et** `Amelioration` (une amélioration à usage limité — Bélier
+Explosif, Nitro toutes variantes — porte elle aussi un nombre d'utilisations de
+départ, jusqu'ici seulement décrit en texte libre dans `regles`, ex. "1 munition")
+— jamais sur `Avantage`/`Sequelle`, qui n'ont pas cette notion. `effet_court`
+existe sur les 4 types (y compris `Sequelle`, seul catalogue où il apparaît en
+dehors des trois autres relations Sponsor). Les Value Objects
+(`WeaponType`/`ImprovementType.munitions`/`.effetCourt`, `AdvantageType`/
+`SequellaType.effetCourt`) les exposent tels quels — `undefined` si non
+renseignés, géré par repli côté renderer (jamais une erreur).
 
 ---
 

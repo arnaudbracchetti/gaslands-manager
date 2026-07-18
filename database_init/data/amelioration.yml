@@ -39,6 +39,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 1
     necessite_orientation: false
+    effet_court: "Anti-tonneau"
     description: |
       Structure de protection permettant de préserver la carrosserie lors des tonneaux.
     regles: |
@@ -65,6 +66,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 1
     necessite_orientation: true
+    effet_court: "+2 dés éperon"
     description: |
       Arme de combat rapproché attachée au véhicule augmentant les dégâts d'impact et protégeant contre le danger.
     regles: |
@@ -93,6 +95,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 0
     necessite_orientation: true
+    effet_court: "+2 dés éperon"
     description: |
       Version du bélier de choc modifiée par l'équipe Slime pour ne requérir aucun emplacement.
     regles: |
@@ -110,6 +113,8 @@ ameliorations_vehicules:
     prix: 3
     emplacement: 0
     necessite_orientation: true
+    munitions: 1
+    effet_court: "+6 dés 1er choc"
     description: |
       Charge d'impact jetable interdite aux véhicules légers octroyant un bonus d'attaque massif lors de la première collision.
     regles: |
@@ -142,6 +147,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 1
     necessite_orientation: false
+    effet_court: "+2 Carrosserie"
     description: |
       Plaques de protection rivetées augmentant la structure de carrosserie maximale de manière permanente.
     regles: |
@@ -167,6 +173,7 @@ ameliorations_vehicules:
     prix: 2
     emplacement: 1
     necessite_orientation: false
+    effet_court: "Portée largables"
     description: |
       Dispositif permettant de projeter des armes largables à portée moyenne dans un arc de 360°.
     regles: |
@@ -194,6 +201,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 1
     necessite_orientation: false
+    effet_court: "+1 Manœuv./-1 Vit."
     description: |
       Remplacement des roues par des chenilles de char pour ignorer les terrains difficiles et augmenter la manœuvrabilité.
     regles: |
@@ -224,6 +232,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+1 Équipage"
     description: |
       Ajoute un passager pour augmenter la valeur d'équipage et le nombre d'attaques réalisables.
     regles: |
@@ -251,6 +260,7 @@ ameliorations_vehicules:
     prix: 2
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+1 Équipage"
     description: |
       Recrutement d'un membre d'équipage supplémentaire à moitié prix pour l'équipe Scarlett.
     regles: |
@@ -267,6 +277,8 @@ ameliorations_vehicules:
     prix: 6
     emplacement: 0
     necessite_orientation: false
+    munitions: 1
+    effet_court: "Accélération forcée"
     description: |
       Boost jetable provoquant un déplacement forcé rectiligne long et fixant le danger à un niveau élevé.
     regles: |
@@ -295,6 +307,8 @@ ameliorations_vehicules:
     prix: 3
     emplacement: 0
     necessite_orientation: false
+    munitions: 1
+    effet_court: "Accélération forcée"
     description: |
       Système de Nitro acheté à prix réduit pour l'équipe Idris, générant moins de danger lors de son utilisation.
     regles: |
@@ -315,6 +329,7 @@ ameliorations_vehicules:
     prix: 5
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+2 Vitesse Max"
     description: |
       Prototype Mishkin non léger augmentant la vitesse maximale, modifiant le gabarit long et explosant lourdement en cas d'échec.
     regles: |
@@ -335,6 +350,7 @@ ameliorations_vehicules:
     prix: 7
     emplacement: 0
     necessite_orientation: false
+    effet_court: "Téléportation"
     description: |
       Module électrique Mishkin permettant un bond de position avant le déplacement, sujet à une déviation ennemie sur un résultat de danger.
     regles: |
@@ -356,6 +372,7 @@ ameliorations_vehicules:
     prix: 2
     emplacement: 0
     necessite_orientation: false
+    effet_court: "Sirène étendue"
     description: |
       Haut-parleur exclusif à la Patrouille propageant l'effet de sirène à l'ensemble des véhicules adverses.
     regles: |
@@ -372,6 +389,7 @@ ameliorations_vehicules:
     prix: 6
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+2 Carrosserie"
     description: |
       Blindage compact conçu par Verney pour augmenter définitivement la carrosserie sans utiliser d'emplacement.
     regles: |
@@ -387,6 +405,7 @@ ameliorations_vehicules:
     prix: 0
     emplacement: 0
     necessite_orientation: false
+    effet_court: "Remorque gratuite"
     description: |
       Module octroyé aux remorques et forteresses de Rusty, appliquant une série de règles spéciales thématiques.
     regles: |
@@ -404,6 +423,7 @@ ameliorations_vehicules:
     prix: 4
     emplacement: 0
     necessite_orientation: false
+    effet_court: "Remorque accès limité"
     description: |
       Châssis articulé léger pour véhicule moyen ou lourd, conférant les règles de convoi et une remorque de transport.
     regles: |
@@ -421,6 +441,7 @@ ameliorations_vehicules:
     prix: 8
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+1 Emplacement"
     description: |
       Châssis articulé moyen pour véhicule moyen ou lourd, conférant les règles de convoi et un emplacement d'arrimage d'arme.
     regles: |
@@ -439,6 +460,7 @@ ameliorations_vehicules:
     prix: 12
     emplacement: 0
     necessite_orientation: false
+    effet_court: "+3 Emplacements"
     description: |
       Châssis articulé lourd réservé aux véhicules lourds, conférant les règles de convoi et trois emplacements d'arrimage.
     regles: |

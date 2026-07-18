@@ -42,6 +42,7 @@ import { GameResultWizard } from '../game-result-wizard/game-result-wizard';
 import { GameJournalModal } from '../game-journal-modal/game-journal-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Icon } from '../../shared/icon/icon';
+import { openHtmlDocumentInNewTab } from '../../shared/html-export.util';
 
 @Component({
   selector: 'app-campaign-program',
@@ -418,6 +419,25 @@ export class CampaignProgram implements OnInit {
    */
   onOpenAtelier(): void {
     this.router.navigate(['/campaigns', this.campaignId(), 'atelier']);
+  }
+
+  /**
+   * Exporte la fiche d'équipe du participant connecté (chocs/séquelles réels,
+   * état après replay complet — cf. GetCampaignTeamSheetUseCase). `window.open`
+   * DOIT être appelé de façon synchrone ici, avant l'appel HTTP asynchrone, sous
+   * peine d'être traité comme un popup non désiré par certains navigateurs.
+   */
+  onExportSheet(): void {
+    const win = window.open('', '_blank');
+    this.campaignsService.getTeamSheet(this.campaignId()).subscribe({
+      next: (html) => openHtmlDocumentInNewTab(win, html),
+      error: (err: HttpErrorResponse) => {
+        win?.close();
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors de la génération de la fiche.';
+        console.error(msg);
+        this.error.set(msg);
+      },
+    });
   }
 
   onDelete(game: Game): void {

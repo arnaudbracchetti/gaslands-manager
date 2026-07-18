@@ -13,6 +13,15 @@ entre en Atelier alors qu'une autre y était encore, l'ancienne se ferme
 automatiquement — vous en êtes averti à l'écran. Une fois fermé, l'Atelier
 d'une partie ne peut plus être rouvert.
 
+## Exporter la fiche d'équipe
+
+Tant qu'une partie est en Atelier, le bouton **📄 Fiche d'équipe** apparaît à
+côté du bouton Atelier dans le Programme Télé — accessible à tout
+participant. Il génère un document imprimable (A4) de votre équipe telle
+qu'elle est réellement à ce moment de la campagne, Chocs et Séquelles
+compris (contrairement à la fiche exportée depuis l'écran Équipes, réservée
+aux équipes non engagées et qui ne connaît jamais ces deux informations).
+
 ## La cagnotte
 
 Votre cagnotte correspond au budget non dépensé de votre équipe, augmenté

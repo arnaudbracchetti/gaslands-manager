@@ -54,4 +54,13 @@ export class TeamsService {
   remove(id: number): Observable<void> {
     return this.http.delete<void>(`/api/teams/${id}`);
   }
+
+  /**
+   * GET /api/teams/:id/sheet → fiche d'équipe exportable (document HTML complet,
+   * imprimable en A4) — `responseType: 'text'` : la réponse est du HTML brut, pas
+   * du JSON.
+   */
+  getSheet(id: number): Observable<string> {
+    return this.http.get(`/api/teams/${id}/sheet`, { responseType: 'text' });
+  }
 }

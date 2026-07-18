@@ -33,6 +33,7 @@ avantages:
     nom_interne: "double_canon"
     categorie: "Agression"
     prix: 2
+    effet_court: "+1 pour toucher"
     description: |
       Améliore la précision de plusieurs armes d'équipage lors de l'attaque.
     regles: |
@@ -42,6 +43,7 @@ avantages:
     nom_interne: "abordage"
     categorie: "Agression"
     prix: 2
+    effet_court: "Ignore Désorientation"
     description: |
       Permet d'attaquer même au contact d'un obstacle, sans pénalité de Désorientation.
     regles: |
@@ -51,6 +53,7 @@ avantages:
     nom_interne: "marteau_de_guerre"
     categorie: "Agression"
     prix: 4
+    effet_court: "Éperonnage + Danger"
     description: |
       Rend l'éperonnage plus dévastateur à mesure que les Jetons Danger s'accumulent.
     regles: |
@@ -60,6 +63,7 @@ avantages:
     nom_interne: "psychopathe"
     categorie: "Agression"
     prix: 5
+    effet_court: "Danger Proximité"
     description: |
       Punit les véhicules adverses qui s'approchent trop près.
     regles: |
@@ -69,6 +73,7 @@ avantages:
     nom_interne: "broyeur"
     categorie: "Agression"
     prix: 5
+    effet_court: "Éperonnage → Danger"
     description: |
       Permet de convertir les dégâts d'un éperonnage en Jetons Danger plutôt qu'en perte de carrosserie.
     regles: |
@@ -78,6 +83,7 @@ avantages:
     nom_interne: "engin_de_la_mort"
     categorie: "Agression"
     prix: 5
+    effet_court: "Passage en Force"
     description: |
       Autorise ce véhicule à effectuer des Passages en Force, comme une Forteresse Mobile.
     regles: |
@@ -89,6 +95,7 @@ avantages:
     nom_interne: "symbiose"
     categorie: "Audace"
     prix: 2
+    effet_court: "Tente le Coup+"
     description: |
       Autorise des tentatives de coup répétées lors du déplacement, au prix de Jetons Danger.
     regles: |
@@ -98,6 +105,7 @@ avantages:
     nom_interne: "insaisissable"
     categorie: "Audace"
     prix: 3
+    effet_court: "-2 dés éperonné"
     description: |
       Pénalise les véhicules qui tentent un éperonnage contre ce véhicule.
     regles: |
@@ -107,6 +115,7 @@ avantages:
     nom_interne: "as_du_frein_a_main"
     categorie: "Audace"
     prix: 3
+    effet_court: "Rotation libre"
     description: |
       Permet de choisir librement l'orientation lors d'une Rotation.
     regles: |
@@ -116,6 +125,7 @@ avantages:
     nom_interne: "feinte"
     categorie: "Audace"
     prix: 5
+    effet_court: "Danger → Esquive"
     description: |
       Convertit des Jetons Danger en bonus aux jets d'Esquive.
     regles: |
@@ -125,6 +135,7 @@ avantages:
     nom_interne: "derapage_controle"
     categorie: "Audace"
     prix: 5
+    effet_court: "Gabarit libre"
     description: |
       Autorise un choix élargi de gabarits pour résoudre un Dérapage.
     regles: |
@@ -134,6 +145,7 @@ avantages:
     nom_interne: "cascadeur"
     categorie: "Audace"
     prix: 7
+    effet_court: "Ignore obstacles"
     comportement: "cascadeur"
     description: |
       Réservé aux véhicules légers et maniables, permet d'ignorer des obstacles au prix de Jetons Danger.
@@ -148,6 +160,7 @@ avantages:
     nom_interne: "baril_de_poudre"
     categorie: "Dur à Cuire"
     prix: 1
+    effet_court: "Explosion+"
     description: |
       Rend l'explosion de ce véhicule plus dangereuse pour son entourage.
     regles: |
@@ -157,6 +170,7 @@ avantages:
     nom_interne: "sens_du_spectacle"
     categorie: "Dur à Cuire"
     prix: 1
+    effet_court: "Perte contrôle→Vote"
     description: |
       Transforme une Perte de Contrôle en Vote du Public.
     regles: |
@@ -166,6 +180,7 @@ avantages:
     nom_interne: "guerrier_de_la_route"
     categorie: "Dur à Cuire"
     prix: 2
+    effet_court: "Retire 1 Danger"
     description: |
       Récompense l'agressivité en retirant un Jeton Danger après avoir touché l'adversaire.
     regles: |
@@ -175,6 +190,7 @@ avantages:
     nom_interne: "couvrez_moi"
     categorie: "Dur à Cuire"
     prix: 2
+    effet_court: "Transfère Danger"
     description: |
       Permet de transférer un Jeton Danger à un véhicule ami proche.
     regles: |
@@ -184,6 +200,7 @@ avantages:
     nom_interne: "fou_furieux"
     categorie: "Dur à Cuire"
     prix: 3
+    effet_court: "Reporte Danger"
     description: |
       Permet de reporter un Jeton Danger sur un autre véhicule quand ceux-ci s'accumulent trop.
     regles: |
@@ -193,6 +210,7 @@ avantages:
     nom_interne: "pluie_de_balles"
     categorie: "Dur à Cuire"
     prix: 3
+    effet_court: "Dérapage→Tourelle"
     description: |
       Transforme un Dérapage en occasion de tirer à 360° avec une arme au choix.
     regles: |
@@ -204,6 +222,7 @@ avantages:
     nom_interne: "flammes_purificatrices"
     categorie: "Horreur"
     prix: 1
+    effet_court: "Sacrifice → soigne"
     description: |
       Permet de sacrifier ses propres Points de Carrosserie pour réparer un véhicule ami.
     regles: |
@@ -213,6 +232,7 @@ avantages:
     nom_interne: "visions_extatiques"
     categorie: "Horreur"
     prix: 1
+    effet_court: "Transfère Danger"
     description: |
       Permet de transférer ses propres Jetons Danger sur un véhicule ami.
     regles: |
@@ -222,6 +242,7 @@ avantages:
     nom_interne: "pacte_avec_le_diable"
     categorie: "Horreur"
     prix: 1
+    effet_court: "Esquive partagée"
     description: |
       Additionne la Vitesse d'un allié à la sienne lors d'un test d'Esquive, au prix d'un risque partagé.
     regles: |
@@ -231,6 +252,7 @@ avantages:
     nom_interne: "autoroute_vers_enfer"
     categorie: "Horreur"
     prix: 2
+    effet_court: "Laisse du Napalm"
     description: |
       Permet de laisser derrière soi un gabarit de Napalm en contrepartie de dégâts encaissés.
     regles: |
@@ -240,6 +262,7 @@ avantages:
     nom_interne: "manifestation_diabolique"
     categorie: "Horreur"
     prix: 3
+    effet_court: "Explosion au retour"
     description: |
       Déclenche une explosion offensive au moment où ce véhicule revient en piste.
     regles: |
@@ -249,6 +272,7 @@ avantages:
     nom_interne: "ange_de_la_mort"
     categorie: "Horreur"
     prix: 4
+    effet_court: "Sacrifice → dés+"
     description: |
       Permet de sacrifier des Points de Carrosserie pour renforcer une attaque.
     regles: |
@@ -260,6 +284,7 @@ avantages:
     nom_interne: "poids_mort"
     categorie: "Mécanique"
     prix: 2
+    effet_court: "Poids supérieur"
     description: |
       Permet de se faire passer pour une classe de poids supérieure au prix de Jetons Danger.
     regles: |
@@ -269,6 +294,7 @@ avantages:
     nom_interne: "expert_en_tonneaux"
     categorie: "Mécanique"
     prix: 2
+    effet_court: "Tonneau flexible"
     description: |
       Offre plus de flexibilité dans le placement du gabarit lors d'un Tonneau.
     regles: |
@@ -278,6 +304,7 @@ avantages:
     nom_interne: "cogneur"
     categorie: "Mécanique"
     prix: 4
+    effet_court: "Collision → Danger"
     description: |
       Inflige un Jeton Danger à l'adversaire lors d'une collision non esquivée.
     regles: |
@@ -287,6 +314,7 @@ avantages:
     nom_interne: "retour_de_flamme"
     categorie: "Mécanique"
     prix: 5
+    effet_court: "Contre-attaque auto"
     description: |
       Déclenche une contre-attaque automatique dès que ce véhicule encaisse des dégâts.
     regles: |
@@ -296,6 +324,7 @@ avantages:
     nom_interne: "concasseur"
     categorie: "Mécanique"
     prix: 7
+    effet_court: "Franchissement"
     description: |
       Donne à ce véhicule la règle spéciale Franchissement des Monster Trucks.
     regles: |
@@ -305,6 +334,7 @@ avantages:
     nom_interne: "meme_pas_mal"
     categorie: "Mécanique"
     prix: 8
+    effet_court: "Annule petites touches"
     description: |
       Annule les attaques adverses qui n'infligent que peu de touches.
     regles: |
@@ -316,6 +346,7 @@ avantages:
     nom_interne: "tireur_elite"
     categorie: "Militaire"
     prix: 2
+    effet_court: "+1 longue portée"
     description: |
       Améliore la précision de tir à longue portée.
     regles: |
@@ -325,6 +356,7 @@ avantages:
     nom_interne: "servant_artillerie"
     categorie: "Militaire"
     prix: 2
+    effet_court: "Équipage → précision"
     description: |
       Permet de sacrifier temporairement de l'Équipage pour améliorer sa précision de tir.
     regles: |
@@ -334,6 +366,7 @@ avantages:
     nom_interne: "charge_a_bloc"
     categorie: "Militaire"
     prix: 2
+    effet_court: "+1 dé si Munitions"
     description: |
       Renforce une arme de tir qui a accumulé suffisamment de Jetons Munition.
     regles: |
@@ -343,6 +376,7 @@ avantages:
     nom_interne: "tirs_rapides"
     categorie: "Militaire"
     prix: 2
+    effet_court: "Attaque bonus"
     description: |
       Permet une Étape d'Attaque supplémentaire avec une seule arme, une fois par manche.
     regles: |
@@ -352,6 +386,7 @@ avantages:
     nom_interne: "tir_a_la_tete"
     categorie: "Militaire"
     prix: 4
+    effet_court: "Critiques renforcées"
     description: |
       Rend les Touches Critiques de tir encore plus meurtrières.
     regles: |
@@ -361,6 +396,7 @@ avantages:
     nom_interne: "riposte"
     categorie: "Militaire"
     prix: 5
+    effet_court: "Contre-tir"
     description: |
       Permet de contre-attaquer immédiatement après avoir subi un tir, au prix de Jetons Danger.
     regles: |
@@ -372,6 +408,7 @@ avantages:
     nom_interne: "fenderkiss"
     categorie: "Optimisation"
     prix: 2
+    effet_court: "Neutralise éperon"
     description: |
       Neutralise les effets de l'éperonnage, dans les deux sens.
     regles: |
@@ -381,6 +418,7 @@ avantages:
     nom_interne: "propulsion"
     categorie: "Optimisation"
     prix: 2
+    effet_court: "Pivot avant"
     description: |
       Modifie le point de pivot du véhicule lors d'une Rotation.
     regles: |
@@ -390,6 +428,7 @@ avantages:
     nom_interne: "doigte"
     categorie: "Optimisation"
     prix: 3
+    effet_court: "Ignore Danger gabarit"
     description: |
       Rend ce véhicule insensible aux icônes Danger des gabarits de déplacement.
     regles: |
@@ -399,6 +438,7 @@ avantages:
     nom_interne: "momentum"
     categorie: "Optimisation"
     prix: 3
+    effet_court: "Relance Manœuvre"
     description: |
       Permet de relancer un Dé de Manœuvre en mettant de côté un résultat Dérapage ou Rotation.
     regles: |
@@ -408,6 +448,7 @@ avantages:
     nom_interne: "ronronnement"
     categorie: "Optimisation"
     prix: 6
+    effet_court: "Plafonne Danger"
     description: |
       Plafonne le nombre de Jetons Danger gagnés par activation.
     regles: |
@@ -417,6 +458,7 @@ avantages:
     nom_interne: "sur_deux_roues"
     categorie: "Optimisation"
     prix: 6
+    effet_court: "Intangible"
     comportement: "sur_deux_roues"
     description: |
       Rend ce véhicule temporairement intangible pour les autres véhicules, au prix de Jetons Danger.
@@ -431,6 +473,7 @@ avantages:
     nom_interne: "a_tes_trousses"
     categorie: "Poursuite"
     prix: 2
+    effet_court: "Punit manœuvre proche"
     description: |
       Punit les véhicules adverses qui manœuvrent trop près de ce véhicule.
     regles: |
@@ -440,6 +483,7 @@ avantages:
     nom_interne: "le_malheur_des_uns"
     categorie: "Poursuite"
     prix: 2
+    effet_court: "Reset Danger"
     description: |
       Efface tous les Jetons Danger de ce véhicule quand un adversaire proche perd le contrôle.
     regles: |
@@ -449,6 +493,7 @@ avantages:
     nom_interne: "provocation"
     categorie: "Poursuite"
     prix: 2
+    effet_court: "Impose Manœuvre"
     description: |
       Impose un Dé de Manœuvre à un véhicule ciblé proche.
     regles: |
@@ -458,6 +503,7 @@ avantages:
     nom_interne: "distancer"
     categorie: "Poursuite"
     prix: 2
+    effet_court: "Punit lenteur"
     description: |
       Punit les véhicules adverses proches et plus lents.
     regles: |
@@ -467,6 +513,7 @@ avantages:
     nom_interne: "tip"
     categorie: "Poursuite"
     prix: 4
+    effet_court: "Collision forcée"
     description: |
       Force un véhicule adverse à effectuer un déplacement dangereux après une collision.
     regles: |
@@ -476,6 +523,7 @@ avantages:
     nom_interne: "regard_destabilisant"
     categorie: "Poursuite"
     prix: 5
+    effet_court: "Bloque Embrayage"
     description: |
       Empêche les véhicules adverses proches de retirer des Jetons Danger via un résultat Embrayage.
     regles: |
@@ -487,6 +535,7 @@ avantages:
     nom_interne: "mister_fahrenheit"
     categorie: "Précision"
     prix: 2
+    effet_court: "Plafonne Danger collision"
     description: |
       Plafonne les Jetons Danger gagnés lors des collisions d'une même activation.
     regles: |
@@ -496,6 +545,7 @@ avantages:
     nom_interne: "heure_de_gloire"
     categorie: "Précision"
     prix: 2
+    effet_court: "Choix Manœuvre"
     description: |
       Permet, une fois par partie, de choisir librement le résultat de ses Dés de Manœuvre.
     regles: |
@@ -505,6 +555,7 @@ avantages:
     nom_interne: "prudence"
     categorie: "Précision"
     prix: 2
+    effet_court: "Retire au lieu de +1"
     description: |
       Permet de retirer un Jeton Danger au lieu d'en gagner un en cas de perte de Vitesse.
     regles: |
@@ -514,6 +565,7 @@ avantages:
     nom_interne: "expertise"
     categorie: "Précision"
     prix: 3
+    effet_court: "+1 Manœuvrabilité"
     comportement: "expertise"
     description: |
       Augmente la Manœuvrabilité du véhicule en permanence.
@@ -524,6 +576,7 @@ avantages:
     nom_interne: "art_de_la_route"
     categorie: "Précision"
     prix: 3
+    effet_court: "Vitesse virtuelle"
     description: |
       Permet de choisir ses gabarits de déplacement comme à une Vitesse différente de la Vitesse réelle.
     regles: |
@@ -533,6 +586,7 @@ avantages:
     nom_interne: "pilote_ne"
     categorie: "Précision"
     prix: 5
+    effet_court: "Défausse 1 dé"
     description: |
       Permet de défausser un résultat de Dé de Manœuvre indésirable, une fois par manche.
     regles: |
@@ -544,6 +598,7 @@ avantages:
     nom_interne: "depart_eclair"
     categorie: "Rapidité"
     prix: 1
+    effet_court: "Vitesse aléatoire"
     description: |
       Détermine une Vitesse de départ aléatoire et potentiellement avantageuse.
     regles: |
@@ -553,6 +608,7 @@ avantages:
     nom_interne: "sillage"
     categorie: "Rapidité"
     prix: 2
+    effet_court: "Collision → Vitesse"
     description: |
       Permet de profiter d'une collision arrière pour changer de Vitesse sans risque.
     regles: |
@@ -562,6 +618,7 @@ avantages:
     nom_interne: "surcharge"
     categorie: "Rapidité"
     prix: 2
+    effet_court: "Dé Manœuvre+"
     description: |
       Permet de lancer un Dé de Manœuvre supplémentaire pour accélérer, au prix d'un risque en cas d'échec.
     regles: |
@@ -571,6 +628,7 @@ avantages:
     nom_interne: "retrograder"
     categorie: "Rapidité"
     prix: 3
+    effet_court: "Déplacement bonus"
     description: |
       Autorise un déplacement forcé supplémentaire après avoir perdu de la Vitesse.
     regles: |
@@ -580,6 +638,7 @@ avantages:
     nom_interne: "temps_additionnel"
     categorie: "Rapidité"
     prix: 3
+    effet_court: "Porte → nettoie Danger"
     description: |
       Permet de nettoyer ses Jetons Danger après avoir franchi une Porte.
     regles: |
@@ -589,6 +648,7 @@ avantages:
     nom_interne: "a_fond_la_caisse"
     categorie: "Rapidité"
     prix: 5
+    effet_court: "Gabarit Long sûr"
     description: |
       Rend le gabarit droit Long utilisable sans danger à toute Vitesse.
     regles: |
@@ -600,6 +660,7 @@ avantages:
     nom_interne: "moteurs_fusee"
     categorie: "Technologie"
     prix: 1
+    effet_court: "Tonneau flexible"
     description: |
       Offre un choix élargi de gabarits lors d'un Tonneau en mouvement.
     regles: |
@@ -609,6 +670,7 @@ avantages:
     nom_interne: "survolte"
     categorie: "Technologie"
     prix: 1
+    effet_court: "Avantage Rapidité"
     description: |
       Octroie un avantage Rapidité aléatoire pour la durée de la partie.
     regles: |
@@ -618,6 +680,7 @@ avantages:
     nom_interne: "gyroscope"
     categorie: "Technologie"
     prix: 1
+    effet_court: "Avantage Audace"
     description: |
       Octroie un avantage Audace aléatoire pour la durée de la partie.
     regles: |
@@ -627,6 +690,7 @@ avantages:
     nom_interne: "navigation_satellite"
     categorie: "Technologie"
     prix: 2
+    effet_court: "Partage Embrayage"
     description: |
       Permet de mettre en réserve des résultats Embrayage utilisables par toute l'équipe.
     regles: |
@@ -636,6 +700,7 @@ avantages:
     nom_interne: "mecano_de_bord"
     categorie: "Technologie"
     prix: 3
+    effet_court: "Équipage → soigne"
     description: |
       Permet une réparation de fortune en sacrifiant temporairement de l'Équipage.
     regles: |
@@ -645,6 +710,7 @@ avantages:
     nom_interne: "eureka"
     categorie: "Technologie"
     prix: 4
+    effet_court: "Arme improvisée"
     description: |
       Permet d'utiliser exceptionnellement une arme non équipée, une fois par partie.
     regles: |
@@ -656,6 +722,7 @@ avantages:
     nom_interne: "rage_au_volant"
     categorie: "Trompe-la-Mort"
     prix: 1
+    effet_court: "+1 Danger auto"
     description: |
       Impose un Jeton Danger automatique à chaque activation.
     regles: |
@@ -665,6 +732,7 @@ avantages:
     nom_interne: "frenesie"
     categorie: "Trompe-la-Mort"
     prix: 2
+    effet_court: "+2 dés Perte Contrôle"
     description: |
       Renforce l'éperonnage lors d'une collision survenue pendant une Perte de Contrôle.
     regles: |
@@ -674,6 +742,7 @@ avantages:
     nom_interne: "foutu_pour_foutu"
     categorie: "Trompe-la-Mort"
     prix: 2
+    effet_court: "Double éperon"
     description: |
       Double les dés d'éperonnage une fois un fort niveau de danger atteint.
     regles: |
@@ -683,6 +752,7 @@ avantages:
     nom_interne: "intouchable"
     categorie: "Trompe-la-Mort"
     prix: 4
+    effet_court: "Immunise Danger"
     description: |
       Rend ce véhicule inaltérable en Jetons Danger, au prix d'un lot initial important.
     regles: |
@@ -692,6 +762,7 @@ avantages:
     nom_interne: "plus_balaise_que_toi"
     categorie: "Trompe-la-Mort"
     prix: 4
+    effet_court: "Double poids collision"
     description: |
       Amplifie les effets de la différence de poids lors d'une collision.
     regles: |
@@ -701,6 +772,7 @@ avantages:
     nom_interne: "biereserker"
     categorie: "Trompe-la-Mort"
     prix: 5
+    effet_court: "-1 dégât hors tour"
     description: |
       Réduit les dégâts subis en dehors de sa propre activation.
     regles: |

@@ -26,6 +26,7 @@ sequelles:
   # ── Séquelles mécaniques — imposées par la Table des Épaves (coût 0) ────────
   - nom: Moteur endommagé
     nom_interne: moteur_endommage
+    effet_court: "-1 Vitesse Max"
     description: Le moteur a souffert lors de la Table des Épaves.
     regles: Vitesse maximale réduite de 1 (minimum 1).
     chocs_cost: 0
@@ -33,6 +34,7 @@ sequelles:
 
   - nom: Direction endommagée
     nom_interne: direction_endommage
+    effet_court: "-1 Manœuvrabilité"
     description: La direction ne répond plus aussi bien qu'avant.
     regles: Manoeuvrabilité réduite de 1 (minimum 1).
     chocs_cost: 0
@@ -40,6 +42,7 @@ sequelles:
 
   - nom: Blindage arraché
     nom_interne: blindage_arrache
+    effet_court: "-2 Carrosserie"
     description: Une partie du blindage a été arrachée pendant la course.
     regles: Carrosserie réduite de 2 (minimum 0).
     chocs_cost: 0
@@ -47,6 +50,7 @@ sequelles:
 
   - nom: Siège irrécupérable
     nom_interne: siege_irrecuperable
+    effet_court: "-1 Équipage"
     description: Le poste de pilotage est endommagé, un membre d'équipage est hors service.
     regles: Valeur d'Équipage réduite de 1 (minimum 1).
     chocs_cost: 0
@@ -55,6 +59,7 @@ sequelles:
   # ── Séquelles volontaires — achetées en atelier contre des Chocs ────────────
   - nom: Suicidaire
     nom_interne: suicidaire
+    effet_court: "Jamais rétrograder"
     description: Ce pilote fonce sans jamais lever le pied.
     regles: Ce véhicule ne peut pas rétrograder volontairement.
     chocs_cost: 1
@@ -62,6 +67,7 @@ sequelles:
 
   - nom: Impopulaire
     nom_interne: impopulaire
+    effet_court: "Vote supplémentaire"
     description: La foule n'aime pas ce pilote.
     regles: Ce véhicule doit payer un Vote du Public supplémentaire pour Revenir en Piste.
     chocs_cost: 1
@@ -69,6 +75,7 @@ sequelles:
 
   - nom: Dingue
     nom_interne: dingue
+    effet_court: "Pas d'annulation Embrayage"
     description: Ce pilote a perdu toute prudence au volant.
     regles: >-
       Ce véhicule ne peut pas utiliser les résultats Embrayage pour annuler des
@@ -78,6 +85,7 @@ sequelles:
 
   - nom: Lâche
     nom_interne: lache
+    effet_court: "Toujours Esquive"
     description: Ce pilote évite systématiquement le contact.
     regles: >-
       Ce véhicule doit toujours annoncer une Esquive lors d'une Collision et il ne
@@ -87,6 +95,7 @@ sequelles:
 
   - nom: Vieille Blessure de Guerre
     nom_interne: vieille_blessure_de_guerre
+    effet_court: "Risque forfait"
     description: Une ancienne blessure ressurgit parfois au pire moment.
     regles: >-
       Au début de chaque partie, lancez un D6. Sur un 1, ce véhicule ne peut pas
@@ -96,6 +105,7 @@ sequelles:
 
   - nom: Vibrations
     nom_interne: vibrations
+    effet_court: "Perte contrôle à 5"
     description: Le châssis vibre anormalement, fragilisant le contrôle du véhicule.
     regles: Ce véhicule Perd le Contrôle dès 5 Jetons Danger au lieu de 6.
     chocs_cost: 3
@@ -103,6 +113,7 @@ sequelles:
 
   - nom: Convulsions
     nom_interne: convulsions
+    effet_court: "Manœuvre volée"
     description: Ce pilote souffre parfois de convulsions incontrôlables au pire moment.
     regles: |-
       - Au début de la partie, vous devez informer vos adversaires lequel de vos pilotes souffre de cette Séquelle.
@@ -114,6 +125,7 @@ sequelles:
 
   - nom: Maintenu par la Rouille
     nom_interne: maintenu_par_la_rouille
+    effet_court: "Double tirage Épaves"
     description: Ce véhicule ne tient plus que par la rouille — chaque passage sur la Table des Épaves lui coûte double.
     regles: >-
       Lors de la séquence d'après-partie, lorsque vous lancez sur le Tableau des
@@ -125,6 +137,7 @@ sequelles:
 
   - nom: Dur à Cuire
     nom_interne: dur_a_cuire
+    effet_court: "Avantage gratuit"
     description: Ce pilote a survécu à tant d'accidents qu'il en a tiré une leçon.
     regles: >-
       Ce véhicule peut immédiatement gagner l'avantage Dur à Cuire de son choix
@@ -134,6 +147,7 @@ sequelles:
 
   - nom: Légende Vivante
     nom_interne: legende_vivante
+    effet_court: "Tirage forcé à 1"
     description: Ce pilote est devenu une légende — la chance semble toujours de son côté.
     regles: >-
       Lors de la séquence d'après-partie, lorsque vous lancez sur le Tableau des

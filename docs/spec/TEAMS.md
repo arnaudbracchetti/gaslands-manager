@@ -44,6 +44,53 @@ La suppression d'un véhicule entier (`DELETE /api/vehicles/:id`, cascade sur so
 
 ---
 
+## Fiche d'équipe exportable
+
+Bouton "Exporter la fiche d'équipe" sur `/teams/:id/edit` (`TeamEditPage`, masqué si
+l'équipe est verrouillée par une campagne en cours - cf. `isLockedByCampaign` ci-dessus)
+- génère un document HTML complet et imprimable (A4), destiné à servir de fiche de
+référence physique pendant une partie : 2 véhicules par ligne, statistiques (Manœuvrabilité/
+Équipage/Emplacements, et carré à dé pour la vitesse courante où le joueur pose un dé
+physique) suivies de la carrosserie en cases à cocher, puis un tableau d'équipement
+(armes/améliorations/avantages) avec une colonne "N°" étroite (renvoi vers l'annexe de
+règles, dédupliqué entre véhicules partageant un même équipement) et une colonne "Effet"
+(libellé court et/ou cases de munitions selon l'équipement) - une annexe de règles numérotée
+clôt le document. Sur écran (hors impression), le rendu est lui-même contraint à la largeur
+d'une page A4 (centré, `@media screen`) pour prévisualiser fidèlement la mise en page imprimée.
+
+**Pagination à l'impression** : une carte véhicule (et le texte de ses lignes d'équipement)
+ne doit jamais être coupée par un saut de page - si elle ne tient pas entièrement dans la
+place restante sur la page courante, elle est intégralement reportée sur la page suivante.
+`break-inside: avoid` (CSS) est posé à chaque niveau imbriqué de la carte (ligne de 2
+véhicules, carte, en-tête, statistiques, carrosserie, tableau d'équipement ET chacune de ses
+lignes) plutôt qu'une seule fois en haut, par prudence vis-à-vis des moteurs de rendu qui
+n'appliquent pas toujours cette règle de façon fiable à un conteneur flex/table. L'annexe
+démarre en plus systématiquement sur une nouvelle page (`break-before: page`), jamais à la
+suite de la dernière ligne de véhicules sur la page courante.
+
+**Logo dans l'en-tête** : le logo (`assets/logo-watermark.png`, copie backend de
+`apps/frontend/public/logo gaslands manager.png`) est affiché en pleine opacité dans le
+bandeau d'en-tête, à gauche du nom d'équipe. Encodé en data URI directement dans le HTML
+(document autonome, cf. ci-dessus) plutôt que chargé via une URL - une fenêtre `about:blank`
+(où ce HTML est écrit côté frontend) ne résout aucune URL relative.
+
+**Pas de PDF généré côté backend** : `GET /api/teams/:id/sheet` renvoie du HTML brut
+(`Content-Type: text/html`), ouvert dans un nouvel onglet - le joueur utilise ensuite
+l'impression native de son navigateur ("Enregistrer en PDF"), le CSS `@page`/A4 étant
+déjà prévu pour un rendu imprimé propre.
+
+**Équipe verrouillée par une campagne** (cf. règle de verrouillage ci-dessus) : ce
+endpoint la rejette (HTTP 400) plutôt que de produire une fiche silencieusement
+incomplète - les chocs/séquelles réels d'une équipe engagée ne sont recalculés que par
+replay campagne, jamais reflétés par cette lecture directe. Pour une équipe engagée,
+la fiche s'exporte depuis la page de la campagne à la place - cf.
+[CAMPAIGN.md — Fiche d'équipe exportable (mode campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne).
+
+Détail du format (mapper/renderer partagés avec le point d'entrée campagne, DTOs,
+règles de dédup des renvois) : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+
+---
+
 ## Modèle de données — `Team`
 
 | Champ | Type | Contraintes |
@@ -75,3 +122,4 @@ Type enrichi côté backend : `TeamWithCount = Team & { vehicleCount: number }` 
 | POST | `/api/teams` | JWT | Créer une équipe |
 | PUT | `/api/teams/:id` | JWT | Modifier une équipe |
 | DELETE | `/api/teams/:id` | JWT | Supprimer une équipe |
+| GET | `/api/teams/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) — HTTP 400 si l'équipe est verrouillée par une campagne en cours |

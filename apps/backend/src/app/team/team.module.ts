@@ -34,6 +34,7 @@ import { AddVehicleUseCase } from './application/add-vehicle.usecase';
 import { RemoveVehicleUseCase } from './application/remove-vehicle.usecase';
 import { RenameVehicleUseCase } from './application/rename-vehicle.usecase';
 import { GetVehicleDetailUseCase } from './application/get-vehicle-detail.usecase';
+import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 
 // Use cases — armes
 import { GetAvailableWeaponsUseCase } from './application/get-available-weapons.usecase';
@@ -119,6 +120,11 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     {
       provide: GetVehicleDetailUseCase,
       useFactory: (tr: ITeamRepository) => new GetVehicleDetailUseCase(tr),
+      inject: [TEAM_REPOSITORY],
+    },
+    {
+      provide: GetTeamSheetUseCase,
+      useFactory: (tr: ITeamRepository) => new GetTeamSheetUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
 

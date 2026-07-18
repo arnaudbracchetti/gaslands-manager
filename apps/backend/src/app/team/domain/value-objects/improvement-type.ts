@@ -41,6 +41,16 @@ export class ImprovementType {
     return this.raw.prix;
   }
 
+  /** Libellé très court (1-2 mots) pour la fiche d'équipe exportable — cf. `Arme.effet_court`. */
+  get effetCourt(): string | undefined {
+    return this.raw.effet_court;
+  }
+
+  /** Nombre d'utilisations de départ, si cette amélioration en est dotée (absent = illimité). */
+  get munitions(): number | undefined {
+    return this.raw.munitions;
+  }
+
   equals(other: ImprovementType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
   }

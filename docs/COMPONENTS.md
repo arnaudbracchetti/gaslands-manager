@@ -423,6 +423,8 @@ Carousel interactif pour choisir un sponsor. Navigation ←/→, affichage du no
 
 Page de gestion d'une équipe (`/teams/:id/edit`). Layout deux panneaux : formulaire d'édition à gauche, liste des véhicules à droite. Gère la modification de l'équipe, l'ajout/suppression de véhicules.
 
+**Export de la fiche d'équipe** : bouton "Exporter la fiche d'équipe" dans l'en-tête du panneau véhicules, visible uniquement si `!isLocked()` (réutilise le même computed que le reste du verrouillage campagne — `Team.isLockedByCampaign`, pas `isEngaged`, cf. [spec/TEAMS.md](../docs/spec/TEAMS.md#fiche-déquipe-exportable)). `onExportSheet()` ouvre une fenêtre de façon SYNCHRONE (`window.open('', '_blank')`) avant l'appel à `TeamsService.getSheet()`, pour éviter qu'elle soit bloquée comme un popup non désiré ; le HTML reçu y est écrit via `openHtmlDocumentInNewTab` (`shared/html-export.util.ts`).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-team-edit-page` |
@@ -898,6 +900,8 @@ Overlay de sélection d'une autre équipe à engager dans une campagne `EN_CONST
 
 Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
 
+**Export de la fiche d'équipe** : `onExportSheet()` répond à l'output `exportSheet` de `GameList` — ignore l'argument `Game` reçu (la donnée exportée est scopée à `(campagneId, participant courant)`, pas à cette partie précise, même remarque que pour `onOpenAtelier()`). Ouvre une fenêtre de façon SYNCHRONE (`window.open('', '_blank')`) avant l'appel à `CampaignsService.getTeamSheet()`, puis y écrit le HTML reçu via `openHtmlDocumentInNewTab` (`shared/html-export.util.ts`).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-program` |
@@ -949,6 +953,7 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
 | `openJournal` | `Game` | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
 | `openAtelier` | `Game` | Ouvre l'atelier (bouton 🔧 visible pour **tout participant** sur une partie en `ATELIER`) — le parent navigue vers `/campaigns/:id/atelier` (l'atelier est au niveau campagne, pas de la partie) |
+| `exportSheet` | `Game` | Exporte la fiche d'équipe du participant connecté (bouton visible pour **tout participant**, même condition que `openAtelier` — la donnée exportée est scopée à `(campagneId, participant)`, pas à cette partie précise) |
 
 ---
 

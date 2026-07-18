@@ -43,6 +43,7 @@ armes:
     nom_interne: "pistolet"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "1D6, portée moyenne"
     prix: 0
     emplacement: 0
     description: |
@@ -72,6 +73,7 @@ armes:
     type: "base"
     montable_tourelle: true
     necessite_orientation: true
+    effet_court: "2D6, portée double"
     prix: 2
     emplacement: 1
     description: |
@@ -100,6 +102,7 @@ armes:
     type: "base"
     montable_tourelle: true
     necessite_orientation: true
+    effet_court: "3D6, portée double"
     prix: 3
     emplacement: 1
     description: |
@@ -128,6 +131,7 @@ armes:
     type: "base"
     montable_tourelle: true
     necessite_orientation: true
+    effet_court: "4D6, portée double"
     prix: 5
     emplacement: 1
     description: |
@@ -158,6 +162,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 1
+    effet_court: "10D6, Recul"
     prix: 1
     emplacement: 3
     description: |
@@ -189,6 +195,7 @@ armes:
     type: "avancée"
     montable_tourelle: false
     necessite_orientation: false
+    effet_court: "Collision (+2)"
     prix: 2
     emplacement: 3
     description: |
@@ -221,6 +228,7 @@ armes:
     type: "avancée"
     montable_tourelle: false
     necessite_orientation: true
+    effet_court: "3D6 - Déplace la cible"
     prix: 6
     emplacement: 1
     description: |
@@ -251,6 +259,7 @@ armes:
     type: "avancée"
     montable_tourelle: false
     necessite_orientation: false
+    effet_court: "Bloque munitions"
     prix: 2
     emplacement: 0
     description: |
@@ -268,6 +277,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: false
+    munitions: 1
+    effet_court: "6D6, Ricoche"
     prix: 6
     emplacement: 2
     description: |
@@ -288,6 +299,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "8D6, Impact + recul"
     prix: 6
     emplacement: 3
     description: |
@@ -318,6 +331,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 1
+    effet_court: "3D6 - Change le poids"
     prix: 2
     emplacement: 1
     description: |
@@ -337,6 +352,7 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    effet_court: "3D6, Zone"
     prix: 5
     emplacement: 1
     description: |
@@ -367,14 +383,14 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    effet_court: "5D6, Tracte la cible"
     prix: 2
     emplacement: 1
     description: |
       Câble d'acier harponnant les ennemis pour les faire pivoter ou les tracter de force.
     regles: |
       - Portée : Double.
-      - Dés d'attaque : (5D6).
-      - N'inflige aucun dégât direct.
+      - Dés d'attaque : (5D6), n'inflige aucun dégât direct.
       - La première touche non annulée accroche la cible et la fait pivoter sur place (vers le tireur ou à l'opposé, selon la plus petite rotation requise), ouvrant une Fenêtre de Collision.
       - Chaque touche suivante non annulée rembobine le câble, provoquant un déplacement forcé de la cible via le gabarit droit Court en direction du tireur.
       - Si la cible est d'une classe de Poids supérieure au tireur, l'effet s'inverse : c'est le tireur qui subit le déplacement forcé vers la cible.
@@ -399,6 +415,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "Lance une épave"
     prix: 4
     emplacement: 4
     description: |
@@ -432,6 +450,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "6D6, Zone enflammée"
     prix: 4
     emplacement: 2
     description: |
@@ -462,6 +482,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "6D6, portée double"
     prix: 5
     emplacement: 2
     description: |
@@ -490,6 +512,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "3D6, Impact"
     prix: 4
     emplacement: 2
     description: |
@@ -519,6 +543,8 @@ armes:
     type: "avancée"
     montable_tourelle: false
     necessite_orientation: false
+    munitions: 1
+    effet_court: "Test de contrôle (+2)"
     prix: 4
     emplacement: 2
     description: |
@@ -538,6 +564,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 3
+    effet_court: "4D6, Tir indirect"
     prix: 4
     emplacement: 1
     description: |
@@ -567,6 +595,7 @@ armes:
     type: "avancée"
     montable_tourelle: false
     necessite_orientation: false
+    effet_court: "Jetons Danger, zone"
     prix: 4
     emplacement: 3
     description: |
@@ -596,6 +625,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 1
+    effet_court: "3D6, Destruction instantanée"
     prix: 3
     emplacement: 1
     description: |
@@ -615,6 +646,8 @@ armes:
     type: "avancée"
     montable_tourelle: true
     necessite_orientation: true
+    munitions: 1
+    effet_court: "6D6, Accélère la cible"
     prix: 6
     emplacement: 2
     description: |
@@ -635,6 +668,8 @@ armes:
     nom_interne: "cocktails_molotov"
     type: "équipage"
     necessite_orientation: false
+    munitions: 5
+    effet_court: "Blitz incendiaire"
     prix: 1
     emplacement: 0
     description: |
@@ -666,6 +701,7 @@ armes:
     nom_interne: "fusil_a_pompe"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "Dégâts dégressifs"
     prix: 4
     emplacement: 0
     description: |
@@ -696,6 +732,7 @@ armes:
     nom_interne: "filet_metallique"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "3D6, Impact"
     prix: 2
     emplacement: 0
     description: |
@@ -703,8 +740,7 @@ armes:
     regles: |
       - Arme d'Équipage (Arc de tir à 360°).
       - Portée : Courte.
-      - Dés d'attaque : (3D6).
-      - N'inflige aucun dégât direct.
+      - Dés d'attaque : (3D6). N'inflige aucun dégât direct.
       - **Impact** : Chaque touche non annulée applique directement 1 Jeton Danger sur le Tableau de Bord du véhicule ciblé.
     sponsors_autorises:
       - "Rutherford"
@@ -725,6 +761,8 @@ armes:
     nom_interne: "grenades"
     type: "équipage"
     necessite_orientation: false
+    munitions: 5
+    effet_court: "1D6, Blitz + impact"
     prix: 1
     emplacement: 0
     description: |
@@ -756,6 +794,8 @@ armes:
     nom_interne: "grenades_lacrymogenes"
     type: "équipage"
     necessite_orientation: false
+    munitions: 5
+    effet_court: "1D6, Blitz + équipage"
     prix: 1
     emplacement: 0
     description: |
@@ -787,6 +827,7 @@ armes:
     nom_interne: "magnum"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "1D6, Impact"
     prix: 3
     emplacement: 0
     description: |
@@ -815,6 +856,7 @@ armes:
     nom_interne: "pistolet_mitrailleur"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "3D6, portée moyenne"
     prix: 5
     emplacement: 0
     description: |
@@ -842,6 +884,7 @@ armes:
     nom_interne: "tromblon"
     type: "équipage"
     necessite_orientation: false
+    effet_court: "2D6, Zone"
     prix: 2
     emplacement: 0
     description: |
@@ -872,6 +915,8 @@ armes:
     nom_interne: "auto_tourelle"
     type: "largable"
     necessite_orientation: false
+    munitions: 3
+    effet_court: "2D6, Tourelle autonome"
     prix: 3
     emplacement: 0
     description: |
@@ -902,6 +947,8 @@ armes:
     nom_interne: "bombes_teleguideees"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "4D6, Voiture explosive"
     prix: 3
     emplacement: 0
     description: |
@@ -932,6 +979,8 @@ armes:
     nom_interne: "largueur_chausse_trapes"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "2D6, Terrain dangereux"
     prix: 1
     emplacement: 1
     description: |
@@ -960,6 +1009,8 @@ armes:
     nom_interne: "largueur_colle"
     type: "largable"
     necessite_orientation: true
+    munitions: 1
+    effet_court: "Ralentit"
     prix: 1
     emplacement: 1
     description: |
@@ -989,6 +1040,8 @@ armes:
     nom_interne: "largueur_fumigenes"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "Fumée/couvert"
     prix: 1
     emplacement: 0
     description: |
@@ -1018,6 +1071,8 @@ armes:
     nom_interne: "largueur_huile"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "Terrain glissant"
     prix: 2
     emplacement: 0
     description: |
@@ -1045,6 +1100,8 @@ armes:
     nom_interne: "largueur_mines"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "4D6, Impact"
     prix: 1
     emplacement: 1
     description: |
@@ -1074,6 +1131,8 @@ armes:
     nom_interne: "largueur_napalm"
     type: "largable"
     necessite_orientation: true
+    munitions: 3
+    effet_court: "4D6, incendiaire"
     prix: 1
     emplacement: 1
     description: |

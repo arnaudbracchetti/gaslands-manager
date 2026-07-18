@@ -187,6 +187,33 @@ describe('GameList', () => {
     expect(emitted).toEqual([game]);
   });
 
+  it('affiche le bouton "Fiche d\'équipe" pour une partie en ATELIER', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'ATELIER' })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.game-list__export')).toBeTruthy();
+  });
+
+  it('n\'affiche pas le bouton "Fiche d\'équipe" hors ATELIER', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'PLANIFIE' })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.game-list__export')).toBeFalsy();
+  });
+
+  it('émet exportSheet avec la partie au clic', () => {
+    const game = makeGame({ id: 9, status: 'ATELIER' });
+    fixture.componentRef.setInput('games', [game]);
+    fixture.detectChanges();
+
+    const emitted: Game[] = [];
+    outputToObservable(component.exportSheet).subscribe((g) => emitted.push(g));
+
+    fixture.nativeElement.querySelector('.game-list__export').click();
+
+    expect(emitted).toEqual([game]);
+  });
+
   it('recordGame émet la partie au clic', () => {
     const game = makeGame();
     fixture.componentRef.setInput('games', [game]);

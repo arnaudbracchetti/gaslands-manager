@@ -42,6 +42,7 @@ export class GameList {
   recordGame: OutputEmitterRef<Game> = output<Game>();
   openJournal: OutputEmitterRef<Game> = output<Game>();
   openAtelier: OutputEmitterRef<Game> = output<Game>();
+  exportSheet: OutputEmitterRef<Game> = output<Game>();
 
   /** Vrai si la partie peut être éditée/supprimée (gérable et pas encore jouée). */
   canModify(game: Game): boolean {

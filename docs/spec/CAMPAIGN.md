@@ -584,6 +584,32 @@ obtient deux résultats "1", chacun avec son propre total de Chocs.
 
 ---
 
+## Fiche d'équipe exportable (mode campagne)
+
+Bouton "📄 Fiche d'équipe" dans `GameList`, au même endroit et sous la même
+condition que le bouton "🔧 Atelier" (partie en statut `ATELIER`, visible par
+tout participant) — même si la donnée exportée est scopée à
+`(campagneId, participant courant)`, pas à la partie elle-même : la partie en
+atelier n'est qu'un point d'entrée pratique dans l'IHM, pas la source des
+données.
+
+Génère la fiche via `GET /api/campaigns/:id/sheet`, depuis l'état **après
+replay complet** — seul chemin qui reflète les chocs/séquelles réels de
+l'équipe engagée (event-sourcés, jamais persistés directement sur `Team`/
+`Vehicle`). Ne passe volontairement pas par `WorkshopVehicleDto` (taillé pour
+l'UI achat/revente atelier) : le même mapper que la fiche "page Équipe" (cf.
+[TEAMS.md — Fiche d'équipe exportable](TEAMS.md#fiche-déquipe-exportable) et
+[ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet))
+est réutilisé tel quel sur `me.team.vehicles` — un véhicule reconstruit par
+replay expose les mêmes objets domaine (`Weapon`/`Improvement`/`Advantage`/
+`Sequella`, `.type` déjà résolu) qu'un véhicule chargé directement, donc aucun
+branchement n'est nécessaire entre les deux points d'entrée.
+
+Même format HTML imprimable (A4, pas de PDF backend) que le point d'entrée
+équipe — cf. TEAMS.md pour le détail du layout.
+
+---
+
 ## Hors scope de l'itération actuelle
 
 Réordonnancement du Programme (US-A4), visibilité partielle pour un `PENDING`,
@@ -860,6 +886,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
+| GET | `/api/campaigns/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |

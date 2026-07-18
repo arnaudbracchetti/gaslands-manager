@@ -25,6 +25,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Header,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -60,6 +61,7 @@ import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
+import { GetCampaignTeamSheetUseCase } from './application/get-campaign-team-sheet.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-workshop-available-advantages.usecase';
@@ -134,6 +136,7 @@ export class CampaignController {
     private readonly changeEquipmentUseCase: ChangeEquipmentUseCase,
     private readonly wreckResolveUseCase: WreckResolveUseCase,
     private readonly getWorkshopUseCase: GetWorkshopUseCase,
+    private readonly getCampaignTeamSheetUseCase: GetCampaignTeamSheetUseCase,
     private readonly getWorkshopAvailableWeaponsUseCase: GetWorkshopAvailableWeaponsUseCase,
     private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
     private readonly getWorkshopAvailableAdvantagesUseCase: GetWorkshopAvailableAdvantagesUseCase,
@@ -239,6 +242,20 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<WorkshopStateDto> {
     return this.getWorkshopUseCase.execute({ campaignId, userId: req.user.id });
+  }
+
+  /**
+   * GET /api/campaigns/:id/sheet — fiche d'équipe exportable (HTML imprimable) du
+   * participant connecté, chocs/séquelles réels inclus (état après replay complet).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/sheet')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  getSheet(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<string> {
+    return this.getCampaignTeamSheetUseCase.execute({ campaignId, userId: req.user.id });
   }
 
   /**

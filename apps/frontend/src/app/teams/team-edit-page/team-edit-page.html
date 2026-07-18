@@ -146,6 +146,14 @@
           </button>
         </div>
 
+        @if (!isLocked()) {
+          <div class="tep-export-sheet">
+            <button class="tep-btn-export-sheet" (click)="onExportSheet()">
+              <app-icon concept="copier" size="sm" /> Exporter la fiche d'équipe
+            </button>
+          </div>
+        }
+
         <!-- Barre budget restant contextuel -->
         @if (vehicles().length > 0) {
           <div class="tep-budget-context">

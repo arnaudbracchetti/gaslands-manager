@@ -34,7 +34,7 @@
 | Mode campagne — Wizard de fin de partie (étapes variables E/ET : présence, classement, portes, jerricans, épaves, résolution) | ✅ Implémenté — couvre Événement Télévisé et Escarmouche (revenu de base D6) |
 | Catalogue dynamique pages `/vehicles` et `/weapons` | 🔲 Backlog |
 | Tableau de bord utilisateur | 🔲 Backlog |
-| Export fiche d'équipe (HTML/PDF) | 🔲 Backlog |
+| Export fiche d'équipe (HTML imprimable) | ✅ Implémenté — 2 véhicules par ligne A4, cases à cocher (carrosserie/munitions), carré à dé (vitesse), annexe de règles dédupliquée. Deux points d'entrée : page Équipe (`GET /api/teams/:id/sheet`, équipe non verrouillée) et page Campagne (`GET /api/campaigns/:id/sheet`, chocs/séquelles réels) — cf. [spec/TEAMS.md](spec/TEAMS.md#fiche-déquipe-exportable) / [spec/CAMPAIGN.md](spec/CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne). Pas de PDF backend : impression navigateur (CSS `@page`) |
 
 ---
 

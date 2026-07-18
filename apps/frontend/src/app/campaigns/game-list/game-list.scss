@@ -178,7 +178,8 @@
     }
   }
 
-  &__atelier {
+  &__atelier,
+  &__export {
     background: var(--tb-bitume);
     border: 1px solid var(--border-rust);
     color: var(--tb-os);

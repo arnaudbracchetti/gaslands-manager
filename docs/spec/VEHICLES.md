@@ -241,11 +241,22 @@ qui porte entièrement la règle de perte totale (pas un second champ de "prix r
 
 **`Vehicule`** — champs : `nom`, `poids` (Léger/Moyen/Lourd), `carrosserie`, `manoeuvrabilite`, `vitesse_max`, `equipage`, `emplacements`, `prix`, `description`, `regles`, `sponsors_autorises[]`, `ameliorations_defaut[]`, `arme_defaut?` (nom_interne de l'arme intégrée, ex. Char d'assaut → `canon_125mm`)
 
-**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3), `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
+**`Arme`** — champs : `nom`, `type` (base/avancée/équipage/largable), `prix`, `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `montable_tourelle?` (booléen — autorise le montage sur Tourelle, coût ×3), `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus), `munitions?` (number — nombre de munitions de départ pour la fiche d'équipe exportable, cf. §Fiche d'équipe exportable ci-dessous), `effet_court?` (string — libellé très court, 1-2 mots, colonne "Effet" de la fiche)
 
-**`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus)
+**`Amelioration`** — champs : `nom`, `prix` (number), `emplacement`, `description`, `regles`, `sponsors_autorises[]`, `necessite_orientation` (booléen obligatoire — cf. §Orientation requise ci-dessus), `munitions?` (number — cf. `Arme.munitions` ; une amélioration à usage limité, ex. Bélier Explosif, Nitro toutes variantes, en est dotée), `effet_court?` (string — cf. `Arme.effet_court`)
 
-**`Avantage`** — champs : `nom`, `nom_interne`, `categorie` (une des 12 catégories, cf. §Avantages de véhicule ci-dessus), `prix`, `description`, `regles`, `comportement?` (présent seulement pour Expertise/Cascadeur/Sur Deux Roues). Pas d'`emplacement`, de `necessite_orientation`, ni de `sponsors_autorises` — jamais d'orientation, jamais de slot, résolution par `categorie`.
+**`Avantage`** — champs : `nom`, `nom_interne`, `categorie` (une des 12 catégories, cf. §Avantages de véhicule ci-dessus), `prix`, `description`, `regles`, `comportement?` (présent seulement pour Expertise/Cascadeur/Sur Deux Roues), `effet_court?` (string — cf. `Arme.effet_court`). Pas d'`emplacement`, de `necessite_orientation`, de `munitions`, ni de `sponsors_autorises` — jamais d'orientation, jamais de slot, résolution par `categorie`.
+
+**Fiche d'équipe exportable — `munitions`/`effet_court`** : ces deux champs optionnels
+n'alimentent qu'une seule chose, la colonne "Effet" de la fiche d'équipe exportable (cf.
+[TEAMS.md — Fiche d'équipe exportable](TEAMS.md#fiche-déquipe-exportable)) — aucune règle
+de jeu n'en dépend, contrairement à `necessite_orientation`. `munitions` existe sur `Arme`
+(~23 des 38 armes en sont dotées) **et** `Amelioration` (Bélier Explosif, Nitro et sa
+variante Idris — un usage limité, jusqu'ici décrit seulement en texte libre dans `regles`,
+ex. "1 munition") — jamais sur `Avantage`/`Sequelle`. `effet_court` existe sur les 4
+catalogues d'équipement (armes, améliorations, avantages, séquelles — cf.
+[CAMPAIGN.md — Séquelles](CAMPAIGN.md#séquelles)), toujours optionnel : une entrée sans
+`effet_court` dégrade proprement sur la fiche (renvoi de règle seul, sans libellé).
 
 ### `Vehicle` _(entité DB — module Vehicle)_
 

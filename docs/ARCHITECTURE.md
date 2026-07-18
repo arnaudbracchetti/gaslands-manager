@@ -210,6 +210,21 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 
 **Réponses HTTP** — jamais retourner une entité ORM brute ni un agrégat domaine directement. `vehicleDomainToDto()` (`infrastructure/team-http.mapper.ts`) traduit un Vehicle domaine en DTO sérialisable. Reproduire ce pattern pour tout nouveau module DDD.
 
+**Read-model présentationnel partagé entre deux modules — fiche d'équipe exportable.**
+`team/infrastructure/team-sheet.mapper.ts`/`team-sheet.renderer.ts` traduisent un
+`Vehicle`/`Team` déjà chargé en document HTML imprimable, consommés à la fois par
+`GetTeamSheetUseCase` (`team/`, lecture directe) et `GetCampaignTeamSheetUseCase`
+(`campaign/`, après replay). Logés sous `team/` plutôt que dans un module neutre
+séparé (décision prise via le skill `ddd`) : `campaign/` dépend déjà de `team/` dans ce
+sens (jamais l'inverse, `TEAM_REPOSITORY` exporté par `TeamModule`), et ce sont des
+fonctions pures sans état — pas de justification à un 3ᵉ module NestJS pour deux
+fichiers sans injection. Fonctionnent sans aucune dépendance `ICatalogRepository` :
+`Weapon.type`/`Improvement.type`/`Advantage.type`/`Sequella.type` sont toujours des
+Value Objects déjà résolus au moment où le mapper les reçoit, que le `Vehicle` vienne
+d'un chargement ORM (`TeamMapper.weaponToDomain`) ou d'un replay campagne
+(`EquipmentChangedEvent` résout `resolvedWeaponType` etc. en amont) — cf.
+[spec/TEAMS.md — Fiche d'équipe exportable](spec/TEAMS.md#fiche-déquipe-exportable).
+
 **⚠️ Piège TypeORM — `where` sur une relation de collection chargée.** Quand un repository filtre sur une relation `OneToMany`/`ManyToMany` (`where: { weapons: { id } }`) tout en l'hydratant (`relations: { weapons: true }`), TypeORM réutilise la **même jointure** pour la recherche ET pour l'hydratation : la collection chargée ne contient alors **que les lignes satisfaisant le `where`**, pas l'intégralité de l'agrégat. Symptôme observé : `findByWeaponId(weaponId)` reconstituait un véhicule avec une **seule** arme (celle recherchée) au lieu de toutes ses armes — corrompant le calcul de coût/emplacements à la persistance. Ce comportement n'est pas documenté par TypeORM (sujet d'issues ouvertes).
 
 - **Contournement** (`TeamRepository.findByWeaponId`) : résoudre d'abord le `teamId` parent (`findOne` sur `VehicleOrm` avec `select: { teamId: true }`, sans hydrater les collections), puis recharger l'agrégat complet via `findByIdForUser` — qui filtre par `id` **scalaire**, donc n'altère pas l'hydratation des collections.
@@ -255,9 +270,11 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/domain/team.ts` | Agrégat racine — toutes les règles métier (budget, sponsor lock, mutations) |
 | `apps/backend/src/app/team/domain/team.repository.interface.ts` | Contrat persistence `ITeamRepository` (Dependency Inversion) |
 | `apps/backend/src/app/team/domain/catalog.repository.interface.ts` | Contrat catalogue `ICatalogRepository` (Dependency Inversion) |
-| `apps/backend/src/app/team/application/` | 15 use cases — un par commande métier |
+| `apps/backend/src/app/team/application/` | 16 use cases — un par commande métier |
 | `apps/backend/src/app/team/infrastructure/team.mapper.ts` | Mapping ORM ↔ agrégat domaine |
 | `apps/backend/src/app/team/infrastructure/catalog.adapter.ts` | `CatalogService` → `ICatalogRepository` |
+| `apps/backend/src/app/team/infrastructure/team-sheet.mapper.ts` | Fonction pure `Vehicle`/`Team` → DTOs de fiche exportable — zéro dépendance catalogue (`.type` déjà résolu), partagée entre le point d'entrée équipe directe et le point d'entrée campagne (replay), cf. §3.4 |
+| `apps/backend/src/app/team/infrastructure/team-sheet.renderer.ts` | Assemble le HTML imprimable (A4) depuis ces DTOs — templates littéraux TypeScript, dédup des renvois de règles, échappement XSS du texte utilisateur (nom d'équipe, renommage de véhicule) |
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (38 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
@@ -269,7 +286,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
 | `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
 | `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine. Dépend d'`ICatalogRepository` (résout la séquelle `siege_irrecuperable`) en plus d'`IRandomizer` — deux modificateurs permanents (`legende_vivante` force le D6 à 1, `maintenu_par_la_rouille` chaîne un second tirage), cf. §Séquelles ci-dessous |
-| `apps/backend/src/app/campaign/application/` | 28 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
+| `apps/backend/src/app/campaign/application/` | 29 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
 ### 3.8 Mode Campagne — Event Sourcing (`campaign/`)

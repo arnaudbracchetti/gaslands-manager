@@ -349,4 +349,22 @@ describe('CampaignsService', () => {
       expect(result).toEqual(sequelles);
     });
   });
+
+  // ── getTeamSheet() ────────────────────────────────────────────────────────
+
+  describe('getTeamSheet()', () => {
+    it('effectue GET /api/campaigns/:id/sheet en responseType text et retourne le HTML brut', () => {
+      let result: string | undefined;
+
+      service.getTeamSheet(1).subscribe((html) => { result = html; });
+
+      const req = httpMock.expectOne('/api/campaigns/1/sheet');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('text');
+
+      req.flush('<!doctype html><html></html>');
+
+      expect(result).toBe('<!doctype html><html></html>');
+    });
+  });
 });

@@ -45,6 +45,7 @@ import { buildVehicleSummary, VehicleSummary } from '../vehicle-summary';
 import { SponsorCarousel } from '../sponsor-carousel/sponsor-carousel';
 import { VehicleSummaryCard } from '../vehicle-summary-card/vehicle-summary-card';
 import { Icon } from '../../shared/icon/icon';
+import { openHtmlDocumentInNewTab } from '../../shared/html-export.util';
 
 @Component({
   selector: 'app-team-edit-page',
@@ -257,6 +258,27 @@ export class TeamEditPage implements OnInit {
       },
       error: (): void => {
         this.error.set('Erreur lors de la suppression.');
+      },
+    });
+  }
+
+  /**
+   * Exporte la fiche d'équipe (HTML imprimable, chocs/séquelles vides — cette
+   * équipe n'est pas verrouillée par une campagne, cf. gating `!isLocked()` côté
+   * template). `window.open` DOIT être appelé de façon synchrone ici, avant
+   * l'appel HTTP asynchrone, sous peine d'être traité comme un popup non désiré
+   * par certains navigateurs.
+   */
+  onExportSheet(): void {
+    const team = this.team();
+    if (!team) return;
+
+    const win = window.open('', '_blank');
+    this.teamsService.getSheet(team.id).subscribe({
+      next: (html): void => openHtmlDocumentInNewTab(win, html),
+      error: (): void => {
+        win?.close();
+        this.error.set('Erreur lors de la génération de la fiche.');
       },
     });
   }

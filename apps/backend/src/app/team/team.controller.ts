@@ -10,6 +10,7 @@ import {
   UseGuards,
   ParseIntPipe,
   HttpCode,
+  Header,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -19,6 +20,7 @@ import { GetTeamSummariesUseCase } from './application/get-team-summaries.usecas
 import { CreateTeamUseCase } from './application/create-team.usecase';
 import { UpdateTeamUseCase } from './application/update-team.usecase';
 import { RemoveTeamUseCase } from './application/remove-team.usecase';
+import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 
 interface AuthenticatedRequest {
   user: { id: number; email: string };
@@ -32,6 +34,7 @@ export class TeamController {
     private readonly createTeamUseCase: CreateTeamUseCase,
     private readonly updateTeamUseCase: UpdateTeamUseCase,
     private readonly removeTeamUseCase: RemoveTeamUseCase,
+    private readonly getTeamSheetUseCase: GetTeamSheetUseCase,
   ) {}
 
   @Get()
@@ -70,5 +73,11 @@ export class TeamController {
   @HttpCode(204)
   remove(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest): Promise<void> {
     return this.removeTeamUseCase.execute({ teamId: id, userId: req.user.id });
+  }
+
+  @Get(':id/sheet')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  getSheet(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest): Promise<string> {
+    return this.getTeamSheetUseCase.execute({ teamId: id, userId: req.user.id });
   }
 }

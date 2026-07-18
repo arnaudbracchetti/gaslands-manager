@@ -44,6 +44,16 @@ export class WeaponType {
     return this.raw.montable_tourelle ?? false;
   }
 
+  /** Nombre de munitions de départ, si cette arme en est dotée (absent = arc illimité). */
+  get munitions(): number | undefined {
+    return this.raw.munitions;
+  }
+
+  /** Libellé très court (1-2 mots) pour la fiche d'équipe exportable — cf. `Arme.effet_court`. */
+  get effetCourt(): string | undefined {
+    return this.raw.effet_court;
+  }
+
   equals(other: WeaponType): boolean {
     return this.raw.nom_interne === other.raw.nom_interne;
   }
