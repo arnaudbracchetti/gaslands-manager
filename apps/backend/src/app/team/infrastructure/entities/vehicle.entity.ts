@@ -19,6 +19,10 @@ export class VehicleOrm {
   @Column({ length: 100 })
   nomInterne: string;
 
+  /** Nom personnalisé donné par le joueur — `null` tant que jamais renommé (fallback sur le type catalogue, cf. `Vehicle.nom`). */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nom: string | null;
+
   @ManyToOne(() => TeamOrm, (team) => team.vehicles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'teamId' })
   team: TeamOrm;

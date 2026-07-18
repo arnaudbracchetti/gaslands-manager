@@ -146,6 +146,17 @@ export class Team {
     this._vehicles.splice(idx, 1);
   }
 
+  /**
+   * Renomme un véhicule (construction d'équipe — équipe non verrouillée). Mirroir
+   * verrouillé de `renameCampaignVehicle` ci-dessous (utilisée par l'événement de
+   * campagne, jamais par cette méthode-ci) — la validation du nom lui-même (non
+   * vide, longueur max) vit sur `Vehicle.rename()`, qui possède cette donnée.
+   */
+  renameVehicle(vehicleId: number, nom: string): void {
+    this.assertNotLocked();
+    this.findVehicle(vehicleId).rename(nom);
+  }
+
   findVehicle(vehicleId: number): Vehicle {
     const v = this._vehicles.find((v) => v.id === vehicleId);
     if (!v) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
@@ -316,6 +327,20 @@ export class Team {
     const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
     if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable pour suppression campagne`);
     this._vehicles.splice(idx, 1);
+  }
+
+  /**
+   * Renomme un véhicule en Atelier (mode campagne) — PAS de `assertNotLocked()` :
+   * une équipe engagée reste verrouillée pendant toute la durée de la campagne, y
+   * compris pendant l'Atelier (cf. `TeamRepository.isLockedByCampaign`), mais le
+   * renommage y reste autorisé par construction — appelée uniquement par
+   * `VehicleRenamedEvent.execute()`/`undo()`, jamais directement par un use case
+   * HTTP (mirroir de `addCampaignWeapon`/`markWeaponSold`). Fonctionne identiquement
+   * pour un véhicule persisté (id positif) ou transient (id négatif, D-S11) —
+   * `findVehicle` ne fait aucune distinction de signe.
+   */
+  renameCampaignVehicle(vehicleId: number, nom: string): void {
+    this.findVehicle(vehicleId).rename(nom);
   }
 
   /** Ajoute une arme transiente sur un véhicule avec un id explicite (D-S11). */

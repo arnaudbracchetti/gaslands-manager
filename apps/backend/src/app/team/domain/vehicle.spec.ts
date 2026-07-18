@@ -837,3 +837,54 @@ describe('Vehicle — décorateurs d\'avantage (Expertise/Cascadeur/Sur Deux Rou
     expect(r.ok).toBe(true); // pas de restriction de poids, contrairement à Cascadeur
   });
 });
+
+describe('Vehicle — nom personnalisé (customName / nom / rename)', () => {
+  it('customName est null tant que jamais renommé', () => {
+    expect(makeVehicle().customName).toBeNull();
+  });
+
+  it('nom retourne le nom du type catalogue quand jamais renommé (sans parenthèse)', () => {
+    expect(makeVehicle().nom).toBe('Voiture');
+  });
+
+  it('rename() met à jour customName et nom', () => {
+    const v = makeVehicle();
+    v.rename('La Teigne');
+    expect(v.customName).toBe('La Teigne');
+    expect(v.nom).toBe('La Teigne (Voiture)');
+  });
+
+  it('rename() trim les espaces superflus', () => {
+    const v = makeVehicle();
+    v.rename('  La Teigne  ');
+    expect(v.customName).toBe('La Teigne');
+  });
+
+  it('nom ne montre pas de parenthèse si le nom personnalisé est identique au type', () => {
+    const v = makeVehicle();
+    v.rename('Voiture');
+    expect(v.nom).toBe('Voiture');
+  });
+
+  it('rename() refuse une chaîne vide ou blanche', () => {
+    const v = makeVehicle();
+    expect(() => v.rename('')).toThrow(DomainException);
+    expect(() => v.rename('   ')).toThrow(DomainException);
+  });
+
+  it('rename() refuse un nom de plus de 100 caractères', () => {
+    const v = makeVehicle();
+    expect(() => v.rename('a'.repeat(101))).toThrow(DomainException);
+  });
+
+  it('rename() accepte exactement 100 caractères', () => {
+    const v = makeVehicle();
+    expect(() => v.rename('a'.repeat(100))).not.toThrow();
+  });
+
+  it('le constructeur accepte un nom personnalisé initial (hydratation depuis l\'ORM)', () => {
+    const v = new Vehicle(1, 10, makeVehicleType(), [], [], [], 'La Teigne');
+    expect(v.customName).toBe('La Teigne');
+    expect(v.nom).toBe('La Teigne (Voiture)');
+  });
+});

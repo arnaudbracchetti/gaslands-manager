@@ -553,6 +553,8 @@ Carte de sélection du type de véhicule de base. Affiche les statistiques du v�
 
 Cœur de la gestion d'équipement. Charge les armes, améliorations **et avantages** disponibles (avec verdicts du backend), gère l'ajout/retrait — y compris le montage sur Tourelle, simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) choisie au moment de son ajout — et affiche le budget de l'équipe. Les avantages disponibles sont scindés en **2 sous-listes** (`advantagesCategoryA`/`advantagesCategoryB`), une par catégorie du sponsor (`Sponsor.classes_avantage[0]`/`[1]`), chacune sous son propre titre de section — un avantage n'occupe jamais d'emplacement (synthétisé à `0` sur l'option transmise à `EquipmentOption`) et ne demande jamais d'orientation.
 
+**Renommage du véhicule** : `onRenameVehicle(nom)` délègue à `EquipmentDataSource.renameVehicle(vehicleId, nom)` (nouvelle méthode de l'abstraction DI, implémentée différemment par `TeamEquipmentDataSource`/`AtelierEquipmentDataSource` — cf. `AtelierVehiclePage` plus bas), câblé sur le `nameChanged` de `VehicleCostSummary` (`[customName]="vehicle().customName"`, `[typeNom]="chosenVehicule()?.nom ?? vehicle().nomInterne"`, `[disabled]="locked()"`).
+
 **Séquelles — 4ᵉ catégorie, atelier campagne uniquement** : si `campaignId` est renseigné (jamais le cas côté `VehicleConfigurator`, construction d'équipe), `EquipmentManager` charge aussi les séquelles ATELIER disponibles (`CampaignsService.getWorkshopAvailableSequelles`, injecté DIRECTEMENT — pas via `EquipmentDataSource`, qui ne couvre pas la monnaie Chocs) et affiche une section catalogue "Séquelles" au même niveau que Armes/Améliorations/Avantages, réutilisant le toggle "Afficher les indisponibles" existant. Chaque carte (`em-sequella-card`, dédiée — pas `EquipmentOption`, dont les badges supposent jerricans + emplacement) affiche une description courte et s'ouvre au clic sur `SequellaDetailModal` (description + règles complètes), même modèle d'interaction que Armes/Améliorations/Avantages (`EquipmentOption` → `EquipmentDetailModal`) — le bouton "Acquérir" stoppe la propagation du clic pour ne pas ouvrir la modale en même temps. Achat direct en un clic pour la plupart des séquelles ; **Dur à Cuire** ouvre d'abord `SequellaAdvantagePicker` (choix d'un avantage gratuit) avant l'achat (`CampaignsService.changeEquipment`). Retrait : annulation même-session toujours proposée (`purchasedThisSession`) ; revente cross-session gardée par `sequellaResaleUnlocked` (présence active de la séquelle "Légende Vivante" sur le véhicule — mirroir de `Vehicle.canRemoveSequella` côté backend), avec perte totale de Chocs (aucun remboursement, comme un avantage revendu). Les séquelles déjà acquises sont affichées par `MountedEquipment` (4ᵉ groupe, colonne de gauche) et le compteur de Chocs par `VehicleCostSummary` (en-tête, colonne de gauche) — tous deux `null`/absents en construction d'équipe.
 
 | | |
@@ -688,25 +690,33 @@ Bloc d'affichage du budget de l'équipe (tous véhicules confondus) : barre de p
 
 ### `VehicleCostSummary` — `teams/vehicle-configurator/equipment-manager/vehicle-cost-summary/`
 
-Récapitulatif du coût du véhicule en cours : nom, jauge d'emplacements, décomposition base / équipement / total.
+Récapitulatif du coût du véhicule en cours : nom **éditable** (champ texte, auto-save au blur — même pattern que `TeamEditPage`/`formName`), jauge d'emplacements, décomposition base / équipement / total. Le nom est distinct du type catalogue (cf. [spec/VEHICLES.md — Nom du véhicule](../docs/spec/VEHICLES.md#construction-dun-véhicule)) : `customName` (valeur brute, `null` si jamais renommé) et `typeNom` (nom du type, fallback d'affichage/édition) sont fournis séparément par le parent — c'est le getter `Vehicle.nom` (backend) qui porte seul la règle d'affichage `"Nom (Type)"`, ce composant n'en a pas besoin pour l'édition (il travaille sur la valeur brute). Pas un composant purement "dumb" au sens habituel : il porte l'état local du champ (`formNom`), synchronisé par `effect()` uniquement quand `customName()`/`typeNom()` changent (jamais pendant la frappe).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-vehicle-cost-summary` |
-| **Type** | Dumb |
+| **Type** | Dumb (avec état local d'édition) |
 | **Compose** | `SlotGauge` |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `vehicleName` | `string` | — | Nom affiché (déjà résolu depuis le catalogue) |
+| `customName` | `string \| null` | — | Valeur brute du nom personnalisé, `null` si jamais renommé |
+| `typeNom` | `string` | — | Nom du type catalogue — fallback d'affichage/édition quand `customName` est `null` |
+| `disabled` | `boolean` | `false` | Désactive le champ (équipe verrouillée hors Atelier) |
 | `emplacementsUtilises` | `number` | — | Emplacements occupés |
 | `emplacementsTotal` | `number` | — | Capacité totale |
 | `coutBase` | `number` | — | Prix du châssis |
 | `coutEquipement` | `number` | — | Somme des armes et améliorations |
 | `coutTotal` | `number` | — | Base + équipement |
 | `chocs` | `number \| null` | `null` | Chocs accumulés (atelier uniquement) — ligne "💥 Chocs" affichée seulement si non-`null`, absente en construction d'équipe |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `nameChanged` | `string` | Émis au blur, uniquement si la valeur a changé (déjà trimmée) — le parent (`EquipmentManager`) délègue à `EquipmentDataSource.renameVehicle` |
 
 ---
 
@@ -1299,7 +1309,7 @@ Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affich
 
 **Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route, traduit pour `EquipmentManager`), `targetWorkshopVehicle` (computed — le MÊME véhicule sous sa forme brute `WorkshopVehicleDto`, seule forme qui porte encore `chocs`/`sequellas`, transmise à `EquipmentManager` via ses inputs `chocs`/`sequellas`), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged`/`sequellaChanged` (émis par `EquipmentManager`) pour rafraîchir cagnotte + budget + Chocs.
 
-> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise. Les séquelles n'ont PAS besoin de cette abstraction : elles n'existent que côté atelier (aucun second contexte "construction d'équipe" à supporter), donc `EquipmentManager` injecte directement `CampaignsService`/`CatalogService` pour leur logique.
+> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise. `renameVehicle(vehicleId, nom)` suit le même principe : `TeamEquipmentDataSource` appelle `PATCH /api/vehicles/:id/name` directement, `AtelierEquipmentDataSource` appelle `POST /api/campaigns/:id/events/vehicle-rename` puis relit `GET .../workshop` (même schéma que les autres mutations atelier). Les séquelles n'ont PAS besoin de cette abstraction : elles n'existent que côté atelier (aucun second contexte "construction d'équipe" à supporter), donc `EquipmentManager` injecte directement `CampaignsService`/`CatalogService` pour leur logique.
 
 ---
 

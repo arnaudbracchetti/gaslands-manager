@@ -73,6 +73,8 @@ const mockSponsorCatalog: Sponsor = {
 const mockVehicle: Vehicle = {
   id: 1,
   nomInterne: 'camion',
+  nom: 'Camion',
+  customName: null,
   teamId: 10,
   improvements: [],
   weapons: [],

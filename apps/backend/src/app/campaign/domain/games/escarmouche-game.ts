@@ -13,6 +13,7 @@ import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
+import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { EquipmentEntityType } from '../enums/equipment-change.enums';
 
 /**
@@ -57,7 +58,9 @@ export class EscarmoucheGame extends Game {
       // ⚠️ Cf. le même commentaire dans EvenementTeleGame.canAccept : la suppression
       // physique du BUY (annulation d'achat) n'est sûre que parce qu'aucun autre événement
       // accepté ici ne référence un weaponId/improvementId.
-      return event instanceof EquipmentChangedEvent;
+      // VehicleRenamedEvent référence un vehicleId sans surcharger targetsVehicle() —
+      // limitation connue assumée, cf. sa doc et docs/plans/2026-07-17-vehicle-instance-name-design.md.
+      return event instanceof EquipmentChangedEvent || event instanceof VehicleRenamedEvent;
     }
     return false;
   }

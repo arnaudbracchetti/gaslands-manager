@@ -165,6 +165,11 @@ describe('Team — verrouillage campagne', () => {
     expect(() => team.addAdvantageToVehicle(10, makeAdvantageType())).toThrow(DomainException);
   });
 
+  it('renameVehicle() refuse toute modification', () => {
+    const team = makeLockedTeam();
+    expect(() => team.renameVehicle(10, 'La Teigne')).toThrow(DomainException);
+  });
+
   it('assertNotLocked() ne lève rien pour une équipe non verrouillée', () => {
     const team = makeTeam();
     expect(() => team.assertNotLocked()).not.toThrow();
@@ -173,6 +178,28 @@ describe('Team — verrouillage campagne', () => {
   it("les mutations campagne (addCampaignWeapon) restent autorisées même verrouillée", () => {
     const team = makeLockedTeam();
     expect(() => team.addCampaignWeapon(10, makeWeaponType(), 'avant', -1)).not.toThrow();
+  });
+
+  it("renameCampaignVehicle() fonctionne même équipe verrouillée (Atelier)", () => {
+    const team = makeLockedTeam();
+    expect(() => team.renameCampaignVehicle(10, 'La Teigne')).not.toThrow();
+    expect(team.findVehicle(10).nom).toBe('La Teigne (Voiture)');
+  });
+});
+
+describe('Team.renameVehicle / renameCampaignVehicle', () => {
+  it('renameVehicle() renomme le véhicule quand l\'équipe est déverrouillée', () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    team.renameVehicle(10, 'La Teigne');
+    expect(team.findVehicle(10).nom).toBe('La Teigne (Voiture)');
+  });
+
+  it('renameCampaignVehicle() fonctionne sur un véhicule transient (id négatif, D-S11)', () => {
+    const team = makeTeam();
+    team.addCampaignVehicle(makeVehicleType(), -5);
+    team.renameCampaignVehicle(-5, 'La Teigne');
+    expect(team.findVehicle(-5).nom).toBe('La Teigne (Voiture)');
   });
 });
 

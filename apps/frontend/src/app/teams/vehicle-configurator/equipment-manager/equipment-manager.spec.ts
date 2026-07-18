@@ -101,6 +101,8 @@ const defaultBudget: BudgetView = { total: 50, usedByOthers: 0 };
 const mockVehicle: Vehicle = {
   id: 100,
   nomInterne: 'camion',
+  nom: 'Camion',
+  customName: null,
   teamId: 7,
   improvements: [],
   weapons: [],
@@ -230,6 +232,7 @@ describe('EquipmentManager', () => {
     removeWeapon: ReturnType<typeof vi.fn>;
     removeImprovement: ReturnType<typeof vi.fn>;
     removeAdvantage: ReturnType<typeof vi.fn>;
+    renameVehicle: ReturnType<typeof vi.fn>;
   };
 
   /** Instancie le composant avec un budget donné (défaut : `defaultBudget`). */
@@ -253,6 +256,7 @@ describe('EquipmentManager', () => {
       removeWeapon: vi.fn().mockReturnValue(of(mockVehicle)),
       removeImprovement: vi.fn().mockReturnValue(of(mockVehicle)),
       removeAdvantage: vi.fn().mockReturnValue(of(mockVehicle)),
+      renameVehicle: vi.fn().mockReturnValue(of({ ...mockVehicle, nom: 'La Teigne (Camion)', customName: 'La Teigne' })),
     };
 
     await TestBed.configureTestingModule({
@@ -401,10 +405,12 @@ describe('EquipmentManager', () => {
   });
 
   describe('Câblage vers VehicleCostSummary', () => {
-    it('transmet le nom du véhicule, les emplacements et le détail du coût', () => {
+    it('transmet customName, le typeNom (résolu catalogue), les emplacements et le détail du coût', () => {
       const summary = fixture.debugElement.query(By.directive(VehicleCostSummary)).componentInstance as VehicleCostSummary;
 
-      expect(summary.vehicleName()).toBe('Camion'); // chosenVehicule()?.nom
+      expect(summary.customName()).toBe(null); // mockVehicle.customName
+      expect(summary.typeNom()).toBe('Camion'); // chosenVehicule()?.nom
+      expect(summary.disabled()).toBe(false); // locked() par défaut
       expect(summary.emplacementsUtilises()).toBe(component.emplacementsUtilises());
       expect(summary.emplacementsTotal()).toBe(component.emplacementsTotal());
       expect(summary.coutBase()).toBe(component.coutBase());
@@ -412,12 +418,24 @@ describe('EquipmentManager', () => {
       expect(summary.coutTotal()).toBe(component.coutTotal());
     });
 
-    it('retombe sur `vehicle().nomInterne` si le véhicule est introuvable dans le catalogue (chosenVehicule null)', () => {
+    it('retombe sur `vehicle().nomInterne` pour typeNom si le véhicule est introuvable dans le catalogue (chosenVehicule null)', () => {
       fixture.componentRef.setInput('vehicle', { ...mockVehicle, nomInterne: 'inconnu' });
       fixture.detectChanges();
 
       const summary = fixture.debugElement.query(By.directive(VehicleCostSummary)).componentInstance as VehicleCostSummary;
-      expect(summary.vehicleName()).toBe('inconnu');
+      expect(summary.typeNom()).toBe('inconnu');
+    });
+
+    it('nameChanged → onRenameVehicle → dataSource.renameVehicle, puis émet vehicleChanged', () => {
+      const emitted: Vehicle[] = [];
+      component.vehicleChanged.subscribe((v: Vehicle) => emitted.push(v));
+
+      const summary = fixture.debugElement.query(By.directive(VehicleCostSummary)).componentInstance as VehicleCostSummary;
+      summary.nameChanged.emit('La Teigne');
+
+      expect(mockDataSource.renameVehicle).toHaveBeenCalledExactlyOnceWith(100, 'La Teigne');
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].customName).toBe('La Teigne');
     });
   });
 

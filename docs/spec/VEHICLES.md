@@ -33,6 +33,8 @@ Le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:t
 
 **Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`Team.remainingBudget`, getter de l'agrégat), qui marque `disponible: false` toute arme/amélioration/avantage dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : choisi au moment de l'ajout d'une arme (bouton « Tourelle x3 », visible si `Arme.montable_tourelle`, au même endroit que les 4 arcs de tir), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
 
+**Nom du véhicule (distinct du type)** : un véhicule porte, en plus de son type catalogue immutable (`nomInterne`), un nom propre éditable (`Vehicle.nom`, cf. §Modèles de données ci-dessous) — par défaut égal au nom du type, personnalisable à tout moment via le champ éditable en tête de `VehicleCostSummary` (même écran que la gestion de l'équipement, pas d'étape dédiée au moment du choix du type). Partout où l'application affiche ce nom, le format est `"Nom (Type)"` **uniquement si le nom a été personnalisé** — sinon le nom seul, jamais de parenthèse redondante (ex. "Camion" reste "Camion" tant que non renommé, mais devient "La Teigne (Camion)" une fois renommé). Cette règle de formatage est portée par le getter `Vehicle.nom` lui-même côté backend — aucun consommateur (DTO, journal d'événements, frontend) ne la recalcule.
+
 ---
 
 ## Règles métier Gaslands
@@ -252,7 +254,8 @@ L'entité `Vehicle` représente un véhicule **appartenant à une équipe** (ins
 | Champ | Type | Contraintes |
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
-| `nomInterne` | string | référence vers `Vehicule.nom_interne` du catalogue |
+| `nomInterne` | string | référence vers `Vehicule.nom_interne` du catalogue — **immutable** une fois le véhicule créé |
+| `nom` | string \| null | nullable — nom personnalisé donné par le joueur (ex. "La Teigne"), `null` tant que jamais renommé. Getter `Vehicle.nom` (agrégat) résout la valeur affichée : nom personnalisé sinon nom du type, formaté `"Nom (Type)"` **seulement si différent du type** — sinon le nom seul. Renommable à tout moment (`PATCH /api/vehicles/:id/name` en construction d'équipe ; en atelier campagne, cf. [CAMPAIGN.md — Renommage d'un véhicule en atelier](CAMPAIGN.md#renommage-dun-véhicule-en-atelier)), y compris quand la campagne verrouille le reste de l'équipe (cf. TEAMS.md) — **sauf** si l'équipe est verrouillée hors phase Atelier (aucune route de renommage n'est acceptée dans cet état). |
 | `teamId` | number | FK → Team (`CASCADE` on delete) |
 | `improvements` | `VehicleImprovement[]` | relation `OneToMany`, `cascade: true` |
 | `createdAt` | Date | auto |
@@ -353,8 +356,9 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 | POST | `/api/vehicles/:id/advantages` | JWT | Ajouter un avantage (validation puis persistance, jamais d'orientation) |
 | DELETE | `/api/vehicles/:id/advantages/:advantageId` | JWT | Retirer un avantage |
 | DELETE | `/api/vehicles/:id` | JWT | Supprimer un véhicule (cascade sur ses armes/améliorations/avantages) |
+| PATCH | `/api/vehicles/:id/name` | JWT | Renomme le véhicule (`{ nom: string }`) — construction d'équipe uniquement, refusé (`DomainException` → HTTP 400) si l'équipe est verrouillée par une campagne en cours. En atelier campagne, le renommage passe par un endpoint dédié event-sourcé, cf. [CAMPAIGN.md — Renommage d'un véhicule en atelier](CAMPAIGN.md#renommage-dun-véhicule-en-atelier) |
 
-> **`PUT /api/vehicles/:id` — non prévue.** `nomInterne` est immutable une fois le véhicule créé. "Modifier un véhicule" signifie *gérer son équipement* via les routes dédiées ci-dessous.
+> **`PUT /api/vehicles/:id` — toujours non prévue.** `nomInterne` (le TYPE catalogue) reste immutable une fois le véhicule créé. "Modifier un véhicule" continue de signifier *gérer son équipement* via les routes dédiées ci-dessous — seule exception : le nom d'affichage du véhicule (distinct du type, cf. §Modèles de données ci-dessus), qui a sa propre route dédiée (`PATCH .../name`) plutôt qu'un `PUT` générique.
 
 ### Armes
 

@@ -5,8 +5,10 @@
   <!-- En-tête : nom, type, coût, emplacements -->
   <div class="tep-vehicle-card__header">
     <div class="tep-vehicle-card__identity">
-      <h3 class="tep-vehicle-card__name">{{ vehicle().nom | uppercase }}</h3>
-      <span class="tep-vehicle-card__type">{{ vehicle().nom | uppercase }}</span>
+      <h3 class="tep-vehicle-card__name">{{ (vehicle().customName ?? vehicle().typeNom) | uppercase }}</h3>
+      @if (vehicle().customName && vehicle().customName !== vehicle().typeNom) {
+        <span class="tep-vehicle-card__type">{{ vehicle().typeNom | uppercase }}</span>
+      }
     </div>
     <div class="tep-vehicle-card__meta">
       <div class="tep-vehicle-card__cost">

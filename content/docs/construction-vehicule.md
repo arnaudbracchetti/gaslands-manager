@@ -10,6 +10,17 @@ par le sponsor de l'équipe (certains véhicules, comme l'Hélicoptère ou le
 Char d'assaut, sont exclusifs à un sponsor). Le véhicule est acheté "nu" et
 son coût est immédiatement décompté du budget de l'équipe.
 
+## Donner un nom à un véhicule
+
+En plus de son type (Buggy, Camion, Monster Truck...), chaque véhicule peut
+recevoir un nom propre — par défaut, il porte simplement le nom de son type.
+Le champ en tête de l'écran d'équipement est modifiable à tout moment : il
+suffit de cliquer dedans, taper un nouveau nom, puis cliquer ailleurs pour
+l'enregistrer. Partout où l'application affiche ce véhicule (fiche d'équipe,
+atelier de campagne, résolution de partie), le nom personnalisé apparaît
+suivi du type entre parenthèses — par exemple **"La Teigne (Buggy)"** — sauf
+si le véhicule n'a jamais été renommé, auquel cas seul le type est affiché.
+
 ## Le budget de l'équipement
 
 L'écran d'équipement affiche en permanence le budget de l'équipe (jerricans

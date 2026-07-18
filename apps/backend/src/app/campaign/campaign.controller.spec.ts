@@ -22,6 +22,7 @@ describe('CampaignController (câblage)', () => {
   let validateParticipantUseCase: ReturnType<typeof uc>;
   let getWorkshopAvailableAdvantagesUseCase: ReturnType<typeof uc>;
   let getWorkshopAvailableSequellesUseCase: ReturnType<typeof uc>;
+  let renameCampaignVehicleUseCase: ReturnType<typeof uc>;
   let controller: CampaignController;
 
   beforeEach(() => {
@@ -45,6 +46,7 @@ describe('CampaignController (câblage)', () => {
     validateParticipantUseCase = uc(undefined);
     getWorkshopAvailableAdvantagesUseCase = uc(['avantage']);
     getWorkshopAvailableSequellesUseCase = uc(['sequelle']);
+    renameCampaignVehicleUseCase = uc(undefined);
 
     controller = new CampaignController(
       query as never,
@@ -77,6 +79,7 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // getWorkshopAvailableImprovements
       getWorkshopAvailableAdvantagesUseCase as never,
       getWorkshopAvailableSequellesUseCase as never,
+      renameCampaignVehicleUseCase as never,
     );
   });
 
@@ -143,5 +146,12 @@ describe('CampaignController (câblage)', () => {
       campaignId: 1, vehicleId: 5, userId: 42,
     });
     expect(result).toEqual(['sequelle']);
+  });
+
+  it('renameCampaignVehicle délègue au use case avec campaignId/vehicleId/nom/userId', async () => {
+    await controller.renameCampaignVehicle(req as never, 1, { vehicleId: 5, nom: 'La Teigne' });
+    expect(renameCampaignVehicleUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, userId: 42, vehicleId: 5, nom: 'La Teigne',
+    });
   });
 });

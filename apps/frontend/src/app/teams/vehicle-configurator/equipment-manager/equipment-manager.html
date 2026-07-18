@@ -45,7 +45,10 @@
         [budgetPourcentage]="budgetPourcentage()" />
 
       <app-vehicle-cost-summary
-        [vehicleName]="chosenVehicule()?.nom ?? vehicle().nomInterne"
+        [customName]="vehicle().customName"
+        [typeNom]="chosenVehicule()?.nom ?? vehicle().nomInterne"
+        [disabled]="locked()"
+        (nameChanged)="onRenameVehicle($event)"
         [emplacementsUtilises]="emplacementsUtilises()"
         [emplacementsTotal]="emplacementsTotal()"
         [coutBase]="coutBase()"

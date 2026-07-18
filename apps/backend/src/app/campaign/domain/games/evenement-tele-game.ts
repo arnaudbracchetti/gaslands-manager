@@ -13,6 +13,7 @@ import { GatesCrossedEvent } from '../events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
+import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { EquipmentEntityType } from '../enums/equipment-change.enums';
 
 export class EvenementTeleGame extends Game {
@@ -60,7 +61,9 @@ export class EvenementTeleGame extends Game {
       // d'entité transiente WEAPON/IMPROVEMENT — sinon la suppression physique du BUY
       // laisserait une référence orpheline au replay. Cf.
       // docs/plans/2026-07-11-atelier-annulation-revente-design.md §1.
-      return event instanceof EquipmentChangedEvent;
+      // VehicleRenamedEvent référence un vehicleId sans surcharger targetsVehicle() —
+      // limitation connue assumée, cf. sa doc et docs/plans/2026-07-17-vehicle-instance-name-design.md.
+      return event instanceof EquipmentChangedEvent || event instanceof VehicleRenamedEvent;
     }
     return false;
   }

@@ -61,7 +61,7 @@ function buildAdvantage(overrides: Partial<WorkshopAdvantageDto> = {}): Workshop
 
 function buildVehicle(overrides: Partial<WorkshopVehicleDto> = {}): WorkshopVehicleDto {
   return {
-    id: 1, nomInterne: 'camion', price: 12, isLost: false, chocs: 0, sequellas: [],
+    id: 1, nomInterne: 'camion', nom: 'Camion', customName: null, price: 12, isLost: false, chocs: 0, sequellas: [],
     weapons: [], improvements: [], advantages: [], resaleRefund: 6, purchasedThisSession: false,
     emplacementsTotal: 3,
     ...overrides,
@@ -121,10 +121,12 @@ describe('buildVehicleSaleSummary', () => {
     expect(summary.purchasedThisSession).toBe(true);
   });
 
-  it('se rabat sur nomInterne si le véhicule est introuvable dans le catalogue', () => {
+  it('chassisPrice se rabat sur le prix du DTO atelier si le véhicule est introuvable dans le catalogue', () => {
     const summary = buildVehicleSaleSummary(buildVehicle({ nomInterne: 'inconnu' }), mockCatalog);
 
-    expect(summary.vehicleName).toBe('inconnu');
+    // vehicleName = vehicle.nom, déjà résolu/formaté côté backend — jamais affecté
+    // par un échec de recherche catalogue (seul chassisPrice en dépend encore).
+    expect(summary.vehicleName).toBe('Camion');
     expect(summary.chassisPrice).toBe(12); // repli sur le prix du DTO atelier
   });
 });

@@ -22,6 +22,8 @@ import {
 const mockVehicle: Vehicle = {
   id: 7,
   nomInterne: 'camion',
+  nom: 'Camion',
+  customName: null,
   teamId: 3,
   improvements: [],
   weapons: [],
@@ -300,6 +302,23 @@ describe('VehicleService', () => {
       req.flush(null);
 
       expect(completed).toBe(true);
+    });
+  });
+
+  // ── rename() ─────────────────────────────────────────────────────────────────
+
+  describe('rename()', () => {
+    it('effectue PATCH /api/vehicles/:id/name avec le nom et retourne le véhicule mis à jour', () => {
+      let result: Vehicle | undefined;
+
+      service.rename(7, 'La Teigne').subscribe((v) => { result = v; });
+
+      const req = httpMock.expectOne('/api/vehicles/7/name');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ nom: 'La Teigne' });
+      req.flush({ ...mockVehicle, nom: 'La Teigne (Camion)', customName: 'La Teigne' });
+
+      expect(result?.customName).toBe('La Teigne');
     });
   });
 });

@@ -91,6 +91,10 @@ export interface WorkshopAdvantageDto {
 export interface WorkshopVehicleDto {
   id: number;
   nomInterne: string;
+  /** Nom affiché — personnalisé ou nom du type catalogue, formaté "Nom (Type)" si différent. */
+  nom: string;
+  /** Valeur brute du nom personnalisé, `null` si jamais renommé — pour pré-remplir un champ d'édition. */
+  customName: string | null;
   price: number;
   isLost: boolean;
   chocs: number;
@@ -149,6 +153,8 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
   return {
     id: w.id,
     nomInterne: w.nomInterne,
+    nom: w.nom,
+    customName: w.customName,
     teamId: 0,
     createdAt: '',
     emplacementsTotal: w.emplacementsTotal,

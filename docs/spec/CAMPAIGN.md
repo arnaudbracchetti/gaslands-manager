@@ -263,8 +263,8 @@ module, ex. séquelles).
 Pour toute partie en statut `ATELIER` ou `JOUE`, un bouton "📜 Journal"
 (`GameList`) ouvre une modale listant **tous** les événements journalisés sur
 cette partie — classement, exploits, table des épaves, atelier (achats/
-reventes, séquelles), contact Résistance — traduits en une ligne de texte
-lisible (`GameEvent.describe()`). Accessible à **tout participant `VALIDATED`**
+reventes, séquelles, renommages de véhicule), contact Résistance — traduits
+en une ligne de texte lisible (`GameEvent.describe()`). Accessible à **tout participant `VALIDATED`**
 de la campagne, même absent de cette partie précise — cohérent avec le
 Programme Télé déjà visible par tous.
 
@@ -338,6 +338,51 @@ L'endpoint `POST .../events/equipment` ne prend plus de `:gameId` en paramètre
 de route : le use case retrouve lui-même l'unique partie actuellement en
 `ATELIER` dans la campagne (erreur 400 "Aucun atelier ouvert actuellement" si
 aucune).
+
+---
+
+## Renommage d'un véhicule en atelier
+
+Un véhicule porte un nom d'affichage propre, distinct de son type catalogue
+(`nomInterne`) — cf. [VEHICLES.md — Nom du véhicule](VEHICLES.md#construction-dun-véhicule).
+Renommable à tout moment, mais par deux mécanismes distincts selon le
+contexte, symétriques au reste du module (mutation directe verrouillable en
+construction d'équipe, event-sourcing en atelier) :
+
+- **Construction d'équipe** (équipe non verrouillée) : `PATCH /api/vehicles/:id/name`,
+  mutation directe (`Team.renameVehicle`), refusée si l'équipe est verrouillée
+  par une campagne en cours (`assertNotLocked`) — cf. [VEHICLES.md](VEHICLES.md#construction-dun-véhicule).
+- **Atelier campagne** : `POST /api/campaigns/:id/events/vehicle-rename`
+  (`{ vehicleId, nom }`, participant sur sa propre équipe — `assertParticipant`,
+  pas `assertOrganizer`, même autorisation que `POST .../events/equipment`).
+  Journalisé via un événement dédié, `VehicleRenamedEvent` (`GameEvent`, capture
+  `previousName`/`newName` pour un `undo()` symétrique), accepté uniquement en
+  statut `ATELIER` par `Game.canAccept()` — **jamais** hors Atelier, y compris
+  quand l'équipe reste verrouillée par ailleurs.
+
+**Pourquoi un événement plutôt qu'une écriture directe, même pour un véhicule
+pré-existant (ligne réelle en base) ?** Aucune ligne du module `campaign/`
+n'appelle jamais `teamRepo.save()` — le principe "l'atelier ne persiste jamais
+directement, tout passe par le journal d'événements" (cf.
+[ARCHITECTURE.md §3.8](../ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign))
+est une invariante centrale, respectée strictement partout ailleurs dans ce
+module. Une écriture directe romprait cette cohérence : le renommage
+n'apparaîtrait pas dans le [Journal d'une partie](#journal-dune-partie)
+(qui ne lit que `game_events`), et ne serait pas défait par l'annulation
+d'achat de la session en cours. `VehicleRenamedEvent` est donc le mécanisme
+**uniforme** pour tout renommage en Atelier, que le véhicule ciblé soit
+pré-existant (id positif) ou transient de la session en cours (id négatif,
+D-S11, cf. [Entités transientes](../DOMAIN_MODEL.md#entités-transientes-d-s11)) —
+`Team.findVehicle`/`renameCampaignVehicle` ne distinguent jamais selon le
+signe de l'id, donc aucun branchement supplémentaire n'est nécessaire.
+
+**Cascade d'annulation** : un `VehicleRenamedEvent` créé après le `BUY_VEHICLE`
+de la même session (véhicule tout juste acheté puis renommé) est inclus dans
+la cascade de suppression si cet achat est annulé — `VehicleRenamedEvent`
+surcharge `targetsVehicle(vehicleId)`, déjà utilisé par
+`Game.collectSessionEventsForVehicle` (cf. [Annulation d'achat vs revente](#annulation-dachat-vs-revente)
+ci-dessous) pour retrouver, sans connaître chaque type d'événement, tout ce
+qui doit disparaître avec le véhicule annulé.
 
 ---
 
@@ -820,4 +865,5 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles` | JWT | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture) |
 | POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
+| POST | `/api/campaigns/:id/events/vehicle-rename` | JWT | Renomme un véhicule en atelier `{ vehicleId, nom }` (participant sur sa propre équipe) — 204. Journalisé via `VehicleRenamedEvent`, accepté uniquement en `ATELIER` (cf. [§Renommage d'un véhicule en atelier](#renommage-dun-véhicule-en-atelier) ci-dessus). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment` |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |

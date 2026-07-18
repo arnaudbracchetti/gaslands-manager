@@ -117,6 +117,10 @@ export class AtelierEquipmentDataSource implements EquipmentDataSource {
     }));
   }
 
+  renameVehicle(vehicleId: number, nom: string): Observable<Vehicle> {
+    return this.mutate(vehicleId, () => this.service.renameVehicle(this.campaignId, vehicleId, nom));
+  }
+
   /**
    * Applique une mutation d'atelier (achat/revente d'équipement) puis relit l'état
    * d'atelier pour renvoyer le véhicule concerné, à jour (chaque endpoint de mutation

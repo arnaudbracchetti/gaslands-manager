@@ -27,8 +27,12 @@ import { Team } from './team.model';
 export interface VehicleSummary {
   /** Identifiant du véhicule (instance d'équipe) — utilisé pour `@for (...; track ...)`. */
   id: number;
-  /** Nom affiché, résolu depuis le catalogue (ex. "Camion") — PAS `nomInterne`. */
+  /** Nom affiché — personnalisé ou nom du type, déjà formaté "Nom (Type)" par le backend si différent (cf. `Vehicle.nom`). */
   nom: string;
+  /** Valeur brute du nom personnalisé, `null` si jamais renommé. */
+  customName: string | null;
+  /** Nom du TYPE catalogue (ex. "Camion") — résolu ici, pour la carte à deux lignes (`VehicleSummaryCard`). */
+  typeNom: string;
   /**
    * Coût total EXACT en jerricans : prix de base du véhicule + somme des prix de ses
    * armes et améliorations montées. Une arme montée sur Tourelle (`weapon.orientation
@@ -157,7 +161,9 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
 
   return {
     id: vehicle.id,
-    nom: vehiculeCatalogue?.nom ?? vehicle.nomInterne,
+    nom: vehicle.nom,
+    customName: vehicle.customName,
+    typeNom: vehiculeCatalogue?.nom ?? vehicle.nomInterne,
     cout,
     emplacementsUtilises,
     emplacementsTotal: vehicle.emplacementsTotal,

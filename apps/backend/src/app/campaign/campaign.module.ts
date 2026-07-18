@@ -56,6 +56,7 @@ import { EnterAtelierUseCase } from './application/enter-atelier.usecase';
 import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
+import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
@@ -233,6 +234,12 @@ import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, catalog: CatalogService) =>
         new ChangeEquipmentUseCase(repo, replay, catalog),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, CatalogService],
+    },
+    {
+      provide: RenameCampaignVehicleUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new RenameCampaignVehicleUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: WreckResolveUseCase,

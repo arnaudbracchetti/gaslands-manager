@@ -28,6 +28,6 @@ export class VehicleLostEvent extends GameEvent {
 
   describe(participants: readonly CampaignParticipant[]): string {
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
-    return `Véhicule détruit : ${found?.vehicle.type.nom ?? `#${this.vehicleId}`}`;
+    return `Véhicule détruit : ${found?.vehicle.nom ?? `#${this.vehicleId}`}`;
   }
 }

@@ -3,7 +3,13 @@
 }
 
 .vcs-name {
+  display: block;
+  width: 100%;
   margin: 0;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 400;
@@ -13,6 +19,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  &:hover:not(:disabled),
+  &:focus:not(:disabled) {
+    border-bottom-color: var(--border-rust);
+    outline: none;
+  }
+
+  &:disabled {
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
 }
 
 .vcs-slots {

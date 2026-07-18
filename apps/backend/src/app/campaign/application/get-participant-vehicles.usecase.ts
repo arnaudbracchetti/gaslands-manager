@@ -41,7 +41,7 @@ export class GetParticipantVehiclesUseCase {
           .filter((v) => !v.isLost)
           .map((v) => ({
             vehicleId: v.id,
-            nom: v.type.nom,
+            nom: v.nom,
             weightClass: weightClassFromPoids(v.type.poids),
           }));
         return { participantId, vehicles };

@@ -122,10 +122,16 @@ function buildVehicle(
   // `mockVehiculeCatalogue.emplacements` (3) par défaut, en l'absence de toute
   // amélioration de capacité (Remorque Moyenne/Lourde) montée.
   emplacementsTotal = 3,
+  // `nom`/`customName` : déjà résolus/formatés par le backend (cf. `Vehicle.nom`) —
+  // défaut "jamais renommé" (nom = type par défaut, customName null).
+  nom = 'Camion',
+  customName: string | null = null,
 ): Vehicle {
   return {
     id: 1,
     nomInterne: 'camion',
+    nom,
+    customName,
     teamId: 4,
     improvements,
     weapons,
@@ -138,10 +144,20 @@ function buildVehicle(
 describe('buildVehicleSummary', () => {
   // ── Cas de base ────────────────────────────────────────────────────────────
 
-  it('résout le nom depuis le catalogue (PAS nomInterne)', () => {
+  it('typeNom résout le nom du TYPE depuis le catalogue (PAS nomInterne)', () => {
     const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
 
-    expect(summary.nom).toBe('Camion');
+    expect(summary.typeNom).toBe('Camion');
+  });
+
+  it('nom/customName reflètent directement le véhicule (déjà résolus/formatés côté backend)', () => {
+    const summary: VehicleSummary = buildVehicleSummary(
+      buildVehicle([], [], [], 3, 'La Teigne (Camion)', 'La Teigne'),
+      mockCatalog,
+    );
+
+    expect(summary.nom).toBe('La Teigne (Camion)');
+    expect(summary.customName).toBe('La Teigne');
   });
 
   it('un véhicule "nu" (sans équipement) coûte uniquement son prix de base', () => {
@@ -222,11 +238,12 @@ describe('buildVehicleSummary', () => {
 
   // ── Robustesse ─────────────────────────────────────────────────────────────
 
-  it('se rabat sur nomInterne si le véhicule est introuvable dans le catalogue', () => {
+  it('typeNom se rabat sur nomInterne si le véhicule est introuvable dans le catalogue', () => {
     const vehicle: Vehicle = { ...buildVehicle([], []), nomInterne: 'inconnu_du_catalogue' };
     const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
 
-    expect(summary.nom).toBe('inconnu_du_catalogue');
+    expect(summary.typeNom).toBe('inconnu_du_catalogue');
+    expect(summary.nom).toBe('Camion'); // vehicle.nom — indépendant du catalogue
     expect(summary.cout).toBe(0); // pas de prix de base résolu
   });
 

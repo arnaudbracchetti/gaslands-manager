@@ -11,6 +11,7 @@ import { ImprovementLostEvent } from '../events/improvement-lost.event';
 import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
+import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
@@ -98,6 +99,10 @@ function makeFavoriDuPublicBonusEvent(id = 8): FavoriDuPublicBonusEvent {
   return new FavoriDuPublicBonusEvent(id, 10, 1, id, 2, 5);
 }
 
+function makeVehicleRenamedEvent(id = 15): VehicleRenamedEvent {
+  return new VehicleRenamedEvent(id, 10, 1, id, 1, 'Voiture', 'La Teigne');
+}
+
 describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
   const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen_1', null, []);
 
@@ -133,6 +138,10 @@ describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
     expect(game.canAccept(makeFavoriDuPublicBonusEvent())).toBe(true);
   });
 
+  it('refuse VehicleRenamedEvent (réservé à ATELIER)', () => {
+    expect(game.canAccept(makeVehicleRenamedEvent())).toBe(false);
+  });
+
   it('type est EVENEMENT_TELE', () => {
     expect(game.type).toBe('EVENEMENT_TELE');
   });
@@ -147,6 +156,10 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
 
   it('accepte EquipmentChangedEvent SEQUELLE (achat volontaire)', () => {
     expect(game.canAccept(makeSequellaEquipmentEvent())).toBe(true);
+  });
+
+  it('accepte VehicleRenamedEvent', () => {
+    expect(game.canAccept(makeVehicleRenamedEvent())).toBe(true);
   });
 
   it('refuse RankingAssignedEvent', () => {
@@ -182,6 +195,7 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
       false,
       () => new WreckResolvedEvent(13, 10, 1, 13, 1, 2, 0, WreckResult.INDEMNE, 0),
     ],
+    ['VehicleRenamedEvent', true, makeVehicleRenamedEvent],
   ];
 
   it.each(allKnownEvents)('%s → accepté=%s en ATELIER', (_name, expected, factory) => {
@@ -540,6 +554,52 @@ describe('Game — creditFavoriDuPublicBonus', () => {
     const bonus = game.creditFavoriDuPublicBonus(1, vehicle.id, false);
 
     expect(bonus).toBeNull();
+  });
+});
+
+describe('Game — renameVehicle', () => {
+  it('génère un VehicleRenamedEvent avec le previousName capturé depuis l\'état courant', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const events = game.renameVehicle(participant, vehicle.id, 'La Teigne');
+
+    expect(events).toHaveLength(1);
+    const event = events[0] as VehicleRenamedEvent;
+    expect(event.vehicleId).toBe(vehicle.id);
+    expect(event.previousName).toBe('Voiture');
+    expect(event.newName).toBe('La Teigne');
+  });
+
+  it('des renommages successifs chaînent : le previousName du 2ᵉ est le newName du 1ᵉʳ', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const [first] = game.renameVehicle(participant, vehicle.id, 'La Teigne');
+    (first as VehicleRenamedEvent).execute([participant]);
+    const [second] = game.renameVehicle(participant, vehicle.id, 'Le Monstre');
+
+    expect((second as VehicleRenamedEvent).previousName).toBe('La Teigne');
+    expect((second as VehicleRenamedEvent).newName).toBe('Le Monstre');
+  });
+
+  it('rejette un nom invalide AVANT de journaliser l\'événement (validation eager, pas différée au replay)', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    expect(() => game.renameVehicle(participant, vehicle.id, '   ')).toThrow('ne peut pas être vide');
+    expect(game.events).toHaveLength(0);
+  });
+
+  it('fonctionne sur un véhicule transient (id négatif, D-S11)', () => {
+    const { participant, team } = makeTestParticipant();
+    team.addCampaignVehicle(makeVehicleType(), -5);
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const events = game.renameVehicle(participant, -5, 'La Teigne');
+
+    expect((events[0] as VehicleRenamedEvent).vehicleId).toBe(-5);
+    expect((events[0] as VehicleRenamedEvent).previousName).toBe('Voiture');
   });
 });
 
@@ -911,6 +971,38 @@ describe('Game — changeEquipment', () => {
 
     expect(result.events).toHaveLength(0);
     expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([50, 51, 52]);
+  });
+
+  it('SELL VEHICLE sur un achat de CETTE session : la cascade inclut aussi un VehicleRenamedEvent de la même session (régression targetsVehicle)', () => {
+    // Même scénario que le test précédent, mais le véhicule a en plus été renommé
+    // (event id=53) avant d'être revendu — sans `targetsVehicle()` sur
+    // `VehicleRenamedEvent`, cet événement resterait orphelin dans le journal et le
+    // PROCHAIN replay lèverait une DomainException sur `Team.findVehicle`.
+    const vehicleType = makeVehicleType();
+    const transientVehicle = new Vehicle(-50, 1, vehicleType, [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team);
+
+    const buyVehicleEvent = new EquipmentChangedEvent(
+      50, 10, participant.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'voiture', 12,
+      null, null, null, vehicleType, null, null, null,
+    );
+    const renameEvent = new VehicleRenamedEvent(53, 10, participant.id, 1, -50, 'Voiture', 'La Teigne');
+    const game = new EvenementTeleGame(
+      10, 1, GameStatus.ATELIER, 1, 'scen', new Date(),
+      [buyVehicleEvent, renameEvent],
+    );
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: -50,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    });
+
+    expect(result.events).toHaveLength(0);
+    expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([50, 53]);
   });
 
   it('SELL VEHICLE sur un achat d\'une AUTRE session : revente normale, pas d\'annulation cascade', () => {

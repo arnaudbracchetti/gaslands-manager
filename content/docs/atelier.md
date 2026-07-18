@@ -26,7 +26,11 @@ Depuis la liste des véhicules de l'équipe, cliquez sur un véhicule pour
 retrouver le même écran d'équipement que lors de la
 [construction d'un véhicule](/documentation/construction-vehicule) : armes,
 améliorations, avantages, et en plus les [Séquelles](/documentation/sequelles),
-payées en Chocs plutôt qu'en jerricans.
+payées en Chocs plutôt qu'en jerricans. Vous pouvez également
+[renommer le véhicule](/documentation/construction-vehicule#donner-un-nom-à-un-véhicule)
+depuis ce même écran, y compris un véhicule tout juste acheté pendant cette
+session — en dehors d'un Atelier ouvert, en revanche, le nom reste figé tant
+que votre équipe est engagée dans une campagne en cours.
 
 ## Annuler un achat ou revendre : la différence
 

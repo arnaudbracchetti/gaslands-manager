@@ -26,6 +26,7 @@ import type { EquipmentChangedEvent } from '../domain/events/equipment-changed.e
 import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
+import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 
 /**
  * Persistence du journal de campagne.
@@ -272,6 +273,22 @@ export class CampaignRepository implements ICampaignRepository {
     if (event instanceof VehicleDestroyedEvent) {
       return { ...base, eventType: 'VEHICLE_DESTROYED', vehicleId: event.vehicleId, weightClass: event.weightClass, championshipPoints: event.championshipPoints };
     }
+    // VehicleRenamedEvent doit aussi être testé par `instanceof` AVANT la cascade
+    // duck-typée ci-dessous : il porte `vehicleId` sans `diceRoll`/`operation`/`weaponId`,
+    // ce qui le ferait tomber dans la branche VEHICLE_LOST (silencieusement, sans
+    // erreur) — le véhicule apparaîtrait perdu au prochain replay au lieu d'être
+    // renommé. 
+    if (event instanceof VehicleRenamedEvent) {
+      return {
+        ...base, eventType: 'VEHICLE_RENAMED',
+        vehicleId: event.vehicleId,
+        previousVehicleName: event.previousName,
+        newVehicleName: event.newName,
+      };
+    }
+
+
+    //TODO: ce mécanisme de dispatch par duck-typing dans son ensemble est fragile — un futur événement mal placé ici peut être mal classé silencieusement en base. Envisager un vrai discriminant explicite porté par chaque GameEvent plutôt que cette cascade de "'propriété' in e".
 
     // Dispatche selon le type concret via duck-typing sur les propriétés de l'événement.
     // On caste d'abord en `unknown` pour accéder aux propriétés spécifiques sans erreur TS.

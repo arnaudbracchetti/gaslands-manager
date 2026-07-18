@@ -44,7 +44,7 @@ export class TeamMapper {
     const improvements = (orm.improvements ?? []).map((i) => this.improvementToDomain(i));
     const advantages = (orm.advantages ?? []).map((a) => this.advantageToDomain(a));
 
-    return new Vehicle(orm.id, orm.teamId, vehicleType, weapons, improvements, advantages);
+    return new Vehicle(orm.id, orm.teamId, vehicleType, weapons, improvements, advantages, orm.nom ?? null);
   }
 
   private weaponToDomain(orm: WeaponOrm): Weapon {
@@ -93,6 +93,9 @@ export class TeamMapper {
     return {
       id: domain.id || undefined,
       nomInterne: domain.type.nomInterne,
+      // Valeur BRUTE (`customName`), jamais le getter `nom` résolu/formaté — sinon perte
+      // de la distinction "jamais renommé" (null) vs "renommé vers le nom du type".
+      nom: domain.customName,
       teamId: domain.teamId || undefined,
       weapons: domain.weapons.map((w) => this.weaponToOrm(w, domain.id)),
       improvements: domain.improvements.map((i) => this.improvementToOrm(i, domain.id)),

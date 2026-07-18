@@ -25,6 +25,8 @@ export class GetVehicleDetailUseCase {
     return {
       id: vehicle.id,
       nomInterne: vehicle.type.nomInterne,
+      nom: vehicle.nom,
+      customName: vehicle.customName,
       stats: vehicle.effectiveStats,
       baseStats: vehicle.baseStats,
       recapitulatif: vehicle.describe(),

@@ -64,6 +64,8 @@ export function vehicleDomainToDto(vehicle: Vehicle): VehicleDto {
   return {
     id: vehicle.id,
     nomInterne: vehicle.type.nomInterne,
+    nom: vehicle.nom,
+    customName: vehicle.customName,
     teamId: vehicle.teamId,
     createdAt: new Date(0),
     improvements,

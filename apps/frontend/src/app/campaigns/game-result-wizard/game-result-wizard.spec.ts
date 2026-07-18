@@ -155,6 +155,15 @@ describe('GameResultWizard — Événement Télévisé', () => {
     expect(component.vehicleLabels().get(100)).toBe('Voiture Alpha (Équipe Alpha)');
   });
 
+  it('vehicleLabels compose correctement un nom déjà formaté par le backend ("Nom (Type)")', () => {
+    fixture.componentRef.setInput('participantVehicles', new Map([
+      [1, [{ vehicleId: 100, nom: 'La Teigne (Voiture)', weightClass: 'MOYEN' as const }]],
+    ]));
+    fixture.detectChanges();
+
+    expect(component.vehicleLabels().get(100)).toBe('La Teigne (Voiture) (Équipe Alpha)');
+  });
+
   it('déclenche un tirage d\'épave (pas de revenu, ET) à l\'arrivée sur résolution', () => {
     const incomeEmitted: number[] = [];
     outputToObservable(component.incomeRollRequested).subscribe((v) => incomeEmitted.push(v));

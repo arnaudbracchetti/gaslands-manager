@@ -78,13 +78,8 @@ export class AtelierVehiclePage implements OnInit {
     return (this.workshop()?.vehicles ?? []).find((v: WorkshopVehicleDto): boolean => v.id === this.vehicleId) ?? null;
   });
 
-  /** Nom affiché du véhicule, résolu depuis le catalogue (repli sur `nomInterne`). */
-  vehicleName: Signal<string> = computed((): string => {
-    const v = this.vehicle();
-    const catalog = this.sponsorCatalog();
-    if (!v || !catalog) return '';
-    return catalog.vehicules.find((c): boolean => c.nom_interne === v.nomInterne)?.nom ?? v.nomInterne;
-  });
+  /** Nom affiché du véhicule — déjà formaté par le backend ("Nom (Type)" si personnalisé). */
+  vehicleName: Signal<string> = computed((): string => this.targetWorkshopVehicle()?.nom ?? '');
 
   /**
    * Budget passé à `EquipmentManager`. Même calcul que l'ancien `AtelierPage.budgetFor` :

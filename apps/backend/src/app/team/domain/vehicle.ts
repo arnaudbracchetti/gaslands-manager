@@ -60,6 +60,7 @@ export class Vehicle {
     private readonly _weapons: Weapon[],
     private readonly _improvements: Improvement[],
     private readonly _advantages: Advantage[] = [],
+    private _nom: string | null = null,
   ) {}
 
   get weapons(): readonly Weapon[] {
@@ -74,6 +75,42 @@ export class Vehicle {
     return this._advantages;
   }
 
+  // ── Nom personnalisé (distinct du type catalogue) ─────────────────────────────
+
+  /** Valeur brute, non formatée — `null` si jamais renommé. Réservé au mapper ORM et au pré-remplissage du champ d'édition. */
+  get customName(): string | null {
+    return this._nom;
+  }
+
+  /**
+   * Nom affiché : résout le nom personnalisé (ou le type par défaut), puis formate
+   * "Nom (Type)" — uniquement si le nom résolu diffère du type catalogue. Seul
+   * endroit qui porte cette règle : tous les DTOs et `describe()` consomment ce
+   * getter directement, jamais de reformattage dupliqué ailleurs.
+   */
+  get nom(): string {
+    const resolved = this._nom ?? this.type.nom;
+    return resolved === this.type.nom ? resolved : `${resolved} (${this.type.nom})`;
+  }
+
+  /** Renomme ce véhicule. Non vide après trim, 100 caractères max (même limite que `nomInterne`). */
+  rename(nom: string): void {
+    this._nom = Vehicle.assertValidName(nom);
+  }
+
+  /**
+   * Validation pure (aucune mutation), exposée publiquement pour que `Game.renameVehicle`
+   * (mode campagne) puisse valider un nom AVANT de construire/persister l'événement —
+   * sans cela, un nom invalide ne serait rejeté qu'au PROCHAIN replay complet (dans
+   * `execute()`), trop tard pour renvoyer une erreur à l'appelant et laissant un
+   * événement invalide dans le journal. Retourne la valeur trimmée.
+   */
+  static assertValidName(nom: string): string {
+    const trimmed = nom.trim();
+    if (!trimmed) throw new DomainException('Le nom du véhicule ne peut pas être vide.');
+    if (trimmed.length > 100) throw new DomainException('Le nom du véhicule est trop long (100 caractères maximum).');
+    return trimmed;
+  }
 
   // ── Getters campagne ──────────────────────────────────────────────────────────
 

@@ -24,6 +24,8 @@ const workshop: WorkshopStateDto = {
     {
       id: 5,
       nomInterne: 'voiture',
+      nom: 'Voiture',
+      customName: null,
       price: 12,
       isLost: false,
       chocs: 0,
@@ -74,6 +76,7 @@ describe('AtelierEquipmentDataSource', () => {
     getWorkshopAvailableWeapons: ReturnType<typeof vi.fn>;
     getWorkshopAvailableImprovements: ReturnType<typeof vi.fn>;
     getWorkshopAvailableAdvantages: ReturnType<typeof vi.fn>;
+    renameVehicle: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -83,6 +86,7 @@ describe('AtelierEquipmentDataSource', () => {
       getWorkshopAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableImprovements: vi.fn().mockReturnValue(of([])),
       getWorkshopAvailableAdvantages: vi.fn().mockReturnValue(of([])),
+      renameVehicle: vi.fn().mockReturnValue(of(undefined)),
     };
 
     TestBed.configureTestingModule({
@@ -163,5 +167,13 @@ describe('AtelierEquipmentDataSource', () => {
   it('getAvailableWeapons délègue au service atelier avec le campaignId de la route', () => {
     ds.getAvailableWeapons(5);
     expect(service.getWorkshopAvailableWeapons).toHaveBeenCalledWith(7, 5);
+  });
+
+  it('renameVehicle → CampaignsService.renameVehicle (campaignId de la route), relit puis remappe le véhicule', async () => {
+    const v = await firstValueFrom(ds.renameVehicle(5, 'La Teigne'));
+
+    expect(service.renameVehicle).toHaveBeenCalledWith(7, 5, 'La Teigne');
+    expect(service.getWorkshop).toHaveBeenCalledWith(7);
+    expect(v.id).toBe(5);
   });
 });

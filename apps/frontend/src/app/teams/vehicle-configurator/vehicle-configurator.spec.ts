@@ -80,6 +80,8 @@ const mockSponsorCatalog: Sponsor = {
 const mockCreatedVehicle: Vehicle = {
   id: 100,
   nomInterne: 'camion',
+  nom: 'Camion',
+  customName: null,
   teamId: 7,
   improvements: [],
   weapons: [],
@@ -92,6 +94,8 @@ const mockCreatedVehicle: Vehicle = {
 const mockOtherVehicle: Vehicle = {
   id: 101,
   nomInterne: 'voiture',
+  nom: 'Voiture',
+  customName: null,
   teamId: 7,
   improvements: [],
   weapons: [],

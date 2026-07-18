@@ -564,6 +564,20 @@ export class EquipmentManager {
     });
   }
 
+  // ── Renommage du véhicule ────────────────────────────────────────────────────
+
+  /** Renomme le véhicule — émis par `VehicleCostSummary` au blur (déjà trimmé, déjà différent de la valeur actuelle). */
+  onRenameVehicle(nom: string): void {
+    this.equipmentError.set('');
+
+    this.dataSource.renameVehicle(this.vehicle().id, nom).subscribe({
+      next: (updated: Vehicle): void => this.vehicleChanged.emit(updated),
+      error: (err: HttpErrorResponse): void => {
+        this.equipmentError.set(err.error?.message ?? 'Impossible de renommer ce véhicule. Réessayez.');
+      },
+    });
+  }
+
   // ── Ajout d'équipement ───────────────────────────────────────────────────────
 
   /**

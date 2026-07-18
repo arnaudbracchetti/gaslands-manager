@@ -37,7 +37,8 @@ export interface VehicleSaleSummary {
 
 export function buildVehicleSaleSummary(vehicle: WorkshopVehicleDto, catalog: Sponsor): VehicleSaleSummary {
   const vehiculeCatalogue = catalog.vehicules.find((v) => v.nom_interne === vehicle.nomInterne);
-  const vehicleName = vehiculeCatalogue?.nom ?? vehicle.nomInterne;
+  // Déjà formaté par le backend ("Nom (Type)" si personnalisé) — plus de résolution catalogue ici.
+  const vehicleName = vehicle.nom;
   const chassisPrice = vehiculeCatalogue?.prix ?? vehicle.price;
 
   const items: VehicleSaleLineItem[] = [];

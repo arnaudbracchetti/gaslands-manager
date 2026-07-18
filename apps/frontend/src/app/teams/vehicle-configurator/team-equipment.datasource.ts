@@ -66,4 +66,8 @@ export class TeamEquipmentDataSource implements EquipmentDataSource {
   removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle> {
     return this.vs.removeAdvantage(vehicleId, advantageId);
   }
+
+  renameVehicle(vehicleId: number, nom: string): Observable<Vehicle> {
+    return this.vs.rename(vehicleId, nom);
+  }
 }

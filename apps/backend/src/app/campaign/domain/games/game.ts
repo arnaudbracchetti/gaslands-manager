@@ -11,10 +11,12 @@ import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
+import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from '../enums/weight-class.enum';
 import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
 import type { IRandomizer } from '../randomizer.interface';
+import { Vehicle } from '../../../team/domain/vehicle';
 import type { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import type { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import type { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
@@ -386,6 +388,30 @@ export abstract class Game {
   /** B3 — Enregistre un mouvement de cagnotte (gain de récompense ou dépense d'atelier). */
   recordWalletMovement(participantId: number, amount: number, reason: WalletReason): GameEvent[] {
     const event = new WalletMovementEvent(0, this.id, participantId, 0, amount, reason);
+    this.addEvent(event);
+    return [event];
+  }
+
+  /**
+   * Renomme un véhicule en Atelier — capture `previousName` depuis la valeur BRUTE
+   * (`Vehicle.customName`, PAS le getter `nom` déjà formaté) : si `nom` était utilisé
+   * ici, un 2ᵉ renommage capturerait "La Teigne (Voiture)" comme previousName, et un
+   * `undo()` ultérieur réinjecterait ce texte tel quel dans `_nom` — les parenthèses
+   * s'empileraient à chaque cycle rename/undo. Fallback sur `type.nom` si jamais
+   * personnalisé (`customName === null`), pour que `previousName` reste toujours une
+   * chaîne concrète (jamais `null`). Fonctionne identiquement pour un véhicule
+   * persisté ou transient (D-S11) — `findVehicle` est agnostique du signe de l'id.
+   *
+   * Valide le nom via `Vehicle.assertValidName` AVANT de construire l'événement :
+   * `VehicleRenamedEvent.execute()` ne revalide rien (D-S3, aucune mutation avant
+   * persistance), donc un nom invalide non filtré ici ne serait rejeté qu'au
+   * PROCHAIN replay complet — trop tard, et l'événement resterait dans le journal.
+   */
+  renameVehicle(participant: CampaignParticipant, vehicleId: number, newName: string): GameEvent[] {
+    const validatedName = Vehicle.assertValidName(newName);
+    const vehicle = participant.team.findVehicle(vehicleId);
+    const previousName = vehicle.customName ?? vehicle.type.nom;
+    const event = new VehicleRenamedEvent(0, this.id, participant.id, 0, vehicleId, previousName, validatedName);
     this.addEvent(event);
     return [event];
   }

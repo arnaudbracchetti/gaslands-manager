@@ -355,4 +355,13 @@ export class CampaignsService {
   changeEquipment(campaignId: number, dto: ChangeEquipmentDto): Observable<void> {
     return this.http.post<void>(`/api/campaigns/${campaignId}/events/equipment`, dto);
   }
+
+  /**
+   * POST /api/campaigns/:id/events/vehicle-rename → renomme un véhicule en Atelier
+   * (204 No Content) — véhicule pré-existant ou transient de la session en cours,
+   * aucune distinction côté appelant. Mirroir de `changeEquipment` ci-dessus.
+   */
+  renameVehicle(campaignId: number, vehicleId: number, nom: string): Observable<void> {
+    return this.http.post<void>(`/api/campaigns/${campaignId}/events/vehicle-rename`, { vehicleId, nom });
+  }
 }

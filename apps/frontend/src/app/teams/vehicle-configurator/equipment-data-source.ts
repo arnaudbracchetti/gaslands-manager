@@ -44,6 +44,7 @@ export interface EquipmentDataSource {
   removeWeapon(vehicleId: number, weaponId: number): Observable<Vehicle>;
   removeImprovement(vehicleId: number, improvementId: number): Observable<Vehicle>;
   removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle>;
+  renameVehicle(vehicleId: number, nom: string): Observable<Vehicle>;
 }
 
 export const EQUIPMENT_DATA_SOURCE = new InjectionToken<EquipmentDataSource>('EquipmentDataSource');

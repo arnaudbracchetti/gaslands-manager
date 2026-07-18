@@ -45,7 +45,7 @@ export class GameEventOrm {
 
   /** Discriminant — valeurs : 'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' |
    *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
-   *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' */
+   *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' | 'VEHICLE_RENAMED' */
   @Column()
   eventType!: string;
 
@@ -124,6 +124,13 @@ export class GameEventOrm {
   /** BUY(SEQUELLE, 'dur_a_cuire') uniquement — nom_interne de l'avantage gratuit accordé. */
   @Column({ type: 'varchar', nullable: true })
   freeAdvantageNomInterne!: string | null;
+
+  // ── Payload : VehicleRenamedEvent ──────────────────────────────────────────
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  previousVehicleName!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  newVehicleName!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

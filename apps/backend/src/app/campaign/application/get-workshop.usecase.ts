@@ -39,6 +39,8 @@ export class GetWorkshopUseCase {
     const vehicles: WorkshopVehicleDto[] = me.team.vehicles.filter((v) => !v.isSold).map((v) => ({
       id: v.id,
       nomInterne: v.type.nomInterne,
+      nom: v.nom,
+      customName: v.customName,
       price: v.type.price,
       isLost: v.isLost,
       chocs: v.chocs,

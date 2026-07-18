@@ -1,8 +1,16 @@
 <!--
-  VehicleCostSummary — nom du véhicule, emplacements et coût (ex partie haute
-  de `.em-current__header`, après `app-team-budget`).
+  VehicleCostSummary — nom du véhicule (éditable), emplacements et coût (ex
+  partie haute de `.em-current__header`, après `app-team-budget`).
 -->
-<h3 class="vcs-name" [title]="vehicleName()">{{ vehicleName() }}</h3>
+<input
+  class="vcs-name"
+  type="text"
+  [ngModel]="formNom()"
+  (ngModelChange)="formNom.set($event)"
+  (blur)="onBlur()"
+  [disabled]="disabled()"
+  [title]="formNom()"
+/>
 
 <div class="vcs-slots">
   <span class="vcs-slots__label">Emplacements</span>

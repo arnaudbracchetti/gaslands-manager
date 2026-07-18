@@ -166,4 +166,12 @@ export class VehicleService {
   removeAdvantage(vehicleId: number, advantageId: number): Observable<Vehicle> {
     return this.http.delete<Vehicle>(`/api/vehicles/${vehicleId}/advantages/${advantageId}`);
   }
+
+  /**
+   * PATCH /api/vehicles/:id/name → renomme le véhicule (refusé si l'équipe est
+   * verrouillée par une campagne en cours). Retourne le véhicule mis à jour.
+   */
+  rename(vehicleId: number, nom: string): Observable<Vehicle> {
+    return this.http.patch<Vehicle>(`/api/vehicles/${vehicleId}/name`, { nom });
+  }
 }

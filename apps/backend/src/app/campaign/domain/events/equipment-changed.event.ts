@@ -307,7 +307,7 @@ export class EquipmentChangedEvent extends GameEvent {
     if (this.orientation) details.push(this.orientation);
     if (this.entityType !== EquipmentEntityType.VEHICLE && this.targetVehicleId !== null) {
       const hostVehicle = this.findVehicleWithTeam(participants, this.targetVehicleId)?.vehicle;
-      if (hostVehicle) details.push(`sur ${hostVehicle.type.nom}`);
+      if (hostVehicle) details.push(`sur ${hostVehicle.nom}`);
     }
     if (this.resolvedFreeAdvantageType) details.push(`+ avantage ${this.resolvedFreeAdvantageType.nom}`);
     const detailsText = details.join(', ');

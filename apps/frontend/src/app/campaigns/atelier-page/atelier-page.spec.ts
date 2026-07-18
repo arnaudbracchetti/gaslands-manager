@@ -63,6 +63,8 @@ const mockWorkshop: WorkshopStateDto = {
     {
       id: 5,
       nomInterne: 'camion',
+      nom: 'Camion',
+      customName: null,
       price: 16,
       isLost: false,
       chocs: 0,

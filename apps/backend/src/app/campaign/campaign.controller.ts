@@ -57,6 +57,7 @@ import { EnterAtelierUseCase } from './application/enter-atelier.usecase';
 import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
+import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-available-weapons.usecase';
@@ -82,6 +83,7 @@ import type { RecordWalletDto } from './dto/record-wallet.dto';
 import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
 import type { ContactResistanceDto } from './dto/contact-resistance.dto';
 import type { ChangeEquipmentDto } from './dto/change-equipment.dto';
+import type { RenameCampaignVehicleDto } from './dto/rename-campaign-vehicle.dto';
 import type { WreckResolveDto } from './dto/wreck-resolve.dto';
 import type { RollIncomeDto } from './dto/roll-income.dto';
 import type { RollIncomeResult } from './application/roll-income.usecase';
@@ -136,6 +138,7 @@ export class CampaignController {
     private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
     private readonly getWorkshopAvailableAdvantagesUseCase: GetWorkshopAvailableAdvantagesUseCase,
     private readonly getWorkshopAvailableSequellesUseCase: GetWorkshopAvailableSequellesUseCase,
+    private readonly renameCampaignVehicleUseCase: RenameCampaignVehicleUseCase,
   ) {}
 
   // ── Catalogue (public) ──────────────────────────────────────────────────────
@@ -513,6 +516,27 @@ export class CampaignController {
       targetEntityId: dto.targetEntityId,
       orientation: dto.orientation,
       freeAdvantageNomInterne: dto.freeAdvantageNomInterne,
+    });
+  }
+
+  /**
+   * POST /api/campaigns/:id/events/vehicle-rename — renomme un véhicule en Atelier
+   * (participant sur sa propre équipe). Même résolution d'atelier que `changeEquipment`
+   * ci-dessus (pas de `:gameId` en route, le use case retrouve l'unique partie ATELIER).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/events/vehicle-rename')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  renameCampaignVehicle(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Body() dto: RenameCampaignVehicleDto,
+  ): Promise<void> {
+    return this.renameCampaignVehicleUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+      vehicleId: dto.vehicleId,
+      nom: dto.nom,
     });
   }
 

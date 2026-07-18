@@ -1,8 +1,9 @@
 /**
  * Tests unitaires pour VehicleCostSummary.
  *
- * Composant "dumb" : on vérifie uniquement l'affichage des valeurs reçues en
- * input (mirroir de `team-budget.spec.ts`/`team-card.spec.ts`).
+ * Composant partiellement "dumb" : affichage des valeurs reçues en input
+ * (mirroir de `team-budget.spec.ts`/`team-card.spec.ts`), plus le comportement
+ * d'édition du nom (auto-save au blur, mirroir de `team-edit-page`).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VehicleCostSummary } from './vehicle-cost-summary';
@@ -17,7 +18,8 @@ describe('VehicleCostSummary', () => {
 
     fixture = TestBed.createComponent(VehicleCostSummary);
 
-    fixture.componentRef.setInput('vehicleName', 'Camion');
+    fixture.componentRef.setInput('customName', null);
+    fixture.componentRef.setInput('typeNom', 'Camion');
     fixture.componentRef.setInput('emplacementsUtilises', 0);
     fixture.componentRef.setInput('emplacementsTotal', 4);
     fixture.componentRef.setInput('coutBase', 16);
@@ -26,12 +28,62 @@ describe('VehicleCostSummary', () => {
     fixture.detectChanges();
   });
 
-  it('affiche le nom du véhicule (texte et title, pour la troncature)', () => {
+  it('pré-remplit le champ avec typeNom quand customName est null', () => {
     const el = fixture.nativeElement as HTMLElement;
-    const name = el.querySelector('.vcs-name') as HTMLElement;
+    const input = el.querySelector('.vcs-name') as HTMLInputElement;
 
-    expect(name.textContent?.trim()).toBe('Camion');
-    expect(name.getAttribute('title')).toBe('Camion');
+    expect(input.value).toBe('Camion');
+    expect(input.title).toBe('Camion');
+  });
+
+  it('pré-remplit le champ avec customName quand il est renseigné', async () => {
+    fixture.componentRef.setInput('customName', 'La Teigne');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const input = el.querySelector('.vcs-name') as HTMLInputElement;
+    expect(input.value).toBe('La Teigne');
+  });
+
+  it('émet nameChanged (trimmé) au blur quand la valeur a changé', () => {
+    const emitted: string[] = [];
+    fixture.componentInstance.nameChanged.subscribe((v: string) => emitted.push(v));
+
+    fixture.componentInstance.formNom.set('  La Teigne  ');
+    fixture.componentInstance.onBlur();
+
+    expect(emitted).toEqual(['La Teigne']);
+  });
+
+  it("n'émet rien au blur si la valeur est inchangée", () => {
+    const emitted: string[] = [];
+    fixture.componentInstance.nameChanged.subscribe((v: string) => emitted.push(v));
+
+    fixture.componentInstance.onBlur();
+
+    expect(emitted).toEqual([]);
+  });
+
+  it("n'émet rien au blur si la valeur est vide (revient à la valeur précédente)", () => {
+    const emitted: string[] = [];
+    fixture.componentInstance.nameChanged.subscribe((v: string) => emitted.push(v));
+
+    fixture.componentInstance.formNom.set('   ');
+    fixture.componentInstance.onBlur();
+
+    expect(emitted).toEqual([]);
+    expect(fixture.componentInstance.formNom()).toBe('Camion');
+  });
+
+  it('désactive le champ quand disabled=true', async () => {
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const input = el.querySelector('.vcs-name') as HTMLInputElement;
+    expect(input.disabled).toBe(true);
   });
 
   it('affiche la section emplacements avec le label et un slot-gauge', () => {

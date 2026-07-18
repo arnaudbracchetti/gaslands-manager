@@ -42,6 +42,7 @@ classDiagram
         +addVehicle(type, defaultImprovements, defaultWeapons) Vehicle
         +removeVehicle(vehicleId) void
         +findVehicle(vehicleId) Vehicle
+        +renameVehicle(vehicleId, nom) void
         +addWeaponToVehicle(vehicleId, weaponType, orientation) void
         +removeWeaponFromVehicle(vehicleId, weaponId) void
         +addImprovementToVehicle(vehicleId, improvementType, orientation) void
@@ -60,15 +61,19 @@ classDiagram
         -_advantages : Advantage[]
         -_sequellas : Sequella[]
         -_isSold : boolean
+        -_nom : string | null
         +weapons : readonly Weapon[]
         +improvements : readonly Improvement[]
         +advantages : readonly Advantage[]
         +cost : number
         +usedSlots : number
         +isSold : boolean
+        +customName : string | null
+        +nom : string
         +baseStats : VehicleStats
         +effectiveStats : VehicleStats
         +describe() VehicleStatsSummary[]
+        +rename(nom) void
         +canAddWeapon(type, orientation, budget) RuleResult
         +canAddImprovement(type, orientation, budget) RuleResult
         +canAddAdvantage(type, budget) RuleResult
@@ -299,6 +304,22 @@ méthodes "campagne" (`addCampaignVehicle`, `markWeaponSold`…, section D-S5/D-
 utilisées par le flux atelier event-sourcing qui doit rester fonctionnel pendant que la
 campagne est `EN_COURS`. Détail : [spec/TEAMS.md](spec/TEAMS.md#crud-équipes).
 
+**Nom d'instance du véhicule** : `Vehicle._nom` (nullable) porte le nom personnalisé
+donné par le joueur, distinct du type catalogue (`type.nomInterne`/`type.nom`) — `null`
+tant que jamais renommé. Le getter `nom` résout et FORMATE en un seul endroit :
+nom personnalisé (ou type par défaut), puis `"Nom (Type)"` uniquement si le résolu
+diffère du type — aucun consommateur (DTO, `describe()` d'événement, frontend) ne
+reformate. `rename(nom)` valide (non vide après trim, 100 caractères max, même limite
+que `nomInterne`) et lève `DomainException` sinon ; sa validation pure est exposée en
+statique (`Vehicle.assertValidName`) pour que `Game.renameVehicle` (mode campagne)
+puisse rejeter un nom invalide AVANT de construire/persister l'événement. Même
+dédoublement construction/campagne que le reste de l'agrégat : `Team.renameVehicle`
+(`assertNotLocked()` + délégation, construction d'équipe) vs `Team.renameCampaignVehicle`
+(délégation seule, atelier — la garde "Atelier uniquement" vit dans `Game.canAccept()`,
+pas ici). Détail complet, y compris pourquoi le renommage en atelier passe par un
+événement dédié plutôt qu'une écriture directe : [spec/CAMPAIGN.md — Renommage d'un
+véhicule en atelier](spec/CAMPAIGN.md#renommage-dun-véhicule-en-atelier).
+
 ---
 
 ## 2. Catalogue en mémoire
@@ -464,6 +485,7 @@ erDiagram
     VEHICLE {
         number id PK
         string nomInterne "réf. catalogue Vehicule"
+        string nom "nullable — nom personnalisé, null tant que jamais renommé"
         number teamId FK
         date createdAt
     }
@@ -531,7 +553,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -554,6 +576,8 @@ erDiagram
         number targetEntityId "nullable"
         string orientation "nullable — EquipmentChanged ; WEAPON : 5 valeurs dont 'tourelle' (coût x3)"
         string freeAdvantageNomInterne "nullable — BUY SEQUELLE 'dur_a_cuire' uniquement, avantage gratuit accordé"
+        string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
+        string newVehicleName "nullable — VehicleRenamedEvent"
         date createdAt
     }
 ```
@@ -711,8 +735,8 @@ pas une entité séparée (cf.
 
 | Classe | Type | Statuts | Événements acceptés en PLANIFIE | Événements acceptés en ATELIER |
 |--------|------|---------|----------------------------------|----------------------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged (tout entityType) |
-| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged (tout entityType) |
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged (tout entityType), VehicleRenamed |
+| `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged (tout entityType), VehicleRenamed |
 
 `EquipmentChangedEvent` est la seule classe acceptée dans les deux statuts, mais
 pas pour les mêmes `entityType` : en `PLANIFIE`, seul `SEQUELLE` passe (séquelle
@@ -753,6 +777,7 @@ d'événements confondus.
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
 | `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` — effet différé confirmé par attestation manuelle de l'organisateur (aucun état mémorisé automatiquement d'une partie à l'autre) | `addPoints(-5)` |
+| `VehicleRenamedEvent` | `vehicle.renameCampaignVehicle(newName)` (via `Team`, pas `assertNotLocked()` — cf. §1) | `vehicle.renameCampaignVehicle(previousName)` |
 
 ### Entités transientes (D-S11)
 

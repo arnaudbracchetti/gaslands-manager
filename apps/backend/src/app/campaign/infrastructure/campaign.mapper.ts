@@ -26,6 +26,7 @@ import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipme
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
+import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
@@ -150,6 +151,12 @@ export class CampaignMapper {
         return new VehicleDestroyedEvent(
           id, gameId, participantId, eventOrder,
           orm.vehicleId!, orm.weightClass as WeightClass, orm.championshipPoints!,
+        );
+
+      case 'VEHICLE_RENAMED':
+        return new VehicleRenamedEvent(
+          id, gameId, participantId, eventOrder,
+          orm.vehicleId!, orm.previousVehicleName!, orm.newVehicleName!,
         );
 
       default:
