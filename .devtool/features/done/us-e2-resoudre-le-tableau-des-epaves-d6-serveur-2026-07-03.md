@@ -1,15 +1,15 @@
 ---
 id: "us-e2-resoudre-le-tableau-des-epaves-d6-serveur-2026-07-03"
-status: "in-progress"
+status: "done"
 priority: "high"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T00:00:00.000Z"
-completedAt: null
+modified: "2026-07-17T15:27:23.022Z"
+completedAt: "2026-07-17T15:27:23.022Z"
 labels: ["mode-campagne", "degats-sequelles"]
-order: "a3"
+order: "a0"
 ---
 # Résoudre le Tableau des Épaves (D6 serveur)
 

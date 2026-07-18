@@ -1,16 +1,16 @@
 ---
 id: "catalogue-dynamique-vehicules-armes-2026-07-17"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:41:35.978Z"
 completedAt: null
 labels: ["frontend", "catalogue"]
-order: "aF"
+order: "a3"
 ---
-
 # Catalogue dynamique `/vehicles` et `/weapons`
 
 En tant que joueur, je veux consulter le catalogue complet des véhicules et armes

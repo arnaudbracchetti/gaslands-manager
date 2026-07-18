@@ -1,16 +1,16 @@
 ---
 id: "us-g1-lancer-une-partie-2026-07-17"
-status: "backlog"
+status: "todo"
 priority: "high"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:40:17.748Z"
 completedAt: null
 labels: ["mode-campagne", "programme-tele"]
-order: "aB"
+order: "Zz"
 ---
-
 # Lancer une partie
 
 En tant qu'organisateur, je veux avoir une action explicite "Lancer la partie" pour

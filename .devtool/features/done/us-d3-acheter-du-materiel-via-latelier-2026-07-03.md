@@ -1,16 +1,16 @@
 ---
 id: "us-d3-acheter-du-materiel-via-latelier-2026-07-03"
-status: "backlog"
+status: "done"
 priority: "high"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T00:00:00.000Z"
-completedAt: null
+modified: "2026-07-17T15:32:07.306Z"
+completedAt: "2026-07-17T15:32:07.306Z"
 labels: ["mode-campagne", "cagnotte-atelier"]
-order: "a4"
+order: "Zz"
 ---
-
 # Acheter du matériel via l'Atelier
 
 En tant que joueur, je veux acheter de nouveaux véhicules/armes/améliorations avec

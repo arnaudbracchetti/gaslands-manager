@@ -1,16 +1,16 @@
 ---
 id: "us-f1-contacter-la-resistance-2026-07-03"
-status: "backlog"
+status: "todo"
 priority: "low"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:39:48.403Z"
 completedAt: null
 labels: ["mode-campagne", "resistance"]
-order: "aA"
+order: "a1"
 ---
-
 # Contacter la Résistance
 
 En tant que joueur n'ayant pas marqué de PC lors d'une partie, je veux contacter la

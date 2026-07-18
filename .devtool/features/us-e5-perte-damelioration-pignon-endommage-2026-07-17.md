@@ -1,16 +1,16 @@
 ---
 id: "us-e5-perte-damelioration-pignon-endommage-2026-07-17"
-status: "backlog"
+status: "review"
 priority: "low"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:40:42.310Z"
 completedAt: null
 labels: ["mode-campagne", "degats-sequelles"]
-order: "aC"
+order: "a0"
 ---
-
 # Perte d'avantage sur "Pignon endommagé"
 
 En tant que joueur, je veux que la ligne "Pignon endommagé" de la Table des

@@ -3,14 +3,14 @@ id: "us-d5-afficher-les-vehicules-perdus-en-atelier-2026-07-17"
 status: "backlog"
 priority: "medium"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:27:39.044Z"
 completedAt: null
 labels: ["mode-campagne", "cagnotte-atelier"]
-order: "aD"
+order: "a6"
 ---
-
 # Afficher les véhicules perdus (épaves) dans l'Atelier
 
 En tant que joueur, je veux voir mes véhicules devenus épaves/détruits dans

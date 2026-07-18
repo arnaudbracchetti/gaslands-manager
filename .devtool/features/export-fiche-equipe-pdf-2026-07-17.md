@@ -1,16 +1,16 @@
 ---
 id: "export-fiche-equipe-pdf-2026-07-17"
-status: "backlog"
+status: "todo"
 priority: "low"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:41:03.583Z"
 completedAt: null
 labels: ["frontend", "export"]
-order: "aH"
+order: "a2"
 ---
-
 # Export de fiche d'équipe (HTML/PDF)
 
 En tant que joueur, je veux pouvoir exporter une fiche complète et imprimable de

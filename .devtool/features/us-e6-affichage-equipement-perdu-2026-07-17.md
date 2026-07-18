@@ -1,16 +1,16 @@
 ---
 id: "us-e6-affichage-equipement-perdu-2026-07-17"
-status: "backlog"
+status: "review"
 priority: "low"
 assignee: null
+epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T00:00:00.000Z"
+modified: "2026-07-17T15:40:51.366Z"
 completedAt: null
 labels: ["mode-campagne", "atelier-ui"]
-order: "aD"
+order: "a1"
 ---
-
 # Afficher les équipements perdus distinctement des équipements vendus
 
 En tant que joueur, je veux voir visuellement la différence entre un équipement
