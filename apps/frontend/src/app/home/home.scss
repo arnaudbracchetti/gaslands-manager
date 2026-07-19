@@ -43,15 +43,15 @@
 }
 
 .hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 8vw, 6rem);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 0.9;
-  color: var(--tb-danger);
-  text-shadow: var(--shadow-stamp-lg);
   margin-bottom: 1.5rem;
+}
+
+.hero-logo {
+  display: block;
+  width: clamp(280px, 45vw, 520px);
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(var(--shadow-stamp-lg));
 }
 
 .hero-subtitle {
