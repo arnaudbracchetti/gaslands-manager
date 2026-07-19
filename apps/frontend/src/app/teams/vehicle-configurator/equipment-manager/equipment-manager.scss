@@ -146,7 +146,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  background: var(--metal-sheen);
+  background: var(--tb-bitume-4);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -181,9 +181,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(230, 180, 28, 0.08);
-  border: 1px solid rgba(230, 180, 28, 0.25);
-  color: var(--tb-danger);
+  background: var(--tint-accent-bg);
+  border: 1px solid var(--tint-accent-border);
+  color: var(--tint-accent-text);
   padding: 2px 8px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);

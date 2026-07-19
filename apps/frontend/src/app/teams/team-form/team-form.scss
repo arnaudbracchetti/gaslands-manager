@@ -41,11 +41,11 @@
     &:focus {
       outline: none;
       border-color: var(--tb-danger);
-      box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.15);
+      box-shadow: var(--focus-ring-glow);
     }
 
     &::placeholder {
-      color: var(--text-faint);
+      color: var(--text-dim);
     }
   }
 
@@ -56,9 +56,9 @@
 }
 
 .form-error {
-  background: rgba(162, 58, 28, 0.12);
+  background: var(--tint-danger-bg);
   border: 1px solid var(--tb-rouille);
-  color: var(--tb-rouille-lt);
+  color: var(--tint-danger-text);
   padding: 10px 14px;
   border-radius: var(--r-sm);
   margin-bottom: 16px;

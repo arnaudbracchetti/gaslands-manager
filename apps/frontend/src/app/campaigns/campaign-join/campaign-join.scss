@@ -41,9 +41,9 @@
 }
 
 .campaign-join-error {
-  background: rgba(162, 58, 28, 0.12);
+  background: var(--tint-danger-bg);
   border: 1px solid var(--tb-rouille);
-  color: var(--tb-rouille-lt);
+  color: var(--tint-danger-text);
 }
 
 .campaign-join-info {

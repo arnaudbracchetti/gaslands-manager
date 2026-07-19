@@ -75,9 +75,9 @@
     letter-spacing: 0.1em;
 
     &--organizer {
-      background: rgba(230, 180, 28, 0.12);
-      border-color: rgba(230, 180, 28, 0.35);
-      color: var(--tb-danger);
+      background: var(--tint-accent-bg);
+      border-color: var(--tint-accent-border);
+      color: var(--tint-accent-text);
     }
 
     &--pending {
@@ -87,9 +87,9 @@
     }
 
     &--rejected {
-      background: rgba(162, 58, 28, 0.08);
-      border-color: rgba(162, 58, 28, 0.25);
-      color: var(--tb-rouille-lt);
+      background: var(--tint-danger-bg);
+      border-color: var(--tint-danger-border);
+      color: var(--tint-danger-text);
       opacity: 0.8;
     }
   }
@@ -149,11 +149,11 @@
 
   &__reject {
     background: transparent;
-    border-color: rgba(162, 58, 28, 0.5);
-    color: var(--tb-rouille-lt);
+    border-color: var(--tint-danger-border-strong);
+    color: var(--tint-danger-text);
 
     &:hover {
-      background: rgba(162, 58, 28, 0.12);
+      background: var(--tint-danger-bg);
     }
   }
 
@@ -171,7 +171,7 @@
   &__remove {
     background: transparent;
     border-color: var(--border-hair);
-    color: var(--text-faint);
+    color: var(--text-dim);
 
     &:hover {
       border-color: var(--tb-rouille);
@@ -209,7 +209,7 @@
 
   &__empty {
     font-family: var(--font-mono);
-    color: var(--text-faint);
+    color: var(--text-dim);
     font-size: 0.78rem;
     letter-spacing: 0.08em;
     padding: 12px 0;

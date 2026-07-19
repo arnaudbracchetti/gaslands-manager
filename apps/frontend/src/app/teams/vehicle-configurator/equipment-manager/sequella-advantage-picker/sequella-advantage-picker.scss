@@ -16,7 +16,7 @@
 }
 
 .sap-modal {
-  background: var(--metal-sheen);
+  background: var(--tb-bitume-4);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 24px;
@@ -112,7 +112,7 @@
   @include bp.mobile {
     position: sticky;
     bottom: 0;
-    background: var(--metal-sheen);
+    background: var(--tb-bitume-4);
   }
 }
 

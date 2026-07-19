@@ -44,7 +44,7 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   padding: 7px 12px;
-  background: var(--metal-sheen);
+  background: var(--tb-bitume-4);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
 }
@@ -113,9 +113,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(230, 180, 28, 0.08);
-  border: 1px solid rgba(230, 180, 28, 0.25);
-  color: var(--tb-danger);
+  background: var(--tint-accent-bg);
+  border: 1px solid var(--tint-accent-border);
+  color: var(--tint-accent-text);
   padding: 2px 8px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
@@ -126,8 +126,8 @@
 
 .me-remove {
   background: transparent;
-  border: 1px solid rgba(162, 58, 28, 0.45);
-  color: var(--tb-rouille-lt);
+  border: 1px solid var(--tint-danger-border);
+  color: var(--tint-danger-text);
   padding: 4px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
@@ -139,7 +139,7 @@
   white-space: nowrap;
 
   &:hover {
-    background: rgba(162, 58, 28, 0.15);
+    background: var(--tint-danger-bg);
     border-color: var(--tb-rouille);
   }
 }

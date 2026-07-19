@@ -6,7 +6,7 @@
 .option {
   flex: 1;
   min-width: 0;
-  background: var(--metal-sheen);
+  background: var(--tb-bitume-4);
   border: 2px solid var(--border-hair);
   border-radius: var(--r-sm);
   padding: 10px 14px;
@@ -57,9 +57,9 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgba(230, 180, 28, 0.08);
-    border: 1px solid rgba(230, 180, 28, 0.25);
-    color: var(--tb-danger);
+    background: var(--tint-accent-bg);
+    border: 1px solid var(--tint-accent-border);
+    color: var(--tint-accent-text);
     padding: 2px 8px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
@@ -72,7 +72,7 @@
     ::ng-deep p, ::ng-deep ul, ::ng-deep li {
       font-family: var(--font-text);
       font-weight: 300;
-      color: var(--text-faint);
+      color: var(--text-dim);
       font-size: 0.8rem;
       font-style: italic;
       line-height: 1.4;
@@ -103,6 +103,7 @@
     border: none;
     background: var(--tb-toxic);
     color: var(--tb-bitume);
+    font-family: var(--font-text);
     font-size: 1.1rem;
     font-weight: 700;
     line-height: 1;
@@ -140,7 +141,7 @@
 }
 
 .orientation-btn {
-  background: rgba(230, 180, 28, 0.08);
+  background: var(--tint-accent-bg);
   border: 1px solid var(--tb-danger);
   color: var(--tb-danger);
   padding: 4px 12px;
@@ -153,14 +154,14 @@
   transition: background 160ms;
 
   &:hover {
-    background: rgba(230, 180, 28, 0.2);
+    background: var(--tint-accent-bg-hover);
   }
 }
 
 .orientation-cancel {
   background: transparent;
   border: 1px solid var(--border-hair);
-  color: var(--text-faint);
+  color: var(--text-dim);
   padding: 4px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);

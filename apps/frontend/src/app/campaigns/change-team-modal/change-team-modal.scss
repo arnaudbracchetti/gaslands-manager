@@ -16,7 +16,7 @@
 }
 
 .ctm-modal {
-  background: var(--metal-sheen);
+  background: var(--surface-raised);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
   padding: 24px;
@@ -53,7 +53,7 @@
   background: var(--tb-metal-1);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
-  color: var(--text-main);
+  color: var(--tb-os);
   font-family: var(--font-text);
   font-size: 0.95rem;
   cursor: pointer;
@@ -72,14 +72,14 @@
   @include bp.mobile {
     position: sticky;
     bottom: 0;
-    background: var(--metal-sheen);
+    background: var(--surface-raised);
   }
 }
 
 .ctm-modal__confirm {
   background: var(--tb-danger);
   border: 1px solid var(--tb-danger);
-  color: var(--text-main);
+  color: var(--action-primary-ink);
   padding: 7px 20px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);

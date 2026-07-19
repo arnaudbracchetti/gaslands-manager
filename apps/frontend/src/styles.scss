@@ -2,7 +2,31 @@
 
 // ─── Polices — Terres Brûlées ────────────────────────────────────────────────
 // Anton (display), Oswald (titres + corps), Space Mono (données / tags)
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+// Stick No Bills, graisse 800 (test display, cf. --font-display ci-dessous)
+// Alumni Sans, graisse 400 (test texte, cf. --font-text ci-dessous)
+// Alumni Sans Pinstripe (test mono, cf. --font-mono ci-dessous)
+@import url('https://fonts.googleapis.com/css2?family=Alumni+Sans:wght@400&family=Alumni+Sans+Pinstripe&family=Anton&family=Oswald:wght@300;400;500;600;700&family=Stick+No+Bills:wght@800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+// Alumni Sans rend visuellement plus petit qu'Oswald à taille égale — compense
+// légèrement via size-adjust plutôt que de toucher chaque sélecteur
+// consommateur de --font-text.
+@font-face {
+  font-family: 'Alumni Sans';
+  font-style: normal;
+  font-weight: 400;
+  size-adjust: 150%;
+  src: url(https://fonts.gstatic.com/s/alumnisans/v20/nwpHtKqkOwdO2aOIwhWudEWpx_zq_Xna-Xd9OO9gr1EI.woff2) format('woff2');
+}
+
+// Alumni Sans Pinstripe — pas d'ajustement nécessaire, déclaré explicitement à
+// 100% pour garder le même mécanisme que les deux polices ci-dessus.
+@font-face {
+  font-family: 'Alumni Sans Pinstripe';
+  font-style: normal;
+  font-weight: 400;
+  size-adjust: 150%;
+  src: url(https://fonts.gstatic.com/s/alumnisanspinstripe/v8/ZgNNjOFFPq_AUJD1umyS30W-Xub8zD1ObheDZb9J.woff2) format('woff2');
+}
 
 // ─── Design tokens — Terres Brûlées ─────────────────────────────────────────
 :root {
@@ -11,7 +35,7 @@
   --tb-sable:   #C98A47;
   --tb-os:      #E7DDC6;
   --tb-rouille: #A23A1C;
-  --tb-danger:  #E6B41C;
+  --tb-danger:  #d29e22;
 
   // ── Surfaces bitume ───────────────────────────────────────────────────────
   --tb-black:    #0C0907;
@@ -37,16 +61,31 @@
 
   // ── Accents ───────────────────────────────────────────────────────────────
   --tb-rouille-deep: #7E2C13;
-  --tb-rouille-lt:   #C2522E;
+  // Luminosité relevée à ~7:1 (round 3, était #D67252/~4.85:1 au round 2,
+  // #C2522E à l'origine) — cf. section "Tints" ci-dessous : variante claire/
+  // texte de --tb-rouille, utilisée telle quelle aussi pour bordures/
+  // remplissages (pas de token "-hi" séparé, cf. docs/plans — éviter la
+  // prolifération de couleurs quasi-identiques). Le 4.5:1 (AA strict) s'est
+  // avéré insuffisant en pratique sur ce texte petit/mono/majuscule — cible
+  // relevée à ~7:1 (quasi-AAA).
+  --tb-rouille-lt:   #E6A088;
   --tb-danger-deep:  #B98A12;
   --tb-danger-lt:    #F0C840;
   --tb-ember:        #F0B25C;
 
   // ── Statuts sémantiques ───────────────────────────────────────────────────
-  --tb-toxic:   #8A9B2E;
-  --tb-coolant: #4E7C8A;
+  // Luminosité relevée à ~7.6:1 (round 3, était #8A9B2E), même logique que --tb-rouille-lt.
+  --tb-toxic: #A8BC4A;
+  // Luminosité relevée à ~7.7:1 (round 3, était #7DA8B5/~4.87:1 au round 2).
+  --tb-coolant: #8FBCC9;
   --tb-warn:    #E6B41C;
   --tb-crit:    #A23A1C;
+
+  // ── RGB — composition rgba() ──────────────────────────────────────────────
+  --tb-danger-rgb:  230, 180, 28;   // = --tb-danger
+  --tb-rouille-rgb: 162, 58, 28;    // = --tb-rouille (base, inchangée)
+  --tb-toxic-rgb:   168, 188, 74;   // = --tb-toxic
+  --tb-coolant-rgb: 143, 188, 201;  // = --tb-coolant
 
   // ── Surfaces sémantiques ──────────────────────────────────────────────────
   --surface-page:   var(--tb-bitume);
@@ -60,7 +99,12 @@
   // ── Texte sémantique ──────────────────────────────────────────────────────
   --text-strong: var(--tb-os);
   --text-body:   rgba(231, 221, 198, 0.82);
-  --text-dim:    rgba(231, 221, 198, 0.55);
+  // 0.55 → 0.60 (round 2, AA strict) → 0.80 (round 3) : le 4.5:1 s'est avéré
+  // insuffisant en pratique sur ce texte petit/mono/majuscule (navbar,
+  // labels) malgré un ratio conforme — cible relevée à ~7:1 (quasi-AAA),
+  // ~7.6:1 sur le pire cas réel (--tb-metal-1). Devient visuellement proche
+  // de --text-body (0.82) : compromis assumé, priorité à la lisibilité.
+  --text-dim:    rgba(231, 221, 198, 0.80);
   --text-faint:  rgba(231, 221, 198, 0.32);
   --text-invert: var(--tb-bitume-2);
   --text-signal: var(--tb-danger);
@@ -77,11 +121,35 @@
   --action-primary-ink:  var(--tb-bitume);
   --action-danger:       var(--tb-rouille);
   --focus-ring:          var(--tb-danger);
+  --focus-ring-glow:     0 0 0 2px rgba(var(--tb-danger-rgb), 0.15);
+
+  // ── Tints — badges translucides ───────────────────────────────────────────
+  // Jeu fini de fonds/bordures/textes semi-transparents pour badges et box
+  // d'état — contrastes validés ≥4.5:1 (texte) sur la surface la moins
+  // favorable (--tb-bitume-4). Ne jamais composer un rgba() ad hoc en dehors
+  // de ce jeu — cf. docs/plans/*-couleurs-fonds-design.md.
+  --tint-accent-bg:            rgba(var(--tb-danger-rgb), 0.12);
+  --tint-accent-bg-hover:      rgba(var(--tb-danger-rgb), 0.20);
+  --tint-accent-border:        rgba(var(--tb-danger-rgb), 0.35);
+  --tint-accent-text:          var(--tb-danger);
+
+  --tint-danger-bg:            rgba(var(--tb-rouille-rgb), 0.10);
+  --tint-danger-border:        rgba(var(--tb-rouille-rgb), 0.40);
+  --tint-danger-border-strong: rgba(var(--tb-rouille-rgb), 0.50);
+  --tint-danger-text:          var(--tb-rouille-lt);
+
+  --tint-success-bg:           rgba(var(--tb-toxic-rgb), 0.08);
+  --tint-success-border:       rgba(var(--tb-toxic-rgb), 0.35);
+  --tint-success-text:         var(--tb-toxic);
+
+  --tint-info-bg:               rgba(var(--tb-coolant-rgb), 0.14);
+  --tint-info-border:           rgba(var(--tb-coolant-rgb), 0.40);
+  --tint-info-text:             var(--tb-coolant);
 
   // ── Typographie ───────────────────────────────────────────────────────────
-  --font-display: 'Anton', 'Oswald', Impact, sans-serif;
-  --font-text:    'Oswald', 'Arial Narrow', sans-serif;
-  --font-mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
+  --font-display: 'Stick No Bills', 'Anton', 'Oswald', Impact, sans-serif;
+  --font-text:    'Alumni Sans', 'Oswald', 'Arial Narrow', sans-serif;
+  --font-mono:    'Alumni Sans', 'Space Mono', ui-monospace, 'Courier New', monospace;
 
   // ── Effets ────────────────────────────────────────────────────────────────
   --noise-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -132,7 +200,7 @@
 
   // Les valeurs RGB pour rgba() — conservées pour les composants qui les utilisent encore
   --clr-accent-rgb:      230, 180, 28;   // = --tb-danger
-  --clr-accent-cyan-rgb: 194, 82, 46;    // = --tb-rouille-lt
+  --clr-accent-cyan-rgb: 230, 160, 136;  // = --tb-rouille-lt
   --clr-success-rgb:     138, 155, 46;   // = --tb-toxic
 }
 
@@ -230,22 +298,22 @@ body {
 }
 
 .navbar-brand {
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-weight: 400;
-  color: var(--tb-danger);
+  display: flex;
   text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 1;
   transition: opacity 160ms var(--ease-mech);
 
   &:hover {
     opacity: 0.8;
   }
+}
+
+.navbar-logo {
+  display: block;
+  height: 52px;
+  width: auto;
 
   @include bp.mobile {
-    font-size: 1.25rem;
+    height: 40px;
   }
 }
 
@@ -429,7 +497,7 @@ main {
     &:focus {
       outline: none;
       border-color: var(--tb-danger);
-      box-shadow: 0 0 0 2px rgba(230, 180, 28, 0.18);
+      box-shadow: var(--focus-ring-glow);
     }
 
     &::placeholder {
@@ -439,9 +507,9 @@ main {
 }
 
 .auth-error {
-  background: rgba(162, 58, 28, 0.12);
-  border: 1px solid var(--tb-rouille);
-  color: var(--tb-rouille-lt);
+  background: var(--tint-danger-bg);
+  border: 1px solid var(--tint-danger-border);
+  color: var(--tint-danger-text);
   padding: 10px 14px;
   border-radius: var(--r-sm);
   margin-bottom: 1.25rem;

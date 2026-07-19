@@ -49,7 +49,7 @@
 .tep-vehicle-card__type {
   font-family: var(--font-mono);
   font-size: 8px;
-  color: var(--text-faint);
+  color: var(--text-dim);
   letter-spacing: 2px;
 }
 
@@ -79,7 +79,7 @@
   &-label {
     font-family: var(--font-mono);
     font-size: 7px;
-    color: var(--text-faint);
+    color: var(--text-dim);
     letter-spacing: 1px;
   }
 }
@@ -93,7 +93,7 @@
   font-size: 8px;
   color: var(--text-dim);
   letter-spacing: 1px;
-  &--overflow { border-color: var(--tb-metal-1); color: var(--text-faint); }
+  &--overflow { border-color: var(--tb-metal-1); color: var(--text-dim); }
 }
 
 .tep-vehicle-card__actions {
@@ -115,20 +115,21 @@
   text-align: center;
   transition: background 140ms;
 
-  &:hover { background: rgba(201, 138, 71, 0.1); }
+  &:hover { background: var(--surface-hover); }
 }
 
 .tep-btn-delete-vehicle {
   border: 1px solid var(--tb-rouille);
-  background: rgba(162, 58, 28, 0.08);
-  color: var(--tb-rouille);
+  background: var(--tint-danger-bg);
+  color: var(--tint-danger-text);
   width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-family: var(--font-text);
   font-size: 14px;
   flex-shrink: 0;
 
-  &:hover { background: rgba(162, 58, 28, 0.2); }
+  &:hover { filter: brightness(1.25); }
 }

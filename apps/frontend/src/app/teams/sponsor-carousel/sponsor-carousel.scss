@@ -50,6 +50,7 @@
   width: 38px;
   height: 38px;
   border-radius: var(--r-sm);
+  font-family: var(--font-text);
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
@@ -107,7 +108,7 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
-    color: var(--text-faint);
+    color: var(--text-dim);
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -158,9 +159,9 @@
 }
 
 .class-badge {
-  background: rgba(230, 180, 28, 0.1);
-  border: 1px solid rgba(230, 180, 28, 0.35);
-  color: var(--tb-danger);
+  background: var(--tint-accent-bg);
+  border: 1px solid var(--tint-accent-border);
+  color: var(--tint-accent-text);
   padding: 2px 10px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);

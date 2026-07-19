@@ -9,6 +9,7 @@
   background: none;
   border: none;
   color: var(--clr-accent);
+  font-family: var(--font-text);
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0;
@@ -50,9 +51,9 @@
 }
 
 .form-error {
-  background: rgba(var(--clr-accent-rgb), 0.15);
-  border: 1px solid var(--clr-accent);
-  color: var(--clr-accent);
+  background: var(--tint-accent-bg);
+  border: 1px solid var(--tint-accent-border);
+  color: var(--tint-accent-text);
   padding: 10px 14px;
   border-radius: 4px;
   margin-bottom: 8px;
