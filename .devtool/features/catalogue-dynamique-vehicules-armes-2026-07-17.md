@@ -1,15 +1,15 @@
 ---
 id: "catalogue-dynamique-vehicules-armes-2026-07-17"
-status: "todo"
+status: "backlog"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T15:41:35.978Z"
+modified: "2026-07-19T05:52:49.659Z"
 completedAt: null
 labels: ["frontend", "catalogue"]
-order: "a3"
+order: "aH"
 ---
 # Catalogue dynamique `/vehicles` et `/weapons`
 
