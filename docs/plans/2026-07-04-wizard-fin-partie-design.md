@@ -59,7 +59,7 @@ mécanique déjà en place, inchangée) :
 | 2-3 | `INDEMNE` | Aucun effet |
 | 4 | `ROUE_CABOSSEE` | `+1` Choc |
 | 5 | `ARRACHEE` | Perd définitivement une **arme ou amélioration** tirée au hasard dans le pool combiné (armes + améliorations montées, hors améliorations `estDefaut`), `+1` Choc |
-| 6 | `PIGNON_ENDOMMAGE` | `+1` Choc — perte d'amélioration **non implémentée** (TODO) |
+| 6 | `PIGNON_ENDOMMAGE` | `+1` Choc — perd définitivement un **avantage** tiré au hasard dans le pool monté (`AdvantageLostEvent`, implémenté depuis — cf. `docs/spec/CAMPAIGN.md`) |
 | 7 | `SIEGE_IRRECUPERABLE` | Équipage réduit de 1 (min 1), **permanent** — `+2` Chocs |
 | 8 | `CHASSIS_FRAGILISE` | `+2` Chocs — rappel textuel "Jeton Danger si collision" (pas d'état) |
 | 9 | `FAVORI_DU_PUBLIC` | `+3` Chocs — rappel textuel ; si la case "Favori du Public" est cochée **et** qu'un futur tirage donne `VEHICULE_DETRUIT`, +5 PC au propriétaire |
