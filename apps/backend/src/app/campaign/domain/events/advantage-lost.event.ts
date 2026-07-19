@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Un avantage est détruit pendant la campagne (Table des Épaves, ligne PIGNON_ENDOMMAGE).
@@ -9,6 +10,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * Mirroir exact de `WeaponLostEvent` et `ImprovementLostEvent`.
  */
 export class AdvantageLostEvent extends GameEvent {
+  readonly eventType = GameEventType.ADVANTAGE_LOST;
+
   constructor(
     id: number,
     gameId: number,

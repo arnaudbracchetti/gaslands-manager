@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Une amélioration est détruite pendant la campagne (Table des Épaves, ligne ARRACHEE).
@@ -8,6 +9,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * `WeaponLostEvent`.
  */
 export class ImprovementLostEvent extends GameEvent {
+  readonly eventType = GameEventType.IMPROVEMENT_LOST;
+
   constructor(
     id: number,
     gameId: number,

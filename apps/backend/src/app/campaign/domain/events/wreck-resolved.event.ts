@@ -1,6 +1,7 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import { WreckResult } from '../enums/wreck-result.enum';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 
 /**
@@ -12,6 +13,8 @@ import { WreckResult } from '../enums/wreck-result.enum';
  * n'applique que les Chocs.
  */
 export class WreckResolvedEvent extends GameEvent {
+  readonly eventType = GameEventType.WRECK_RESOLVED;
+
   constructor(
     id: number,
     gameId: number,

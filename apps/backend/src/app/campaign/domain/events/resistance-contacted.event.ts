@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Un participant a contacté la Résistance — +3 Points de Résistance (secret).
@@ -7,6 +8,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  */
 export class ResistanceContactedEvent extends GameEvent {
   private static readonly PR_BONUS = 3;
+
+  readonly eventType = GameEventType.RESISTANCE_CONTACTED;
 
   constructor(
     id: number,

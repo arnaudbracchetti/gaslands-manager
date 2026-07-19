@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Un véhicule est renommé en Atelier (mode campagne) — mécanisme uniforme, que le
@@ -22,6 +23,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * sur `Team.findVehicle`.
  */
 export class VehicleRenamedEvent extends GameEvent {
+  readonly eventType = GameEventType.VEHICLE_RENAMED;
+
   constructor(
     id: number,
     gameId: number,

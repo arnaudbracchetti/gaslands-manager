@@ -1,12 +1,15 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import { WalletReason } from '../enums/wallet-reason.enum';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Mouvement de cagnotte (gain ou dépense).
  * `amount` peut être positif (gain) ou négatif (dépense).
  */
 export class WalletMovementEvent extends GameEvent {
+  readonly eventType = GameEventType.WALLET_MOVEMENT;
+
   constructor(
     id: number,
     gameId: number,

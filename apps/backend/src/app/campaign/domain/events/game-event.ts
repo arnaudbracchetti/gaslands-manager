@@ -2,6 +2,7 @@ import { DomainException } from '../../../shared/domain/domain-exception';
 import type { CampaignParticipant } from '../campaign-participant';
 import type { Team } from '../../../team/domain/team';
 import type { Vehicle } from '../../../team/domain/vehicle';
+import type { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Commande de campagne — GoF Command.
@@ -20,6 +21,14 @@ export abstract class GameEvent {
     readonly participantId: number,
     readonly eventOrder: number,
   ) {}
+
+  /**
+   * Discriminant explicite — une valeur par sous-classe concrète, fixée par un champ
+   * littéral sur chacune (`readonly eventType = GameEventType.XXX`). Permet à
+   * `CampaignRepository.eventToOrm` de dispatcher par `switch` exhaustif plutôt que par
+   * duck-typing sur les propriétés présentes.
+   */
+  abstract readonly eventType: GameEventType;
 
   abstract execute(participants: CampaignParticipant[]): void;
   abstract undo(participants: CampaignParticipant[]): void;

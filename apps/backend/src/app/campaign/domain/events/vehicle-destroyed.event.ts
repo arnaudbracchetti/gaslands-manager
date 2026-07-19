@@ -1,6 +1,7 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import { WeightClass } from '../enums/weight-class.enum';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Un véhicule ennemi a été détruit par poids pendant une partie (Course à la
@@ -13,6 +14,8 @@ import { WeightClass } from '../enums/weight-class.enum';
  * moment de l'enregistrement (même raisonnement D-S8 que `RankingAssignedEvent`).
  */
 export class VehicleDestroyedEvent extends GameEvent {
+  readonly eventType = GameEventType.VEHICLE_DESTROYED;
+
   constructor(
     id: number,
     gameId: number,

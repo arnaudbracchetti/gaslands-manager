@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Portes franchies par un participant pendant une partie (Course à la Mort,
@@ -10,6 +11,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * les parties déjà jouées.
  */
 export class GatesCrossedEvent extends GameEvent {
+  readonly eventType = GameEventType.GATES_CROSSED;
+
   constructor(
     id: number,
     gameId: number,

@@ -26,8 +26,10 @@ import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipme
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
+import { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
 import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 
+import { GameEventType } from '../domain/enums/game-event-type.enum';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
 import { WeightClass } from '../domain/enums/weight-class.enum';
@@ -112,48 +114,51 @@ export class CampaignMapper {
   private toEvent(orm: GameEventOrm): GameEvent {
     const { id, gameId, participantId, eventOrder } = orm;
 
-    switch (orm.eventType) {
-      case 'RANKING_ASSIGNED':
+    switch (orm.eventType as GameEventType) {
+      case GameEventType.RANKING_ASSIGNED:
         return new RankingAssignedEvent(id, gameId, participantId, eventOrder, orm.rank!, orm.championshipPoints!);
 
-      case 'WALLET_MOVEMENT':
+      case GameEventType.WALLET_MOVEMENT:
         return new WalletMovementEvent(id, gameId, participantId, eventOrder, orm.amount!, orm.walletReason as WalletReason);
 
-      case 'VEHICLE_LOST':
+      case GameEventType.VEHICLE_LOST:
         return new VehicleLostEvent(id, gameId, participantId, eventOrder, orm.vehicleId!);
 
-      case 'WEAPON_LOST':
+      case GameEventType.WEAPON_LOST:
         return new WeaponLostEvent(id, gameId, participantId, eventOrder, orm.weaponId!);
 
-      case 'IMPROVEMENT_LOST':
+      case GameEventType.IMPROVEMENT_LOST:
         return new ImprovementLostEvent(id, gameId, participantId, eventOrder, orm.improvementId!);
 
-      case 'ADVANTAGE_LOST':
+      case GameEventType.ADVANTAGE_LOST:
         return new AdvantageLostEvent(id, gameId, participantId, eventOrder, orm.advantageId!);
 
-      case 'WRECK_RESOLVED':
+      case GameEventType.WRECK_RESOLVED:
         return new WreckResolvedEvent(
           id, gameId, participantId, eventOrder,
           orm.vehicleId!, orm.diceRoll!, orm.chocsBefore!,
           orm.wreckResult as WreckResult, orm.chocsGained!,
         );
 
-      case 'EQUIPMENT_CHANGED':
+      case GameEventType.EQUIPMENT_CHANGED:
         return this.toEquipmentChangedEvent(orm);
 
-      case 'RESISTANCE_CONTACTED':
+      case GameEventType.RESISTANCE_CONTACTED:
         return new ResistanceContactedEvent(id, gameId, participantId, eventOrder);
 
-      case 'GATES_CROSSED':
+      case GameEventType.GATES_CROSSED:
         return new GatesCrossedEvent(id, gameId, participantId, eventOrder, orm.gatesCrossed!, orm.championshipPoints!);
 
-      case 'VEHICLE_DESTROYED':
+      case GameEventType.VEHICLE_DESTROYED:
         return new VehicleDestroyedEvent(
           id, gameId, participantId, eventOrder,
           orm.vehicleId!, orm.weightClass as WeightClass, orm.championshipPoints!,
         );
 
-      case 'VEHICLE_RENAMED':
+      case GameEventType.FAVORI_DU_PUBLIC_BONUS:
+        return new FavoriDuPublicBonusEvent(id, gameId, participantId, eventOrder, orm.vehicleId!, orm.championshipPoints!);
+
+      case GameEventType.VEHICLE_RENAMED:
         return new VehicleRenamedEvent(
           id, gameId, participantId, eventOrder,
           orm.vehicleId!, orm.previousVehicleName!, orm.newVehicleName!,

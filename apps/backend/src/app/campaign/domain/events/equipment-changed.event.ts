@@ -7,6 +7,7 @@ import type { AdvantageType } from '../../../team/domain/value-objects/advantage
 import type { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import type { Orientation, WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 export { EquipmentOperation, EquipmentEntityType };
 
@@ -78,6 +79,8 @@ export { EquipmentOperation, EquipmentEntityType };
  * éparpillerait cette complexité au lieu de la réduire.
  */
 export class EquipmentChangedEvent extends GameEvent {
+  readonly eventType = GameEventType.EQUIPMENT_CHANGED;
+
   constructor(
     id: number,
     gameId: number,

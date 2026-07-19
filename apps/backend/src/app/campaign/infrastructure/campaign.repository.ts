@@ -21,12 +21,15 @@ import type { RankingAssignedEvent } from '../domain/events/ranking-assigned.eve
 import type { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import type { VehicleLostEvent } from '../domain/events/vehicle-lost.event';
 import type { WeaponLostEvent } from '../domain/events/weapon-lost.event';
+import type { ImprovementLostEvent } from '../domain/events/improvement-lost.event';
+import type { AdvantageLostEvent } from '../domain/events/advantage-lost.event';
 import type { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import type { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
-import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
-import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
-import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
-import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
+import type { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
+import type { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
+import type { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
+import type { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
+import { GameEventType } from '../domain/enums/game-event-type.enum';
 
 /**
  * Persistence du journal de campagne.
@@ -262,80 +265,85 @@ export class CampaignRepository implements ICampaignRepository {
       eventOrder,
     };
 
-    // GatesCrossedEvent et VehicleDestroyedEvent sont dispatchés par `instanceof`
-    // (pas par duck-typing) car leurs propriétés (`championshipPoints`, `vehicleId`)
-    // collisionneraient sinon avec les branches duck-typées ci-dessous
-    // (RANKING_ASSIGNED teste aussi `championshipPoints`, VEHICLE_LOST teste aussi
-    // `vehicleId`) — d'où la nécessité de les traiter en premier, sans ambiguïté.
-    if (event instanceof GatesCrossedEvent) {
-      return { ...base, eventType: 'GATES_CROSSED', gatesCrossed: event.gatesCrossed, championshipPoints: event.championshipPoints };
+    // Dispatch par discriminant explicite (`GameEvent.eventType`, fixé par chaque
+    // sous-classe concrète) — un seul cast par branche, justifié par le discriminant
+    // qui vient d'être vérifié, plutôt qu'une cascade de tests structurels sur les
+    // propriétés présentes. Pas de `default` : GameEventType est un type fermé interne
+    // (jamais une donnée externe), TypeScript impose déjà l'exhaustivité (la fonction a
+    // un type de retour explicite — tout chemin manquant est une erreur de compilation).
+    switch (event.eventType) {
+      case GameEventType.RANKING_ASSIGNED: {
+        const e = event as RankingAssignedEvent;
+        return { ...base, eventType: GameEventType.RANKING_ASSIGNED, rank: e.rank, championshipPoints: e.championshipPoints };
+      }
+      case GameEventType.WALLET_MOVEMENT: {
+        const e = event as WalletMovementEvent;
+        return { ...base, eventType: GameEventType.WALLET_MOVEMENT, amount: e.amount, walletReason: e.reason };
+      }
+      case GameEventType.VEHICLE_LOST: {
+        const e = event as VehicleLostEvent;
+        return { ...base, eventType: GameEventType.VEHICLE_LOST, vehicleId: e.vehicleId };
+      }
+      case GameEventType.WEAPON_LOST: {
+        const e = event as WeaponLostEvent;
+        return { ...base, eventType: GameEventType.WEAPON_LOST, weaponId: e.weaponId };
+      }
+      case GameEventType.IMPROVEMENT_LOST: {
+        const e = event as ImprovementLostEvent;
+        return { ...base, eventType: GameEventType.IMPROVEMENT_LOST, improvementId: e.improvementId };
+      }
+      case GameEventType.ADVANTAGE_LOST: {
+        const e = event as AdvantageLostEvent;
+        return { ...base, eventType: GameEventType.ADVANTAGE_LOST, advantageId: e.advantageId };
+      }
+      case GameEventType.WRECK_RESOLVED: {
+        const e = event as WreckResolvedEvent;
+        return {
+          ...base, eventType: GameEventType.WRECK_RESOLVED,
+          vehicleId: e.vehicleId,
+          diceRoll: e.diceRoll,
+          chocsBefore: e.chocsBefore,
+          wreckResult: e.wreckResult,
+          chocsGained: e.chocsGained,
+        };
+      }
+      case GameEventType.EQUIPMENT_CHANGED: {
+        const e = event as EquipmentChangedEvent;
+        return {
+          ...base, eventType: GameEventType.EQUIPMENT_CHANGED,
+          operation: e.operation,
+          entityType: e.entityType,
+          nomInterne: e.nomInterne,
+          cost: e.cost,
+          targetVehicleId: e.targetVehicleId,
+          targetEntityId: e.targetEntityId,
+          orientation: e.orientation,
+          freeAdvantageNomInterne: e.freeAdvantageNomInterne,
+        };
+      }
+      case GameEventType.RESISTANCE_CONTACTED:
+        return { ...base, eventType: GameEventType.RESISTANCE_CONTACTED };
+      case GameEventType.GATES_CROSSED: {
+        const e = event as GatesCrossedEvent;
+        return { ...base, eventType: GameEventType.GATES_CROSSED, gatesCrossed: e.gatesCrossed, championshipPoints: e.championshipPoints };
+      }
+      case GameEventType.VEHICLE_DESTROYED: {
+        const e = event as VehicleDestroyedEvent;
+        return { ...base, eventType: GameEventType.VEHICLE_DESTROYED, vehicleId: e.vehicleId, weightClass: e.weightClass, championshipPoints: e.championshipPoints };
+      }
+      case GameEventType.FAVORI_DU_PUBLIC_BONUS: {
+        const e = event as FavoriDuPublicBonusEvent;
+        return { ...base, eventType: GameEventType.FAVORI_DU_PUBLIC_BONUS, vehicleId: e.vehicleId, championshipPoints: e.championshipPoints };
+      }
+      case GameEventType.VEHICLE_RENAMED: {
+        const e = event as VehicleRenamedEvent;
+        return {
+          ...base, eventType: GameEventType.VEHICLE_RENAMED,
+          vehicleId: e.vehicleId,
+          previousVehicleName: e.previousName,
+          newVehicleName: e.newName,
+        };
+      }
     }
-    if (event instanceof VehicleDestroyedEvent) {
-      return { ...base, eventType: 'VEHICLE_DESTROYED', vehicleId: event.vehicleId, weightClass: event.weightClass, championshipPoints: event.championshipPoints };
-    }
-    // VehicleRenamedEvent doit aussi être testé par `instanceof` AVANT la cascade
-    // duck-typée ci-dessous : il porte `vehicleId` sans `diceRoll`/`operation`/`weaponId`,
-    // ce qui le ferait tomber dans la branche VEHICLE_LOST (silencieusement, sans
-    // erreur) — le véhicule apparaîtrait perdu au prochain replay au lieu d'être
-    // renommé. 
-    if (event instanceof VehicleRenamedEvent) {
-      return {
-        ...base, eventType: 'VEHICLE_RENAMED',
-        vehicleId: event.vehicleId,
-        previousVehicleName: event.previousName,
-        newVehicleName: event.newName,
-      };
-    }
-
-
-    //TODO: ce mécanisme de dispatch par duck-typing dans son ensemble est fragile — un futur événement mal placé ici peut être mal classé silencieusement en base. Envisager un vrai discriminant explicite porté par chaque GameEvent plutôt que cette cascade de "'propriété' in e".
-
-    // Dispatche selon le type concret via duck-typing sur les propriétés de l'événement.
-    // On caste d'abord en `unknown` pour accéder aux propriétés spécifiques sans erreur TS.
-    const e = event as unknown as Record<string, unknown>;
-
-    if ('rank' in e && 'championshipPoints' in e) {
-      return { ...base, eventType: 'RANKING_ASSIGNED', rank: e['rank'] as number, championshipPoints: e['championshipPoints'] as number };
-    }
-    if ('amount' in e && 'reason' in e) {
-      return { ...base, eventType: 'WALLET_MOVEMENT', amount: e['amount'] as number, walletReason: e['reason'] as string };
-    }
-    if ('vehicleId' in e && !('diceRoll' in e) && !('operation' in e) && !('weaponId' in e)) {
-      return { ...base, eventType: 'VEHICLE_LOST', vehicleId: e['vehicleId'] as number };
-    }
-    if ('weaponId' in e) {
-      return { ...base, eventType: 'WEAPON_LOST', weaponId: e['weaponId'] as number };
-    }
-    if ('improvementId' in e) {
-      return { ...base, eventType: 'IMPROVEMENT_LOST', improvementId: e['improvementId'] as number };
-    }
-    if ('advantageId' in e) {
-      return { ...base, eventType: 'ADVANTAGE_LOST', advantageId: e['advantageId'] as number };
-    }
-    if ('diceRoll' in e) {
-      return {
-        ...base, eventType: 'WRECK_RESOLVED',
-        vehicleId: e['vehicleId'] as number,
-        diceRoll: e['diceRoll'] as number,
-        chocsBefore: e['chocsBefore'] as number,
-        wreckResult: e['wreckResult'] as string,
-        chocsGained: e['chocsGained'] as number,
-      };
-    }
-    if ('operation' in e) {
-      return {
-        ...base, eventType: 'EQUIPMENT_CHANGED',
-        operation: e['operation'] as string,
-        entityType: e['entityType'] as string,
-        nomInterne: e['nomInterne'] as string,
-        cost: e['cost'] as number,
-        targetVehicleId: e['targetVehicleId'] as number | null,
-        targetEntityId: e['targetEntityId'] as number | null,
-        orientation: e['orientation'] as string | null,
-        freeAdvantageNomInterne: e['freeAdvantageNomInterne'] as string | null,
-      };
-    }
-    // ResistanceContactedEvent — pas de payload au-delà des champs de base
-    return { ...base, eventType: 'RESISTANCE_CONTACTED' };
   }
 }

@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Classement d'un participant après une partie.
@@ -8,6 +9,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * futur des règles de calcul n'affecte pas les résultats passés.
  */
 export class RankingAssignedEvent extends GameEvent {
+  readonly eventType = GameEventType.RANKING_ASSIGNED;
+
   constructor(
     id: number,
     gameId: number,

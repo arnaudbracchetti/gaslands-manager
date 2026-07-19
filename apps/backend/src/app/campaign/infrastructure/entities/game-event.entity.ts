@@ -43,9 +43,11 @@ export class GameEventOrm {
   @Column()
   eventOrder!: number;
 
-  /** Discriminant — valeurs : 'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' |
-   *  'WEAPON_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
-   *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' | 'VEHICLE_RENAMED' */
+  /** Discriminant — miroir de `GameEventType` (domain/enums/game-event-type.enum.ts) :
+   *  'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' | 'WEAPON_LOST' |
+   *  'IMPROVEMENT_LOST' | 'ADVANTAGE_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
+   *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' |
+   *  'FAVORI_DU_PUBLIC_BONUS' | 'VEHICLE_RENAMED' */
   @Column()
   eventType!: string;
 

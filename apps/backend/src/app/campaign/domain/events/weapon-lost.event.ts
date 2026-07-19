@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Une arme est détruite pendant la campagne.
@@ -7,6 +8,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * Le coût de l'arme n'est pas remboursé (price inchangé).
  */
 export class WeaponLostEvent extends GameEvent {
+  readonly eventType = GameEventType.WEAPON_LOST;
+
   constructor(
     id: number,
     gameId: number,

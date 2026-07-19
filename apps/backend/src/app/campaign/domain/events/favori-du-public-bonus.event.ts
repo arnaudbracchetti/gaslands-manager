@@ -1,5 +1,6 @@
 import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
+import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Bonus différé "Favori du public" (Table des Épaves, ligne 9) : un véhicule ayant
@@ -13,6 +14,8 @@ import type { CampaignParticipant } from '../campaign-participant';
  * de l'enregistrement (même raisonnement D-S8 que `RankingAssignedEvent`).
  */
 export class FavoriDuPublicBonusEvent extends GameEvent {
+  readonly eventType = GameEventType.FAVORI_DU_PUBLIC_BONUS;
+
   constructor(
     id: number,
     gameId: number,
