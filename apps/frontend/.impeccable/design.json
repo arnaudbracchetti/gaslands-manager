@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-19T00:00:00.000Z",
+  "title": "Design System: Gaslands Manager",
+  "extensions": {
+    "colorMeta": {
+      "convoy-amber": { "role": "primary", "displayName": "Convoy Amber", "canonical": "#D29E22", "tonalRamp": ["#7E2C13", "#B98A12", "#D29E22", "#F0C840"] },
+      "rust-signal": { "role": "secondary", "displayName": "Rust Signal", "canonical": "#A23A1C", "tonalRamp": ["#7E2C13", "#A23A1C", "#E6A088"] },
+      "desert-sand": { "role": "tertiary", "displayName": "Desert Sand", "canonical": "#C98A47", "tonalRamp": ["#B06A30", "#C98A47", "#DDD0B4"] },
+      "scorched-bitumen": { "role": "neutral", "displayName": "Scorched Bitumen", "canonical": "#14100C", "tonalRamp": ["#0C0907", "#14100C", "#1B140E", "#221A13", "#2A2018"] },
+      "bitume-void": { "role": "neutral", "displayName": "Bitume Void", "canonical": "#0C0907" },
+      "bitume-deep": { "role": "neutral", "displayName": "Bitume Deep", "canonical": "#1B140E" },
+      "bitume-raised": { "role": "neutral", "displayName": "Bitume Raised", "canonical": "#221A13" },
+      "bitume-hover": { "role": "neutral", "displayName": "Bitume Hover", "canonical": "#2A2018" },
+      "gunmetal": { "role": "neutral", "displayName": "Gunmetal", "canonical": "#2E261D", "tonalRamp": ["#2E261D", "#3A3026", "#4A3E2F", "#5A4C39"] },
+      "sunbleached-bone": { "role": "neutral", "displayName": "Sunbleached Bone", "canonical": "#E7DDC6", "tonalRamp": ["#DDD0B4", "#E7DDC6", "#EFE6D2"] },
+      "toxic-green": { "role": "success", "displayName": "Toxic Green", "canonical": "#A8BC4A" },
+      "coolant-blue": { "role": "info", "displayName": "Coolant Blue", "canonical": "#8FBCC9" },
+      "warn-gold": { "role": "warning", "displayName": "Warn Gold", "canonical": "#E6B41C" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page-level headings only (auth title, documentation H1) — never body copy." },
+      "headline": { "displayName": "Headline", "purpose": "Card titles and section headers." },
+      "body": { "displayName": "Body", "purpose": "Paragraph text and descriptions, prose capped at 65-75ch." },
+      "label": { "displayName": "Label", "purpose": "Mono, uppercase, wide-tracked — nav, form labels, badges, stats. The default voice for anything data-shaped or under ~13px." },
+      "button": { "displayName": "Button", "purpose": "Interactive control text — uppercase, wide-tracked, on the body typeface." }
+    },
+    "shadows": [
+      { "name": "stamp", "value": "0 3px 0 rgba(0, 0, 0, 0.45)", "purpose": "Default resting shadow — hard edge, zero blur, reads as a pressed metal plate." },
+      { "name": "stamp-lg", "value": "0 6px 0 rgba(36, 14, 4, 0.45)", "purpose": "Higher-emphasis stamp (auth card, display text-shadow)." },
+      { "name": "glow-danger", "value": "0 0 40px rgba(230, 180, 28, 0.35)", "purpose": "Soft amber glow — hover/active feedback only, never resting state." },
+      { "name": "glow-rust", "value": "0 0 40px rgba(162, 58, 28, 0.4)", "purpose": "Soft rust glow — danger/over-budget hover feedback." },
+      { "name": "focus-ring-glow", "value": "0 0 0 2px rgba(230, 180, 28, 0.15)", "purpose": "Focused input ring." }
+    ],
+    "motion": [
+      { "name": "ease-mech", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "Default mechanical ease-out for hover/transition states." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single call-to-action color. Full-width in forms, lifts 1px on hover.",
+      "html": "<button class=\"ds-btn-primary\">CONFIRMER</button>",
+      "css": ".ds-btn-primary { background: #D29E22; color: #14100C; border: none; padding: 12px; border-radius: 2px; font-family: 'Alumni Sans', 'Oswald', 'Arial Narrow', sans-serif; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.45); transition: opacity 160ms, transform 90ms; } .ds-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ghost/outline button — never uses the amber accent.",
+      "html": "<button class=\"ds-btn-secondary\">ANNULER</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: #E7DDC6; border: 2px solid rgba(162,58,28,0.55); padding: 12px; border-radius: 2px; font-family: 'Alumni Sans', 'Oswald', 'Arial Narrow', sans-serif; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: background 160ms, border-color 160ms, color 160ms; } .ds-btn-secondary:hover { background: #2A2018; border-color: rgba(231,221,198,0.40); }"
+    },
+    {
+      "name": "Team Card",
+      "kind": "card",
+      "refersTo": "card-team",
+      "description": "Stamped metal panel with a giant watermark number behind the content.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-card__watermark\">01</span><div class=\"ds-card__header\"><span class=\"ds-card__prefix\">ÉQUIPE</span><h3 class=\"ds-card__name\">Les Charognards</h3></div><span class=\"ds-card__badge\">Rutherford</span></div>",
+      "css": ".ds-card { background: #221A13; border: 2px solid rgba(162,58,28,0.55); border-radius: 2px; padding: 20px; box-shadow: 0 3px 0 rgba(0,0,0,0.45); position: relative; overflow: hidden; transition: border-color 160ms, box-shadow 160ms; } .ds-card:hover { border-color: #D29E22; box-shadow: 0 0 40px rgba(230,180,28,0.35); } .ds-card__watermark { position: absolute; top: -10px; right: 10px; font-family: 'Stick No Bills', 'Anton', 'Oswald', Impact, sans-serif; font-size: 6.5rem; color: #E7DDC6; opacity: 0.06; line-height: 1; pointer-events: none; } .ds-card__prefix { display: block; font-family: 'Alumni Sans', 'Space Mono', ui-monospace, monospace; font-size: 0.68rem; color: rgba(231,221,198,0.80); letter-spacing: 0.08em; } .ds-card__name { font-family: 'Stick No Bills', 'Anton', 'Oswald', Impact, sans-serif; color: #E7DDC6; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.04em; } .ds-card__badge { display: inline-block; margin-top: 10px; background: rgba(210,158,34,0.12); border: 1px solid rgba(210,158,34,0.35); color: #D29E22; padding: 2px 10px; border-radius: 2px; font-family: 'Alumni Sans', 'Space Mono', ui-monospace, monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Dark sunken field, amber focus glow.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field__label\">Email</label><input class=\"ds-field__input\" type=\"email\" placeholder=\"vous@exemple.fr\" /></div>",
+      "css": ".ds-field__label { display: block; font-family: 'Alumni Sans', 'Space Mono', ui-monospace, monospace; color: rgba(231,221,198,0.80); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 6px; } .ds-field__input { width: 100%; background: #14100C; border: 1px solid rgba(162,58,28,0.55); color: #E7DDC6; padding: 10px 14px; border-radius: 2px; font-family: 'Alumni Sans', 'Oswald', 'Arial Narrow', sans-serif; font-size: 1rem; transition: border-color 160ms; } .ds-field__input:focus { outline: none; border-color: #D29E22; box-shadow: 0 0 0 2px rgba(230,180,28,0.15); } .ds-field__input::placeholder { color: rgba(231,221,198,0.32); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-tint",
+      "description": "Closed-set translucent tint badge — accent variant shown; danger/success/info follow the same pattern with their own tint tokens.",
+      "html": "<span class=\"ds-badge\">Sponsor</span>",
+      "css": ".ds-badge { display: inline-block; background: rgba(210,158,34,0.12); border: 1px solid rgba(210,158,34,0.35); color: #D29E22; padding: 2px 10px; border-radius: 2px; font-family: 'Alumni Sans', 'Space Mono', ui-monospace, monospace; font-size: 0.72rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.1em; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Burnt Ledger",
+    "overview": "Gaslands Manager reads as a field ledger stamped and re-stamped in a garage that also happens to build war machines — every screen is a record kept under bad light with a metal pen, not a polished dashboard. The system is dark by design and by doctrine: one theme, no light mode to accommodate, built around scorched bitumen black, sun-bleached bone text, and a single convoy-amber signal color that means \"act here.\" Rust-orange carries the danger register; sand and metal carry texture and secondary structure. Everything sits on hard square corners (2-4px at most) and thick rust-colored borders, stamped rather than floated — flat \"stamp\" shadows with zero blur, not soft Material elevation. Grain texture and diagonal hazard stripes appear where the interface wants to feel handled, not printed. This system explicitly rejects the generic SaaS dashboard (pastel cards, hairline gray icons, quiet gradients, interchangeable startup polish) and the cartoon game-UI look (saturated candy colors, rounded-everything, cute).",
+    "keyCharacteristics": [
+      "Single dark theme, no light/dark toggle to design for.",
+      "Square corners everywhere (max 4px radius).",
+      "Hard-edge stamp shadows at rest; soft colored glow only as hover/danger response.",
+      "One accent (convoy amber) carries all primary CTAs; rust orange is reserved for danger/secondary signal.",
+      "Mono, uppercase, wide-tracked labels for anything data-shaped."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Convoy Amber is the only color that means \"press this.\" If a secondary button, link, or badge starts competing with it for attention, it's the wrong color.", "section": "colors" },
+      { "name": "The Closed Tint Set Rule", "body": "Translucent badge/status backgrounds are never composed ad hoc. They come from one closed set, each validated at ≥4.5:1 against the least favorable surface.", "section": "colors" },
+      { "name": "The Living Palette Rule", "body": "AA (4.5:1) is the floor, not the ceiling. Several tokens were pushed toward ~7:1 after AA-strict values proved too dim in practice on small mono/uppercase text.", "section": "colors" },
+      { "name": "The Stencil Label Rule", "body": "Any text under ~13px, or any all-caps run, is Label typography (mono, wide-tracked) — never the body font shrunk down.", "section": "typography" },
+      { "name": "The Stamped-Not-Floating Rule", "body": "No soft ambient drop-shadow at rest, ever. Raised surfaces lighten one background step and/or add the hard-edge Stamp shadow; blur is reserved for Danger/Focus glows.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep every corner at 2px or less — square, stamped, industrial.",
+      "Do use Convoy Amber as the only color that means \"primary action.\"",
+      "Do use hard-edge Stamp shadows for resting elevation; reserve blurred glow for hover/danger feedback.",
+      "Do set any small or uppercase text in Label typography rather than shrinking the body font.",
+      "Do compose translucent badges only from the Closed Tint Set."
+    ],
+    "donts": [
+      "Don't build a generic SaaS dashboard: no pastel cards, no hairline gray icons, no quiet gradients.",
+      "Don't go cartoon/cute: no oversaturated candy colors, no fully-rounded corners, no childish illustration.",
+      "Don't let Rust Signal double as a call-to-action color.",
+      "Don't invent a new rgba() for a badge or tint background.",
+      "Don't use a soft ambient drop-shadow at rest on any card or button."
+    ]
+  }
+}
