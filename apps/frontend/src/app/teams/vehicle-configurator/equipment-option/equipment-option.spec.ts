@@ -183,7 +183,7 @@ describe('EquipmentOption', () => {
     expect(component.choosingOrientation()).toBe(true);
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelectorAll('.orientation-btn')).toHaveLength(4);
+    expect(el.querySelectorAll('.orientation-btn')).toHaveLength(3);
   });
 
   it('masque la description pendant le choix d\'orientation, et la réaffiche après "Annuler"', () => {

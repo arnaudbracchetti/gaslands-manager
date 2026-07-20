@@ -24,7 +24,7 @@
 #                  armes d'équipage. Tous les sponsors acceptent le montage sur Tourelle
 #                  d'une arme qui le permet ; seule l'arme porte la restriction.
 #   necessite_orientation — (booléen, obligatoire) Cette arme doit-elle se voir assigner
-#                  un arc de tir (avant/arrière/gauche/droite) à l'achat ? `false` pour
+#                  un arc de tir (avant/arrière/latéral) à l'achat ? `false` pour
 #                  les armes d'équipage (arc à 360° automatique) et pour certaines armes
 #                  de tir à arc non-orienté ou à effet sans trajectoire (ex. Boule de
 #                  démolition, Marteleur, Mur de haut-parleurs, Auto-Tourelle, Brouilleur

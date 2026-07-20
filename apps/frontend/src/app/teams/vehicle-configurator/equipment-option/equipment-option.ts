@@ -14,16 +14,16 @@
  * ⚠️ Point UX (cf. plan, "Point UX à respecter") : ne JAMAIS émettre `chosen`
  * pour un équipement orientable sans orientation choisie. Flux en deux temps :
  *   1. Clic sur "Ajouter" → si `requiresOrientation()`, affiche le sélecteur
- *      4 directions au lieu d'émettre directement
+ *      3 directions au lieu d'émettre directement
  *   2. Clic sur une direction → émet `{ nomInterne, orientation }`
  * Pour un équipement non-orientable (`requiresOrientation() === false`, ex: arme
  * d'équipage ou amélioration non-orientée), "Ajouter" émet directement `{ nomInterne }`.
  *
  * **Montage sur Tourelle** (armes uniquement) : un bouton « Tourelle x3 », identique
- * en style aux 4 boutons d'orientation, apparaît dans le même sélecteur, visible
+ * en style aux 3 boutons d'orientation, apparaît dans le même sélecteur, visible
  * uniquement si `option().montableSurTourelle` est vrai (attribut catalogue propre
  * à cette arme). Son clic appelle le même `onOrientationChosen('tourelle')` que les
- * 4 boutons de direction — `'tourelle'` est juste une 5ème valeur d'orientation
+ * 3 boutons de direction — `'tourelle'` est juste une 4ème valeur d'orientation
  * (arc à 360°) — le coût ×3 est calculé côté backend.
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
@@ -76,13 +76,13 @@ export class EquipmentOption {
 
   /**
    * Affiche le sélecteur d'orientation (état local, purement UI — ne sort jamais
-   * de ce composant). `false` : ligne "au repos" ; `true` : 4 boutons de direction
+   * de ce composant). `false` : ligne "au repos" ; `true` : 3 boutons de direction
    * + "Annuler" remplacent le bouton "Ajouter".
    */
   choosingOrientation: WritableSignal<boolean> = signal(false);
 
-  /** Les 4 arcs de tir standard de Gaslands (cf. `Orientation`, SPECIFICATION.md §5). */
-  readonly orientations: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
+  /** Les 3 arcs de tir standard de Gaslands (cf. `Orientation`, SPECIFICATION.md §5). */
+  readonly orientations: readonly Orientation[] = ['avant', 'arrière', 'lateral'];
 
   /**
    * Affiche la popup de détail (`EquipmentDetailModal`) — état local, purement UI.

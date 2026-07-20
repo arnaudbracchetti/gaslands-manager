@@ -134,7 +134,7 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
     await expect(mountedWeapon.getByText('(Tourelle)')).toBeVisible();
     // Prix ×3 (2 🛢️ → 6 🛢️, cf. armes.yml) — pas d'orientation affichée (arc 360°).
     await expect(mountedWeapon).toContainText('6');
-    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(gauche\)$|^\(droite\)$/)).toHaveCount(0);
+    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(lateral\)$/)).toHaveCount(0);
   });
 
   test('retire une arme montée sur Tourelle comme n\'importe quelle arme', async ({ page }) => {
@@ -204,7 +204,7 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
     await expect(mountedWeapon).toBeVisible();
     await expect(page.getByText('Armes (1)')).toBeVisible();
     // Aucune orientation affichée sur l'arme montée (arc à 360° automatique).
-    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(gauche\)$|^\(droite\)$/)).toHaveCount(0);
+    await expect(mountedWeapon.getByText(/^\(avant\)$|^\(arrière\)$|^\(lateral\)$/)).toHaveCount(0);
   });
 
   test('une amélioration Bélier (necessite_orientation=true) requiert une orientation avant l\'ajout', async ({ page }) => {

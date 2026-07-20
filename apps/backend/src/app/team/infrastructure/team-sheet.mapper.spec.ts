@@ -155,12 +155,12 @@ describe('vehicleToSheetDto', () => {
     const belier = makeImprovementType({
       nom: 'Bélier', nom_interne: 'belier', comportement: 'belier', necessite_orientation: true,
     });
-    vehicle.addImprovement(belier, 'gauche', 100);
+    vehicle.addImprovement(belier, 'lateral', 100);
     const dto = vehicleToSheetDto(vehicle);
 
     const rows = dto.equipment.filter((e) => e.category === 'amelioration');
     expect(rows.find((r) => r.nomInterne === 'blindage')?.facing).toBe('—');
-    expect(rows.find((r) => r.nomInterne === 'belier')?.facing).toBe('Gauche');
+    expect(rows.find((r) => r.nomInterne === 'belier')?.facing).toBe('Latéral');
   });
 
   it('une amélioration à usage limité (ex. Bélier Explosif, Nitro) expose ses munitions', () => {

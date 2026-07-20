@@ -15,13 +15,13 @@
 
 /**
  * Orientation directionnelle — miroir de `Orientation` (backend `vehicle-build.ts`).
- * Réutilisée à l'identique pour les améliorations ET les armes (les 4 arcs de
+ * Réutilisée à l'identique pour les améliorations ET les armes (les 3 arcs de
  * tir standard de Gaslands, cf. SPECIFICATION.md §5).
  */
-export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
+export type Orientation = 'avant' | 'arrière' | 'lateral';
 
 /**
- * Orientation d'une arme — les 4 arcs plus `'tourelle'` (montage sur Tourelle, arc à
+ * Orientation d'une arme — les 3 arcs plus `'tourelle'` (montage sur Tourelle, arc à
  * 360°, coût ×3). Distincte d'`Orientation` (utilisée par `VehicleImprovement`, qui
  * ne supporte jamais le montage Tourelle).
  */
@@ -264,6 +264,6 @@ export interface EquipmentOption {
  */
 export interface EquipmentChoice {
   nomInterne: string;
-  /** Armes : 5 valeurs possibles, dont `'tourelle'` (×3). Améliorations : 4 valeurs. */
+  /** Armes : 4 valeurs possibles, dont `'tourelle'` (×3). Améliorations : 3 valeurs. */
   orientation?: WeaponOrientation;
 }

@@ -39,8 +39,8 @@ Cliquer sur une arme du catalogue ouvre une popup avec sa description
 complète (règles, coût, emplacement). L'ajouter au véhicule se fait avec le
 bouton **+** de sa carte.
 
-La plupart des armes demandent de choisir un **arc de tir** (avant, arrière,
-gauche ou droite) — les armes d'équipage tirent automatiquement à 360° sans
+La plupart des armes demandent de choisir un **arc de tir** (avant, arrière
+ou latéral) — les armes d'équipage tirent automatiquement à 360° sans
 qu'il soit nécessaire de choisir. Les armes marquées compatibles peuvent
 aussi être montées **sur Tourelle** (bouton dédié, arc à 360°) : ce montage
 **triple le coût** de l'arme. Pour changer l'arme montée sur une Tourelle,

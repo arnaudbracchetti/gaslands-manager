@@ -21,10 +21,10 @@ export function fail(reason: string): RuleResult {
   return { ok: false, reason };
 }
 
-export type Orientation = 'avant' | 'arrière' | 'gauche' | 'droite';
+export type Orientation = 'avant' | 'arrière' | 'lateral';
 
 /**
- * Orientation d'une arme — les 4 arcs de tir plus `'tourelle'` (montage sur Tourelle,
+ * Orientation d'une arme — les 3 arcs de tir plus `'tourelle'` (montage sur Tourelle,
  * arc à 360°, coût ×3). Distinct d'`Orientation` (utilisée par `VehicleImprovement`,
  * qui ne supporte jamais le montage Tourelle) pour rendre cet état impossible par le
  * typage plutôt que de le garder à l'exécution.

@@ -232,7 +232,7 @@ est violée. La couche application convertit `DomainException` → `BadRequestEx
 
 **Montage sur Tourelle** : n'est pas modélisé comme une amélioration indépendante, ni
 comme un booléen orthogonal à l'orientation — c'est la valeur `'tourelle'` du type
-`WeaponOrientation = Orientation | 'tourelle'` (distinct de l'`Orientation` à 4 valeurs
+`WeaponOrientation = Orientation | 'tourelle'` (distinct de l'`Orientation` à 3 valeurs
 utilisée par `VehicleImprovement`, qui ne supporte jamais ce montage). `Weapon.orientation
 === 'tourelle'` triple `price` (arc à 360°) ; l'ancien état invalide « orientation ET
 montage Tourelle choisis en même temps » est désormais impossible à représenter, plutôt
@@ -513,7 +513,7 @@ erDiagram
     WEAPON {
         number id PK
         string nomInterne "réf. catalogue Arme"
-        enum orientation "avant|arrière|gauche|droite|tourelle (coût x3), null si équipage"
+        enum orientation "avant|arrière|lateral|tourelle (coût x3), null si équipage"
         boolean estDefaut "intégré au profil de base (ex. Canon de 125mm du Char d'assaut)"
         number vehicleId FK
         date createdAt
@@ -522,7 +522,7 @@ erDiagram
     VEHICLE_IMPROVEMENT {
         number id PK
         string nomInterne "réf. catalogue Amelioration"
-        enum orientation "avant|arrière|gauche|droite"
+        enum orientation "avant|arrière|lateral"
         boolean estDefaut "intégré au profil de base"
         number vehicleId FK
         date createdAt
@@ -594,7 +594,7 @@ erDiagram
         number cost "nullable"
         number targetVehicleId "nullable"
         number targetEntityId "nullable"
-        string orientation "nullable — EquipmentChanged ; WEAPON : 5 valeurs dont 'tourelle' (coût x3)"
+        string orientation "nullable — EquipmentChanged ; WEAPON : 4 valeurs dont 'tourelle' (coût x3)"
         string freeAdvantageNomInterne "nullable — BUY SEQUELLE 'dur_a_cuire' uniquement, avantage gratuit accordé"
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"

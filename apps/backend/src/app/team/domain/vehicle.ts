@@ -17,8 +17,8 @@ import type {
   VehicleStatsSummary,
 } from './behaviors/equipment-behavior';
 
-/** Les 4 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
-const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'gauche', 'droite'];
+/** Les 3 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
+const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'lateral'];
 
 /**
  * Un véhicule appartenant à une équipe — entité enfant de l'agrégat Team.

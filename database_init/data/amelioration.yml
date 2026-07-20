@@ -18,7 +18,7 @@
 #   regles       — Règles spéciales au format liste Markdown
 #   sponsors_autorises — Sponsors pouvant acheter cette amélioration
 #   necessite_orientation — (booléen, obligatoire) Cette amélioration doit-elle se voir
-#                  assigner une orientation (avant/arrière/gauche/droite) à l'achat, comme
+#                  assigner une orientation (avant/arrière/latéral) à l'achat, comme
 #                  pour une arme ? `true` uniquement pour le Bélier (et sa variante Slime)
 #                  et le Bélier Explosif ; `false` pour toutes les autres.
 #

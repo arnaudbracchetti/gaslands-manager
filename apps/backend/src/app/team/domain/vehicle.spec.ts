@@ -352,7 +352,7 @@ describe('Vehicle.canAddImprovement — règles de pose (chaîne Decorator)', ()
   it('autorise un Bélier sur une orientation libre', () => {
     const belier = new Improvement(1, improvementType('belier', 'belier', 1), 'avant', false);
     const v = vehicleWith([belier]);
-    const r = v.canAddImprovement(improvementType('belier', 'belier', 1), 'gauche', 100);
+    const r = v.canAddImprovement(improvementType('belier', 'belier', 1), 'lateral', 100);
     expect(r.ok).toBe(true);
   });
 
@@ -472,7 +472,7 @@ describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilit�
     expect(r.ok).toBe(true);
   });
 
-  it('sonde chaque arc et renvoie le signal "orientation requise" dès qu\'un arc est libre (Bélier avant occupé, gauche libre) — pas un ok() muet', () => {
+  it('sonde chaque arc et renvoie le signal "orientation requise" dès qu\'un arc est libre (Bélier avant occupé, lateral libre) — pas un ok() muet', () => {
     // Un arc libre rend l'amélioration proposable, mais l'utilisateur doit encore
     // choisir laquelle : le verdict reste `fail('orientation requise')`, jamais
     // l'`ok()` d'un arc sondé silencieusement (cf. doc de la méthode).
@@ -484,7 +484,7 @@ describe('Vehicle.canAddImprovementInAnyOrientation — verdict de disponibilit�
   });
 
   it('refuse (dernière raison) si TOUS les arcs sont occupés', () => {
-    const orientations: readonly ('avant' | 'arrière' | 'gauche' | 'droite')[] = ['avant', 'arrière', 'gauche', 'droite'];
+    const orientations: readonly ('avant' | 'arrière' | 'lateral')[] = ['avant', 'arrière', 'lateral'];
     const beliers = orientations.map(
       (o, i) => new Improvement(i + 1, improvementType('belier', 'belier', 1), o, false),
     );

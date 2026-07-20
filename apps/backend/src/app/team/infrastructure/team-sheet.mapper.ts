@@ -9,8 +9,7 @@ import type { EquipmentRowDto, TeamSheetDto, VehicleSheetDto } from './team-shee
 const FACING_LABELS: Record<Orientation | 'tourelle', string> = {
   avant: 'Avant',
   arrière: 'Arrière',
-  gauche: 'Gauche',
-  droite: 'Droite',
+  lateral: 'Latéral',
   tourelle: 'Tourelle',
 };
 

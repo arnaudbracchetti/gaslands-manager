@@ -31,7 +31,7 @@ Le bouton "+ Ajouter un véhicule" d'une carte d'équipe navigue vers `/teams/:t
 
 **Détail d'un équipement** : toute la carte d'une arme ou d'une amélioration (`equipment-option`) est cliquable et ouvre une popup (`EquipmentDetailModal`) — nom, coût, emplacement, description, règles complètes, et raison de refus éventuelle. L'ajout au véhicule reste l'action exclusive du bouton "+" de la carte (`$event.stopPropagation()` empêche son clic d'ouvrir la popup).
 
-**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`Team.remainingBudget`, getter de l'agrégat), qui marque `disponible: false` toute arme/amélioration/avantage dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : choisi au moment de l'ajout d'une arme (bouton « Tourelle x3 », visible si `Arme.montable_tourelle`, au même endroit que les 4 arcs de tir), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
+**Budget de l'équipe dans le configurateur** : `EquipmentManager` affiche en tête le bloc "Budget de l'équipe" — jerricans utilisés / budget total, barre de progression, solde restant. La validation est assurée par le backend (`Team.remainingBudget`, getter de l'agrégat), qui marque `disponible: false` toute arme/amélioration/avantage dont le prix dépasserait le budget restant — **règle "Budget de l'équipe insuffisant"**, vérifiée **avant** toute autre règle (sponsor exclu). **Cas particulier du montage sur Tourelle** : choisi au moment de l'ajout d'une arme (bouton « Tourelle x3 », visible si `Arme.montable_tourelle`, au même endroit que les 3 arcs de tir), il triple son coût — la garde budget porte alors sur ce coût ×3, cf. §Budget ci-dessous.
 
 **Nom du véhicule (distinct du type)** : un véhicule porte, en plus de son type catalogue immutable (`nomInterne`), un nom propre éditable (`Vehicle.nom`, cf. §Modèles de données ci-dessous) — par défaut égal au nom du type, personnalisable à tout moment via le champ éditable en tête de `VehicleCostSummary` (même écran que la gestion de l'équipement, pas d'étape dédiée au moment du choix du type). Partout où l'application affiche ce nom, le format est `"Nom (Type)"` **uniquement si le nom a été personnalisé** — sinon le nom seul, jamais de parenthèse redondante (ex. "Camion" reste "Camion" tant que non renommé, mais devient "La Teigne (Camion)" une fois renommé). Cette règle de formatage est portée par le getter `Vehicle.nom` lui-même côté backend — aucun consommateur (DTO, journal d'événements, frontend) ne la recalcule.
 
@@ -122,11 +122,11 @@ message d'erreur backend (`raison` commence par `'Une orientation est requise'`,
 cf. `equipment-manager.ts`) — le champ catalogue est mirroré côté frontend
 (`catalog.model.ts`) à titre purement informatif.
 
-### Montage sur Tourelle (5ème valeur d'orientation)
+### Montage sur Tourelle (4ème valeur d'orientation)
 
 La Tourelle **n'est pas une amélioration** — c'est une valeur possible de
 l'orientation de l'arme (`Weapon.orientation = 'tourelle'`, choisie au moment de
-l'achat via le bouton « Tourelle x3 », au même endroit que les 4 arcs de tir
+l'achat via le bouton « Tourelle x3 », au même endroit que les 3 arcs de tir
 classiques) : elle triple le coût de l'arme (arc de tir à 360°), exclusive avec
 toute autre orientation puisque c'est la même valeur qui les porte toutes.
 Seules les armes marquées `montable_tourelle: true` au catalogue (`Arme.montable_tourelle`,
@@ -277,7 +277,7 @@ L'entité `Vehicle` représente un véhicule **appartenant à une équipe** (ins
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `nomInterne` | string | référence vers `Amelioration.nom_interne` du catalogue |
-| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite'` \| `null` | nullable — uniquement pour les améliorations orientées (Bélier...) |
+| `orientation` | `'avant' \| 'arrière' \| 'lateral'` \| `null` | nullable — uniquement pour les améliorations orientées (Bélier...) |
 | `estDefaut` | boolean | `false` pour les améliorations achetées ; `true` pour les améliorations intégrées au profil de base |
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
@@ -307,7 +307,7 @@ Contrairement à `VehicleImprovement`, `Weapon` ne porte aucune notion de `compo
 |-------|------|-------------|
 | `id` | number | PK, auto-incrémenté |
 | `nomInterne` | string | référence vers `Arme.nom_interne` du catalogue |
-| `orientation` | `'avant' \| 'arrière' \| 'gauche' \| 'droite' \| 'tourelle'` \| `null` | **obligatoire** pour `type !== 'équipage'` (5 valeurs, dont `'tourelle'` — montage sur Tourelle, arc à 360°, coût ×3), **interdite** (`null`) pour `type === 'équipage'`. Choisi à l'achat (`AddWeaponDto.orientation`), immuable ensuite — pour en changer, revendre puis racheter |
+| `orientation` | `'avant' \| 'arrière' \| 'lateral' \| 'tourelle'` \| `null` | **obligatoire** pour `type !== 'équipage'` (4 valeurs, dont `'tourelle'` — montage sur Tourelle, arc à 360°, coût ×3), **interdite** (`null`) pour `type === 'équipage'`. Choisi à l'achat (`AddWeaponDto.orientation`), immuable ensuite — pour en changer, revendre puis racheter |
 | `estDefaut` | boolean | `false` pour les armes achetées ; `true` pour une arme intégrée au profil de base du véhicule (ex. Canon de 125mm du Char d'assaut, non retirable) |
 | `vehicleId` | number | FK → Vehicle (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
@@ -376,7 +376,7 @@ Note : les noms de sponsor avec espaces/accents doivent être URL-encodés (`La%
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/vehicles/:id/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité (sponsor + orientation + emplacements) — inclut `montableSurTourelle: boolean` par arme |
-| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (`AddWeaponDto.orientation?`, 5 valeurs dont `'tourelle'`, validation puis persistance) |
+| POST | `/api/vehicles/:id/weapons` | JWT | Ajouter une arme à un véhicule (`AddWeaponDto.orientation?`, 4 valeurs dont `'tourelle'`, validation puis persistance) |
 | DELETE | `/api/weapons/:id` | JWT | Retirer une arme — refusée (`DomainException` → HTTP 400) si `estDefaut: true` |
 
 > `AvailableImprovementDto`, `AvailableWeaponDto` et `AvailableAdvantageDto` incluent `description: string` (affiché dans `equipment-option`) et `regles: string` (affiché dans `EquipmentDetailModal` uniquement).

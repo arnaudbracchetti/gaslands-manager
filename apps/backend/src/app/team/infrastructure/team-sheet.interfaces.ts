@@ -24,7 +24,7 @@ export interface EquipmentRowDto {
    * Colonne "Facing", déjà formatée par le mapper (qui seul sait distinguer une
    * arme d'équipage — orientation `null` par construction du domaine — d'une
    * amélioration/avantage/séquelle, qui n'ont jamais cette notion) :
-   * "Avant"/"Arrière"/"Gauche"/"Droite"/"Tourelle" (arme ou amélioration orientée),
+   * "Avant"/"Arrière"/"Latéral"/"Tourelle" (arme ou amélioration orientée),
    * "Équipage" (arme d'équipage), "360°" (arme à arc automatique non-équipage,
    * ex. Boule de démolition), "—" (amélioration/avantage/séquelle non orientée).
    */

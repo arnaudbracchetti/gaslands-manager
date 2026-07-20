@@ -61,7 +61,7 @@ erDiagram
     Weapon {
         number id PK
         string nomInterne
-        string orientation "avant|arriere|gauche|droite|tourelle|null"
+        string orientation "avant|arriere|lateral|tourelle|null"
         boolean estDefaut "false = achetee, true = profil de base"
         number vehicleId FK
     }
@@ -69,7 +69,7 @@ erDiagram
     VehicleImprovement {
         number id PK
         string nomInterne
-        string orientation "avant|arriere|gauche|droite|null"
+        string orientation "avant|arriere|lateral|null"
         boolean estDefaut "false = achetee, true = profil de base"
         number vehicleId FK
     }
@@ -86,9 +86,9 @@ erDiagram
     Vehicle ||--o{ VehicleAdvantage : "acquiert"
 ```
 
-> **Montage sur Tourelle : ce n'est pas une entité.** `Weapon.orientation` accepte 5
-> valeurs (`'avant' | 'arrière' | 'gauche' | 'droite' | 'tourelle'`) - la Tourelle est la
-> 5ᵉ valeur de ce même champ, choisie à l'achat de l'arme, pas une amélioration ni une
+> **Montage sur Tourelle : ce n'est pas une entité.** `Weapon.orientation` accepte 4
+> valeurs (`'avant' | 'arrière' | 'lateral' | 'tourelle'`) - la Tourelle est la
+> 4ᵉ valeur de ce même champ, choisie à l'achat de l'arme, pas une amélioration ni une
 > ligne séparée. Aucun champ `weaponNomInterne` n'existe nulle part dans le schéma -
 > l'arme sur Tourelle EST l'entité `Weapon`, avec un `orientation` particulier. Détail
 > complet : §7.bis ci-dessous, et [spec/VEHICLES.md](spec/VEHICLES.md#montage-sur-tourelle-attribut-de-larme).
@@ -534,7 +534,7 @@ sequenceDiagram
 
     User->>EO: clique "Ajouter"
     alt Arme ou amélioration orientable
-        EO->>EO: choosingOrientation.set(true)<br/>affiche 4 boutons d'orientation<br/>+ bouton "Tourelle x3" si arme montableSurTourelle
+        EO->>EO: choosingOrientation.set(true)<br/>affiche 3 boutons d'orientation<br/>+ bouton "Tourelle x3" si arme montableSurTourelle
         User->>EO: choisit "avant" (ou "Tourelle x3")
         EO->>EM: chosen.emit({ nomInterne, orientation })
     else Équipement non orientable (arme d'équipage, amélioration non orientée, avantage)
@@ -727,7 +727,7 @@ Le modèle actuel, complet, tient en quelques points :
   montée hérite ainsi directement du mécanisme générique de revente/annulation déjà en
   place pour toute arme (`isSold`/prix résiduel), sans code dédié.
 - **Frontend** : `equipment-option.ts`/`.html` affiche un bouton « Tourelle x3 » dans le
-  même sélecteur que les 4 arcs de tir classiques, visible uniquement si
+  même sélecteur que les 3 arcs de tir classiques, visible uniquement si
   `option().montableSurTourelle` est vrai. Son clic appelle exactement le même handler
   que le choix d'un arc (`onOrientationChosen('tourelle')`). Aucune modale séparée,
   aucune notion de « Tourelle orpheline » à pourvoir plus tard. `mounted-equipment.ts`
@@ -850,7 +850,7 @@ s'applique à tous les avantages indistinctement, pas à un `comportement` parti
 
 | Type d'arme | Orientation |
 |---|---|
-| `base`, `avancée`, `largable` (avec `necessite_orientation: true`) | **Obligatoire** - définit l'arc de tir (4 arcs classiques, ou Tourelle si l'arme le permet) |
+| `base`, `avancée`, `largable` (avec `necessite_orientation: true`) | **Obligatoire** - définit l'arc de tir (3 arcs classiques, ou Tourelle si l'arme le permet) |
 | `équipage`, ou toute arme avec `necessite_orientation: false` | **Interdite** - tir à 360° automatique |
 
 Détail du champ catalogue `necessite_orientation` (remplace l'ancienne dérivation
@@ -973,6 +973,6 @@ sequenceDiagram
 |---------|------|
 | `apps/frontend/src/app/teams/vehicle-configurator/vehicle.service.ts` | Centralise tous les appels HTTP véhicule/arme/amélioration/avantage |
 | `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/equipment-manager.ts` | Chargement des 3 listes disponibles, calcul budget/emplacements, ajout/retrait |
-| `apps/frontend/src/app/teams/vehicle-configurator/equipment-option/equipment-option.ts` | Sélecteur d'orientation (4 arcs + bouton "Tourelle x3" conditionnel) |
+| `apps/frontend/src/app/teams/vehicle-configurator/equipment-option/equipment-option.ts` | Sélecteur d'orientation (3 arcs + bouton "Tourelle x3" conditionnel) |
 | `apps/frontend/src/app/teams/vehicle-configurator/equipment-manager/mounted-equipment/mounted-equipment.ts` | Affichage des armes/améliorations/avantages montés, badge "(Tourelle)" inline |
 | `apps/frontend/src/app/teams/vehicle-configurator/vehicle-builder.model.ts` | Types `EquipmentChoice`, `Orientation`, `WeaponOrientation` |
