@@ -6,10 +6,10 @@
   background: var(--surface-raised);
   border: 2px solid var(--border-rust);
   border-radius: var(--r-sm);
-  padding: 16px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
   transition: border-color 160ms, box-shadow 160ms, transform 90ms;
   box-shadow: var(--shadow-stamp);
   position: relative;
@@ -29,7 +29,7 @@
     top: -10px;
     right: 10px;
     font-family: var(--font-display);
-    font-size: 6.5rem;
+    font-size: 4.5rem;
     font-weight: 700;
     color: var(--tb-os);
     opacity: 0.06;
@@ -93,7 +93,7 @@
       background: var(--tint-accent-bg);
       border: 1px solid var(--tint-accent-border);
       color: var(--tint-accent-text);
-      padding: 2px 8px;
+      padding: 2px 6px;
       border-radius: var(--r-sm);
       font-family: var(--font-mono);
       font-size: 0.68rem;
@@ -106,7 +106,7 @@
     align-items: center;
     justify-content: space-between;
     margin-top: auto;
-    padding-top: 8px;
+    padding-top: 6px;
     border-top: 1px solid var(--border-hair);
   }
 

@@ -38,15 +38,24 @@
 .me-item {
   position: relative; // contient le filigrane .me-item__watermark
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 7px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name   badges"
+    "action badges";
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: start;
+  padding: 6px 10px;
   background: var(--tb-bitume-4);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: border-color 160ms;
+
+  &:hover {
+    border-color: var(--tb-danger);
+  }
 }
 
 // Objet revendu (atelier) — carte assombrie/désaturée, contenu toujours lisible.
@@ -81,6 +90,7 @@
 }
 
 .me-name {
+  grid-area: name;
   font-family: var(--font-text);
   font-size: 0.85rem;
   font-weight: 600;
@@ -104,8 +114,13 @@
 }
 
 .me-badges {
+  grid-area: badges;
+  align-self: center;
+  justify-self: end;
   display: flex;
-  gap: 5px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -116,7 +131,7 @@
   background: var(--tint-accent-bg);
   border: 1px solid var(--tint-accent-border);
   color: var(--tint-accent-text);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -125,10 +140,12 @@
 }
 
 .me-remove {
+  grid-area: action;
+  justify-self: start;
   background: transparent;
   border: 1px solid var(--tint-danger-border);
   color: var(--tint-danger-text);
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -147,6 +164,8 @@
 // ─── Badges ──────────────────────────────────────────────────────────────────
 
 .me-badge-defaut {
+  grid-area: action;
+  justify-self: start;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--text-dim);
@@ -164,6 +183,8 @@
 }
 
 .me-locked {
+  grid-area: action;
+  justify-self: start;
   font-size: 0.85rem;
   opacity: 0.6;
   cursor: help;

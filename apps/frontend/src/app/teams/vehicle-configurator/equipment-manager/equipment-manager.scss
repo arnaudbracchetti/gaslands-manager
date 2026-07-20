@@ -142,10 +142,16 @@
 // en dur pour les jerricans, inadaptés à la monnaie Chocs des séquelles.
 
 .em-sequella-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  grid-template-areas:
+    "name  cost"
+    "desc  add"
+    "extra extra";
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+  padding: 8px 10px;
   background: var(--tb-bitume-4);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
@@ -161,39 +167,43 @@
   }
 }
 
-.em-sequella-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .em-sequella-card__name {
+  grid-area: name;
+  align-self: center;
   font-family: var(--font-text);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .em-sequella-card__badge {
+  grid-area: cost;
+  width: 44px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   background: var(--tint-accent-bg);
   border: 1px solid var(--tint-accent-border);
   color: var(--tint-accent-text);
-  padding: 2px 8px;
+  padding: 2px 4px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .em-sequella-card__description {
+  grid-area: desc;
+  margin: 0;
   font-size: 0.82rem;
   color: var(--text-dim);
   line-height: 1.4;
@@ -205,6 +215,7 @@
 }
 
 .em-sequella-card__reason {
+  grid-area: extra;
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -212,22 +223,29 @@
 }
 
 .em-sequella-card__acquire {
-  align-self: flex-start;
-  background: transparent;
-  border: 1px solid var(--border-rust);
-  color: var(--tb-os);
-  padding: 4px 14px;
+  grid-area: add;
+  justify-self: center;
+  align-self: center;
+  width: 44px;
+  height: 36px;
   border-radius: var(--r-sm);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  border: none;
+  background: var(--tb-toxic);
+  color: var(--tb-bitume);
+  font-family: var(--font-text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: border-color 160ms, color 160ms;
+  transition: opacity 160ms, transform 90ms;
+  box-shadow: var(--shadow-stamp);
 
   &:hover {
-    border-color: var(--tb-danger);
-    color: var(--tb-danger);
+    opacity: 0.85;
+    transform: scale(1.05);
   }
 }
 

@@ -130,7 +130,7 @@
 
 .option--side-actions {
   display: grid;
-  grid-template-columns: 1fr 56px;
+  grid-template-columns: 1fr 44px;
   grid-template-areas:
     "name  cost"
     "desc  slots"
@@ -155,6 +155,10 @@
   }
 
   .option__badge {
+    padding: 2px 4px;
+    width: 44px;
+    box-sizing: border-box;
+
     &:first-child {
       grid-area: cost;
       justify-content: center;
@@ -176,6 +180,8 @@
     justify-self: center;
     align-self: center;
     margin-top: 0;
+    width: 44px;
+    height: 36px;
   }
 
   > .option__reason,

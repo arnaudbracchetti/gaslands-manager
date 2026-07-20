@@ -245,12 +245,10 @@
                     class="em-sequella-card"
                     [class.em-sequella-card--unavailable]="!sequella.disponible"
                     (click)="openSequellaDetails(sequella)">
-                    <div class="em-sequella-card__header">
-                      <span class="em-sequella-card__name">{{ sequella.nom }}</span>
-                      <span class="em-sequella-card__badge" title="Coût en Chocs">
-                        <app-icon concept="chocs" size="xs" /> {{ sequella.chocsCost }}
-                      </span>
-                    </div>
+                    <span class="em-sequella-card__name">{{ sequella.nom }}</span>
+                    <span class="em-sequella-card__badge" title="Coût en Chocs">
+                      <app-icon concept="chocs" size="xs" /> {{ sequella.chocsCost }}
+                    </span>
                     <!-- [innerHTML] : description convertie en HTML au chargement du catalogue (marked). -->
                     <div class="em-sequella-card__description" [innerHTML]="sequella.description"></div>
                     @if (!sequella.disponible) {
@@ -259,8 +257,9 @@
                       <button
                         class="em-sequella-card__acquire"
                         type="button"
-                        (click)="$event.stopPropagation(); onAcquireSequella(sequella)">
-                        Acquérir
+                        (click)="$event.stopPropagation(); onAcquireSequella(sequella)"
+                        aria-label="Acquérir">
+                        <span aria-hidden="true">+</span>
                       </button>
                     }
                   </div>
