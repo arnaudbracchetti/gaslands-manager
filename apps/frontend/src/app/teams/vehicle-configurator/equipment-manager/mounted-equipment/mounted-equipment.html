@@ -23,7 +23,7 @@
   } @else {
     <ul class="me-list">
       @for (weapon of visibleWeapons(); track weapon.id) {
-        <li class="me-item" [class.me-item--sold]="weapon.sold || weapon.lost" [attr.title]="weapon.sold ? 'Revendue (atelier)' : weapon.lost ? 'Perdue (Table des Épaves)' : null">
+        <li class="me-item" [class.me-item--sold]="weapon.sold || weapon.lost" [attr.title]="weapon.sold ? 'Revendue (atelier)' : weapon.lost ? 'Perdue (Table des Épaves)' : null" (click)="openWeaponDetails(weapon)">
           @if (weapon.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (weapon.lost) {
@@ -56,7 +56,7 @@
               class="me-remove"
               type="button"
               title="Retirer cette arme"
-              (click)="weaponRemoved.emit(weapon)">
+              (click)="$event.stopPropagation(); weaponRemoved.emit(weapon)">
               Retirer
             </button>
           }
@@ -76,7 +76,7 @@
   } @else {
     <ul class="me-list">
       @for (improvement of visibleImprovements(); track improvement.id) {
-        <li class="me-item" [class.me-item--sold]="improvement.sold || improvement.lost" [attr.title]="improvement.sold ? 'Revendue (atelier)' : improvement.lost ? 'Perdue (Table des Épaves)' : null">
+        <li class="me-item" [class.me-item--sold]="improvement.sold || improvement.lost" [attr.title]="improvement.sold ? 'Revendue (atelier)' : improvement.lost ? 'Perdue (Table des Épaves)' : null" (click)="openImprovementDetails(improvement)">
           @if (improvement.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (improvement.lost) {
@@ -109,7 +109,7 @@
               class="me-remove"
               type="button"
               title="Retirer cette amélioration"
-              (click)="improvementRemoved.emit(improvement)">
+              (click)="$event.stopPropagation(); improvementRemoved.emit(improvement)">
               Retirer
             </button>
           }
@@ -129,7 +129,7 @@
   } @else {
     <ul class="me-list">
       @for (advantage of visibleAdvantages(); track advantage.id) {
-        <li class="me-item" [class.me-item--sold]="advantage.sold || advantage.lost" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : advantage.lost ? 'Perdu (Table des Épaves) — aucun remboursement' : null">
+        <li class="me-item" [class.me-item--sold]="advantage.sold || advantage.lost" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : advantage.lost ? 'Perdu (Table des Épaves) — aucun remboursement' : null" (click)="openAdvantageDetails(advantage)">
           @if (advantage.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (advantage.lost) {
@@ -149,7 +149,7 @@
               class="me-remove"
               type="button"
               title="Retirer cet avantage"
-              (click)="advantageRemoved.emit(advantage)">
+              (click)="$event.stopPropagation(); advantageRemoved.emit(advantage)">
               Retirer
             </button>
           }
@@ -170,7 +170,7 @@
     } @else {
       <ul class="me-list">
         @for (sequella of visibleSequellas(); track sequella.id) {
-          <li class="me-item" [class.me-item--sold]="sequella.isSold" [attr.title]="sequella.isSold ? 'Revendue (atelier) — perte totale de Chocs' : null">
+          <li class="me-item" [class.me-item--sold]="sequella.isSold" [attr.title]="sequella.isSold ? 'Revendue (atelier) — perte totale de Chocs' : null" (click)="openSequellaRowDetails(sequella)">
             @if (sequella.isSold) {
               <span class="me-item__watermark">Vendue</span>
             }
@@ -188,7 +188,7 @@
                   class="me-remove"
                   type="button"
                   title="Retirer cette séquelle"
-                  (click)="sequellaRemoved.emit(sequella)">
+                  (click)="$event.stopPropagation(); sequellaRemoved.emit(sequella)">
                   Retirer
                 </button>
               } @else {
@@ -202,4 +202,12 @@
       </ul>
     }
   </section>
+}
+
+<!-- ── Détail au clic — même popup que la carte catalogue correspondante ── -->
+@if (detailsEquipment(); as opt) {
+  <app-equipment-detail-modal [option]="opt" [requiresOrientation]="false" (closed)="closeEquipmentDetails()" />
+}
+@if (detailsSequella(); as ds) {
+  <app-sequella-detail-modal [sequella]="ds" (closed)="closeSequellaRowDetails()" />
 }

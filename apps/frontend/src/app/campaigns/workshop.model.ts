@@ -63,6 +63,13 @@ export interface WorkshopSequellaDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Phrase d'ambiance courte — cf. `AvailableSequellaDto.description`. Porté ici (contrairement
+   *  aux armes/améliorations/avantages, résolues via `sponsorCatalog()`) car une séquelle n'a
+   *  aucun catalogue résolu par sponsor côté frontend, et une séquelle `TABLE_EPAVES` n'apparaît
+   *  jamais dans le catalogue d'achat atelier (`AvailableSequellaDto[]`, filtré `ATELIER`). */
+  description: string;
+  /** Effet mécanique précis (Markdown→HTML) — cf. `AvailableSequellaDto.regles`, même raison. */
+  regles: string;
 }
 
 /** Verdict de disponibilité d'une séquelle ATELIER — miroir de `AvailableAdvantageDto`. */

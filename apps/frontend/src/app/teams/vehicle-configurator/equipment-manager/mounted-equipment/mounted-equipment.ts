@@ -30,14 +30,21 @@ import {
   signal,
 } from '@angular/core';
 import { Sponsor } from '../../../../catalog/catalog.model';
-import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
-import type { WorkshopSequellaDto } from '../../../../campaigns/workshop.model';
+import {
+  VehicleImprovement,
+  Weapon,
+  VehicleAdvantage,
+  EquipmentOption as EquipmentOptionDto,
+} from '../../vehicle-builder.model';
+import type { AvailableSequellaDto, WorkshopSequellaDto } from '../../../../campaigns/workshop.model';
 import { Icon } from '../../../../shared/icon/icon';
+import { EquipmentDetailModal } from '../../equipment-option/equipment-detail-modal/equipment-detail-modal';
+import { SequellaDetailModal } from '../sequella-detail-modal/sequella-detail-modal';
 
 @Component({
   selector: 'app-mounted-equipment',
   standalone: true,
-  imports: [Icon],
+  imports: [Icon, EquipmentDetailModal, SequellaDetailModal],
   templateUrl: './mounted-equipment.html',
   styleUrl: './mounted-equipment.scss',
 })
@@ -220,5 +227,85 @@ export class MountedEquipment {
     if (improvement.estDefaut) return 'Équipement intégré au profil de base — aucun emplacement consommé';
     if (improvement.sold) return 'Emplacement(s) occupé(s) après la revente';
     return 'Emplacements requis';
+  }
+
+  // ── Détail au clic — même popup que la carte catalogue correspondante ───────
+  // Mirroir de `EquipmentOption.detailsOpen`/`EquipmentManager.detailsSequella` :
+  // état purement local, aucune sortie vers le parent. `disponible: true` toujours
+  // (l'objet est déjà possédé) — aucun message de refus à afficher dans la popup.
+
+  /** Arme/amélioration/avantage actuellement détaillé(e), `null` si aucune popup ouverte. */
+  detailsEquipment: WritableSignal<EquipmentOptionDto | null> = signal<EquipmentOptionDto | null>(null);
+
+  /** Séquelle actuellement détaillée, `null` si aucune popup ouverte. */
+  detailsSequella: WritableSignal<AvailableSequellaDto | null> = signal<AvailableSequellaDto | null>(null);
+
+  /** Ouvre le détail d'une arme montée — `description`/`regles` résolus via le catalogue du sponsor. */
+  openWeaponDetails(weapon: Weapon): void {
+    const catalog = this.sponsorCatalog().armes.find((a): boolean => a.nom_interne === weapon.nomInterne);
+    this.detailsEquipment.set({
+      nom: this.resolveWeaponName(weapon.nomInterne),
+      nomInterne: weapon.nomInterne,
+      prix: weapon.prix,
+      emplacement: weapon.emplacement,
+      description: catalog?.description ?? '',
+      regles: catalog?.regles ?? '',
+      disponible: true,
+      montableSurTourelle: catalog?.montable_tourelle,
+    });
+  }
+
+  /** Ouvre le détail d'une amélioration posée — mirroir de `openWeaponDetails`. */
+  openImprovementDetails(improvement: VehicleImprovement): void {
+    const catalog = this.sponsorCatalog().ameliorations.find((a): boolean => a.nom_interne === improvement.nomInterne);
+    this.detailsEquipment.set({
+      nom: this.resolveImprovementName(improvement.nomInterne),
+      nomInterne: improvement.nomInterne,
+      prix: improvement.prix,
+      emplacement: improvement.emplacement,
+      description: catalog?.description ?? '',
+      regles: catalog?.regles ?? '',
+      disponible: true,
+    });
+  }
+
+  /** Ouvre le détail d'un avantage acquis — mirroir de `openWeaponDetails` (jamais d'emplacement/orientation). */
+  openAdvantageDetails(advantage: VehicleAdvantage): void {
+    const catalog = this.sponsorCatalog().avantages.find((a): boolean => a.nom_interne === advantage.nomInterne);
+    this.detailsEquipment.set({
+      nom: this.resolveAdvantageName(advantage.nomInterne),
+      nomInterne: advantage.nomInterne,
+      prix: advantage.prix,
+      emplacement: 0,
+      description: catalog?.description ?? '',
+      regles: catalog?.regles ?? '',
+      disponible: true,
+    });
+  }
+
+  /** Ferme la popup arme/amélioration/avantage — "Annuler" ou clic hors de la boîte. */
+  closeEquipmentDetails(): void {
+    this.detailsEquipment.set(null);
+  }
+
+  /**
+   * Ouvre le détail d'une séquelle acquise — `description`/`regles` sont désormais
+   * portés nativement par `WorkshopSequellaDto` (cf. son en-tête), y compris pour une
+   * séquelle `TABLE_EPAVES`, jamais présente dans le catalogue d'achat atelier.
+   */
+  openSequellaRowDetails(sequella: WorkshopSequellaDto): void {
+    this.detailsSequella.set({
+      nom: sequella.nom,
+      nomInterne: sequella.nomInterne,
+      chocsCost: sequella.chocsCost,
+      description: sequella.description,
+      regles: sequella.regles,
+      disponible: true,
+    });
+  }
+
+  /** Ferme la popup séquelle — mirroir de `closeEquipmentDetails`. */
+  closeSequellaRowDetails(): void {
+    this.detailsSequella.set(null);
   }
 }

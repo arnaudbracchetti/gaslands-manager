@@ -37,6 +37,14 @@ export interface WorkshopSequellaDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Phrase d'ambiance courte — cf. `SequellaType.description`. Contrairement aux armes/
+   *  améliorations/avantages, une séquelle n'a pas de catalogue résolu par sponsor côté
+   *  frontend (`Sequelle` n'a aucune relation avec `Sponsor`) : ce texte doit être porté
+   *  ici pour que le détail d'une séquelle déjà montée (y compris `TABLE_EPAVES`, jamais
+   *  exposée par le catalogue d'achat atelier) reste consultable côté IHM. */
+  description: string;
+  /** Effet mécanique précis (Markdown→HTML) — cf. `SequellaType.regles`, même raison que `description`. */
+  regles: string;
 }
 
 export interface WorkshopImprovementDto {

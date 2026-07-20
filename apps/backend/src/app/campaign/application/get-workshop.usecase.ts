@@ -55,6 +55,8 @@ export class GetWorkshopUseCase {
         origine: s.type.origine,
         isSold: s.isSold,
         purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.SEQUELLE, s.id) ?? false,
+        description: s.type.description,
+        regles: s.type.regles,
       })),
       weapons: v.weapons.map((w) => ({
         id: w.id,
