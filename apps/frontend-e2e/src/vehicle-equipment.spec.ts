@@ -108,7 +108,9 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
     const canonIntegre = page.locator('.me-item').filter({ hasText: 'Canon de 125 mm' });
     await expect(canonIntegre).toBeVisible();
     await expect(canonIntegre.getByText('(Tourelle)')).toBeVisible();
-    await expect(canonIntegre.getByText('🔒 Intégré')).toBeVisible();
+    // Le 🔒 n'est plus un emoji textuel mais une icône peinte (`app-icon`,
+    // cf. `mounted-equipment.html`) — seul le libellé "Intégré" reste du texte.
+    await expect(canonIntegre.getByText('Intégré')).toBeVisible();
     await expect(canonIntegre.getByRole('button', { name: 'Retirer', exact: true })).toHaveCount(0);
   });
 

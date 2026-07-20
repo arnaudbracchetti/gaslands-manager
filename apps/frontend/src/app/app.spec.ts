@@ -54,6 +54,9 @@ describe('App (composant racine)', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.navbar')).toBeTruthy();
-    expect(compiled.querySelector('.navbar-brand')?.textContent).toContain('Gaslands');
+    // Le logo est une image (cf. commit 2e08843, "remplace le logo texte par
+    // le logo image") — plus de texte visible dans `.navbar-brand`, on vérifie
+    // donc l'attribut `alt` de l'image à la place.
+    expect(compiled.querySelector('.navbar-brand img')?.getAttribute('alt')).toContain('Gaslands');
   });
 });
