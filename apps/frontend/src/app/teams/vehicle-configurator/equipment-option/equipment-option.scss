@@ -121,6 +121,70 @@
   }
 }
 
+// ─── Variante "actions en colonne" (choisie via /impeccable live) ────────────
+// Coût, emplacements et bouton "+" empilés dans une colonne fixe à droite de
+// la carte (nom + description occupent la colonne principale à gauche) —
+// via CSS Grid + `display: contents` sur les conteneurs intermédiaires
+// (`&__header`, `&__badges`) pour que leurs enfants participent directement
+// à la grille de `.option`, sans toucher au markup/aux bindings Angular.
+
+.option--side-actions {
+  display: grid;
+  grid-template-columns: 1fr 56px;
+  grid-template-areas:
+    "name  cost"
+    "desc  slots"
+    "desc  add"
+    "extra extra";
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+  padding: 8px 10px;
+
+  .option__header {
+    display: contents;
+  }
+
+  .option__badges {
+    display: contents;
+  }
+
+  .option__name {
+    grid-area: name;
+    align-self: center;
+  }
+
+  .option__badge {
+    &:first-child {
+      grid-area: cost;
+      justify-content: center;
+    }
+
+    &:last-child {
+      grid-area: slots;
+      justify-content: center;
+    }
+  }
+
+  > .option__description {
+    grid-area: desc;
+    margin: 0;
+  }
+
+  > .option__add {
+    grid-area: add;
+    justify-self: center;
+    align-self: center;
+    margin-top: 0;
+  }
+
+  > .option__reason,
+  > .option__orientations {
+    grid-area: extra;
+    margin-top: 0;
+  }
+}
+
 // ─── Sélecteur d'orientation ─────────────────────────────────────────────────
 
 .option__orientations {

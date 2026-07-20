@@ -26,9 +26,9 @@
   d'orientation, Annuler) appelle `$event.stopPropagation()` pour ne pas
   déclencher cette ouverture.
 -->
-<div class="option" [class.option--unavailable]="!option().disponible && !requiresOrientation()"
-     (click)="openDetails()">
 
+<div class="option option--side-actions" [class.option--unavailable]="!option().disponible && !requiresOrientation()"
+     (click)="openDetails()">
   <div class="option__header">
     <span class="option__name" [title]="option().nom">{{ option().nom }}</span>
     <div class="option__badges">
@@ -42,7 +42,6 @@
       </span>
     </div>
   </div>
-
   @if (option().description && !choosingOrientation()) {
     <!-- [innerHTML] : description convertie en HTML au chargement du catalogue
          (CatalogService.onModuleInit, marked) — <div> et non <p> car le HTML
@@ -50,7 +49,6 @@
          equipment-option.scss (::ng-deep). -->
     <div class="option__description" [innerHTML]="option().description"></div>
   }
-
   @if (!option().disponible && !requiresOrientation()) {
     <!-- Refus définitif — la raison vient du backend (RuleResult.reason),
          cf. WeaponService.checkCandidate / ImprovementDecorator.validate -->
@@ -61,18 +59,14 @@
     <div class="option__orientations">
       <span class="option__orientations-label">Orientation :</span>
       @for (orientation of orientations; track orientation) {
-        <button
-          class="orientation-btn"
-          type="button"
-          (click)="$event.stopPropagation(); onOrientationChosen(orientation)">
+        <button class="orientation-btn" type="button"
+                (click)="$event.stopPropagation(); onOrientationChosen(orientation)">
           {{ orientation }}
         </button>
       }
       @if (option().montableSurTourelle) {
-        <button
-          class="orientation-btn"
-          type="button"
-          (click)="$event.stopPropagation(); onOrientationChosen('tourelle')">
+        <button class="orientation-btn" type="button"
+                (click)="$event.stopPropagation(); onOrientationChosen('tourelle')">
           Tourelle x3
         </button>
       }
@@ -85,7 +79,6 @@
       <span aria-hidden="true">+</span>
     </button>
   }
-
 </div>
 
 @if (detailsOpen()) {
