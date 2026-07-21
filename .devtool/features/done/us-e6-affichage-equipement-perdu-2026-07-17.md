@@ -1,15 +1,15 @@
 ---
 id: "us-e6-affichage-equipement-perdu-2026-07-17"
-status: "review"
+status: "done"
 priority: "low"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T15:40:51.366Z"
-completedAt: null
+modified: "2026-07-20T22:01:57.038Z"
+completedAt: "2026-07-20T22:01:57.038Z"
 labels: ["mode-campagne", "atelier-ui"]
-order: "a1"
+order: "Zx"
 ---
 # Afficher les équipements perdus distinctement des équipements vendus
 

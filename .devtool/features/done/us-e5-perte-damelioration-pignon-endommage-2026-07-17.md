@@ -1,15 +1,15 @@
 ---
 id: "us-e5-perte-damelioration-pignon-endommage-2026-07-17"
-status: "review"
+status: "done"
 priority: "low"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T15:40:42.310Z"
-completedAt: null
+modified: "2026-07-20T22:01:44.578Z"
+completedAt: "2026-07-20T22:01:44.578Z"
 labels: ["mode-campagne", "degats-sequelles"]
-order: "a0"
+order: "Zy"
 ---
 # Perte d'avantage sur "Pignon endommagé"
 
