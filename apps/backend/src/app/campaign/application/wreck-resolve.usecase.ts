@@ -3,7 +3,6 @@ import type { ICampaignRepository } from '../domain/campaign.repository.interfac
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { DomainException } from '../../shared/domain/domain-exception';
 import { WreckTable } from '../domain/wreck/wreck-table';
-import { WreckResult } from '../domain/enums/wreck-result.enum';
 import type { WreckOutcome } from '../domain/wreck/wreck-outcome';
 import { assertOrganizer } from './authorization.helpers';
 
@@ -14,10 +13,12 @@ export interface WreckResolveCommand {
   userId: number;
   vehicleId: number;
   /**
-   * Attestation manuelle de l'organisateur : ce véhicule porte déjà un bonus "Favori du
-   * public" en attente d'une partie précédente (l'app ne mémorise pas cet état elle-même,
-   * cf. design du wizard de fin de partie). Ignoré si le résultat n'est pas
-   * `VEHICULE_DETRUIT`.
+   * Déclaration du joueur qu'il souhaite dépenser 3 votes du public pour déclencher le
+   * bonus Favori du Public sur ce véhicule (ressource non trackée par l'application,
+   * honor-system). Le serveur revérifie l'éligibilité réelle (`Vehicle.hasFavoriDuPublic`)
+   * avant de créditer quoi que ce soit — cf. `Game.creditFavoriDuPublicBonus`. Indépendant
+   * du résultat du tirage de cette partie : le simple fait que ce véhicule soit désigné
+   * épave (donc que ce endpoint soit appelé pour lui) suffit, quel que soit le résultat.
    */
   pendingFavoriDuPublic?: boolean;
 }
@@ -35,8 +36,11 @@ export interface WreckResolveResult {
  * jamais un choix de l'organisateur. L'interprétation du résultat (quels événements
  * produire selon la ligne obtenue) vit dans `Campaign.resolveWreck()` — ce use case
  * ne fait que tirer le résultat (infrastructure) et déléguer à l'agrégat. Le bonus
- * "Favori du public" est une règle indépendante du tirage (attestation manuelle de
- * l'organisateur), traitée séparément via `Campaign.creditFavoriDuPublicBonus()`.
+ * "Favori du public" est une règle indépendante du RÉSULTAT du tirage (mais dépend du
+ * fait qu'un tirage ait lieu, donc que le véhicule soit désigné épave), traitée
+ * séparément via `Game.creditFavoriDuPublicBonus()` — ce use case ne fait que lui
+ * transmettre le choix brut du joueur, l'éligibilité réelle étant revérifiée côté
+ * domaine, pas ici.
  */
 export class WreckResolveUseCase {
   constructor(
@@ -55,8 +59,7 @@ export class WreckResolveUseCase {
       const { events, outcome } = game.resolveWreck(participant, cmd.vehicleId, this.wreckTable);
 
       const bonusEvent = game.creditFavoriDuPublicBonus(
-        cmd.participantId, outcome.vehicleId,
-        outcome.wreckResult === WreckResult.VEHICULE_DETRUIT && (cmd.pendingFavoriDuPublic ?? false),
+        participant, outcome.vehicleId, cmd.pendingFavoriDuPublic ?? false,
       );
       if (bonusEvent) events.push(bonusEvent);
 

@@ -147,12 +147,16 @@ export interface RollIncomeResultDto {
 /**
  * Véhicule courant d'un participant, retourné par
  * GET /api/campaigns/:id/games/:gameId/participant-vehicles — alimente le
- * picker "véhicules ennemis détruits" du formulaire de résultat.
+ * picker "véhicules ennemis détruits" du formulaire de résultat, ainsi que la
+ * garde d'éligibilité de la case "Favori du public" de l'écran de désignation des
+ * épaves (`hasFavoriDuPublic` — le serveur revérifie toujours cette même valeur
+ * avant de créditer le bonus, cette case n'est qu'un gate d'affichage).
  */
 export interface ParticipantVehicleDto {
   vehicleId: number;
   nom: string;
   weightClass: WeightClass;
+  hasFavoriDuPublic: boolean;
 }
 
 export interface ParticipantVehiclesDto {

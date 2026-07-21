@@ -537,21 +537,33 @@ describe('Game — resolveWreck', () => {
 });
 
 describe('Game — creditFavoriDuPublicBonus', () => {
-  it('crédite +5 PC quand le véhicule vient d\'être détruit', () => {
-    const { vehicle } = makeTestParticipant();
+  it('crédite +5 PC quand le véhicule est éligible et le joueur le demande', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    vehicle.markFavoriDuPublic();
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
 
-    const bonus = game.creditFavoriDuPublicBonus(1, vehicle.id, true);
+    const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, true);
 
     expect(bonus).toBeInstanceOf(FavoriDuPublicBonusEvent);
     expect((bonus as FavoriDuPublicBonusEvent).championshipPoints).toBe(5);
   });
 
-  it('ne crédite rien si le véhicule n\'a pas été détruit — règle indépendante du tirage', () => {
-    const { vehicle } = makeTestParticipant();
+  it('ne crédite rien si le joueur ne le demande pas', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    vehicle.markFavoriDuPublic();
     const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
 
-    const bonus = game.creditFavoriDuPublicBonus(1, vehicle.id, false);
+    const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, false);
+
+    expect(bonus).toBeNull();
+  });
+
+  it('ne crédite rien si le véhicule n\'est pas réellement éligible, même si le joueur le demande', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    // hasFavoriDuPublic jamais marqué — le serveur ne fait pas confiance au seul booléen client.
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, true);
 
     expect(bonus).toBeNull();
   });

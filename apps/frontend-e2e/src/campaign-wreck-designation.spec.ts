@@ -14,7 +14,7 @@ import { createCampaign, addGame, completePreDesignationSteps, designateWreck, a
  * résultat quelconque est apparu.
  */
 test.describe('Campagnes — Désignation des épaves', () => {
-  test('"Mis en épave seul" + "Favori du public" en solo', async ({ page, browser }) => {
+  test('"Mis en épave seul" — case Favori du public absente pour un véhicule jamais éligible', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Epave',
@@ -39,15 +39,16 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
     await completePreDesignationSteps(page, [teamName, joineeTeamName]);
 
-    // ── Désignation — "Mis en épave seul" + Favori du public ────────────────
+    // ── Désignation — "Mis en épave seul" ───────────────────────────────────
     const vehicleItem = page.locator('.wds__item').filter({ hasText: 'Camion à glaces' });
     await expect(vehicleItem).toBeVisible();
     await designateWreck(page, 'Camion à glaces', 'alone');
 
+    // Ce véhicule n'a jamais obtenu le tirage FAVORI_DU_PUBLIC de la Table des Épaves
+    // — la case ne doit donc jamais apparaître, même en épave (revérification serveur
+    // via `ParticipantVehicleDto.hasFavoriDuPublic`, cf. docs/spec/CAMPAIGN.md).
     const favoriCheckbox = vehicleItem.locator('.wds__favori-checkbox');
-    await expect(favoriCheckbox).toBeVisible();
-    await expect(favoriCheckbox).toContainText('Favori du public (partie précédente)');
-    await favoriCheckbox.locator('input[type="checkbox"]').check();
+    await expect(favoriCheckbox).toHaveCount(0);
 
     const recordResultResponse = page.waitForResponse(
       (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/games\/\d+\/results$/.test(r.url()),
@@ -69,7 +70,7 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await joineeContext.close();
   });
 
-  test('"Détruit par…" désigne un AUTRE participant, jamais soi-même', async ({ page, browser }) => {
+  test('"Mis en épave par…" désigne un AUTRE participant, jamais soi-même', async ({ page, browser }) => {
     await registerTestUser(page, {
       firstName: 'Furiosa',
       lastName: 'Epave',
@@ -99,9 +100,9 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
     await completePreDesignationSteps(page, [organizerTeam, joineeTeam]);
 
-    // ── Le véhicule de l'organisateur est "Détruit par…" l'autre ────────────
+    // ── Le véhicule de l'organisateur est "Mis en épave par…" l'autre ───────
     const vehicleItem = page.locator('.wds__item').filter({ hasText: 'Camion à glaces' });
-    await vehicleItem.locator('label').filter({ hasText: 'Détruit par…' }).locator('input[type="radio"]').check();
+    await vehicleItem.locator('label').filter({ hasText: 'Mis en épave par…' }).locator('input[type="radio"]').check();
 
     const destroyerSelect = vehicleItem.locator('select.wds__destroyer-select');
     await expect(destroyerSelect.locator('option', { hasText: joineeTeam })).toHaveCount(1);

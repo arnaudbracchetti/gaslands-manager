@@ -43,6 +43,7 @@ export class GetParticipantVehiclesUseCase {
             vehicleId: v.id,
             nom: v.nom,
             weightClass: weightClassFromPoids(v.type.poids),
+            hasFavoriDuPublic: v.hasFavoriDuPublic,
           }));
         return { participantId, vehicles };
       });

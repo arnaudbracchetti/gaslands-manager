@@ -95,7 +95,7 @@ export async function completePreDesignationSteps(page: Page, teamNames: string[
 /**
  * Sélectionne le statut d'un véhicule à l'écran Désignation des épaves du
  * wizard — `li.wds__item` scopé par nom de véhicule. Les 3 statuts radio sont
- * "Intact"/"Détruit par…"/"Mis en épave seul" (le "…" est l'ellipse Unicode
+ * "Intact"/"Mis en épave par…"/"Mis en épave seul" (le "…" est l'ellipse Unicode
  * U+2026, pas trois points). Si `status: 'destroyed'`, `destroyerTeamName`
  * sélectionne le destructeur dans `select.wds__destroyer-select` (liste les
  * AUTRES participants présents, jamais le propriétaire du véhicule).
@@ -107,7 +107,7 @@ export async function designateWreck(
   options?: { destroyerTeamName?: string; favoriDuPublic?: boolean },
 ): Promise<void> {
   const item = page.locator('.wds__item').filter({ hasText: vehicleName });
-  const radioLabel = status === 'destroyed' ? 'Détruit par…' : 'Mis en épave seul';
+  const radioLabel = status === 'destroyed' ? 'Mis en épave par…' : 'Mis en épave seul';
   await item.locator('label').filter({ hasText: radioLabel }).locator('input[type="radio"]').check();
 
   if (options?.destroyerTeamName) {

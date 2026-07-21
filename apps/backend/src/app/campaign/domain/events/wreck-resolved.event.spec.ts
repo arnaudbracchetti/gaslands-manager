@@ -28,6 +28,28 @@ describe('WreckResolvedEvent — execute / undo', () => {
     expect(vehicle.chocs).toBe(before);
   });
 
+  it('execute avec wreckResult=FAVORI_DU_PUBLIC marque le véhicule', () => {
+    const { participant, participants, vehicle } = makeTestParticipant();
+    const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 9, 0, WreckResult.FAVORI_DU_PUBLIC, 3);
+    event.execute(participants);
+    expect(vehicle.hasFavoriDuPublic).toBe(true);
+  });
+
+  it('execute avec un autre résultat ne touche pas hasFavoriDuPublic', () => {
+    const { participant, participants, vehicle } = makeTestParticipant();
+    const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 3, 0, WreckResult.ROUE_CABOSSEE, 1);
+    event.execute(participants);
+    expect(vehicle.hasFavoriDuPublic).toBe(false);
+  });
+
+  it('undo annule le statut Favori du Public posé par ce tirage', () => {
+    const { participant, participants, vehicle } = makeTestParticipant();
+    const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 9, 0, WreckResult.FAVORI_DU_PUBLIC, 3);
+    event.execute(participants);
+    event.undo(participants);
+    expect(vehicle.hasFavoriDuPublic).toBe(false);
+  });
+
   it('describe() résume le véhicule, la ligne, le tirage et les chocs gagnés', () => {
     const { participant, participants, vehicle } = makeTestParticipant();
     const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 4, 0, WreckResult.ROUE_CABOSSEE, 1);

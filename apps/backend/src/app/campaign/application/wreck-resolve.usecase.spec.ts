@@ -138,15 +138,39 @@ describe('WreckResolveUseCase', () => {
     expect(result.descriptions[1]).toBe('Véhicule détruit : Voiture');
   });
 
-  it('VEHICULE_DETRUIT avec favori du public en attente : trois descriptions (+ FavoriDuPublicBonus)', async () => {
+  it('VEHICULE_DETRUIT avec véhicule éligible et favori du public demandé : trois descriptions (+ FavoriDuPublicBonus)', async () => {
     // diceRoll=6, vehicle.addChocs(4) → modifiedRoll=10 → VEHICULE_DETRUIT
     const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
+    vehicle.markFavoriDuPublic(); // éligibilité acquise lors d'un tirage antérieur
     vehicle.addChocs(4);
     const result = await useCase.execute({
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1, pendingFavoriDuPublic: true,
     });
     expect(result.descriptions).toHaveLength(3);
     expect(result.descriptions[2]).toContain('Bonus Favori du public');
+  });
+
+  it('DEBOSSELE avec véhicule éligible et favori du public demandé : le bonus est crédité malgré un résultat qui n\'est pas VEHICULE_DETRUIT', async () => {
+    // diceRoll=1, modifiedRoll=1 → DEBOSSELE — le bonus ne dépend PAS du résultat du
+    // tirage de cette partie : seules la mise en épave (ce endpoint est appelé pour ce
+    // véhicule) et l'éligibilité comptent.
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(1), catalog));
+    vehicle.markFavoriDuPublic();
+    const result = await useCase.execute({
+      campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1, pendingFavoriDuPublic: true,
+    });
+    expect(result.descriptions).toHaveLength(2);
+    expect(result.descriptions[1]).toContain('Bonus Favori du public');
+  });
+
+  it('VEHICULE_DETRUIT avec favori du public demandé mais véhicule non éligible : pas de bonus (revérification serveur)', async () => {
+    // diceRoll=6, vehicle.addChocs(4) → modifiedRoll=10 → VEHICULE_DETRUIT — hasFavoriDuPublic jamais marqué
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
+    vehicle.addChocs(4);
+    const result = await useCase.execute({
+      campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1, pendingFavoriDuPublic: true,
+    });
+    expect(result.descriptions).toHaveLength(2);
   });
 
   it('persiste tous les événements créés via appendEvents', async () => {

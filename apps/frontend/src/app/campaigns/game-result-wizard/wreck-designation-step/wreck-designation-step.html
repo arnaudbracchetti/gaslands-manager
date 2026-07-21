@@ -4,7 +4,8 @@
     Pour chaque véhicule, indiquez s'il a été mis en épave — par un adversaire ou seul
     (foncé dans un mur).
     @if (showFavoriDuPublic()) {
-      Cochez « Favori du public » s'il porte déjà ce bonus en attente d'une partie précédente.
+      Une case « Favori du public » apparaît automatiquement pour tout véhicule qui
+      porte déjà ce statut d'une partie précédente.
     }
   </p>
 
@@ -41,7 +42,7 @@
               (change)="setStatus(row.vehicle.vehicleId, 'destroyed')"
               [disabled]="saving()"
             />
-            Détruit par…
+            Mis en épave par…
           </label>
           <label>
             <input
@@ -69,7 +70,7 @@
           </select>
         }
 
-        @if (state.status !== 'intact' && showFavoriDuPublic()) {
+        @if (state.status !== 'intact' && showFavoriDuPublic() && row.vehicle.hasFavoriDuPublic) {
           <label class="wds__favori-checkbox">
             <input
               type="checkbox"
@@ -77,7 +78,7 @@
               (change)="togglePendingFavoriDuPublic(row.vehicle.vehicleId)"
               [disabled]="saving()"
             />
-            <app-icon concept="favori_public" size="sm" /> Favori du public (partie précédente)
+            <app-icon concept="favori_public" size="sm" /> Favori du public — dépenser 3 votes du public (+5 PC)
           </label>
         }
       </li>

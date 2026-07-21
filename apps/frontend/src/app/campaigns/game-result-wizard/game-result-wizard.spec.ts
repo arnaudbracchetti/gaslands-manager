@@ -39,8 +39,8 @@ const mockEscarmouche: Game = {
 };
 
 const mockVehicles = new Map([
-  [1, [{ vehicleId: 100, nom: 'Voiture Alpha', weightClass: 'MOYEN' as const }]],
-  [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+  [1, [{ vehicleId: 100, nom: 'Voiture Alpha', weightClass: 'MOYEN' as const, hasFavoriDuPublic: false }]],
+  [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const, hasFavoriDuPublic: false }]],
 ]);
 
 describe('GameResultWizard — Événement Télévisé', () => {
@@ -157,7 +157,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
 
   it('vehicleLabels compose correctement un nom déjà formaté par le backend ("Nom (Type)")', () => {
     fixture.componentRef.setInput('participantVehicles', new Map([
-      [1, [{ vehicleId: 100, nom: 'La Teigne (Voiture)', weightClass: 'MOYEN' as const }]],
+      [1, [{ vehicleId: 100, nom: 'La Teigne (Voiture)', weightClass: 'MOYEN' as const, hasFavoriDuPublic: false }]],
     ]));
     fixture.detectChanges();
 

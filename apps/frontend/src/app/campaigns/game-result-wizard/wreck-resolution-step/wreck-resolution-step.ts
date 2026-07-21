@@ -123,8 +123,8 @@ export class WreckResolutionStep {
       case 'CHASSIS_FRAGILISE':
         return '+1 Jeton Danger si ce véhicule est impliqué dans une Collision.';
       case 'FAVORI_DU_PUBLIC':
-        return 'Cochez « Favori du public » à la prochaine désignation de ce véhicule '
-          + 'si le tirage suivant le détruit — +5 PC seront alors crédités.';
+        return 'Statut accordé — si ce véhicule est mis en épave lors d\'une prochaine partie, la '
+          + 'case à cocher proposera automatiquement le bonus (+5 PC contre 3 votes du public).';
       default:
         return null;
     }

@@ -82,6 +82,13 @@ describe('WreckResolutionStep', () => {
     expect(component.reminderFor('INDEMNE')).toBeNull();
   });
 
+  it('reminderFor pour FAVORI_DU_PUBLIC décrit le déclenchement automatique de la case (plus une simple attestation manuelle)', () => {
+    const reminder = component.reminderFor('FAVORI_DU_PUBLIC');
+    expect(reminder).not.toBeNull();
+    expect(reminder).toContain('automatiquement');
+    expect(reminder).toContain('3 votes du public');
+  });
+
   it('formCancel émet void au clic Annuler', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.formCancel).subscribe(() => emitted.push(true));

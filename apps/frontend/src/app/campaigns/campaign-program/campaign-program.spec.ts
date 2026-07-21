@@ -67,7 +67,7 @@ describe('CampaignProgram Component', () => {
       resetResult: vi.fn().mockReturnValue(of(undefined)),
       rollIncome: vi.fn().mockReturnValue(of({ amount: 4, descriptions: ['+4 jerricans (Récompense)'] })),
       getParticipantVehicles: vi.fn().mockReturnValue(of([
-        { participantId: 1, vehicles: [{ vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' }] },
+        { participantId: 1, vehicles: [{ vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN', hasFavoriDuPublic: false }] },
       ])),
       resolveWreck: vi.fn().mockReturnValue(of({
         outcome: { vehicleId: 100, diceRoll: 3, chocsBefore: 0, wreckResult: 'INDEMNE', chocsGained: 0, lostEquipment: null },
@@ -266,7 +266,7 @@ describe('CampaignProgram Component', () => {
 
     expect(mockService.getParticipantVehicles).toHaveBeenCalledWith(1, 10, [1]);
     expect(component.participantVehicles().get(1)).toEqual([
-      { vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN' },
+      { vehicleId: 100, nom: 'Voiture', weightClass: 'MOYEN', hasFavoriDuPublic: false },
     ]);
   });
 

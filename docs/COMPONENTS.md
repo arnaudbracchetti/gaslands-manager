@@ -1160,7 +1160,7 @@ Résolution) — les deux se cumulent.
 
 ### `WreckDesignationStep` — `campaigns/game-result-wizard/wreck-designation-step/`
 
-Écran Désignation des épaves : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul). Le picker destructeur reste actif pour les deux types de partie ; la case "Favori du public" (bonus PC, ET uniquement) est masquée pour une Escarmouche via `showFavoriDuPublic`. C'est ici que se fait la saisie "véhicules ennemis détruits" (US-B2, tout type de partie — 0 PC pour une Escarmouche, tracé au journal uniquement).
+Écran Désignation des épaves : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul). Le picker destructeur reste actif pour les deux types de partie ; une case "Favori du public" (bonus PC) n'apparaît que pour un véhicule qui porte réellement ce statut (`ParticipantVehicleDto.hasFavoriDuPublic`, dérivé côté serveur d'un tirage antérieur de la Table des Épaves — jamais une simple déclaration libre), et uniquement pour un Événement Télévisé, masquée pour une Escarmouche via `showFavoriDuPublic` — cf. [spec/CAMPAIGN.md — Faveur du Public](spec/CAMPAIGN.md#faveur-du-public). C'est ici que se fait la saisie "véhicules ennemis détruits" (US-B2, tout type de partie — 0 PC pour une Escarmouche, tracé au journal uniquement).
 
 | | |
 |---|---|
@@ -1173,7 +1173,7 @@ Résolution) — les deux se cumulent.
 |-----|------|--------|-------------|
 | `presentParticipants` | `CampaignParticipant[]` | — | Participants retenus à l'écran Présence |
 | `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant présent |
-| `showFavoriDuPublic` | `boolean` | `true` | Affiche la case "Favori du public" (bonus PC, Événement Télévisé uniquement) — masquée pour une Escarmouche |
+| `showFavoriDuPublic` | `boolean` | `true` | Autorise la case "Favori du public" (bonus PC, Événement Télévisé uniquement) — masquée pour une Escarmouche. Ne suffit pas seul à l'afficher : le véhicule doit aussi être réellement éligible (`vehicle.hasFavoriDuPublic`) |
 | `saving` | `boolean` | `false` | Désactive les boutons pendant `recordResult()` |
 
 **Outputs**

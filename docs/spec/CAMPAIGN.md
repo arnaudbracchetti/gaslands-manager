@@ -186,13 +186,15 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    de scénario (ex. pillage de convoi), indépendant du revenu de base D6 de
    l'écran 6 (Escarmouche) — les deux se cumulent.
 5. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
-   des équipes présentes : *Intact* / *Détruit par [participant]* / *Mis en
+   des équipes présentes : *Intact* / *Mis en épave par [participant]* / *Mis en
    épave seul*. Le picker destructeur reste actif pour les deux types de
-   partie ; la case "Favori du public" (bonus PC, ET uniquement) est masquée
-   pour une Escarmouche (`showFavoriDuPublic` input). Cet écran soumet le lot
-   accumulé (`POST .../results`) — les événements de classement/exploits/
-   résistance (ET) ou de jerricans/destructions à 0 PC (Escarmouche) sont
-   journalisés à cette étape, **mais la partie reste `PLANIFIE`** — voir
+   partie ; une case "Favori du public" apparaît uniquement pour un véhicule
+   qui porte réellement ce statut ET pour un Événement Télévisé
+   (`showFavoriDuPublic` input, toujours masquée en Escarmouche) — cf.
+   §Faveur du Public ci-dessous pour le détail de la règle. Cet écran soumet
+   le lot accumulé (`POST .../results`) — les événements de classement/
+   exploits/résistance (ET) ou de jerricans/destructions à 0 PC (Escarmouche)
+   sont journalisés à cette étape, **mais la partie reste `PLANIFIE`** — voir
    ci-dessous.
 6. **Résolution** (`WreckResolutionStep`) — **synthèse automatique**, sans
    aucun bouton ni sélecteur : dès l'arrivée sur cet écran, un `effect()`
@@ -201,10 +203,9 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    .../events/income`), puis la **Table des Épaves** (tout type de partie,
    `POST .../events/wreck`, un par véhicule désigné à l'écran précédent).
    Chaque résultat s'affiche dès qu'il est reçu, plus la ligne "Détruit par
-   [participant]" si applicable (donnée capturée à l'écran 5). Si un véhicule
-   est confirmé "Favori du public" et que le tirage donne `VEHICULE_DETRUIT`,
-   +5 PC sont crédités à son propriétaire (`FavoriDuPublicBonusEvent`, ET
-   uniquement — la case n'existe pas côté Escarmouche). Le bouton "Terminer"
+   [participant]" si applicable (donnée capturée à l'écran 5). Le bonus
+   Favori du Public (+5 PC, cf. §Faveur du Public) est crédité à cette étape
+   si applicable. Le bouton "Terminer"
    (actif une fois tous les tirages reçus) appelle `POST .../enter-atelier` —
    **c'est à ce moment, et seulement à ce moment, que la partie passe
    `PLANIFIE → ATELIER`**, ouvrant la phase garage post-partie *sur cette
@@ -581,6 +582,49 @@ consommation :
 Les deux se composent sans se connaître (chaque tirage élémentaire vérifie
 Légende Vivante indépendamment) : un véhicule qui porte les deux séquelles
 obtient deux résultats "1", chacun avec son propre total de Chocs.
+
+---
+
+## Faveur du Public
+
+Ligne 9 de la Table des Épaves (Événement Télévisé et Escarmouche) : un
+véhicule qui obtient le résultat `FAVORI_DU_PUBLIC` acquiert ce statut,
+suivi par l'application (`Vehicle.hasFavoriDuPublic`, jamais persisté en
+colonne — reconstruit à chaque replay comme `isLost`/`isSold`) plutôt
+qu'attesté sur l'honneur par l'organisateur. Le statut reste actif tant
+qu'il n'a pas été dépensé, y compris d'une partie à l'autre de la même
+campagne.
+
+**Déclenchement** : à l'écran Désignation des épaves (`WreckDesignationStep`)
+d'une partie ultérieure, une case "Favori du public" apparaît **uniquement**
+pour un véhicule qui (a) est désigné *Mis en épave par [participant]* ou
+*Mis en épave seul* à cet écran (jamais *Intact*) ET (b) porte réellement ce
+statut — jamais pour les autres véhicules, contrairement au comportement
+précédent (case libre sur tout véhicule non-intact). Cocher cette case
+déclare que le joueur choisit de dépenser **3 votes du public** pour
+l'activer — une ressource utilisée en cours de partie physique, **non
+trackée par l'application** (déclaration sur l'honneur, comme le reste de la
+mécanique "votes du public" tant que "Lancement de partie" n'est pas
+implémenté, cf. Limitations connues ci-dessous).
+
+**Résolution** : dès lors que la case a été cochée et que le véhicule est
+réellement éligible, +5 PC sont crédités au propriétaire
+(`FavoriDuPublicBonusEvent`) et le statut est consommé sur ce véhicule —
+**indépendamment du résultat du tirage de la Table des Épaves de cette
+partie** (que ce tirage donne `VEHICULE_DETRUIT`, un simple `DEBOSSELE` ou
+n'importe quelle autre ligne, le bonus est crédité de la même façon : seule
+la mise en épave déclarée à l'écran précédent compte, pas l'issue du dé). Si
+la case n'est pas cochée, aucun événement n'est généré et le statut reste
+actif pour une prochaine fois. Réservé à l'Événement Télévisé (la case
+n'existe pas côté Escarmouche, `showFavoriDuPublic` toujours faux).
+
+**Revérification serveur** : le booléen envoyé par le client n'est jamais la
+seule source de vérité — `Game.creditFavoriDuPublicBonus` relit
+`Vehicle.hasFavoriDuPublic` avant de créditer quoi que ce soit, même principe
+que `weightClass` (toujours re-dérivé côté serveur, jamais accepté tel quel
+d'un appelant). Les "votes du public" eux-mêmes restent hors de ce contrôle
+— seule l'éligibilité réelle (le statut Favori du Public) est vérifiée,
+jamais le solde de votes.
 
 ---
 

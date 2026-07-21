@@ -9,8 +9,8 @@ const mockParticipants = [
 ];
 
 const mockVehicles = new Map([
-  [1, [{ vehicleId: 100, nom: 'Voiture Alpha', weightClass: 'MOYEN' as const }]],
-  [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const }]],
+  [1, [{ vehicleId: 100, nom: 'Voiture Alpha', weightClass: 'MOYEN' as const, hasFavoriDuPublic: true }]],
+  [2, [{ vehicleId: 200, nom: 'Buggy Beta', weightClass: 'LEGER' as const, hasFavoriDuPublic: false }]],
 ]);
 
 describe('WreckDesignationStep', () => {
@@ -130,6 +130,18 @@ describe('WreckDesignationStep', () => {
   it('masque la case Favori du public quand showFavoriDuPublic est faux (Escarmouche)', () => {
     fixture.componentRef.setInput('showFavoriDuPublic', false);
     component.setStatus(100, 'alone');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.wds__favori-checkbox')).toBeNull();
+  });
+
+  it('masque la case si le véhicule n\'est pas éligible, même en épave et showFavoriDuPublic=true', () => {
+    component.setStatus(200, 'alone'); // hasFavoriDuPublic: false dans la fixture
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.wds__favori-checkbox')).toBeNull();
+  });
+
+  it('n\'affiche pas la case tant que le véhicule reste Intact, même éligible', () => {
+    // véhicule 100 : hasFavoriDuPublic true dans la fixture, mais jamais désigné épave/détruit
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.wds__favori-checkbox')).toBeNull();
   });

@@ -2,8 +2,10 @@
  * Composant WreckDesignationStep — écran 2 du wizard de fin de partie : pour
  * chaque véhicule des équipes présentes, désigner s'il a été mis en épave — par
  * un destructeur (véhicules ennemis détruits, exploit US-B2) ou seul (aucun
- * destructeur, foncé dans un mur) — et si un bonus "Favori du public" est en
- * attente d'une partie précédente.
+ * destructeur, foncé dans un mur) — et, s'il porte réellement le statut Favori du
+ * Public (`ParticipantVehicleDto.hasFavoriDuPublic`, dérivé côté serveur d'un tirage
+ * antérieur de la Table des Épaves — jamais une simple déclaration libre), si le
+ * joueur choisit de dépenser 3 votes du public pour le déclencher.
  *
  * Composant "dumb" : ne fait aucun appel HTTP. Produit un `WreckDesignationResult`
  * qui sépare deux usages distincts de la même désignation :

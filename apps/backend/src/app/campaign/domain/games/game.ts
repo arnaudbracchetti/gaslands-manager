@@ -227,16 +227,29 @@ export abstract class Game {
   }
 
   /**
-   * Règle indépendante du tirage de la Table des Épaves : crédite +5 PC au
-   * propriétaire d'un véhicule attesté "Favori du public" (par l'organisateur, lors
-   * d'une partie précédente) lorsque ce véhicule vient d'être détruit.
-   * `vehicleWasDestroyed` est un fait déjà établi par l'appelant (résultat de
-   * `resolveWreck` ci-dessus) — cette méthode ne réinterprète pas la table, elle
-   * applique une règle séparée sur ce fait.
+   * Règle indépendante du résultat du tirage de la Table des Épaves : crédite +5 PC au
+   * propriétaire d'un véhicule qui porte réellement le statut Favori du Public
+   * (`Vehicle.hasFavoriDuPublic`, octroyé par un tirage FAVORI_DU_PUBLIC lors d'une
+   * partie précédente — cf. `WreckResolvedEvent`) dès lors que ce véhicule est mis en
+   * épave (désigné non-intact) lors de la partie courante ET que le joueur a déclaré
+   * vouloir dépenser 3 votes du public pour déclencher le bonus. Le résultat du tirage
+   * D6 de cette partie (survit, perd de l'équipement, détruit…) n'a AUCUNE incidence sur
+   * ce bonus — seul le fait d'avoir été désigné épave (ce qui déclenche l'appel à
+   * `POST .../events/wreck`, donc à cette méthode) compte. `pendingFavoriDuPublic` est un
+   * fait brut déjà établi par l'appelant (choix du joueur) — cette méthode revérifie
+   * l'éligibilité réelle côté serveur plutôt que de faire confiance au seul booléen
+   * transmis par le client (même principe que `weightClass`, toujours re-dérivé côté
+   * serveur).
    */
-  creditFavoriDuPublicBonus(participantId: number, vehicleId: number, vehicleWasDestroyed: boolean): GameEvent | null {
-    if (!vehicleWasDestroyed) return null;
-    const bonusEvent = new FavoriDuPublicBonusEvent(0, this.id, participantId, 0, vehicleId, FAVORI_DU_PUBLIC_BONUS_POINTS);
+  creditFavoriDuPublicBonus(
+    participant: CampaignParticipant,
+    vehicleId: number,
+    pendingFavoriDuPublic: boolean,
+  ): GameEvent | null {
+    if (!pendingFavoriDuPublic) return null;
+    if (!participant.team.findVehicle(vehicleId).hasFavoriDuPublic) return null;
+
+    const bonusEvent = new FavoriDuPublicBonusEvent(0, this.id, participant.id, 0, vehicleId, FAVORI_DU_PUBLIC_BONUS_POINTS);
     this.addEvent(bonusEvent);
     return bonusEvent;
   }

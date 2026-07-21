@@ -31,7 +31,8 @@ export class Vehicle {
   
   private _isLost = false;
   private _isSold = false;
-  
+  private _hasFavoriDuPublic = false;
+
   /**
    * Ids des armes/améliorations/avantages marqués vendus PAR la revente de CE
    * véhicule (cascade de `markSold()`) — distincts de ceux déjà vendus
@@ -128,6 +129,16 @@ export class Vehicle {
 
   get isSold(): boolean {
     return this._isSold;
+  }
+
+  /**
+   * Statut "Favori du Public" (Table des Épaves, ligne FAVORI_DU_PUBLIC) : octroyé par
+   * `WreckResolvedEvent`, consommé par `FavoriDuPublicBonusEvent` quand le joueur choisit
+   * de dépenser 3 votes du public pour le déclencher à la destruction de ce véhicule.
+   * Cf. `docs/spec/CAMPAIGN.md#faveur-du-public`.
+   */
+  get hasFavoriDuPublic(): boolean {
+    return this._hasFavoriDuPublic;
   }
 
   // ── Calculs ──────────────────────────────────────────────────────────────────
@@ -540,6 +551,15 @@ export class Vehicle {
     this._isLost = false;
   }
 
+  /** Idempotent, comme markLost() — un véhicule déjà Favori du Public le reste (pas de cumul). */
+  markFavoriDuPublic(): void {
+    this._hasFavoriDuPublic = true;
+  }
+
+  clearFavoriDuPublic(): void {
+    this._hasFavoriDuPublic = false;
+  }
+
   /**
    * Marque ce véhicule "vendu" (flag isSold, châssis à prix résiduel `ceil(prix/2)`,
    * cf. `cost`) plutôt que de le retirer de l'équipe — revente d'un véhicule
@@ -662,7 +682,8 @@ export class Vehicle {
 
   /**
    * Remet tous les états transients de campagne à zéro (isLost, isSold, chocs,
-   * séquelles). Appelé par Team.resetCampaignState() au début de chaque replay.
+   * séquelles, Favori du Public). Appelé par Team.resetCampaignState() au début de
+   * chaque replay.
    */
   clearCampaignState(): void {
     this._isLost = false;
@@ -672,6 +693,7 @@ export class Vehicle {
     this._cascadeSoldAdvantageIds = [];
     this._chocs = 0;
     this._sequellas.length = 0;
+    this._hasFavoriDuPublic = false;
   }
 
   /**

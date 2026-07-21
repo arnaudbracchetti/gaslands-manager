@@ -97,6 +97,43 @@ describe('Vehicle — champs transients de campagne', () => {
     });
   });
 
+  describe('markFavoriDuPublic / clearFavoriDuPublic', () => {
+    it('hasFavoriDuPublic est false par défaut', () => {
+      expect(makeVehicle().hasFavoriDuPublic).toBe(false);
+    });
+
+    it('markFavoriDuPublic est idempotent', () => {
+      const v = makeVehicle();
+      v.markFavoriDuPublic();
+      v.markFavoriDuPublic();
+      expect(v.hasFavoriDuPublic).toBe(true);
+    });
+
+    it('clearFavoriDuPublic remet le véhicule à l\'état sans bonus', () => {
+      const v = makeVehicle();
+      v.markFavoriDuPublic();
+      v.clearFavoriDuPublic();
+      expect(v.hasFavoriDuPublic).toBe(false);
+    });
+  });
+
+  describe('clearCampaignState', () => {
+    it('remet tous les états transients de campagne à leur valeur par défaut', () => {
+      const v = makeVehicle();
+      v.markLost();
+      v.markSold();
+      v.addChocs(3);
+      v.markFavoriDuPublic();
+
+      v.clearCampaignState();
+
+      expect(v.isLost).toBe(false);
+      expect(v.isSold).toBe(false);
+      expect(v.chocs).toBe(0);
+      expect(v.hasFavoriDuPublic).toBe(false);
+    });
+  });
+
   describe('canAddWeapon — garde _isLost', () => {
     it('retourne fail si le véhicule est perdu', () => {
       const v = makeVehicle();

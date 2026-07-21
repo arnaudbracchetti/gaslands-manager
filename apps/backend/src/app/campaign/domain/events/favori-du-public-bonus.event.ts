@@ -4,14 +4,19 @@ import { GameEventType } from '../enums/game-event-type.enum';
 
 /**
  * Bonus différé "Favori du public" (Table des Épaves, ligne 9) : un véhicule ayant
- * déjà obtenu ce résultat lors d'une partie précédente crédite +5 PC à son propriétaire
- * la fois où il devient enfin `VEHICULE_DETRUIT`.
+ * déjà obtenu ce résultat lors d'une partie précédente (`Vehicle.hasFavoriDuPublic`,
+ * octroyé par `WreckResolvedEvent`) crédite +5 PC à son propriétaire la fois où il
+ * devient enfin `VEHICULE_DETRUIT` — à condition que le joueur choisisse de dépenser
+ * 3 votes du public pour le déclencher (déclaration sur l'honneur, non trackée par
+ * l'application).
  *
- * L'attestation ("ce véhicule porte déjà ce bonus en attente") est manuelle — saisie par
- * l'organisateur à l'écran de désignation des épaves — l'app ne mémorise aucun état entre
- * deux parties (cf. design du wizard de fin de partie). `vehicleId` est purement
- * informatif, comme pour `VehicleDestroyedEvent`. `championshipPoints` est figé au moment
- * de l'enregistrement (même raisonnement D-S8 que `RankingAssignedEvent`).
+ * Le statut est un état réel du véhicule (pas une simple attestation manuelle) :
+ * `Game.creditFavoriDuPublicBonus` revérifie `Vehicle.hasFavoriDuPublic` avant de
+ * construire cet événement, qui CONSOMME le statut en le retirant du véhicule à son
+ * exécution — un même octroi ne peut être dépensé qu'une fois. `vehicleId` est par
+ * ailleurs purement informatif, comme pour `VehicleDestroyedEvent`. `championshipPoints`
+ * est figé au moment de l'enregistrement (même raisonnement D-S8 que
+ * `RankingAssignedEvent`).
  */
 export class FavoriDuPublicBonusEvent extends GameEvent {
   readonly eventType = GameEventType.FAVORI_DU_PUBLIC_BONUS;
@@ -28,11 +33,15 @@ export class FavoriDuPublicBonusEvent extends GameEvent {
   }
 
   execute(participants: CampaignParticipant[]): void {
-    this.findParticipant(participants).addPoints(this.championshipPoints);
+    const p = this.findParticipant(participants);
+    p.team.findVehicle(this.vehicleId).clearFavoriDuPublic();
+    p.addPoints(this.championshipPoints);
   }
 
   undo(participants: CampaignParticipant[]): void {
-    this.findParticipant(participants).addPoints(-this.championshipPoints);
+    const p = this.findParticipant(participants);
+    p.team.findVehicle(this.vehicleId).markFavoriDuPublic();
+    p.addPoints(-this.championshipPoints);
   }
 
   describe(participants: readonly CampaignParticipant[]): string {

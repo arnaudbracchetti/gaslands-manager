@@ -61,6 +61,7 @@ classDiagram
         -_advantages : Advantage[]
         -_sequellas : Sequella[]
         -_isSold : boolean
+        -_hasFavoriDuPublic : boolean
         -_nom : string | null
         +weapons : readonly Weapon[]
         +improvements : readonly Improvement[]
@@ -68,6 +69,7 @@ classDiagram
         +cost : number
         +usedSlots : number
         +isSold : boolean
+        +hasFavoriDuPublic : boolean
         +customName : string | null
         +nom : string
         +baseStats : VehicleStats
@@ -85,6 +87,8 @@ classDiagram
         +removeAdvantage(advantageId) void
         +markSold() void
         +clearSold() void
+        +markFavoriDuPublic() void
+        +clearFavoriDuPublic() void
     }
 
     class Weapon {
@@ -790,13 +794,13 @@ d'événements confondus.
 | `WeaponLostEvent` | `weapon.markLost()` | `weapon.clearLost()` |
 | `ImprovementLostEvent` | `improvement.markLost()` (mirroir `WeaponLostEvent`) | `improvement.clearLost()` |
 | `AdvantageLostEvent` | `advantage.markLost()` (mirroir `WeaponLostEvent`/`ImprovementLostEvent`) | `advantage.clearLost()` |
-| `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) | `vehicle.addChocs(-n)` |
+| `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) ; `vehicle.markFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` | `vehicle.addChocs(-n)` ; `vehicle.clearFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` |
 | `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`) | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity` | Inverse de execute |
 | `EquipmentChangedEvent` (`entityType = SEQUELLE`) | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`) | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte |
 | `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
-| `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` — effet différé confirmé par attestation manuelle de l'organisateur (aucun état mémorisé automatiquement d'une partie à l'autre) | `addPoints(-5)` |
+| `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`) | `addPoints(-5)` + `vehicle.markFavoriDuPublic()` |
 | `VehicleRenamedEvent` | `vehicle.renameCampaignVehicle(newName)` (via `Team`, pas `assertNotLocked()` — cf. §1) | `vehicle.renameCampaignVehicle(previousName)` |
 
 ### Entités transientes (D-S11)

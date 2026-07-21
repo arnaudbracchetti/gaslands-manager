@@ -10,7 +10,10 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * Stocke le résultat brut du D6 + la ligne de table appliquée. Les effets concrets
  * (VehicleLostEvent, WeaponLostEvent, ImprovementLostEvent) sont créés séparément par
  * `WreckTable` (domain service) et persistés comme événements distincts. Celui-ci
- * n'applique que les Chocs.
+ * applique les Chocs et, pour la ligne FAVORI_DU_PUBLIC, octroie le statut Favori du
+ * Public au véhicule (`Vehicle.hasFavoriDuPublic`) — consommé plus tard par
+ * `FavoriDuPublicBonusEvent` si le joueur choisit de le déclencher à une destruction
+ * ultérieure de ce même véhicule.
  */
 export class WreckResolvedEvent extends GameEvent {
   readonly eventType = GameEventType.WRECK_RESOLVED;
@@ -31,12 +34,16 @@ export class WreckResolvedEvent extends GameEvent {
 
   execute(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    p.team.findVehicle(this.vehicleId).addChocs(this.chocsGained);
+    const vehicle = p.team.findVehicle(this.vehicleId);
+    vehicle.addChocs(this.chocsGained);
+    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC) vehicle.markFavoriDuPublic();
   }
 
   undo(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    p.team.findVehicle(this.vehicleId).addChocs(-this.chocsGained);
+    const vehicle = p.team.findVehicle(this.vehicleId);
+    vehicle.addChocs(-this.chocsGained);
+    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC) vehicle.clearFavoriDuPublic();
   }
 
   describe(participants: readonly CampaignParticipant[]): string {
