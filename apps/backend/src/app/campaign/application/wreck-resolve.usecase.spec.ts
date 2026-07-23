@@ -103,7 +103,7 @@ describe('WreckResolveUseCase', () => {
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toBe('Arme perdue sur le véhicule Voiture : Mitrailleuse');
+    expect(result.descriptions[1]).toBe('Arme perdue : Mitrailleuse sur le véhicule Voiture');
   });
 
   it('ARRACHEE avec une amélioration perdue : deux descriptions (WreckResolved + ImprovementLost)', async () => {
@@ -113,7 +113,7 @@ describe('WreckResolveUseCase', () => {
       campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
     });
     expect(result.descriptions).toHaveLength(2);
-    expect(result.descriptions[1]).toBe('Amélioration perdue sur le véhicule Voiture : Blindage');
+    expect(result.descriptions[1]).toBe('Amélioration perdue : Blindage sur le véhicule Voiture');
   });
 
   it('SIEGE_IRRECUPERABLE : deux descriptions (WreckResolved + EquipmentChangedEvent SEQUELLE)', async () => {

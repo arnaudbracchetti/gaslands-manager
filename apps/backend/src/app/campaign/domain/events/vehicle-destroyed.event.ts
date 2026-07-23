@@ -42,7 +42,7 @@ export class VehicleDestroyedEvent extends GameEvent {
     // Escarmouche (Game.recordDestroyedVehicleTraces) fige toujours 0 PC : la destruction
     // reste tracée dans le journal, sans afficher un gain de PC inexistant.
     const suffix = this.championshipPoints > 0 ? ` (+${this.championshipPoints} PC)` : '';
-    return `Véhicule ennemi détruit : ${label} — ${WEIGHT_CLASS_LABELS[this.weightClass]}${suffix}`;
+    return `Véhicule ennemi détruit : ${label} - ${WEIGHT_CLASS_LABELS[this.weightClass]}${suffix}`;
   }
 }
 

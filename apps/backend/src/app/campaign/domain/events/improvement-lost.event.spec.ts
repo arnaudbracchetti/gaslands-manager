@@ -30,6 +30,6 @@ describe('ImprovementLostEvent — execute / undo', () => {
   it('describe() décrit la perte de l\'amélioration, avec son nom et le véhicule hôte', () => {
     const { participant, participants, improvement } = makeTestParticipant();
     const event = new ImprovementLostEvent(1, 10, participant.id, 1, improvement.id);
-    expect(event.describe(participants)).toBe('Amélioration perdue sur le véhicule Voiture : Blindage');
+    expect(event.describe(participants)).toBe('Amélioration perdue : Blindage sur le véhicule Voiture');
   });
 });

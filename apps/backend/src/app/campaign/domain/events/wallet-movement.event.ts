@@ -31,7 +31,7 @@ export class WalletMovementEvent extends GameEvent {
 
   describe(): string {
     const sign = this.amount >= 0 ? '+' : '';
-    return `${sign}${this.amount} jerricans (${WALLET_REASON_LABELS[this.reason]})`;
+    return `Budget : ${sign}${this.amount} jerricans (${WALLET_REASON_LABELS[this.reason]})`;
   }
 }
 

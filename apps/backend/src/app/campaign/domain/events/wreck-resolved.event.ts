@@ -52,7 +52,7 @@ export class WreckResolvedEvent extends GameEvent {
       : '';
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
     const vehicleName = found?.vehicle.nom ?? '';
-    return `Table des Épaves${vehicleName ? ` (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} `
+    return `Tirage sur la table des Épaves${vehicleName ? ` pour (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} `
       + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${chocs})`;
   }
 }

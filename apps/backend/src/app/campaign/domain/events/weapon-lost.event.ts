@@ -36,7 +36,7 @@ export class WeaponLostEvent extends GameEvent {
       const nom = p.team.findWeapon(this.weaponId).type.nom;
       const vehicle = p.team.vehicles.find((v) => v.weapons.some((w) => w.id === this.weaponId));
       const vehicleLabel = vehicle ? ` sur le véhicule ${vehicle.type.nom}` : '';
-      return `Arme perdue${vehicleLabel} : ${nom}`;
+      return `Arme perdue : ${nom}${vehicleLabel}`;
     } catch {
       return `Arme perdue : #${this.weaponId}`;
     }

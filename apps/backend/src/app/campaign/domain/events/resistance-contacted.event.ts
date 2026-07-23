@@ -29,6 +29,6 @@ export class ResistanceContactedEvent extends GameEvent {
   }
 
   describe(): string {
-    return `Contact avec la Résistance (+${ResistanceContactedEvent.PR_BONUS} PR, secret)`;
+    return `Contact avec la Résistance (+${ResistanceContactedEvent.PR_BONUS} PR)`;
   }
 }

@@ -36,6 +36,6 @@ describe('RankingAssignedEvent — execute / undo', () => {
 
   it('describe() résume le classement et les PC', () => {
     const event = new RankingAssignedEvent(1, 10, 1, 1, 2, 5);
-    expect(event.describe()).toBe('Classé 2 (+5 PC)');
+    expect(event.describe()).toBe('Classement : véhicule classé 2 (+5 PC)');
   });
 });

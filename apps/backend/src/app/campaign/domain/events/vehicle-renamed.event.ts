@@ -52,7 +52,6 @@ export class VehicleRenamedEvent extends GameEvent {
   }
 
   describe(participants: readonly CampaignParticipant[]): string {
-    const typeNom = this.findVehicleWithTeam(participants, this.vehicleId)?.vehicle.type.nom;
-    return `Renommage${typeNom ? ` (${typeNom})` : ''} : "${this.previousName}" → "${this.newName}"`;
+    return `Renommage de véhicule : "${this.previousName}" → "${this.newName}"`;
   }
 }

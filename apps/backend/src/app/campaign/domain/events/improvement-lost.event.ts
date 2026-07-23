@@ -37,7 +37,7 @@ export class ImprovementLostEvent extends GameEvent {
       const nom = p.team.findImprovement(this.improvementId).type.nom;
       const vehicle = p.team.vehicles.find((v) => v.improvements.some((i) => i.id === this.improvementId));
       const vehicleLabel = vehicle ? ` sur le véhicule ${vehicle.type.nom}` : '';
-      return `Amélioration perdue${vehicleLabel} : ${nom}`;
+      return `Amélioration perdue : ${nom}${vehicleLabel}`;
     } catch {
       return `Amélioration perdue : #${this.improvementId}`;
     }

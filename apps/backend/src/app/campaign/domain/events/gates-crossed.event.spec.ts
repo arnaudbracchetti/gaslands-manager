@@ -35,6 +35,6 @@ describe('GatesCrossedEvent — execute / undo', () => {
 
   it('describe() résume les portes franchies et les PC', () => {
     const event = new GatesCrossedEvent(1, 10, 1, 1, 3, 3);
-    expect(event.describe()).toBe('3 porte(s) franchie(s) (+3 PC)');
+    expect(event.describe()).toBe('Porte(s) franchie(s) : 3 porte(s) (+3 PC)');
   });
 });

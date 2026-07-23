@@ -243,8 +243,9 @@ déjà été écrit".
 
 **Description textuelle des événements** : chaque `GameEvent` expose une
 méthode `describe(): string` (une ligne de texte en français résumant
-l'événement — ex. `"Classé 1 (+10 PC)"`, `"Table des Épaves : Arrachée
-(D6=5+0 chocs, +1 choc(s))"`, `"+4 jerricans (Récompense)"`). `POST
+l'événement — ex. `"Classement : véhicule classé 1 (+10 PC)"`, `"Tirage sur la
+table des Épaves pour (Voiture) : Arrachée (D6=5+0 chocs, +1 choc(s))"`,
+`"Budget : +4 jerricans (Récompense)"`). `POST
 .../events/wreck` et `POST .../events/income` renvoient ces lignes
 (`descriptions: string[]`, une par événement généré) et `WreckResolutionStep`
 les affiche telles quelles sous chaque entrée (véhicule ou participant).

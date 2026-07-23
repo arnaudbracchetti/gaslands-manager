@@ -31,6 +31,6 @@ export class RankingAssignedEvent extends GameEvent {
   }
 
   describe(): string {
-    return `Classé ${this.rank} (+${this.championshipPoints} PC)`;
+    return `Classement : véhicule classé ${this.rank} (+${this.championshipPoints} PC)`;
   }
 }

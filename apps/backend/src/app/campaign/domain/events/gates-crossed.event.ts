@@ -33,6 +33,6 @@ export class GatesCrossedEvent extends GameEvent {
   }
 
   describe(): string {
-    return `${this.gatesCrossed} porte(s) franchie(s) (+${this.championshipPoints} PC)`;
+    return `Porte(s) franchie(s) : ${this.gatesCrossed} porte(s) (+${this.championshipPoints} PC)`;
   }
 }

@@ -31,11 +31,11 @@ describe('WalletMovementEvent — execute / undo', () => {
 
   it('describe() résume un gain', () => {
     const event = new WalletMovementEvent(1, 10, 1, 1, 10, WalletReason.RECOMPENSE);
-    expect(event.describe()).toBe('+10 jerricans (Récompense)');
+    expect(event.describe()).toBe('Budget : +10 jerricans (Récompense)');
   });
 
   it('describe() résume une dépense', () => {
     const event = new WalletMovementEvent(1, 10, 1, 1, -5, WalletReason.ACHAT);
-    expect(event.describe()).toBe('-5 jerricans (Achat atelier)');
+    expect(event.describe()).toBe('Budget : -5 jerricans (Achat atelier)');
   });
 });

@@ -302,7 +302,7 @@ describe('Game — journal', () => {
 
     expect(journal.map((j) => j.eventId)).toEqual([e1.id, e2.id]); // trié par eventOrder
     expect(journal[0].participantId).toBe(1);
-    expect(journal[0].description).toContain('Classé');
+    expect(journal[0].description).toContain('Classement');
     expect(journal[1].description).toContain('porte');
   });
 

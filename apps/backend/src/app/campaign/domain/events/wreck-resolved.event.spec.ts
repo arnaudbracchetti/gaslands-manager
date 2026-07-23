@@ -54,19 +54,19 @@ describe('WreckResolvedEvent — execute / undo', () => {
     const { participant, participants, vehicle } = makeTestParticipant();
     const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 4, 0, WreckResult.ROUE_CABOSSEE, 1);
     expect(event.describe(participants)).toBe(
-      'Table des Épaves (Voiture) : Passage de roue cabossé (D6=4+0 chocs, +1 choc(s))',
+      'Tirage sur la table des Épaves pour (Voiture) : Passage de roue cabossé (D6=4+0 chocs, +1 choc(s))',
     );
   });
 
   it('describe() n\'ajoute pas de mention de chocs si chocsGained = 0', () => {
     const { participant, participants, vehicle } = makeTestParticipant();
     const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 2, 0, WreckResult.INDEMNE, 0);
-    expect(event.describe(participants)).toBe('Table des Épaves (Voiture) : S\'en sort indemne (D6=2+0 chocs)');
+    expect(event.describe(participants)).toBe('Tirage sur la table des Épaves pour (Voiture) : S\'en sort indemne (D6=2+0 chocs)');
   });
 
   it('describe() affiche une perte de chocs négative (DEBOSSELE)', () => {
     const { participant, participants, vehicle } = makeTestParticipant();
     const event = new WreckResolvedEvent(1, 10, participant.id, 1, vehicle.id, 1, 1, WreckResult.DEBOSSELE, -1);
-    expect(event.describe(participants)).toBe('Table des Épaves (Voiture) : Débosselé ! (D6=1+1 chocs, -1 choc(s))');
+    expect(event.describe(participants)).toBe('Tirage sur la table des Épaves pour (Voiture) : Débosselé ! (D6=1+1 chocs, -1 choc(s))');
   });
 });
