@@ -1,0 +1,39 @@
+<!--
+  ParticipantJournalModal — overlay listant tout l'historique d'un participant,
+  groupé par partie. Structure calquée sur GameJournalModal (.gjm-*), classes .pjm-*.
+-->
+<div class="pjm-overlay" role="dialog" aria-modal="true" aria-label="Historique du participant">
+  <div class="pjm-modal">
+    <h4 class="pjm-modal__title">
+      <app-icon concept="journal" size="md" /> Historique — {{ participant().userName }}
+    </h4>
+
+    @if (loading()) {
+      <p class="pjm-modal__loading">Chargement de l'historique...</p>
+    } @else if (groupedEntries().length === 0) {
+      <p class="pjm-modal__empty">Aucun événement enregistré.</p>
+    } @else {
+      <div class="pjm-modal__groups">
+        @for (group of groupedEntries(); track group.gameId) {
+          <div class="pjm-group">
+            <h5 class="pjm-group__title">Partie {{ group.gameOrder }} — {{ group.scenarioName }}</h5>
+            <ul class="pjm-group__entries">
+              @for (entry of group.entries; track entry) {
+                <li class="pjm-group__entry">
+                  <span class="pjm-group__description">{{ entry.description }}</span>
+                  <span class="pjm-group__time">{{ entry.createdAt | date: 'short' }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="pjm-modal__actions">
+      <button class="pjm-modal__close" type="button" (click)="closed.emit()">
+        Fermer
+      </button>
+    </div>
+  </div>
+</div>

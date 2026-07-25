@@ -39,6 +39,7 @@ describe('CampaignController (câblage)', () => {
       getGame: vi.fn().mockResolvedValue({ id: 7, status: 'JOUE' }),
       getResults: vi.fn(),
       getJournal: vi.fn().mockResolvedValue(['journal']),
+      getParticipantJournal: vi.fn().mockResolvedValue(['pjournal']),
     };
     scenarioCatalog = { getAll: vi.fn().mockReturnValue(['scen']) };
     createCampaignUseCase = uc(1);
@@ -107,6 +108,12 @@ describe('CampaignController (câblage)', () => {
     const result = await controller.getJournal(req as never, 1, 7);
     expect(query.getJournal).toHaveBeenCalledWith(1, 7, 42);
     expect(result).toEqual(['journal']);
+  });
+
+  it('getParticipantJournal délègue à query.getParticipantJournal(id, pid, userId)', async () => {
+    const result = await controller.getParticipantJournal(req as never, 1, 5);
+    expect(query.getParticipantJournal).toHaveBeenCalledWith(1, 5, 42);
+    expect(result).toEqual(['pjournal']);
   });
 
   it('createGame exécute le use case puis recompose via query.getGame', async () => {

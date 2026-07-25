@@ -13,7 +13,7 @@
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CampaignOrm } from './infrastructure/entities/campaign.entity';
 import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { GameOrm } from './infrastructure/entities/game.entity';
@@ -26,6 +26,7 @@ import { CampaignParticipantResponseDto } from './dto/campaign-participant-respo
 import { GameResponseDto } from './dto/game-response.dto';
 import { GameResultResponseDto } from './dto/game-result-response.dto';
 import { GameJournalEntryDto } from './dto/game-journal-response.dto';
+import { ParticipantJournalEntryDto } from './dto/participant-journal-response.dto';
 import { CampaignReplayService } from './infrastructure/campaign-replay.service';
 
 @Injectable()
@@ -255,6 +256,61 @@ export class CampaignQueryService {
         teamName: participant?.team?.name ?? '',
         createdAt: createdAtByEventId.get(entry.eventId) as Date,
       };
+    });
+  }
+
+  /**
+   * Historique complet d'un participant à travers TOUTE la campagne (toutes
+   * les parties) — accessible à tout participant VALIDATED, même pour
+   * consulter l'historique d'un tiers (même règle de visibilité que
+   * getJournal, pas réservé à l'organisateur). Parcourt campaign.games (déjà
+   * trié par order ASC après replay), filtre le journal de chaque partie sur
+   * ce participant, et omet les parties sans événement pour lui (pas de
+   * groupe vide côté frontend).
+   */
+  async getParticipantJournal(
+    campaignId: number,
+    participantId: number,
+    userId: number,
+  ): Promise<ParticipantJournalEntryDto[]> {
+    await this.assertVisibleParticipant(campaignId, userId);
+
+    const participant = await this.participantRepo.findOne({ where: { id: participantId, campaignId } });
+    if (!participant) {
+      throw new NotFoundException('Participant introuvable.');
+    }
+
+    const campaign = await this.replayService.load(campaignId);
+
+    const byGame = campaign.games
+      .map((game) => ({
+        game,
+        entries: game.journal(campaign.participants).filter((e) => e.participantId === participantId),
+      }))
+      .filter(({ entries }) => entries.length > 0);
+
+    if (byGame.length === 0) return [];
+
+    const gameIds = byGame.map(({ game }) => game.id);
+    const [gameOrms, eventRows] = await Promise.all([
+      this.gameRepo.find({ where: { id: In(gameIds) } }),
+      this.gameEventRepo.find({ where: { gameId: In(gameIds) } }),
+    ]);
+    const gameOrmById = new Map(gameOrms.map((g) => [g.id, g]));
+    const createdAtByEventId = new Map(eventRows.map((e) => [e.id, e.createdAt]));
+
+    return byGame.flatMap(({ game, entries }) => {
+      const gameOrm = gameOrmById.get(game.id);
+      const scenario = gameOrm?.scenarioId ? this.scenarioCatalog.getByNomInterne(gameOrm.scenarioId) : undefined;
+      const scenarioName = scenario?.nom ?? gameOrm?.scenarioId ?? '';
+      return entries.map((entry) => ({
+        eventId: entry.eventId,
+        gameId: game.id,
+        gameOrder: game.order,
+        scenarioName,
+        description: entry.description,
+        createdAt: createdAtByEventId.get(entry.eventId) as Date,
+      }));
     });
   }
 

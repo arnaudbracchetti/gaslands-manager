@@ -119,13 +119,23 @@ describe('ParticipantList', () => {
 
   // ── Action Retirer (regroupée dans le menu ⋯, cf. carte compacte) ────────
 
-  it('masque le bouton Retirer (menu ⋯) si l\'utilisateur n\'est pas organisateur', () => {
+  it('affiche le menu ⋯ pour un non-organisateur (Historique), sans les actions organisateur', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', false);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.participant-list__menu-trigger')).toBeNull();
+    const items = el.querySelectorAll('.participant-list__item');
+    // Le menu ⋯ reste affiché (Historique est toujours disponible pour tout
+    // participant), mais Promouvoir/Refuser/Retirer sont réservés à l'organisateur.
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    expect(trigger).not.toBeNull();
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[1], 'Retirer')).toBeNull();
+    expect(findMenuButtonByLabel(items[1], 'Promouvoir')).toBeNull();
+    expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
   });
 
   it('affiche Retirer dans le menu ⋯ et émet remove(pid) quand organisateur', () => {
@@ -150,7 +160,7 @@ describe('ParticipantList', () => {
     expect(emitted).toEqual([2]);
   });
 
-  it('masque le menu ⋯ pour l\'unique organisateur VALIDATED (CA4)', () => {
+  it('n\'affiche pas Retirer dans le menu ⋯ pour l\'unique organisateur VALIDATED (CA4)', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
@@ -158,9 +168,16 @@ describe('ParticipantList', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    // items[0] = Jean, seul organisateur VALIDATED → aucune action de
-    // maintenance disponible (Refuser/Promouvoir/Retirer tous bloqués).
-    expect(items[0].querySelector('.participant-list__menu-trigger')).toBeNull();
+    // items[0] = Jean, seul organisateur VALIDATED → le menu ⋯ reste affiché
+    // (Historique toujours disponible), mais aucune action de maintenance
+    // (Refuser/Promouvoir/Retirer tous bloqués).
+    const trigger = items[0].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    expect(trigger).not.toBeNull();
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[0], 'Retirer')).toBeNull();
+    expect(findMenuButtonByLabel(items[0], 'Promouvoir')).toBeNull();
   });
 
   it('affiche le menu ⋯ (Retirer) pour un organisateur s\'il en reste un autre (CA5)', () => {
@@ -290,5 +307,64 @@ describe('ParticipantList', () => {
     expect(items[0].querySelector('a.participant-list__icon-btn')).toBeNull();
     const disabledBtn = items[0].querySelector('button.participant-list__icon-btn[disabled]');
     expect(disabledBtn).not.toBeNull();
+  });
+
+  // ── Historique complet d'un participant ──────────────────────────────────
+
+  it('émet viewJournal(pid) au clic sur le bouton historique de sa propre ligne', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42); // Jean, items[0]
+    fixture.detectChanges();
+
+    const emitted: number[] = [];
+    outputToObservable(component.viewJournal).subscribe((pid) => emitted.push(pid));
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const journalBtn = items[0].querySelector(
+      'button.participant-list__icon-btn[title="Voir mon historique"]',
+    ) as HTMLButtonElement;
+    expect(journalBtn).not.toBeNull();
+    journalBtn.click();
+    expect(emitted).toEqual([1]);
+  });
+
+  it('émet viewJournal(pid) et ferme le menu au clic sur "Voir l\'historique" (autre participant)', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.detectChanges();
+
+    const emitted: number[] = [];
+    outputToObservable(component.viewJournal).subscribe((pid) => emitted.push(pid));
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    const historyBtn = findMenuButtonByLabel(items[1], 'Voir l\'historique');
+    expect(historyBtn).not.toBeNull();
+    historyBtn!.click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([2]);
+    expect(items[1].querySelector('.participant-list__menu')).toBeNull();
+  });
+
+  it('le menu ⋯ d\'un autre participant affiche les actions organisateur en plus de l\'historique quand isOrganizer', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('isOrganizer', true);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[1], 'Retirer')).not.toBeNull();
+    expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
   });
 });

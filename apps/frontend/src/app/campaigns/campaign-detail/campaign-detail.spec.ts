@@ -13,6 +13,7 @@ import { CampaignDetail } from './campaign-detail';
 import { CampaignsService } from '../campaigns.service';
 import { Campaign } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
+import { ParticipantJournalEntryDto } from '../game.model';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
 import { TeamsService } from '../../teams/teams.service';
@@ -58,6 +59,7 @@ describe('CampaignDetail', () => {
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
+    getParticipantJournal: ReturnType<typeof vi.fn>;
     // Appelés par le composant enfant CampaignProgram (désormais toujours monté).
     getGames: ReturnType<typeof vi.fn>;
     getScenarios: ReturnType<typeof vi.fn>;
@@ -90,6 +92,7 @@ describe('CampaignDetail', () => {
       remove: vi.fn(),
       changeState: vi.fn(),
       promote: vi.fn(),
+      getParticipantJournal: vi.fn().mockReturnValue(of([])),
       getGames: vi.fn().mockReturnValue(of([])),
       getScenarios: vi.fn().mockReturnValue(of([])),
     };
@@ -300,6 +303,65 @@ describe('CampaignDetail', () => {
       component.pendingPromote.set(null);
 
       expect(mockCampaignsService.promote).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── onViewJournal() / onParticipantJournalClosed() ──────────────────────
+
+  describe('onViewJournal()', () => {
+    it('ouvre la modale et charge l\'historique du participant ciblé', () => {
+      const entries: ParticipantJournalEntryDto[] = [
+        { eventId: 100, gameId: 7, gameOrder: 1, scenarioName: 'La Porte', description: 'Classé 1 (+10 PC)', createdAt: '2026-07-01T00:00:00.000Z' },
+      ];
+      mockCampaignsService.getParticipantJournal.mockReturnValue(of(entries));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onViewJournal(3);
+
+      expect(mockCampaignsService.getParticipantJournal).toHaveBeenCalledWith(1, 3);
+      expect(component.journalParticipant()).toEqual(mockParticipants[2]);
+      expect(component.participantJournalEntries()).toEqual(entries);
+      expect(component.loadingParticipantJournal()).toBe(false);
+    });
+
+    it('affiche une erreur si le chargement échoue', () => {
+      mockCampaignsService.getParticipantJournal.mockReturnValue(throwError(() => new Error('500')));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onViewJournal(3);
+
+      expect(component.error()).not.toBe('');
+      expect(component.loadingParticipantJournal()).toBe(false);
+    });
+  });
+
+  describe('onParticipantJournalClosed()', () => {
+    it('réinitialise les signaux de la modale', () => {
+      mockCampaignsService.getParticipantJournal.mockReturnValue(
+        of([{ eventId: 100, gameId: 7, gameOrder: 1, scenarioName: 'La Porte', description: 'x', createdAt: '2026-07-01T00:00:00.000Z' }]),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onViewJournal(3);
+      expect(component.journalParticipant()).not.toBeNull();
+
+      component.onParticipantJournalClosed();
+
+      expect(component.journalParticipant()).toBeNull();
+      expect(component.participantJournalEntries()).toEqual([]);
+      expect(component.loadingParticipantJournal()).toBe(false);
     });
   });
 

@@ -249,3 +249,17 @@ export interface GameJournalEntryDto {
   description: string;
   createdAt: string;
 }
+
+/**
+ * Une ligne de l'historique complet d'un participant, toutes parties
+ * confondues — miroir de ParticipantJournalEntryDto (backend). Retournée à
+ * plat ; le regroupement par partie est fait côté frontend (ParticipantJournalModal).
+ */
+export interface ParticipantJournalEntryDto {
+  eventId: number;
+  gameId: number;
+  gameOrder: number;
+  scenarioName: string;
+  description: string;
+  createdAt: string;
+}

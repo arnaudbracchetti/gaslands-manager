@@ -21,6 +21,7 @@ import type {
   WreckResolveResultDto,
   EnterAtelierResultDto,
   GameJournalEntryDto,
+  ParticipantJournalEntryDto,
   RollIncomeRequestDto,
   RollIncomeResultDto,
 } from './game.model';
@@ -95,6 +96,18 @@ export class CampaignsService {
    */
   getParticipants(campaignId: number): Observable<CampaignParticipant[]> {
     return this.http.get<CampaignParticipant[]>(`/api/campaigns/${campaignId}/participants`);
+  }
+
+  /**
+   * GET /api/campaigns/:id/participants/:pid/journal → historique complet d'un
+   * participant à travers toutes les parties de la campagne — accessible à tout
+   * participant VALIDATED, y compris pour consulter l'historique d'un tiers.
+   * Retourné à plat ; le regroupement par partie est fait côté frontend.
+   */
+  getParticipantJournal(campaignId: number, pid: number): Observable<ParticipantJournalEntryDto[]> {
+    return this.http.get<ParticipantJournalEntryDto[]>(
+      `/api/campaigns/${campaignId}/participants/${pid}/journal`,
+    );
   }
 
   /**

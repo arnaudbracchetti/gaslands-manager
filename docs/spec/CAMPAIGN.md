@@ -292,6 +292,42 @@ pas sur le domaine `GameEvent`).
 
 ---
 
+## Historique complet d'un participant
+
+En plus du journal d'une partie (ci-dessus, scopé à une seule partie et à
+tous ses participants), l'écran `/campaigns/:id` permet de consulter
+l'**historique complet d'UN participant, sur TOUTES les parties** de la
+campagne, groupé par partie — utile pour reconstituer le parcours complet
+d'un joueur sans rouvrir le journal de chaque partie une à une.
+
+- **Sur sa propre ligne** (`ParticipantList`) : un bouton icône 📜, à côté du
+  lien "Gérer mon équipe"/Atelier — toujours affiché tant que l'utilisateur a
+  une équipe engagée (`participant.teamId`), indépendamment de l'état de la
+  campagne ou d'un atelier ouvert.
+- **Sur la ligne d'un autre participant** : une entrée "Voir l'historique"
+  dans le menu ⋯. Ce menu, jusqu'ici réservé à l'organisateur (Promouvoir/
+  Refuser/Retirer), s'affiche désormais pour **tout participant** sur toute
+  ligne autre que la sienne — les actions organisateur restent gated
+  individuellement à l'intérieur du menu, seule "Voir l'historique" est
+  inconditionnelle.
+- **Visibilité** : tout participant `VALIDATED` de la campagne peut consulter
+  l'historique de n'importe quel autre participant — même règle que le
+  journal d'une partie (`assertVisibleParticipant`), **pas réservé à
+  l'organisateur**.
+- **Regroupement** : par partie, dans l'ordre du Programme (`campaign.games`,
+  trié par `order` ASC) ; une partie sans événement pour ce participant est
+  omise (pas de groupe vide affiché).
+
+**Aucune nouvelle méthode sur l'agrégat `Campaign`** : l'agrégation
+multi-parties est une préoccupation de lecture pure (cf. [ARCHITECTURE.md
+§3.8](../ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign),
+"`Campaign` se limite à la navigation"). `CampaignQueryService.
+getParticipantJournal` itère elle-même `campaign.games` et réutilise
+`Game.journal()` tel quel (déjà utilisé par le journal de partie ci-dessus),
+en filtrant chaque résultat sur le `participantId` ciblé.
+
+---
+
 ## Cycle de vie d'une partie et phase Atelier
 
 Une partie (`Game`) traverse trois statuts : `PLANIFIE → ATELIER → JOUE`. Il
@@ -869,6 +905,7 @@ tout type de partie).
 | PUT | `/api/campaigns/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) — couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` |
 | PUT | `/api/campaigns/:id/participants/:pid/promote` | JWT | Promouvoir co-organisateur (organisateur) |
 | DELETE | `/api/campaigns/:id/participants/:pid` | JWT | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement) |
+| GET | `/api/campaigns/:id/participants/:pid/journal` | JWT | Historique complet d'un participant, toutes parties confondues, groupé par partie (tout participant `VALIDATED`, y compris pour consulter l'historique d'un tiers) — cf. [§Historique complet d'un participant](#historique-complet-dun-participant) |
 
 > Routes participants déclarées dans cet ordre dans `campaign.controller.ts` : la route
 > `PUT :id/participants/me` est définie **avant** `PUT :id/participants/:pid/validate`,

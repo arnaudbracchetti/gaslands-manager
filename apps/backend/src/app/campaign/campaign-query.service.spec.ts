@@ -140,6 +140,79 @@ describe('CampaignQueryService', () => {
     });
   });
 
+  describe('getParticipantJournal', () => {
+    it('regroupe le journal de chaque partie filtré sur le participant ciblé, en résolvant scenarioName', async () => {
+      participantRepo.findOne.mockResolvedValueOnce({ id: 99 }); // assertVisibleParticipant OK
+      participantRepo.findOne.mockResolvedValueOnce({ id: 1 }); // participant ciblé existe
+      const game1 = {
+        id: 7,
+        order: 1,
+        journal: vi.fn().mockReturnValue([
+          { eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)' },
+          { eventId: 101, participantId: 2, description: 'Classé 2 (+5 PC)' },
+        ]),
+      };
+      const game2 = {
+        id: 8,
+        order: 2,
+        journal: vi.fn().mockReturnValue([
+          { eventId: 102, participantId: 1, description: 'Budget : +4 jerricans (Récompense)' },
+        ]),
+      };
+      replayService.load.mockResolvedValue({
+        games: [game1, game2],
+        participants: ['p1', 'p2'],
+      });
+      gameRepo.find.mockResolvedValue([
+        { id: 7, scenarioId: 'gate' },
+        { id: 8, scenarioId: 'course' },
+      ]);
+      scenarioCatalog.getByNomInterne.mockImplementation((nomInterne: string) =>
+        nomInterne === 'gate' ? { nom: 'La Porte' } : { nom: 'La Course' },
+      );
+      const createdAt100 = new Date('2026-07-01T00:00:00Z');
+      const createdAt102 = new Date('2026-07-02T00:00:00Z');
+      gameEventRepo.find.mockResolvedValue([
+        { id: 100, createdAt: createdAt100 },
+        { id: 102, createdAt: createdAt102 },
+      ]);
+
+      const journal = await service.getParticipantJournal(1, 1, 42);
+
+      expect(journal).toEqual([
+        { eventId: 100, gameId: 7, gameOrder: 1, scenarioName: 'La Porte', description: 'Classé 1 (+10 PC)', createdAt: createdAt100 },
+        { eventId: 102, gameId: 8, gameOrder: 2, scenarioName: 'La Course', description: 'Budget : +4 jerricans (Récompense)', createdAt: createdAt102 },
+      ]);
+    });
+
+    it('omet les parties sans événement pour ce participant', async () => {
+      participantRepo.findOne.mockResolvedValueOnce({ id: 99 });
+      participantRepo.findOne.mockResolvedValueOnce({ id: 1 });
+      const game1 = {
+        id: 7,
+        order: 1,
+        journal: vi.fn().mockReturnValue([{ eventId: 100, participantId: 2, description: 'Classé 1 (+10 PC)' }]),
+      };
+      replayService.load.mockResolvedValue({ games: [game1], participants: [] });
+
+      const journal = await service.getParticipantJournal(1, 1, 42);
+
+      expect(journal).toEqual([]);
+      expect(gameRepo.find).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFound si l\'appelant n\'est pas participant VALIDATED', async () => {
+      participantRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getParticipantJournal(1, 1, 42)).rejects.toThrow('introuvable');
+    });
+
+    it('lève NotFound si le participant ciblé n\'appartient pas à la campagne', async () => {
+      participantRepo.findOne.mockResolvedValueOnce({ id: 99 });
+      participantRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getParticipantJournal(1, 999, 42)).rejects.toThrow('introuvable');
+    });
+  });
+
   describe('findAll', () => {
     it('enrichit chaque participation avec participantCount, myRole et myTeamName', async () => {
       participantRepo.find.mockResolvedValue([

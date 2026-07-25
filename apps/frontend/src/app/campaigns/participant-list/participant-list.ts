@@ -12,6 +12,11 @@
  *   - Orga (autre que soi) : Retirer (sauf dernier organisateur)
  *   - REJECTED : Valider
  *
+ * Le menu ⋯ (hors soi-même) est visible par TOUT participant, pas seulement
+ * l'organisateur : "Voir l'historique" y est toujours proposé (même règle de
+ * visibilité que le journal d'une partie — tout participant VALIDATED, même
+ * pour un tiers). Les actions organisateur ci-dessus restent gated dedans.
+ *
  * Classement : la liste est triée par Points de Championnat décroissants
  * (tri stable — tant qu'aucun point n'existe, l'ordre reste celui d'origine).
  * Les PC ne sont affichés que pour les participants VALIDATED.
@@ -52,6 +57,9 @@ export class ParticipantList {
 
   /** Émis au clic sur "Promouvoir", avec l'id du CampaignParticipant ciblé. */
   promote: OutputEmitterRef<number> = output<number>();
+
+  /** Émis au clic sur "Voir l'historique" (soi-même ou via le menu ⋯), avec l'id du CampaignParticipant ciblé. */
+  viewJournal: OutputEmitterRef<number> = output<number>();
 
   /** Vrai quand l'équipe est encore modifiable (saison EN_CONSTRUCTION). */
   canChangeTeam: InputSignal<boolean> = input(false);
@@ -175,10 +183,6 @@ export class ParticipantList {
     return this.canReject(participant) && participant.status === 'VALIDATED';
   }
 
-  hasOverflowActions(participant: CampaignParticipant): boolean {
-    return this.canRetire(participant) || this.showMenuReject(participant) || this.canPromote(participant);
-  }
-
   toggleMenu(pid: number): void {
     this.openMenuId.set(this.openMenuId() === pid ? null : pid);
   }
@@ -200,6 +204,15 @@ export class ParticipantList {
   onMenuRemove(pid: number): void {
     this.closeMenu();
     this.onRemove(pid);
+  }
+
+  onViewJournal(pid: number): void {
+    this.viewJournal.emit(pid);
+  }
+
+  onMenuViewJournal(pid: number): void {
+    this.closeMenu();
+    this.viewJournal.emit(pid);
   }
 
   /**

@@ -101,7 +101,8 @@
             (validate)="onValidate($event)"
             (remove)="onRemoveParticipant($event)"
             (promote)="onPromote($event)"
-            (changeTeam)="openChangeTeamModal()" />
+            (changeTeam)="openChangeTeamModal()"
+            (viewJournal)="onViewJournal($event)" />
 
           @if (showChangeTeamModal()) {
             <app-change-team-modal
@@ -175,6 +176,18 @@
       confirmLabel="Supprimer"
       (confirmed)="onConfirmDeleteCampaign()"
       (cancelled)="showDeleteCampaignConfirm.set(false)" />
+  }
+
+  <!-- Rendue hors de .campaign-detail-rail (position: sticky) : un ancêtre
+       sticky peut piéger un descendant position:fixed dans son propre
+       rectangle au lieu du viewport complet, faisant apparaître le contenu
+       du Programme (colonne principale) par-dessus la modale. -->
+  @if (journalParticipant(); as participant) {
+    <app-participant-journal-modal
+      [participant]="participant"
+      [entries]="participantJournalEntries()"
+      [loading]="loadingParticipantJournal()"
+      (closed)="onParticipantJournalClosed()" />
   }
 
 </div>

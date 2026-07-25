@@ -20,7 +20,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { Campaign, CampaignState, ChangeStateDto } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
+import { ParticipantJournalEntryDto } from '../game.model';
 import { ParticipantList } from '../participant-list/participant-list';
+import { ParticipantJournalModal } from '../participant-journal-modal/participant-journal-modal';
 import { CampaignProgram } from '../campaign-program/campaign-program';
 import { InviteLink } from '../invite-link/invite-link';
 import { AuthService } from '../../auth/auth.service';
@@ -40,7 +42,16 @@ const STATE_LABELS: Record<CampaignState, string> = {
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [ParticipantList, CampaignProgram, InviteLink, ChangeTeamModal, ConfirmModal, Breadcrumb, Icon],
+  imports: [
+    ParticipantList,
+    ParticipantJournalModal,
+    CampaignProgram,
+    InviteLink,
+    ChangeTeamModal,
+    ConfirmModal,
+    Breadcrumb,
+    Icon,
+  ],
   templateUrl: './campaign-detail.html',
   styleUrl: './campaign-detail.scss',
 })
@@ -63,6 +74,13 @@ export class CampaignDetail implements OnInit {
 
   /** Vrai si une partie de la saison est actuellement en statut ATELIER — reçu de CampaignProgram. */
   hasAtelierGame: WritableSignal<boolean> = signal(false);
+
+  /** Participant dont l'historique complet est affiché (null = modale fermée). */
+  journalParticipant: WritableSignal<CampaignParticipant | null> = signal<CampaignParticipant | null>(null);
+
+  participantJournalEntries: WritableSignal<ParticipantJournalEntryDto[]> = signal<ParticipantJournalEntryDto[]>([]);
+
+  loadingParticipantJournal: WritableSignal<boolean> = signal(false);
 
   // ── Confirmations ──────────────────────────────────────────────────────────
 
@@ -264,6 +282,33 @@ export class CampaignDetail implements OnInit {
         this.stateTransitioning.set(false);
       },
     });
+  }
+
+  /** ParticipantList émet cet événement (soi-même ou via le menu ⋯) — ouvre l'historique complet. */
+  onViewJournal(pid: number): void {
+    const participant = this.participants().find((p) => p.id === pid);
+    if (!participant) return;
+
+    this.journalParticipant.set(participant);
+    this.participantJournalEntries.set([]);
+    this.loadingParticipantJournal.set(true);
+
+    this.campaignsService.getParticipantJournal(this.campaignId(), pid).subscribe({
+      next: (entries: ParticipantJournalEntryDto[]) => {
+        this.participantJournalEntries.set(entries);
+        this.loadingParticipantJournal.set(false);
+      },
+      error: () => {
+        this.error.set('Erreur lors du chargement de l\'historique du participant.');
+        this.loadingParticipantJournal.set(false);
+      },
+    });
+  }
+
+  onParticipantJournalClosed(): void {
+    this.journalParticipant.set(null);
+    this.participantJournalEntries.set([]);
+    this.loadingParticipantJournal.set(false);
   }
 
   openChangeTeamModal(): void {

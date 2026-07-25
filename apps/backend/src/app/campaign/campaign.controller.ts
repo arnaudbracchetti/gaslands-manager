@@ -80,6 +80,7 @@ import { UpdateGameDto } from './dto/update-game.dto';
 import { GameResponseDto } from './dto/game-response.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
 import type { GameJournalEntryDto } from './dto/game-journal-response.dto';
+import type { ParticipantJournalEntryDto } from './dto/participant-journal-response.dto';
 import type { RecordResultDto } from './dto/record-result.dto';
 import type { RecordWalletDto } from './dto/record-wallet.dto';
 import type { RecordVehicleLostDto } from './dto/record-vehicle-lost.dto';
@@ -695,6 +696,17 @@ export class CampaignController {
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<void> {
     return this.removeParticipantUseCase.execute({ campaignId: id, pid, userId: req.user.id });
+  }
+
+  /** GET /api/campaigns/:id/participants/:pid/journal — historique complet, tout participant VALIDATED. */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/participants/:pid/journal')
+  getParticipantJournal(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pid', ParseIntPipe) pid: number,
+  ): Promise<ParticipantJournalEntryDto[]> {
+    return this.query.getParticipantJournal(id, pid, req.user.id);
   }
 
   // ── Détail / suppression campagne (routes :id génériques en dernier) ─────────

@@ -45,9 +45,14 @@
                   </button>
                 }
               }
+              <button type="button" class="participant-list__icon-btn"
+                title="Voir mon historique" aria-label="Voir mon historique"
+                (click)="onViewJournal(participant.id)">
+                <app-icon concept="journal" size="xs" />
+              </button>
             }
 
-            <!-- Actions organisateur (hors soi-même) -->
+            <!-- Actions organisateur inline (hors soi-même) -->
             @if (isOrganizer() && !isSelf(participant)) {
 
               @if (canValidate(participant) || canRevalidate(participant)) {
@@ -63,17 +68,21 @@
                   title="Refuser" aria-label="Refuser"
                   (click)="onValidate(participant.id, false)">✕</button>
               }
+            }
 
-              @if (hasOverflowActions(participant)) {
-                <div class="participant-list__menu-wrap">
-                  <button type="button" class="participant-list__icon-btn participant-list__menu-trigger"
-                    title="Plus d'actions" aria-label="Plus d'actions"
-                    aria-haspopup="menu" [attr.aria-expanded]="openMenuId() === participant.id"
-                    (click)="toggleMenu(participant.id)">⋯</button>
+            <!-- Menu ⋯ (hors soi-même) — toujours affiché : historique visible
+                 par tout participant, actions organisateur gated à l'intérieur. -->
+            @if (!isSelf(participant)) {
+              <div class="participant-list__menu-wrap">
+                <button type="button" class="participant-list__icon-btn participant-list__menu-trigger"
+                  title="Plus d'actions" aria-label="Plus d'actions"
+                  aria-haspopup="menu" [attr.aria-expanded]="openMenuId() === participant.id"
+                  (click)="toggleMenu(participant.id)">⋯</button>
 
-                  @if (openMenuId() === participant.id) {
-                    <div class="participant-list__menu-backdrop" (click)="closeMenu()"></div>
-                    <div class="participant-list__menu" role="menu">
+                @if (openMenuId() === participant.id) {
+                  <div class="participant-list__menu-backdrop" (click)="closeMenu()"></div>
+                  <div class="participant-list__menu" role="menu">
+                    @if (isOrganizer()) {
                       @if (canPromote(participant)) {
                         <button type="button" role="menuitem" (click)="onMenuPromote(participant.id)">Promouvoir</button>
                       }
@@ -83,10 +92,11 @@
                       @if (canRetire(participant)) {
                         <button type="button" role="menuitem" class="participant-list__menu-danger" (click)="onMenuRemove(participant.id)">Retirer</button>
                       }
-                    </div>
-                  }
-                </div>
-              }
+                    }
+                    <button type="button" role="menuitem" (click)="onMenuViewJournal(participant.id)">Voir l'historique</button>
+                  </div>
+                }
+              </div>
             }
 
           </div>

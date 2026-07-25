@@ -138,6 +138,7 @@ graph TD
         CampaignDetail["CampaignDetail (smart)"]
         CampaignJoin["CampaignJoin (smart)"]
         ParticipantList
+        ParticipantJournalModal
         InviteLink
         ChangeTeamModal
         CampaignProgram["CampaignProgram (smart)"]
@@ -186,6 +187,7 @@ graph TD
     CampaignForm --> QuickTeamCreate
     CampaignJoin --> QuickTeamCreate
     CampaignDetail --> ParticipantList
+    CampaignDetail --> ParticipantJournalModal
     CampaignDetail --> InviteLink
     CampaignDetail --> ChangeTeamModal
     CampaignDetail --> ConfirmModal
@@ -790,7 +792,7 @@ Formulaire de création d'une campagne (nom + sélection optionnelle d'une équi
 
 ### `CampaignDetail` — `campaigns/campaign-detail/` 🧠
 
-Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs. Charge également le classement (`GET .../standings`) pour transmettre les Points de Championnat à `ParticipantList` — chargement indépendant et non bloquant : si `/standings` échoue, la liste des participants reste affichée sans PC. Rechargé aussi via `onResultRecorded()`, appelé quand `CampaignProgram` émet `resultRecorded` après l'enregistrement d'un résultat de partie — sans ce pont, le classement resterait figé jusqu'au prochain rechargement de page. Relaie de même `atelierStatusChanged` (`onAtelierStatusChanged()`, signal `hasAtelierGame`) vers `ParticipantList`, pour que le lien "Gérer mon équipe" bascule vers l'Atelier dès qu'une partie y entre — cf. `ParticipantList` ci-dessous.
+Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs. Charge également le classement (`GET .../standings`) pour transmettre les Points de Championnat à `ParticipantList` — chargement indépendant et non bloquant : si `/standings` échoue, la liste des participants reste affichée sans PC. Rechargé aussi via `onResultRecorded()`, appelé quand `CampaignProgram` émet `resultRecorded` après l'enregistrement d'un résultat de partie — sans ce pont, le classement resterait figé jusqu'au prochain rechargement de page. Relaie de même `atelierStatusChanged` (`onAtelierStatusChanged()`, signal `hasAtelierGame`) vers `ParticipantList`, pour que le lien "Gérer mon équipe" bascule vers l'Atelier dès qu'une partie y entre — cf. `ParticipantList` ci-dessous. Possède également l'état de la modale `ParticipantJournalModal` (`journalParticipant`/`participantJournalEntries`/`loadingParticipantJournal`, `onViewJournal()`/`onParticipantJournalClosed()`), ouverte quand `ParticipantList` émet `viewJournal` — même pattern "parent smart possède l'état de la modale" que `ChangeTeamModal`. Rendue en dehors de `.campaign-detail-rail` (colonne `position: sticky`), au même niveau que les `ConfirmModal` en bas du template — un ancêtre `sticky` peut piéger un descendant `position: fixed` dans son propre rectangle au lieu du viewport complet (bug constaté : le Programme, colonne principale, apparaissait par-dessus la modale).
 
 | | |
 |---|---|
@@ -798,9 +800,9 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 | **Type** | Smart |
 | **Route** | `/campaigns/:id` |
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
-| **Compose** | `ParticipantList`, `InviteLink`, `ChangeTeamModal`, `ConfirmModal`, `Breadcrumb` |
+| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `ConfirmModal`, `Breadcrumb` |
 
-**Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`.
+**Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`, `journalParticipant`, `participantJournalEntries`, `loadingParticipantJournal`.
 
 ---
 
@@ -823,6 +825,8 @@ Page de demande d'inscription à une campagne via son code d'invitation (`/campa
 ### `ParticipantList` — `campaigns/participant-list/`
 
 Liste unifiée des participants d'une campagne avec boutons d'action adaptés au statut et au rôle. Encapsule toutes les règles de visibilité (organisateur uniquement, pas de self-reject sur le dernier organisateur, etc.).
+
+**Historique complet d'un participant** : sur sa propre ligne, un bouton icône 📜 (à côté du lien "Gérer mon équipe") émet `viewJournal`, toujours affiché tant que `participant.teamId` est renseigné — indépendamment de `campaignState`/`hasAtelierGame`. Sur toute autre ligne, le menu ⋯ (cf. ci-dessous) porte une entrée "Voir l'historique" qui émet le même événement. Contrairement aux autres entrées du menu, celle-ci est visible par **tout participant**, pas seulement l'organisateur — le menu ⋯, jusqu'ici gated `isOrganizer() && !isSelf(participant)`, est désormais gated uniquement `!isSelf(participant)` ; les actions organisateur (Promouvoir/Refuser/Retirer) restent gated individuellement à l'intérieur.
 
 **Classement (PC)** : la liste est triée par Points de Championnat décroissants (tri stable — tant qu'aucun point n'existe pour aucun participant, l'ordre affiché reste celui d'origine). Le badge "🏆 X PC" n'est affiché que pour les participants `VALIDATED` ; les `PENDING`/`REJECTED` comptent pour 0 PC dans le tri sans afficher de badge. Les PC proviennent de `GET /api/campaigns/:id/standings` (calculé côté backend, cf. [CAMPAIGN.md](spec/CAMPAIGN.md)), chargé par `CampaignDetail` et transmis sous forme de map.
 
@@ -854,6 +858,32 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 | `remove` | `number` | `pid` — suppression définitive (organisateur, EN_CONSTRUCTION) |
 | `promote` | `number` | `pid` — promotion co-organisateur |
 | `changeTeam` | `void` | Ouvre la modale de changement d'équipe |
+| `viewJournal` | `number` | `pid` — consultation de l'historique complet (soi-même ou un autre participant, tout participant VALIDATED) |
+
+---
+
+### `ParticipantJournalModal` — `campaigns/participant-journal-modal/`
+
+Historique complet d'un participant, toutes parties de la campagne confondues — mirroir de `GameJournalModal` (cf. ci-dessous), mais groupé par **partie** (`gameId`) plutôt que par participant, puisque le participant est ici fixe et les parties multiples. Composant dumb : reçoit la liste plate des événements (`ParticipantJournalEntryDto`, avec `gameId`/`gameOrder`/`scenarioName` par entrée) et les regroupe via un `computed()` (`Map`, ordre d'insertion préservé) — le backend renvoie déjà les entrées triées par ordre de partie puis chronologiquement à l'intérieur de chaque partie. Ouverte depuis le bouton/menu "Voir l'historique" de `ParticipantList`, possédée par `CampaignDetail`.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-participant-journal-modal` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `participant` | `CampaignParticipant` | — | Participant dont l'historique est affiché |
+| `entries` | `ParticipantJournalEntryDto[]` | `[]` | Événements à plat, tels que reçus de l'API |
+| `loading` | `boolean` | `false` | Affiche l'état de chargement |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `closed` | `void` | Fermeture de la modale |
 
 ---
 
