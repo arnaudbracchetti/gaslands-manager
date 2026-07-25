@@ -7,6 +7,7 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import { provideRouter } from '@angular/router';
 import { ParticipantList } from './participant-list';
 import { CampaignParticipant } from '../campaign-participant.model';
 
@@ -15,6 +16,15 @@ const mockParticipants: CampaignParticipant[] = [
   { id: 2, userId: 43, teamId: 8, status: 'PENDING', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
 ];
 
+/** Retrouve un bouton du menu ⋯ (déjà ouvert) par son libellé exact. */
+function findMenuButtonByLabel(item: Element, label: string): HTMLButtonElement | null {
+  const buttons = item.querySelectorAll('.participant-list__menu button');
+  for (const btn of Array.from(buttons)) {
+    if (btn.textContent?.trim() === label) return btn as HTMLButtonElement;
+  }
+  return null;
+}
+
 describe('ParticipantList', () => {
   let component: ParticipantList;
   let fixture: ComponentFixture<ParticipantList>;
@@ -22,6 +32,7 @@ describe('ParticipantList', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ParticipantList],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ParticipantList);
@@ -41,14 +52,14 @@ describe('ParticipantList', () => {
     expect(items[0].textContent).toContain('Furies');
   });
 
-  it('affiche le badge "Organisateur" pour un participant organisateur', () => {
+  it('affiche l\'icône "Organisateur" pour un participant organisateur', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    expect(items[0].querySelector('.participant-list__badge--organizer')).not.toBeNull();
-    expect(items[1].querySelector('.participant-list__badge--organizer')).toBeNull();
+    expect(items[0].querySelector('.participant-list__organizer-badge')).not.toBeNull();
+    expect(items[1].querySelector('.participant-list__organizer-badge')).toBeNull();
   });
 
   it('affiche un message si la liste est vide', () => {
@@ -67,11 +78,11 @@ describe('ParticipantList', () => {
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.participant-list__validate')).toBeNull();
-    expect(el.querySelector('.participant-list__reject')).toBeNull();
+    expect(el.querySelector('.participant-list__icon-btn--accept')).toBeNull();
+    expect(el.querySelector('.participant-list__icon-btn--reject')).toBeNull();
   });
 
-  it('affiche Valider/Refuser pour un PENDING quand isOrganizer', () => {
+  it('affiche Valider/Refuser (icônes inline) pour un PENDING quand isOrganizer', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
@@ -83,13 +94,13 @@ describe('ParticipantList', () => {
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
 
-    const validateBtn = items[1].querySelector('.participant-list__validate') as HTMLButtonElement;
+    const validateBtn = items[1].querySelector('.participant-list__icon-btn--accept') as HTMLButtonElement;
     expect(validateBtn).not.toBeNull();
     validateBtn.click();
     expect(emitted).toContainEqual({ pid: 2, accept: true });
   });
 
-  it('émet validate({ accept: false }) au clic sur Refuser pour un PENDING', () => {
+  it('émet validate({ accept: false }) au clic sur Refuser (icône inline) pour un PENDING', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
@@ -100,24 +111,24 @@ describe('ParticipantList', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    const rejectBtn = items[1].querySelector('.participant-list__reject') as HTMLButtonElement;
+    const rejectBtn = items[1].querySelector('.participant-list__icon-btn--reject') as HTMLButtonElement;
     expect(rejectBtn).not.toBeNull();
     rejectBtn.click();
     expect(emitted).toContainEqual({ pid: 2, accept: false });
   });
 
-  // ── Action Retirer ───────────────────────────────────────────────────────
+  // ── Action Retirer (regroupée dans le menu ⋯, cf. carte compacte) ────────
 
-  it('masque le bouton Retirer si l\'utilisateur n\'est pas organisateur', () => {
+  it('masque le bouton Retirer (menu ⋯) si l\'utilisateur n\'est pas organisateur', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', false);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.participant-list__remove')).toBeNull();
+    expect(el.querySelector('.participant-list__menu-trigger')).toBeNull();
   });
 
-  it('affiche le bouton Retirer et émet remove(pid) quand organisateur', () => {
+  it('affiche Retirer dans le menu ⋯ et émet remove(pid) quand organisateur', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
@@ -128,13 +139,18 @@ describe('ParticipantList', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    const removeBtn = items[1].querySelector('.participant-list__remove') as HTMLButtonElement;
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    expect(trigger).not.toBeNull();
+    trigger.click();
+    fixture.detectChanges();
+
+    const removeBtn = findMenuButtonByLabel(items[1], 'Retirer');
     expect(removeBtn).not.toBeNull();
-    removeBtn.click();
+    removeBtn!.click();
     expect(emitted).toEqual([2]);
   });
 
-  it('masque le bouton Retirer pour l\'unique organisateur VALIDATED (CA4)', () => {
+  it('masque le menu ⋯ pour l\'unique organisateur VALIDATED (CA4)', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
@@ -142,10 +158,12 @@ describe('ParticipantList', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    expect(items[0].querySelector('.participant-list__remove')).toBeNull();
+    // items[0] = Jean, seul organisateur VALIDATED → aucune action de
+    // maintenance disponible (Refuser/Promouvoir/Retirer tous bloqués).
+    expect(items[0].querySelector('.participant-list__menu-trigger')).toBeNull();
   });
 
-  it('affiche le bouton Retirer pour un organisateur s\'il en reste un autre (CA5)', () => {
+  it('affiche le menu ⋯ (Retirer) pour un organisateur s\'il en reste un autre (CA5)', () => {
     const twoOrganizers: CampaignParticipant[] = [
       { ...mockParticipants[0] },
       { ...mockParticipants[1], isOrganizer: true, status: 'VALIDATED' },
@@ -157,25 +175,27 @@ describe('ParticipantList', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    expect(items[0].querySelector('.participant-list__remove')).not.toBeNull();
-    expect(items[1].querySelector('.participant-list__remove')).not.toBeNull();
+    expect(items[0].querySelector('.participant-list__menu-trigger')).not.toBeNull();
+    expect(items[1].querySelector('.participant-list__menu-trigger')).not.toBeNull();
   });
 
-  // ── Action Promouvoir ────────────────────────────────────────────────────
+  // ── Action Promouvoir (dans le menu ⋯) ───────────────────────────────────
 
-  it('affiche le bouton Promouvoir pour un participant VALIDATED non-organisateur', () => {
+  it('n\'affiche pas Promouvoir dans le menu ⋯ pour un participant PENDING', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('isOrganizer', true);
     fixture.componentRef.setInput('currentUserId', 99);
     fixture.detectChanges();
 
-    const emitted: number[] = [];
-    outputToObservable(component.promote).subscribe((pid) => emitted.push(pid));
-
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    // items[1] est PENDING → pas de bouton promouvoir
-    expect(items[1].querySelector('.participant-list__promote')).toBeNull();
+    // items[1] (Alice) est PENDING : le menu ⋯ existe (pour Retirer) mais
+    // ne doit jamais contenir Promouvoir (réservé aux VALIDATED non-orga).
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[1], 'Promouvoir')).toBeNull();
   });
 
   // ── Classement (Points de Championnat) ───────────────────────────────────
@@ -212,16 +232,63 @@ describe('ParticipantList', () => {
     expect(items[1].textContent).toContain('Jean Dupont');
   });
 
-  it('n\'affiche le badge PC que pour les participants VALIDATED', () => {
+  it('n\'affiche les PC (ligne atténuée) que pour les participants VALIDATED', () => {
     fixture.componentRef.setInput('participants', mockParticipants);
     fixture.componentRef.setInput('championshipPoints', new Map([[1, 5], [2, 5]]));
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     const items = el.querySelectorAll('.participant-list__item');
-    // items[0] = Jean (VALIDATED) → badge PC présent
-    expect(items[0].querySelector('.participant-list__points')?.textContent).toContain('5 PC');
-    // items[1] = Alice (PENDING) → pas de badge PC
-    expect(items[1].querySelector('.participant-list__points')).toBeNull();
+    // items[0] = Jean (VALIDATED) → ligne "équipe · N PC"
+    expect(items[0].querySelector('.participant-list__meta')?.textContent).toContain('5 PC');
+    // items[1] = Alice (PENDING) → ligne "équipe · En attente", jamais de PC
+    expect(items[1].querySelector('.participant-list__meta')?.textContent).not.toContain('PC');
+  });
+
+  // ── Lien "Gérer mon équipe" (construction / atelier / grisé) ─────────────
+
+  it('pointe vers TeamEditPage quand la saison est EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42); // Jean (items[0]), teamId 7
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_CONSTRUCTION');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const link = items[0].querySelector('a.participant-list__icon-btn') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/teams/7/edit?from=campaign&campaignId=5');
+    expect(items[0].querySelector('button.participant-list__icon-btn[disabled]')).toBeNull();
+  });
+
+  it('pointe vers l\'Atelier quand la saison est démarrée et qu\'une partie y est ouverte', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_COURS');
+    fixture.componentRef.setInput('hasAtelierGame', true);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const link = items[0].querySelector('a.participant-list__icon-btn') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/campaigns/5/atelier');
+  });
+
+  it('affiche un bouton grisé (non cliquable) quand la saison est démarrée sans atelier ouvert', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_COURS');
+    fixture.componentRef.setInput('hasAtelierGame', false);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    expect(items[0].querySelector('a.participant-list__icon-btn')).toBeNull();
+    const disabledBtn = items[0].querySelector('button.participant-list__icon-btn[disabled]');
+    expect(disabledBtn).not.toBeNull();
   });
 });

@@ -11,110 +11,126 @@
     <div class="campaign-detail-error">{{ error() }}</div>
   } @else if (campaign()) {
 
-    <!-- En-tête : nom + badge état -->
+    <!-- En-tête : nom + badge état, pleine largeur au-dessus du corps -->
     <div class="campaign-detail-header">
-      <h1>{{ campaign()!.name }}</h1>
-      <span class="campaign-detail-state-badge campaign-detail-state-badge--{{ campaign()!.state }}">
-        {{ stateLabel() }}
-      </span>
+      <div class="campaign-detail-header__title-group">
+        <h1>{{ campaign()!.name }}</h1>
+        <span class="campaign-detail-state-badge campaign-detail-state-badge--{{ campaign()!.state }}">
+          {{ stateLabel() }}
+        </span>
+      </div>
       @if (isOrganizer()) {
         <span class="campaign-detail-role-badge"><app-icon concept="organisateur" size="sm" /> Organisateur</span>
       }
     </div>
 
-    <!-- Carte d'état — organisateur uniquement -->
-    @if (isOrganizer()) {
-      <div class="campaign-state-card">
-        @switch (campaign()!.state) {
-          @case ('EN_CONSTRUCTION') {
-            <p class="campaign-state-card__message">
-              Inscriptions ouvertes. Validez les demandes avant de lancer.
-            </p>
-            <app-invite-link [inviteCode]="campaign()!.inviteCode" />
-            <div class="campaign-state-card__actions">
-              <button class="btn-primary" type="button"
-                [disabled]="stateTransitioning()"
-                (click)="onChangeState('EN_COURS')">
-                Lancer → EN COURS
-              </button>
-            </div>
-          }
-          @case ('EN_COURS') {
-            <p class="campaign-state-card__message">
-              Inscriptions fermées. Les parties restent ajoutables.
-            </p>
-            <app-invite-link [inviteCode]="campaign()!.inviteCode" />
-            <div class="campaign-state-card__actions">
-              <button class="btn-secondary" type="button"
-                [disabled]="stateTransitioning()"
-                (click)="onChangeState('EN_CONSTRUCTION')">
-                ← Rouvrir les inscriptions
-              </button>
-              <button class="campaign-state-card__btn-close" type="button"
-                [disabled]="stateTransitioning()"
-                (click)="onChangeState('TERMINEE')">
-                Clôturer → TERMINÉE
-              </button>
-            </div>
-          }
-          @case ('TERMINEE') {
-            <p class="campaign-state-card__message">
-              Saison archivée. Lecture seule.
-            </p>
-            <div class="campaign-state-card__actions">
-              <button class="btn-secondary" type="button"
-                [disabled]="stateTransitioning()"
-                (click)="onChangeState('EN_COURS')">
-                ← Rouvrir EN COURS
-              </button>
-            </div>
-          }
-        }
-      </div>
-    }
-
     @if (error()) {
       <div class="campaign-detail-error">{{ error() }}</div>
     }
 
-    <!-- Section Participants — liste unifiée -->
-    <section class="campaign-detail-section">
-      <h2>Participants ({{ validatedCount() }} validé{{ validatedCount() > 1 ? 's' : '' }} · {{ pendingCount() }} en attente)</h2>
-      <app-participant-list
-        [participants]="participants()"
-        [championshipPoints]="championshipPoints()"
-        [isOrganizer]="isOrganizer()"
-        [currentUserId]="currentUserId()"
-        [canChangeTeam]="canChangeTeam()"
-        [campaignId]="campaignId()"
-        (validate)="onValidate($event)"
-        (remove)="onRemoveParticipant($event)"
-        (promote)="onPromote($event)"
-        (changeTeam)="openChangeTeamModal()" />
+    <!-- Corps : rail (état + participants) à gauche, Programme Télé en colonne
+         principale à droite. Le rail reste non vide pour un non-organisateur
+         (liste des participants seule). -->
+    <div class="campaign-detail-body">
 
-      @if (showChangeTeamModal()) {
-        <app-change-team-modal
-          [teams]="myTeams()"
-          [currentTeamId]="myParticipant()?.teamId ?? null"
+      <aside class="campaign-detail-rail">
+
+        <!-- Carte d'état — organisateur uniquement -->
+        @if (isOrganizer()) {
+          <div class="campaign-state-card">
+            @switch (campaign()!.state) {
+              @case ('EN_CONSTRUCTION') {
+                <p class="campaign-state-card__message">
+                  Inscriptions ouvertes. Validez les demandes avant de lancer.
+                </p>
+                <app-invite-link [inviteCode]="campaign()!.inviteCode" />
+                <div class="campaign-state-card__actions">
+                  <button class="btn-primary" type="button"
+                    [disabled]="stateTransitioning()"
+                    (click)="onChangeState('EN_COURS')">
+                    Lancer → EN COURS
+                  </button>
+                </div>
+              }
+              @case ('EN_COURS') {
+                <p class="campaign-state-card__message">
+                  Inscriptions fermées. Les parties restent ajoutables.
+                </p>
+                <app-invite-link [inviteCode]="campaign()!.inviteCode" />
+                <div class="campaign-state-card__actions">
+                  <button class="btn-secondary" type="button"
+                    [disabled]="stateTransitioning()"
+                    (click)="onChangeState('EN_CONSTRUCTION')">
+                    ← Rouvrir les inscriptions
+                  </button>
+                  <button class="campaign-state-card__btn-close" type="button"
+                    [disabled]="stateTransitioning()"
+                    (click)="onChangeState('TERMINEE')">
+                    Clôturer → TERMINÉE
+                  </button>
+                </div>
+              }
+              @case ('TERMINEE') {
+                <p class="campaign-state-card__message">
+                  Saison archivée. Lecture seule.
+                </p>
+                <div class="campaign-state-card__actions">
+                  <button class="btn-secondary" type="button"
+                    [disabled]="stateTransitioning()"
+                    (click)="onChangeState('EN_COURS')">
+                    ← Rouvrir EN COURS
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        }
+
+        <!-- Section Participants — liste unifiée -->
+        <section class="campaign-detail-section">
+          <h2>Participants{{ pendingCount() > 0 ? ' (' + pendingCount() + ' en attente)' : '' }}</h2>
+          <app-participant-list
+            [participants]="participants()"
+            [championshipPoints]="championshipPoints()"
+            [isOrganizer]="isOrganizer()"
+            [currentUserId]="currentUserId()"
+            [canChangeTeam]="canChangeTeam()"
+            [campaignId]="campaignId()"
+            [campaignState]="campaign()!.state"
+            [hasAtelierGame]="hasAtelierGame()"
+            (validate)="onValidate($event)"
+            (remove)="onRemoveParticipant($event)"
+            (promote)="onPromote($event)"
+            (changeTeam)="openChangeTeamModal()" />
+
+          @if (showChangeTeamModal()) {
+            <app-change-team-modal
+              [teams]="myTeams()"
+              [currentTeamId]="myParticipant()?.teamId ?? null"
+              [isOrganizer]="isOrganizer()"
+              (confirmed)="onConfirmChangeTeam($event)"
+              (cancelled)="showChangeTeamModal.set(false)" />
+          }
+        </section>
+
+      </aside>
+
+      <!-- Programme Télé — affiché dans tous les états, visible par tous les
+           participants VALIDATED (lecture). La gestion est réservée à
+           l'organisateur et interdite en TERMINEE (géré par CampaignProgram via
+           campaignState). -->
+      <div class="campaign-detail-main">
+        <app-campaign-program
+          [campaignId]="campaignId()"
           [isOrganizer]="isOrganizer()"
-          (confirmed)="onConfirmChangeTeam($event)"
-          (cancelled)="showChangeTeamModal.set(false)" />
-      }
-    </section>
+          [campaignState]="campaign()!.state"
+          (resultRecorded)="onResultRecorded()"
+          (atelierStatusChanged)="onAtelierStatusChanged($event)" />
+      </div>
 
-    <!-- Programme Télé — affiché dans tous les états, visible par tous les
-         participants VALIDATED (lecture). La gestion est réservée à
-         l'organisateur et interdite en TERMINEE (géré par CampaignProgram via
-         campaignState). -->
-    <section class="campaign-detail-section">
-      <app-campaign-program
-        [campaignId]="campaignId()"
-        [isOrganizer]="isOrganizer()"
-        [campaignState]="campaign()!.state"
-        (resultRecorded)="onResultRecorded()" />
-    </section>
+    </div>
 
-    <!-- Zone dangereuse — organisateur uniquement -->
+    <!-- Zone dangereuse — organisateur uniquement, footer pleine largeur -->
     @if (isOrganizer()) {
       <section class="campaign-detail-danger-zone">
         <h3>Zone dangereuse</h3>

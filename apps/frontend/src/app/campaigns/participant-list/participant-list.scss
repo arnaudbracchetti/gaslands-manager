@@ -1,5 +1,7 @@
-// ─── Liste de participants — style "standings" (BoardScreen TB) ───────────────
-@use '../../shared/styles/breakpoints' as bp;
+// ─── Liste de participants — cartes compactes, 2 lignes ────────────────────
+// Ligne 1 : nom + actions en icône. Ligne 2, atténuée : équipe · PC/statut.
+// Actions occasionnelles (Promouvoir/Refuser un validé/Retirer) groupées
+// derrière un menu ⋯ ancré sous son déclencheur.
 
 .participant-list {
   list-style: none;
@@ -13,11 +15,10 @@
     background: var(--tb-bitume-2);
     border: 2px solid var(--border-hair);
     border-radius: var(--r-sm);
-    padding: 12px 16px;
+    padding: 8px 10px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 10px;
     box-shadow: var(--shadow-stamp);
     transition: border-color 160ms;
 
@@ -29,8 +30,8 @@
 
   // Avatar — initiales dans un carré métal
   &__avatar {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--r-sm);
     background: var(--tb-metal-2);
     border: 1px solid var(--border-rust);
@@ -39,17 +40,23 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     font-weight: 400;
     flex-shrink: 0;
   }
 
-  &__info {
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__row1 {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex: 1;
+    gap: 6px;
   }
 
   &__name {
@@ -58,152 +65,150 @@
     color: var(--tb-os);
     text-transform: uppercase;
     letter-spacing: 0.02em;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
-  // Badges statut/rôle
-  &__badge {
-    background: transparent;
-    border: 1px solid var(--border-hair);
+  // Ligne 2 — équipe · PC (VALIDATED) ou équipe · statut (PENDING/REJECTED),
+  // métadonnées volontairement atténuées plutôt qu'en badges pleins.
+  &__meta {
+    font-family: var(--font-mono);
     color: var(--text-dim);
-    padding: 2px 10px;
-    border-radius: var(--r-sm);
-    font-family: var(--font-mono);
     font-size: 0.68rem;
-    font-weight: 400;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-
-    &--organizer {
-      background: var(--tint-accent-bg);
-      border-color: var(--tint-accent-border);
-      color: var(--tint-accent-text);
-    }
-
-    &--pending {
-      background: var(--tb-bitume);
-      border-color: var(--border-hair);
-      color: var(--text-dim);
-    }
-
-    &--rejected {
-      background: var(--tint-danger-bg);
-      border-color: var(--tint-danger-border);
-      color: var(--tint-danger-text);
-      opacity: 0.8;
-    }
-  }
-
-  // Points de Championnat — classement
-  &__points {
-    background: transparent;
-    border: 1px solid var(--border-hair);
-    color: var(--tb-toxic);
-    padding: 2px 10px;
-    border-radius: var(--r-sm);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 400;
-    letter-spacing: 0.1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__actions {
     margin-left: auto;
+    flex-shrink: 0;
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-
-    @include bp.mobile {
-      margin-left: 0;
-      width: 100%;
-    }
+    align-items: center;
+    gap: 4px;
   }
 
-  // Boutons Valider / Refuser / Promouvoir / Retirer / Modifier l'équipe
-  &__validate,
-  &__reject,
-  &__promote,
-  &__remove,
-  &__change-team {
-    padding: 5px 12px;
+  // Boutons icône seule — Changer d'équipe / Gérer mon équipe / Valider /
+  // Refuser (inline) / déclencheur du menu ⋯.
+  &__icon-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--border-hair);
     border-radius: var(--r-sm);
+    color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    line-height: 1;
     cursor: pointer;
-    border: 1px solid transparent;
-    transition: opacity 160ms, background 160ms, border-color 160ms;
-
-    &:hover {
-      opacity: 0.85;
-    }
-  }
-
-  &__validate {
-    background: var(--tb-toxic);
-    color: var(--tb-bitume);
-    border-color: var(--tb-toxic);
-  }
-
-  &__reject {
-    background: transparent;
-    border-color: var(--tint-danger-border-strong);
-    color: var(--tint-danger-text);
-
-    &:hover {
-      background: var(--tint-danger-bg);
-    }
-  }
-
-  &__promote {
-    background: transparent;
-    border-color: var(--border-rust);
-    color: var(--text-dim);
-
-    &:hover {
-      border-color: var(--tb-os);
-      color: var(--tb-os);
-    }
-  }
-
-  &__remove {
-    background: transparent;
-    border-color: var(--border-hair);
-    color: var(--text-dim);
-
-    &:hover {
-      border-color: var(--tb-rouille);
-      color: var(--tb-rouille-lt);
-    }
-  }
-
-  &__change-team {
-    background: transparent;
-    border-color: var(--border-rust);
-    color: var(--text-dim);
-
-    &:hover {
-      border-color: var(--tb-os);
-      color: var(--tb-os);
-    }
-  }
-
-  &__manage-team {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     text-decoration: none;
-    color: var(--text-dim);
-    padding: 6px 12px;
-    border: 1px solid var(--border-rust);
-    background: transparent;
+    transition: border-color 160ms, color 160ms, background 160ms;
 
     &:hover {
       border-color: var(--tb-os);
       color: var(--tb-os);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+
+      &:hover {
+        border-color: var(--border-hair);
+        color: var(--text-dim);
+      }
+    }
+
+    &--accept {
+      border-color: var(--tb-toxic);
+      color: var(--tb-toxic);
+
+      &:hover {
+        opacity: 0.85;
+      }
+    }
+
+    &--reject {
+      border-color: var(--tint-danger-border-strong);
+      color: var(--tint-danger-text);
+
+      &:hover {
+        background: var(--tint-danger-bg);
+      }
+    }
+  }
+
+  // Ancre du menu ⋯ — position:relative pour que le menu s'ancre dessous.
+  &__menu-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  // Capte le clic hors-menu pour le refermer — invisible, plein viewport.
+  &__menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: transparent;
+    border: none;
+    cursor: default;
+  }
+
+  &__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 41;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    background: var(--clr-bg-modal);
+    border: 1px solid var(--border-rust);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-stamp);
+    overflow: hidden;
+
+    button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border-hair);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 160ms, color 160ms;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background: var(--surface-hover);
+        color: var(--tb-os);
+      }
+    }
+
+    // Refuser / Retirer — poids de sélecteur volontairement supérieur au
+    // hover générique ci-dessus (imbriqué dans .participant-list__menu),
+    // pas de !important.
+    .participant-list__menu-danger:hover {
+      background: var(--tint-danger-bg);
+      color: var(--tint-danger-text);
     }
   }
 

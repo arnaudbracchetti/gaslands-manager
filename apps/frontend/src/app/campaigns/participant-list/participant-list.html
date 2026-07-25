@@ -1,92 +1,101 @@
-<!-- Liste unifiée de tous les participants (tous statuts) -->
+<!-- Liste unifiée de tous les participants (tous statuts) — cartes compactes,
+     2 lignes : nom + actions en icône (ligne 1), équipe/PC/statut atténués
+     (ligne 2). Actions occasionnelles (Promouvoir/Refuser un validé/Retirer)
+     groupées derrière un menu ⋯ plutôt que des boutons pleine largeur. -->
 <ul class="participant-list">
   @for (participant of sortedParticipants(); track participant.id) {
-    <li class="participant-list__item">
+    <li class="participant-list__item" [class.participant-list__item--me]="isSelf(participant)">
 
       <!-- Avatar initiales -->
       <div class="participant-list__avatar">{{ avatarInitials(participant) }}</div>
 
-      <!-- Informations -->
-      <div class="participant-list__info">
-        <span class="participant-list__name">
-          {{ participant.userName }}
-          @if (participant.teamName) { · {{ participant.teamName }} }
-        </span>
-        <span class="participant-list__badge"
-          [class.participant-list__badge--organizer]="participant.isOrganizer"
-          [class.participant-list__badge--pending]="participant.status === 'PENDING'"
-          [class.participant-list__badge--rejected]="participant.status === 'REJECTED'">
+      <div class="participant-list__body">
+        <div class="participant-list__row1">
+          <span class="participant-list__name">{{ participant.userName }}</span>
+
           @if (participant.isOrganizer) {
-            <app-icon concept="organisateur" size="sm" /> Organisateur
-          } @else if (participant.status === 'PENDING') {
-            ◷ En attente
-          } @else if (participant.status === 'REJECTED') {
-            Refusé
-          } @else {
-            ▲ Participant
+            <app-icon class="participant-list__organizer-badge" concept="organisateur" size="xs" alt="Organisateur" />
           }
-        </span>
-        @if (participant.status === 'VALIDATED') {
-          <span class="participant-list__points"><app-icon concept="points_championnat" size="sm" /> {{ pointsFor(participant) }} PC</span>
+
+          <div class="participant-list__actions">
+
+            <!-- Actions sur sa propre ligne -->
+            @if (isSelf(participant)) {
+              @if (canChangeTeam()) {
+                <button type="button" class="participant-list__icon-btn"
+                  title="Changer d'équipe" aria-label="Changer d'équipe"
+                  (click)="changeTeam.emit()">
+                  <app-icon concept="modifier" size="xs" />
+                </button>
+              }
+              @if (participant.teamId && campaignId()) {
+                @if (manageTeamMode(); as mode) {
+                  <a class="participant-list__icon-btn"
+                     [routerLink]="mode === 'edit'
+                       ? ['/teams', participant.teamId, 'edit']
+                       : ['/campaigns', campaignId(), 'atelier']"
+                     [queryParams]="mode === 'edit' ? { from: 'campaign', campaignId: campaignId() } : null"
+                     title="Gérer mon équipe" aria-label="Gérer mon équipe">
+                    <app-icon concept="atelier" size="xs" />
+                  </a>
+                } @else {
+                  <button type="button" class="participant-list__icon-btn" disabled
+                    title="Aucun atelier ouvert actuellement" aria-label="Gérer mon équipe (indisponible)">
+                    <app-icon concept="atelier" size="xs" />
+                  </button>
+                }
+              }
+            }
+
+            <!-- Actions organisateur (hors soi-même) -->
+            @if (isOrganizer() && !isSelf(participant)) {
+
+              @if (canValidate(participant) || canRevalidate(participant)) {
+                <button type="button" class="participant-list__icon-btn participant-list__icon-btn--accept"
+                  title="Valider" aria-label="Valider"
+                  (click)="onValidate(participant.id, true)">
+                  <app-icon concept="valide" size="xs" />
+                </button>
+              }
+
+              @if (showInlineReject(participant)) {
+                <button type="button" class="participant-list__icon-btn participant-list__icon-btn--reject"
+                  title="Refuser" aria-label="Refuser"
+                  (click)="onValidate(participant.id, false)">✕</button>
+              }
+
+              @if (hasOverflowActions(participant)) {
+                <div class="participant-list__menu-wrap">
+                  <button type="button" class="participant-list__icon-btn participant-list__menu-trigger"
+                    title="Plus d'actions" aria-label="Plus d'actions"
+                    aria-haspopup="menu" [attr.aria-expanded]="openMenuId() === participant.id"
+                    (click)="toggleMenu(participant.id)">⋯</button>
+
+                  @if (openMenuId() === participant.id) {
+                    <div class="participant-list__menu-backdrop" (click)="closeMenu()"></div>
+                    <div class="participant-list__menu" role="menu">
+                      @if (canPromote(participant)) {
+                        <button type="button" role="menuitem" (click)="onMenuPromote(participant.id)">Promouvoir</button>
+                      }
+                      @if (showMenuReject(participant)) {
+                        <button type="button" role="menuitem" class="participant-list__menu-danger" (click)="onMenuReject(participant.id)">Refuser</button>
+                      }
+                      @if (canRetire(participant)) {
+                        <button type="button" role="menuitem" class="participant-list__menu-danger" (click)="onMenuRemove(participant.id)">Retirer</button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+          </div>
+        </div>
+
+        @if (metaText(participant); as meta) {
+          <div class="participant-list__meta">{{ meta }}</div>
         }
       </div>
-
-      <!-- Actions sur sa propre ligne -->
-      @if (isSelf(participant)) {
-        <div class="participant-list__actions">
-          <!-- Changer l'équipe engagée (EN_CONSTRUCTION uniquement) -->
-          @if (canChangeTeam()) {
-            <button class="participant-list__change-team" type="button"
-              (click)="changeTeam.emit()">
-              <app-icon concept="modifier" size="sm" /> Changer d'équipe
-            </button>
-          }
-          <!-- Gérer son équipe — disponible dès qu'une équipe est engagée -->
-          @if (participant.teamId && campaignId()) {
-            <a class="participant-list__manage-team"
-               [routerLink]="['/teams', participant.teamId, 'edit']"
-               [queryParams]="{ from: 'campaign', campaignId: campaignId() }">
-              🔧 Gérer mon équipe
-            </a>
-          }
-        </div>
-      }
-
-      <!-- Actions (organisateur uniquement, hors soi-même) -->
-      @if (isOrganizer() && !isSelf(participant)) {
-        <div class="participant-list__actions">
-          @if (canValidate(participant)) {
-            <button class="participant-list__validate" type="button"
-              (click)="onValidate(participant.id, true)">
-              Valider
-            </button>
-          }
-          @if (canReject(participant)) {
-            <button class="participant-list__reject" type="button"
-              (click)="onValidate(participant.id, false)">
-              Refuser
-            </button>
-          }
-          @if (canRevalidate(participant)) {
-            <button class="participant-list__validate" type="button"
-              (click)="onValidate(participant.id, true)">
-              Valider
-            </button>
-          }
-          @if (canPromote(participant)) {
-            <button class="participant-list__promote" type="button"
-              (click)="promote.emit(participant.id)">
-              Promouvoir
-            </button>
-          }
-          @if (canRetire(participant)) {
-            <button class="participant-list__remove" type="button"
-              (click)="onRemove(participant.id)">
-              Retirer
-            </button>
-          }
-        </div>
-      }
 
     </li>
   } @empty {

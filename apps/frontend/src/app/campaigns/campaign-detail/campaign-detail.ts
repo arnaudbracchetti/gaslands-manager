@@ -61,6 +61,9 @@ export class CampaignDetail implements OnInit {
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
 
+  /** Vrai si une partie de la saison est actuellement en statut ATELIER — reçu de CampaignProgram. */
+  hasAtelierGame: WritableSignal<boolean> = signal(false);
+
   // ── Confirmations ──────────────────────────────────────────────────────────
 
   /** Participant en attente de confirmation de retrait (null = aucun) */
@@ -173,6 +176,11 @@ export class CampaignDetail implements OnInit {
   /** CampaignProgram émet cet événement après l'enregistrement d'un résultat. */
   onResultRecorded(): void {
     this.loadStandings();
+  }
+
+  /** CampaignProgram émet cet événement à chaque rechargement du programme. */
+  onAtelierStatusChanged(value: boolean): void {
+    this.hasAtelierGame.set(value);
   }
 
   onValidate(event: { pid: number; accept: boolean }): void {

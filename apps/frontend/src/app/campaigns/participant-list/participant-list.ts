@@ -16,9 +16,10 @@
  * (tri stable — tant qu'aucun point n'existe, l'ordre reste celui d'origine).
  * Les PC ne sont affichés que pour les participants VALIDATED.
  */
-import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CampaignParticipant } from '../campaign-participant.model';
+import { CampaignState } from '../campaign.model';
 import { Icon } from '../../shared/icon/icon';
 
 @Component({
@@ -58,8 +59,34 @@ export class ParticipantList {
   /** Émis au clic sur "Modifier l'équipe" — le parent possède la liste des équipes. */
   changeTeam: OutputEmitterRef<void> = output<void>();
 
-  /** Id de la saison courante — utilisé pour construire le lien de retour vers TeamEditPage. */
+  /** Id de la saison courante — utilisé pour construire le lien "Gérer mon équipe" (TeamEditPage ou Atelier). */
   campaignId: InputSignal<number | undefined> = input<number | undefined>(undefined);
+
+  /** État courant de la saison — pilote la cible du lien "Gérer mon équipe". */
+  campaignState: InputSignal<CampaignState | undefined> = input<CampaignState | undefined>(undefined);
+
+  /** Vrai si une partie de la saison est actuellement en statut ATELIER. */
+  hasAtelierGame: InputSignal<boolean> = input(false);
+
+  /**
+   * Cible du lien "Gérer mon équipe" — construction d'équipe tant que la
+   * saison est EN_CONSTRUCTION, sinon l'Atelier si (et seulement si) une
+   * partie y est actuellement ouverte. `null` = campagne démarrée sans
+   * atelier ouvert — le lien reste affiché mais grisé (cf. template).
+   */
+  manageTeamMode: Signal<'edit' | 'atelier' | null> = computed(() => {
+    if (this.campaignState() === 'EN_CONSTRUCTION') return 'edit';
+    if (this.hasAtelierGame()) return 'atelier';
+    return null;
+  });
+
+  /**
+   * Id du participant dont le menu ⋯ (actions secondaires) est actuellement
+   * ouvert — un seul à la fois, `null` si aucun. Purement présentationnel :
+   * ne change aucune des règles can*() ci-dessous, seulement leur groupement
+   * visuel (inline vs. menu).
+   */
+  openMenuId: WritableSignal<number | null> = signal<number | null>(null);
 
   private organizerCount: Signal<number> = computed(
     () => this.participants().filter((p) => p.isOrganizer && p.status === 'VALIDATED').length,
@@ -131,6 +158,62 @@ export class ParticipantList {
 
   canRevalidate(participant: CampaignParticipant): boolean {
     return this.isOrganizer() && !this.isSelf(participant) && participant.status === 'REJECTED';
+  }
+
+  /**
+   * Regroupement présentationnel des actions organisateur (carte compacte) :
+   * la décision d'accepter/refuser une demande (PENDING) reste inline, en
+   * icône — c'est l'action la plus fréquente et la plus urgente. Le reste
+   * (Refuser un VALIDATED, Promouvoir, Retirer) passe dans le menu ⋯ — des
+   * actions de maintenance occasionnelles, pas de nouvelle règle métier.
+   */
+  showInlineReject(participant: CampaignParticipant): boolean {
+    return this.canReject(participant) && participant.status === 'PENDING';
+  }
+
+  showMenuReject(participant: CampaignParticipant): boolean {
+    return this.canReject(participant) && participant.status === 'VALIDATED';
+  }
+
+  hasOverflowActions(participant: CampaignParticipant): boolean {
+    return this.canRetire(participant) || this.showMenuReject(participant) || this.canPromote(participant);
+  }
+
+  toggleMenu(pid: number): void {
+    this.openMenuId.set(this.openMenuId() === pid ? null : pid);
+  }
+
+  closeMenu(): void {
+    this.openMenuId.set(null);
+  }
+
+  onMenuPromote(pid: number): void {
+    this.closeMenu();
+    this.promote.emit(pid);
+  }
+
+  onMenuReject(pid: number): void {
+    this.closeMenu();
+    this.onValidate(pid, false);
+  }
+
+  onMenuRemove(pid: number): void {
+    this.closeMenu();
+    this.onRemove(pid);
+  }
+
+  /**
+   * Ligne 2 atténuée : équipe · PC (VALIDATED) ou équipe · statut
+   * (PENDING/REJECTED) — remplace les badges pleins pour réduire l'emprise
+   * visuelle de chaque carte. Chaîne vide = ligne 2 absente du DOM.
+   */
+  metaText(participant: CampaignParticipant): string {
+    const parts: string[] = [];
+    if (participant.teamName) parts.push(participant.teamName);
+    if (participant.status === 'VALIDATED') parts.push(`${this.pointsFor(participant)} PC`);
+    else if (participant.status === 'PENDING') parts.push('En attente');
+    else if (participant.status === 'REJECTED') parts.push('Refusé');
+    return parts.join(' · ');
   }
 
   avatarInitials(participant: CampaignParticipant): string {

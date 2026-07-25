@@ -75,6 +75,15 @@ export class CampaignProgram implements OnInit {
    */
   resultRecorded: OutputEmitterRef<void> = output<void>();
 
+  /**
+   * Émis à chaque rechargement du programme — vrai si une partie de la
+   * campagne est actuellement en statut ATELIER (un seul possible à la
+   * fois). CampaignDetail l'utilise pour piloter le lien "Gérer mon équipe"
+   * de ParticipantList, composant frère qui n'a sinon aucun moyen de
+   * connaître ce statut.
+   */
+  atelierStatusChanged: OutputEmitterRef<boolean> = output<boolean>();
+
   // ── État ──────────────────────────────────────────────────────────────────────
 
   games: WritableSignal<Game[]> = signal<Game[]>([]);
@@ -167,6 +176,7 @@ export class CampaignProgram implements OnInit {
       next: (games: Game[]) => {
         this.games.set(games);
         this.loading.set(false);
+        this.atelierStatusChanged.emit(games.some((g) => g.status === 'ATELIER'));
       },
       error: (err: HttpErrorResponse) => {
         const msg = err.error?.message ?? err.message ?? 'Erreur lors du chargement du programme.';
