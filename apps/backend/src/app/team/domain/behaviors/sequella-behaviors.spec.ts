@@ -11,49 +11,6 @@ function makeStats(overrides: Partial<VehicleStats> = {}): VehicleStats {
   };
 }
 
-describe('MoteurEndommageBehavior (moteur_endommage)', () => {
-  it('réduit vitesse_max de 1', () => {
-    const behavior = resolveSequellaBehavior('moteur_endommage');
-    expect(behavior.applyStats(makeStats({ vitesse_max: 6 })).vitesse_max).toBe(5);
-  });
-
-  it('ne descend pas sous 1 (vitesse minimum)', () => {
-    const behavior = resolveSequellaBehavior('moteur_endommage');
-    expect(behavior.applyStats(makeStats({ vitesse_max: 1 })).vitesse_max).toBe(1);
-  });
-
-  it('ne modifie pas les autres stats', () => {
-    const behavior = resolveSequellaBehavior('moteur_endommage');
-    const result = behavior.applyStats(makeStats());
-    expect(result.carrosserie).toBe(6);
-    expect(result.manoeuvrabilite).toBe(4);
-  });
-});
-
-describe('DirectionEndommageBehavior (direction_endommage)', () => {
-  it('réduit manoeuvrabilite de 1', () => {
-    const behavior = resolveSequellaBehavior('direction_endommage');
-    expect(behavior.applyStats(makeStats({ manoeuvrabilite: 4 })).manoeuvrabilite).toBe(3);
-  });
-
-  it('ne descend pas sous 1', () => {
-    const behavior = resolveSequellaBehavior('direction_endommage');
-    expect(behavior.applyStats(makeStats({ manoeuvrabilite: 1 })).manoeuvrabilite).toBe(1);
-  });
-});
-
-describe('BlindageArracheBehavior (blindage_arrache)', () => {
-  it('réduit carrosserie de 2', () => {
-    const behavior = resolveSequellaBehavior('blindage_arrache');
-    expect(behavior.applyStats(makeStats({ carrosserie: 6 })).carrosserie).toBe(4);
-  });
-
-  it('ne descend pas sous 0', () => {
-    const behavior = resolveSequellaBehavior('blindage_arrache');
-    expect(behavior.applyStats(makeStats({ carrosserie: 1 })).carrosserie).toBe(0);
-  });
-});
-
 describe('SiegeIrrecuperableBehavior (siege_irrecuperable)', () => {
   it('réduit equipage de 1', () => {
     const behavior = resolveSequellaBehavior('siege_irrecuperable');
@@ -75,18 +32,8 @@ describe('resolveSequellaBehavior — fallback neutre', () => {
 });
 
 describe('SEQUELLA_BEHAVIORS', () => {
-  it('contient les 4 entrées à effet chiffré', () => {
-    expect(SEQUELLA_BEHAVIORS.has('moteur_endommage')).toBe(true);
-    expect(SEQUELLA_BEHAVIORS.has('direction_endommage')).toBe(true);
-    expect(SEQUELLA_BEHAVIORS.has('blindage_arrache')).toBe(true);
+  it('contient uniquement l\'entrée à effet chiffré (siege_irrecuperable)', () => {
     expect(SEQUELLA_BEHAVIORS.has('siege_irrecuperable')).toBe(true);
-  });
-
-  it('les séquelles se composent correctement (fold successif, plus de chaînage)', () => {
-    const stats = makeStats({ vitesse_max: 6, manoeuvrabilite: 4 });
-    const apresMoteur = resolveSequellaBehavior('moteur_endommage').applyStats(stats);
-    const apresDirection = resolveSequellaBehavior('direction_endommage').applyStats(apresMoteur);
-    expect(apresDirection.vitesse_max).toBe(5);
-    expect(apresDirection.manoeuvrabilite).toBe(3);
+    expect(SEQUELLA_BEHAVIORS.size).toBe(1);
   });
 });

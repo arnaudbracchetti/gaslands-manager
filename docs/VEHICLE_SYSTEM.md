@@ -367,11 +367,8 @@ Registre des séquelles (`domain/behaviors/sequella-behaviors.ts`,
 séquelles n'ayant pas ce champ au catalogue) :
 
 ```
-moteur_endommage       → MoteurEndommageBehavior
-direction_endommage    → DirectionEndommageBehavior
-blindage_arrache       → BlindageArracheBehavior
 siege_irrecuperable    → SiegeIrrecuperableBehavior
-(autre/absent)         → comportement neutre   (11 des 15 séquelles)
+(autre/absent)         → comportement neutre   (11 des 12 séquelles)
 ```
 
 ### 4.5 `canPlace` sur le Type, `applyStats` sur l'Instance

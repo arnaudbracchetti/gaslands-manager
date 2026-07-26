@@ -11,7 +11,7 @@
 #   regles       - Effet mécanique précis (Markdown), affiché uniquement dans la
 #                  modale de détail ouverte au clic sur la carte
 #   chocs_cost   - Coût en Chocs (monnaie du véhicule, distincte des Jerricans d'équipe).
-#                  0 pour les 4 séquelles imposées automatiquement (origine TABLE_EPAVES).
+#                  0 pour les 2 séquelles imposées automatiquement (origine TABLE_EPAVES).
 #   origine      - ATELIER (achat volontaire, en échange de Chocs accumulés en partie)
 #                  ou TABLE_EPAVES (imposée par un tirage sur la Table des Épaves,
 #                  jamais achetable directement en atelier).
@@ -24,30 +24,6 @@
 
 sequelles:
   # ── Séquelles mécaniques — imposées par la Table des Épaves (coût 0) ────────
-  - nom: Moteur endommagé
-    nom_interne: moteur_endommage
-    effet_court: "-1 Vitesse Max"
-    description: Le moteur a souffert lors de la Table des Épaves.
-    regles: Vitesse maximale réduite de 1 (minimum 1).
-    chocs_cost: 0
-    origine: TABLE_EPAVES
-
-  - nom: Direction endommagée
-    nom_interne: direction_endommage
-    effet_court: "-1 Manœuvrabilité"
-    description: La direction ne répond plus aussi bien qu'avant.
-    regles: Manoeuvrabilité réduite de 1 (minimum 1).
-    chocs_cost: 0
-    origine: TABLE_EPAVES
-
-  - nom: Blindage arraché
-    nom_interne: blindage_arrache
-    effet_court: "-2 Carrosserie"
-    description: Une partie du blindage a été arrachée pendant la course.
-    regles: Carrosserie réduite de 2 (minimum 0).
-    chocs_cost: 0
-    origine: TABLE_EPAVES
-
   - nom: Siège irrécupérable
     nom_interne: siege_irrecuperable
     effet_court: "-1 Équipage"

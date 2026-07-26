@@ -14,24 +14,6 @@ export interface SequellaBehavior {
 
 const NEUTRAL_SEQUELLA_BEHAVIOR: SequellaBehavior = { applyStats: (s) => s };
 
-class MoteurEndommageBehavior implements SequellaBehavior {
-  applyStats(current: VehicleStats): VehicleStats {
-    return { ...current, vitesse_max: Math.max(1, current.vitesse_max - 1) };
-  }
-}
-
-class DirectionEndommageBehavior implements SequellaBehavior {
-  applyStats(current: VehicleStats): VehicleStats {
-    return { ...current, manoeuvrabilite: Math.max(1, current.manoeuvrabilite - 1) };
-  }
-}
-
-class BlindageArracheBehavior implements SequellaBehavior {
-  applyStats(current: VehicleStats): VehicleStats {
-    return { ...current, carrosserie: Math.max(0, current.carrosserie - 2) };
-  }
-}
-
 class SiegeIrrecuperableBehavior implements SequellaBehavior {
   applyStats(current: VehicleStats): VehicleStats {
     return { ...current, equipage: Math.max(1, current.equipage - 1) };
@@ -40,9 +22,6 @@ class SiegeIrrecuperableBehavior implements SequellaBehavior {
 
 /** Clé = `nom_interne` de la séquelle (pas de champ `comportement` sur `Sequelle`). */
 export const SEQUELLA_BEHAVIORS: ReadonlyMap<string, SequellaBehavior> = new Map([
-  ['moteur_endommage', new MoteurEndommageBehavior()],
-  ['direction_endommage', new DirectionEndommageBehavior()],
-  ['blindage_arrache', new BlindageArracheBehavior()],
   ['siege_irrecuperable', new SiegeIrrecuperableBehavior()],
 ]);
 

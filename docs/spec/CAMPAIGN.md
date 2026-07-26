@@ -644,7 +644,7 @@ Conception détaillée : [`docs/plans/2026-07-26-sabotage-points-wizard-design.m
 > [Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03).
 
 Une **Séquelle** (Gaslands, p.170) est un inconvénient permanent qu'un véhicule
-acquiert en échange de Chocs accumulés en partie — 15 au catalogue
+acquiert en échange de Chocs accumulés en partie — 12 au catalogue
 (`database_init/data/sequelle.yml`), chargées par `CatalogService` comme tout
 autre catalogue d'équipement. Chaque séquelle porte un champ `origine` :
 
@@ -659,15 +659,15 @@ via un composant dédié `SequellaDetailModal` (cf.
 — la carte séquelle reste `em-sequella-card` (dédiée, monnaie Chocs plutôt que
 jerricans/emplacement) plutôt que de basculer sur `EquipmentOption`.
 
-- **`TABLE_EPAVES`** (5 séquelles : `moteur_endommage`, `direction_endommage`,
-  `blindage_arrache`, `siege_irrecuperable`, `chassis_fragilise`) — imposée
-  automatiquement par un tirage sur la Table des Épaves (coût toujours 0),
-  jamais achetable directement en atelier. `chassis_fragilise` (ligne
-  `CHASSIS_FRAGILISE`) est purement descriptive — comme les 10 séquelles
-  `ATELIER` ci-dessous, elle n'a aucune entrée dans `SEQUELLA_BEHAVIORS`
-  (`resolveSequellaBehavior` retombe sur le comportement neutre) — contrairement
-  aux 4 autres séquelles `TABLE_EPAVES`, qui modifient chacune une statistique
-  chiffrée du véhicule.
+- **`TABLE_EPAVES`** (2 séquelles : `siege_irrecuperable`, `chassis_fragilise`)
+  — imposée automatiquement par un tirage sur la Table des Épaves (coût
+  toujours 0), jamais achetable directement en atelier. `chassis_fragilise`
+  (ligne `CHASSIS_FRAGILISE`) est purement descriptive — comme les 10
+  séquelles `ATELIER` ci-dessous, elle n'a aucune entrée dans
+  `SEQUELLA_BEHAVIORS` (`resolveSequellaBehavior` retombe sur le comportement
+  neutre) — contrairement à `siege_irrecuperable`, seule autre séquelle
+  `TABLE_EPAVES`, qui modifie une statistique chiffrée du véhicule
+  (équipage).
 - **`ATELIER`** (10 séquelles : Suicidaire, Impopulaire, Dingue, Lâche,
   Vieille Blessure de Guerre, Vibrations, Convulsions, Maintenu par la Rouille,
   Dur à Cuire, Légende Vivante) — achat volontaire contre des Chocs, en

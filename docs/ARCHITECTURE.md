@@ -366,7 +366,7 @@ sans mécanisme supplémentaire (`order` fractionnaire) : voir
 
 #### Séquelles
 
-Catalogue unifié `database_init/data/sequelle.yml` (14 entrées), chargé par
+Catalogue unifié `database_init/data/sequelle.yml` (12 entrées), chargé par
 `CatalogService` comme tout autre catalogue d'équipement — champ `origine`
 (`ATELIER` | `TABLE_EPAVES`) distinguant achat volontaire et imposition
 automatique. `Sequella` (`team/domain/sequella.ts`) est une entité enfant de

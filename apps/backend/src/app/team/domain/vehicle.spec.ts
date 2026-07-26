@@ -192,11 +192,11 @@ describe('Vehicle — champs transients de campagne', () => {
   });
 
   describe('addCampaignSequella / removeSequella', () => {
-    const moteur = SequellaType.from({
-      nom: 'Moteur endommagé', nom_interne: 'moteur_endommage', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+    const siege = SequellaType.from({
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
     });
-    const direction = SequellaType.from({
-      nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
+    const chassis = SequellaType.from({
+      nom: 'Châssis fragilisé', nom_interne: 'chassis_fragilise', description: '', regles: '', chocs_cost: 2, origine: 'TABLE_EPAVES',
     });
 
     it('sequellas est vide par défaut', () => {
@@ -205,21 +205,21 @@ describe('Vehicle — champs transients de campagne', () => {
 
     it('addCampaignSequella empile les séquelles dans l\'ordre d\'application, avec l\'id fourni', () => {
       const v = makeVehicle();
-      v.addCampaignSequella(moteur, -1);
-      v.addCampaignSequella(direction, -2);
+      v.addCampaignSequella(siege, -1);
+      v.addCampaignSequella(chassis, -2);
       expect(v.sequellas).toHaveLength(2);
-      expect(v.sequellas[0].type.nomInterne).toBe('moteur_endommage');
+      expect(v.sequellas[0].type.nomInterne).toBe('siege_irrecuperable');
       expect(v.sequellas[0].id).toBe(-1);
-      expect(v.sequellas[1].type.nomInterne).toBe('direction_endommage');
+      expect(v.sequellas[1].type.nomInterne).toBe('chassis_fragilise');
     });
 
     it('removeSequella retire la séquelle ciblée par son id (undo d\'un achat)', () => {
       const v = makeVehicle();
-      v.addCampaignSequella(moteur, -1);
-      v.addCampaignSequella(direction, -2);
+      v.addCampaignSequella(siege, -1);
+      v.addCampaignSequella(chassis, -2);
       v.removeSequella(-2);
       expect(v.sequellas).toHaveLength(1);
-      expect(v.sequellas[0].type.nomInterne).toBe('moteur_endommage');
+      expect(v.sequellas[0].type.nomInterne).toBe('siege_irrecuperable');
     });
 
     it('removeSequella lève DomainException si la séquelle est introuvable', () => {
@@ -619,25 +619,25 @@ describe('Vehicle.buildChain — contribution portée par les flags (refactor)',
     });
   }
 
-  const directionEndommagee = SequellaType.from({
-    nom: 'Direction endommagée', nom_interne: 'direction_endommage', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+  const siegeIrrecuperable = SequellaType.from({
+    nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
   });
   const suicidaire = SequellaType.from({
     nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
   });
 
-  it('séquelle câblée : "Direction endommagée" (-1) fait chuter la manœuvrabilité effective sous 3 → Cascadeur refusé', () => {
+  it('séquelle câblée : "Siège irrécupérable" (-1 équipage) modifie bien les stats effectives', () => {
     const v = new Vehicle(1, 10, moyenManoeuvre3(), [], []);
-    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // 3 sans séquelle
-    v.addCampaignSequella(directionEndommagee, -1);
-    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(false); // 3 - 1 = 2
+    expect(v.effectiveStats.equipage).toBe(2); // sans séquelle
+    v.addCampaignSequella(siegeIrrecuperable, -1);
+    expect(v.effectiveStats.equipage).toBe(1); // 2 - 1
   });
 
-  it('séquelle vendue neutralisée : une "Direction endommagée" vendue ne réduit plus la manœuvrabilité', () => {
+  it('séquelle vendue neutralisée : un "Siège irrécupérable" vendu ne réduit plus l\'équipage', () => {
     const v = new Vehicle(1, 10, moyenManoeuvre3(), [], []);
-    v.addCampaignSequella(directionEndommagee, -1);
+    v.addCampaignSequella(siegeIrrecuperable, -1);
     v.markSequellaSold(-1);
-    expect(v.canAddAdvantage(cascadeur(), 100).ok).toBe(true); // effet annulé → 3
+    expect(v.effectiveStats.equipage).toBe(2); // effet annulé
   });
 
   it('séquelle sans effet chiffré ("Suicidaire") : repli Neutral, aucune stat modifiée', () => {
