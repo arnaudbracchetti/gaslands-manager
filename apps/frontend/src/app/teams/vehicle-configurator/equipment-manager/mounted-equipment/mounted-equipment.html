@@ -1,19 +1,25 @@
-<!-- ── Filtre "masquer les équipements vendus" — absent si rien n'est vendu ── -->
-@if (hiddenSoldCount() > 0) {
-  <button
-    class="me-toggle"
-    type="button"
-    [attr.title]="showSold() ? 'Masquer les équipements vendus' : 'Afficher les équipements vendus (' + hiddenSoldCount() + ')'"
-    (click)="showSold.set(!showSold())">
-    @if (showSold()) {
-      <app-icon concept="recherche" size="md" />
-    } @else {
-      <app-icon concept="recherche" size="md" /> {{ hiddenSoldCount() }}
-    }
-  </button>
-}
+<!-- ── Filtre "masquer les équipements vendus" — toujours dans le flux (hauteur
+     réservée même quand rien n'est vendu), seulement invisible/désactivé :
+     évite un décalage vertical du premier groupe quand ce composant est
+     instancié plusieurs fois côte à côte (ex. ParticipantAtelierPage) et que
+     seule l'une des instances a quelque chose à masquer. ── -->
+<button
+  class="me-toggle"
+  type="button"
+  [class.me-toggle--placeholder]="hiddenSoldCount() === 0"
+  [disabled]="hiddenSoldCount() === 0"
+  [attr.aria-hidden]="hiddenSoldCount() === 0 ? 'true' : null"
+  [attr.title]="hiddenSoldCount() === 0 ? null : (showSold() ? 'Masquer les équipements vendus' : 'Afficher les équipements vendus (' + hiddenSoldCount() + ')')"
+  (click)="showSold.set(!showSold())">
+  @if (showSold()) {
+    <app-icon concept="recherche" size="md" />
+  } @else {
+    <app-icon concept="recherche" size="md" /> {{ hiddenSoldCount() }}
+  }
+</button>
 
 <!-- ── Armes montées — une arme montée sur Tourelle affiche un badge dédié ── -->
+@if (showWeapons()) {
 <section class="me-group">
   <h4 class="me-group-title">Armes ({{ weapons().length }})</h4>
   @if (weapons().length === 0) {
@@ -65,8 +71,10 @@
     </ul>
   }
 </section>
+}
 
 <!-- ── Améliorations posées ── -->
+@if (showImprovements()) {
 <section class="me-group">
   <h4 class="me-group-title">Améliorations ({{ improvements().length }})</h4>
   @if (improvements().length === 0) {
@@ -118,8 +126,10 @@
     </ul>
   }
 </section>
+}
 
 <!-- ── Avantages acquis — jamais d'orientation ni d'emplacement ── -->
+@if (showAdvantages()) {
 <section class="me-group">
   <h4 class="me-group-title">Avantages ({{ advantages().length }})</h4>
   @if (advantages().length === 0) {
@@ -158,6 +168,7 @@
     </ul>
   }
 </section>
+}
 
 <!-- ── Séquelles acquises — atelier campagne uniquement ── -->
 @if (showSequellas()) {

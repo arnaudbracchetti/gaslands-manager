@@ -32,6 +32,17 @@
   }
 }
 
+// Emplacements et Chocs sur une même ligne — deux indicateurs courts, pas
+// besoin d'une ligne entière chacun. `flex-wrap` en filet de sécurité si le
+// conteneur est trop étroit pour les deux côte à côte.
+.vcs-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
 .vcs-slots {
   display: flex;
   align-items: center;
@@ -50,7 +61,7 @@
   font-size: 0.85rem;
   color: var(--text-dim);
   letter-spacing: 0.04em;
-  margin-top: 4px;
+  white-space: nowrap;
 
   strong {
     color: var(--tb-danger);

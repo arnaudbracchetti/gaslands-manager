@@ -1,0 +1,98 @@
+<div class="pap-page">
+
+  <app-breadcrumb [crumbs]="breadcrumbs()" />
+
+  <div class="pap-header">
+    <h1>{{ headerTitle() }}</h1>
+    <span class="pap-readonly-badge">Lecture seule</span>
+  </div>
+
+  @if (loading()) {
+    <p class="pap-status pap-status--loading">Chargement de l'atelier…</p>
+  } @else if (error()) {
+    <p class="pap-status pap-status--error">{{ error() }}</p>
+  } @else {
+
+    <div class="pap-body">
+
+      <aside class="pap-vehicle-list">
+        <app-team-budget
+          [budgetEquipe]="budgetEquipeTotal()"
+          [coutEquipeTotal]="totalVehiclesCost()"
+          [budgetRestant]="budgetRestant()"
+          [budgetDepasse]="budgetDepasse()"
+          [budgetPourcentage]="budgetPourcentage()"
+        />
+
+        @if (vehicleSummaries().length === 0) {
+          <p class="pap-vehicles-empty">Aucun véhicule dans cette équipe.</p>
+        } @else {
+          <div class="pap-vehicle-tabs">
+            @for (summary of vehicleSummaries(); track summary.id; let i = $index) {
+              <div class="pap-vehicle-tab" [class.pap-vehicle-tab--active]="summary.id === selectedVehicleId()">
+                <app-vehicle-summary-card
+                  [vehicle]="summary"
+                  [index]="i + 1"
+                  [showDelete]="false"
+                  (manageClicked)="onSelectVehicle($event)"
+                />
+              </div>
+            }
+          </div>
+        }
+      </aside>
+
+      <section class="pap-vehicle-detail">
+        @if (selectedVehicle(); as v) {
+          <div class="pap-detail-grid">
+            <div class="pap-cost-card">
+              <app-vehicle-cost-summary
+                [customName]="v.customName"
+                [typeNom]="typeNom()"
+                [disabled]="true"
+                [emplacementsUtilises]="emplacementsUtilises()"
+                [emplacementsTotal]="v.emplacementsTotal"
+                [coutBase]="coutBase()"
+                [coutEquipement]="coutEquipement()"
+                [coutTotal]="coutTotal()"
+                [chocs]="targetWorkshopVehicle()?.chocs ?? null"
+              />
+            </div>
+
+            @if (sponsorCatalog(); as catalog) {
+              <div class="pap-equipment-col pap-equipment-col--left">
+                <app-mounted-equipment
+                  [weapons]="v.weapons"
+                  [improvements]="v.improvements"
+                  [advantages]="[]"
+                  [showAdvantages]="false"
+                  [sequellas]="[]"
+                  [showSequellas]="false"
+                  [locked]="true"
+                  [sponsorCatalog]="catalog"
+                />
+              </div>
+              <div class="pap-equipment-col pap-equipment-col--right">
+                <app-mounted-equipment
+                  [weapons]="[]"
+                  [showWeapons]="false"
+                  [improvements]="[]"
+                  [showImprovements]="false"
+                  [advantages]="v.advantages"
+                  [sequellas]="targetWorkshopVehicle()?.sequellas ?? []"
+                  [showSequellas]="true"
+                  [locked]="true"
+                  [sponsorCatalog]="catalog"
+                />
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="pap-vehicles-empty">Aucun véhicule sélectionné.</p>
+        }
+      </section>
+
+    </div>
+  }
+
+</div>

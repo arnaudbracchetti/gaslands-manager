@@ -217,3 +217,10 @@
     color: var(--tb-danger);
   }
 }
+
+// Rien à masquer : le bouton reste dans le flux (hauteur réservée, cf. son
+// commentaire dans le template) mais devient invisible et non interactif.
+.me-toggle--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}

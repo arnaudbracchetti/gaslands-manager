@@ -177,7 +177,8 @@
     box-shadow: var(--shadow-stamp);
     overflow: hidden;
 
-    button {
+    button, a {
+      display: block;
       width: 100%;
       text-align: left;
       padding: 8px 12px;
@@ -190,6 +191,7 @@
       font-weight: 400;
       text-transform: uppercase;
       letter-spacing: 0.08em;
+      text-decoration: none;
       cursor: pointer;
       transition: background 160ms, color 160ms;
 

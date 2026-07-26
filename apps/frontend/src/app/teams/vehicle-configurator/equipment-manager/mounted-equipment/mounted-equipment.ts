@@ -52,11 +52,28 @@ export class MountedEquipment {
   /** Armes montées — hors celles absorbées par une ligne Tourelle. */
   weapons: InputSignal<Weapon[]> = input.required<Weapon[]>();
 
+  /**
+   * Affiche la section "Armes" — `true` par défaut (comportement historique,
+   * inchangé pour `EquipmentManager`/`AtelierVehiclePage`). Permet à un
+   * consommateur d'instancier ce composant plusieurs fois pour répartir les 4
+   * groupes sur plusieurs colonnes (ex. `ParticipantAtelierPage`, armes/
+   * améliorations à gauche, avantages/séquelles à droite) sans dupliquer le
+   * template — mirroir de `showSequellas` pour les 3 groupes historiquement
+   * inconditionnels.
+   */
+  showWeapons: InputSignal<boolean> = input<boolean>(true);
+
   /** Améliorations posées — les Tourelles reçoivent un traitement spécial. */
   improvements: InputSignal<VehicleImprovement[]> = input.required<VehicleImprovement[]>();
 
+  /** Affiche la section "Améliorations" — mirroir de `showWeapons`. */
+  showImprovements: InputSignal<boolean> = input<boolean>(true);
+
   /** Avantages acquis — jamais d'orientation, jamais d'emplacement. */
   advantages: InputSignal<VehicleAdvantage[]> = input.required<VehicleAdvantage[]>();
+
+  /** Affiche la section "Avantages" — mirroir de `showWeapons`. */
+  showAdvantages: InputSignal<boolean> = input<boolean>(true);
 
   /**
    * Séquelles acquises — atelier campagne uniquement, absent (`[]`) en

@@ -328,6 +328,40 @@ en filtrant chaque résultat sur le `participantId` ciblé.
 
 ---
 
+## Consultation en lecture seule de l'atelier d'un participant
+
+Mirroir de [§Historique complet d'un participant](#historique-complet-dun-participant)
+appliqué à l'atelier plutôt qu'au journal : depuis l'écran `/campaigns/:id`,
+tout participant `VALIDATED` peut consulter l'équipe d'un tiers (véhicules,
+armes, améliorations, avantages, séquelles, chocs, cagnotte), en lecture
+seule — aucune action d'achat/vente/retrait n'est jamais possible sur cet
+écran.
+
+- **Accès** : sur la ligne d'un autre participant, une entrée "Voir l'atelier"
+  dans le menu ⋯, visible dès que ce participant a une équipe engagée
+  (`participant.teamId`) **et** que la campagne n'est plus `EN_CONSTRUCTION`
+  (une équipe en construction libre n'a pas encore de contenu d'atelier
+  stabilisé à montrer). Contrairement au lien "Gérer mon équipe" (qui ne
+  bascule vers l'Atelier que si une partie y est *actuellement* ouverte), la
+  consultation en lecture seule ne dépend d'aucun atelier ouvert précis — les
+  données restent consultables à tout moment dès que la campagne a démarré.
+- **Écran** (`ParticipantAtelierPage`, `/campaigns/:id/participants/:pid/atelier`) :
+  vue maître-détail sur une seule page — colonne de gauche listant tous les
+  véhicules de l'équipe consultée (façon onglets), partie droite affichant la
+  configuration complète du véhicule sélectionné (armes, améliorations,
+  avantages, séquelles), plus un bandeau de synthèse d'équipe (budget total /
+  consommé à l'instant t). Pas de sous-route par véhicule : la sélection est
+  un état local à la page, contrairement à l'atelier "personnel"
+  (`AtelierPage`/`AtelierVehiclePage`, deux routes distinctes).
+- **Backend** : `GetWorkshopUseCase` (déjà utilisé par `GET .../workshop`
+  pour "mon" atelier) accepte désormais un `participantId` optionnel dans sa
+  commande — cf. [§Atelier et épaves](#atelier-et-épaves-partie-5),
+  `GET .../participants/:pid/workshop`. Aucun endpoint mutant (achat/revente,
+  verdicts de disponibilité) n'existe en version "consultation d'un tiers" :
+  seule la lecture est exposée.
+
+---
+
 ## Cycle de vie d'une partie et phase Atelier
 
 Une partie (`Game`) traverse trois statuts : `PLANIFIE → ATELIER → JOUE`. Il
@@ -968,6 +1002,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
+| GET | `/api/campaigns/:id/participants/:pid/workshop` | JWT | Atelier d'**un autre participant**, en lecture seule — même forme de réponse que `GET .../workshop` (`WorkshopStateDto`), mais `participantId` de la commande désigne la cible plutôt que l'appelant. Réservé aux appelants `VALIDATED` (même règle de visibilité que `GET .../participants/:pid/journal`, `NotFoundException` dans les deux cas de refus) ; le participant cible n'a lui-même aucune contrainte de statut. Consommé par `ParticipantAtelierPage` (vue maître-détail) |
 | GET | `/api/campaigns/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |

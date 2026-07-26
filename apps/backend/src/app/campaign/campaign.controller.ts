@@ -709,6 +709,17 @@ export class CampaignController {
     return this.query.getParticipantJournal(id, pid, req.user.id);
   }
 
+  /** GET /api/campaigns/:id/participants/:pid/workshop — atelier d'un participant, lecture seule (tout participant VALIDATED). */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/participants/:pid/workshop')
+  getParticipantWorkshop(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pid', ParseIntPipe) pid: number,
+  ): Promise<WorkshopStateDto> {
+    return this.getWorkshopUseCase.execute({ campaignId: id, userId: req.user.id, participantId: pid });
+  }
+
   // ── Détail / suppression campagne (routes :id génériques en dernier) ─────────
 
   /** GET /api/campaigns/:id — détail (participant VALIDATED). */

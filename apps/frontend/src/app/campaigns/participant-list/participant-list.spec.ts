@@ -25,6 +25,15 @@ function findMenuButtonByLabel(item: Element, label: string): HTMLButtonElement 
   return null;
 }
 
+/** Mirroir de `findMenuButtonByLabel`, pour les entrées de menu en lien (`<a>`). */
+function findMenuLinkByLabel(item: Element, label: string): HTMLAnchorElement | null {
+  const links = item.querySelectorAll('.participant-list__menu a');
+  for (const link of Array.from(links)) {
+    if (link.textContent?.trim() === label) return link as HTMLAnchorElement;
+  }
+  return null;
+}
+
 describe('ParticipantList', () => {
   let component: ParticipantList;
   let fixture: ComponentFixture<ParticipantList>;
@@ -366,5 +375,62 @@ describe('ParticipantList', () => {
 
     expect(findMenuButtonByLabel(items[1], 'Retirer')).not.toBeNull();
     expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
+  });
+
+  // ── Consultation en lecture seule de l'atelier d'un tiers ────────────────
+
+  it('affiche "Voir l\'atelier" dans le menu ⋯ d\'un autre participant quand la campagne est démarrée', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_COURS');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    // items[1] = Alice (id 2, teamId 8).
+    const atelierLink = findMenuLinkByLabel(items[1], 'Voir l\'atelier');
+    expect(atelierLink).not.toBeNull();
+    expect(atelierLink!.getAttribute('href')).toBe('/campaigns/5/participants/2/atelier');
+  });
+
+  it('n\'affiche pas "Voir l\'atelier" tant que la campagne est EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_CONSTRUCTION');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuLinkByLabel(items[1], 'Voir l\'atelier')).toBeNull();
+  });
+
+  it('n\'affiche pas "Voir l\'atelier" pour un participant sans équipe engagée', () => {
+    const withoutTeam: CampaignParticipant[] = [
+      { ...mockParticipants[0] },
+      { ...mockParticipants[1], teamId: null },
+    ];
+    fixture.componentRef.setInput('participants', withoutTeam);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.componentRef.setInput('campaignState', 'EN_COURS');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuLinkByLabel(items[1], 'Voir l\'atelier')).toBeNull();
   });
 });

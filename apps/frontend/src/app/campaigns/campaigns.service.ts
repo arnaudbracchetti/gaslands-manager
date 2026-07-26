@@ -111,6 +111,16 @@ export class CampaignsService {
   }
 
   /**
+   * GET /api/campaigns/:id/participants/:pid/workshop → atelier d'UN AUTRE
+   * participant, en lecture seule — même règle de visibilité que
+   * `getParticipantJournal` (tout participant VALIDATED, y compris pour
+   * consulter l'équipe d'un tiers). Même forme de réponse que `getWorkshop`.
+   */
+  getParticipantWorkshop(campaignId: number, pid: number): Observable<WorkshopStateDto> {
+    return this.http.get<WorkshopStateDto>(`/api/campaigns/${campaignId}/participants/${pid}/workshop`);
+  }
+
+  /**
    * PUT /api/campaigns/:id/participants/:pid/validate → valide ou refuse une
    * demande d'inscription (organisateur uniquement).
    */

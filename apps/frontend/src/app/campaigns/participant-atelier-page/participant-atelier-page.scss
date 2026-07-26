@@ -1,0 +1,198 @@
+// Même gabarit que AtelierPage/VehicleConfiguratorPage (`atp-page`/`atp-header`)
+// — pleine largeur d'écran, en-tête collant sous le fil d'Ariane.
+.pap-page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.pap-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: var(--tb-bitume);
+  padding: 16px 0;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--border-rust);
+
+  h1 {
+    font-family: var(--font-display);
+    color: var(--tb-os);
+    font-size: 1.8rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.pap-readonly-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  background: var(--tint-info-bg);
+  border: 1px solid var(--tint-info-border);
+  color: var(--tint-info-text);
+}
+
+@media (max-width: 760px) {
+  .pap-header {
+    position: static;
+    background: none;
+    padding: 0;
+    margin-bottom: 32px;
+    border-bottom: none;
+  }
+}
+
+.pap-status {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  &--loading { color: var(--text-dim); }
+  &--error   { color: var(--tb-rouille-lt); }
+}
+
+.pap-vehicles-empty {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 40px 20px;
+  border: 1px dashed var(--border-rust);
+}
+
+// Maître-détail : colonne de gauche (liste/onglets de véhicules, largeur fixe)
+// + panneau de droite (détail du véhicule sélectionné, largeur restante).
+.pap-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+// Colonne de gauche : synthèse de budget d'équipe en tête, puis la liste/
+// onglets de véhicules — les deux sont scopés à l'équipe entière, pas au seul
+// véhicule affiché dans le panneau de droite.
+.pap-vehicle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pap-vehicle-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pap-vehicle-tab {
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: outline-color 160ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+
+  &--active {
+    outline-color: var(--tb-os);
+  }
+}
+
+.pap-vehicle-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+// Grille unique du panneau de détail (`VehicleCostSummary` + 2 sous-colonnes
+// d'équipement) plutôt que 2 blocs empilés indépendamment : les 3 boîtes sont
+// des enfants DIRECTS d'une seule grille `1fr 1fr`, avec la carte de coût
+// placée en colonne 1 seulement (`grid-column: 1`). Sans placement explicite
+// de ligne, l'algorithme d'auto-placement CSS Grid (non-dense) avance
+// naturellement : la carte de coût occupe (ligne 1, colonne 1), la sous-colonne
+// gauche — dont la colonne 1 est déjà prise en ligne 1 — retombe en (ligne 2,
+// colonne 1), et la sous-colonne droite trouve (ligne 2, colonne 2) libre —
+// sans repasser en arrière remplir (ligne 1, colonne 2), qui reste donc vide
+// au-dessus d'« Avantages ». Résultat : la carte de coût s'aligne exactement
+// sur la largeur de la sous-colonne Armes/Améliorations, plutôt qu'une largeur
+// arbitraire indépendante des 2 colonnes en dessous.
+.pap-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  // `stretch` (défaut grid) plutôt que `start` : les 2 sous-colonnes
+  // d'équipement (ligne 2) s'étirent à la hauteur de la plus grande plutôt que
+  // de s'arrêter chacune à la hauteur de son propre contenu.
+  align-items: stretch;
+}
+
+// `VehicleCostSummary` (`:host { display: contents }`) — sans conteneur dédié,
+// ses lignes label/valeur (`justify-content: space-between`) s'étireraient sur
+// toute la largeur du panneau de droite (bien plus large ici que la sidebar
+// étroite `.em-current` où ce composant est normalement utilisé), écartant
+// démesurément label et valeur. La contraindre à une seule colonne de la
+// grille (ci-dessus) borne cet étirement à une largeur de carte raisonnable —
+// même jeu de tokens que `.pap-equipment-col` pour la cohérence visuelle.
+.pap-cost-card {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  background: var(--tb-bitume-2);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+}
+
+// 2 sous-colonnes d'équipement (ligne 2 de la grille) : Armes + Améliorations
+// à gauche, Avantages + Séquelles à droite (2 instances de `MountedEquipment`,
+// chacune gardant seulement les groupes qui la concernent via `showWeapons`/
+// `showImprovements`/`showAdvantages`/`showSequellas`).
+.pap-equipment-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  // Boîte visible (même jeu de tokens que `.pap-cost-card`/`.atp-wallet`) pour
+  // que l'étirement en hauteur (`align-items: stretch` ci-dessus) soit
+  // perceptible : sans fond ni bordure, deux colonnes de même hauteur mais de
+  // contenu différent seraient indiscernables l'une de l'autre.
+  padding: 14px;
+  background: var(--tb-bitume-2);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+
+  &--left  { grid-column: 1; }
+  &--right { grid-column: 2; }
+}
+
+@media (max-width: 900px) {
+  .pap-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .pap-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pap-cost-card,
+  .pap-equipment-col--left,
+  .pap-equipment-col--right {
+    grid-column: 1;
+  }
+}

@@ -12,16 +12,18 @@
   [title]="formNom()"
 />
 
-<div class="vcs-slots">
-  <span class="vcs-slots__label">Emplacements</span>
-  <app-slot-gauge [used]="emplacementsUtilises()" [total]="emplacementsTotal()" size="md" />
-</div>
-
-@if (chocs() !== null) {
-  <div class="vcs-chocs" title="Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles">
-    <app-icon concept="chocs" size="sm" /> Chocs : <strong>{{ chocs() }}</strong>
+<div class="vcs-meta-row">
+  <div class="vcs-slots">
+    <span class="vcs-slots__label">Emplacements</span>
+    <app-slot-gauge [used]="emplacementsUtilises()" [total]="emplacementsTotal()" size="md" />
   </div>
-}
+
+  @if (chocs() !== null) {
+    <div class="vcs-chocs" title="Chocs accumulés par ce véhicule (Table des Épaves) — monnaie des séquelles">
+      <app-icon concept="chocs" size="sm" /> Chocs : <strong>{{ chocs() }}</strong>
+    </div>
+  }
+</div>
 
 <div class="vcs-cost">
   <p class="vcs-cost-row">

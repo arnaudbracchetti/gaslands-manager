@@ -94,6 +94,9 @@
                       }
                     }
                     <button type="button" role="menuitem" (click)="onMenuViewJournal(participant.id)">Voir l'historique</button>
+                    @if (participant.teamId && campaignId() && campaignState() !== 'EN_CONSTRUCTION') {
+                      <a role="menuitem" [routerLink]="['/campaigns', campaignId(), 'participants', participant.id, 'atelier']" (click)="closeMenu()">Voir l'atelier</a>
+                    }
                   </div>
                 }
               </div>

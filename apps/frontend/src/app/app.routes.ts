@@ -67,6 +67,16 @@ export const appRoutes: Route[] = [
     canActivate: [authGuard],
     data: { docSlug: 'atelier' },
   },
+  // Consultation en lecture seule de l'atelier d'un AUTRE participant — vue
+  // maître-détail sur une seule page (pas de sous-route véhicule, contrairement
+  // à l'atelier "personnel" ci-dessus).
+  {
+    path: 'campaigns/:id/participants/:pid/atelier',
+    loadComponent: () =>
+      import('./campaigns/participant-atelier-page/participant-atelier-page').then((m) => m.ParticipantAtelierPage),
+    canActivate: [authGuard],
+    data: { docSlug: 'atelier' },
+  },
   // ─── Édition d'une équipe (hub : infos + véhicules) ────────────────────────
   // Déclarée AVANT les routes vehicles pour éviter tout conflit de paramètres.
   {

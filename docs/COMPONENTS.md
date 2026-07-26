@@ -154,6 +154,7 @@ graph TD
         GameJournalModal
         AtelierPage["AtelierPage (smart)"]
         AtelierVehiclePage["AtelierVehiclePage (smart)"]
+        ParticipantAtelierPage["ParticipantAtelierPage (smart)"]
     end
 
     subgraph Admin
@@ -204,6 +205,12 @@ graph TD
     AtelierPage -.->|navigate| AtelierVehiclePage
     AtelierVehiclePage --> EquipmentManager
     AtelierVehiclePage --> Breadcrumb
+    ParticipantList -.->|routerLink| ParticipantAtelierPage
+    ParticipantAtelierPage --> VehicleSummaryCard
+    ParticipantAtelierPage --> VehicleCostSummary
+    ParticipantAtelierPage --> MountedEquipment
+    ParticipantAtelierPage --> TeamBudget
+    ParticipantAtelierPage --> Breadcrumb
     GameResultWizard --> PresenceStep
     GameResultWizard --> RankingStep
     GameResultWizard --> GatesStep
@@ -643,6 +650,8 @@ Popup d'information sur un équipement : nom, coût, emplacement, description, r
 
 Affiche les armes, améliorations, avantages **et séquelles** actuellement montés/acquis sur le véhicule, avec leurs boutons de retrait. Une arme montée sur Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans la liste des armes — ce n'est pas une ligne d'amélioration séparée. Un avantage revendu en atelier affiche le même filigrane "Vendu" que les autres équipements, mais son prix affiché **ne change jamais** (perte totale à la revente, contrairement à la moitié-prix des armes/améliorations) — reflet direct d'`Advantage.price`, jamais réduit. Le 4ᵉ groupe "Séquelles" (`showSequellas`, `false` par défaut — actif uniquement côté atelier) suit la même règle de perte totale à la revente, avec une nuance propre : le bouton "Retirer" n'apparaît que si `sequella.purchasedThisSession || sequellaResaleUnlocked()` — sinon une icône 🔒 indique que la revente cross-session est fermée (mirroir de `Vehicle.canRemoveSequella` côté backend).
 
+**Répartition sur plusieurs colonnes** : `showWeapons`/`showImprovements`/`showAdvantages` (mirroir de `showSequellas`, mais `true` par défaut — comportement historique inchangé pour `EquipmentManager`/`AtelierVehiclePage`, qui ne les renseignent jamais) permettent à un consommateur d'instancier le composant plusieurs fois, chacune ne gardant qu'un sous-ensemble des 4 groupes, pour répartir le détail sur plusieurs colonnes visuelles sans dupliquer le template. Utilisé par `ParticipantAtelierPage` (cf. ci-dessous) : une instance Armes+Améliorations, une instance Avantages+Séquelles.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-mounted-equipment` |
@@ -653,8 +662,11 @@ Affiche les armes, améliorations, avantages **et séquelles** actuellement mont
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `weapons` | `Weapon[]` | — | Armes montées |
+| `showWeapons` | `boolean` | `true` | Affiche le groupe "Armes" — `false` pour l'omettre d'une instance dédiée à d'autres groupes (cf. ci-dessus) |
 | `improvements` | `VehicleImprovement[]` | — | Améliorations montées |
+| `showImprovements` | `boolean` | `true` | Affiche le groupe "Améliorations" — mirroir de `showWeapons` |
 | `advantages` | `VehicleAdvantage[]` | — | Avantages acquis (jamais d'orientation ni d'emplacement) |
+| `showAdvantages` | `boolean` | `true` | Affiche le groupe "Avantages" — mirroir de `showWeapons` |
 | `sequellas` | `WorkshopSequellaDto[]` | `[]` | Séquelles acquises — atelier uniquement. `nom` déjà résolu côté backend (pas de résolution catalogue nécessaire, contrairement aux 3 autres) |
 | `sequellaResaleUnlocked` | `boolean` | `false` | Débloque le retrait des séquelles pré-existantes (calculé par `EquipmentManager` depuis `sequellas`) |
 | `showSequellas` | `boolean` | `false` | Affiche le groupe "Séquelles" — gate explicite, jamais activé côté construction d'équipe |
@@ -831,6 +843,8 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 **Classement (PC)** : la liste est triée par Points de Championnat décroissants (tri stable — tant qu'aucun point n'existe pour aucun participant, l'ordre affiché reste celui d'origine). Le badge "🏆 X PC" n'est affiché que pour les participants `VALIDATED` ; les `PENDING`/`REJECTED` comptent pour 0 PC dans le tri sans afficher de badge. Les PC proviennent de `GET /api/campaigns/:id/standings` (calculé côté backend, cf. [CAMPAIGN.md](spec/CAMPAIGN.md)), chargé par `CampaignDetail` et transmis sous forme de map.
 
 **Lien "Gérer mon équipe"** (propre ligne uniquement, `participant.teamId` requis) : cible dynamique, pilotée par le computed `manageTeamMode()` (`'edit' | 'atelier' | null`) — `EN_CONSTRUCTION` → `/teams/:id/edit` (construction standard) ; sinon, si une partie de la campagne est actuellement en statut `ATELIER` (`hasAtelierGame`) → `/campaigns/:id/atelier` ; sinon (campagne démarrée, aucun atelier ouvert) le bouton reste affiché mais **grisé** (`<button disabled>`, même classe visuelle que le lien actif) plutôt qu'absent du DOM. `hasAtelierGame` est une notion **campagne-wide** (un seul atelier actif à la fois) que `ParticipantList` ne peut pas déterminer elle-même — elle lui est transmise par `CampaignDetail`, qui la reçoit de `CampaignProgram` (composant frère, seul à charger la liste des parties) via l'output `atelierStatusChanged`, cf. `CampaignProgram` ci-dessous.
+
+**Consultation en lecture seule de l'atelier d'un tiers** : sur la ligne d'un autre participant, le menu ⋯ porte une entrée "Voir l'atelier" — visible dès que `participant.teamId` est renseigné **et** que `campaignState() !== 'EN_CONSTRUCTION'`. Contrairement à "Voir l'historique" (qui émet un `output` vers `CampaignDetail`, lequel possède l'état de la modale), c'est un lien direct (`[routerLink]` vers `ParticipantAtelierPage`, cf. ci-dessous) — la destination est une route déterministe, aucun état à posséder côté parent. Pas de contrainte d'atelier ouvert (contrairement à "Gérer mon équipe") : la lecture seule reste possible dès que la campagne a démarré.
 
 | | |
 |---|---|
@@ -1350,6 +1364,63 @@ Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affich
 **Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route, traduit pour `EquipmentManager`), `targetWorkshopVehicle` (computed — le MÊME véhicule sous sa forme brute `WorkshopVehicleDto`, seule forme qui porte encore `chocs`/`sequellas`, transmise à `EquipmentManager` via ses inputs `chocs`/`sequellas`), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged`/`sequellaChanged` (émis par `EquipmentManager`) pour rafraîchir cagnotte + budget + Chocs.
 
 > **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise. `renameVehicle(vehicleId, nom)` suit le même principe : `TeamEquipmentDataSource` appelle `PATCH /api/vehicles/:id/name` directement, `AtelierEquipmentDataSource` appelle `POST /api/campaigns/:id/events/vehicle-rename` puis relit `GET .../workshop` (même schéma que les autres mutations atelier). Les séquelles n'ont PAS besoin de cette abstraction : elles n'existent que côté atelier (aucun second contexte "construction d'équipe" à supporter), donc `EquipmentManager` injecte directement `CampaignsService`/`CatalogService` pour leur logique.
+
+---
+
+### `ParticipantAtelierPage` — `campaigns/participant-atelier-page/` 🧠
+
+Consultation en LECTURE SEULE de l'atelier d'un AUTRE participant
+(`/campaigns/:id/participants/:pid/atelier`), atteinte depuis le menu ⋯ de
+`ParticipantList` sur `/campaigns/:id`. Vue **maître-détail sur une seule
+page** (pas de sous-route par véhicule, contrairement à
+`AtelierPage`/`AtelierVehiclePage` côté "mon" équipe) : colonne de gauche
+regroupant la synthèse de budget d'équipe (`TeamBudget`, budget total/consommé
+"à l'instant t" — `budgetEquipeTotal = wallet + coût de tous les véhicules`,
+`budgetRestant = wallet`) puis la liste de tous les véhicules (façon onglets —
+`VehicleSummaryCard`, `[showDelete]="false"`, dont l'output `manageClicked`
+est détourné pour **sélectionner** un signal local `selectedVehicleId` plutôt
+que naviguer) ; partie droite affichant la configuration complète du véhicule
+sélectionné, répartie sur **2 sous-colonnes** (`.pap-equipment-columns`,
+CSS Grid `1fr 1fr`) pour éviter qu'une seule colonne d'équipement s'étire sur
+toute la largeur du panneau : Armes + Améliorations à gauche, Avantages +
+Séquelles à droite — 2 instances de `MountedEquipment`, chacune gardant
+uniquement ses groupes via `showWeapons`/`showImprovements`/`showAdvantages`
+(cf. `MountedEquipment` ci-dessus). Titre `headerTitle()` = "Atelier de
+[Équipe] ([Joueur])" (fil d'ariane assorti), résolu depuis `CampaignParticipant.
+teamName`/`.userName` (déjà chargés par `getParticipants` pour identifier la
+cible, cf. ci-dessous) — retombe sur "Atelier" tant que non chargé.
+
+Ne branche **jamais** `EquipmentManager` : celui-ci ferait des appels HTTP
+mutants scopés à "mon" équipe (`available-weapons/improvements/advantages/
+sequelles`, achats/reventes via `AtelierEquipmentDataSource`), inutilisables
+et non autorisés sur le véhicule d'un tiers — le backend les résout par
+`req.user.id`, jamais par un `vehicleId` de route. Le panneau de détail
+compose directement `VehicleCostSummary` (`[disabled]="true"`) et
+`MountedEquipment` (`[locked]="true"`) — les deux étaient déjà des composants
+"dumb" dotés d'un mode verrouillé natif ; seuls les 3 nouveaux gates
+`showWeapons`/`showImprovements`/`showAdvantages` ont été ajoutés à
+`MountedEquipment` (défaut `true`, sans effet sur ses autres consommateurs)
+pour permettre cette répartition en 2 colonnes.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-participant-atelier-page` |
+| **Type** | Smart |
+| **Route** | `/campaigns/:id/participants/:pid/atelier` |
+| **Services** | `ActivatedRoute`, `CampaignsService`, `CatalogService` |
+| **Compose** | `Breadcrumb`, `TeamBudget`, `VehicleSummaryCard`, `VehicleCostSummary`, `MountedEquipment` |
+
+**Signals clés** : `loading`, `error`, `workshop` (via `getParticipantWorkshop`,
+pas `getWorkshop`), `sponsorCatalog`, `campaignName`, `participantName`/
+`teamName` (résolus ensemble via `getParticipants`, pour l'en-tête/fil
+d'ariane), `headerTitle` (computed — "Atelier de [Équipe] ([Joueur])"),
+`selectedVehicleId` (sélection locale, auto-initialisée au premier véhicule
+chargé), `vehicles`/`vehicleSummaries` (colonne de gauche), `totalVehiclesCost`/`budgetEquipeTotal`/
+`budgetRestant`/`budgetDepasse`/`budgetPourcentage` (bandeau de synthèse),
+`selectedVehicle`/`targetWorkshopVehicle`/`typeNom`/`emplacementsUtilises`/
+`coutBase`/`coutEquipement`/`coutTotal` (panneau de détail — mêmes formules
+que `EquipmentManager`, appliquées au véhicule sélectionné plutôt qu'au seul
+véhicule de la route).
 
 ---
 
