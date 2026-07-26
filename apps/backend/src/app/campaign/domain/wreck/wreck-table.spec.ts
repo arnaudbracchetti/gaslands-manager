@@ -27,6 +27,9 @@ class FixedRandomizer implements IRandomizer {
 const SIEGE_IRRECUPERABLE = SequellaType.from({
   nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
 });
+const CHASSIS_FRAGILISE = SequellaType.from({
+  nom: 'Châssis fragilisé', nom_interne: 'chassis_fragilise', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+});
 const MAINTENU_PAR_LA_ROUILLE = SequellaType.from({
   nom: 'Maintenu par la Rouille', nom_interne: 'maintenu_par_la_rouille', description: '', regles: '', chocs_cost: 5, origine: 'ATELIER',
 });
@@ -34,14 +37,16 @@ const LEGENDE_VIVANTE = SequellaType.from({
   nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '', chocs_cost: 11, origine: 'ATELIER',
 });
 
-/** Catalogue minimal — seule `getSequellaType('siege_irrecuperable')` est appelée par WreckTable. */
+/** Catalogue minimal — seules `getSequellaType('siege_irrecuperable')`/`('chassis_fragilise')` sont appelées par WreckTable. */
 class FixedCatalog implements ICatalogRepository {
   getVehicleType(): undefined { return undefined; }
   getWeaponType(): undefined { return undefined; }
   getImprovementType(): undefined { return undefined; }
   getAdvantageType(): undefined { return undefined; }
   getSequellaType(nomInterne: string): SequellaType | undefined {
-    return nomInterne === 'siege_irrecuperable' ? SIEGE_IRRECUPERABLE : undefined;
+    if (nomInterne === 'siege_irrecuperable') return SIEGE_IRRECUPERABLE;
+    if (nomInterne === 'chassis_fragilise') return CHASSIS_FRAGILISE;
+    return undefined;
   }
   getVehicleTypesForSponsor(): [] { return []; }
   getWeaponTypesForSponsor(): [] { return []; }
@@ -276,6 +281,16 @@ describe('WreckTable — Table des Épaves (10 lignes)', () => {
       const equipmentEvent = events[1] as EquipmentChangedEvent;
       expect(equipmentEvent.entityType).toBe(EquipmentEntityType.SEQUELLE);
       expect(equipmentEvent.nomInterne).toBe('siege_irrecuperable');
+      expect(equipmentEvent.cost).toBe(0);
+    });
+
+    it('CHASSIS_FRAGILISE → WreckResolvedEvent + EquipmentChangedEvent(BUY, SEQUELLE, coût 0)', () => {
+      const { events } = new WreckTable(new FixedRandomizer(3), catalog).resolve(makeVehicle('Moyen', 5), GAME_ID, PARTICIPANT_ID);
+      expect(events).toHaveLength(2);
+      expect(events[1]).toBeInstanceOf(EquipmentChangedEvent);
+      const equipmentEvent = events[1] as EquipmentChangedEvent;
+      expect(equipmentEvent.entityType).toBe(EquipmentEntityType.SEQUELLE);
+      expect(equipmentEvent.nomInterne).toBe('chassis_fragilise');
       expect(equipmentEvent.cost).toBe(0);
     });
 

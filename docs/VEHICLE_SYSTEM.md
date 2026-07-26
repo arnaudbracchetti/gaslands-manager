@@ -371,7 +371,7 @@ moteur_endommage       → MoteurEndommageBehavior
 direction_endommage    → DirectionEndommageBehavior
 blindage_arrache       → BlindageArracheBehavior
 siege_irrecuperable    → SiegeIrrecuperableBehavior
-(autre/absent)         → comportement neutre   (10 des 14 séquelles)
+(autre/absent)         → comportement neutre   (11 des 15 séquelles)
 ```
 
 ### 4.5 `canPlace` sur le Type, `applyStats` sur l'Instance

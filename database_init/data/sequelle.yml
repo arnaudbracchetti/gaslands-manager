@@ -56,6 +56,16 @@ sequelles:
     chocs_cost: 0
     origine: TABLE_EPAVES
 
+  - nom: Châssis fragilisé
+    nom_interne: chassis_fragilise
+    effet_court: "+1 Danger (collision)"
+    description: Le châssis a pris un coup qui le rend plus fragile en cas de choc.
+    regles: >-
+      Ce véhicule gagne 1 Jeton Danger supplémentaire chaque fois qu'il est impliqué
+      dans une Collision.
+    chocs_cost: 0
+    origine: TABLE_EPAVES
+
   # ── Séquelles volontaires — achetées en atelier contre des Chocs ────────────
   - nom: Suicidaire
     nom_interne: suicidaire

@@ -41,7 +41,7 @@ export interface WreckTableResult {
  *   5    ARRACHEE           +1 + équipement perdu (tiré au sort dans le pool)
  *   6    PIGNON_ENDOMMAGE   +1
  *   7    SIEGE_IRRECUPERABLE +2 → BUY(SEQUELLE, 'siege_irrecuperable', coût 0)
- *   8    CHASSIS_FRAGILISE  +2
+ *   8    CHASSIS_FRAGILISE  +2 → BUY(SEQUELLE, 'chassis_fragilise', coût 0)
  *   9    FAVORI_DU_PUBLIC   +3
  *   10+  VEHICULE_DETRUIT    0  → VehicleLostEvent
  *
@@ -135,6 +135,20 @@ export class WreckTable {
       events.push(new EquipmentChangedEvent(
         0, gameId, participantId, 0,
         EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
+        outcome.vehicleId, null, null,
+        null, null, null, null,
+        sequellaType, null,
+      ));
+    }
+
+    if (outcome.wreckResult === WreckResult.CHASSIS_FRAGILISE) {
+      const sequellaType = this.catalog.getSequellaType('chassis_fragilise');
+      if (!sequellaType) {
+        throw new DomainException('Séquelle catalogue introuvable : "chassis_fragilise".');
+      }
+      events.push(new EquipmentChangedEvent(
+        0, gameId, participantId, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'chassis_fragilise', 0,
         outcome.vehicleId, null, null,
         null, null, null, null,
         sequellaType, null,

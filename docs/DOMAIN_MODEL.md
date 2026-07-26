@@ -765,8 +765,8 @@ pas une entité séparée (cf.
 
 `EquipmentChangedEvent` est la seule classe acceptée dans les deux statuts, mais
 pas pour les mêmes `entityType` : en `PLANIFIE`, seul `SEQUELLE` passe (séquelle
-`TABLE_EPAVES` imposée par la Table des Épaves, ligne "Siège irrécupérable" —
-générée par le tirage, *avant* l'entrée en atelier) ; `VEHICLE`/`WEAPON`/
+`TABLE_EPAVES` imposée par la Table des Épaves, lignes "Siège irrécupérable"/
+"Châssis fragilisé" — générées par le tirage, *avant* l'entrée en atelier) ; `VEHICLE`/`WEAPON`/
 `IMPROVEMENT`/`ADVANTAGE`, et `SEQUELLE` `ATELIER` (achat volontaire contre des
 Chocs), restent exclusifs à `ATELIER`.
 
@@ -854,6 +854,7 @@ complète : [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles) et
   deux modificateurs permanents de `WreckTable` (double tirage chaîné / D6
   forcé à 1), lus par présence (`Vehicle.hasActiveSequella`) à chaque
   résolution de la Table des Épaves.
-- **`WreckTable` gagne une dépendance `ICatalogRepository`** (résout
-  `siege_irrecuperable` pour construire l'`EquipmentChangedEvent` imposé),
+- **`WreckTable` gagne une dépendance `ICatalogRepository`** (résout les
+  séquelles imposées automatiquement — `siege_irrecuperable`,
+  `chassis_fragilise` — pour construire l'`EquipmentChangedEvent` imposé),
   en plus de son `IRandomizer` existant.

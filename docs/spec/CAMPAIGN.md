@@ -412,9 +412,9 @@ contrairement à l'ancien design, qui nécessitait un `order` fractionnaire
 vraies parties.
 
 `EquipmentChangedEvent(entityType: SEQUELLE)` est accepté à la fois en
-`PLANIFIE` (séquelle `TABLE_EPAVES` imposée par la Table des Épaves, ligne
-"Siège irrécupérable" — coût 0, pas un achat, cf. `evenement-tele-game.ts`/
-`escarmouche-game.ts` `canAccept()`) et en `ATELIER` (échange volontaire de
+`PLANIFIE` (séquelle `TABLE_EPAVES` imposée par la Table des Épaves, lignes
+"Siège irrécupérable"/"Châssis fragilisé" — coût 0, pas un achat, cf.
+`evenement-tele-game.ts`/`escarmouche-game.ts` `canAccept()`) et en `ATELIER` (échange volontaire de
 Chocs contre une séquelle `ATELIER`, coût variable selon le type) — seule
 sous-catégorie d'`EquipmentChangedEvent` acceptée hors `ATELIER`, puisqu'elle
 est générée par le tirage (écran 3 du wizard) *avant* l'entrée en atelier.
@@ -644,7 +644,7 @@ Conception détaillée : [`docs/plans/2026-07-26-sabotage-points-wizard-design.m
 > [Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03).
 
 Une **Séquelle** (Gaslands, p.170) est un inconvénient permanent qu'un véhicule
-acquiert en échange de Chocs accumulés en partie — 14 au catalogue
+acquiert en échange de Chocs accumulés en partie — 15 au catalogue
 (`database_init/data/sequelle.yml`), chargées par `CatalogService` comme tout
 autre catalogue d'équipement. Chaque séquelle porte un champ `origine` :
 
@@ -659,10 +659,15 @@ via un composant dédié `SequellaDetailModal` (cf.
 — la carte séquelle reste `em-sequella-card` (dédiée, monnaie Chocs plutôt que
 jerricans/emplacement) plutôt que de basculer sur `EquipmentOption`.
 
-- **`TABLE_EPAVES`** (4 séquelles : `moteur_endommage`, `direction_endommage`,
-  `blindage_arrache`, `siege_irrecuperable`) — imposée automatiquement par un
-  tirage sur la Table des Épaves (coût toujours 0), jamais achetable
-  directement en atelier.
+- **`TABLE_EPAVES`** (5 séquelles : `moteur_endommage`, `direction_endommage`,
+  `blindage_arrache`, `siege_irrecuperable`, `chassis_fragilise`) — imposée
+  automatiquement par un tirage sur la Table des Épaves (coût toujours 0),
+  jamais achetable directement en atelier. `chassis_fragilise` (ligne
+  `CHASSIS_FRAGILISE`) est purement descriptive — comme les 10 séquelles
+  `ATELIER` ci-dessous, elle n'a aucune entrée dans `SEQUELLA_BEHAVIORS`
+  (`resolveSequellaBehavior` retombe sur le comportement neutre) — contrairement
+  aux 4 autres séquelles `TABLE_EPAVES`, qui modifient chacune une statistique
+  chiffrée du véhicule.
 - **`ATELIER`** (10 séquelles : Suicidaire, Impopulaire, Dingue, Lâche,
   Vieille Blessure de Guerre, Vibrations, Convulsions, Maintenu par la Rouille,
   Dur à Cuire, Légende Vivante) — achat volontaire contre des Chocs, en

@@ -25,14 +25,21 @@ class FixedRandomizer implements IRandomizer {
 const SIEGE_IRRECUPERABLE = SequellaType.from({
   nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
 });
+const CHASSIS_FRAGILISE = SequellaType.from({
+  nom: 'Châssis fragilisé', nom_interne: 'chassis_fragilise', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
+});
 
-/** Catalogue minimal — seule `getSequellaType('siege_irrecuperable')` est appelée par WreckTable. */
+/** Catalogue minimal — seules `getSequellaType('siege_irrecuperable')`/`('chassis_fragilise')` sont appelées par WreckTable. */
 const catalog: ICatalogRepository = {
   getVehicleType: () => undefined,
   getWeaponType: () => undefined,
   getImprovementType: () => undefined,
   getAdvantageType: () => undefined,
-  getSequellaType: (nomInterne: string) => (nomInterne === 'siege_irrecuperable' ? SIEGE_IRRECUPERABLE : undefined),
+  getSequellaType: (nomInterne: string) => {
+    if (nomInterne === 'siege_irrecuperable') return SIEGE_IRRECUPERABLE;
+    if (nomInterne === 'chassis_fragilise') return CHASSIS_FRAGILISE;
+    return undefined;
+  },
   getVehicleTypesForSponsor: () => [],
   getWeaponTypesForSponsor: () => [],
   getImprovementTypesForSponsor: () => [],
@@ -125,6 +132,17 @@ describe('WreckResolveUseCase', () => {
     });
     expect(result.descriptions).toHaveLength(2);
     expect(result.descriptions[1]).toContain('Siège irrécupérable');
+  });
+
+  it('CHASSIS_FRAGILISE : deux descriptions (WreckResolved + EquipmentChangedEvent SEQUELLE)', async () => {
+    // diceRoll=6, vehicle.addChocs(2) → modifiedRoll=8 → CHASSIS_FRAGILISE
+    const { useCase, vehicle } = makeFixture(new WreckTable(new FixedRandomizer(6), catalog));
+    vehicle.addChocs(2);
+    const result = await useCase.execute({
+      campaignId: 1, gameId: 10, userId: 42, participantId: 1, vehicleId: 1,
+    });
+    expect(result.descriptions).toHaveLength(2);
+    expect(result.descriptions[1]).toContain('Châssis fragilisé');
   });
 
   it('VEHICULE_DETRUIT sans favori du public : deux descriptions (WreckResolved + VehicleLost)', async () => {
