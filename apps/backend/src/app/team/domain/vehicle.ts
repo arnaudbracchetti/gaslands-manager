@@ -159,8 +159,27 @@ export class Vehicle {
   }
 
   /**
-   * Montant remboursé si ce véhicule est revendu 
-   * 
+   * Montant remboursé pour le seul châssis si ce véhicule est revendu — moitié prix
+   * arrondi à l'inférieur (p.170), extrait de `resaleRefund` pour que l'atelier
+   * puisse afficher ce montant séparément de celui de chaque arme/amélioration/
+   * avantage (cf. `SellVehicleModal`, ligne "Châssis").
+   *
+   * Précondition : ce véhicule ne doit pas être déjà vendu — ce montant est calculé
+   * sur `this.type.price` (prix catalogue brut), jamais réduit par `_isSold`
+   * contrairement à `Weapon`/`Improvement`. Un second appel après `markSold()`
+   * calculerait donc un remboursement fantôme non nul plutôt que 0 — la garde
+   * ci-dessous transforme ce bug silencieux en échec explicite.
+   */
+  get chassisResaleRefund(): number {
+    if (this._isSold) {
+      throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
+    }
+    return Math.floor(this.type.price / 2);
+  }
+
+  /**
+   * Montant remboursé si ce véhicule est revendu
+   *
    * Ne s'applique qu'à la revente d'un véhicule PRÉ-EXISTANT — un
    * véhicule acheté PENDANT la session d'atelier en cours est annulé intégralement
    * (100 %), un cas distinct géré par `Game.changeEquipment` (cf. sa doc), pas ici.
@@ -169,32 +188,20 @@ export class Vehicle {
    * déjà été crédité au moment de LEUR vente individuelle — les resommer ici via
    * `resaleRefund` (qui recalculerait une fraction de leur prix déjà résiduel)
    * doublerait le remboursement.
-   *
-   * Précondition : ce véhicule ne doit pas être déjà vendu — `chassisRefund` est
-   * calculé sur `this.type.price` (prix catalogue brut), jamais réduit par `_isSold`
-   * contrairement à `Weapon`/`Improvement`. Un second appel après `markSold()`
-   * calculerait donc un remboursement fantôme non nul plutôt que 0 — la garde
-   * ci-dessous transforme ce bug silencieux en échec explicite.
    */
   get resaleRefund(): number {
-    
-    if (this._isSold) {
-      throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
-    }
-    const chassisRefund = Math.floor(this.type.price / 2);
-    
     const weaponsRefund = this._weapons
       .filter((w) => !w.isSold)
       .reduce((sum, w) => sum + w.resaleRefund, 0);
-    
+
     const improvementsRefund = this._improvements
       .filter((i) => !i.isSold)
       .reduce((sum, i) => sum + i.resaleRefund, 0);
-    
+
     const advantagesRefund = this._advantages
       .filter((a) => !a.isSold)
       .reduce((sum, a) => sum + a.resaleRefund, 0);
-    return chassisRefund + weaponsRefund + improvementsRefund + advantagesRefund;
+    return this.chassisResaleRefund + weaponsRefund + improvementsRefund + advantagesRefund;
   }
 
   /**

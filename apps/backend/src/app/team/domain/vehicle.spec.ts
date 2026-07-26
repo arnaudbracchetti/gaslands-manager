@@ -720,6 +720,20 @@ describe('Vehicle.resaleRefund — règle par élément (châssis + équipement 
   });
 });
 
+describe('Vehicle.chassisResaleRefund — remboursement du châssis seul (isolé de resaleRefund)', () => {
+  it('vaut la moitié du prix châssis (arrondi inférieur), indépendamment de l\'équipement monté', () => {
+    const v = makeVehicle(4, 13);
+    v.addWeapon(makeWeaponType(5), 'avant', 100);
+    expect(v.chassisResaleRefund).toBe(6); // floor(13/2), ignore l'arme montée
+  });
+
+  it('lève DomainException si le véhicule est déjà vendu', () => {
+    const v = makeVehicle(4, 12);
+    v.markSold();
+    expect(() => v.chassisResaleRefund).toThrow(DomainException);
+  });
+});
+
 describe('Vehicle.canAddAdvantage / addAdvantage / removeAdvantage', () => {
   it('retourne fail si le véhicule est perdu', () => {
     const v = makeVehicle();

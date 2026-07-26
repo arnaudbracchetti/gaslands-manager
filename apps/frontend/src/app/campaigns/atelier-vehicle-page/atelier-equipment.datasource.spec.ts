@@ -31,16 +31,17 @@ const workshop: WorkshopStateDto = {
       chocs: 0,
       sequellas: [],
       weapons: [
-        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
-        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, emplacement: 2, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 1 },
+        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, emplacement: 2, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 22 },
       ],
       improvements: [
-        { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 2 },
       ],
       advantages: [
-        { id: 3, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false },
+        { id: 3, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 0 },
       ],
       resaleRefund: 6,
+      chassisResaleRefund: 6,
       purchasedThisSession: false,
       emplacementsTotal: 5,
     },

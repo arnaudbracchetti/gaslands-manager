@@ -34,6 +34,9 @@ export interface WorkshopWeaponDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Montant recrédité si cette arme est revendue MAINTENANT (moitié prix arrondi à
+   *  l'inférieur) — `0` si déjà vendue/perdue/estDefaut. */
+  resaleRefund: number;
 }
 
 export interface WorkshopImprovementDto {
@@ -49,6 +52,9 @@ export interface WorkshopImprovementDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Montant recrédité si cette amélioration est revendue MAINTENANT — même règle et
+   *  mêmes cas à `0` que `WorkshopWeaponDto.resaleRefund`. */
+  resaleRefund: number;
 }
 
 export interface WorkshopSequellaDto {
@@ -93,6 +99,8 @@ export interface WorkshopAdvantageDto {
   isLost: boolean;
   isSold: boolean;
   purchasedThisSession: boolean;
+  /** Toujours `0` (perte totale à la revente, cf. `Advantage.resaleRefund`). */
+  resaleRefund: number;
 }
 
 export interface WorkshopVehicleDto {
@@ -112,6 +120,9 @@ export interface WorkshopVehicleDto {
   /** Montant qui serait remboursé à la revente (règle par élément) — non pertinent si
    *  `purchasedThisSession=true` (retrait = annulation intégrale, pas revente). */
   resaleRefund: number;
+  /** Montant recrédité pour le seul châssis si ce véhicule est revendu — même
+   *  non-pertinence que `resaleRefund` si `purchasedThisSession=true`. */
+  chassisResaleRefund: number;
   /** Acheté pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
   /**

@@ -39,7 +39,7 @@ const mockCatalog: Sponsor = {
 function buildWeapon(overrides: Partial<WorkshopWeaponDto> = {}): WorkshopWeaponDto {
   return {
     id: 1, nomInterne: 'mitrailleuse', orientation: 'avant', price: 5, emplacement: 1,
-    estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false,
+    estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 2,
     ...overrides,
   };
 }
@@ -47,7 +47,7 @@ function buildWeapon(overrides: Partial<WorkshopWeaponDto> = {}): WorkshopWeapon
 function buildImprovement(overrides: Partial<WorkshopImprovementDto> = {}): WorkshopImprovementDto {
   return {
     id: 1, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1,
-    estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false,
+    estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 2,
     ...overrides,
   };
 }
@@ -55,6 +55,7 @@ function buildImprovement(overrides: Partial<WorkshopImprovementDto> = {}): Work
 function buildAdvantage(overrides: Partial<WorkshopAdvantageDto> = {}): WorkshopAdvantageDto {
   return {
     id: 1, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false,
+    resaleRefund: 0,
     ...overrides,
   };
 }
@@ -62,7 +63,7 @@ function buildAdvantage(overrides: Partial<WorkshopAdvantageDto> = {}): Workshop
 function buildVehicle(overrides: Partial<WorkshopVehicleDto> = {}): WorkshopVehicleDto {
   return {
     id: 1, nomInterne: 'camion', nom: 'Camion', customName: null, price: 12, isLost: false, chocs: 0, sequellas: [],
-    weapons: [], improvements: [], advantages: [], resaleRefund: 6, purchasedThisSession: false,
+    weapons: [], improvements: [], advantages: [], resaleRefund: 6, chassisResaleRefund: 6, purchasedThisSession: false,
     emplacementsTotal: 3,
     ...overrides,
   };
@@ -94,6 +95,19 @@ describe('buildVehicleSaleSummary', () => {
     expect(summary.items).toHaveLength(3);
     expect(summary.items.map((i) => i.label)).toEqual(['Mitrailleuse', 'Blindage', 'Expertise']);
     expect(summary.totalCost).toBe(12 + 5 + 4 + 3);
+  });
+
+  it('reporte le montant de vente (resaleRefund backend) par ligne, jamais recalculé côté client', () => {
+    const vehicle = buildVehicle({
+      weapons: [buildWeapon({ resaleRefund: 2 })],
+      improvements: [buildImprovement({ resaleRefund: 2 })],
+      advantages: [buildAdvantage({ resaleRefund: 0 })],
+      chassisResaleRefund: 6,
+    });
+    const summary = buildVehicleSaleSummary(vehicle, mockCatalog);
+
+    expect(summary.chassisRefund).toBe(6);
+    expect(summary.items.map((i) => i.refund)).toEqual([2, 2, 0]);
   });
 
   it('exclut les armes/améliorations/avantages estDefaut, vendus ou perdus du détail', () => {

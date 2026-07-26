@@ -23,6 +23,11 @@ export interface WorkshopWeaponDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Montant recrédité si cette arme est revendue MAINTENANT (moitié prix arrondi à
+   *  l'inférieur) — `0` si déjà vendue/perdue/estDefaut (non pertinent dans ces cas :
+   *  ces lignes n'apparaissent jamais dans `SellVehicleModal`). Non pertinent non plus
+   *  si `purchasedThisSession=true` (annulation intégrale, pas revente par élément). */
+  resaleRefund: number;
 }
 
 export interface WorkshopSequellaDto {
@@ -60,6 +65,9 @@ export interface WorkshopImprovementDto {
   isSold: boolean;
   /** Achetée pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Montant recrédité si cette amélioration est revendue MAINTENANT — même règle et
+   *  mêmes cas à `0` que `WorkshopWeaponDto.resaleRefund`. */
+  resaleRefund: number;
 }
 
 export interface WorkshopAdvantageDto {
@@ -71,6 +79,10 @@ export interface WorkshopAdvantageDto {
   isSold: boolean;
   /** Acheté pendant la session d'atelier en cours — retrait = annulation, pas revente. */
   purchasedThisSession: boolean;
+  /** Toujours `0` (perte totale à la revente, cf. `Advantage.resaleRefund`) — exposé par
+   *  cohérence avec `WorkshopWeaponDto`/`WorkshopImprovementDto.resaleRefund` plutôt que
+   *  supposé implicitement côté frontend. */
+  resaleRefund: number;
 }
 
 export interface WorkshopVehicleDto {
@@ -91,6 +103,10 @@ export interface WorkshopVehicleDto {
    *  Non pertinent si `purchasedThisSession=true` : dans ce cas, le retrait est une
    *  annulation intégrale (100 %), pas une revente à moitié prix. */
   resaleRefund: number;
+  /** Montant recrédité pour le seul châssis si ce véhicule est revendu — cf.
+   *  `Vehicle.chassisResaleRefund`. Même non-pertinence que `resaleRefund` si
+   *  `purchasedThisSession=true`. */
+  chassisResaleRefund: number;
   /** Acheté pendant la session d'atelier en cours — retrait = annulation intégrale, pas revente. */
   purchasedThisSession: boolean;
   /**

@@ -18,17 +18,30 @@
           intégralement son achat (et celui de tout équipement monté dessus depuis).
         </p>
       } @else {
+        <div class="svm-modal__items-header">
+          <span class="svm-modal__item-original">Prix initial</span>
+          <span class="svm-modal__item-arrow"></span>
+          <span class="svm-modal__item-refund">Vente</span>
+        </div>
         <ul class="svm-modal__items">
           <li class="svm-modal__item">
             <span class="svm-modal__item-category">Châssis</span>
             <span class="svm-modal__item-label">{{ summary().vehicleName }}</span>
-            <span class="svm-modal__item-price">{{ summary().chassisPrice }} <app-icon concept="argent" size="sm" /></span>
+            <span class="svm-modal__item-prices">
+              <span class="svm-modal__item-original">{{ summary().chassisPrice }} <app-icon concept="argent" size="sm" /></span>
+              <span class="svm-modal__item-arrow">→</span>
+              <span class="svm-modal__item-refund">{{ summary().chassisRefund }} <app-icon concept="argent" size="sm" /></span>
+            </span>
           </li>
           @for (item of summary().items; track item.label + item.category) {
             <li class="svm-modal__item">
               <span class="svm-modal__item-category">{{ item.category }}</span>
               <span class="svm-modal__item-label">{{ item.label }}</span>
-              <span class="svm-modal__item-price">{{ item.price }} <app-icon concept="argent" size="sm" /></span>
+              <span class="svm-modal__item-prices">
+                <span class="svm-modal__item-original">{{ item.price }} <app-icon concept="argent" size="sm" /></span>
+                <span class="svm-modal__item-arrow">→</span>
+                <span class="svm-modal__item-refund">{{ item.refund }} <app-icon concept="argent" size="sm" /></span>
+              </span>
             </li>
           }
         </ul>

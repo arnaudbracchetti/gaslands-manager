@@ -5,12 +5,13 @@
  * (pas besoin de repasser par le modèle `Vehicle` de construction d'équipe) et
  * détaille chaque ligne d'équipement plutôt qu'un simple tag.
  *
- * `refund` (montant réellement crédité) est TOUJOURS la valeur backend
- * (`WorkshopVehicleDto.resaleRefund`) — jamais recalculée ici, même convention que
- * `Weapon.price`/`Improvement.price`/`Advantage.price` (règle métier, pas de
- * réimplémentation côté client). Seuls `totalCost` et le détail par ligne
- * (affichage informatif) sont calculés ici, à partir des prix déjà résolus par
- * le backend sur chaque équipement (`weapon.price`/`improvement.price`/`advantage.price`).
+ * `refund` (agrégat) et le `refund` de chaque ligne/`chassisRefund` sont TOUJOURS
+ * les valeurs backend (`WorkshopVehicleDto.resaleRefund`/`.chassisResaleRefund`,
+ * `WorkshopWeaponDto`/`WorkshopImprovementDto`/`WorkshopAdvantageDto.resaleRefund`)
+ * — jamais recalculées ici, même convention que `Weapon.price`/`Improvement.price`/
+ * `Advantage.price` (règle métier, pas de réimplémentation côté client). Seuls
+ * `totalCost` et le détail par ligne (affichage informatif) sont calculés ici, à
+ * partir des valeurs déjà résolues par le backend sur chaque équipement.
  */
 import { Sponsor } from '../../catalog/catalog.model';
 import { WorkshopVehicleDto } from '../workshop.model';
@@ -18,12 +19,17 @@ import { WorkshopVehicleDto } from '../workshop.model';
 export interface VehicleSaleLineItem {
   label: string;
   category: 'Arme' | 'Amélioration' | 'Avantage';
+  /** Prix initial (payé à l'achat). */
   price: number;
+  /** Montant recrédité si cette ligne est revendue — backend (`Xxx.resaleRefund`). */
+  refund: number;
 }
 
 export interface VehicleSaleSummary {
   vehicleName: string;
   chassisPrice: number;
+  /** Backend : `Vehicle.chassisResaleRefund` — montant recrédité pour le seul châssis. */
+  chassisRefund: number;
   /** Équipement actif — exclut estDefaut/isSold/isLost, même filtre que
    *  `buildVehicleSummary.equipements`/`MountedEquipment.visibleXxx`. */
   items: VehicleSaleLineItem[];
@@ -46,19 +52,29 @@ export function buildVehicleSaleSummary(vehicle: WorkshopVehicleDto, catalog: Sp
   for (const weapon of vehicle.weapons) {
     if (weapon.estDefaut || weapon.isSold || weapon.isLost) continue;
     const armeCatalogue = catalog.armes.find((a) => a.nom_interne === weapon.nomInterne);
-    items.push({ label: armeCatalogue?.nom ?? weapon.nomInterne, category: 'Arme', price: weapon.price });
+    items.push({ label: armeCatalogue?.nom ?? weapon.nomInterne, category: 'Arme', price: weapon.price, refund: weapon.resaleRefund });
   }
 
   for (const improvement of vehicle.improvements) {
     if (improvement.estDefaut || improvement.isSold || improvement.isLost) continue;
     const amCatalogue = catalog.ameliorations.find((a) => a.nom_interne === improvement.nomInterne);
-    items.push({ label: amCatalogue?.nom ?? improvement.nomInterne, category: 'Amélioration', price: improvement.price });
+    items.push({
+      label: amCatalogue?.nom ?? improvement.nomInterne,
+      category: 'Amélioration',
+      price: improvement.price,
+      refund: improvement.resaleRefund,
+    });
   }
 
   for (const advantage of vehicle.advantages) {
     if (advantage.isSold) continue;
     const avCatalogue = catalog.avantages.find((a) => a.nom_interne === advantage.nomInterne);
-    items.push({ label: avCatalogue?.nom ?? advantage.nomInterne, category: 'Avantage', price: advantage.price });
+    items.push({
+      label: avCatalogue?.nom ?? advantage.nomInterne,
+      category: 'Avantage',
+      price: advantage.price,
+      refund: advantage.resaleRefund,
+    });
   }
 
   const totalCost = chassisPrice + items.reduce((sum, item) => sum + item.price, 0);
@@ -66,6 +82,7 @@ export function buildVehicleSaleSummary(vehicle: WorkshopVehicleDto, catalog: Sp
   return {
     vehicleName,
     chassisPrice,
+    chassisRefund: vehicle.chassisResaleRefund,
     items,
     totalCost,
     refund: vehicle.resaleRefund,

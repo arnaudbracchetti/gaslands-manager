@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
+import { NotFoundException } from '@nestjs/common';
 import { GetWorkshopUseCase } from './get-workshop.usecase';
 import type { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { Campaign } from '../domain/campaign';
 import { CampaignParticipant } from '../domain/campaign-participant';
-import { CampaignState } from '../domain/enums/campaign.enums';
+import { CampaignState, ParticipantStatus } from '../domain/enums/campaign.enums';
 import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType } from '../domain/test-helpers';
 import { Team } from '../../team/domain/team';
 import { Vehicle } from '../../team/domain/vehicle';
@@ -115,6 +116,38 @@ describe('GetWorkshopUseCase', () => {
     expect(dto.vehicles[0].purchasedThisSession).toBe(false);
   });
 
+  it('expose chassisResaleRefund (véhicule) et resaleRefund par ligne (arme/amélioration)', async () => {
+    const { useCase } = makeFixture(); // véhicule 12 + arme 5 + amélioration 4
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].chassisResaleRefund).toBe(6); // floor(12/2)
+    expect(dto.vehicles[0].weapons[0].resaleRefund).toBe(2); // floor(5/2)
+    expect(dto.vehicles[0].improvements[0].resaleRefund).toBe(2); // floor(4/2)
+  });
+
+  it('expose resaleRefund=0 sur une arme/amélioration déjà vendue (déjà créditée à sa propre vente)', async () => {
+    const { useCase, weapon } = makeFixture();
+    weapon.markSold();
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].weapons[0].resaleRefund).toBe(0);
+  });
+
+  it('expose resaleRefund=0 sur un avantage (perte totale)', async () => {
+    const { participant } = makeTestParticipantWithAdvantage();
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].advantages[0].resaleRefund).toBe(0);
+  });
+
   /**
    * Régression : un véhicule vendu (isSold) doit disparaître entièrement de la liste
    * exposée — contrairement à une arme/amélioration/avantage vendu(e), qui reste
@@ -178,5 +211,67 @@ describe('GetWorkshopUseCase', () => {
 
     // 4 (base, makeVehicleType) + 1 (bonus Remorque Moyenne) = 5.
     expect(dto.vehicles[0].emplacementsTotal).toBe(5);
+  });
+});
+
+/**
+ * Consultation en lecture seule de l'atelier d'UN AUTRE participant
+ * (`participantId` dans la commande) — cf. `docs/spec/CAMPAIGN.md`, §Atelier et
+ * épaves. Même politique de visibilité que `Game.journal()`/
+ * `CampaignQueryService.getParticipantJournal` : appelant VALIDATED requis,
+ * cible résolue par id dans la campagne, `NotFoundException` (jamais 403) dans
+ * les deux cas de refus.
+ */
+describe('GetWorkshopUseCase — consultation de l\'atelier d\'un tiers (participantId)', () => {
+  it('retourne l\'atelier du participant CIBLÉ (pas celui de l\'appelant) quand l\'appelant est VALIDATED', async () => {
+    const { participant: target } = makeTestParticipant(1); // userId 42, VALIDATED, wallet 29
+    const caller = new CampaignParticipant(2, 99, null, false, ParticipantStatus.VALIDATED);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [target, caller], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 99, participantId: 1 });
+
+    expect(dto.participantId).toBe(1);
+    expect(dto.sponsor).toBe('Rutherford');
+    expect(dto.wallet).toBe(29);
+  });
+
+  it('self-view (participantId absent) reste inchangée : aucune contrainte de statut sur l\'appelant', async () => {
+    const { participant } = makeTestParticipant(1);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.participantId).toBe(1);
+  });
+
+  it('rejette (NotFoundException) un appelant non-VALIDATED consultant un tiers', async () => {
+    const { participant: target } = makeTestParticipant(1);
+    const caller = new CampaignParticipant(2, 99, null, false, ParticipantStatus.PENDING);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [target, caller], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    await expect(useCase.execute({ campaignId: 1, userId: 99, participantId: 1 })).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejette (NotFoundException) un participantId inexistant dans la campagne', async () => {
+    const { participant: caller } = makeTestParticipant(1);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [caller], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    await expect(useCase.execute({ campaignId: 1, userId: 42, participantId: 999 })).rejects.toThrow(NotFoundException);
   });
 });

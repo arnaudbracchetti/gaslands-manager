@@ -1327,7 +1327,7 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 
 ### `SellVehicleModal` — `campaigns/atelier-page/sell-vehicle-modal/`
 
-Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément, `summary.refund` — valeur backend, jamais recalculée côté client) sinon.
+Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément) sinon. Dans ce dernier cas, **chaque ligne** (châssis compris) affiche à la fois le prix initial et le montant de la vente pour cet élément précis (`item.price` → `item.refund`, `summary.chassisPrice` → `summary.chassisRefund`) — valeurs backend (`Weapon`/`Improvement`/`Advantage.resaleRefund`, `Vehicle.chassisResaleRefund`), jamais recalculées côté client. Le pied de modale garde le total agrégé (`summary.refund` — `Vehicle.resaleRefund`).
 
 | | |
 |---|---|

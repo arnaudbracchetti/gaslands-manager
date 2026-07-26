@@ -114,6 +114,25 @@
   line-height: 1.5;
 }
 
+// En-tête + lignes partagent les mêmes classes de colonne (.svm-modal__item-original/
+// -arrow/-refund) pour que les largeurs coïncident exactement, quel que soit le nombre
+// de chiffres affichés sur chaque ligne — un simple `justify-content: flex-end` sur
+// l'en-tête seul ne suffit pas à aligner "Prix initial"/"Vente" avec leur colonne de
+// valeurs, dont l'écart réel dépend de la largeur de la flèche et des icônes.
+.svm-modal__items-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-text);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  color: var(--text-strong);
+  margin-bottom: -2px;
+}
+
 .svm-modal__items {
   list-style: none;
   margin: 0;
@@ -143,10 +162,50 @@
   flex: 1;
 }
 
-.svm-modal__item-price {
+.svm-modal__item-prices {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+// Largeurs de colonne communes à l'en-tête ET aux lignes (cf. commentaire sur
+// .svm-modal__items-header) — "Prix initial" est le libellé le plus large des deux,
+// il dimensionne sa colonne ; les valeurs numériques s'alignent à droite dedans.
+.svm-modal__item-original {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 4px;
+  min-width: 78px;
+}
+
+.svm-modal__item-arrow {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 14px;
+  opacity: 0.5;
+}
+
+.svm-modal__item-refund {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 44px;
+}
+
+// Style spécifique aux VALEURS (pas à l'en-tête) : prix initial atténué (sans barré,
+// qui le ferait lire comme "annulé" — il reste le prix payé, juste moins pertinent
+// que le montant de vente), montant de vente en accent contrasté sur le fond sombre
+// (--tint-danger-text, pas --tb-rouille brut — trop proche du fond pour rester lisible).
+.svm-modal__items .svm-modal__item-original {
+  opacity: 0.65;
+}
+
+.svm-modal__items .svm-modal__item-refund {
+  font-weight: 600;
+  color: var(--tint-danger-text);
 }
 
 .svm-modal__refund {
