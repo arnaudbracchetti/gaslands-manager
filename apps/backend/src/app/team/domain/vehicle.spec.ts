@@ -296,21 +296,39 @@ describe('Vehicle — champs transients de campagne', () => {
     });
   });
 
-  describe('canRemoveSequella / hasActiveSequella', () => {
+  describe('canRemoveSequella / isSequellaRemovable / hasActiveSequella', () => {
     const legendeVivante = SequellaType.from({
       nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '', chocs_cost: 11, origine: 'ATELIER',
+    });
+    const suicidaire = SequellaType.from({
+      nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '', chocs_cost: 1, origine: 'ATELIER',
+    });
+    const siegeIrrecuperable = SequellaType.from({
+      nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '', chocs_cost: 0, origine: 'TABLE_EPAVES',
     });
 
     it('rejette la revente par défaut (pas de Légende Vivante active)', () => {
       const v = makeVehicle();
-      expect(v.canRemoveSequella().ok).toBe(false);
+      expect(v.canRemoveSequella(suicidaire).ok).toBe(false);
     });
 
-    it('autorise la revente si Légende Vivante est active sur ce véhicule', () => {
+    it('autorise la revente d\'une séquelle ATELIER si Légende Vivante est active sur ce véhicule', () => {
       const v = makeVehicle();
       v.addCampaignSequella(legendeVivante, -1);
-      expect(v.canRemoveSequella().ok).toBe(true);
+      expect(v.canRemoveSequella(suicidaire).ok).toBe(true);
       expect(v.hasActiveSequella('legende_vivante')).toBe(true);
+    });
+
+    it('rejette toujours une séquelle TABLE_EPAVES, même avec Légende Vivante active', () => {
+      const v = makeVehicle();
+      v.addCampaignSequella(legendeVivante, -1);
+      expect(v.canRemoveSequella(siegeIrrecuperable).ok).toBe(false);
+    });
+
+    it('isSequellaRemovable retourne false pour une origine TABLE_EPAVES, true pour ATELIER', () => {
+      const v = makeVehicle();
+      expect(v.isSequellaRemovable(siegeIrrecuperable)).toBe(false);
+      expect(v.isSequellaRemovable(suicidaire)).toBe(true);
     });
 
     it('hasActiveSequella retourne false pour une séquelle absente', () => {

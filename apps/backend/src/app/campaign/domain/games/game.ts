@@ -299,6 +299,23 @@ export abstract class Game {
     if (cmd.operation === EquipmentOperation.BUY) {
       cost = this.resolveBuyCost(cmd);
     } else if (cmd.operation === EquipmentOperation.SELL) {
+      // Séquelle TABLE_EPAVES (dommage permanent) : jamais retirable, ni par annulation
+      // même-session ni par revente cross-session — vérifié EN PREMIER, avant le
+      // court-circuit d'annulation ci-dessous, qui sinon supprimerait silencieusement
+      // l'événement sans jamais consulter `Vehicle.canRemoveSequella`/`isSequellaRemovable`.
+      if (cmd.entityType === EquipmentEntityType.SEQUELLE) {
+        const targetSequella = participant.team
+          .findVehicle(cmd.targetVehicleId!)
+          .sequellas.find((s) => s.id === cmd.targetEntityId);
+        if (!targetSequella) throw new DomainException(`Séquelle ${cmd.targetEntityId} introuvable.`);
+        if (!participant.team.findVehicle(cmd.targetVehicleId!).isSequellaRemovable(targetSequella.type)) {
+          throw new DomainException(
+            'Cette séquelle est un dommage permanent imposé par la Table des Épaves — ' +
+              'elle ne peut jamais être retirée.',
+          );
+        }
+      }
+
       // Objet acheté PENDANT cette session d'atelier : annulation, vérifiée AVANT tout
       // calcul de remboursement (resolveSell lirait sinon un état sur le point de
       // disparaître intégralement). Même contrôle pour les 5 types d'entité — seule la
@@ -716,7 +733,10 @@ export abstract class Game {
         const sequella = vehicle.sequellas.find((s) => s.id === cmd.targetEntityId);
         if (!sequella) throw new DomainException(`Séquelle ${cmd.targetEntityId} introuvable.`);
         // Revente fermée par défaut (contrairement aux 4 autres types) — cf. Vehicle.canRemoveSequella.
-        const canRemove = vehicle.canRemoveSequella();
+        // L'origine TABLE_EPAVES a déjà été interceptée plus haut (avant le court-circuit
+        // d'annulation) ; cet appel ne fait donc plus qu'appliquer la garde Légende Vivante
+        // en pratique, mais reste la source de vérité unique pour la règle complète.
+        const canRemove = vehicle.canRemoveSequella(sequella.type);
         if (!canRemove.ok) throw new DomainException(canRemove.reason);
         return {
           refund: sequella.resaleRefund,

@@ -32,6 +32,7 @@ import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType,
 import { Team } from '../../../team/domain/team';
 import { Vehicle } from '../../../team/domain/vehicle';
 import { WeaponType } from '../../../team/domain/value-objects/weapon-type';
+import { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 
 /** Stub de WreckTable qui retourne un outcome et des événements pré-construits.
  * Isole Game.resolveWreck() de la logique de WreckTable (testée dans wreck-table.spec.ts). */
@@ -968,6 +969,108 @@ describe('Game — changeEquipment', () => {
 
     expect(result.deleteEventIds).toEqual([42]);
     expect(result.events).toHaveLength(0);
+  });
+
+  // ── SEQUELLE — TABLE_EPAVES jamais retirable, ATELIER inchangée ──────────────
+
+  const tableEpavesType = SequellaType.from({
+    nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '',
+    chocs_cost: 0, origine: 'TABLE_EPAVES',
+  });
+  const atelierSequellaType = SequellaType.from({
+    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '',
+    chocs_cost: 1, origine: 'ATELIER',
+  });
+  const legendeVivanteType = SequellaType.from({
+    nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '',
+    chocs_cost: 11, origine: 'ATELIER',
+  });
+
+  it('SELL SEQUELLE (TABLE_EPAVES) sur un tirage de CETTE session : toujours refusé (pas d\'annulation)', () => {
+    // La séquelle TABLE_EPAVES (id transient -60) simule un tirage de la Table des Épaves
+    // journalisé sur CETTE MÊME partie, juste avant l'entrée en atelier (BUY event id=60,
+    // même gameId) — le cas exact que le court-circuit d'annulation intercepterait sinon.
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team); // resetCampaignState() d'abord — la séquelle est ajoutée APRÈS
+    vehicle.addCampaignSequella(tableEpavesType, -60);
+
+    const buyEvent = new EquipmentChangedEvent(
+      60, 10, participant.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
+      vehicle.id, null, null, null, null, null, null, tableEpavesType,
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+
+    expect(() => game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: -60,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    })).toThrow('Table des Épaves');
+  });
+
+  it('SELL SEQUELLE (TABLE_EPAVES) cross-session : toujours refusé même avec Légende Vivante active', () => {
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team); // resetCampaignState() d'abord — les séquelles sont ajoutées APRÈS
+    vehicle.addCampaignSequella(tableEpavesType, 100); // pré-existante (id positif)
+    vehicle.addCampaignSequella(legendeVivanteType, 101); // active sur ce véhicule
+
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    expect(() => game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: 100,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    })).toThrow('Table des Épaves');
+  });
+
+  it('SELL SEQUELLE (ATELIER) sur un achat de CETTE session : annulation inchangée', () => {
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team); // resetCampaignState() d'abord — la séquelle est ajoutée APRÈS
+    vehicle.addCampaignSequella(atelierSequellaType, -70);
+
+    const buyEvent = new EquipmentChangedEvent(
+      70, 10, participant.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'suicidaire', 1,
+      vehicle.id, null, null, null, null, null, null, atelierSequellaType,
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: -70,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    });
+
+    expect(result.deleteEventIds).toEqual([70]);
+    expect(result.events).toHaveLength(0);
+  });
+
+  it('SELL SEQUELLE (ATELIER) cross-session : revente autorisée si Légende Vivante active', () => {
+    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const participant = new CampaignParticipant(1, 42, 1, false);
+    participant.attachTeam(team); // resetCampaignState() d'abord — les séquelles sont ajoutées APRÈS
+    vehicle.addCampaignSequella(atelierSequellaType, 100); // pré-existante (id positif)
+    vehicle.addCampaignSequella(legendeVivanteType, 101); // active sur ce véhicule
+
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    const result = game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
+      targetVehicleId: vehicle.id, targetEntityId: 100,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    });
+
+    expect(result.deleteEventIds).toEqual([]);
+    expect(result.events).toHaveLength(1);
+    // Perte totale — Sequella.resaleRefund est toujours 0 (mirroir d'Advantage.price).
+    expect((result.events[0] as EquipmentChangedEvent).cost).toBe(0);
   });
 
   // ── VEHICLE — revente par élément vs annulation cascade same-session ─────────

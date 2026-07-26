@@ -139,7 +139,9 @@ sequelles:
       Lors de la séquence d'après-partie, lorsque vous lancez sur le Tableau des
       Épaves, considérez votre résultat comme étant un "1". Effet permanent —
       s'applique à chaque tirage tant que cette séquelle reste active sur ce véhicule.
-      Sa présence ouvre également la revente des autres séquelles de ce véhicule,
-      même celles acquises lors d'une session d'atelier antérieure.
+      Sa présence ouvre également la revente des autres séquelles ATELIER de ce
+      véhicule, même celles acquises lors d'une session d'atelier antérieure — les
+      séquelles imposées par la Table des Épaves (dommages permanents) restent quant
+      à elles irrévocables, quel que soit l'état de cette séquelle.
     chocs_cost: 11
     origine: ATELIER

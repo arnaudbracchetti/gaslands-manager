@@ -451,14 +451,33 @@ export class Vehicle {
   }
 
   /**
-   * Règle de revente d'une séquelle pré-existante (hors session d'atelier en cours,
-   * cf. `Game.changeEquipment` pour la distinction annulation/revente). Contrairement
-   * à une arme/amélioration/avantage, cette revente est **fermée par défaut** — une
-   * séquelle représente un dommage ou trait permanent, pas un objet ordinaire. Elle ne
-   * s'ouvre que si ce véhicule porte encore la séquelle "Légende Vivante" active :
-   * son détenteur peut alors se défaire de ses anciennes séquelles.
+   * Une séquelle de cette origine peut-elle un jour être retirée (annulation même-session
+   * OU revente cross-session) ? Une séquelle `TABLE_EPAVES` représente un dommage permanent
+   * imposé par un tirage — jamais un objet ordinaire dont on peut se défaire — donc
+   * toujours `false`, y compris pour l'annulation même-session (cf. `Game.changeEquipment`,
+   * qui consulte ce prédicat AVANT son court-circuit d'annulation). Une séquelle `ATELIER`
+   * reste toujours retirable en principe ; `canRemoveSequella` affine ensuite selon le cas
+   * (cross-session : encore gardée par Légende Vivante).
    */
-  canRemoveSequella(): RuleResult {
+  isSequellaRemovable(type: SequellaType): boolean {
+    return type.origine !== 'TABLE_EPAVES';
+  }
+
+  /**
+   * Règle de revente d'une séquelle pré-existante (hors session d'atelier en cours,
+   * cf. `Game.changeEquipment` pour la distinction annulation/revente). Une séquelle
+   * `TABLE_EPAVES` n'est jamais retirable (cf. `isSequellaRemovable`). Pour une séquelle
+   * `ATELIER`, la revente est **fermée par défaut** — un trait permanent, pas un objet
+   * ordinaire — et ne s'ouvre que si ce véhicule porte encore la séquelle "Légende Vivante"
+   * active : son détenteur peut alors se défaire de ses anciennes séquelles `ATELIER`.
+   */
+  canRemoveSequella(type: SequellaType): RuleResult {
+    if (!this.isSequellaRemovable(type)) {
+      return fail(
+        'Cette séquelle est un dommage permanent imposé par la Table des Épaves — ' +
+          'elle ne peut jamais être retirée.',
+      );
+    }
     if (!this.hasActiveSequella('legende_vivante')) {
       return fail(
         'Cette séquelle ne peut pas être revendue : seule la présence de la séquelle ' +

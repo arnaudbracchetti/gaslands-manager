@@ -278,8 +278,11 @@ Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantag
 (compteur mutable propre au véhicule), pas le budget Jerricans de l'équipe. `Vehicle.canAddSequella`
 garde l'origine catalogue (`SequellaType.origine`, une séquelle `TABLE_EPAVES` ne peut être
 imposée que par un tirage de la Table des Épaves), l'unicité (comme `canAddAdvantage`) et les
-Chocs suffisants ; `Vehicle.canRemoveSequella` ferme par défaut la revente cross-session, sauf
-présence active de la séquelle `legende_vivante` sur le véhicule. Contrairement aux autres
+Chocs suffisants ; `Vehicle.isSequellaRemovable` rejette absolument le retrait (annulation
+même-session comprise) d'une séquelle `TABLE_EPAVES` — un dommage permanent, jamais un objet
+ordinaire — et `Vehicle.canRemoveSequella` ferme par défaut, pour une séquelle `ATELIER`, la
+revente cross-session, sauf présence active de la séquelle `legende_vivante` sur le véhicule.
+Contrairement aux autres
 entités enfants, les mutations campagne d'une séquelle (`addCampaignSequella`, `markSequellaSold`…)
 sont journalisées via `EquipmentChangedEvent` (entityType `SEQUELLE`) plutôt qu'un événement dédié
 — cf. [§4 — Séquelles](#séquelles-event-sourcing) et [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles).

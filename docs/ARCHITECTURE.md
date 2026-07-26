@@ -376,10 +376,14 @@ réduit à la revente).
 Unifiée dans `EquipmentChangedEvent` (`entityType: SEQUELLE`) plutôt qu'un
 événement dédié — seules différences avec les 4 autres types : la monnaie
 débitée/créditée est `vehicle.chocs` (pas la cagnotte du participant, cf.
-`EquipmentChangedEvent.applyChocsDelta`), et la revente cross-session est
-gardée par `Vehicle.canRemoveSequella()` (fermée par défaut, ouverte par la
-présence de la séquelle `legende_vivante`). `Vehicle.canAddSequella()` garde
-origine/unicité/Chocs suffisants — appelée par `Game.changeEquipment()`,
+`EquipmentChangedEvent.applyChocsDelta`), et le retrait est gardé par
+`Vehicle.isSequellaRemovable()`/`canRemoveSequella()` — une séquelle
+`TABLE_EPAVES` (dommage permanent) est **toujours** rejetée, annulation
+même-session comprise (garde consultée par `Game.changeEquipment()` avant son
+court-circuit d'annulation habituel, sinon contourné) ; une séquelle
+`ATELIER` suit la règle historique (revente cross-session fermée par défaut,
+ouverte par la présence de la séquelle `legende_vivante`). `Vehicle.canAddSequella()`
+garde origine/unicité/Chocs suffisants — appelée par `Game.changeEquipment()`,
 jamais par le use case (`ChangeEquipmentUseCase` reste une orchestration pure).
 
 Dur à Cuire est le seul cas à bundler deux effets dans un seul événement

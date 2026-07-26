@@ -12,6 +12,7 @@ import { outputToObservable } from '@angular/core/rxjs-interop';
 import { MountedEquipment } from './mounted-equipment';
 import { Sponsor } from '../../../../catalog/catalog.model';
 import { VehicleImprovement, Weapon, VehicleAdvantage } from '../../vehicle-builder.model';
+import type { WorkshopSequellaDto } from '../../../../campaigns/workshop.model';
 
 // Catalogue minimal — sert à résoudre noms/emplacements affichés.
 const mockSponsorCatalog: Sponsor = {
@@ -83,15 +84,53 @@ const mockAdvantage: VehicleAdvantage = {
   prix: 2,
 };
 
+// Séquelle imposée par un tirage de la Table des Épaves — jamais retirable, même si
+// "Légende Vivante" est active (cf. Vehicle.isSequellaRemovable côté backend).
+const mockSequellaTableEpaves: WorkshopSequellaDto = {
+  id: 500,
+  nomInterne: 'siege_irrecuperable',
+  nom: 'Siège irrécupérable',
+  chocsCost: 0,
+  origine: 'TABLE_EPAVES',
+  isSold: false,
+  purchasedThisSession: false,
+  description: '',
+  regles: '',
+};
+
+// Séquelle achetée volontairement en atelier — retirable selon les règles habituelles
+// (annulation même-session, ou revente cross-session si Légende Vivante est active).
+const mockSequellaAtelier: WorkshopSequellaDto = {
+  id: 501,
+  nomInterne: 'suicidaire',
+  nom: 'Suicidaire',
+  chocsCost: 1,
+  origine: 'ATELIER',
+  isSold: false,
+  purchasedThisSession: false,
+  description: '',
+  regles: '',
+};
+
 describe('MountedEquipment', () => {
   let component: MountedEquipment;
   let fixture: ComponentFixture<MountedEquipment>;
 
-  function setInputs(weapons: Weapon[], improvements: VehicleImprovement[], advantages: VehicleAdvantage[] = []): void {
+  function setInputs(
+    weapons: Weapon[],
+    improvements: VehicleImprovement[],
+    advantages: VehicleAdvantage[] = [],
+    sequellas: WorkshopSequellaDto[] = [],
+    showSequellas = false,
+    sequellaResaleUnlocked = false,
+  ): void {
     fixture.componentRef.setInput('weapons', weapons);
     fixture.componentRef.setInput('improvements', improvements);
     fixture.componentRef.setInput('advantages', advantages);
     fixture.componentRef.setInput('sponsorCatalog', mockSponsorCatalog);
+    fixture.componentRef.setInput('sequellas', sequellas);
+    fixture.componentRef.setInput('showSequellas', showSequellas);
+    fixture.componentRef.setInput('sequellaResaleUnlocked', sequellaResaleUnlocked);
     fixture.detectChanges();
   }
 
@@ -342,5 +381,49 @@ describe('MountedEquipment', () => {
     (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
 
     expect(emitted).toEqual([mockAdvantage]);
+  });
+
+  // ── Séquelles (atelier uniquement) — TABLE_EPAVES jamais retirable ──────────
+
+  it('séquelle TABLE_EPAVES : jamais de bouton Retirer, même avec sequellaResaleUnlocked activé', () => {
+    setInputs([], [], [], [mockSequellaTableEpaves], true, true);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Séquelles (1)');
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(0);
+    expect(el.querySelector('.me-locked')).not.toBeNull();
+  });
+
+  it('séquelle TABLE_EPAVES : jamais de bouton Retirer même si purchasedThisSession est vrai', () => {
+    setInputs([], [], [], [{ ...mockSequellaTableEpaves, purchasedThisSession: true }], true, false);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(0);
+    expect(el.querySelector('.me-locked')).not.toBeNull();
+  });
+
+  it('séquelle ATELIER : bouton Retirer visible si sequellaResaleUnlocked est activé (non-régression)', () => {
+    setInputs([], [], [], [mockSequellaAtelier], true, true);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(1);
+  });
+
+  it('séquelle ATELIER : pas de bouton Retirer (icône verrouillée) sans Légende Vivante active', () => {
+    setInputs([], [], [], [mockSequellaAtelier], true, false);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.me-remove')).toHaveLength(0);
+    expect(el.querySelector('.me-locked')).not.toBeNull();
+  });
+
+  it('émet sequellaRemoved au clic sur "Retirer" d\'une séquelle ATELIER retirable', () => {
+    setInputs([], [], [], [mockSequellaAtelier], true, true);
+    const emitted: WorkshopSequellaDto[] = [];
+    outputToObservable(component.sequellaRemoved).subscribe((s) => emitted.push(s));
+
+    (fixture.nativeElement.querySelector('.me-remove') as HTMLButtonElement).click();
+
+    expect(emitted).toEqual([mockSequellaAtelier]);
   });
 });

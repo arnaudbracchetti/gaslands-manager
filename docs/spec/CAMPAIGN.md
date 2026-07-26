@@ -679,13 +679,24 @@ jerricans/emplacement) plutôt que de basculer sur `EquipmentOption`.
   (une même séquelle `ATELIER` ne peut être acquise deux fois) et les Chocs
   suffisants.
 
-**Revente — fermée par défaut.** Contrairement aux armes/améliorations/
-avantages, la revente cross-session d'une séquelle est **rejetée** par
-`Vehicle.canRemoveSequella()`, sauf si le véhicule porte encore une séquelle
-`legende_vivante` active — sa présence ouvre alors la revente des autres
-séquelles de ce véhicule, y compris celles acquises lors d'une session
-d'atelier antérieure. L'annulation même-session, elle, suit la règle commune
-sans exception (toujours possible).
+**Séquelle `TABLE_EPAVES` — jamais retirable.** Un dommage permanent imposé par
+un tirage sur la Table des Épaves ne peut **jamais** être retiré — ni par
+revente cross-session (même avec `legende_vivante` active), ni par
+l'annulation même-session (une séquelle `TABLE_EPAVES` peut être "de cette
+session" si le tirage vient d'avoir lieu sur la partie qui entre en atelier).
+`Vehicle.isSequellaRemovable()` porte cette garde absolue, consultée par
+`Game.changeEquipment()` **avant** le court-circuit d'annulation même-session
+— qui sinon supprimerait silencieusement l'événement sans jamais consulter
+cette règle.
+
+**Revente d'une séquelle `ATELIER` — fermée par défaut.** Contrairement aux
+armes/améliorations/avantages, la revente cross-session d'une séquelle
+`ATELIER` est **rejetée** par `Vehicle.canRemoveSequella()`, sauf si le
+véhicule porte encore une séquelle `legende_vivante` active — sa présence
+ouvre alors la revente des autres séquelles `ATELIER` de ce véhicule, y
+compris celles acquises lors d'une session d'atelier antérieure (jamais les
+séquelles `TABLE_EPAVES`, cf. ci-dessus). L'annulation même-session, elle,
+suit la règle commune sans exception (toujours possible).
 
 **Dur à Cuire** — un seul événement porte les deux effets (achat de la
 séquelle **et** octroi d'un avantage gratuit de son choix) : `BUY(SEQUELLE,

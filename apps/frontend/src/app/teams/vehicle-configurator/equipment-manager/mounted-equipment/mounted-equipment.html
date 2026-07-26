@@ -194,7 +194,11 @@
               </span>
             </span>
             @if (!sequella.isSold && !locked()) {
-              @if (sequella.purchasedThisSession || sequellaResaleUnlocked()) {
+              @if (sequella.origine === 'TABLE_EPAVES') {
+                <span class="me-locked" title="Dommage permanent imposé par la Table des Épaves — ne peut jamais être retiré">
+                  <app-icon concept="verrouille" size="xs" />
+                </span>
+              } @else if (sequella.purchasedThisSession || sequellaResaleUnlocked()) {
                 <button
                   class="me-remove"
                   type="button"
