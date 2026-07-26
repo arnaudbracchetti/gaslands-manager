@@ -29,12 +29,26 @@ export class EscarmoucheDestroyedVehicleDto {
 }
 
 /**
- * Corps de `POST .../results`. Les trois champs sont indépendants et optionnels :
- * `results` (classement + exploits) n'est envoyé que pour un Événement Télévisé ;
- * `jerricanGains`/`destroyedVehicles` (à plat) uniquement pour une Escarmouche.
+ * Points de sabotage dépensés (déclaration rétroactive de l'organisateur, écran dédié du
+ * wizard) — applicable aux deux types de partie, contrairement à `results`/
+ * `jerricanGains` ci-dessous. `pointsSpent` est la valeur DÉCLARÉE, pas encore clampée :
+ * le clamp au solde réellement disponible est fait côté serveur
+ * (`SabotagePointsSpentEvent.declare`), jamais côté client (le solde n'est jamais
+ * affiché à l'écran).
+ */
+export class SabotageSpentDto {
+  participantId!: number;
+  pointsSpent!: number;
+}
+
+/**
+ * Corps de `POST .../results`. `results` (classement + exploits) n'est envoyé que pour
+ * un Événement Télévisé ; `jerricanGains`/`destroyedVehicles` (à plat) uniquement pour
+ * une Escarmouche. `sabotageSpent` est indépendant du type de partie.
  */
 export class RecordResultDto {
   results?: RecordResultItemDto[];
   jerricanGains?: JerricanGainDto[];
   destroyedVehicles?: EscarmoucheDestroyedVehicleDto[];
+  sabotageSpent?: SabotageSpentDto[];
 }

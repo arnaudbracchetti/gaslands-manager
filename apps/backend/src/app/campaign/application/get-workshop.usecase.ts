@@ -24,7 +24,8 @@ export interface GetWorkshopCommand {
  * État campagne de l'équipe consultée (le participant connecté, ou un tiers via
  * `participantId`) après replay complet. Inclut les entités transientes (achats
  * atelier) et les effets accumulés (perte, chocs, séquelles). `resistancePoints`
- * est exclu (D-S4).
+ * (le total brut) est exclu (D-S4) — seul son dérivé `sabotagePoints` est exposé,
+ * et uniquement au propriétaire consultant son propre atelier (jamais via `participantId`).
  */
 export class GetWorkshopUseCase {
   constructor(private readonly replayService: CampaignReplayService) {}
@@ -128,6 +129,9 @@ export class GetWorkshopUseCase {
       sponsor: target.team.sponsor,
       wallet: target.wallet,
       championshipPoints: target.championshipPoints,
+      // Secret vis-à-vis des autres joueurs (D-S4) : seul le propriétaire consultant son
+      // propre atelier (participantId absent de la commande) voit ce compteur dérivé.
+      sabotagePoints: cmd.participantId === undefined ? target.sabotagePoints : null,
       vehicles,
     };
   }

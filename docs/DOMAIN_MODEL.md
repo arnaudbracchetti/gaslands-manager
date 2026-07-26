@@ -577,7 +577,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED | SABOTAGE_POINTS_SPENT"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -602,6 +602,7 @@ erDiagram
         string freeAdvantageNomInterne "nullable — BUY SEQUELLE 'dur_a_cuire' uniquement, avantage gratuit accordé"
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"
+        number sabotagePointsSpent "nullable — SabotagePointsSpentEvent, DÉJÀ clampé au solde disponible à la déclaration"
         date createdAt
     }
 ```
@@ -665,6 +666,7 @@ classDiagram
         +wallet : number
         +championshipPoints : number
         +resistancePoints : number
+        +sabotagePoints : number
         +team : Team
         +attachTeam(team) void
         +reset() void
@@ -759,7 +761,7 @@ pas une entité séparée (cf.
 
 | Classe | Type | Statuts | Événements acceptés en PLANIFIE | Événements acceptés en ATELIER |
 |--------|------|---------|----------------------------------|----------------------------------|
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus | EquipmentChanged (tout entityType), VehicleRenamed |
+| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus, SabotagePointsSpent | EquipmentChanged (tout entityType), VehicleRenamed |
 | `EscarmoucheGame` | `ESCARMOUCHE` | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger) | EquipmentChanged (tout entityType), VehicleRenamed |
 
 `EquipmentChangedEvent` est la seule classe acceptée dans les deux statuts, mais
@@ -802,6 +804,7 @@ d'événements confondus.
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
 | `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`) | `addPoints(-5)` + `vehicle.markFavoriDuPublic()` |
 | `VehicleRenamedEvent` | `vehicle.renameCampaignVehicle(newName)` (via `Team`, pas `assertNotLocked()` — cf. §1) | `vehicle.renameCampaignVehicle(previousName)` |
+| `SabotagePointsSpentEvent` (déclaration rétroactive, wizard de fin de partie) | `participant.addResistance(-3 × pointsSpent)` — `pointsSpent` est DÉJÀ le montant clampé au solde disponible, calculé par `Game.recordSabotageSpent` AVANT construction (jamais recalculé dans `execute()`/`describe()`, cf. sa doc) | `addResistance(+3 × pointsSpent)` |
 
 ### Entités transientes (D-S11)
 

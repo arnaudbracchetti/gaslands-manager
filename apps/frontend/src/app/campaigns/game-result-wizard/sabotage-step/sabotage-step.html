@@ -1,0 +1,34 @@
+<!-- Écran Sabotage du wizard de fin de partie : déclaration rétroactive des points de sabotage dépensés -->
+<div class="sst">
+  <p class="sst__hint">
+    Points de sabotage dépensés par équipe pendant la partie (déclaration à voix haute, 0 si aucun) :
+  </p>
+
+  <ul class="sst__list">
+    @for (participant of participants(); track participant.id) {
+      <li class="sst__item">
+        <span class="sst__team">{{ participant.teamName }}</span>
+        <input
+          type="number"
+          min="0"
+          class="sst__input"
+          [value]="pointsSpentFor(participant.id)"
+          (change)="setPointsSpent(participant.id, $any($event.target).value)"
+          [disabled]="saving()"
+        />
+      </li>
+    }
+  </ul>
+
+  <div class="sst__actions">
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onCancel()">
+      Annuler
+    </button>
+    <button type="button" class="btn-secondary" [disabled]="saving()" (click)="onBack()">
+      Retour
+    </button>
+    <button type="submit" class="btn-primary" [disabled]="saving()" (click)="onNext()">
+      Suivant
+    </button>
+  </div>
+</div>

@@ -1037,25 +1037,27 @@ Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type
 
 Orchestrateur du wizard de fin de partie — **étapes variables**, pilotées par le type de
 partie (Événement Télévisé/Escarmouche) et les métadonnées du scénario
-(`franchissementPortes`/`gainJerricans`) : jusqu'à 6 écrans possibles (Présence →
-Classement → Portes → Jerricans → Désignation des épaves → Résolution), jamais tous
-affichés en même temps (`activeSteps` computed). Affiché via `CampaignProgram` pour les
-parties `PLANIFIE` en `EN_COURS`. Documents de conception :
+(`franchissementPortes`/`gainJerricans`) : jusqu'à 7 écrans possibles (Présence →
+Sabotage → Classement → Portes → Jerricans → Désignation des épaves → Résolution),
+jamais tous affichés en même temps (`activeSteps` computed). Affiché via
+`CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`. Documents de conception :
 [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
-(conception initiale, 3 écrans) puis
+(conception initiale, 3 écrans),
 [`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
-(refonte à étapes variables + parcours Escarmouche).
+(refonte à étapes variables + parcours Escarmouche) puis
+[`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md)
+(ajout de l'écran Sabotage).
 
-**Persistance différée** : les 5 premiers écrans sont de l'état purement client (rien
-n'est envoyé au serveur) — le lot accumulé (classement+exploits pour un ET, ou
-jerricans+destructions à 0 PC pour une Escarmouche) n'est construit et émis
+**Persistance différée** : les 6 premiers écrans sont de l'état purement client (rien
+n'est envoyé au serveur) — le lot accumulé (classement+exploits+sabotage pour un ET, ou
+jerricans+destructions à 0 PC+sabotage pour une Escarmouche) n'est construit et émis
 (`batchReady`) qu'à la transition Désignation → Résolution.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-game-result-wizard` |
 | **Type** | Dumb |
-| **Compose** | `PresenceStep`, `RankingStep`, `GatesStep`, `JerricansStep`, `WreckDesignationStep`, `WreckResolutionStep` |
+| **Compose** | `PresenceStep`, `SabotageStep`, `RankingStep`, `GatesStep`, `JerricansStep`, `WreckDesignationStep`, `WreckResolutionStep` |
 
 **Inputs**
 
@@ -1078,7 +1080,7 @@ jerricans+destructions à 0 PC pour une Escarmouche) n'est construit et émis
 | Nom | Type | Description |
 |-----|------|-------------|
 | `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement (écran Présence) — le parent recharge `participantVehicles` en réponse |
-| `batchReady` | `RecordResultDto` | Lot accumulé (classement+exploits ET, ou jerricans+destructions Escarmouche), émis à la transition Désignation → Résolution |
+| `batchReady` | `RecordResultDto` | Lot accumulé (classement+exploits+sabotage ET, ou jerricans+destructions+sabotage Escarmouche), émis à la transition Désignation → Résolution |
 | `incomeRollRequested` | `number` | Demande de tirage de revenu automatique, un participant présent à la fois (écran Résolution, Escarmouche) — émis par un `effect()` interne |
 | `wreckRollRequested` | `WreckResolveRequestDto` | Demande de tirage d'épave automatique, un véhicule à la fois (écran Résolution, après les revenus le cas échéant) — émis par un `effect()` interne |
 | `wizardCompleted` | `void` | Le wizard est entièrement terminé (écran Résolution, "Terminer") — le parent appelle `enterAtelier()` à ce signal, **c'est le seul moment où la partie passe PLANIFIE → ATELIER** |
@@ -1117,6 +1119,40 @@ s'affiche dès qu'une seule équipe est cochée.
 |-----|------|-------------|
 | `next` | `number[]` | Ids présents (ordre de coche), une fois l'étape validée |
 | `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement |
+| `formCancel` | `void` | Annulation |
+
+---
+
+### `SabotageStep` — `campaigns/game-result-wizard/sabotage-step/`
+
+Écran Sabotage — **toujours affiché**, juste après Présence, sans condition de
+scénario (contrairement à `GatesStep`/`JerricansStep`). Déclaration rétroactive par
+l'organisateur du nombre de points de sabotage dépensés par équipe pendant la partie
+(annonce orale à table) — cf. [spec/CAMPAIGN.md — Points de
+sabotage](spec/CAMPAIGN.md#points-de-sabotage). Même gabarit que `GatesStep`/
+`JerricansStep` : un champ numérique par participant présent, à 0 par défaut — "Suivant"
+ne coûte qu'un clic si personne n'a rien déclaré. Le solde de sabotage n'est jamais
+affiché à cet écran (secret) : aucune validation côté client, le clamp au solde
+réellement disponible est entièrement fait côté serveur (silencieux, jamais un rejet).
+
+| | |
+|---|---|
+| **Sélecteur** | `app-sabotage-step` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `participants` | `CampaignParticipant[]` | — | Participants présents à la partie (transmis par l'écran Présence) |
+| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `next` | `SabotageSpentEntry[]` | `{ participantId, pointsSpent }[]` — uniquement les participants avec `pointsSpent > 0` |
+| `back` | `void` | Retour à l'écran Présence |
 | `formCancel` | `void` | Annulation |
 
 ---
@@ -1314,6 +1350,8 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 
 Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=true`, libellé/icône adaptés — "Vendre"/💰 ou "Annuler l'achat" selon `purchasedThisSession`), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Un bouton "+ Ajouter un véhicule" ouvre une grille de `VehicleChoiceCard` (réutilisé tel quel) alimentée par `sponsorCatalog().vehicules`, pour acheter un nouveau véhicule via la cagnotte. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
 
+**Points de sabotage** : partage le même cadre que la Cagnotte (`.atp-summary`, une ligne par valeur — `.atp-summary-row`, séparées par un filet `border-hair`) plutôt que deux bandeaux distincts. Affiche le compteur dérivé `WorkshopStateDto.sabotagePoints` — 1 point pour 3 Points de Résistance secrets, `Math.floor(resistancePoints / 3)`, cf. [spec/CAMPAIGN.md — Points de sabotage](../docs/spec/CAMPAIGN.md#points-de-sabotage). Exposé uniquement sur cet écran (l'atelier "personnel"), jamais sur `ParticipantAtelierPage` (lecture d'un tiers, où l'API renvoie `null`).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-atelier-page` |
@@ -1322,7 +1360,7 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `CatalogService` |
 | **Compose** | `Breadcrumb`, `VehicleSummaryCard`, `VehicleChoiceCard`, `SellVehicleModal` |
 
-**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`), `pendingSaleVehicleId`, `saleSummary` (computed via `buildVehicleSaleSummary`), `showAddVehicle`.
+**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `sabotagePoints` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`), `pendingSaleVehicleId`, `saleSummary` (computed via `buildVehicleSaleSummary`), `showAddVehicle`.
 
 ---
 

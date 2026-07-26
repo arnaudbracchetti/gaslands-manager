@@ -123,5 +123,10 @@ export interface WorkshopStateDto {
   sponsor: string;
   wallet: number;
   championshipPoints: number;
+  /** Points de sabotage dérivés (`floor(resistancePoints / 3)`) — `null` quand cet atelier
+   *  est consulté en lecture seule pour UN AUTRE participant (`GET .../participants/:pid/workshop`) :
+   *  le total de Points de Résistance reste secret vis-à-vis des autres joueurs, seul son
+   *  propriétaire peut voir ce compteur dérivé. */
+  sabotagePoints: number | null;
   vehicles: WorkshopVehicleDto[];
 }

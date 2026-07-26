@@ -12,6 +12,7 @@ import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
+import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from '../enums/weight-class.enum';
 import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
@@ -451,6 +452,42 @@ export abstract class Game {
     const events: GameEvent[] = [];
     for (const gain of gains) {
       events.push(...this.recordWalletMovement(gain.participantId, gain.amount, WalletReason.RECOMPENSE));
+    }
+    return events;
+  }
+
+  /**
+   * Déclaration rétroactive de l'organisateur — dépense de points de sabotage pendant
+   * la partie (wizard de fin de partie, écran dédié, cf. spec/CAMPAIGN.md). Applicable
+   * aux deux types de partie (contrairement à `recordResult`/`recordJerricanGains`) : le
+   * sabotage n'est pas scénario-dépendant.
+   *
+   * Clampe la déclaration au solde de sabotage réellement disponible AVANT de construire
+   * l'événement — `SabotagePointsSpentEvent` stocke toujours la valeur déjà résolue,
+   * jamais la valeur brute (cf. sa doc, sur la raison exacte). Aucune `DomainException`
+   * pour une sur-déclaration : un solde insuffisant réduit silencieusement le montant
+   * appliqué (aucun événement journalisé si le résultat est nul), jamais un rejet.
+   *
+   * `participantId` inconnu de la campagne, en revanche, ne devrait jamais se produire —
+   * le wizard ne propose que des participants réels de la campagne — et lève donc une
+   * `DomainException`, contrairement au solde insuffisant qui est un cas normal.
+   */
+  recordSabotageSpent(
+    entries: { participantId: number; pointsSpent: number }[],
+    participants: readonly CampaignParticipant[],
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+    for (const entry of entries) {
+      const participant = participants.find((p) => p.id === entry.participantId);
+      if (!participant) {
+        throw new DomainException(`Participant #${entry.participantId} introuvable dans la campagne.`);
+      }
+      const actualSpent = Math.min(entry.pointsSpent, participant.sabotagePoints);
+      if (actualSpent > 0) {
+        const event = new SabotagePointsSpentEvent(0, this.id, participant.id, 0, actualSpent);
+        this.addEvent(event);
+        events.push(event);
+      }
     }
     return events;
   }

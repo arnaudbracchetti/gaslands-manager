@@ -63,28 +63,36 @@ describe('GameResultWizard — Événement Télévisé', () => {
     expect(component.currentStepId()).toBe('presence');
   });
 
-  it('activeSteps inclut classement + portes (franchissementPortes) pour un ET', () => {
-    expect(component.activeSteps()).toEqual(['presence', 'ranking', 'gates', 'designation', 'resolution']);
+  it('activeSteps inclut sabotage, classement + portes (franchissementPortes) pour un ET', () => {
+    expect(component.activeSteps()).toEqual(['presence', 'sabotage', 'ranking', 'gates', 'designation', 'resolution']);
   });
 
   it('activeSteps omet portes si franchissementPortes est faux', () => {
     fixture.componentRef.setInput('game', { ...mockEvenementTele, franchissementPortes: false });
-    expect(component.activeSteps()).toEqual(['presence', 'ranking', 'designation', 'resolution']);
+    expect(component.activeSteps()).toEqual(['presence', 'sabotage', 'ranking', 'designation', 'resolution']);
   });
 
-  it('onPresenceNext avance vers classement', () => {
+  it('onPresenceNext avance vers sabotage (toujours affiché, sans condition de scénario)', () => {
     component.onPresenceNext([1, 2]);
+    expect(component.currentStepId()).toBe('sabotage');
+  });
+
+  it('onSabotageNext avance vers classement', () => {
+    component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     expect(component.currentStepId()).toBe('ranking');
   });
 
   it('onRankingNext avance vers portes', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     expect(component.currentStepId()).toBe('gates');
   });
 
   it('onGatesNext avance vers désignation', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     component.onGatesNext([{ participantId: 1, gatesCrossed: 3 }]);
     expect(component.currentStepId()).toBe('designation');
@@ -92,6 +100,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
 
   it('goBack revient à l\'étape précédente', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     component.goBack();
     expect(component.currentStepId()).toBe('ranking');
@@ -104,12 +113,14 @@ describe('GameResultWizard — Événement Télévisé', () => {
 
   it('rankedParticipants respecte l\'ordre du classement', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 2, rank: 1 }, { participantId: 1, rank: 2 }]);
     expect(component.rankedParticipants().map((p) => p.id)).toEqual([2, 1]);
   });
 
   it('batchReady fusionne classement, portes et destroyedVehicles dans results', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     component.onGatesNext([{ participantId: 1, gatesCrossed: 3 }]);
 
@@ -128,10 +139,26 @@ describe('GameResultWizard — Événement Télévisé', () => {
     ]);
     expect(emitted[0].jerricanGains).toBeUndefined();
     expect(emitted[0].destroyedVehicles).toBeUndefined();
+    expect(emitted[0].sabotageSpent).toBeUndefined();
+  });
+
+  it('batchReady inclut sabotageSpent quand des points ont été déclarés', () => {
+    component.onPresenceNext([1, 2]);
+    component.onSabotageNext([{ participantId: 1, pointsSpent: 2 }]);
+    component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
+    component.onGatesNext([]);
+
+    const emitted: RecordResultDto[] = [];
+    outputToObservable(component.batchReady).subscribe((v) => emitted.push(v));
+
+    component.onDesignationNext({ destroyedVehicles: new Map(), wreckedVehicles: [] });
+
+    expect(emitted[0].sabotageSpent).toEqual([{ participantId: 1, pointsSpent: 2 }]);
   });
 
   it('onDesignationNext ne fait pas avancer le wizard tant que resultRecorded n\'est pas confirmé', () => {
     component.onPresenceNext([1]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }]);
     component.onGatesNext([]);
     component.onDesignationNext({ destroyedVehicles: new Map(), wreckedVehicles: [] });
@@ -140,6 +167,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
 
   it('avance vers résolution quand resultRecorded devient non-null', () => {
     component.onPresenceNext([1]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }]);
     component.onGatesNext([]);
     component.onDesignationNext({
@@ -171,6 +199,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
     outputToObservable(component.wreckRollRequested).subscribe((v) => wreckEmitted.push(v));
 
     component.onPresenceNext([1]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }]);
     component.onGatesNext([]);
     component.onDesignationNext({
@@ -189,6 +218,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
     outputToObservable(component.wreckRollRequested).subscribe((v) => emitted.push(v));
 
     component.onPresenceNext([1]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }]);
     component.onGatesNext([]);
     component.onDesignationNext({
@@ -204,6 +234,7 @@ describe('GameResultWizard — Événement Télévisé', () => {
 
   it('destroyedBy résout le libellé du destructeur depuis destroyedVehicles (écran désignation)', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onRankingNext([{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }]);
     component.onGatesNext([]);
     component.onDesignationNext({
@@ -244,28 +275,36 @@ describe('GameResultWizard — Escarmouche', () => {
     fixture.detectChanges();
   });
 
-  it('activeSteps omet classement/portes, inclut jerricans (gainJerricans)', () => {
-    expect(component.activeSteps()).toEqual(['presence', 'jerricans', 'designation', 'resolution']);
+  it('activeSteps inclut sabotage, omet classement/portes, inclut jerricans (gainJerricans)', () => {
+    expect(component.activeSteps()).toEqual(['presence', 'sabotage', 'jerricans', 'designation', 'resolution']);
   });
 
   it('activeSteps omet aussi jerricans si gainJerricans est faux', () => {
     fixture.componentRef.setInput('game', { ...mockEscarmouche, gainJerricans: false });
-    expect(component.activeSteps()).toEqual(['presence', 'designation', 'resolution']);
+    expect(component.activeSteps()).toEqual(['presence', 'sabotage', 'designation', 'resolution']);
   });
 
-  it('onPresenceNext avance directement vers jerricans (pas de classement)', () => {
+  it('onPresenceNext avance vers sabotage (toujours affiché avant jerricans)', () => {
     component.onPresenceNext([1, 2]);
+    expect(component.currentStepId()).toBe('sabotage');
+  });
+
+  it('onSabotageNext avance vers jerricans (pas de classement)', () => {
+    component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     expect(component.currentStepId()).toBe('jerricans');
   });
 
   it('onJerricansNext avance vers désignation', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onJerricansNext([{ participantId: 1, amount: 5 }]);
     expect(component.currentStepId()).toBe('designation');
   });
 
   it('batchReady envoie jerricanGains et destroyedVehicles à plat, jamais results', () => {
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onJerricansNext([{ participantId: 1, amount: 5 }]);
 
     const emitted: RecordResultDto[] = [];
@@ -280,10 +319,25 @@ describe('GameResultWizard — Escarmouche', () => {
     expect(emitted[0].results).toBeUndefined();
     expect(emitted[0].jerricanGains).toEqual([{ participantId: 1, amount: 5 }]);
     expect(emitted[0].destroyedVehicles).toEqual([{ destroyerId: 1, vehicleId: 200 }]);
+    expect(emitted[0].sabotageSpent).toBeUndefined();
+  });
+
+  it('batchReady inclut sabotageSpent (Escarmouche aussi, indépendant du classement)', () => {
+    component.onPresenceNext([1, 2]);
+    component.onSabotageNext([{ participantId: 2, pointsSpent: 1 }]);
+    component.onJerricansNext([]);
+
+    const emitted: RecordResultDto[] = [];
+    outputToObservable(component.batchReady).subscribe((v) => emitted.push(v));
+
+    component.onDesignationNext({ destroyedVehicles: new Map(), wreckedVehicles: [] });
+
+    expect(emitted[0].sabotageSpent).toEqual([{ participantId: 2, pointsSpent: 1 }]);
   });
 
   it('batchReady omet jerricanGains/destroyedVehicles si vides', () => {
     component.onPresenceNext([1]);
+    component.onSabotageNext([]);
     component.onJerricansNext([]);
 
     const emitted: RecordResultDto[] = [];
@@ -302,6 +356,7 @@ describe('GameResultWizard — Escarmouche', () => {
     outputToObservable(component.wreckRollRequested).subscribe((v) => wreckEmitted.push(v));
 
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onJerricansNext([]);
     component.onDesignationNext({
       destroyedVehicles: new Map(),
@@ -320,6 +375,7 @@ describe('GameResultWizard — Escarmouche', () => {
     outputToObservable(component.wreckRollRequested).subscribe((v) => wreckEmitted.push(v));
 
     component.onPresenceNext([1, 2]);
+    component.onSabotageNext([]);
     component.onJerricansNext([]);
     component.onDesignationNext({
       destroyedVehicles: new Map(),

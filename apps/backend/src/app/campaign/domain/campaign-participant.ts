@@ -60,6 +60,13 @@ export class CampaignParticipant {
   get championshipPoints(): number { return this._championshipPoints; }
   get resistancePoints(): number { return this._resistancePoints; }
 
+  /** Points de sabotage — dérivés des Points de Résistance secrets (1 par tranche de 3,
+   *  arrondi à l'inférieur). Seule valeur dérivée révélée : le total brut de
+   *  `resistancePoints` reste caché, y compris à son propriétaire (D-S4). */
+  get sabotagePoints(): number {
+    return Math.floor(this._resistancePoints / 3);
+  }
+
   // ── Mutations CRUD (état stocké) ──────────────────────────────────────────
 
   /** Passe le participant à VALIDATED (validation d'une demande ou revalidation). */

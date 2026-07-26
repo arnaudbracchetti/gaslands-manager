@@ -354,6 +354,7 @@ export class CampaignController {
       results: dto.results,
       jerricanGains: dto.jerricanGains,
       destroyedVehicles: dto.destroyedVehicles,
+      sabotageSpent: dto.sabotageSpent,
     });
     return this.query.getGame(id, gameId);
   }

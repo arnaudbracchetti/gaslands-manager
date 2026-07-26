@@ -11,9 +11,12 @@
   } @else if (error()) {
     <p class="atp-status atp-status--error">{{ error() }}</p>
   } @else {
-    <div class="atp-wallet">
-      <span class="atp-wallet-label">Cagnotte</span>
-      <span class="atp-wallet-value">{{ wallet() }} jerricans</span>
+    <div class="atp-summary atp-summary--ledger">
+      <span class="atp-summary-label">Cagnotte</span>
+      <span class="atp-summary-value">{{ wallet() }} jerricans</span>
+      <span class="atp-summary-sep">·</span>
+      <span class="atp-summary-label">Sabotage</span>
+      <span class="atp-summary-value atp-summary-value--sabotage">{{ sabotagePoints() }}</span>
     </div>
 
     @if (vehicleSummaries().length === 0) {

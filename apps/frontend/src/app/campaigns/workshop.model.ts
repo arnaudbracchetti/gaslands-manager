@@ -139,6 +139,10 @@ export interface WorkshopStateDto {
   sponsor: string;
   wallet: number;
   championshipPoints: number;
+  /** Points de sabotage dérivés (`floor(resistancePoints / 3)`) — `null` quand cet atelier
+   *  est consulté en lecture seule pour un autre participant (secret vis-à-vis des autres
+   *  joueurs, cf. `ParticipantAtelierPage`). */
+  sabotagePoints: number | null;
   vehicles: WorkshopVehicleDto[];
 }
 

@@ -56,6 +56,7 @@ points d'exploit — portes franchies, véhicules ennemis détruits). Il se met
 
 Une mécanique discrète : tout participant qui termine hors du haut du
 classement d'une partie reçoit automatiquement des Points de Résistance.
-Elle est volontairement **secrète** — personne, pas même vous, ne peut
-consulter votre propre total actuellement. Elle n'a aujourd'hui aucun autre
-effet visible dans l'application.
+Le total exact reste volontairement **secret** — personne, pas même vous, ne
+peut le consulter directement. Il alimente toutefois un compteur dérivé
+visible dans votre [Atelier](/documentation/atelier#points-de-sabotage), les
+Points de sabotage.

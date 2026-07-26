@@ -24,6 +24,14 @@
             (presentParticipantsChanged)="onPresentParticipantsChanged($event)"
             (formCancel)="onCancel()" />
         }
+        @case ('sabotage') {
+          <app-sabotage-step
+            [participants]="presentParticipants()"
+            [saving]="false"
+            (next)="onSabotageNext($event)"
+            (back)="goBack()"
+            (formCancel)="onCancel()" />
+        }
         @case ('ranking') {
           <app-ranking-step
             [game]="game()"

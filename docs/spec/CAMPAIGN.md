@@ -151,21 +151,24 @@ du journal** : `Campaign.standings()` ne change pas, elle lit déjà
 L'enregistrement du résultat d'une partie (`EN_COURS`) est un **wizard à
 étapes variables** (`GameResultWizard`), pilotées par le type de partie
 (`EVENEMENT_TELE`/`ESCARMOUCHE`) et par les métadonnées du scénario
-(`Scenario.franchissement_portes`/`gain_jerricans`) — jusqu'à 6 écrans
+(`Scenario.franchissement_portes`/`gain_jerricans`) — jusqu'à 7 écrans
 possibles, jamais tous affichés en même temps. Documents de conception :
 [`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
-(conception initiale, 3 écrans, Événement Télévisé uniquement) puis
+(conception initiale, 3 écrans, Événement Télévisé uniquement),
 [`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
-(refonte à étapes variables, ajout du parcours Escarmouche).
+(refonte à étapes variables, ajout du parcours Escarmouche) puis
+[`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md)
+(ajout de l'écran Sabotage).
 
 | # | Écran | Composant | Visible si |
 |---|-------|-----------|-----------|
 | 1 | Présence | `PresenceStep` | toujours |
-| 2 | Classement | `RankingStep` | `EVENEMENT_TELE` uniquement |
-| 3 | Portes franchies | `GatesStep` | `EVENEMENT_TELE` **et** `franchissement_portes` |
-| 4 | Jerricans (butin manuel) | `JerricansStep` | `gain_jerricans` |
-| 5 | Désignation des épaves | `WreckDesignationStep` | toujours |
-| 6 | Résolution (revenu + épaves) | `WreckResolutionStep` | toujours |
+| 2 | Sabotage (points dépensés) | `SabotageStep` | toujours |
+| 3 | Classement | `RankingStep` | `EVENEMENT_TELE` uniquement |
+| 4 | Portes franchies | `GatesStep` | `EVENEMENT_TELE` **et** `franchissement_portes` |
+| 5 | Jerricans (butin manuel) | `JerricansStep` | `gain_jerricans` |
+| 6 | Désignation des épaves | `WreckDesignationStep` | toujours |
+| 7 | Résolution (revenu + épaves) | `WreckResolutionStep` | toujours |
 
 1. **Présence** (`PresenceStep`) — cases à cocher des participants
    `VALIDATED`, toujours le premier écran. Émet la liste des présents (ordre
@@ -173,19 +176,29 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    et sert de point de départ à l'écran Classement. **Minimum deux équipes**
    cochées pour continuer (bouton "Suivant" désactivé sinon, avertissement
    affiché) — une partie n'oppose jamais un seul participant.
-2. **Classement** (`RankingStep`, Événement Télévisé uniquement) — ordre par
+2. **Sabotage** (`SabotageStep`, toujours affiché — pas de gate scénario,
+   contrairement à Portes/Jerricans) — déclaration rétroactive par
+   l'organisateur du nombre de points de sabotage dépensés par équipe pendant
+   la partie physique (annonce orale à table), cf. [§Points de
+   sabotage](#points-de-sabotage) pour la mécanique complète. Un champ
+   numérique par participant présent, à 0 par défaut : "Suivant" ne coûte
+   qu'un clic si personne n'a rien dépensé — même gabarit que
+   `GatesStep`/`JerricansStep`. Le solde de sabotage n'est jamais affiché à
+   cet écran (secret, y compris pour l'organisateur) : rien n'est validé
+   côté client, le clamp au solde réel se fait entièrement côté serveur.
+3. **Classement** (`RankingStep`, Événement Télévisé uniquement) — ordre par
    glisser-déposer des présents (la présence elle-même a été déplacée à
    l'écran 1). Absent pour une Escarmouche, qui n'attribue jamais de PC de
    classement (`Game.recordResult` rejette d'ailleurs tout appel hors
    Événement Télévisé, cf. §Exploits ci-dessus).
-3. **Portes franchies** (`GatesStep`, Événement Télévisé + scénario
+4. **Portes franchies** (`GatesStep`, Événement Télévisé + scénario
    `franchissement_portes`) — extrait de l'ancien champ intégré à
    `RankingStep`, désormais son propre écran, gated par le scénario (tous les
    Événements Télévisés n'ont pas de portes, ex. "L'Arène").
-4. **Jerricans** (`JerricansStep`, scénario `gain_jerricans`) — butin manuel
+5. **Jerricans** (`JerricansStep`, scénario `gain_jerricans`) — butin manuel
    de scénario (ex. pillage de convoi), indépendant du revenu de base D6 de
-   l'écran 6 (Escarmouche) — les deux se cumulent.
-5. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
+   l'écran 7 (Escarmouche) — les deux se cumulent.
+6. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
    des équipes présentes : *Intact* / *Mis en épave par [participant]* / *Mis en
    épave seul*. Le picker destructeur reste actif pour les deux types de
    partie ; une case "Favori du public" apparaît uniquement pour un véhicule
@@ -193,10 +206,10 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    (`showFavoriDuPublic` input, toujours masquée en Escarmouche) — cf.
    §Faveur du Public ci-dessous pour le détail de la règle. Cet écran soumet
    le lot accumulé (`POST .../results`) — les événements de classement/
-   exploits/résistance (ET) ou de jerricans/destructions à 0 PC (Escarmouche)
-   sont journalisés à cette étape, **mais la partie reste `PLANIFIE`** — voir
-   ci-dessous.
-6. **Résolution** (`WreckResolutionStep`) — **synthèse automatique**, sans
+   exploits/résistance/sabotage (ET) ou de jerricans/destructions à 0 PC/
+   sabotage (Escarmouche) sont journalisés à cette étape, **mais la partie
+   reste `PLANIFIE`** — voir ci-dessous.
+7. **Résolution** (`WreckResolutionStep`) — **synthèse automatique**, sans
    aucun bouton ni sélecteur : dès l'arrivée sur cet écran, un `effect()`
    déclenche les tirages serveur un par un — d'abord le **revenu de base**
    (Escarmouche uniquement, 1D6 par participant présent, `POST
@@ -219,20 +232,20 @@ ne permettrait de sortir du wizard bloqué. L'entrée en atelier est donc une
 action explicite et séparée (`EnterAtelierUseCase`), déclenchée uniquement à
 la fin complète du wizard.
 
-**Persistance différée et annulation** : les écrans 1 à 5 sont de l'état
-purement client — rien n'est envoyé au serveur avant l'arrivée sur l'écran 6
+**Persistance différée et annulation** : les écrans 1 à 6 sont de l'état
+purement client — rien n'est envoyé au serveur avant l'arrivée sur l'écran 7
 (Résolution). "Précédent" et "Annuler" restent donc libres jusque-là, sans
-aucun appel réseau à défaire. Le lot accumulé (classement + exploits pour un
-Événement Télévisé, ou jerricans + destructions pour une Escarmouche,
-construit par `GameResultWizard.buildRecordResultDto`) n'est envoyé qu'à la
-transition écran 5 → écran 6. Une fois sur l'écran 6, "Annuler" reste
-disponible mais déclenche un **reset serveur** complet
+aucun appel réseau à défaire. Le lot accumulé (classement + exploits +
+sabotage pour un Événement Télévisé, ou jerricans + destructions + sabotage
+pour une Escarmouche, construit par `GameResultWizard.buildRecordResultDto`)
+n'est envoyé qu'à la transition écran 6 → écran 7. Une fois sur l'écran 7,
+"Annuler" reste disponible mais déclenche un **reset serveur** complet
 (`DELETE .../games/:gameId/results`, `ResetResultUseCase` — supprime tous les
 événements déjà journalisés sur cette partie, classement/exploits/revenus/
-épaves compris, en une seule opération atomique via `Game.resultEventIdsForReset`,
-réservé à une partie encore `PLANIFIE`) ; "Précédent" n'est en revanche plus
-disponible à ce stade (l'écran 6 n'a plus d'action manuelle de retour à
-défaire, cf. `WreckResolutionStep`, formCancel).
+épaves/sabotage compris, en une seule opération atomique via
+`Game.resultEventIdsForReset`, réservé à une partie encore `PLANIFIE`) ;
+"Précédent" n'est en revanche plus disponible à ce stade (l'écran 7 n'a plus
+d'action manuelle de retour à défaire, cf. `WreckResolutionStep`, formCancel).
 
 Côté frontend, `CampaignProgram.onWizardCancelled()` décide seul, sans que
 `GameResultWizard` ait à le savoir, si un reset est nécessaire — en observant
@@ -251,7 +264,7 @@ table des Épaves pour (Voiture) : Arrachée (D6=5+0 chocs, +1 choc(s))"`,
 les affiche telles quelles sous chaque entrée (véhicule ou participant).
 
 **Limitation connue** : si l'utilisateur quitte le wizard (ou recharge la
-page) entre la soumission de l'écran 5 et le clic "Terminer" de l'écran 6, la
+page) entre la soumission de l'écran 6 et le clic "Terminer" de l'écran 7, la
 partie reste `PLANIFIE` (par design) et réapparaît comme "à enregistrer" —
 rouvrir le wizard sans passer par "Annuler" (donc sans déclencher le reset
 serveur) et resoumettre le lot créerait des événements en double (aucune
@@ -571,6 +584,52 @@ directement sur le wallet — seule la mutation de l'entité (créée, ou flagu�
 
 ---
 
+## Points de sabotage
+
+Compteur affiché dans l'Atelier (`AtelierPage`), juste sous la Cagnotte : un
+entier **dérivé** des Points de Résistance secrets (cf. [Limitations
+connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) —
+`CampaignParticipant.sabotagePoints`, `Math.floor(resistancePoints / 3)` — 1
+point de sabotage pour 3 Points de Résistance, arrondi à l'inférieur).
+
+**Le total brut de Points de Résistance reste caché**, y compris à son
+propriétaire — seul ce compteur dérivé est révélé. Le secret vis-à-vis des
+**autres joueurs** reste total : `GetWorkshopUseCase` ne peuple ce champ
+(`WorkshopStateDto.sabotagePoints`) que pour le propriétaire consultant son
+propre atelier (`GET .../workshop`, sans `participantId`) — `null` sur la
+consultation en lecture seule de l'atelier d'un tiers (`GET
+.../participants/:pid/workshop`, [§Consultation en lecture seule de l'atelier
+d'un participant](#consultation-en-lecture-seule-de-latelier-dun-participant)).
+
+**Dépense — déclaration rétroactive, pas de suivi en direct.** L'usage réel
+des Jetons de Sabotage pendant une partie physique reste une "règle de
+table" hors périmètre de l'application (cf. décision D2,
+[`docs/plans/2026-06-21-mode-campagne-design.md`](../plans/2026-06-21-mode-campagne-design.md)),
+au même titre que les Votes du Public — l'application ne suit jamais l'usage
+en cours de partie. Elle permet en revanche, depuis l'écran Sabotage du
+wizard de fin de partie (cf. [§Wizard de fin de
+partie](#wizard-de-fin-de-partie)), d'enregistrer *après coup* combien de
+points de sabotage chaque équipe a dépensés durant la partie qui vient de se
+jouer — l'organisateur saisit un nombre par équipe présente, sur déclaration
+orale à table, comme pour les autres écrans du wizard (Portes, Jerricans).
+
+Cette déclaration **débite réellement** les Points de Résistance secrets
+(3 PR bruts par point de sabotage déclaré dépensé, `SabotagePointsSpentEvent`)
+— le solde de sabotage reste donc juste dans la durée, pas un simple journal
+sans effet. Le solde n'étant jamais affiché à l'écran (secret, y compris pour
+l'organisateur), rien n'est validé côté client : le serveur **clampe
+silencieusement** toute sur-déclaration au solde réellement disponible au
+moment de la partie (`CampaignParticipant.sabotagePoints`), sans jamais
+rejeter la saisie — ce qui garantit mathématiquement que
+`resistancePoints` ne descend jamais sous 0 (3 × `sabotagePoints` ≤
+`resistancePoints`, par construction du `floor()`). Le journal de partie
+affiche le montant **réellement appliqué** (déjà clampé), jamais la valeur
+brute tapée par l'organisateur — une sur-déclaration ne reste donc visible
+qu'indirectement, par un montant plus bas que celui annoncé à voix haute.
+Conception détaillée : [`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md).
+
+---
+
 ## Séquelles
 
 > Conception détaillée (mécanique backend) :
@@ -833,10 +892,12 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
   **automatique** : `Game.recordResult()` crédite tout participant hors du
   top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
-  dédié — cohérent avec le secret de cette mécanique. Le secret vis-à-vis des
-  autres joueurs est bien respecté, mais appliqué trop largement : un participant
-  ne peut pas non plus lire **ses propres** Points de Résistance (aucun endpoint
-  ne les expose, y compris au propriétaire).
+  dédié — cohérent avec le secret de cette mécanique. Le **total brut** reste
+  caché, y compris à son propriétaire — aucun endpoint ne l'expose tel quel.
+  Un dérivé (`sabotagePoints`, cf. [§Points de sabotage](#points-de-sabotage))
+  est désormais exposé au propriétaire dans l'Atelier, mais le secret vis-à-vis
+  des **autres joueurs** reste total : ce dérivé n'apparaît jamais dans la
+  consultation en lecture seule de l'atelier d'un tiers.
 
 ---
 

@@ -8,11 +8,14 @@
  * chacun porté par un sous-composant "dumb" dédié :
  *
  *   1. Présence     (`PresenceStep`)              — toujours
- *   2. Classement    (`RankingStep`)               — Événement Télévisé uniquement
- *   3. Portes        (`GatesStep`)                 — ET + scénario.franchissementPortes
- *   4. Jerricans     (`JerricansStep`)              — scénario.gainJerricans (butin manuel)
- *   5. Désignation   (`WreckDesignationStep`)       — toujours
- *   6. Résolution    (`WreckResolutionStep`)        — toujours (revenu D6 Escarmouche + épaves)
+ *   2. Sabotage      (`SabotageStep`)               — toujours (déclaration rétroactive,
+ *                                                     pas de gate scénario contrairement à
+ *                                                     Portes/Jerricans ci-dessous)
+ *   3. Classement    (`RankingStep`)               — Événement Télévisé uniquement
+ *   4. Portes        (`GatesStep`)                 — ET + scénario.franchissementPortes
+ *   5. Jerricans     (`JerricansStep`)              — scénario.gainJerricans (butin manuel)
+ *   6. Désignation   (`WreckDesignationStep`)       — toujours
+ *   7. Résolution    (`WreckResolutionStep`)        — toujours (revenu D6 Escarmouche + épaves)
  *
  * PERSISTANCE DIFFÉRÉE : les écrans 1 à 5 sont de l'état purement client — rien
  * n'est envoyé au serveur avant l'arrivée sur l'écran 6. "Précédent"/"Annuler"
@@ -39,22 +42,25 @@ import type {
   RankingEntry,
   RecordResultDto,
   RollIncomeResultDto,
+  SabotageSpentEntry,
   WreckDesignationResult,
   WreckOutcomeDto,
   WreckResolveRequestDto,
   WreckedVehicleEntry,
 } from '../game.model';
 import { PresenceStep } from './presence-step/presence-step';
+import { SabotageStep } from './sabotage-step/sabotage-step';
 import { RankingStep } from './ranking-step/ranking-step';
 import { GatesStep } from './gates-step/gates-step';
 import { JerricansStep } from './jerricans-step/jerricans-step';
 import { WreckDesignationStep } from './wreck-designation-step/wreck-designation-step';
 import { WreckResolutionStep } from './wreck-resolution-step/wreck-resolution-step';
 
-type WizardStepId = 'presence' | 'ranking' | 'gates' | 'jerricans' | 'designation' | 'resolution';
+type WizardStepId = 'presence' | 'sabotage' | 'ranking' | 'gates' | 'jerricans' | 'designation' | 'resolution';
 
 const STEP_LABELS: Record<WizardStepId, string> = {
   presence: 'Présence',
+  sabotage: 'Sabotage',
   ranking: 'Classement',
   gates: 'Portes',
   jerricans: 'Jerricans',
@@ -65,7 +71,10 @@ const STEP_LABELS: Record<WizardStepId, string> = {
 @Component({
   selector: 'app-game-result-wizard',
   standalone: true,
-  imports: [CommonModule, PresenceStep, RankingStep, GatesStep, JerricansStep, WreckDesignationStep, WreckResolutionStep],
+  imports: [
+    CommonModule, PresenceStep, SabotageStep, RankingStep, GatesStep, JerricansStep,
+    WreckDesignationStep, WreckResolutionStep,
+  ],
   templateUrl: './game-result-wizard.html',
   styleUrl: './game-result-wizard.scss',
 })
@@ -119,6 +128,7 @@ export class GameResultWizard {
 
   /** Ids présents, dans l'ordre de coche (écran Présence). */
   private presentParticipantIds = signal<number[]>([]);
+  private sabotageSpentEntries = signal<SabotageSpentEntry[]>([]);
   private rankingResult = signal<RankingEntry[]>([]);
   private gatesEntries = signal<GatesEntry[]>([]);
   private jerricanGainEntries = signal<JerricanGainDto[]>([]);
@@ -135,7 +145,7 @@ export class GameResultWizard {
    */
   activeSteps = computed<WizardStepId[]>(() => {
     const isEvenementTele = this.game().type === 'EVENEMENT_TELE';
-    const steps: WizardStepId[] = ['presence'];
+    const steps: WizardStepId[] = ['presence', 'sabotage'];
     if (isEvenementTele) steps.push('ranking');
     if (isEvenementTele && this.game().franchissementPortes) steps.push('gates');
     if (this.game().gainJerricans) steps.push('jerricans');
@@ -237,6 +247,13 @@ export class GameResultWizard {
     this.presentParticipantsChanged.emit(ids);
   }
 
+  // ── Écran Sabotage (toujours affiché, déclaration rétroactive) ──────────────
+
+  onSabotageNext(entries: SabotageSpentEntry[]): void {
+    this.sabotageSpentEntries.set(entries);
+    this.advance();
+  }
+
   // ── Écran Classement (Événement Télévisé) ────────────────────────────────────
 
   onRankingNext(entries: RankingEntry[]): void {
@@ -270,6 +287,9 @@ export class GameResultWizard {
 
   /** Construit le lot à persister — forme dépend du type de partie (cf. en-tête de fichier). */
   private buildRecordResultDto(destroyedVehiclesMap: ReadonlyMap<number, DestroyedVehicleDto[]>): RecordResultDto {
+    // Indépendant du type de partie — cf. écran Sabotage ci-dessus.
+    const sabotageSpent = this.sabotageSpentEntries().length > 0 ? this.sabotageSpentEntries() : undefined;
+
     if (this.game().type === 'EVENEMENT_TELE') {
       const gatesMap = new Map(this.gatesEntries().map((g) => [g.participantId, g.gatesCrossed]));
       return {
@@ -279,6 +299,7 @@ export class GameResultWizard {
           gatesCrossed: gatesMap.get(r.participantId) || undefined,
           destroyedVehicles: destroyedVehiclesMap.get(r.participantId),
         })),
+        sabotageSpent,
       };
     }
 
@@ -288,6 +309,7 @@ export class GameResultWizard {
     return {
       jerricanGains: this.jerricanGainEntries().length > 0 ? this.jerricanGainEntries() : undefined,
       destroyedVehicles: destroyedVehicles.length > 0 ? destroyedVehicles : undefined,
+      sabotageSpent,
     };
   }
 

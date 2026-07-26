@@ -47,7 +47,7 @@ export class GameEventOrm {
    *  'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' | 'WEAPON_LOST' |
    *  'IMPROVEMENT_LOST' | 'ADVANTAGE_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
    *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' |
-   *  'FAVORI_DU_PUBLIC_BONUS' | 'VEHICLE_RENAMED' */
+   *  'FAVORI_DU_PUBLIC_BONUS' | 'VEHICLE_RENAMED' | 'SABOTAGE_POINTS_SPENT' */
   @Column()
   eventType!: string;
 
@@ -133,6 +133,14 @@ export class GameEventOrm {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   newVehicleName!: string | null;
+
+  /**
+   * Payload : SabotagePointsSpentEvent — montant DÉJÀ clampé au solde disponible au
+   * moment de la déclaration (jamais la valeur brute tapée par l'organisateur), cf.
+   * `SabotagePointsSpentEvent.declare`.
+   */
+  @Column({ type: 'int', nullable: true })
+  sabotagePointsSpent!: number | null;
 
   @CreateDateColumn()
   createdAt!: Date;

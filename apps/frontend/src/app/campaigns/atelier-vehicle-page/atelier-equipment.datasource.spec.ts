@@ -20,6 +20,7 @@ const workshop: WorkshopStateDto = {
   sponsor: 'Miyazaki',
   wallet: 10,
   championshipPoints: 0,
+  sabotagePoints: 0,
   vehicles: [
     {
       id: 5,

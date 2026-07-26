@@ -12,6 +12,7 @@ import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
+import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
@@ -505,6 +506,60 @@ describe('Game — recordDestroyedVehicleTraces (Escarmouche)', () => {
     const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
     expect(() =>
       game.recordDestroyedVehicleTraces([{ destroyerId: 1, vehicleId: 999 }], [p1]),
+    ).toThrow('introuvable');
+  });
+});
+
+describe('Game — recordSabotageSpent (applicable aux deux types de partie)', () => {
+  it('crée un SabotagePointsSpentEvent par participant ayant un solde disponible', () => {
+    const { participant, participants } = makeTestParticipant();
+    participant.addResistance(9); // sabotagePoints = 3
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordSabotageSpent(
+      [{ participantId: participant.id, pointsSpent: 2 }],
+      participants,
+    ) as SabotagePointsSpentEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toBeInstanceOf(SabotagePointsSpentEvent);
+    expect(events[0].pointsSpent).toBe(2);
+    expect(game.events).toContain(events[0]);
+  });
+
+  it('clampe silencieusement une sur-déclaration, sans lever de DomainException', () => {
+    const { participant, participants } = makeTestParticipant();
+    participant.addResistance(9); // sabotagePoints = 3
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordSabotageSpent(
+      [{ participantId: participant.id, pointsSpent: 10 }],
+      participants,
+    ) as SabotagePointsSpentEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].pointsSpent).toBe(3);
+  });
+
+  it("ne crée aucun événement pour une entrée à 0 ou pour un solde de sabotage nul", () => {
+    const { participant, participants } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordSabotageSpent(
+      [{ participantId: participant.id, pointsSpent: 0 }, { participantId: participant.id, pointsSpent: 5 }],
+      participants,
+    );
+
+    expect(events).toHaveLength(0);
+    expect(game.events).toHaveLength(0);
+  });
+
+  it('lève une DomainException pour un participantId inconnu de la campagne', () => {
+    const { participants } = makeTestParticipant();
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    expect(() =>
+      game.recordSabotageSpent([{ participantId: 999, pointsSpent: 5 }], participants),
     ).toThrow('introuvable');
   });
 });

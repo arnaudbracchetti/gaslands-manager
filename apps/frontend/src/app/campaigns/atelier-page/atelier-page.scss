@@ -50,19 +50,23 @@
   &--error   { color: var(--tb-rouille-lt); }
 }
 
-.atp-wallet {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 12px 18px;
+.atp-summary {
+  display: inline-flex;
+  flex-direction: column;
   margin-bottom: 24px;
   background: var(--tb-bitume-2);
   border: 1px solid var(--border-rust);
   border-radius: var(--r-sm);
 }
 
-.atp-wallet-label {
+.atp-summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 6px 18px;
+}
+
+.atp-summary-label {
   font-family: var(--font-mono);
   font-weight: 600;
   text-transform: uppercase;
@@ -71,11 +75,30 @@
   color: var(--text-dim);
 }
 
-.atp-wallet-value {
+.atp-summary-value {
   font-family: var(--font-mono);
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--tb-danger);
+
+  &--sabotage {
+    color: var(--clr-warning);
+  }
+}
+
+// Variante "ligne de registre" : les deux statistiques tiennent sur une seule
+// ligne compacte au lieu de deux lignes empilées — mêmes classes label/value
+// que .atp-summary-row, juste réagencées à plat.
+.atp-summary--ledger {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 8px 18px;
+}
+
+.atp-summary-sep {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
 }
 
 .atp-vehicles-empty {

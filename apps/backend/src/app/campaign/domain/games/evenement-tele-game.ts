@@ -14,6 +14,7 @@ import { VehicleDestroyedEvent } from '../events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
+import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
 import { EquipmentEntityType } from '../enums/equipment-change.enums';
 
 export class EvenementTeleGame extends Game {
@@ -50,7 +51,8 @@ export class EvenementTeleGame extends Game {
         event instanceof ResistanceContactedEvent ||
         event instanceof GatesCrossedEvent ||
         event instanceof VehicleDestroyedEvent ||
-        event instanceof FavoriDuPublicBonusEvent
+        event instanceof FavoriDuPublicBonusEvent ||
+        event instanceof SabotagePointsSpentEvent
       );
     }
     if (this.status === GameStatus.ATELIER) {

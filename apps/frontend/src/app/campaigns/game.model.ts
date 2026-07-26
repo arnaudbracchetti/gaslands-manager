@@ -115,10 +115,21 @@ export interface EscarmoucheDestroyedVehicleDto {
 }
 
 /**
- * Corps de la requête POST /api/campaigns/:id/games/:gameId/results. Les trois
- * champs sont indépendants : `results` (classement + exploits) n'est envoyé que
- * pour un Événement Télévisé ; `jerricanGains`/`destroyedVehicles` (à plat)
- * uniquement pour une Escarmouche.
+ * Points de sabotage dépensés, saisis à l'écran Sabotage du wizard (déclaration
+ * rétroactive de l'organisateur, applicable aux deux types de partie). `pointsSpent`
+ * est la valeur DÉCLARÉE, pas encore clampée — le solde disponible n'est jamais
+ * affiché à l'écran, le clamp au solde réel est entièrement fait côté serveur.
+ */
+export interface SabotageSpentEntry {
+  participantId: number;
+  pointsSpent: number;
+}
+
+/**
+ * Corps de la requête POST /api/campaigns/:id/games/:gameId/results. `results`
+ * (classement + exploits) n'est envoyé que pour un Événement Télévisé ;
+ * `jerricanGains`/`destroyedVehicles` (à plat) uniquement pour une Escarmouche.
+ * `sabotageSpent` est indépendant du type de partie.
  */
 export interface RecordResultDto {
   results?: {
@@ -131,6 +142,7 @@ export interface RecordResultDto {
   }[];
   jerricanGains?: JerricanGainDto[];
   destroyedVehicles?: EscarmoucheDestroyedVehicleDto[];
+  sabotageSpent?: SabotageSpentEntry[];
 }
 
 /** Corps de POST .../events/income — revenu de base Escarmouche (1D6 serveur). */

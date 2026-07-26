@@ -29,6 +29,18 @@ des récompenses gagnées en jouant. Elle diminue à chaque achat, augmente à
 chaque revente — vous n'avez rien à calculer, le solde affiché en haut de
 l'écran est toujours à jour.
 
+## Points de sabotage
+
+Juste sous la cagnotte, un second compteur affiche vos Points de sabotage —
+1 point pour 3 [Points de Résistance](/documentation/campagnes#points-de-resistance)
+accumulés (arrondi à l'inférieur). Le total exact de Points de Résistance
+reste secret ; seul ce compteur dérivé vous est montré, et seulement à vous —
+un autre participant qui consulte votre atelier ne le voit jamais.
+
+L'usage réel des Jetons de Sabotage pendant une partie physique reste
+déclaratif, comme les Votes du Public : l'application se contente de compter
+le solde accumulé entre deux parties, pas son emploi en cours de jeu.
+
 ## Acheter et vendre de l'équipement
 
 Depuis la liste des véhicules de l'équipe, cliquez sur un véhicule pour

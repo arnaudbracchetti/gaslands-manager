@@ -66,6 +66,7 @@ const mockWorkshop: WorkshopStateDto = {
   sponsor: 'Rutherford',
   wallet: 10,
   championshipPoints: 0,
+  sabotagePoints: null,
   vehicles: [
     {
       id: 5,

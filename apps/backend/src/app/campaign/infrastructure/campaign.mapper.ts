@@ -28,6 +28,7 @@ import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
 import { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
 import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
+import { SabotagePointsSpentEvent } from '../domain/events/sabotage-points-spent.event';
 
 import { GameEventType } from '../domain/enums/game-event-type.enum';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
@@ -163,6 +164,9 @@ export class CampaignMapper {
           id, gameId, participantId, eventOrder,
           orm.vehicleId!, orm.previousVehicleName!, orm.newVehicleName!,
         );
+
+      case GameEventType.SABOTAGE_POINTS_SPENT:
+        return new SabotagePointsSpentEvent(id, gameId, participantId, eventOrder, orm.sabotagePointsSpent!);
 
       default:
         throw new DomainException(`Type d'événement inconnu : "${orm.eventType}"`);

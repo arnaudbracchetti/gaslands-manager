@@ -75,3 +75,28 @@ describe('CampaignParticipant.wallet (dérivé)', () => {
     expect(participant.wallet).toBe(team.remainingBudget);
   });
 });
+
+describe('CampaignParticipant.sabotagePoints (dérivé)', () => {
+  it('vaut 0 tant qu\'aucun Point de Résistance n\'a été crédité', () => {
+    const { participant } = makeTestParticipant();
+    expect(participant.sabotagePoints).toBe(0);
+  });
+
+  it('reste à 0 pour 1 ou 2 Points de Résistance (arrondi à l\'inférieur)', () => {
+    const { participant } = makeTestParticipant();
+    participant.addResistance(2);
+    expect(participant.sabotagePoints).toBe(0);
+  });
+
+  it('vaut 1 dès 3 Points de Résistance', () => {
+    const { participant } = makeTestParticipant();
+    participant.addResistance(3);
+    expect(participant.sabotagePoints).toBe(1);
+  });
+
+  it('vaut 3 pour 9 Points de Résistance', () => {
+    const { participant } = makeTestParticipant();
+    participant.addResistance(9);
+    expect(participant.sabotagePoints).toBe(3);
+  });
+});

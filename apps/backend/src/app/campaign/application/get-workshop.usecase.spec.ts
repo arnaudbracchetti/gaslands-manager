@@ -225,6 +225,7 @@ describe('GetWorkshopUseCase', () => {
 describe('GetWorkshopUseCase — consultation de l\'atelier d\'un tiers (participantId)', () => {
   it('retourne l\'atelier du participant CIBLÉ (pas celui de l\'appelant) quand l\'appelant est VALIDATED', async () => {
     const { participant: target } = makeTestParticipant(1); // userId 42, VALIDATED, wallet 29
+    target.addResistance(9); // 3 points de sabotage — doivent rester cachés à un tiers
     const caller = new CampaignParticipant(2, 99, null, false, ParticipantStatus.VALIDATED);
     const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [target, caller], []);
     const replayService: CampaignReplayService = {
@@ -237,10 +238,13 @@ describe('GetWorkshopUseCase — consultation de l\'atelier d\'un tiers (partici
     expect(dto.participantId).toBe(1);
     expect(dto.sponsor).toBe('Rutherford');
     expect(dto.wallet).toBe(29);
+    // Secret vis-à-vis des autres joueurs (D-S4) : jamais exposé via participantId.
+    expect(dto.sabotagePoints).toBeNull();
   });
 
   it('self-view (participantId absent) reste inchangée : aucune contrainte de statut sur l\'appelant', async () => {
     const { participant } = makeTestParticipant(1);
+    participant.addResistance(9); // 3 points de sabotage — exposés à son propriétaire
     const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
     const replayService: CampaignReplayService = {
       loadAndReplay: vi.fn().mockResolvedValue(campaign),
@@ -250,6 +254,7 @@ describe('GetWorkshopUseCase — consultation de l\'atelier d\'un tiers (partici
     const dto = await useCase.execute({ campaignId: 1, userId: 42 });
 
     expect(dto.participantId).toBe(1);
+    expect(dto.sabotagePoints).toBe(3);
   });
 
   it('rejette (NotFoundException) un appelant non-VALIDATED consultant un tiers', async () => {

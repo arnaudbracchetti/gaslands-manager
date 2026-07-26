@@ -65,6 +65,9 @@ export class AtelierPage implements OnInit {
   /** Cagnotte courante — solde restant à dépenser en atelier. */
   wallet: Signal<number> = computed((): number => this.workshop()?.wallet ?? 0);
 
+  /** Points de sabotage disponibles — 1 par tranche de 3 Points de Résistance secrets. */
+  sabotagePoints: Signal<number> = computed((): number => this.workshop()?.sabotagePoints ?? 0);
+
   /** Véhicules de l'équipe engagée, traduits vers la forme attendue par `buildVehicleSummary`. */
   vehicles: Signal<Vehicle[]> = computed((): Vehicle[] => {
     return (this.workshop()?.vehicles ?? []).map(mapWorkshopVehicleToVehicle);

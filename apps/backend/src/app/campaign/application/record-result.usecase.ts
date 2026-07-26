@@ -28,6 +28,11 @@ export interface EscarmoucheDestroyedVehicleCommandItem {
   vehicleId: number;
 }
 
+export interface SabotageSpentCommandItem {
+  participantId: number;
+  pointsSpent: number;
+}
+
 export interface RecordResultCommand {
   campaignId: number;
   gameId: number;
@@ -38,6 +43,8 @@ export interface RecordResultCommand {
   jerricanGains?: JerricanGainCommandItem[];
   /** Véhicules ennemis détruits hors classement, trace journal à 0 PC — Escarmouche uniquement. */
   destroyedVehicles?: EscarmoucheDestroyedVehicleCommandItem[];
+  /** Points de sabotage dépensés — applicable aux deux types de partie. */
+  sabotageSpent?: SabotageSpentCommandItem[];
 }
 
 /**
@@ -52,6 +59,9 @@ export interface RecordResultCommand {
  *   scénario, `Game.recordDestroyedVehicleTraces` trace les destructions sans PC (0
  *   Points de Championnat). Le revenu de base D6 est tiré séparément, cf.
  *   `RollIncomeUseCase`.
+ * - `sabotageSpent` (les deux types de partie) : `Game.recordSabotageSpent` clampe
+ *   silencieusement chaque déclaration au solde de sabotage réellement disponible —
+ *   jamais de rejet pour une sur-déclaration, cf. `SabotagePointsSpentEvent.declare`.
  *
  * Ne fait PAS entrer la partie en atelier — elle reste PLANIFIE pour que la suite du
  * wizard de fin de partie (résolution des revenus/épaves) puisse encore y journaliser
@@ -87,6 +97,9 @@ export class RecordResultUseCase {
       }
       if (cmd.destroyedVehicles) {
         events.push(...game.recordDestroyedVehicleTraces(cmd.destroyedVehicles, campaign.participants));
+      }
+      if (cmd.sabotageSpent) {
+        events.push(...game.recordSabotageSpent(cmd.sabotageSpent, campaign.participants));
       }
     } catch (e: unknown) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);

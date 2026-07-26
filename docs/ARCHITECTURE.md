@@ -359,7 +359,7 @@ sans mécanisme supplémentaire (`order` fractionnaire) : voir
 
 #### Points d'attention
 
-- **`resistancePoints` secret** — jamais exposé dans `StandingsEntry` ni dans `GET /workshop`. Seul l'organisateur peut appeler `POST .../events/resistance`.
+- **`resistancePoints` secret** — le total brut n'est jamais exposé, ni dans `StandingsEntry` ni dans `GET /workshop` (seul l'organisateur peut appeler `POST .../events/resistance`). Un dérivé (`CampaignParticipant.sabotagePoints`, `floor(resistancePoints / 3)`) EST exposé dans `WorkshopStateDto`, mais uniquement au propriétaire consultant son propre atelier — `null` sur `GET .../participants/:pid/workshop` (lecture d'un tiers), pour préserver le secret vis-à-vis des autres joueurs. Cf. [spec/CAMPAIGN.md — Points de sabotage](spec/CAMPAIGN.md#points-de-sabotage).
 - **D6 serveur** — l'aléatoire est isolé derrière l'interface `IRandomizer` (port hexagonal, `domain/randomizer.interface.ts`). L'adaptateur production est `RandomProvider` (`infrastructure/`). Dans les tests, on passe un `FixedRandomizer implements IRandomizer` directement au constructeur de `WreckTable` — aucun `protected`/sous-classe requis. `WreckTable` prend aussi un second paramètre `ICatalogRepository` (résolution de la séquelle `siege_irrecuperable`, cf. §Séquelles ci-dessous) : un test double minimal suffit, seul `getSequellaType` est appelé.
 - **Autorisation sans base de données** — les use cases campagne vérifient le rôle via `campaign.participants` (liste en mémoire après replay). Aucun accès SQL supplémentaire pour l'autorisation.
 - **`TEAM_REPOSITORY` exporté par `TeamModule`** — requis par `CampaignRepository` (infrastructure) pour charger l'état figé des équipes au moment du replay.

@@ -29,6 +29,7 @@ import type { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import type { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
 import type { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
 import type { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
+import type { SabotagePointsSpentEvent } from '../domain/events/sabotage-points-spent.event';
 import { GameEventType } from '../domain/enums/game-event-type.enum';
 
 /**
@@ -343,6 +344,10 @@ export class CampaignRepository implements ICampaignRepository {
           previousVehicleName: e.previousName,
           newVehicleName: e.newName,
         };
+      }
+      case GameEventType.SABOTAGE_POINTS_SPENT: {
+        const e = event as SabotagePointsSpentEvent;
+        return { ...base, eventType: GameEventType.SABOTAGE_POINTS_SPENT, sabotagePointsSpent: e.pointsSpent };
       }
     }
   }
