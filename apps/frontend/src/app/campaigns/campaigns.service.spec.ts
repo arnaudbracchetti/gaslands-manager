@@ -367,4 +367,22 @@ describe('CampaignsService', () => {
       expect(result).toBe('<!doctype html><html></html>');
     });
   });
+
+  // ── getParticipantTeamSheet() ───────────────────────────────────────────────
+
+  describe('getParticipantTeamSheet()', () => {
+    it('effectue GET /api/campaigns/:id/participants/:pid/sheet en responseType text et retourne le HTML brut', () => {
+      let result: string | undefined;
+
+      service.getParticipantTeamSheet(1, 5).subscribe((html) => { result = html; });
+
+      const req = httpMock.expectOne('/api/campaigns/1/participants/5/sheet');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('text');
+
+      req.flush('<!doctype html><html></html>');
+
+      expect(result).toBe('<!doctype html><html></html>');
+    });
+  });
 });

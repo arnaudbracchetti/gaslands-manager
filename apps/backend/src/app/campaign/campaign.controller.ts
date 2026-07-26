@@ -103,7 +103,7 @@ import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
 // Payload injecté par JwtStrategy dans req.user.
 interface AuthenticatedRequest {
-  user: { id: number; email: string };
+  user: { id: number; email: string; firstName: string; lastName: string };
 }
 
 @Controller()
@@ -256,7 +256,35 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<string> {
-    return this.getCampaignTeamSheetUseCase.execute({ campaignId, userId: req.user.id });
+    return this.getCampaignTeamSheetUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+      playerName: `${req.user.firstName} ${req.user.lastName}`,
+    });
+  }
+
+  /**
+   * GET /api/campaigns/:id/participants/:pid/sheet — fiche d'équipe exportable
+   * d'UN AUTRE participant, réservée à l'organisateur (`GetCampaignTeamSheetUseCase`
+   * rejette sinon). `CampaignQueryService.getParticipant` résout le nom (prénom +
+   * nom) de la CIBLE — sans risque de fuite : un appelant non organisateur ne
+   * reçoit jamais cette donnée, le use case rejette avant tout rendu.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/participants/:pid/sheet')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  async getParticipantSheet(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Param('pid', ParseIntPipe) pid: number,
+  ): Promise<string> {
+    const target = await this.query.getParticipant(campaignId, pid);
+    return this.getCampaignTeamSheetUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+      playerName: target.userName,
+      participantId: pid,
+    });
   }
 
   /**

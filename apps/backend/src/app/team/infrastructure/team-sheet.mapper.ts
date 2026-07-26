@@ -111,15 +111,25 @@ export function vehicleToSheetDto(vehicle: Vehicle): VehicleSheetDto {
   };
 }
 
+export interface TeamToSheetDtoParams {
+  teamName: string;
+  sponsor: string;
+  playerName: string;
+  /** `CampaignParticipant.sabotagePoints` — `null` hors contexte campagne. */
+  sabotagePoints: number | null;
+  /** `CampaignParticipant.votesPublicFor(...)` — `null` hors contexte campagne. */
+  votesPublic: number | null;
+  vehicles: readonly Vehicle[];
+}
+
 /** Véhicules vendus exclus — mirroir du filtre déjà appliqué par `GetWorkshopUseCase`. */
-export function teamToSheetDto(
-  teamName: string,
-  sponsor: string,
-  vehicles: readonly Vehicle[],
-): TeamSheetDto {
+export function teamToSheetDto(params: TeamToSheetDtoParams): TeamSheetDto {
   return {
-    teamName,
-    sponsor,
-    vehicles: vehicles.filter((v) => !v.isSold).map(vehicleToSheetDto),
+    teamName: params.teamName,
+    sponsor: params.sponsor,
+    playerName: params.playerName,
+    sabotagePoints: params.sabotagePoints,
+    votesPublic: params.votesPublic,
+    vehicles: params.vehicles.filter((v) => !v.isSold).map(vehicleToSheetDto),
   };
 }

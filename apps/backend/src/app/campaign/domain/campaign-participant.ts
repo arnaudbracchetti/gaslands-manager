@@ -67,6 +67,22 @@ export class CampaignParticipant {
     return Math.floor(this._resistancePoints / 3);
   }
 
+  /**
+   * Votes du Public gagnés en début de partie — dérivés de l'écart de Points de
+   * Championnat avec le leader de la campagne (barème Gaslands officiel), fourni
+   * en paramètre (ce participant ne connaît pas les autres).
+   */
+  votesPublicFor(leaderPoints: number): number {
+    return this.votesPublicForGap(leaderPoints - this._championshipPoints);
+  }
+
+  /** Barème "Votes du Public" (Gaslands) — VP gagnés selon l'écart de PC avec le leader. */
+  private votesPublicForGap(gap: number): number {
+    const thresholds = [10, 15, 20, 25, 30];
+    const idx = thresholds.findIndex((t) => gap <= t);
+    return idx === -1 ? 5 : idx;
+  }
+
   // ── Mutations CRUD (état stocké) ──────────────────────────────────────────
 
   /** Passe le participant à VALIDATED (validation d'une demande ou revalidation). */

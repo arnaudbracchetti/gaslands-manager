@@ -26,11 +26,33 @@ describe('GetTeamSheetUseCase', () => {
     const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
     const useCase = new GetTeamSheetUseCase(makeRepo(team));
 
-    const html = await useCase.execute({ teamId: 1, userId: 42 });
+    const html = await useCase.execute({ teamId: 1, userId: 42, playerName: 'Jean Dupont' });
 
     expect(html).toContain('<!doctype html>');
     expect(html).toContain('Les Furieux');
     expect(html).toContain('Voiture');
+  });
+
+  it('affiche le nom du joueur et aucune ligne de sabotage (hors contexte campagne)', async () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const useCase = new GetTeamSheetUseCase(makeRepo(team));
+
+    const html = await useCase.execute({ teamId: 1, userId: 42, playerName: 'Jean Dupont' });
+
+    expect(html).toContain('Joueur : Jean Dupont');
+    expect(html).not.toContain('class="sabotage-row"');
+  });
+
+  it('affiche toujours le coût total en cans, jamais de Votes du Public (hors contexte campagne)', async () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const useCase = new GetTeamSheetUseCase(makeRepo(team));
+
+    const html = await useCase.execute({ teamId: 1, userId: 42, playerName: 'Jean Dupont' });
+
+    expect(html).toContain('<div class="team-total">12 <span class="unit">cans</span></div>');
+    expect(html).not.toContain('class="unit">VP</span>');
   });
 
   it('rejette avec BadRequestException (400) si l\'équipe est verrouillée par une campagne', async () => {
@@ -38,6 +60,6 @@ describe('GetTeamSheetUseCase', () => {
     const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle], true);
     const useCase = new GetTeamSheetUseCase(makeRepo(team));
 
-    await expect(useCase.execute({ teamId: 1, userId: 42 })).rejects.toThrow(BadRequestException);
+    await expect(useCase.execute({ teamId: 1, userId: 42, playerName: 'Jean Dupont' })).rejects.toThrow(BadRequestException);
   });
 });

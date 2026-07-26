@@ -58,6 +58,21 @@ règles, dédupliqué entre véhicules partageant un même équipement) et une c
 clôt le document. Sur écran (hors impression), le rendu est lui-même contraint à la largeur
 d'une page A4 (centré, `@media screen`) pour prévisualiser fidèlement la mise en page imprimée.
 
+**Bandeau d'en-tête** : outre le nom d'équipe, le sponsor et le coût total, affiche le nom
+du joueur connecté (prénom + nom, résolu depuis `req.user`, jamais une requête DB
+supplémentaire) et, si disponibles, les points de sabotage sous forme de cases à cocher
+(une case par point) - une case par point permet au joueur de les cocher au fur et à mesure
+qu'il les dépense pendant la partie physique, même idiome visuel que les cases de munitions
+d'une ligne d'équipement. Cette ligne Sabotage n'apparaît que sur la fiche mode campagne
+(`GET /api/campaigns/:id/sheet`, cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode
+campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)) : la fiche "construction
+d'équipe" ci-dessous n'a pas cette notion (`sabotagePoints` toujours `null`), les Points de
+Résistance n'existant que dans le contexte d'une campagne (cf.
+[CAMPAIGN.md — Points de sabotage](CAMPAIGN.md#points-de-sabotage)). Sur cette même fiche
+mode campagne, le coût total lui-même est en plus **remplacé** par les Votes du Public
+gagnés en début de partie (cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode
+campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)).
+
 **Pagination à l'impression** : une carte véhicule (et le texte de ses lignes d'équipement)
 ne doit jamais être coupée par un saut de page - si elle ne tient pas entièrement dans la
 place restante sur la page courante, elle est intégralement reportée sur la page suivante.

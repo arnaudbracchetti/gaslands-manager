@@ -60,6 +60,8 @@ describe('CampaignDetail', () => {
     changeState: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
     getParticipantJournal: ReturnType<typeof vi.fn>;
+    getTeamSheet: ReturnType<typeof vi.fn>;
+    getParticipantTeamSheet: ReturnType<typeof vi.fn>;
     // Appelés par le composant enfant CampaignProgram (désormais toujours monté).
     getGames: ReturnType<typeof vi.fn>;
     getScenarios: ReturnType<typeof vi.fn>;
@@ -93,6 +95,8 @@ describe('CampaignDetail', () => {
       changeState: vi.fn(),
       promote: vi.fn(),
       getParticipantJournal: vi.fn().mockReturnValue(of([])),
+      getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
+      getParticipantTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
       getGames: vi.fn().mockReturnValue(of([])),
       getScenarios: vi.fn().mockReturnValue(of([])),
     };
@@ -362,6 +366,66 @@ describe('CampaignDetail', () => {
       expect(component.journalParticipant()).toBeNull();
       expect(component.participantJournalEntries()).toEqual([]);
       expect(component.loadingParticipantJournal()).toBe(false);
+    });
+  });
+
+  // ── onExportSheet() ──────────────────────────────────────────────────────
+
+  describe('onExportSheet()', () => {
+    it('appelle getTeamSheet (pas getParticipantTeamSheet) quand pid est le sien', () => {
+      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } } as unknown as Window;
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onExportSheet(1); // mockParticipants[0], userId 42 = mockCurrentUser.id
+
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(mockCampaignsService.getTeamSheet).toHaveBeenCalledWith(1);
+      expect(mockCampaignsService.getParticipantTeamSheet).not.toHaveBeenCalled();
+      expect(fakeWin.document.write).toHaveBeenCalledWith('<!doctype html><html></html>');
+
+      openSpy.mockRestore();
+    });
+
+    it('appelle getParticipantTeamSheet (pas getTeamSheet) pour un autre participant', () => {
+      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } } as unknown as Window;
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onExportSheet(3); // mockParticipants[2], userId 44 ≠ mockCurrentUser.id
+
+      expect(openSpy).toHaveBeenCalledWith('', '_blank');
+      expect(mockCampaignsService.getParticipantTeamSheet).toHaveBeenCalledWith(1, 3);
+      expect(mockCampaignsService.getTeamSheet).not.toHaveBeenCalled();
+      expect(fakeWin.document.write).toHaveBeenCalledWith('<!doctype html><html></html>');
+
+      openSpy.mockRestore();
+    });
+
+    it('ferme la fenêtre et affiche une erreur si l\'appel échoue', () => {
+      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() }, close: vi.fn() } as unknown as Window;
+      vi.spyOn(window, 'open').mockReturnValue(fakeWin);
+      mockCampaignsService.getTeamSheet.mockReturnValue(throwError(() => new Error('boom')));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onExportSheet(1);
+
+      expect(fakeWin.close).toHaveBeenCalled();
+      expect(component.error()).not.toBe('');
+
+      vi.mocked(window.open).mockRestore();
     });
   });
 

@@ -50,6 +50,13 @@
                 (click)="onViewJournal(participant.id)">
                 <app-icon concept="journal" size="xs" />
               </button>
+              @if (participant.teamId && campaignId()) {
+                <button type="button" class="participant-list__icon-btn"
+                  title="Fiche d'équipe" aria-label="Fiche d'équipe"
+                  (click)="exportSheet.emit(participant.id)">
+                  <app-icon concept="copier" size="xs" />
+                </button>
+              }
             }
 
             <!-- Actions organisateur inline (hors soi-même) -->
@@ -91,6 +98,9 @@
                       }
                       @if (canRetire(participant)) {
                         <button type="button" role="menuitem" class="participant-list__menu-danger" (click)="onMenuRemove(participant.id)">Retirer</button>
+                      }
+                      @if (participant.teamId && campaignId()) {
+                        <button type="button" role="menuitem" (click)="onMenuExportSheet(participant.id)">Fiche d'équipe</button>
                       }
                     }
                     <button type="button" role="menuitem" (click)="onMenuViewJournal(participant.id)">Voir l'historique</button>

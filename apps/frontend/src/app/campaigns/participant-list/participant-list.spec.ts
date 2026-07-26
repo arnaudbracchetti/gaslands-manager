@@ -377,6 +377,112 @@ describe('ParticipantList', () => {
     expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
   });
 
+  // ── Fiche d'équipe (déplacée depuis le Programme Télé) ───────────────────
+
+  it('affiche "Fiche d\'équipe" sur sa propre ligne dès qu\'une équipe est engagée', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42); // Jean, items[0], teamId 7
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const sheetBtn = items[0].querySelector(
+      'button.participant-list__icon-btn[title="Fiche d\'équipe"]',
+    ) as HTMLButtonElement;
+    expect(sheetBtn).not.toBeNull();
+  });
+
+  it('émet exportSheet(pid) au clic sur "Fiche d\'équipe" de sa propre ligne', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('currentUserId', 42);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const emitted: number[] = [];
+    outputToObservable(component.exportSheet).subscribe((pid) => emitted.push(pid));
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const sheetBtn = items[0].querySelector(
+      'button.participant-list__icon-btn[title="Fiche d\'équipe"]',
+    ) as HTMLButtonElement;
+    sheetBtn.click();
+
+    expect(emitted).toEqual([1]);
+  });
+
+  it('n\'affiche pas "Fiche d\'équipe" sur sa propre ligne sans équipe engagée', () => {
+    const withoutTeam: CampaignParticipant[] = [
+      { ...mockParticipants[0], teamId: null },
+      { ...mockParticipants[1] },
+    ];
+    fixture.componentRef.setInput('participants', withoutTeam);
+    fixture.componentRef.setInput('currentUserId', 42);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    expect(items[0].querySelector('button.participant-list__icon-btn[title="Fiche d\'équipe"]')).toBeNull();
+  });
+
+  it('l\'organisateur voit "Fiche d\'équipe" dans le menu ⋯ d\'un autre participant ayant une équipe', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('isOrganizer', true);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[1], 'Fiche d\'équipe')).not.toBeNull();
+  });
+
+  it('un non-organisateur ne voit PAS "Fiche d\'équipe" dans le menu ⋯ d\'un autre participant', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('isOrganizer', false);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    expect(findMenuButtonByLabel(items[1], 'Fiche d\'équipe')).toBeNull();
+  });
+
+  it('émet exportSheet(pid) et ferme le menu au clic sur "Fiche d\'équipe" (organisateur, autre participant)', () => {
+    fixture.componentRef.setInput('participants', mockParticipants);
+    fixture.componentRef.setInput('isOrganizer', true);
+    fixture.componentRef.setInput('currentUserId', 99);
+    fixture.componentRef.setInput('campaignId', 5);
+    fixture.detectChanges();
+
+    const emitted: number[] = [];
+    outputToObservable(component.exportSheet).subscribe((pid) => emitted.push(pid));
+
+    const el = fixture.nativeElement as HTMLElement;
+    const items = el.querySelectorAll('.participant-list__item');
+    const trigger = items[1].querySelector('.participant-list__menu-trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+
+    const sheetBtn = findMenuButtonByLabel(items[1], 'Fiche d\'équipe');
+    sheetBtn!.click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([2]);
+    expect(items[1].querySelector('.participant-list__menu')).toBeNull();
+  });
+
   // ── Consultation en lecture seule de l'atelier d'un tiers ────────────────
 
   it('affiche "Voir l\'atelier" dans le menu ⋯ d\'un autre participant quand la campagne est démarrée', () => {

@@ -6,6 +6,7 @@ import { renderTeamSheetHtml } from '../infrastructure/team-sheet.renderer';
 export interface GetTeamSheetQuery {
   teamId: number;
   userId: number;
+  playerName: string;
 }
 
 /**
@@ -29,7 +30,14 @@ export class GetTeamSheetUseCase {
         'Cette équipe est verrouillée par une campagne en cours — exportez sa fiche depuis la page de la campagne.',
       );
     }
-    const dto = teamToSheetDto(team.name, team.sponsor, team.vehicles);
+    const dto = teamToSheetDto({
+      teamName: team.name,
+      sponsor: team.sponsor,
+      playerName: query.playerName,
+      sabotagePoints: null,
+      votesPublic: null,
+      vehicles: team.vehicles,
+    });
     return renderTeamSheetHtml(dto);
   }
 }

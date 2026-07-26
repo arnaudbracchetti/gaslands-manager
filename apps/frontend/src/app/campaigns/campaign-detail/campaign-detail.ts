@@ -32,6 +32,7 @@ import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
+import { openHtmlDocumentInNewTab } from '../../shared/html-export.util';
 
 const STATE_LABELS: Record<CampaignState, string> = {
   EN_CONSTRUCTION: 'En construction',
@@ -301,6 +302,30 @@ export class CampaignDetail implements OnInit {
       error: () => {
         this.error.set('Erreur lors du chargement de l\'historique du participant.');
         this.loadingParticipantJournal.set(false);
+      },
+    });
+  }
+
+  /**
+   * ParticipantList émet cet événement (soi-même ou via le menu ⋯, organisateur
+   * uniquement pour un tiers) — exporte la fiche HTML imprimable. Le backend
+   * n'expose pas la même route pour soi-même (`GET .../sheet`) que pour un tiers
+   * (`GET .../participants/:pid/sheet`, organisateur), d'où la distinction ici.
+   * `window.open` DOIT être appelé de façon synchrone, avant l'appel HTTP
+   * asynchrone, sous peine d'être traité comme un popup non désiré.
+   */
+  onExportSheet(pid: number): void {
+    const win = window.open('', '_blank');
+    const isSelf = this.myParticipant()?.id === pid;
+    const request$ = isSelf
+      ? this.campaignsService.getTeamSheet(this.campaignId())
+      : this.campaignsService.getParticipantTeamSheet(this.campaignId(), pid);
+
+    request$.subscribe({
+      next: (html) => openHtmlDocumentInNewTab(win, html),
+      error: () => {
+        win?.close();
+        this.error.set('Erreur lors de la génération de la fiche.');
       },
     });
   }

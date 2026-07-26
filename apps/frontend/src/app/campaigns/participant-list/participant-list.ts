@@ -61,6 +61,9 @@ export class ParticipantList {
   /** Émis au clic sur "Voir l'historique" (soi-même ou via le menu ⋯), avec l'id du CampaignParticipant ciblé. */
   viewJournal: OutputEmitterRef<number> = output<number>();
 
+  /** Émis au clic sur "Fiche d'équipe" (soi-même ou via le menu ⋯, organisateur), avec l'id du CampaignParticipant ciblé. */
+  exportSheet: OutputEmitterRef<number> = output<number>();
+
   /** Vrai quand l'équipe est encore modifiable (saison EN_CONSTRUCTION). */
   canChangeTeam: InputSignal<boolean> = input(false);
 
@@ -213,6 +216,11 @@ export class ParticipantList {
   onMenuViewJournal(pid: number): void {
     this.closeMenu();
     this.viewJournal.emit(pid);
+  }
+
+  onMenuExportSheet(pid: number): void {
+    this.closeMenu();
+    this.exportSheet.emit(pid);
   }
 
   /**

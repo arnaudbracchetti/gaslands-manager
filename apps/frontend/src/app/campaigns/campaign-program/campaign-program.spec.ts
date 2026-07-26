@@ -52,7 +52,6 @@ describe('CampaignProgram Component', () => {
     resolveWreck: ReturnType<typeof vi.fn>;
     enterAtelier: ReturnType<typeof vi.fn>;
     getGameJournal: ReturnType<typeof vi.fn>;
-    getTeamSheet: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -77,7 +76,6 @@ describe('CampaignProgram Component', () => {
       getGameJournal: vi.fn().mockReturnValue(of([
         { participantId: 1, userName: 'Ada Lovelace', teamName: 'Les Furieux', description: 'Classé 1 (+10 PC)', createdAt: '2026-07-01T00:00:00.000Z' },
       ])),
-      getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
     };
 
     await TestBed.configureTestingModule({
@@ -184,34 +182,6 @@ describe('CampaignProgram Component', () => {
 
     expect(component.error()).not.toBe('');
     expect(component.loading()).toBe(false);
-  });
-
-  it('exporte la fiche : ouvre une fenêtre (avant l\'appel HTTP) puis y écrit le HTML reçu', () => {
-    const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } } as unknown as Window;
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
-
-    fixture.detectChanges();
-    component.onExportSheet();
-
-    expect(openSpy).toHaveBeenCalledWith('', '_blank');
-    expect(mockService.getTeamSheet).toHaveBeenCalledWith(1);
-    expect(fakeWin.document.write).toHaveBeenCalledWith('<!doctype html><html></html>');
-
-    openSpy.mockRestore();
-  });
-
-  it('exporter la fiche : ferme la fenêtre et affiche une erreur si l\'appel échoue', () => {
-    const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() }, close: vi.fn() } as unknown as Window;
-    vi.spyOn(window, 'open').mockReturnValue(fakeWin);
-    mockService.getTeamSheet.mockReturnValue(throwError(() => new Error('boom')));
-
-    fixture.detectChanges();
-    component.onExportSheet();
-
-    expect(fakeWin.close).toHaveBeenCalled();
-    expect(component.error()).not.toBe('');
-
-    vi.mocked(window.open).mockRestore();
   });
 
   it('affiche GameResultWizard en popup, sans masquer GameList', () => {

@@ -776,27 +776,79 @@ jamais le solde de votes.
 
 ## Fiche d'équipe exportable (mode campagne)
 
-Bouton "📄 Fiche d'équipe" dans `GameList`, au même endroit et sous la même
-condition que le bouton "🔧 Atelier" (partie en statut `ATELIER`, visible par
-tout participant) — même si la donnée exportée est scopée à
-`(campagneId, participant courant)`, pas à la partie elle-même : la partie en
-atelier n'est qu'un point d'entrée pratique dans l'IHM, pas la source des
-données.
+Bouton "Fiche d'équipe" dans `ParticipantList` (cf.
+[COMPONENTS.md](../COMPONENTS.md#participantlist--campaignsparticipant-list)),
+au même endroit que "Gérer mon équipe"/"Voir mon historique" — **pas** dans le
+Programme Télé (`GameList`), qui ne le porte plus. Deux points d'accès :
 
-Génère la fiche via `GET /api/campaigns/:id/sheet`, depuis l'état **après
-replay complet** — seul chemin qui reflète les chocs/séquelles réels de
-l'équipe engagée (event-sourcés, jamais persistés directement sur `Team`/
-`Vehicle`). Ne passe volontairement pas par `WorkshopVehicleDto` (taillé pour
-l'UI achat/revente atelier) : le même mapper que la fiche "page Équipe" (cf.
+- **Sur sa propre ligne** : toujours affiché dès qu'une équipe est engagée
+  (`participant.teamId`), quel que soit l'état de la campagne ou qu'un atelier
+  soit ouvert ou non — le backend n'exige que `me.hasTeam`.
+- **Sur la ligne d'un autre participant, via le menu "⋯"** : réservé à
+  l'organisateur — rejoint le périmètre `@if (isOrganizer())` déjà appliqué à
+  Promouvoir/Refuser/Retirer dans ce même menu, contrairement à "Voir
+  l'historique"/"Voir l'atelier" (ouverts à tout participant `VALIDATED`).
+
+**Deux endpoints distincts**, pas un paramètre optionnel sur une route unique :
+- `GET /api/campaigns/:id/sheet` — sa propre fiche (inchangé), `playerName`
+  résolu depuis `req.user` sans requête DB supplémentaire.
+- `GET /api/campaigns/:id/participants/:pid/sheet` — fiche d'un tiers,
+  réservée à l'organisateur (`GetCampaignTeamSheetUseCase.resolveTarget`,
+  `assertOrganizer` — `NotFoundException` sinon). Le contrôleur résout le nom
+  de la CIBLE via `CampaignQueryService.getParticipant(campaignId, pid)`
+  (`userName`) avant d'appeler le use case — sans risque de fuite : si
+  l'appelant n'est pas organisateur, le use case rejette avant tout rendu, le
+  nom résolu n'atteint jamais la réponse HTTP.
+
+Le frontend (`CampaignDetail.onExportSheet(pid)`) détermine lui-même lequel
+des deux appeler, en comparant `pid` à l'id de son propre `CampaignParticipant`
+(`myParticipant()`) — les deux routes ne sont pas interchangeables.
+
+Génère la fiche via l'état **après replay complet** — seul chemin qui reflète
+les chocs/séquelles réels de l'équipe engagée (event-sourcés, jamais persistés
+directement sur `Team`/`Vehicle`). Ne passe volontairement pas par
+`WorkshopVehicleDto` (taillé pour l'UI achat/revente atelier) : le même mapper
+que la fiche "page Équipe" (cf.
 [TEAMS.md — Fiche d'équipe exportable](TEAMS.md#fiche-déquipe-exportable) et
 [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet))
-est réutilisé tel quel sur `me.team.vehicles` — un véhicule reconstruit par
+est réutilisé tel quel sur `target.team.vehicles` — un véhicule reconstruit par
 replay expose les mêmes objets domaine (`Weapon`/`Improvement`/`Advantage`/
 `Sequella`, `.type` déjà résolu) qu'un véhicule chargé directement, donc aucun
 branchement n'est nécessaire entre les deux points d'entrée.
 
 Même format HTML imprimable (A4, pas de PDF backend) que le point d'entrée
 équipe — cf. TEAMS.md pour le détail du layout.
+
+**Points de sabotage dans l'en-tête** : contrairement à la fiche "construction
+d'équipe" (`sabotagePoints` toujours `null`, les Points de Résistance n'existant
+pas hors campagne), cette fiche affiche dans son bandeau d'en-tête une case à
+cocher par point de sabotage actuellement disponible (`target.sabotagePoints`,
+cf. [§Points de sabotage](#points-de-sabotage)) — **y compris sur la fiche d'un
+tiers exportée par l'organisateur**. Contrairement à `GetWorkshopUseCase`
+(atelier, ouvert en lecture à tout participant `VALIDATED`, où ce compteur reste
+secret vis-à-vis des autres joueurs — D-S4), cette route tierce est déjà
+réservée à l'organisateur (`resolveTarget`/`assertOrganizer`) : le secret ne
+s'applique pas à ce niveau d'accès déjà restreint, donc `sabotagePoints` n'est
+**jamais** nullifié ici, que `participantId` soit renseigné ou non. Le nom du
+joueur (prénom + nom) est également affiché — le sien pour sa propre fiche,
+celui de la cible pour la fiche exportée par l'organisateur.
+
+**Votes du Public à la place du coût total** : le bloc `team-total` du bandeau
+d'en-tête, qui affiche le coût total de l'équipe sur la fiche "construction
+d'équipe", est **remplacé** sur cette fiche par le nombre de Votes du Public
+gagnés en début de partie — dérivé de l'écart de Points de Championnat entre
+ce participant (la cible, pas nécessairement l'appelant) et le 1er de la
+campagne (`CampaignParticipant.votesPublicFor`, barème officiel Gaslands :
+0-10 PC d'écart → 0 VP, 11-15 → 1, 16-20 → 2, 21-25 → 3, 26-30 → 4, 31+ → 5).
+Contrairement aux points de sabotage, ce nombre n'est **jamais** secret (déjà
+public via `GET .../standings`) — affiché normalement même sur la fiche d'un
+tiers. L'écart utilisé est celui du classement courant au moment de l'export
+(`Campaign.standings()`, trié PC décroissants), pas figé au lancement d'une
+partie précise — cette fiche n'a pas vocation à remplacer le futur écran
+"Lancer la partie" (cf. [Limitations
+connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03)), qui
+créditera un jour un solde de VP réellement suivi ; ici, seule la valeur
+**affichée** change, aucun solde n'est persisté ni consommé.
 
 ---
 
@@ -1081,6 +1133,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
 | GET | `/api/campaigns/:id/participants/:pid/workshop` | JWT | Atelier d'**un autre participant**, en lecture seule — même forme de réponse que `GET .../workshop` (`WorkshopStateDto`), mais `participantId` de la commande désigne la cible plutôt que l'appelant. Réservé aux appelants `VALIDATED` (même règle de visibilité que `GET .../participants/:pid/journal`, `NotFoundException` dans les deux cas de refus) ; le participant cible n'a lui-même aucune contrainte de statut. Consommé par `ParticipantAtelierPage` (vue maître-détail) |
 | GET | `/api/campaigns/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
+| GET | `/api/campaigns/:id/participants/:pid/sheet` | JWT | Fiche d'équipe exportable d'**un autre participant** — réservé à l'organisateur (`NotFoundException` sinon, `GetCampaignTeamSheetUseCase.resolveTarget`), contrairement à `.../participants/:pid/workshop`/`.../journal` (ouverts à tout participant `VALIDATED`). `sabotagePoints` toujours affiché (jamais nullifié), le secret D-S4 ne s'appliquant pas à ce niveau d'accès déjà organisateur-only. Cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |

@@ -23,7 +23,7 @@ import { RemoveTeamUseCase } from './application/remove-team.usecase';
 import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 
 interface AuthenticatedRequest {
-  user: { id: number; email: string };
+  user: { id: number; email: string; firstName: string; lastName: string };
 }
 
 @UseGuards(JwtAuthGuard)
@@ -78,6 +78,10 @@ export class TeamController {
   @Get(':id/sheet')
   @Header('Content-Type', 'text/html; charset=utf-8')
   getSheet(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest): Promise<string> {
-    return this.getTeamSheetUseCase.execute({ teamId: id, userId: req.user.id });
+    return this.getTeamSheetUseCase.execute({
+      teamId: id,
+      userId: req.user.id,
+      playerName: `${req.user.firstName} ${req.user.lastName}`,
+    });
   }
 }

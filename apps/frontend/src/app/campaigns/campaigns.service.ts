@@ -338,6 +338,16 @@ export class CampaignsService {
   }
 
   /**
+   * GET /api/campaigns/:id/participants/:pid/sheet → fiche d'équipe exportable
+   * d'UN AUTRE participant, réservée à l'organisateur (contrairement à
+   * `getParticipantWorkshop`/`getParticipantJournal`, ouverts à tout participant
+   * VALIDATED). `responseType: 'text'` : la réponse est du HTML brut.
+   */
+  getParticipantTeamSheet(campaignId: number, pid: number): Observable<string> {
+    return this.http.get(`/api/campaigns/${campaignId}/participants/${pid}/sheet`, { responseType: 'text' });
+  }
+
+  /**
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-weapons → armes du
    * sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget =
    * cagnotte du participant). Même forme que le verdict "construction d'équipe".

@@ -100,3 +100,23 @@ describe('CampaignParticipant.sabotagePoints (dérivé)', () => {
     expect(participant.sabotagePoints).toBe(3);
   });
 });
+
+describe('CampaignParticipant.votesPublicFor', () => {
+  it.each([
+    [0, 0], [10, 0],
+    [11, 1], [15, 1],
+    [16, 2], [20, 2],
+    [21, 3], [25, 3],
+    [26, 4], [30, 4],
+    [31, 5], [50, 5],
+  ])('écart de %i PC avec le leader → %i VP', (gap, expectedVp) => {
+    const { participant } = makeTestParticipant();
+    expect(participant.votesPublicFor(participant.championshipPoints + gap)).toBe(expectedVp);
+  });
+
+  it('vaut 0 quand ce participant est lui-même le leader (écart nul)', () => {
+    const { participant } = makeTestParticipant();
+    participant.addPoints(20);
+    expect(participant.votesPublicFor(participant.championshipPoints)).toBe(0);
+  });
+});

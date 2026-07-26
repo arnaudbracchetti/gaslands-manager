@@ -38,6 +38,9 @@ function makeSheet(overrides: Partial<TeamSheetDto> = {}): TeamSheetDto {
   return {
     teamName: 'Les Enragés',
     sponsor: 'Rutherford',
+    playerName: 'Jean Dupont',
+    sabotagePoints: null,
+    votesPublic: null,
     vehicles: [makeVehicle()],
     ...overrides,
   };
@@ -107,6 +110,59 @@ describe('renderTeamSheetHtml', () => {
   it('le bandeau d\'en-tête affiche un total de 0 pour une équipe sans véhicule', () => {
     const html = renderTeamSheetHtml(makeSheet({ vehicles: [] }));
     expect(html).toContain('<div class="team-total">0 <span class="unit">cans</span></div>');
+  });
+
+  it('affiche le nom du joueur dans le bandeau d\'en-tête', () => {
+    const html = renderTeamSheetHtml(makeSheet({ playerName: 'Jean Dupont' }));
+    expect(html).toContain('<div class="team-player">Joueur : Jean Dupont</div>');
+  });
+
+  it('échappe les caractères spéciaux du nom du joueur (XSS)', () => {
+    const html = renderTeamSheetHtml(makeSheet({ playerName: '<script>alert(1)</script>' }));
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('n\'affiche aucune ligne de sabotage quand sabotagePoints est null (hors contexte campagne)', () => {
+    const html = renderTeamSheetHtml(makeSheet({ sabotagePoints: null }));
+    expect(html).not.toContain('class="sabotage-row"');
+  });
+
+  it('affiche une case à cocher par point de sabotage disponible', () => {
+    const html = renderTeamSheetHtml(makeSheet({ sabotagePoints: 3 }));
+    expect(html).toContain('class="sabotage-row"');
+    const boxes = html.match(/<span class="sabotage-boxes">((?:<span class="box small"><\/span>)*)<\/span>/);
+    expect(boxes?.[1]?.match(/<span class="box small">/g)).toHaveLength(3);
+  });
+
+  it('affiche la ligne de sabotage sans case quand sabotagePoints vaut 0', () => {
+    const html = renderTeamSheetHtml(makeSheet({ sabotagePoints: 0 }));
+    expect(html).toContain('class="sabotage-row"');
+    const boxes = html.match(/<span class="sabotage-boxes">((?:<span class="box small"><\/span>)*)<\/span>/);
+    expect(boxes?.[1]).toBe('');
+  });
+
+  it('affiche le coût total en cans quand votesPublic est null (hors contexte campagne)', () => {
+    const html = renderTeamSheetHtml(makeSheet({
+      votesPublic: null,
+      vehicles: [makeVehicle({ cost: 42 })],
+    }));
+    expect(html).toContain('<div class="team-total">42 <span class="unit">cans</span></div>');
+    expect(html).not.toContain('class="unit">VP</span>');
+  });
+
+  it('affiche les Votes du Public à la place du coût total en contexte campagne', () => {
+    const html = renderTeamSheetHtml(makeSheet({
+      votesPublic: 3,
+      vehicles: [makeVehicle({ cost: 42 })],
+    }));
+    expect(html).toContain('<div class="team-total">3 <span class="unit">VP</span></div>');
+    expect(html).not.toContain('<div class="team-total">42 <span class="unit">cans</span></div>');
+  });
+
+  it('affiche 0 VP sans erreur quand le participant est le leader', () => {
+    const html = renderTeamSheetHtml(makeSheet({ votesPublic: 0 }));
+    expect(html).toContain('<div class="team-total">0 <span class="unit">VP</span></div>');
   });
 
   it('regroupe les cases de carrosserie par paquets de 5', () => {

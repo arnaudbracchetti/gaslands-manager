@@ -65,5 +65,11 @@ export interface TeamSheetDto {
   teamName: string;
   /** Valeur fixe du catalogue, jamais à échapper. */
   sponsor: string;
+  /** Prénom + nom du joueur connecté — texte utilisateur → à échapper au rendu. */
+  playerName: string;
+  /** Points de sabotage disponibles (`CampaignParticipant.sabotagePoints`) — `null` hors contexte campagne (construction d'équipe). */
+  sabotagePoints: number | null;
+  /** Votes du Public gagnés en début de partie (`CampaignParticipant.votesPublicFor`) — `null` hors contexte campagne ; remplace alors le coût total dans le bandeau d'en-tête. */
+  votesPublic: number | null;
   vehicles: VehicleSheetDto[];
 }

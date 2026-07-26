@@ -807,6 +807,8 @@ Formulaire de création d'une campagne (nom + sélection optionnelle d'une équi
 
 Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs. Charge également le classement (`GET .../standings`) pour transmettre les Points de Championnat à `ParticipantList` — chargement indépendant et non bloquant : si `/standings` échoue, la liste des participants reste affichée sans PC. Rechargé aussi via `onResultRecorded()`, appelé quand `CampaignProgram` émet `resultRecorded` après l'enregistrement d'un résultat de partie — sans ce pont, le classement resterait figé jusqu'au prochain rechargement de page. Relaie de même `atelierStatusChanged` (`onAtelierStatusChanged()`, signal `hasAtelierGame`) vers `ParticipantList`, pour que le lien "Gérer mon équipe" bascule vers l'Atelier dès qu'une partie y entre — cf. `ParticipantList` ci-dessous. Possède également l'état de la modale `ParticipantJournalModal` (`journalParticipant`/`participantJournalEntries`/`loadingParticipantJournal`, `onViewJournal()`/`onParticipantJournalClosed()`), ouverte quand `ParticipantList` émet `viewJournal` — même pattern "parent smart possède l'état de la modale" que `ChangeTeamModal`. Rendue en dehors de `.campaign-detail-rail` (colonne `position: sticky`), au même niveau que les `ConfirmModal` en bas du template — un ancêtre `sticky` peut piéger un descendant `position: fixed` dans son propre rectangle au lieu du viewport complet (bug constaté : le Programme, colonne principale, apparaissait par-dessus la modale).
 
+**Export de la fiche d'équipe** (déplacé depuis `GameList`/`CampaignProgram`) : `onExportSheet(pid)` répond à l'output `exportSheet` de `ParticipantList` — détermine self vs tiers en comparant `pid` à `myParticipant()?.id` (deux routes backend distinctes, pas de paramètre optionnel unique) et appelle `CampaignsService.getTeamSheet()` ou `getParticipantTeamSheet()` en conséquence. Même pattern `window.open` synchrone + `openHtmlDocumentInNewTab` que l'ancien `CampaignProgram.onExportSheet()` (désormais retiré de ce composant).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-detail` |
@@ -847,6 +849,8 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 
 **Consultation en lecture seule de l'atelier d'un tiers** : sur la ligne d'un autre participant, le menu ⋯ porte une entrée "Voir l'atelier" — visible dès que `participant.teamId` est renseigné **et** que `campaignState() !== 'EN_CONSTRUCTION'`. Contrairement à "Voir l'historique" (qui émet un `output` vers `CampaignDetail`, lequel possède l'état de la modale), c'est un lien direct (`[routerLink]` vers `ParticipantAtelierPage`, cf. ci-dessous) — la destination est une route déterministe, aucun état à posséder côté parent. Pas de contrainte d'atelier ouvert (contrairement à "Gérer mon équipe") : la lecture seule reste possible dès que la campagne a démarré.
 
+**Fiche d'équipe** (déplacée depuis `GameList`, cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode campagne)](spec/CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)) : sur sa propre ligne, un bouton icône (à côté de "Voir mon historique") émet `exportSheet`, affiché dès que `participant.teamId && campaignId()` — **pas** de condition d'atelier ouvert, contrairement à son ancien emplacement dans `GameList` (le backend n'exige que `me.hasTeam`). Sur la ligne d'un autre participant, une entrée "Fiche d'équipe" dans le menu ⋯, réservée à l'organisateur (`@if (isOrganizer())`, aux côtés de Promouvoir/Refuser/Retirer) — contrairement à "Voir l'historique"/"Voir l'atelier", ouverts à tout participant. `CampaignDetail` (parent) détermine ensuite, selon le `pid` reçu, quel des deux endpoints backend appeler (soi-même vs tiers, cf. `onExportSheet` ci-dessus).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-participant-list` |
@@ -874,6 +878,7 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 | `promote` | `number` | `pid` — promotion co-organisateur |
 | `changeTeam` | `void` | Ouvre la modale de changement d'équipe |
 | `viewJournal` | `number` | `pid` — consultation de l'historique complet (soi-même ou un autre participant, tout participant VALIDATED) |
+| `exportSheet` | `number` | `pid` — export de la fiche d'équipe (soi-même, ou un autre participant via le menu ⋯ — organisateur uniquement) |
 
 ---
 
@@ -949,8 +954,6 @@ Overlay de sélection d'une autre équipe à engager dans une campagne `EN_CONST
 
 Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
 
-**Export de la fiche d'équipe** : `onExportSheet()` répond à l'output `exportSheet` de `GameList` — ignore l'argument `Game` reçu (la donnée exportée est scopée à `(campagneId, participant courant)`, pas à cette partie précise, même remarque que pour `onOpenAtelier()`). Ouvre une fenêtre de façon SYNCHRONE (`window.open('', '_blank')`) avant l'appel à `CampaignsService.getTeamSheet()`, puis y écrit le HTML reçu via `openHtmlDocumentInNewTab` (`shared/html-export.util.ts`).
-
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-program` |
@@ -1003,7 +1006,6 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
 | `openJournal` | `Game` | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
 | `openAtelier` | `Game` | Ouvre l'atelier (bouton 🔧 visible pour **tout participant** sur une partie en `ATELIER`) — le parent navigue vers `/campaigns/:id/atelier` (l'atelier est au niveau campagne, pas de la partie) |
-| `exportSheet` | `Game` | Exporte la fiche d'équipe du participant connecté (bouton visible pour **tout participant**, même condition que `openAtelier` — la donnée exportée est scopée à `(campagneId, participant)`, pas à cette partie précise) |
 
 ---
 

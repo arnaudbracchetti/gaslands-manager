@@ -15,7 +15,7 @@ import { RemoveTeamUseCase } from './application/remove-team.usecase';
 import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 import type { TeamSummaryDto } from './domain/team.repository.interface';
 
-const mockUser = { id: 42, email: 'test@test.com' };
+const mockUser = { id: 42, email: 'test@test.com', firstName: 'Jean', lastName: 'Dupont' };
 const mockRequest = { user: mockUser };
 
 const mockSummary: TeamSummaryDto = {
@@ -101,12 +101,12 @@ describe('TeamController', () => {
   });
 
   describe('getSheet()', () => {
-    it('délègue à GetTeamSheetUseCase avec teamId et userId', async () => {
+    it('délègue à GetTeamSheetUseCase avec teamId, userId et le nom du joueur', async () => {
       mockGetSheet.execute.mockResolvedValue('<!doctype html>...');
 
       const result = await controller.getSheet(1, mockRequest as never);
 
-      expect(mockGetSheet.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42 });
+      expect(mockGetSheet.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42, playerName: 'Jean Dupont' });
       expect(result).toBe('<!doctype html>...');
     });
   });

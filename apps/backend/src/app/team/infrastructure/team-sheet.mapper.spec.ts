@@ -222,17 +222,47 @@ describe('vehicleToSheetDto', () => {
 });
 
 describe('teamToSheetDto', () => {
-  it('assemble le nom d\'équipe, le sponsor et les véhicules actifs', () => {
-    const dto = teamToSheetDto('Les Enragés', 'Rutherford', [makeVehicle()]);
+  it('assemble le nom d\'équipe, le sponsor, le joueur, les points de sabotage/VP et les véhicules actifs', () => {
+    const dto = teamToSheetDto({
+      teamName: 'Les Enragés',
+      sponsor: 'Rutherford',
+      playerName: 'Jean Dupont',
+      sabotagePoints: 2,
+      votesPublic: 3,
+      vehicles: [makeVehicle()],
+    });
     expect(dto.teamName).toBe('Les Enragés');
     expect(dto.sponsor).toBe('Rutherford');
+    expect(dto.playerName).toBe('Jean Dupont');
+    expect(dto.sabotagePoints).toBe(2);
+    expect(dto.votesPublic).toBe(3);
     expect(dto.vehicles).toHaveLength(1);
+  });
+
+  it('transmet sabotagePoints/votesPublic à null hors contexte campagne', () => {
+    const dto = teamToSheetDto({
+      teamName: 'Les Enragés',
+      sponsor: 'Rutherford',
+      playerName: 'Jean Dupont',
+      sabotagePoints: null,
+      votesPublic: null,
+      vehicles: [makeVehicle()],
+    });
+    expect(dto.sabotagePoints).toBeNull();
+    expect(dto.votesPublic).toBeNull();
   });
 
   it('exclut un véhicule vendu de la fiche', () => {
     const vehicle = makeVehicle();
     vehicle.markSold();
-    const dto = teamToSheetDto('Les Enragés', 'Rutherford', [vehicle]);
+    const dto = teamToSheetDto({
+      teamName: 'Les Enragés',
+      sponsor: 'Rutherford',
+      playerName: 'Jean Dupont',
+      sabotagePoints: null,
+      votesPublic: null,
+      vehicles: [vehicle],
+    });
     expect(dto.vehicles).toHaveLength(0);
   });
 });

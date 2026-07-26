@@ -103,8 +103,13 @@ const SHEET_CSS = `
   .page-header .header-logo { height: 13mm; width: auto; }
   .page-header .team-name { font-size: 17pt; font-weight: 700; }
   .page-header .team-sponsor { font-size: 9pt; color: #555; margin-left: 2mm; }
+  .page-header .team-player { font-size: 8pt; color: #555; margin-top: 0.5mm; }
+  .page-header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1.5mm; }
   .page-header .team-total { font-size: 11pt; font-weight: 700; white-space: nowrap; }
   .page-header .team-total .unit { font-size: 8pt; font-weight: 400; }
+  .sabotage-row { display: flex; align-items: center; gap: 1.5mm; }
+  .sabotage-row .sabotage-lbl { font-size: 7pt; text-transform: uppercase; color: #666; letter-spacing: 0.2pt; }
+  .sabotage-row .sabotage-boxes { display: flex; gap: 0.6mm; flex-wrap: wrap; justify-content: flex-end; max-width: 45mm; }
 `;
 
 const TYPE_LABELS: Record<EquipmentCategory, string> = {
@@ -241,15 +246,42 @@ function renderVehicleCard(vehicle: VehicleSheetDto, sponsor: string, footnotes:
  * résiduel pour un véhicule vendu - aucun véhicule vendu n'atteint de toute façon
  * ce DTO, filtré par `teamToSheetDto`).
  */
-function renderPageHeader(dto: TeamSheetDto): string {
+function renderSabotageRow(sabotagePoints: number | null): string {
+  if (sabotagePoints === null) return '';
+  return `
+    <div class="sabotage-row">
+      <span class="sabotage-lbl">Sabotage</span>
+      <span class="sabotage-boxes">${'<span class="box small"></span>'.repeat(sabotagePoints)}</span>
+    </div>`;
+}
+
+/**
+ * Coût total de l'équipe hors contexte campagne ; en campagne, remplacé par les
+ * Votes du Public gagnés en début de partie (`dto.votesPublic`, dérivé de l'écart
+ * de PC avec le leader — cf. `CampaignParticipant.votesPublicFor`).
+ */
+function renderTeamTotal(dto: TeamSheetDto): string {
+  if (dto.votesPublic !== null) {
+    return `<div class="team-total">${dto.votesPublic} <span class="unit">VP</span></div>`;
+  }
   const total = dto.vehicles.reduce((sum, v) => sum + v.cost, 0);
+  return `<div class="team-total">${total} <span class="unit">cans</span></div>`;
+}
+
+function renderPageHeader(dto: TeamSheetDto): string {
   return `
     <div class="page-header">
       <div class="page-header-left">
         <img class="header-logo" src="${LOGO_DATA_URI}" alt="Gaslands Manager">
-        <div><span class="team-name">${escapeHtml(dto.teamName)}</span><span class="team-sponsor">${dto.sponsor}</span></div>
+        <div>
+          <div><span class="team-name">${escapeHtml(dto.teamName)}</span><span class="team-sponsor">${dto.sponsor}</span></div>
+          <div class="team-player">Joueur : ${escapeHtml(dto.playerName)}</div>
+        </div>
       </div>
-      <div class="team-total">${total} <span class="unit">cans</span></div>
+      <div class="page-header-right">
+        ${renderTeamTotal(dto)}
+        ${renderSabotageRow(dto.sabotagePoints)}
+      </div>
     </div>`;
 }
 

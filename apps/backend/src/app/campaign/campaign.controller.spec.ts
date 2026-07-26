@@ -6,7 +6,7 @@ import { CampaignController } from './campaign.controller';
  * commande et délègue au bon use case / query service. Aucune règle métier ici —
  * on vérifie uniquement la délégation et la recomposition de la réponse.
  */
-const req = { user: { id: 42, email: 'u@x' } };
+const req = { user: { id: 42, email: 'u@x', firstName: 'Jean', lastName: 'Dupont' } };
 
 // Fabrique un mock de use case (objet avec execute()).
 function uc(returnValue?: unknown): { execute: ReturnType<typeof vi.fn> } {
@@ -165,9 +165,28 @@ describe('CampaignController (câblage)', () => {
     });
   });
 
-  it('getSheet délègue à GetCampaignTeamSheetUseCase avec campaignId/userId', async () => {
+  it('getSheet délègue à GetCampaignTeamSheetUseCase avec campaignId/userId/playerName', async () => {
     const result = await controller.getSheet(req as never, 1);
-    expect(getCampaignTeamSheetUseCase.execute).toHaveBeenCalledWith({ campaignId: 1, userId: 42 });
+    expect(getCampaignTeamSheetUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1,
+      userId: 42,
+      playerName: 'Jean Dupont',
+    });
+    expect(result).toBe('<!doctype html>...');
+  });
+
+  it('getParticipantSheet résout le nom de la cible via query.getParticipant puis délègue au use case avec participantId', async () => {
+    query.getParticipant.mockResolvedValueOnce({ id: 5, userName: 'Autre Joueur' });
+
+    const result = await controller.getParticipantSheet(req as never, 1, 5);
+
+    expect(query.getParticipant).toHaveBeenCalledWith(1, 5);
+    expect(getCampaignTeamSheetUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1,
+      userId: 42,
+      playerName: 'Autre Joueur',
+      participantId: 5,
+    });
     expect(result).toBe('<!doctype html>...');
   });
 });
