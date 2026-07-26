@@ -31,7 +31,7 @@ export class EnterAtelierUseCase {
   ) {}
 
   async execute(cmd: EnterAtelierCommand): Promise<EnterAtelierResult> {
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     // Pas de replay complet — enterAtelier opère sur les statuts, pas sur l'état transient.
     assertOrganizer(campaign, cmd.userId);
 

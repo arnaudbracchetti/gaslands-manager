@@ -283,7 +283,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
-| `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` / `load` — point d'entrée des use cases |
+| `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` — unique point d'entrée des use cases (charge et rejoue systématiquement ; un ancien `.load()` sans replay a été supprimé après avoir causé deux bugs de résolution d'entités transientes) |
 | `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
 | `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine. Dépend d'`ICatalogRepository` (résout la séquelle `siege_irrecuperable`) en plus d'`IRandomizer` — deux modificateurs permanents (`legende_vivante` force le D6 à 1, `maintenu_par_la_rouille` chaîne un second tirage), cf. §Séquelles ci-dessous |
 | `apps/backend/src/app/campaign/application/` | 29 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |

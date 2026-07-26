@@ -30,7 +30,7 @@ function makeFixture(randomizer: IRandomizer): {
     appendEvents: vi.fn().mockResolvedValue(undefined),
   } as unknown as ICampaignRepository;
   const replayService: CampaignReplayService = {
-    load: vi.fn().mockResolvedValue(campaign),
+    loadAndReplay: vi.fn().mockResolvedValue(campaign),
   } as unknown as CampaignReplayService;
 
   const useCase = new RollIncomeUseCase(campaignRepo, replayService, randomizer);

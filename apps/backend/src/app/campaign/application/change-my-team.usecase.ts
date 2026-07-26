@@ -31,7 +31,7 @@ export class ChangeMyTeamUseCase {
       }
     }
 
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
 
     let participantId: number;
     try {

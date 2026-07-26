@@ -22,7 +22,7 @@ export class ChangeStateUseCase {
   ) {}
 
   async execute(cmd: ChangeStateCommand): Promise<void> {
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
 
     try {

@@ -18,7 +18,7 @@ export class DeleteCampaignUseCase {
   ) {}
 
   async execute(cmd: DeleteCampaignCommand): Promise<void> {
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
     await this.campaignRepo.deleteCampaign(cmd.campaignId);
   }

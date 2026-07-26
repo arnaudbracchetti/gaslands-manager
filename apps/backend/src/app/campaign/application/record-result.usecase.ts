@@ -75,7 +75,7 @@ export class RecordResultUseCase {
   ) {}
 
   async execute(cmd: RecordResultCommand): Promise<void> {
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
     const game = campaign.findGame(cmd.gameId);
 

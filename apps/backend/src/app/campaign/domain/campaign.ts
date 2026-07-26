@@ -103,22 +103,6 @@ export class Campaign {
     }
   }
 
-  /**
-   * Rejoue jusqu'à la partie dont l'ordre est strictement inférieur à celui de `gameId`.
-   */
-  replayUpTo(gameId: number): void {
-    const target = this.findGame(gameId);
-    for (const p of this._participants) {
-      p.reset();
-    }
-    const sorted = [...this._games]
-      .filter((g) => g.order < target.order)
-      .sort((a, b) => a.order - b.order);
-    for (const game of sorted) {
-      game.replayEvents(this._participants);
-    }
-  }
-
   // ── Classement ───────────────────────────────────────────────────────────────
 
   /**

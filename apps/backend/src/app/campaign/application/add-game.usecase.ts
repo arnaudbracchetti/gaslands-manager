@@ -31,7 +31,7 @@ export class AddGameUseCase {
     }
     const type = cmd.type ?? scenario.type;
 
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
     assertOrganizer(campaign, cmd.userId);
 
     let gameId: number;

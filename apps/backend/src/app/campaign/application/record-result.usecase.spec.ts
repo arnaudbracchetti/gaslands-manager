@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { RecordResultUseCase } from './record-result.usecase';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { CampaignReplayService } from '../infrastructure/campaign-replay.service';
+import { CampaignReplayService as RealCampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { Campaign } from '../domain/campaign';
 import { CampaignParticipant } from '../domain/campaign-participant';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
@@ -12,6 +13,8 @@ import { ParticipantStatus } from '../domain/enums/campaign.enums';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
+import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import { Vehicle } from '../../team/domain/vehicle';
 import { Team } from '../../team/domain/team';
 import { makeVehicleType } from '../domain/test-helpers';
@@ -32,7 +35,7 @@ function makeFixture(game: EvenementTeleGame | EscarmoucheGame): {
     appendEvents: vi.fn().mockResolvedValue(undefined),
   } as unknown as ICampaignRepository;
   const replayService: CampaignReplayService = {
-    load: vi.fn().mockResolvedValue(campaign),
+    loadAndReplay: vi.fn().mockResolvedValue(campaign),
   } as unknown as CampaignReplayService;
 
   const useCase = new RecordResultUseCase(campaignRepo, replayService);
@@ -119,6 +122,52 @@ describe('RecordResultUseCase — Escarmouche (jerricanGains / destroyedVehicles
     expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, [
       expect.any(WalletMovementEvent),
       expect.any(VehicleDestroyedEvent),
+    ]);
+  });
+});
+
+describe('RecordResultUseCase — véhicule transient (id négatif, D-S11)', () => {
+  it('destroyedVehicles cible un véhicule acheté en atelier lors d\'une partie antérieure, sans DomainException (régression : le use case doit rejouer le journal, pas juste charger l\'agrégat)', async () => {
+    // Contrairement aux tests ci-dessus (campagne pré-construite à la main, `loadAndReplay`
+    // mocké pour la retourner telle quelle), ce test utilise le VRAI `CampaignReplayService`
+    // pour que `campaign.replay()` s'exécute réellement et recrée le véhicule transient
+    // (id = -eventId) depuis un `EquipmentChangedEvent(BUY, VEHICLE)` brut — seul moyen de
+    // reproduire le bug "Véhicule #-137 introuvable dans la campagne" (RecordResultUseCase
+    // appelait `.load()`, qui ne rejoue jamais le journal).
+    const vehicleType = makeVehicleType('Lourd');
+
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    p1.attachTeam(new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []));
+
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    p2.attachTeam(new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, []));
+
+    // Partie antérieure déjà JOUE : le véhicule ennemi y a été acheté en atelier
+    // (jamais persisté en base — id = -event.id = -77 une fois rejoué).
+    const buyVehicleEvent = new EquipmentChangedEvent(
+      77, 5, p2.id, 0,
+      EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'voiture', 12,
+      null, null, null, vehicleType, null, null, null,
+    );
+    const previousGame = new EscarmoucheGame(5, 1, GameStatus.JOUE, 1, 'pillage_de_convoi', new Date(), [buyVehicleEvent]);
+    const currentGame = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 2, 'embuscade', null, []);
+
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [p1, p2], [previousGame, currentGame]);
+
+    const campaignRepo: ICampaignRepository = {
+      findCampaign: vi.fn().mockResolvedValue(campaign),
+      appendEvents: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ICampaignRepository;
+
+    const useCase = new RecordResultUseCase(campaignRepo, new RealCampaignReplayService(campaignRepo));
+
+    await useCase.execute({
+      campaignId: 1, gameId: 10, userId: 42,
+      destroyedVehicles: [{ destroyerId: 1, vehicleId: -77 }],
+    });
+
+    expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, [
+      expect.objectContaining({ vehicleId: -77, championshipPoints: 0 }),
     ]);
   });
 });

@@ -238,7 +238,7 @@ export class CampaignQueryService {
   async getJournal(campaignId: number, gameId: number, userId: number): Promise<GameJournalEntryDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
-    const campaign = await this.replayService.load(campaignId);
+    const campaign = await this.replayService.loadAndReplay(campaignId);
     const entries = campaign.findGame(gameId).journal(campaign.participants);
 
     const [participants, eventRows] = await Promise.all([
@@ -280,7 +280,7 @@ export class CampaignQueryService {
       throw new NotFoundException('Participant introuvable.');
     }
 
-    const campaign = await this.replayService.load(campaignId);
+    const campaign = await this.replayService.loadAndReplay(campaignId);
 
     const byGame = campaign.games
       .map((game) => ({

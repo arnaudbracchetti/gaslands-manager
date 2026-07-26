@@ -51,15 +51,6 @@ describe('CampaignReplayService', () => {
     expect(result).toBeInstanceOf(Campaign);
   });
 
-  it('load retourne la saison sans rejouer', async () => {
-    const { repo, service, participant } = makeSeasonWithRepo(1, 5);
-
-    await service.load(1);
-
-    expect(repo.findCampaign).toHaveBeenCalledWith(1);
-    expect(participant.championshipPoints).toBe(0); // replay non appelé
-  });
-
   it('loadAndReplay replay idempotent : deux appels → même état', async () => {
     const { participant } = makeTestParticipant(1);
     const game = makeGameWithPoints(1, 7);

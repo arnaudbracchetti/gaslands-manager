@@ -19,18 +19,21 @@ export class CampaignReplayService {
   /**
    * Charge la saison depuis la base et rejoue l'intégralité de son journal.
    * Retourne l'agrégat `Campaign` avec tous les états transients reconstruits.
+   *
+   * Seule méthode de chargement du module — utilisée uniformément par tous les use
+   * cases, même ceux qui ne touchent qu'à la structure (participants/parties). Un
+   * ancien `.load()` (sans replay) existait pour épargner ce calcul aux use cases
+   * n'ayant besoin que de cette structure, mais s'est révélé être un piège : deux bugs
+   * distincts (RecordResultUseCase, CampaignQueryService.getJournal/getParticipantJournal)
+   * sont venus d'un use case qui aurait dû rejouer l'état mais utilisait `.load()` par
+   * erreur — les entités transientes (véhicules/équipement achetés en atelier, id
+   * négatif) n'existaient alors jamais en mémoire. Supprimé au profit d'un unique point
+   * d'entrée : le coût du replay est négligible pour une campagne de ce jeu (peu de
+   * parties/événements), largement inférieur au risque de récidive.
    */
   async loadAndReplay(campaignId: number): Promise<Campaign> {
     const campaign = await this.campaignRepo.findCampaign(campaignId);
     campaign.replay();
     return campaign;
-  }
-
-  /**
-   * Charge sans rejouer — pour les use cases qui rejoueront eux-mêmes
-   * (ex. `replayUpTo` pour annulation partielle).
-   */
-  async load(campaignId: number): Promise<Campaign> {
-    return this.campaignRepo.findCampaign(campaignId);
   }
 }

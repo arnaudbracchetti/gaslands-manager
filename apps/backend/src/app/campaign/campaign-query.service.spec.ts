@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CampaignQueryService } from './campaign-query.service';
-import { CampaignState } from './domain/enums/campaign.enums';
+import { CampaignState, ParticipantStatus } from './domain/enums/campaign.enums';
+import { CampaignReplayService } from './infrastructure/campaign-replay.service';
+import type { ICampaignRepository } from './domain/campaign.repository.interface';
+import { Campaign } from './domain/campaign';
+import { CampaignParticipant } from './domain/campaign-participant';
+import { EscarmoucheGame } from './domain/games/escarmouche-game';
+import { GameStatus } from './domain/enums/game-status.enum';
+import { AdvantageLostEvent } from './domain/events/advantage-lost.event';
+import { EquipmentChangedEvent } from './domain/events/equipment-changed.event';
+import { EquipmentOperation, EquipmentEntityType } from './domain/enums/equipment-change.enums';
+import { makeVehicleType, makeAdvantageType } from './domain/test-helpers';
+import { Team } from '../team/domain/team';
+import { Vehicle } from '../team/domain/vehicle';
 
 /**
  * Tests du côté lecture (CQRS). Les repositories TypeORM sont mockés — on vérifie
@@ -111,7 +123,7 @@ describe('CampaignQueryService', () => {
   describe('getJournal', () => {
     it('enrichit le journal de l\'agrégat avec userName/teamName/createdAt', async () => {
       participantRepo.findOne.mockResolvedValue({ id: 99 });  // assertVisibleParticipant OK
-      replayService.load.mockResolvedValue({
+      replayService.loadAndReplay.mockResolvedValue({
         findGame: vi.fn().mockReturnValue({
           journal: vi.fn().mockReturnValue([
             { eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)' },
@@ -159,7 +171,7 @@ describe('CampaignQueryService', () => {
           { eventId: 102, participantId: 1, description: 'Budget : +4 jerricans (Récompense)' },
         ]),
       };
-      replayService.load.mockResolvedValue({
+      replayService.loadAndReplay.mockResolvedValue({
         games: [game1, game2],
         participants: ['p1', 'p2'],
       });
@@ -193,7 +205,7 @@ describe('CampaignQueryService', () => {
         order: 1,
         journal: vi.fn().mockReturnValue([{ eventId: 100, participantId: 2, description: 'Classé 1 (+10 PC)' }]),
       };
-      replayService.load.mockResolvedValue({ games: [game1], participants: [] });
+      replayService.loadAndReplay.mockResolvedValue({ games: [game1], participants: [] });
 
       const journal = await service.getParticipantJournal(1, 1, 42);
 
@@ -210,6 +222,62 @@ describe('CampaignQueryService', () => {
       participantRepo.findOne.mockResolvedValueOnce({ id: 99 });
       participantRepo.findOne.mockResolvedValueOnce(null);
       await expect(service.getParticipantJournal(1, 999, 42)).rejects.toThrow('introuvable');
+    });
+  });
+
+  describe('getJournal — régression véhicule/avantage transient (id négatif, D-S11)', () => {
+    it('résout le nom d\'un avantage transient perdu (AdvantageLostEvent), pas juste "#-77" (nécessite un vrai replay)', async () => {
+      // Contrairement aux tests "getJournal" ci-dessus (journal() mocké directement,
+      // qui ne vérifient que l'enrichissement userName/teamName), ce test exerce le VRAI
+      // `AdvantageLostEvent.describe()` via un vrai `CampaignReplayService`. L'avantage
+      // transient (id = -77) n'est PAS construit en dur : il est recréé par le replay
+      // d'un véritable `EquipmentChangedEvent(BUY, ADVANTAGE)` journalisé sur une partie
+      // antérieure déjà JOUE (achat en atelier) — sinon le test ne reproduit pas le vrai
+      // bug ("Avantage perdu : #-77" survient uniquement quand l'entité n'existe QUE via
+      // le replay du journal, jamais quand elle est pré-construite dans le test).
+      const vehicleType = makeVehicleType();
+      const advantageType = makeAdvantageType();
+
+      const vehicle = new Vehicle(10, 1, vehicleType, [], []);
+      const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+
+      const participant = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+      participant.attachTeam(team);
+
+      // Partie antérieure déjà JOUE : achat de l'avantage en atelier (event id=77 → id
+      // transient -77 une fois rejoué).
+      const buyAdvantageEvent = new EquipmentChangedEvent(
+        77, 5, participant.id, 0,
+        EquipmentOperation.BUY, EquipmentEntityType.ADVANTAGE, 'tireur_elite', 2,
+        10, null, null, null, null, null, advantageType,
+      );
+      const previousGame = new EscarmoucheGame(5, 1, GameStatus.JOUE, 1, 'pillage_de_convoi', new Date(), [buyAdvantageEvent]);
+
+      // Partie courante : la Table des Épaves a fait perdre cet avantage transient.
+      const advantageLostEvent = new AdvantageLostEvent(200, 10, participant.id, 0, -77);
+      const currentGame = new EscarmoucheGame(10, 1, GameStatus.JOUE, 2, 'embuscade', new Date(), [advantageLostEvent]);
+
+      const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], [previousGame, currentGame]);
+
+      const realCampaignRepo: ICampaignRepository = {
+        findCampaign: vi.fn().mockResolvedValue(campaign),
+      } as unknown as ICampaignRepository;
+      const realReplayService = new CampaignReplayService(realCampaignRepo);
+      const serviceWithRealReplay = new CampaignQueryService(
+        campaignRepo as never, participantRepo as never, gameRepo as never, gameEventRepo as never,
+        scenarioCatalog as never, realReplayService as never,
+      );
+
+      participantRepo.findOne.mockResolvedValue({ id: participant.id }); // assertVisibleParticipant OK
+      participantRepo.find.mockResolvedValue([
+        { id: 1, user: { firstName: 'Ada', lastName: 'Lovelace' }, team: { name: 'Les Furieux' } },
+      ]);
+      gameEventRepo.find.mockResolvedValue([{ id: 200, createdAt: new Date('2026-07-26T10:08:00Z') }]);
+
+      const journal = await serviceWithRealReplay.getJournal(1, 10, 42);
+
+      expect(journal).toHaveLength(1);
+      expect(journal[0].description).toBe('Avantage perdu sur le véhicule Voiture : Tireur d\'Élite');
     });
   });
 

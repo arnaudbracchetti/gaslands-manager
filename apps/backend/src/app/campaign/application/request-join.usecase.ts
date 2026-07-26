@@ -34,7 +34,7 @@ export class RequestJoinUseCase {
       throw new ConflictException('Cette équipe est déjà engagée dans une autre campagne.');
     }
 
-    const campaign = await this.replayService.load(cmd.campaignId);
+    const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
 
     let participantId: number;
     try {

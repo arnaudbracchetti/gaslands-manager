@@ -647,7 +647,6 @@ classDiagram
         +participants : readonly CampaignParticipant[]
         +games : readonly Game[]
         +replay() void
-        +replayUpTo(gameId) void
         +enterAtelier(gameId) autoClosedGameId
         +closeAtelier(gameId) void
         +closeCampaign() void

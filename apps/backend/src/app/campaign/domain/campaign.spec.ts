@@ -99,26 +99,6 @@ describe('Campaign — replay', () => {
   });
 });
 
-describe('Campaign — replayUpTo', () => {
-  it('rejoue seulement les parties dont order < target.order', () => {
-    const { participant } = makeTestParticipant();
-    const e1 = makeRankingEvent(participant.id, 4, 10);
-    const e2 = makeRankingEvent(participant.id, 6, 20);
-    const game1 = makeGame(10, 1, [e1]);  // order=1
-    const game2 = makeGame(20, 2, [e2]);  // order=2
-    const campaign = makeCampaign([participant], [game1, game2]);
-
-    campaign.replayUpTo(20);  // rejoue uniquement game1
-    expect(participant.championshipPoints).toBe(4);
-  });
-
-  it('lève si gameId cible est introuvable', () => {
-    const { participant } = makeTestParticipant();
-    const campaign = makeCampaign([participant], []);
-    expect(() => campaign.replayUpTo(999)).toThrow('introuvable');
-  });
-});
-
 describe('Campaign — standings', () => {
   it('trie par PC décroissants', () => {
     const { participant: p1 } = makeTestParticipant(1);

@@ -26,7 +26,7 @@ function makeFixture(status: GameStatus): {
     deleteEvents: vi.fn().mockResolvedValue(undefined),
   } as unknown as ICampaignRepository;
   const replayService: CampaignReplayService = {
-    load: vi.fn().mockResolvedValue(campaign),
+    loadAndReplay: vi.fn().mockResolvedValue(campaign),
   } as unknown as CampaignReplayService;
 
   const useCase = new ResetResultUseCase(campaignRepo, replayService);
@@ -47,7 +47,7 @@ describe('ResetResultUseCase', () => {
     const campaignRepo: ICampaignRepository = {
       deleteEvents: vi.fn().mockResolvedValue(undefined),
     } as unknown as ICampaignRepository;
-    const replayService = { load: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
+    const replayService = { loadAndReplay: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
 
     await new ResetResultUseCase(campaignRepo, replayService).execute({ campaignId: 1, gameId: 10, userId: 42 });
     expect(campaignRepo.deleteEvents).not.toHaveBeenCalled();
