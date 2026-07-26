@@ -448,7 +448,7 @@ Page de gestion d'une équipe (`/teams/:id/edit`). Layout deux panneaux : formul
 
 ### `VehicleSummaryCard` — `teams/vehicle-summary-card/`
 
-Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, coût total, emplacements. Émet les actions Gérer et Supprimer.
+Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, coût total, emplacements. Toute la carte est cliquable (`cardClicked`, même pattern que `TeamCard`/`CampaignCard` — `role="button"`, `tabindex="0"`, `(keydown.enter)`/`(keydown.space)`) ; le bouton supprimer/vendre reste une action séparée dans un coin de la carte, protégée par `$event.stopPropagation()` (clic ET clavier, pour ne pas déclencher `cardClicked` en même temps).
 
 | | |
 |---|---|
@@ -461,13 +461,14 @@ Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, co�
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `vehicle` | `VehicleSummary` | — | Résumé du véhicule |
+| `selected` | `boolean` | `false` | Surbrillance "sélectionné" — utilisée par `ParticipantAtelierPage` (vue maître-détail en lecture seule) pour indiquer le véhicule actuellement consulté |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `manageClicked` | `number` | ID du véhicule → navigation vers le configurateur |
-| `deleteClicked` | `VehicleSummary` | Demande de suppression du véhicule |
+| `cardClicked` | `number` | ID du véhicule, émis au clic (ou Entrée/Espace) sur la carte — l'action déclenchée dépend de l'écran appelant : navigation vers le configurateur (`AtelierPage`/`TeamEditPage`) ou sélection pour consultation (`ParticipantAtelierPage`) |
+| `deleteClicked` | `VehicleSummary` | Demande de suppression/vente du véhicule (bouton dédié, n'émet jamais `cardClicked`) |
 
 ---
 
@@ -1377,9 +1378,11 @@ page** (pas de sous-route par véhicule, contrairement à
 regroupant la synthèse de budget d'équipe (`TeamBudget`, budget total/consommé
 "à l'instant t" — `budgetEquipeTotal = wallet + coût de tous les véhicules`,
 `budgetRestant = wallet`) puis la liste de tous les véhicules (façon onglets —
-`VehicleSummaryCard`, `[showDelete]="false"`, dont l'output `manageClicked`
-est détourné pour **sélectionner** un signal local `selectedVehicleId` plutôt
-que naviguer) ; partie droite affichant la configuration complète du véhicule
+`VehicleSummaryCard`, `[showDelete]="false"` (aucun bouton de vente en lecture
+seule) et `[selected]` lié à `selectedVehicleId`, dont le clic sur la carte
+(`cardClicked`) est détourné pour **sélectionner** le signal local
+`selectedVehicleId` plutôt que naviguer) ; partie droite affichant la
+configuration complète du véhicule
 sélectionné, répartie sur **2 sous-colonnes** (`.pap-equipment-columns`,
 CSS Grid `1fr 1fr`) pour éviter qu'une seule colonne d'équipement s'étire sur
 toute la largeur du panneau : Armes + Améliorations à gauche, Avantages +

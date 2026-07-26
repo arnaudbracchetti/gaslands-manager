@@ -98,18 +98,6 @@
   gap: 10px;
 }
 
-.pap-vehicle-tab {
-  cursor: pointer;
-  border-radius: var(--r-sm);
-  transition: outline-color 160ms;
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-
-  &--active {
-    outline-color: var(--tb-os);
-  }
-}
-
 .pap-vehicle-detail {
   display: flex;
   flex-direction: column;

@@ -110,7 +110,7 @@ export async function addVehicle(page: Page, options?: { vehicleName?: string })
 
 /**
  * Ouvre le configurateur d'équipement d'un véhicule existant depuis la page
- * d'édition d'équipe (bouton "GÉRER L'ÉQUIPEMENT", `data-testid="vehicle-card-manage"`).
+ * d'édition d'équipe (clic sur la carte véhicule entière, `data-testid="vehicle-card-manage"`).
  * `index` sélectionne la carte véhicule à cibler quand l'équipe en a plusieurs
  * (0 = la première, ordre d'affichage de `TeamEditPage`).
  */

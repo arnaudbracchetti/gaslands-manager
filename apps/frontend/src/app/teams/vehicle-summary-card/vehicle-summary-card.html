@@ -1,4 +1,12 @@
-<div class="tep-vehicle-card" [attr.data-testid]="'vehicle-card-' + vehicle().id">
+<div
+  class="tep-vehicle-card"
+  [class.tep-vehicle-card--selected]="selected()"
+  data-testid="vehicle-card-manage"
+  role="button"
+  tabindex="0"
+  (click)="cardClicked.emit(vehicle().id)"
+  (keydown.enter)="cardClicked.emit(vehicle().id)"
+  (keydown.space)="cardClicked.emit(vehicle().id)">
 
   <span class="tep-vehicle-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
 
@@ -39,19 +47,13 @@
   }
 
   <!-- Actions -->
-  <div class="tep-vehicle-card__actions">
-    <button
-      class="tep-btn-manage"
-      data-testid="vehicle-card-manage"
-      (click)="manageClicked.emit(vehicle().id)"
-      title="Gérer l'équipement de ce véhicule">
-      GÉRER L'ÉQUIPEMENT
-    </button>
-    @if (showDelete()) {
+  @if (showDelete()) {
+    <div class="tep-vehicle-card__actions">
       <button
         class="tep-btn-delete-vehicle"
         data-testid="vehicle-card-delete"
-        (click)="deleteClicked.emit(vehicle())"
+        (click)="$event.stopPropagation(); deleteClicked.emit(vehicle())"
+        (keydown)="$event.stopPropagation()"
         [title]="deleteTitle()">
         @if (deleteIconConcept()) {
           <app-icon [concept]="deleteIconConcept()!" size="md" />
@@ -59,7 +61,7 @@
           {{ deleteIconFallback() }}
         }
       </button>
-    }
-  </div>
+    </div>
+  }
 
 </div>

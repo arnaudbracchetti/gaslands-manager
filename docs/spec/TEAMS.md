@@ -38,7 +38,7 @@ est donc toujours exact, sans approximation (cf. `apps/frontend/src/app/teams/ve
 
 ## Modifier / supprimer un véhicule depuis la liste d'équipe
 
-Chaque ligne de la liste porte deux actions — ✏️ *Gérer l'équipement* et 🗑 *Supprimer*. "Modifier un véhicule" ne porte PAS sur ses caractéristiques de base (`nomInterne` immutable) mais sur son équipement : le bouton navigue vers `/teams/:teamId/vehicles/:vehicleId`, page dédiée (`VehicleConfiguratorPage` → `VehicleConfigurator`) qui permet d'ajouter ET de retirer armes/améliorations sur un véhicule existant.
+Chaque ligne de la liste (`VehicleSummaryCard`) est cliquable dans son intégralité pour *Gérer l'équipement* — même convention que les cartes équipe/campagne (`TeamCard`/`CampaignCard`) — et porte en plus un bouton dédié 🗑 *Supprimer*. "Modifier un véhicule" ne porte PAS sur ses caractéristiques de base (`nomInterne` immutable) mais sur son équipement : le clic sur la carte navigue vers `/teams/:teamId/vehicles/:vehicleId`, page dédiée (`VehicleConfiguratorPage` → `VehicleConfigurator`) qui permet d'ajouter ET de retirer armes/améliorations sur un véhicule existant. Le bouton *Supprimer* reste une action séparée (`$event.stopPropagation()` empêche son clic de déclencher aussi la navigation).
 
 La suppression d'un véhicule entier (`DELETE /api/vehicles/:id`, cascade sur son équipement) demande confirmation et **ne procède pas par suppression optimiste** : `vehicleCount` doit être resynchronisé après coup — il peut retomber à 0 et déverrouiller le choix du sponsor (cf. règle de verrouillage ci-dessus) — d'où un rechargement complet (`Teams.loadTeams`, déclenché par la recréation du composant au retour sur `/teams`) après chaque action destructrice.
 

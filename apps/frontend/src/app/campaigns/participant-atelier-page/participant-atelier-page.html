@@ -29,14 +29,13 @@
         } @else {
           <div class="pap-vehicle-tabs">
             @for (summary of vehicleSummaries(); track summary.id; let i = $index) {
-              <div class="pap-vehicle-tab" [class.pap-vehicle-tab--active]="summary.id === selectedVehicleId()">
-                <app-vehicle-summary-card
-                  [vehicle]="summary"
-                  [index]="i + 1"
-                  [showDelete]="false"
-                  (manageClicked)="onSelectVehicle($event)"
-                />
-              </div>
+              <app-vehicle-summary-card
+                [vehicle]="summary"
+                [index]="i + 1"
+                [showDelete]="false"
+                [selected]="summary.id === selectedVehicleId()"
+                (cardClicked)="onSelectVehicle($event)"
+              />
             }
           </div>
         }

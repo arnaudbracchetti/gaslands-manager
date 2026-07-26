@@ -2,7 +2,10 @@
  * VehicleSummaryCard — carte dumb affichant le résumé d'un véhicule d'équipe.
  *
  * Composant de présentation extrait de `TeamEditPage` pour en réduire le budget CSS.
- * Reçoit un `VehicleSummary` en entrée et émet deux événements : "gérer" et "supprimer".
+ * Reçoit un `VehicleSummary` en entrée. Toute la carte est cliquable (`cardClicked`,
+ * même pattern que `TeamCard`/`CampaignCard`) — l'action déclenchée dépend de l'écran
+ * appelant (gérer l'équipement, sélectionner pour consultation…). Le bouton
+ * supprimer/vendre reste une action séparée (`deleteClicked`).
  */
 import { Component, Signal, computed, input, output } from '@angular/core';
 import { SlicePipe, UpperCasePipe } from '@angular/common';
@@ -27,6 +30,10 @@ export class VehicleSummaryCard {
   /** Affiche le bouton de suppression/vente. */
   showDelete = input<boolean>(true);
 
+  /** Surbrillance "sélectionné" — utilisé par la vue maître-détail en lecture seule
+   *  (`ParticipantAtelierPage`) pour indiquer le véhicule actuellement consulté. */
+  selected = input<boolean>(false);
+
   /** Titre (tooltip) du bouton — "Supprimer ce véhicule" par défaut (construction d'équipe),
    *  adapté par l'atelier ("Vendre ce véhicule"/"Annuler l'achat"). */
   deleteTitle = input<string>('Supprimer ce véhicule');
@@ -44,8 +51,9 @@ export class VehicleSummaryCard {
     String(this.index()).padStart(2, '0'),
   );
 
-  /** Émet l'id du véhicule — le parent navigue vers la page d'équipement. */
-  manageClicked = output<number>();
+  /** Émet l'id du véhicule au clic sur la carte — le parent décide de l'action
+   *  (naviguer vers la page d'équipement, sélectionner pour consultation…). */
+  cardClicked = output<number>();
 
   /** Émet le VehicleSummary complet — le parent a besoin du nom pour la confirmation. */
   deleteClicked = output<VehicleSummary>();
