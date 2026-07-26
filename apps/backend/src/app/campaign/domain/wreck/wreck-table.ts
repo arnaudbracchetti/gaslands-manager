@@ -12,6 +12,7 @@ import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { DomainException } from '../../../shared/domain/domain-exception';
+import { wreckWeightModifier } from './wreck-weight-modifier';
 
 export interface WreckTableResult {
   outcome: WreckOutcome;
@@ -95,7 +96,7 @@ export class WreckTable {
     const lostEquipment = equipmentPool.length > 0 ? this.random.pick(equipmentPool) : null;
     const advantagePool = this.buildAdvantagePool(vehicle);
     const lostAdvantage = advantagePool.length > 0 ? this.random.pick(advantagePool) : null;
-    const modifiedRoll = diceRoll + chocsBefore + this.weightModifier(vehicle.type.poids);
+    const modifiedRoll = diceRoll + chocsBefore + wreckWeightModifier(vehicle.type.poids);
     const { result, chocsGained } = this.lookupTable(modifiedRoll, chocsBefore);
     const finalLoss =
       result === WreckResult.ARRACHEE ? lostEquipment :
@@ -186,11 +187,5 @@ export class WreckTable {
     if (modifiedRoll === 8) return { result: WreckResult.CHASSIS_FRAGILISE, chocsGained: 2 };
     if (modifiedRoll === 9) return { result: WreckResult.FAVORI_DU_PUBLIC, chocsGained: 3 };
     return { result: WreckResult.VEHICULE_DETRUIT, chocsGained: 0 };
-  }
-
-  private weightModifier(poids: string): number {
-    if (poids === 'Léger') return 1;
-    if (poids === 'Lourd') return -1;
-    return 0;
   }
 }

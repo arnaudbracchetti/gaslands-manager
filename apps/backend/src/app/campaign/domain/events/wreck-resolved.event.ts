@@ -2,6 +2,7 @@ import { GameEvent } from './game-event';
 import type { CampaignParticipant } from '../campaign-participant';
 import { WreckResult } from '../enums/wreck-result.enum';
 import { GameEventType } from '../enums/game-event-type.enum';
+import { wreckWeightModifier } from '../wreck/wreck-weight-modifier';
 
 
 /**
@@ -52,8 +53,17 @@ export class WreckResolvedEvent extends GameEvent {
       : '';
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
     const vehicleName = found?.vehicle.nom ?? '';
+    // Le modificateur de poids (Léger +1 / Lourd −1) entre dans le calcul du tirage
+    // (cf. WreckTable.rollOnce) mais n'est stocké nulle part sur l'événement — comme
+    // `vehicleName` ci-dessus, il est recalculé ici depuis le véhicule (type immutable).
+    // Sans lui, un total affiché "D6+chocs" pouvait ne pas correspondre à la ligne
+    // obtenue pour un véhicule Léger/Lourd (omis, pas 0, l'affichage restait silencieux).
+    const weightMod = found ? wreckWeightModifier(found.vehicle.type.poids) : 0;
+    const weightPart = weightMod !== 0
+      ? `, ${weightMod > 0 ? '+' : ''}${weightMod} (${found?.vehicle.type.poids}) = ${this.diceRoll + this.chocsBefore + weightMod}`
+      : '';
     return `Tirage sur la table des Épaves${vehicleName ? ` pour (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} `
-      + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${chocs})`;
+      + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${weightPart}${chocs})`;
   }
 }
 
