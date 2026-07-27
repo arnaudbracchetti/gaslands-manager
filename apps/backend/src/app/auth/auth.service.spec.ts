@@ -7,7 +7,7 @@
  * pour que le mock soit actif avant que le module soit importé.
  */
 
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -48,6 +48,9 @@ describe('AuthService', () => {
     findByEmail: vi.fn(),
     create: vi.fn(),
     findById: vi.fn(),
+    findEntityById: vi.fn(),
+    updateProfile: vi.fn(),
+    updatePassword: vi.fn(),
   };
 
   const mockJwtService = {
@@ -139,6 +142,68 @@ describe('AuthService', () => {
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
       await expect(service.login(dto)).rejects.toThrow('Ce compte a été désactivé');
+    });
+  });
+
+  // ── updateProfile ──────────────────────────────────────────────────────────
+
+  describe('updateProfile()', () => {
+    const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+
+    it('délègue à UserService.updateProfile() et retourne le résultat', async () => {
+      const updated = { ...mockSafeUser, ...dto };
+      mockUserService.updateProfile.mockResolvedValue(updated);
+
+      const result = await service.updateProfile(1, dto);
+
+      expect(mockUserService.updateProfile).toHaveBeenCalledWith(1, dto);
+      expect(result).toEqual(updated);
+    });
+
+    it('lève BadRequestException si un champ est manquant', async () => {
+      await expect(service.updateProfile(1, { ...dto, email: '' })).rejects.toThrow(BadRequestException);
+      expect(mockUserService.updateProfile).not.toHaveBeenCalled();
+    });
+
+    it('propage ConflictException si l\'email est déjà pris', async () => {
+      mockUserService.updateProfile.mockRejectedValue(new ConflictException('Cet email est déjà utilisé'));
+
+      await expect(service.updateProfile(1, dto)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ── changePassword ─────────────────────────────────────────────────────────
+
+  describe('changePassword()', () => {
+    const dto = { currentPassword: 'ancienMdp', newPassword: 'nouveauMdp123' };
+
+    it('vérifie le mot de passe actuel puis délègue à UserService.updatePassword()', async () => {
+      mockUserService.findEntityById.mockResolvedValue(mockUserWithPassword);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+      await service.changePassword(1, dto);
+
+      expect(bcrypt.compare).toHaveBeenCalledWith('ancienMdp', mockUserWithPassword.password);
+      expect(mockUserService.updatePassword).toHaveBeenCalledWith(1, 'nouveauMdp123');
+    });
+
+    it('lève BadRequestException si un champ est manquant', async () => {
+      await expect(service.changePassword(1, { ...dto, currentPassword: '' })).rejects.toThrow(BadRequestException);
+      expect(mockUserService.findEntityById).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si le nouveau mot de passe est trop court', async () => {
+      await expect(service.changePassword(1, { ...dto, newPassword: 'abc' })).rejects.toThrow(BadRequestException);
+      expect(mockUserService.findEntityById).not.toHaveBeenCalled();
+    });
+
+    it('lève BadRequestException si le mot de passe actuel est incorrect', async () => {
+      mockUserService.findEntityById.mockResolvedValue(mockUserWithPassword);
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+
+      await expect(service.changePassword(1, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.changePassword(1, dto)).rejects.toThrow('Mot de passe actuel incorrect');
+      expect(mockUserService.updatePassword).not.toHaveBeenCalled();
     });
   });
 });

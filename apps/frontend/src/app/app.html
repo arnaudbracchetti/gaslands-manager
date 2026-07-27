@@ -33,8 +33,28 @@
   -->
   <div class="navbar-user">
     @if (authService.isLoggedIn()) {
-      <!-- Affiche le prénom de l'utilisateur connecté -->
-      <span class="user-name">{{ authService.currentUser()?.firstName }}</span>
+      <!--
+        Menu utilisateur — même structure trigger/backdrop/panel que le menu
+        "⋯" de ParticipantList : un backdrop plein écran transparent ferme le
+        menu au clic hors du panel, sans HostListener document-level.
+      -->
+      <div class="navbar-user-menu">
+        <button
+          type="button"
+          class="user-name user-name--trigger"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="userMenuOpen()"
+          (click)="toggleUserMenu()">
+          {{ authService.currentUser()?.firstName }}
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="navbar-user-menu__backdrop" (click)="closeUserMenu()"></div>
+          <div class="navbar-user-menu__panel" role="menu">
+            <button type="button" role="menuitem" (click)="openUserDetails()">Détails du compte</button>
+          </div>
+        }
+      </div>
       <!-- (click) appelle logout() qui efface le token et redirige vers /login -->
       <button class="btn-logout" (click)="authService.logout()">Déconnexion</button>
     } @else {
@@ -48,3 +68,23 @@
 <main>
   <router-outlet></router-outlet>
 </main>
+
+<!--
+  Dialog "Détails du compte" — rendu en dehors de <nav> (ancêtre sticky) et
+  de <main>, au même niveau que le reste du shell : un descendant
+  position:fixed peut être piégé dans le rectangle d'un ancêtre sticky au
+  lieu du viewport complet (piège déjà documenté pour ParticipantJournalModal).
+-->
+@if (showUserDetailsModal()) {
+  @if (authService.currentUser(); as user) {
+    <app-user-details-modal
+      [user]="user"
+      [profileSaving]="profileSaving()"
+      [profileError]="profileError()"
+      [passwordSaving]="passwordSaving()"
+      [passwordError]="passwordError()"
+      (closed)="closeUserDetails()"
+      (profileSubmitted)="onProfileSubmitted($event)"
+      (passwordSubmitted)="onPasswordSubmitted($event)" />
+  }
+}

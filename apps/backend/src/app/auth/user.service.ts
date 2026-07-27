@@ -23,6 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserOrm } from './user.entity';
 
 // Type utilitaire TypeScript : User sans le champ sensible `password`
@@ -54,6 +55,16 @@ export class UserService {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) return null;
     return this.sanitize(user);
+  }
+
+  /**
+   * Cherche un utilisateur par id AVEC son hash de mot de passe (usage interne
+   * uniquement : comparaison bcrypt lors du changement de mot de passe).
+   * Contrairement à findById(), ne sanitize PAS — ne jamais renvoyer
+   * directement dans une réponse HTTP.
+   */
+  async findEntityById(id: number): Promise<UserOrm | null> {
+    return this.userRepo.findOne({ where: { id } });
   }
 
   /**
@@ -93,6 +104,43 @@ export class UserService {
       }
       throw new InternalServerErrorException('Erreur lors de la création du compte');
     }
+  }
+
+  /**
+   * Met à jour firstName/lastName/email d'un utilisateur (auto-édition de
+   * profil). Même gestion d'erreur que create() : email déjà pris par un
+   * autre compte → ConflictException.
+   */
+  async updateProfile(id: number, dto: UpdateProfileDto): Promise<SafeUser> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable');
+    }
+
+    user.firstName = dto.firstName;
+    user.lastName = dto.lastName;
+    user.email = dto.email.toLowerCase().trim();
+
+    try {
+      const saved = await this.userRepo.save(user);
+      return this.sanitize(saved);
+    } catch (err: unknown) {
+      const pgError = err as { code?: string };
+      if (pgError?.code === '23505') {
+        throw new ConflictException('Cet email est déjà utilisé');
+      }
+      throw new InternalServerErrorException('Erreur lors de la mise à jour du profil');
+    }
+  }
+
+  /**
+   * Remplace le mot de passe haché d'un utilisateur. Le hachage (coût 10,
+   * même standard que create()) est fait ici : UserService reste la seule
+   * source de vérité sur le stockage du mot de passe.
+   */
+  async updatePassword(id: number, newPlainPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPlainPassword, 10);
+    await this.userRepo.update(id, { password: hashedPassword });
   }
 
   /**

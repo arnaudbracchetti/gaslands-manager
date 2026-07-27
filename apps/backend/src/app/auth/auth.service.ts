@@ -11,11 +11,13 @@
  * Le serveur vérifie la signature sans requête base de données (c'est l'avantage).
  */
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserRole } from './user.entity';
 import { SafeUser, UserService } from './user.service';
 
@@ -90,6 +92,42 @@ export class AuthService {
     const access_token = this.signToken(user.id, user.email, user.role);
 
     return { access_token, user: safeUser };
+  }
+
+  /**
+   * Auto-édition du profil (prénom/nom/email) par l'utilisateur connecté.
+   * Le rôle n'est jamais modifiable via cette méthode.
+   */
+  async updateProfile(userId: number, dto: UpdateProfileDto): Promise<SafeUser> {
+    if (!dto.firstName || !dto.lastName || !dto.email) {
+      throw new BadRequestException('Tous les champs sont obligatoires');
+    }
+    return this.userService.updateProfile(userId, dto);
+  }
+
+  /**
+   * Changement de mot de passe par l'utilisateur connecté — exige le mot de
+   * passe actuel (bcrypt.compare, même principe que login()).
+   */
+  async changePassword(userId: number, dto: ChangePasswordDto): Promise<void> {
+    if (!dto.currentPassword || !dto.newPassword) {
+      throw new BadRequestException('Tous les champs sont obligatoires');
+    }
+    if (dto.newPassword.length < 6) {
+      throw new BadRequestException('Le mot de passe doit faire au moins 6 caractères');
+    }
+
+    const user = await this.userService.findEntityById(userId);
+    if (!user) {
+      throw new BadRequestException('Utilisateur introuvable');
+    }
+
+    const passwordValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!passwordValid) {
+      throw new BadRequestException('Mot de passe actuel incorrect');
+    }
+
+    await this.userService.updatePassword(userId, dto.newPassword);
   }
 
   /**

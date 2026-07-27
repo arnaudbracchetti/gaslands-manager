@@ -382,6 +382,72 @@ main {
   letter-spacing: 0.12em;
 }
 
+// Menu utilisateur — même structure trigger/backdrop/panel que le menu "⋯"
+// de ParticipantList (participant-list.scss &__menu-wrap/&__menu-backdrop/
+// &__menu), adaptée au scope global (app.scss est vide par convention, cf.
+// ARCHITECTURE.md) et ancrée à gauche plutôt qu'à droite du trigger.
+.navbar-user-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.user-name--trigger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  // Hérite de .user-name (font-family/couleur/taille/letter-spacing) : même
+  // élément, deux classes.
+
+  &:hover {
+    color: var(--tb-os);
+  }
+}
+
+.navbar-user-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.navbar-user-menu__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 41;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  background: var(--clr-bg-modal);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-stamp);
+  overflow: hidden;
+
+  button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 160ms, color 160ms;
+
+    &:hover {
+      background: var(--surface-hover);
+      color: var(--tb-os);
+    }
+  }
+}
+
 .btn-logout {
   background: transparent;
   border: 1px solid var(--border-rust);

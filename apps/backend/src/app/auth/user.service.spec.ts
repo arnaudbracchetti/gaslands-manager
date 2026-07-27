@@ -46,6 +46,7 @@ describe('UserService', () => {
     create: vi.fn(),
     save: vi.fn(),
     delete: vi.fn(),
+    update: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -128,6 +129,82 @@ describe('UserService', () => {
       mockRepo.save.mockRejectedValue({ code: '23505' });
 
       await expect(service.create(dto)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ── findEntityById ─────────────────────────────────────────────────────────
+
+  describe('findEntityById()', () => {
+    it('retourne l\'utilisateur AVEC le champ password', async () => {
+      mockRepo.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.findEntityById(1);
+
+      expect(result).toHaveProperty('password');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('retourne null si l\'utilisateur n\'existe pas', async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      const result = await service.findEntityById(999);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ── updateProfile ──────────────────────────────────────────────────────────
+
+  describe('updateProfile()', () => {
+    const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+
+    it('met à jour firstName/lastName/email et retourne l\'utilisateur SANS le champ password', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser });
+      mockRepo.save.mockResolvedValue({ ...mockUser, ...dto });
+
+      const result = await service.updateProfile(1, dto);
+
+      expect(mockRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' }),
+      );
+      expect(result).not.toHaveProperty('password');
+      expect(result).toMatchObject(dto);
+    });
+
+    it('normalise l\'email (lowercase + trim)', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser });
+      mockRepo.save.mockResolvedValue({ ...mockUser });
+
+      await service.updateProfile(1, { ...dto, email: '  Jeanne@Test.com  ' });
+
+      expect(mockRepo.save).toHaveBeenCalledWith(expect.objectContaining({ email: 'jeanne@test.com' }));
+    });
+
+    it('lève NotFoundException si l\'utilisateur n\'existe pas', async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.updateProfile(999, dto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('lève ConflictException si l\'email est déjà utilisé par un autre compte (erreur PostgreSQL 23505)', async () => {
+      mockRepo.findOne.mockResolvedValue({ ...mockUser });
+      mockRepo.save.mockRejectedValue({ code: '23505' });
+
+      await expect(service.updateProfile(1, dto)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ── updatePassword ─────────────────────────────────────────────────────────
+
+  describe('updatePassword()', () => {
+    it('hache le nouveau mot de passe (coût 10) et met à jour l\'utilisateur', async () => {
+      vi.mocked(bcrypt.hash).mockResolvedValue('$2b$10$newhash' as never);
+      mockRepo.update.mockResolvedValue({ affected: 1 });
+
+      await service.updatePassword(1, 'nouveauMotDePasse');
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('nouveauMotDePasse', 10);
+      expect(mockRepo.update).toHaveBeenCalledWith(1, { password: '$2b$10$newhash' });
     });
   });
 

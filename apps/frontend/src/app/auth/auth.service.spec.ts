@@ -161,6 +161,71 @@ describe('AuthService', () => {
     });
   });
 
+  // ── updateProfile() ──────────────────────────────────────────────────────
+
+  describe('updateProfile()', () => {
+    it('envoie PATCH /api/auth/me et met à jour currentUser avec la réponse', () => {
+      service.currentUser.set(mockUser);
+      const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+      const updatedUser = { ...mockUser, ...dto };
+
+      service.updateProfile(dto).subscribe();
+
+      const req = httpMock.expectOne('/api/auth/me');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(dto);
+      req.flush(updatedUser);
+
+      expect(service.currentUser()).toEqual(updatedUser);
+    });
+
+    it('ne modifie pas currentUser en cas d\'erreur serveur', () => {
+      service.currentUser.set(mockUser);
+      let errored = false;
+
+      service.updateProfile({ firstName: 'X', lastName: 'Y', email: 'pris@test.com' }).subscribe({
+        error: () => { errored = true; },
+      });
+
+      const req = httpMock.expectOne('/api/auth/me');
+      req.flush({ message: 'Cet email est déjà utilisé' }, { status: 409, statusText: 'Conflict' });
+
+      expect(service.currentUser()).toEqual(mockUser);
+      expect(errored).toBe(true);
+    });
+  });
+
+  // ── changePassword() ─────────────────────────────────────────────────────
+
+  describe('changePassword()', () => {
+    it('envoie PATCH /api/auth/me/password sans modifier currentUser', () => {
+      service.currentUser.set(mockUser);
+      const dto = { currentPassword: 'ancien', newPassword: 'nouveauMdp123' };
+
+      service.changePassword(dto).subscribe();
+
+      const req = httpMock.expectOne('/api/auth/me/password');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(dto);
+      req.flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(service.currentUser()).toEqual(mockUser);
+    });
+
+    it('propage l\'erreur serveur (ex. mot de passe actuel incorrect)', () => {
+      let errored = false;
+
+      service.changePassword({ currentPassword: 'faux', newPassword: 'nouveauMdp123' }).subscribe({
+        error: () => { errored = true; },
+      });
+
+      const req = httpMock.expectOne('/api/auth/me/password');
+      req.flush({ message: 'Mot de passe actuel incorrect' }, { status: 400, statusText: 'Bad Request' });
+
+      expect(errored).toBe(true);
+    });
+  });
+
   // ── restoreSession() ──────────────────────────────────────────────────────
 
   describe('restoreSession()', () => {

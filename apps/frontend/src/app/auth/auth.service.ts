@@ -25,7 +25,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, ReplaySubject, tap, map } from 'rxjs';
-import { AuthResponse, RegisterDto, User } from './auth.model';
+import { AuthResponse, ChangePasswordDto, RegisterDto, UpdateProfileDto, User } from './auth.model';
 
 // Clé de stockage du JWT dans localStorage
 const TOKEN_KEY = 'gaslands_token';
@@ -148,6 +148,26 @@ export class AuthService {
         }),
         map(() => undefined),
       );
+  }
+
+  /**
+   * Auto-édition du profil (prénom/nom/email). Met à jour `currentUser`
+   * avec la réponse serveur — la navbar (et le reste de l'app) reflète
+   * immédiatement le changement, sans requête supplémentaire.
+   */
+  updateProfile(dto: UpdateProfileDto): Observable<void> {
+    return this.http.patch<User>('/api/auth/me', dto).pipe(
+      tap((user: User) => this.currentUser.set(user)),
+      map(() => undefined),
+    );
+  }
+
+  /**
+   * Changement de mot de passe. 204 sans corps — aucune mise à jour de
+   * `currentUser` nécessaire.
+   */
+  changePassword(dto: ChangePasswordDto): Observable<void> {
+    return this.http.patch<void>('/api/auth/me/password', dto).pipe(map(() => undefined));
   }
 
   /**

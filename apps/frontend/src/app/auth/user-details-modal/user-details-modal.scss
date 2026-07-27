@@ -1,0 +1,140 @@
+// Styles calqués sur change-team-modal.scss (.ctm-*) pour cohérence visuelle,
+// étendus pour porter deux sous-formulaires empilés.
+@use '../../shared/styles/breakpoints' as bp;
+
+.udm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+
+  @include bp.mobile {
+    align-items: flex-end;
+  }
+}
+
+.udm-modal {
+  background: var(--surface-raised);
+  border: 2px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  padding: 24px;
+  width: min(460px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-stamp-lg);
+
+  @include bp.mobile {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92vh;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    border-radius: var(--r-sm) var(--r-sm) 0 0;
+  }
+}
+
+.udm-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.udm-modal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--tb-os);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.udm-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+
+  &:hover {
+    color: var(--tb-os);
+  }
+}
+
+.udm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-hair);
+
+  &:first-of-type {
+    padding-top: 0;
+    border-top: none;
+  }
+}
+
+.udm-section__title {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.udm-readonly {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.udm-readonly__label {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.udm-readonly__value {
+  font-family: var(--font-text);
+  color: var(--tb-os);
+  font-size: 0.95rem;
+}
+
+.udm-submit {
+  width: 100%;
+  background: var(--tb-danger);
+  border: 1px solid var(--tb-danger);
+  color: var(--action-primary-ink);
+  padding: 10px 20px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 160ms, border-color 160ms, opacity 160ms;
+
+  &:hover:not(:disabled) {
+    background: var(--tb-os);
+    border-color: var(--tb-os);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

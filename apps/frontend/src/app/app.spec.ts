@@ -8,19 +8,39 @@
  * qui n'existe plus dans ce projet. Il a été remplacé par un test simple
  * vérifiant la présence de la navbar Gaslands.
  */
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { of, throwError } from 'rxjs';
 import { App } from './app';
+import type { User } from './auth/auth.model';
 import { AuthService } from './auth/auth.service';
-import { signal, computed } from '@angular/core';
 
-// Mock minimal d'AuthService pour ce test de fumée
+const mockUser: User = {
+  id: 1,
+  firstName: 'Jean',
+  lastName: 'Dupont',
+  email: 'jean@test.com',
+  role: 'user',
+  isActive: true,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+};
+
+// Mock minimal d'AuthService pour ce test de fumée — isLoggedIn dérive de
+// currentUser (comme le vrai service) pour que les tests du menu utilisateur
+// puissent basculer l'état connecté simplement via currentUserSignal.set(...).
+// Signal déclaré à part (plutôt qu'inline dans l'objet) pour éviter la
+// référence circulaire dans le typage de mockAuthService (TS7022/TS7024).
+const currentUserSignal = signal<User | null>(null);
 const mockAuthService = {
-  currentUser: signal(null),
-  isLoggedIn: computed(() => false),
+  currentUser: currentUserSignal,
+  isLoggedIn: computed(() => currentUserSignal() !== null),
   logout: vi.fn(),
+  updateProfile: vi.fn(),
+  changePassword: vi.fn(),
 };
 
 describe('App (composant racine)', () => {
@@ -58,5 +78,109 @@ describe('App (composant racine)', () => {
     // le logo image") — plus de texte visible dans `.navbar-brand`, on vérifie
     // donc l'attribut `alt` de l'image à la place.
     expect(compiled.querySelector('.navbar-brand img')?.getAttribute('alt')).toContain('Gaslands');
+  });
+
+  // ── Menu utilisateur + dialog "Détails du compte" ─────────────────────────
+
+  describe('Menu utilisateur', () => {
+    beforeEach(() => {
+      // vi.restoreAllMocks() (afterEach global) ne réinitialise pas
+      // l'historique d'appel des vi.fn() sans implémentation d'origine —
+      // clearAllMocks() efface calls/results explicitement avant chaque test.
+      vi.clearAllMocks();
+      mockAuthService.currentUser.set(mockUser);
+    });
+
+    afterEach(() => {
+      mockAuthService.currentUser.set(null);
+    });
+
+    it('ouvre le menu au clic sur le prénom, et le ferme au clic sur le backdrop', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+
+      (compiled.querySelector('.user-name--trigger') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeTruthy();
+
+      (compiled.querySelector('.navbar-user-menu__backdrop') as HTMLDivElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+    });
+
+    it('ouvre le dialog "Détails du compte" et ferme le menu', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      (compiled.querySelector('.user-name--trigger') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      (compiled.querySelector('.navbar-user-menu__panel button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(compiled.querySelector('app-user-details-modal')).toBeTruthy();
+      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+    });
+
+    it('onProfileSubmitted() appelle authService.updateProfile() et efface profileSaving au succès', async () => {
+      mockAuthService.updateProfile.mockReturnValue(of(undefined));
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+
+      const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+      fixture.componentInstance.onProfileSubmitted(dto);
+
+      expect(mockAuthService.updateProfile).toHaveBeenCalledWith(dto);
+      expect(fixture.componentInstance.profileSaving()).toBe(false);
+      expect(fixture.componentInstance.profileError()).toBe('');
+    });
+
+    it('onProfileSubmitted() renseigne profileError() en cas d\'erreur HTTP', async () => {
+      mockAuthService.updateProfile.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ error: { message: 'Cet email est déjà utilisé' }, status: 409 })),
+      );
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onProfileSubmitted({ firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' });
+
+      expect(fixture.componentInstance.profileError()).toBe('Cet email est déjà utilisé');
+      expect(fixture.componentInstance.profileSaving()).toBe(false);
+    });
+
+    it('onPasswordSubmitted() appelle authService.changePassword() puis logout() au succès', async () => {
+      mockAuthService.changePassword.mockReturnValue(of(undefined));
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+
+      const dto = { currentPassword: 'ancien', newPassword: 'nouveauMdp123' };
+      fixture.componentInstance.onPasswordSubmitted(dto);
+
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(dto);
+      expect(mockAuthService.logout).toHaveBeenCalled();
+    });
+
+    it('onPasswordSubmitted() renseigne passwordError() en cas d\'erreur HTTP, sans déconnecter', async () => {
+      mockAuthService.changePassword.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ error: { message: 'Mot de passe actuel incorrect' }, status: 400 })),
+      );
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onPasswordSubmitted({ currentPassword: 'faux', newPassword: 'nouveauMdp123' });
+
+      expect(fixture.componentInstance.passwordError()).toBe('Mot de passe actuel incorrect');
+      expect(mockAuthService.logout).not.toHaveBeenCalled();
+    });
   });
 });

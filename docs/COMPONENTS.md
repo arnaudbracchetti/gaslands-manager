@@ -98,6 +98,11 @@ Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`, `AtelierPage`, `Atel
 
 ```mermaid
 graph TD
+    subgraph Shell
+        App["App (smart, racine)"]
+        UserDetailsModal
+    end
+
     subgraph Shared["Shared (réutilisables)"]
         SlotGauge
         ConfirmModal
@@ -218,6 +223,7 @@ graph TD
     GameResultWizard --> WreckDesignationStep
     GameResultWizard --> WreckResolutionStep
     AdminUsers --> ConfirmModal
+    App --> UserDetailsModal
 ```
 
 ---
@@ -247,6 +253,49 @@ Page d'inscription (prénom, nom, email, mot de passe). Crée le compte et navig
 | **Type** | Smart |
 | **Route** | `/register` |
 | **Services** | `AuthService`, `Router` |
+
+---
+
+### `UserDetailsModal` — `auth/user-details-modal/`
+
+Dialog "Détails du compte", ouvert depuis le menu utilisateur de la navbar
+(`App`, clic sur le prénom en haut à droite — même structure trigger/
+backdrop/panel que le menu "⋯" de `ParticipantList`). Deux sous-formulaires
+indépendants (Informations / Mot de passe), chacun avec son propre bouton,
+son propre état de sauvegarde et sa propre erreur possédés par le parent
+(`App`) — même pattern que `ChangeTeamModal` (pré-remplissage via `effect()`
+sur l'input `user`, resynchronisé à chaque ouverture puisque l'instance du
+composant persiste entre deux ouvertures). Le rôle est affiché en texte,
+jamais dans un champ éditable. Après un changement de mot de passe réussi,
+le parent appelle `authService.logout()` (déconnexion forcée, cf.
+[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)) — le dialog n'a donc
+pas besoin de vider ses propres champs mot de passe, la redirection vers
+`/login` le démonte.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-user-details-modal` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `user` | `User` | — | Utilisateur courant (pré-remplissage des deux sous-formulaires) |
+| `profileSaving` | `boolean` | `false` | Sauvegarde du sous-formulaire Informations en cours |
+| `profileError` | `string` | `''` | Message d'erreur serveur du sous-formulaire Informations |
+| `passwordSaving` | `boolean` | `false` | Sauvegarde du sous-formulaire Mot de passe en cours |
+| `passwordError` | `string` | `''` | Message d'erreur serveur du sous-formulaire Mot de passe |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `closed` | `void` | Fermeture du dialog |
+| `profileSubmitted` | `UpdateProfileDto` | Sous-formulaire Informations validé (prénom/nom/email non vides) |
+| `passwordSubmitted` | `ChangePasswordDto` | Sous-formulaire Mot de passe validé (correspondance + longueur ≥ 6 côté client) |
+
+Utilisé par : `App` (composant racine).
 
 ---
 

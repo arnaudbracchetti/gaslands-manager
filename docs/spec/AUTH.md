@@ -28,6 +28,35 @@ Chaque utilisateur ne peut voir et modifier que ses propres données.
 
 ---
 
+## Auto-édition du profil
+
+Un utilisateur connecté peut consulter et modifier ses propres informations
+depuis le menu ouvert au clic sur son prénom, tout en haut de la navbar
+(`App`) — entrée "Détails du compte", qui ouvre `UserDetailsModal` (cf.
+[COMPONENTS.md](../COMPONENTS.md#userdetailsmodal--authuser-details-modal)).
+Le dialog contient deux sous-formulaires indépendants :
+
+- **Informations** (`PATCH /api/auth/me`) : prénom, nom, email. Le rôle est
+  affiché en lecture seule — jamais modifiable par ce endpoint ni par
+  l'utilisateur lui-même (seul `AdminSeedService`, cf. ci-dessous, ou un futur
+  écran admin dédié, peut changer un rôle). L'email est revérifié unique en
+  base au même titre qu'à l'inscription (contrainte `unique` PostgreSQL,
+  capturée comme à l'inscription — HTTP 409 si déjà pris par un autre
+  compte). En cas de succès, la réponse (profil à jour) remplace directement
+  le `currentUser` du frontend : la navbar reflète le changement sans
+  requête supplémentaire.
+- **Mot de passe** (`PATCH /api/auth/me/password`) : exige le mot de passe
+  actuel (vérifié par `bcrypt.compare`, même principe que la connexion) en
+  plus du nouveau mot de passe (même règle de longueur minimale — 6
+  caractères — qu'à l'inscription). **Après un changement réussi,
+  l'utilisateur est automatiquement déconnecté** (`authService.logout()`,
+  redirection vers `/login`) : ce projet n'a pas de mécanisme de révocation
+  JWT (token stateless), la reconnexion avec le nouveau mot de passe est donc
+  le seul moyen de garantir qu'aucune session active ne continue de tourner
+  avec l'ancien mot de passe implicitement validé.
+
+---
+
 ## Compte administrateur
 
 Au démarrage du backend, `AdminSeedService` (`OnModuleInit`, même pattern que `CatalogService`,
@@ -74,7 +103,7 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 | `lastName` | string | obligatoire |
 | `email` | string | obligatoire, unique |
 | `password` | string | hash bcrypt (jamais retourné en réponse) |
-| `role` | `'user' \| 'admin'` | défaut : `'user'`. Non modifiable via `/api/auth/register` (champ absent de `RegisterDto`). Le compte unique `role: 'admin'` est créé/synchronisé au démarrage par `AdminSeedService`. |
+| `role` | `'user' \| 'admin'` | défaut : `'user'`. Non modifiable via `/api/auth/register` (champ absent de `RegisterDto`) ni via `PATCH /api/auth/me` (auto-édition du profil, cf. ci-dessus — affiché en lecture seule). Le compte unique `role: 'admin'` est créé/synchronisé au démarrage par `AdminSeedService`. |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
 
@@ -87,6 +116,8 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 | POST | `/api/auth/register` | Non | Création de compte |
 | POST | `/api/auth/login` | Non | Connexion, retourne JWT |
 | GET | `/api/auth/me` | JWT | Retourne l'utilisateur courant |
+| PATCH | `/api/auth/me` | JWT | Auto-édition du profil (prénom/nom/email) — 409 si email déjà pris |
+| PATCH | `/api/auth/me/password` | JWT | Changement de mot de passe (mot de passe actuel requis) — déconnecte l'utilisateur au succès |
 | GET | `/api/users` | JWT + admin | Liste tous les comptes (`RolesGuard`) |
 | DELETE | `/api/users/:id` | JWT + admin | Supprime un compte (auto-suppression interdite) |
 | PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte (auto-désactivation interdite) |

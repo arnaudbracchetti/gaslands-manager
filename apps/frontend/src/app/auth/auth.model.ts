@@ -43,3 +43,21 @@ export interface RegisterDto {
   email: string;
   password: string;
 }
+
+/**
+ * Données envoyées à PATCH /api/auth/me (auto-édition du profil).
+ * Le rôle n'est jamais modifiable via ce DTO.
+ */
+export interface UpdateProfileDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+/**
+ * Données envoyées à PATCH /api/auth/me/password (changement de mot de passe).
+ */
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}

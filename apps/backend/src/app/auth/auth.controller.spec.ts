@@ -31,6 +31,8 @@ describe('AuthController', () => {
   const mockAuthService = {
     register: vi.fn().mockResolvedValue(mockAuthResponse),
     login: vi.fn().mockResolvedValue(mockAuthResponse),
+    updateProfile: vi.fn(),
+    changePassword: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -82,6 +84,37 @@ describe('AuthController', () => {
       const result = controller.getProfile(req);
 
       expect(result).toEqual(mockAuthResponse.user);
+    });
+  });
+
+  // ── updateProfile ──────────────────────────────────────────────────────────
+
+  describe('updateProfile()', () => {
+    it('appelle AuthService.updateProfile() avec req.user.id et le DTO', async () => {
+      const req = { user: mockAuthResponse.user };
+      const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+      const updated = { ...mockAuthResponse.user, ...dto };
+      mockAuthService.updateProfile.mockResolvedValue(updated);
+
+      const result = await controller.updateProfile(req, dto);
+
+      expect(mockAuthService.updateProfile).toHaveBeenCalledWith(1, dto);
+      expect(result).toEqual(updated);
+    });
+  });
+
+  // ── changePassword ─────────────────────────────────────────────────────────
+
+  describe('changePassword()', () => {
+    it('appelle AuthService.changePassword() avec req.user.id et le DTO', async () => {
+      const req = { user: mockAuthResponse.user };
+      const dto = { currentPassword: 'ancienMdp', newPassword: 'nouveauMdp123' };
+      mockAuthService.changePassword.mockResolvedValue(undefined);
+
+      const result = await controller.changePassword(req, dto);
+
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(1, dto);
+      expect(result).toBeUndefined();
     });
   });
 });

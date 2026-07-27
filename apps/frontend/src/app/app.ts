@@ -1,14 +1,17 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import type { ChangePasswordDto, UpdateProfileDto } from './auth/auth.model';
 import { AuthService } from './auth/auth.service';
+import { UserDetailsModal } from './auth/user-details-modal/user-details-modal';
 import { Icon } from './shared/icon/icon';
 // AuthService importé pour annoter le membre de classe (règle memberVariableDeclaration).
 
 // App est le composant racine : il est chargé en premier et encadre toute l'application
 // RouterModule fournit les directives routerLink, routerLinkActive et router-outlet
 @Component({
-  imports: [RouterModule, Icon],
+  imports: [RouterModule, Icon, UserDetailsModal],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -37,6 +40,20 @@ export class App implements OnInit {
    */
   docSlug: WritableSignal<string | null> = signal(null);
 
+  /** Menu déroulant ouvert au clic sur le prénom dans la navbar. */
+  userMenuOpen: WritableSignal<boolean> = signal(false);
+
+  /** Dialog "Détails du compte", ouvert depuis l'entrée du menu ci-dessus. */
+  showUserDetailsModal: WritableSignal<boolean> = signal(false);
+
+  /** État du sous-formulaire "Informations" du dialog — possédé ici (parent smart). */
+  profileSaving: WritableSignal<boolean> = signal(false);
+  profileError: WritableSignal<string> = signal('');
+
+  /** État du sous-formulaire "Mot de passe" du dialog — possédé ici (parent smart). */
+  passwordSaving: WritableSignal<boolean> = signal(false);
+  passwordError: WritableSignal<string> = signal('');
+
   ngOnInit(): void {
     // Paramètre typé `unknown` (plutôt que le type `Event` du routeur, non
     // ré-exporté sans ambiguïté par @angular/router) : `instanceof` fonctionne
@@ -58,5 +75,57 @@ export class App implements OnInit {
       route = route.firstChild;
     }
     return (route.snapshot.data['docSlug'] as string | undefined) ?? null;
+  }
+
+  toggleUserMenu(): void {
+    this.userMenuOpen.set(!this.userMenuOpen());
+  }
+
+  closeUserMenu(): void {
+    this.userMenuOpen.set(false);
+  }
+
+  openUserDetails(): void {
+    this.closeUserMenu();
+    this.profileError.set('');
+    this.passwordError.set('');
+    this.showUserDetailsModal.set(true);
+  }
+
+  closeUserDetails(): void {
+    this.showUserDetailsModal.set(false);
+  }
+
+  onProfileSubmitted(dto: UpdateProfileDto): void {
+    this.profileSaving.set(true);
+    this.profileError.set('');
+    this.authService.updateProfile(dto).subscribe({
+      next: (): void => {
+        this.profileSaving.set(false);
+      },
+      error: (err: HttpErrorResponse): void => {
+        this.profileError.set(err.error?.message ?? 'Erreur lors de la mise à jour du profil');
+        this.profileSaving.set(false);
+      },
+    });
+  }
+
+  // Après un changement de mot de passe réussi, on force la déconnexion
+  // (pas de mécanisme de révocation JWT côté serveur) : la reconnexion se
+  // fait naturellement avec le nouveau mot de passe. logout() redirige vers
+  // /login, ce qui démonte le dialog par la même occasion.
+  onPasswordSubmitted(dto: ChangePasswordDto): void {
+    this.passwordSaving.set(true);
+    this.passwordError.set('');
+    this.authService.changePassword(dto).subscribe({
+      next: (): void => {
+        this.passwordSaving.set(false);
+        this.authService.logout();
+      },
+      error: (err: HttpErrorResponse): void => {
+        this.passwordError.set(err.error?.message ?? 'Erreur lors du changement de mot de passe');
+        this.passwordSaving.set(false);
+      },
+    });
   }
 }
