@@ -8,7 +8,7 @@ import { ForbiddenException, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RolesGuard } from './roles.guard';
-import { UserRole } from './user.entity';
+import { UserRole } from './domain/user-role';
 
 const createContext = (role: UserRole): ExecutionContext => {
   return {

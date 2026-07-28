@@ -59,14 +59,14 @@ describe('CampaignQueryService', () => {
 
     it('résout le nom de l\'organisateur et le nombre de participants validés', async () => {
       campaignRepo.findOne.mockResolvedValue({ id: 1, name: 'C', state: CampaignState.EN_CONSTRUCTION });
-      participantRepo.findOne.mockResolvedValue({ user: { firstName: 'Ada', lastName: 'Lovelace' } });
+      participantRepo.findOne.mockResolvedValue({ user: { pseudo: 'AdaTheAce' } });
       participantRepo.count.mockResolvedValue(3);
 
       const summary = await service.findByInviteCode('code');
 
       expect(summary).toEqual({
         id: 1, name: 'C', state: CampaignState.EN_CONSTRUCTION,
-        organizerName: 'Ada Lovelace', participantCount: 3,
+        organizerName: 'AdaTheAce', participantCount: 3,
       });
     });
   });
@@ -132,7 +132,7 @@ describe('CampaignQueryService', () => {
       });
       const createdAt = new Date('2026-07-01T00:00:00Z');
       participantRepo.find.mockResolvedValue([
-        { id: 1, user: { firstName: 'Ada', lastName: 'Lovelace' }, team: { name: 'Les Furieux' } },
+        { id: 1, user: { pseudo: 'AdaTheAce' }, team: { name: 'Les Furieux' } },
       ]);
       gameEventRepo.find.mockResolvedValue([{ id: 100, createdAt }]);
 
@@ -141,7 +141,7 @@ describe('CampaignQueryService', () => {
       expect(journal).toEqual([
         {
           eventId: 100, participantId: 1, description: 'Classé 1 (+10 PC)',
-          userName: 'Ada Lovelace', teamName: 'Les Furieux', createdAt,
+          userName: 'AdaTheAce', teamName: 'Les Furieux', createdAt,
         },
       ]);
     });
@@ -270,7 +270,7 @@ describe('CampaignQueryService', () => {
 
       participantRepo.findOne.mockResolvedValue({ id: participant.id }); // assertVisibleParticipant OK
       participantRepo.find.mockResolvedValue([
-        { id: 1, user: { firstName: 'Ada', lastName: 'Lovelace' }, team: { name: 'Les Furieux' } },
+        { id: 1, user: { pseudo: 'AdaTheAce' }, team: { name: 'Les Furieux' } },
       ]);
       gameEventRepo.find.mockResolvedValue([{ id: 200, createdAt: new Date('2026-07-26T10:08:00Z') }]);
 

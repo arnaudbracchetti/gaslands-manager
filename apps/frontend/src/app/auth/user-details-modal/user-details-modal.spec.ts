@@ -14,6 +14,8 @@ const mockUser: User = {
   id: 1,
   firstName: 'Jean',
   lastName: 'Dupont',
+  pseudo: 'JeanLeFou',
+  callName: 'JeanLeFou',
   email: 'jean@test.com',
   role: 'user',
   isActive: true,
@@ -59,10 +61,11 @@ describe('UserDetailsModal', () => {
 
     component.firstName.set('Jeanne');
     component.lastName.set('Martin');
+    component.pseudo.set('Furiosa');
     component.email.set('jeanne@test.com');
     component.onProfileSubmit();
 
-    expect(emitted).toEqual([{ firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' }]);
+    expect(emitted).toEqual([{ firstName: 'Jeanne', lastName: 'Martin', pseudo: 'Furiosa', email: 'jeanne@test.com' }]);
   });
 
   it('n\'émet pas profileSubmitted si un champ obligatoire est vide', () => {

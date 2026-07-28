@@ -12,7 +12,7 @@
  *   export class UsersController { ... }
  */
 import { SetMetadata } from '@nestjs/common';
-import { UserRole } from './user.entity';
+import { UserRole } from './domain/user-role';
 
 export const ROLES_KEY = 'roles';
 

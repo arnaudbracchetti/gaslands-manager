@@ -59,7 +59,8 @@ clôt le document. Sur écran (hors impression), le rendu est lui-même contrain
 d'une page A4 (centré, `@media screen`) pour prévisualiser fidèlement la mise en page imprimée.
 
 **Bandeau d'en-tête** : outre le nom d'équipe, le sponsor et le coût total, affiche le nom
-du joueur connecté (prénom + nom, résolu depuis `req.user`, jamais une requête DB
+du joueur connecté (son **pseudo**, via `req.user.callName` — cf.
+[AUTH.md — Nom d'affichage](AUTH.md#nom-daffichage-callname) ; jamais une requête DB
 supplémentaire) et, si disponibles, les points de sabotage sous forme de cases à cocher
 (une case par point) - une case par point permet au joueur de les cocher au fur et à mesure
 qu'il les dépense pendant la partie physique, même idiome visuel que les cases de munitions

@@ -15,14 +15,16 @@
  * 6. La valeur retournée par validate() est attachée à req.user.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import type { UserRole } from './user.entity';
-import { type SafeUser, UserService } from './user.service';
+import { USER_REPOSITORY } from './auth.tokens';
+import type { User } from './domain/user';
+import type { UserRole } from './domain/user-role';
+import type { IUserRepository } from './domain/user.repository.interface';
 
-// Le payload est ce qu'on a mis dans jwtService.sign({ sub: userId, email, role })
+// Le payload est ce qu'on a mis dans JwtTokenIssuer.issue()
 interface JwtPayload {
   sub: number;  // "sub" = subject = identifiant de l'utilisateur (convention JWT)
   email: string;
@@ -33,7 +35,8 @@ interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     config: ConfigService,
-    private readonly userService: UserService,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepo: IUserRepository,
   ) {
     super({
       // Où chercher le token dans la requête HTTP
@@ -49,14 +52,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   /**
    * Appelée par Passport après vérification réussie du token.
-   * Le résultat est attaché à req.user dans le contrôleur.
    *
-   * On recharge l'utilisateur depuis la base pour avoir des données fraîches
-   * (et pour que req.user soit un objet User complet, pas juste le payload JWT).
+   * Retourne l'AGRÉGAT de domaine, pas un objet plat : c'est ce qui rend
+   * `req.user.callName` disponible dans tous les controllers (y compris ceux
+   * de `team/` et `campaign/`, pour le nom du joueur sur la fiche d'équipe).
+   * Corollaire : un controller ne renvoie jamais `req.user` tel quel en réponse
+   * HTTP — toujours via `userDomainToDto`, sinon le getter est perdu.
+   *
+   * On recharge depuis la base pour disposer de données fraîches (rôle,
+   * activation) plutôt que de faire confiance au payload du token.
+   * null = compte supprimé depuis l'émission du token → 401 automatique.
    */
-  // Promise<SafeUser | null> : Passport place cette valeur dans req.user.
-  // null = utilisateur supprimé depuis l'émission du token → 401 automatique.
-  async validate(payload: JwtPayload): Promise<SafeUser | null> {
-    return this.userService.findById(payload.sub);
+  validate(payload: JwtPayload): Promise<User | null> {
+    return this.userRepo.findById(payload.sub);
   }
 }

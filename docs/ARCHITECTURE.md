@@ -88,7 +88,10 @@ module.exports = { '/api': { target: `http://localhost:${backendPort}`, secure: 
 ```
 apps/backend/src/app/
 ├── app.module.ts        ← Module racine
-├── auth/                ← Authentification (User, JWT, bcrypt)
+├── auth/                ← Agrégat User (DDD — voir §3.4) : authentification, profil, administration des comptes
+│   ├── domain/          ← Agrégat User (règles + getter `callName`), UserRole, IUserRepository, IPasswordHasher, ITokenIssuer
+│   ├── application/     ← 7 Use Cases (Register, Login, UpdateProfile, ChangePassword, ListUsers, RemoveUser, SetActive)
+│   └── infrastructure/  ← UserRepository, UserMapper, user-http.mapper, BcryptPasswordHasher, JwtTokenIssuer, entité ORM
 ├── catalog/             ← Catalogue YAML → Map en mémoire au démarrage
 ├── content/             ← Lecture des fichiers Markdown → HTML
 ├── shared/domain/       ← DomainException partagée entre team/ et campaign/
@@ -163,7 +166,7 @@ class TestCatalogService extends CatalogService {
 > Cette section-ci documente le **pattern concret déjà en place** dans ce repo — le
 > résultat d'une conception passée, pas la méthode pour y arriver.
 
-Le module `team/` implémente l'architecture **Domain-Driven Design** — `Team` est l'agrégat racine qui englobe `Vehicle`, `Weapon` et `VehicleImprovement` comme entités enfants. Ce pattern s'applique à tout nouveau module domaine complexe. Quatre couches avec responsabilités strictes :
+Le module `team/` implémente l'architecture **Domain-Driven Design** — `Team` est l'agrégat racine qui englobe `Vehicle`, `Weapon` et `VehicleImprovement` comme entités enfants. Ce pattern s'applique à tout nouveau module domaine complexe. `campaign/` et `auth/` le suivent également : ce dernier a été refondu depuis un modèle anémique (ex-`UserService`/`AuthService`, supprimés) vers l'agrégat `User` — cf. §3.5 et [spec/AUTH.md](spec/AUTH.md#nom-daffichage-callname). Quatre couches avec responsabilités strictes :
 
 | Couche | Dossier | Contient | Règle absolue |
 |--------|---------|----------|---------------|
@@ -210,6 +213,14 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 
 **Réponses HTTP** — jamais retourner une entité ORM brute ni un agrégat domaine directement. `vehicleDomainToDto()` (`infrastructure/team-http.mapper.ts`) traduit un Vehicle domaine en DTO sérialisable. Reproduire ce pattern pour tout nouveau module DDD.
 
+> ⚠️ Ce n'est pas une préférence stylistique : `JSON.stringify()` **ne sérialise pas**
+> les accesseurs `get` d'un prototype de classe. Un agrégat renvoyé tel quel perd
+> silencieusement tous ses champs calculés, sans la moindre erreur. Cas le plus
+> exposé : `User.callName` (`auth/`), le nom d'affichage de l'utilisateur — d'où
+> `userDomainToDto()`, second exemple du même pattern. Corollaire : un controller ne
+> renvoie jamais `req.user` directement (c'est l'agrégat `User` déposé par
+> `JwtStrategy.validate()`), toujours via ce mapper.
+
 **Read-model présentationnel partagé entre deux modules — fiche d'équipe exportable.**
 `team/infrastructure/team-sheet.mapper.ts`/`team-sheet.renderer.ts` traduisent un
 `Vehicle`/`Team` déjà chargé en document HTML imprimable, consommés à la fois par
@@ -238,12 +249,20 @@ pattern singleton-en-mémoire que `CatalogService` (§3.3). Comportement fonctio
 (création, resynchronisation, garantie d'unicité) : voir
 [spec/AUTH.md — Compte administrateur](spec/AUTH.md#compte-administrateur).
 
+Reste un service NestJS plutôt qu'un use case : il n'est déclenché par aucune requête
+HTTP, seulement par le cycle de vie du module. Il passe néanmoins par `IUserRepository`
+et l'agrégat comme tout le reste — aucune écriture ORM directe, aucun appel à bcrypt
+(le hachage transite par `IPasswordHasher`), ce qui permet à son spec de se passer de
+`vi.mock('bcrypt')` et d'un faux Repository TypeORM.
+
 Détails d'implémentation absents de la spec : `ADMIN_PASSWORD` est lu via
 `config.getOrThrow()` (pas de valeur par défaut pour un secret, même logique que
 `DATABASE_PASSWORD` dans `app.module.ts`) : absent de `.env` → crash explicite au
 démarrage. `ADMIN_EMAIL` a un défaut (`admin@gaslands.local`). Le mot de passe est
-haché bcrypt coût 10 (même que `UserService.create()`). `role` (enum `UserRole`,
-`user.entity.ts`) est exclu de `RegisterDto`, colonne à `default: UserRole.USER`.
+haché bcrypt coût 10 (constante de `BcryptPasswordHasher`, seul endroit du code qui
+importe bcrypt). `role` (enum `UserRole`, `auth/domain/user-role.ts`) est exclu de
+`RegisterDto` et forcé par la fabrique `User.register()`, colonne à
+`default: UserRole.USER`.
 
 ### 3.6 `TeamSummaryDto` — read model léger
 
@@ -264,7 +283,12 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 |---------|------|
 | `apps/backend/src/main.ts` | Bootstrap, CORS, préfixe `/api`, écoute `0.0.0.0:3000` |
 | `apps/backend/src/app/app.module.ts` | Module racine : TypeORM, ConfigModule, modules domaine |
-| `apps/backend/src/app/auth/` | Auth complète (entity, service, controller, strategy, guard) |
+| `apps/backend/src/app/auth/domain/user.ts` | Agrégat racine User — toutes les règles du compte, et le getter `callName` : **unique** point de vérité du nom d'affichage d'un utilisateur (cf. [spec/AUTH.md](spec/AUTH.md#nom-daffichage-callname)) |
+| `apps/backend/src/app/auth/domain/password-hasher.interface.ts` | Port hexagonal du hachage (`IPasswordHasher`) — permet à la règle « le mot de passe actuel doit correspondre » de vivre dans l'agrégat sans qu'il importe bcrypt. Même intention qu'`IRandomizer` (§3.8) |
+| `apps/backend/src/app/auth/domain/token-issuer.interface.ts` | Port hexagonal d'émission du JWT (`ITokenIssuer`) — évite que `application/` importe `@nestjs/jwt` |
+| `apps/backend/src/app/auth/application/` | 7 use cases. **Aucun ne porte `@LogUseCase()`** : ce décorateur sérialise la commande entière dans les logs, ce qui écrirait les mots de passe en clair |
+| `apps/backend/src/app/auth/infrastructure/user.mapper.ts` | Mapping ORM ↔ agrégat. Fonction pure exportée hors du module : `CampaignQueryService` s'en sert pour lire `callName` sur un `UserOrm` chargé par relation |
+| `apps/backend/src/app/auth/infrastructure/user-http.mapper.ts` | Agrégat → DTO HTTP. Matérialise `callName` (getter non sérialisable) et n'expose jamais le hash — remplace l'ancien `UserService.sanitize()` |
 | `apps/backend/src/app/catalog/` | Catalogue YAML → Map en mémoire |
 | `apps/backend/src/app/content/` | Markdown → HTML via `marked` |
 | `apps/backend/src/app/team/domain/team.ts` | Agrégat racine — toutes les règles métier (budget, sponsor lock, mutations) |

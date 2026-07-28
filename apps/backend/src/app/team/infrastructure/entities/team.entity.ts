@@ -8,7 +8,7 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { UserOrm } from '../../../auth/user.entity';
+import { UserOrm } from '../../../auth/infrastructure/entities/user.entity';
 import { VehicleOrm } from './vehicle.entity';
 
 /**

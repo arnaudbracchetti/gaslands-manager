@@ -47,6 +47,19 @@
         </div>
 
         <div class="form-group">
+          <label for="udm-pseudo">Pseudo</label>
+          <input
+            id="udm-pseudo"
+            type="text"
+            [ngModel]="pseudo()"
+            (ngModelChange)="pseudo.set($event)"
+            name="pseudo"
+            autocomplete="nickname"
+            required
+          />
+        </div>
+
+        <div class="form-group">
           <label for="udm-email">Email</label>
           <input
             id="udm-email"

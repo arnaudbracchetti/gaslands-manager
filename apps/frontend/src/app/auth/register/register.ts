@@ -22,13 +22,14 @@ export class Register {
 
   readonly firstName: WritableSignal<string> = signal('');
   readonly lastName: WritableSignal<string> = signal('');
+  readonly pseudo: WritableSignal<string> = signal('');
   readonly email: WritableSignal<string> = signal('');
   readonly password: WritableSignal<string> = signal('');
   readonly errorMessage: WritableSignal<string> = signal('');
   readonly isLoading: WritableSignal<boolean> = signal(false);
 
   onSubmit(): void {
-    if (!this.firstName() || !this.lastName() || !this.email() || !this.password()) {
+    if (!this.firstName() || !this.lastName() || !this.pseudo() || !this.email() || !this.password()) {
       this.errorMessage.set('Veuillez remplir tous les champs');
       return;
     }
@@ -40,6 +41,7 @@ export class Register {
       .register({
         firstName: this.firstName(),
         lastName: this.lastName(),
+        pseudo: this.pseudo(),
         email: this.email(),
         password: this.password(),
       })

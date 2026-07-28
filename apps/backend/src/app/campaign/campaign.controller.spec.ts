@@ -1,12 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CampaignController } from './campaign.controller';
+import { User } from '../auth/domain/user';
+import { UserRole } from '../auth/domain/user-role';
 
 /**
  * Tests de câblage du CampaignController : chaque route traduit la requête HTTP en
  * commande et délègue au bon use case / query service. Aucune règle métier ici —
  * on vérifie uniquement la délégation et la recomposition de la réponse.
  */
-const req = { user: { id: 42, email: 'u@x', firstName: 'Jean', lastName: 'Dupont' } };
+// Vraie instance d'agrégat, comme ce que JwtStrategy dépose dans req.user :
+// c'est son getter `callName` que le controller lit pour `playerName`.
+const req = {
+  user: new User(42, 'Jean', 'Dupont', 'JeanLeFou', 'u@x', 'hashed:x', UserRole.USER, true, new Date(), new Date()),
+};
 
 // Fabrique un mock de use case (objet avec execute()).
 function uc(returnValue?: unknown): { execute: ReturnType<typeof vi.fn> } {
@@ -170,7 +176,7 @@ describe('CampaignController (câblage)', () => {
     expect(getCampaignTeamSheetUseCase.execute).toHaveBeenCalledWith({
       campaignId: 1,
       userId: 42,
-      playerName: 'Jean Dupont',
+      playerName: 'JeanLeFou',
     });
     expect(result).toBe('<!doctype html>...');
   });

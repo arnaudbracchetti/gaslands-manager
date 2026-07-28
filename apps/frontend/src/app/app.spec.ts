@@ -22,6 +22,8 @@ const mockUser: User = {
   id: 1,
   firstName: 'Jean',
   lastName: 'Dupont',
+  pseudo: 'JeanLeFou',
+  callName: 'JeanLeFou',
   email: 'jean@test.com',
   role: 'user',
   isActive: true,
@@ -137,7 +139,7 @@ describe('App (composant racine)', () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
 
-      const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+      const dto = { firstName: 'Jeanne', lastName: 'Martin', pseudo: 'Furiosa', email: 'jeanne@test.com' };
       fixture.componentInstance.onProfileSubmitted(dto);
 
       expect(mockAuthService.updateProfile).toHaveBeenCalledWith(dto);
@@ -152,7 +154,7 @@ describe('App (composant racine)', () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
 
-      fixture.componentInstance.onProfileSubmitted({ firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' });
+      fixture.componentInstance.onProfileSubmitted({ firstName: 'Jeanne', lastName: 'Martin', pseudo: 'Furiosa', email: 'jeanne@test.com' });
 
       expect(fixture.componentInstance.profileError()).toBe('Cet email est déjà utilisé');
       expect(fixture.componentInstance.profileSaving()).toBe(false);

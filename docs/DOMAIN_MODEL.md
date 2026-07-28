@@ -329,6 +329,104 @@ véhicule en atelier](spec/CAMPAIGN.md#renommage-dun-véhicule-en-atelier).
 
 ---
 
+## 1 bis. Agrégat User
+
+Agrégat **sans entité enfant** — une seule ligne `users`, aucune collection. Sa
+valeur n'est donc pas la composition mais la **centralisation des règles du
+compte**, jusque-là dispersées dans des services anémiques (`UserService`/
+`AuthService`, supprimés), et surtout du getter `callName` : le seul endroit qui
+décide quel nom afficher pour un utilisateur, partout dans l'application (cf.
+[spec/AUTH.md](spec/AUTH.md#nom-daffichage-callname)).
+
+```mermaid
+classDiagram
+    direction LR
+
+    class User {
+        <<Aggregate Root>>
+        +id : number
+        -_firstName : string
+        -_lastName : string
+        -_pseudo : string
+        -_email : string
+        -_passwordHash : string
+        -_role : UserRole
+        -_isActive : boolean
+        +firstName : string
+        +lastName : string
+        +pseudo : string
+        +email : string
+        +role : UserRole
+        +isActive : boolean
+        +callName : string
+        +register(cmd, hasher)$ Promise~User~
+        +registerAdmin(cmd, hasher)$ Promise~User~
+        +updateProfile(cmd) void
+        +changePassword(current, new, hasher) Promise~void~
+        +resetPassword(new, hasher) Promise~void~
+        +changeEmail(email) void
+        +setActive(isActive, requesterId) void
+        +assertCanAuthenticate(password, hasher) Promise~void~
+        +assertRemovableBy(requesterId) void
+    }
+
+    class IPasswordHasher {
+        <<Port>>
+        +hash(plain) Promise~string~
+        +compare(plain, hash) Promise~boolean~
+    }
+
+    class ITokenIssuer {
+        <<Port>>
+        +issue(user) string
+    }
+
+    class IUserRepository {
+        <<Port>>
+        +findById(id) Promise~User~
+        +findByEmail(email) Promise~User~
+        +findAll() Promise~User[]~
+        +findAdmin() Promise~User~
+        +save(user) Promise~User~
+        +remove(id) Promise~void~
+    }
+
+    class DomainException {
+        <<Exception>>
+    }
+
+    User ..> IPasswordHasher : reçoit en paramètre
+    User ..> DomainException : lève
+    IUserRepository ..> User : charge / persiste
+    ITokenIssuer ..> User : lit id/email/role
+```
+
+**`callName`, unique point de vérité** : retourne aujourd'hui `_pseudo`. Aucun
+consommateur (use case, controller, read model, frontend) ne lit `pseudo` pour de
+l'affichage — changer la règle ne demande de toucher que ce getter. Le pseudo
+**brut** reste exposé séparément par le DTO HTTP, pour le seul pré-remplissage du
+formulaire d'édition : même couple que `Vehicle.customName` (brut) / `Vehicle.nom`
+(résolu), §1.
+
+**`_role` est `readonly`** : l'impossibilité pour un utilisateur de changer son
+propre rôle est structurelle, pas une vérification qu'un appelant pourrait
+oublier. Seules les fabriques `register()`/`registerAdmin()` le fixent.
+
+**Le hachage passe par un port** (`IPasswordHasher`, implémenté par
+`BcryptPasswordHasher`) plutôt que par un import direct de bcrypt : c'est ce qui
+permet aux règles qui en dépendent (« le mot de passe actuel doit correspondre »,
+« un compte désactivé ne peut pas se connecter ») de vivre dans l'agrégat tout en
+gardant le domaine sans dépendance technique. Même intention qu'`IRandomizer`
+pour la Table des Épaves (§4). Le hasher est **passé en paramètre de méthode**,
+jamais détenu en champ — l'agrégat reste sérialisable et sans dépendance stockée.
+
+**Seule règle du compte hors agrégat** : l'unicité de l'email, qui exige de
+connaître les AUTRES utilisateurs — donnée qu'un agrégat n'a structurellement pas.
+Elle vit dans la contrainte `unique` PostgreSQL, traduite en `ConflictException`
+par `UserRepository`.
+
+---
+
 ## 2. Catalogue en mémoire
 
 Les données de jeu sont chargées **une seule fois au démarrage** depuis les fichiers YAML
@@ -490,8 +588,9 @@ erDiagram
         number id PK
         string firstName
         string lastName
+        string pseudo "nom d'affichage — source du getter User.callName, NON unique"
         string email UK
-        string password "bcrypt hash"
+        string password "bcrypt hash — champ privé de l'agrégat, jamais exposé"
         enum role "user|admin"
         boolean isActive
         date createdAt

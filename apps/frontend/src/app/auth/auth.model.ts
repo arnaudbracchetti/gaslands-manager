@@ -17,6 +17,19 @@ export interface User {
   id: number;
   firstName: string;
   lastName: string;
+  /**
+   * Valeur BRUTE du pseudo. Sert uniquement à pré-remplir le champ éditable du
+   * formulaire "Détails du compte" — pour afficher un utilisateur, utiliser
+   * `callName` ci-dessous.
+   */
+  pseudo: string;
+  /**
+   * Nom d'affichage — À UTILISER PARTOUT où l'on montre "qui" est quelqu'un
+   * (navbar, listes, en-têtes…). Champ calculé côté backend par le getter
+   * `User.callName` de l'agrégat : la règle "quel nom afficher" n'existe qu'à
+   * cet endroit-là, jamais dupliquée côté client.
+   */
+  callName: string;
   email: string;
   role: 'user' | 'admin';
   isActive: boolean;
@@ -40,6 +53,7 @@ export interface AuthResponse {
 export interface RegisterDto {
   firstName: string;
   lastName: string;
+  pseudo: string;
   email: string;
   password: string;
 }
@@ -51,6 +65,7 @@ export interface RegisterDto {
 export interface UpdateProfileDto {
   firstName: string;
   lastName: string;
+  pseudo: string;
   email: string;
 }
 

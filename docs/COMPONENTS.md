@@ -245,7 +245,7 @@ Page de connexion (email + mot de passe). Navigue vers `/home` en cas de succès
 
 ### `Register` — `auth/register/`
 
-Page d'inscription (prénom, nom, email, mot de passe). Crée le compte et navigue vers `/home`.
+Page d'inscription (prénom, nom, **pseudo**, email, mot de passe). Tous les champs sont obligatoires. Le pseudo est le nom sous lequel le joueur apparaîtra partout dans l'application (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)). Crée le compte et navigue vers `/home`.
 
 | | |
 |---|---|
@@ -259,7 +259,7 @@ Page d'inscription (prénom, nom, email, mot de passe). Crée le compte et navig
 ### `UserDetailsModal` — `auth/user-details-modal/`
 
 Dialog "Détails du compte", ouvert depuis le menu utilisateur de la navbar
-(`App`, clic sur le prénom en haut à droite — même structure trigger/
+(`App`, clic sur le pseudo en haut à droite — même structure trigger/
 backdrop/panel que le menu "⋯" de `ParticipantList`). Deux sous-formulaires
 indépendants (Informations / Mot de passe), chacun avec son propre bouton,
 son propre état de sauvegarde et sa propre erreur possédés par le parent
@@ -292,7 +292,7 @@ pas besoin de vider ses propres champs mot de passe, la redirection vers
 | Nom | Type | Description |
 |-----|------|-------------|
 | `closed` | `void` | Fermeture du dialog |
-| `profileSubmitted` | `UpdateProfileDto` | Sous-formulaire Informations validé (prénom/nom/email non vides) |
+| `profileSubmitted` | `UpdateProfileDto` | Sous-formulaire Informations validé (prénom/nom/pseudo/email non vides). Le champ pseudo est pré-rempli avec `user.pseudo` — la valeur BRUTE, pas `user.callName` qui en dérive côté backend |
 | `passwordSubmitted` | `ChangePasswordDto` | Sous-formulaire Mot de passe validé (correspondance + longueur ≥ 6 côté client) |
 
 Utilisé par : `App` (composant racine).
@@ -1567,7 +1567,7 @@ Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mir
 
 ### `AdminUsers` — `admin/users/` 🧠
 
-Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes avec toggle actif/inactif et suppression. Masque les actions sur le compte connecté.
+Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes avec toggle actif/inactif et suppression. Masque les actions sur le compte connecté. Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
 
 | | |
 |---|---|

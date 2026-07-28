@@ -5,6 +5,38 @@
 
 ---
 
+## Nom d'affichage (`callName`)
+
+Un utilisateur porte, en plus de son prénom et de son nom, un **pseudo**
+obligatoire — c'est ce pseudo, et lui seul, qui identifie le joueur partout où
+l'application montre "qui" est quelqu'un : navbar, liste des participants d'une
+campagne, journal de partie, organisateur d'une campagne, ligne "Joueur" de la
+fiche d'équipe exportable. Prénom et nom restent saisis et modifiables, mais ne
+sont plus jamais affichés hors des écrans de compte (inscription, "Détails du
+compte", administration).
+
+Le pseudo **n'est pas unique** : ce n'est pas un identifiant (l'email joue ce
+rôle), deux joueurs peuvent choisir le même.
+
+La règle "quel nom afficher" est portée par un **unique** getter de l'agrégat de
+domaine, `User.callName` (`auth/domain/user.ts`) — aujourd'hui le pseudo tel
+quel. Aucun appelant (use case, controller, read model, frontend) ne lit
+`pseudo` pour de l'affichage : faire évoluer la règle (repli sur prénom/nom si
+le pseudo est vide, format `"Pseudo (Prénom)"`…) ne demandera de modifier que ce
+getter.
+
+Conséquence sur le contrat HTTP : toute réponse exposant un utilisateur porte
+**deux** champs distincts — `pseudo` (valeur brute, dont le seul usage est de
+pré-remplir le champ éditable du formulaire) et `callName` (valeur calculée, à
+utiliser pour tout affichage). Même couple que `Vehicle.customName` (brut) /
+`Vehicle.nom` (résolu), cf. [VEHICLES.md](VEHICLES.md#construction-dun-véhicule).
+`callName` **doit** être matérialisé par le mapper HTTP
+(`infrastructure/user-http.mapper.ts`) : `JSON.stringify` ne sérialise pas les
+accesseurs `get` d'un prototype, un agrégat renvoyé tel quel perdrait
+silencieusement ce champ.
+
+---
+
 ## Utilisateurs et rôles
 
 | Rôle | Accès |
@@ -19,7 +51,7 @@ Chaque utilisateur ne peut voir et modifier que ses propres données.
 
 ## Authentification
 
-- **Inscription** (`POST /api/auth/register`) : création de compte avec prénom, nom, email, mot de passe
+- **Inscription** (`POST /api/auth/register`) : création de compte avec prénom, nom, pseudo, email, mot de passe
 - **Connexion** (`POST /api/auth/login`) : vérification du mot de passe (bcrypt), émission d'un token JWT
 - **Session persistante** : token stocké dans `localStorage`, restauré au démarrage de l'app via `GET /api/auth/me`
 - **Déconnexion** : suppression du token + redirection vers `/login`
@@ -36,10 +68,13 @@ depuis le menu ouvert au clic sur son prénom, tout en haut de la navbar
 [COMPONENTS.md](../COMPONENTS.md#userdetailsmodal--authuser-details-modal)).
 Le dialog contient deux sous-formulaires indépendants :
 
-- **Informations** (`PATCH /api/auth/me`) : prénom, nom, email. Le rôle est
+- **Informations** (`PATCH /api/auth/me`) : prénom, nom, pseudo, email. Le champ
+  édité est le pseudo **brut**, pas le `callName` qui en dérive (cf. §Nom
+  d'affichage ci-dessus). Le rôle est
   affiché en lecture seule — jamais modifiable par ce endpoint ni par
-  l'utilisateur lui-même (seul `AdminSeedService`, cf. ci-dessous, ou un futur
-  écran admin dédié, peut changer un rôle). L'email est revérifié unique en
+  l'utilisateur lui-même (garantie structurelle : `User._role` est `readonly`,
+  `updateProfile()` ne peut pas y toucher ; seul `AdminSeedService`, cf.
+  ci-dessous, ou un futur écran admin dédié, peut changer un rôle). L'email est revérifié unique en
   base au même titre qu'à l'inscription (contrainte `unique` PostgreSQL,
   capturée comme à l'inscription — HTTP 409 si déjà pris par un autre
   compte). En cas de succès, la réponse (profil à jour) remplace directement
@@ -63,7 +98,9 @@ Au démarrage du backend, `AdminSeedService` (`OnModuleInit`, même pattern que 
 cf. ARCHITECTURE.md §3.3) garantit l'existence d'un unique utilisateur `role: "admin"` :
 
 - S'il n'existe aucun utilisateur `role: "admin"` en base, il est créé avec
-  `ADMIN_EMAIL`/`ADMIN_PASSWORD` (variables `.env`, mot de passe haché via bcrypt).
+  `ADMIN_EMAIL`/`ADMIN_PASSWORD` (variables `.env`, mot de passe haché via bcrypt)
+  et le pseudo fixe `"Admin"` (pas de variable `.env` dédiée : le seed ne
+  resynchronise que l'email et le mot de passe).
 - S'il existe déjà, son email et son mot de passe sont **resynchronisés** avec
   `ADMIN_EMAIL`/`ADMIN_PASSWORD` si l'une ou l'autre de ces valeurs a changé dans `.env`
   depuis le dernier démarrage (comparaison bcrypt pour le mot de passe) — un warning est
@@ -84,8 +121,8 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
   `@Roles(UserRole.ADMIN)` au niveau du controller. `RolesGuard` lit les rôles requis
   via `Reflector` et lève `ForbiddenException` (403) si `request.user.role` n'y figure
   pas — générique (`@Roles(...)` accepte plusieurs rôles), pas spécifique à l'admin.
-  `UserService.remove`/`setActive` interdisent en plus qu'un admin s'auto-supprime ou
-  se désactive lui-même.
+  L'agrégat interdit en plus qu'un admin s'auto-supprime ou se désactive lui-même
+  (`User.assertRemovableBy` / `User.setActive`, traduits en 403 par les use cases).
 - **Frontend** : la route `/admin/users` (`AdminUsers`, cf.
   [COMPONENTS.md](../COMPONENTS.md#adminusers--adminusers-)) déclare
   `canActivate: [authGuard, adminGuard]` — `adminGuard` vérifie explicitement
@@ -101,11 +138,18 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 | `id` | UUID | PK, généré auto |
 | `firstName` | string | obligatoire |
 | `lastName` | string | obligatoire |
+| `pseudo` | string(100) | obligatoire, **non unique** — nom d'affichage, source de `callName` (cf. §Nom d'affichage ci-dessus). Colonne déclarée `default: ''` : `synchronize: true` ne peut pas ajouter une colonne NOT NULL sans défaut sur une table peuplée — seuls les comptes antérieurs à cette colonne peuvent donc valoir `''`, jusqu'à leur prochaine édition de profil |
 | `email` | string | obligatoire, unique |
-| `password` | string | hash bcrypt (jamais retourné en réponse) |
+| `password` | string | hash bcrypt. Champ **privé** de l'agrégat (`User._passwordHash`), jamais recopié par le mapper HTTP — n'existe donc dans aucune réponse par construction, plus par omission |
 | `role` | `'user' \| 'admin'` | défaut : `'user'`. Non modifiable via `/api/auth/register` (champ absent de `RegisterDto`) ni via `PATCH /api/auth/me` (auto-édition du profil, cf. ci-dessus — affiché en lecture seule). Le compte unique `role: 'admin'` est créé/synchronisé au démarrage par `AdminSeedService`. |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
+
+**Champ calculé dans la réponse API** (non stocké en base) :
+
+| Champ (DTO) | Type | Description |
+|-------------|------|-------------|
+| `callName` | string | Nom d'affichage résolu par le getter `User.callName` de l'agrégat — cf. §Nom d'affichage ci-dessus. Matérialisé par `userDomainToDto()`, jamais recalculé par un consommateur. |
 
 ---
 
@@ -113,11 +157,11 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| POST | `/api/auth/register` | Non | Création de compte |
+| POST | `/api/auth/register` | Non | Création de compte (prénom, nom, pseudo, email, mot de passe) — 400 si un champ manque ou si le mot de passe fait moins de 6 caractères |
 | POST | `/api/auth/login` | Non | Connexion, retourne JWT |
 | GET | `/api/auth/me` | JWT | Retourne l'utilisateur courant |
-| PATCH | `/api/auth/me` | JWT | Auto-édition du profil (prénom/nom/email) — 409 si email déjà pris |
+| PATCH | `/api/auth/me` | JWT | Auto-édition du profil (prénom/nom/pseudo/email) — 409 si email déjà pris |
 | PATCH | `/api/auth/me/password` | JWT | Changement de mot de passe (mot de passe actuel requis) — déconnecte l'utilisateur au succès |
 | GET | `/api/users` | JWT + admin | Liste tous les comptes (`RolesGuard`) |
-| DELETE | `/api/users/:id` | JWT + admin | Supprime un compte (auto-suppression interdite) |
-| PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte (auto-désactivation interdite) |
+| DELETE | `/api/users/:id` | JWT + admin | Supprime un compte — 403 si auto-suppression (`User.assertRemovableBy`) |
+| PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte — 403 si auto-désactivation (`User.setActive`) |

@@ -42,6 +42,20 @@
       </div>
 
       <div class="form-group">
+        <label for="pseudo">Pseudo <span style="color: #555; font-weight: 400;">(nom vu par les autres joueurs)</span></label>
+        <input
+          id="pseudo"
+          type="text"
+          [ngModel]="pseudo()"
+          (ngModelChange)="pseudo.set($event)"
+          name="pseudo"
+          placeholder="MadMax"
+          autocomplete="nickname"
+          required
+        />
+      </div>
+
+      <div class="form-group">
         <label for="email">Email</label>
         <input
           id="email"

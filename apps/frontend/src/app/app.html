@@ -45,11 +45,25 @@
           aria-haspopup="menu"
           [attr.aria-expanded]="userMenuOpen()"
           (click)="toggleUserMenu()">
-          {{ authService.currentUser()?.firstName }}
+          {{ authService.currentUser()?.callName }}
         </button>
 
         @if (userMenuOpen()) {
-          <div class="navbar-user-menu__backdrop" (click)="closeUserMenu()"></div>
+          <!--
+            Zone de fermeture — role="button" + tabindex + gestion clavier
+            (même pattern que VehicleSummaryCard/TeamCard/CampaignCard, cf.
+            COMPONENTS.md) plutôt qu'un simple (click) : un backdrop cliquable
+            doit rester atteignable au clavier (Entrée/Espace), pas seulement
+            à la souris.
+          -->
+          <div
+            class="navbar-user-menu__backdrop"
+            role="button"
+            tabindex="0"
+            aria-label="Fermer le menu"
+            (click)="closeUserMenu()"
+            (keydown.enter)="closeUserMenu()"
+            (keydown.space)="closeUserMenu()"></div>
           <div class="navbar-user-menu__panel" role="menu">
             <button type="button" role="menuitem" (click)="openUserDetails()">Détails du compte</button>
           </div>

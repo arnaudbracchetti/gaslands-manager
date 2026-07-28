@@ -41,10 +41,11 @@ describe('Register Component', () => {
 
   // ── Rendu initial ─────────────────────────────────────────────────────────
 
-  it('affiche le formulaire d\'inscription avec les 4 champs', () => {
+  it('affiche le formulaire d\'inscription avec tous ses champs', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('input[name="firstName"]')).toBeTruthy();
     expect(compiled.querySelector('input[name="lastName"]')).toBeTruthy();
+    expect(compiled.querySelector('input[name="pseudo"]')).toBeTruthy();
     expect(compiled.querySelector('input[type="email"]')).toBeTruthy();
     expect(compiled.querySelector('input[type="password"]')).toBeTruthy();
   });
@@ -57,12 +58,13 @@ describe('Register Component', () => {
 
   // ── Soumission réussie ────────────────────────────────────────────────────
 
-  it('appelle authService.register() avec les 4 champs et navigue vers /home', () => {
+  it('appelle authService.register() avec tous les champs et navigue vers /home', () => {
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate');
 
     component.firstName.set('Jean');
     component.lastName.set('Dupont');
+    component.pseudo.set('JeanLeFou');
     component.email.set('jean@test.com');
     component.password.set('password123');
     mockAuthService.register.mockReturnValue(of(undefined));
@@ -72,6 +74,7 @@ describe('Register Component', () => {
     expect(mockAuthService.register).toHaveBeenCalledWith({
       firstName: 'Jean',
       lastName: 'Dupont',
+      pseudo: 'JeanLeFou',
       email: 'jean@test.com',
       password: 'password123',
     });
@@ -83,6 +86,7 @@ describe('Register Component', () => {
   it('affiche le message d\'erreur si l\'email est déjà utilisé', () => {
     component.firstName.set('Jean');
     component.lastName.set('Dupont');
+    component.pseudo.set('JeanLeFou');
     component.email.set('jean@test.com');
     component.password.set('password123');
     mockAuthService.register.mockReturnValue(
@@ -101,6 +105,7 @@ describe('Register Component', () => {
   it('n\'envoie pas la requête si un champ est vide', () => {
     component.firstName.set('Jean');
     component.lastName.set('Dupont');
+    component.pseudo.set('JeanLeFou');
     component.email.set('jean@test.com');
     // password laissé vide
 

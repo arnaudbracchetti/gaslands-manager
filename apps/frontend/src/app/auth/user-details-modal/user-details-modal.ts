@@ -41,6 +41,7 @@ export class UserDetailsModal {
 
   firstName: WritableSignal<string> = signal('');
   lastName: WritableSignal<string> = signal('');
+  pseudo: WritableSignal<string> = signal('');
   email: WritableSignal<string> = signal('');
 
   currentPassword: WritableSignal<string> = signal('');
@@ -51,7 +52,12 @@ export class UserDetailsModal {
   roleLabel: Signal<string> = computed(() => (this.user().role === 'admin' ? 'Administrateur' : 'Utilisateur'));
 
   profileSubmitDisabled: Signal<boolean> = computed(
-    () => this.profileSaving() || !this.firstName().trim() || !this.lastName().trim() || !this.email().trim(),
+    () =>
+      this.profileSaving() ||
+      !this.firstName().trim() ||
+      !this.lastName().trim() ||
+      !this.pseudo().trim() ||
+      !this.email().trim(),
   );
 
   /** Coche client uniquement — indépendante de passwordError() (erreur serveur). */
@@ -77,6 +83,9 @@ export class UserDetailsModal {
       const u = this.user();
       this.firstName.set(u.firstName);
       this.lastName.set(u.lastName);
+      // Valeur BRUTE (`pseudo`), pas `callName` : on édite le champ source,
+      // pas le nom d'affichage qui en est dérivé côté backend.
+      this.pseudo.set(u.pseudo);
       this.email.set(u.email);
     });
   }
@@ -88,6 +97,7 @@ export class UserDetailsModal {
     this.profileSubmitted.emit({
       firstName: this.firstName(),
       lastName: this.lastName(),
+      pseudo: this.pseudo(),
       email: this.email(),
     });
   }

@@ -12,7 +12,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from './roles.decorator';
-import type { UserRole } from './user.entity';
+import type { UserRole } from './domain/user-role';
 
 interface RequestWithUser {
   user: { role: UserRole };

@@ -9,7 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { CampaignOrm } from './campaign.entity';
-import { UserOrm } from '../../../auth/user.entity';
+import { UserOrm } from '../../../auth/infrastructure/entities/user.entity';
 import { TeamOrm } from '../../../team/infrastructure/entities/team.entity';
 import { ParticipantStatus } from '../../domain/enums/campaign.enums';
 

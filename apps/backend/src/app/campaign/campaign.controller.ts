@@ -28,6 +28,7 @@ import {
   Header,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { User } from '../auth/domain/user';
 
 // Lecture (CQRS)
 import { CampaignQueryService } from './campaign-query.service';
@@ -101,9 +102,10 @@ import type { Scenario } from './scenario.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
 import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
-// Payload injecté par JwtStrategy dans req.user.
+// Agrégat User injecté par JwtStrategy dans req.user — d'où l'accès direct à
+// `req.user.callName` (le nom d'affichage, cf. auth/domain/user.ts).
 interface AuthenticatedRequest {
-  user: { id: number; email: string; firstName: string; lastName: string };
+  user: User;
 }
 
 @Controller()
@@ -259,15 +261,15 @@ export class CampaignController {
     return this.getCampaignTeamSheetUseCase.execute({
       campaignId,
       userId: req.user.id,
-      playerName: `${req.user.firstName} ${req.user.lastName}`,
+      playerName: req.user.callName,
     });
   }
 
   /**
    * GET /api/campaigns/:id/participants/:pid/sheet — fiche d'équipe exportable
    * d'UN AUTRE participant, réservée à l'organisateur (`GetCampaignTeamSheetUseCase`
-   * rejette sinon). `CampaignQueryService.getParticipant` résout le nom (prénom +
-   * nom) de la CIBLE — sans risque de fuite : un appelant non organisateur ne
+   * rejette sinon). `CampaignQueryService.getParticipant` résout le nom d'affichage
+   * (`callName`) de la CIBLE — sans risque de fuite : un appelant non organisateur ne
    * reçoit jamais cette donnée, le use case rejette avant tout rendu.
    */
   @UseGuards(JwtAuthGuard)

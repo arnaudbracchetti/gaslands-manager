@@ -14,8 +14,23 @@ import { UpdateTeamUseCase } from './application/update-team.usecase';
 import { RemoveTeamUseCase } from './application/remove-team.usecase';
 import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 import type { TeamSummaryDto } from './domain/team.repository.interface';
+import { User } from '../auth/domain/user';
+import { UserRole } from '../auth/domain/user-role';
 
-const mockUser = { id: 42, email: 'test@test.com', firstName: 'Jean', lastName: 'Dupont' };
+// Vraie instance d'agrégat, comme ce que JwtStrategy dépose dans req.user :
+// c'est son getter `callName` que le controller lit pour `playerName`.
+const mockUser = new User(
+  42,
+  'Jean',
+  'Dupont',
+  'JeanLeFou',
+  'test@test.com',
+  'hashed:x',
+  UserRole.USER,
+  true,
+  new Date(),
+  new Date(),
+);
 const mockRequest = { user: mockUser };
 
 const mockSummary: TeamSummaryDto = {
@@ -106,7 +121,7 @@ describe('TeamController', () => {
 
       const result = await controller.getSheet(1, mockRequest as never);
 
-      expect(mockGetSheet.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42, playerName: 'Jean Dupont' });
+      expect(mockGetSheet.execute).toHaveBeenCalledWith({ teamId: 1, userId: 42, playerName: 'JeanLeFou' });
       expect(result).toBe('<!doctype html>...');
     });
   });

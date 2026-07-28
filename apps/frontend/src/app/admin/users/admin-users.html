@@ -22,6 +22,7 @@
     <table class="admin-users-table">
       <thead>
         <tr>
+          <th>Pseudo</th>
           <th>Prénom</th>
           <th>Nom</th>
           <th>Email</th>
@@ -34,6 +35,7 @@
       <tbody>
         @for (user of users(); track user.id) {
           <tr>
+            <td>{{ user.callName }}</td>
             <td>{{ user.firstName }}</td>
             <td>{{ user.lastName }}</td>
             <td>{{ user.email }}</td>
@@ -64,7 +66,7 @@
 
   @if (pendingDeleteUser()) {
     <app-confirm-modal
-      [message]="'Supprimer le compte de &quot;' + pendingDeleteUser()!.firstName + ' ' + pendingDeleteUser()!.lastName + '&quot; ? Cette action est irréversible.'"
+      [message]="'Supprimer le compte de &quot;' + pendingDeleteUser()!.callName + '&quot; ? Cette action est irréversible.'"
       confirmLabel="Supprimer"
       (confirmed)="onConfirmDeleteUser()"
       (cancelled)="pendingDeleteUser.set(null)" />

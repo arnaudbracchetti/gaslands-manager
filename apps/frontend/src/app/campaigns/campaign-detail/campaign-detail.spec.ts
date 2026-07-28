@@ -33,6 +33,8 @@ const mockCurrentUser: User = {
   id: 42,
   firstName: 'Jean',
   lastName: 'Dupont',
+  pseudo: 'JeanLeFou',
+  callName: 'JeanLeFou',
   email: 'jean@example.com',
   role: 'user',
   isActive: true,

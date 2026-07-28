@@ -13,6 +13,7 @@ import {
   Header,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { User } from '../auth/domain/user';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import type { TeamSummaryDto } from './domain/team.repository.interface';
@@ -22,8 +23,9 @@ import { UpdateTeamUseCase } from './application/update-team.usecase';
 import { RemoveTeamUseCase } from './application/remove-team.usecase';
 import { GetTeamSheetUseCase } from './application/get-team-sheet.usecase';
 
+/** `req.user` est l'agrégat `User` déposé par `JwtStrategy.validate()`. */
 interface AuthenticatedRequest {
-  user: { id: number; email: string; firstName: string; lastName: string };
+  user: User;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -81,7 +83,7 @@ export class TeamController {
     return this.getTeamSheetUseCase.execute({
       teamId: id,
       userId: req.user.id,
-      playerName: `${req.user.firstName} ${req.user.lastName}`,
+      playerName: req.user.callName,
     });
   }
 }

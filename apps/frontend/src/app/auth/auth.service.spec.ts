@@ -21,6 +21,8 @@ const mockUser = {
   id: 1,
   firstName: 'Jean',
   lastName: 'Dupont',
+  pseudo: 'JeanLeFou',
+  callName: 'JeanLeFou',
   email: 'jean@test.com',
   role: 'user' as const,
   isActive: true,
@@ -135,6 +137,7 @@ describe('AuthService', () => {
       service.register({
         firstName: 'Jean',
         lastName: 'Dupont',
+        pseudo: 'JeanLeFou',
         email: 'jean@test.com',
         password: 'password123',
       }).subscribe();
@@ -166,7 +169,7 @@ describe('AuthService', () => {
   describe('updateProfile()', () => {
     it('envoie PATCH /api/auth/me et met à jour currentUser avec la réponse', () => {
       service.currentUser.set(mockUser);
-      const dto = { firstName: 'Jeanne', lastName: 'Martin', email: 'jeanne@test.com' };
+      const dto = { firstName: 'Jeanne', lastName: 'Martin', pseudo: 'Furiosa', email: 'jeanne@test.com' };
       const updatedUser = { ...mockUser, ...dto };
 
       service.updateProfile(dto).subscribe();
@@ -183,7 +186,7 @@ describe('AuthService', () => {
       service.currentUser.set(mockUser);
       let errored = false;
 
-      service.updateProfile({ firstName: 'X', lastName: 'Y', email: 'pris@test.com' }).subscribe({
+      service.updateProfile({ firstName: 'X', lastName: 'Y', pseudo: 'XY', email: 'pris@test.com' }).subscribe({
         error: () => { errored = true; },
       });
 

@@ -14,6 +14,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+// Fonction pure sans état (comme team-sheet.mapper.ts, importé par ce module) :
+// traduire la ligne `users` en agrégat est le seul moyen de lire le nom
+// d'affichage via `User.callName` plutôt que de réimplémenter la règle ici.
+import { UserMapper } from '../auth/infrastructure/user.mapper';
 import { CampaignOrm } from './infrastructure/entities/campaign.entity';
 import { CampaignParticipantOrm } from './infrastructure/entities/campaign-participant.entity';
 import { GameOrm } from './infrastructure/entities/game.entity';
@@ -127,7 +131,7 @@ export class CampaignQueryService {
       id: campaign.id,
       name: campaign.name,
       state: campaign.state,
-      organizerName: organizer ? `${organizer.user.firstName} ${organizer.user.lastName}` : '',
+      organizerName: organizer ? UserMapper.toDomain(organizer.user).callName : '',
       participantCount,
     };
   }
@@ -252,7 +256,7 @@ export class CampaignQueryService {
       const participant = participantById.get(entry.participantId);
       return {
         ...entry,
-        userName: participant ? `${participant.user.firstName} ${participant.user.lastName}` : '',
+        userName: participant ? UserMapper.toDomain(participant.user).callName : '',
         teamName: participant?.team?.name ?? '',
         createdAt: createdAtByEventId.get(entry.eventId) as Date,
       };
@@ -333,7 +337,7 @@ export class CampaignQueryService {
       teamId: p.teamId,
       status: p.status,
       isOrganizer: p.isOrganizer,
-      userName: `${p.user.firstName} ${p.user.lastName}`,
+      userName: UserMapper.toDomain(p.user).callName,
       teamName: p.team?.name ?? '',
     };
   }

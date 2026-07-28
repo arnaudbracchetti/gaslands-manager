@@ -791,7 +791,9 @@ Programme Télé (`GameList`), qui ne le porte plus. Deux points d'accès :
 
 **Deux endpoints distincts**, pas un paramètre optionnel sur une route unique :
 - `GET /api/campaigns/:id/sheet` — sa propre fiche (inchangé), `playerName`
-  résolu depuis `req.user` sans requête DB supplémentaire.
+  résolu depuis `req.user.callName` (le pseudo, cf.
+  [AUTH.md — Nom d'affichage](AUTH.md#nom-daffichage-callname)) sans requête DB
+  supplémentaire.
 - `GET /api/campaigns/:id/participants/:pid/sheet` — fiche d'un tiers,
   réservée à l'organisateur (`GetCampaignTeamSheetUseCase.resolveTarget`,
   `assertOrganizer` — `NotFoundException` sinon). Le contrôleur résout le nom

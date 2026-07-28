@@ -11,95 +11,103 @@
  *   PATCH /api/auth/me          → auto-édition du profil (protégé)
  *   PATCH /api/auth/me/password → changement de mot de passe (protégé)
  *
- * Le rôle du contrôleur est UNIQUEMENT de recevoir la requête HTTP,
- * déléguer la logique au service, et renvoyer la réponse.
- * Pas de logique métier ici.
+ * Le rôle du contrôleur est UNIQUEMENT de traduire HTTP → commande, déléguer au
+ * use case et renvoyer la réponse. Pas de logique métier ici.
  */
 
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Request, UseGuards } from '@nestjs/common';
-// import type : AuthResponse et SafeUser sont des constructions purement TypeScript
-// (interface / type alias) — elles n'existent pas à l'exécution.
-// Avec emitDecoratorMetadata + isolatedModules (config NestJS), TypeScript exige
-// `import type` pour les types utilisés dans des signatures décorées,
-// afin d'éviter d'émettre des métadonnées invalides pour des symboles inexistants.
-import { type AuthResponse, AuthService } from './auth.service';
+import { ChangePasswordUseCase } from './application/change-password.usecase';
+import { LoginUseCase } from './application/login.usecase';
+import { RegisterUseCase } from './application/register.usecase';
+import { UpdateProfileUseCase } from './application/update-profile.usecase';
+import type { User } from './domain/user';
+import type { AuthResponseDto } from './dto/auth-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import type { UserResponseDto } from './dto/user-response.dto';
+import { userDomainToDto } from './infrastructure/user-http.mapper';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import type { SafeUser } from './user.service';
+
+/**
+ * `req.user` est l'agrégat `User` lui-même, déposé par `JwtStrategy.validate()`
+ * — d'où l'accès direct à `req.user.callName` depuis n'importe quel controller.
+ */
+interface AuthenticatedRequest {
+  user: User;
+}
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly loginUseCase: LoginUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
+  ) {}
 
   /**
    * POST /api/auth/register
-   * Corps attendu : { firstName, lastName, email, password }
-   * Retourne : { access_token: string, user: SafeUser }
-   * Codes HTTP : 201 Created (succès), 409 Conflict (email déjà pris), 401 (données invalides)
+   * Corps attendu : { firstName, lastName, pseudo, email, password }
+   * Retourne : { access_token: string, user: UserResponseDto }
+   * Codes HTTP : 201 Created, 409 Conflict (email déjà pris), 400 (données invalides)
    */
   @Post('register')
-  // Promise<AuthResponse> : ce handler est async (délégation à authService.register()).
-  // Le type de retour documente le contrat HTTP : { access_token, user } sans password.
-  register(@Body() dto: RegisterDto): Promise<AuthResponse> {
-    return this.authService.register(dto);
+  register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
+    return this.registerUseCase.execute(dto);
   }
 
   /**
    * POST /api/auth/login
    * Corps attendu : { email, password }
-   * Retourne : { access_token: string, user: SafeUser }
-   * Codes HTTP : 200 OK (succès), 401 Unauthorized (identifiants invalides)
-   *
-   * Note : NestJS retourne 200 pour @Post() par défaut.
-   * Pour changer en 201, on utiliserait @HttpCode(HttpStatus.OK).
+   * Codes HTTP : 200 OK, 401 Unauthorized (identifiants invalides / compte désactivé)
    */
   @Post('login')
-  login(@Body() dto: LoginDto): Promise<AuthResponse> {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+    return this.loginUseCase.execute(dto);
   }
 
   /**
    * GET /api/auth/me
    * Requiert un header : Authorization: Bearer <jwt_token>
-   * Retourne : SafeUser (profil de l'utilisateur connecté)
    *
-   * @UseGuards(JwtAuthGuard) : déclenche la validation JWT.
-   * Si le token est valide, req.user est rempli par JwtStrategy.validate().
-   * Si le token est absent/invalide/expiré, NestJS retourne 401 automatiquement.
+   * `req.user` est un agrégat de domaine : il DOIT passer par le mapper —
+   * `JSON.stringify` ne sérialiserait pas son getter `callName`.
    */
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  // req.user est typé SafeUser (et non unknown) car JwtStrategy.validate()
-  // retourne Promise<SafeUser | null> — Passport place cette valeur dans req.user.
-  getProfile(@Request() req: { user: SafeUser }): SafeUser {
-    return req.user;
+  getProfile(@Request() req: AuthenticatedRequest): UserResponseDto {
+    return userDomainToDto(req.user);
   }
 
   /**
    * PATCH /api/auth/me
-   * Corps attendu : { firstName, lastName, email }
-   * Retourne : SafeUser mis à jour (200 OK)
-   * Codes HTTP : 400 (champ manquant), 409 (email déjà pris), 401 (token absent/invalide)
+   * Corps attendu : { firstName, lastName, pseudo, email }
+   * Codes HTTP : 200 OK, 400 (champ manquant), 409 (email déjà pris), 401
    */
   @UseGuards(JwtAuthGuard)
   @Patch('me')
-  updateProfile(@Request() req: { user: SafeUser }, @Body() dto: UpdateProfileDto): Promise<SafeUser> {
-    return this.authService.updateProfile(req.user.id, dto);
+  updateProfile(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<UserResponseDto> {
+    return this.updateProfileUseCase.execute({ ...dto, userId: req.user.id });
   }
 
   /**
    * PATCH /api/auth/me/password
    * Corps attendu : { currentPassword, newPassword }
    * Retourne : rien (204 No Content)
-   * Codes HTTP : 400 (mot de passe actuel incorrect / nouveau trop court / champ manquant), 401
+   * Codes HTTP : 400 (mot de passe actuel incorrect / nouveau trop court), 401
    */
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Patch('me/password')
-  changePassword(@Request() req: { user: SafeUser }, @Body() dto: ChangePasswordDto): Promise<void> {
-    return this.authService.changePassword(req.user.id, dto);
+  changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    return this.changePasswordUseCase.execute({ ...dto, userId: req.user.id });
   }
 }

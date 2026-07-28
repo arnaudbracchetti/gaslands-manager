@@ -11,6 +11,13 @@ import { Page, expect } from '@playwright/test';
 export interface TestUser {
   firstName: string;
   lastName: string;
+  /**
+   * Nom d'affichage. Optionnel dans les fixtures : le pseudo est obligatoire
+   * côté formulaire, mais la vingtaine de `TestUser` déjà déclarés dans les
+   * specs n'ont pas à le préciser quand il n'est pas au cœur du test — d'où le
+   * repli sur `firstName` ci-dessous.
+   */
+  pseudo?: string;
   email: string;
   password: string;
 }
@@ -22,6 +29,7 @@ export async function registerTestUser(page: Page, user: TestUser): Promise<void
   // exact: true — "Nom" est sinon aussi un match en sous-chaîne de "Prénom"
   // (suffixe "...énom").
   await page.getByLabel('Nom', { exact: true }).fill(user.lastName);
+  await page.getByLabel('Pseudo').fill(user.pseudo ?? user.firstName);
   await page.getByLabel('Email').fill(user.email);
   // getByLabel matche par défaut en sous-chaîne — le label complet du
   // formulaire d'inscription est "Mot de passe (6 caractères minimum)".
