@@ -8,6 +8,8 @@
  *
  * Le type de la partie est déduit du scénario choisi (chaque scénario porte son
  * type par défaut) ; on n'expose pas de sélecteur de type séparé dans US-A1.
+ *
+ * Chrome délégué à ModalShell (mode "action") — cf. campaign-form.ts.
  */
 import {
   Component,
@@ -22,11 +24,12 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Game, Scenario, CreateGameDto } from '../game.model';
 import { Icon } from '../../shared/icon/icon';
+import { ModalShell } from '../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-game-form',
   standalone: true,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, ModalShell],
   templateUrl: './game-form.html',
   styleUrl: './game-form.scss',
 })

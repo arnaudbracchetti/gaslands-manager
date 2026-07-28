@@ -1,47 +1,41 @@
-<!-- Formulaire d'ajout / édition d'une partie au Programme Télé, en popup -->
-<div class="gf-overlay" role="dialog" aria-modal="true"
-     [attr.aria-label]="isEdit() ? 'Modifier la partie' : 'Nouvelle partie'">
-  <div class="gf-modal">
+<!-- Formulaire d'ajout / édition d'une partie au Programme Télé. Chrome délégué à ModalShell (mode "action"). -->
+<app-modal-shell
+  [ariaLabel]="isEdit() ? 'Modifier la partie' : 'Nouvelle partie'"
+  variant="primary"
+  [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
+  [confirmDisabled]="saving()"
+  (confirmed)="saveForm()"
+  (cancelled)="cancelForm()">
 
-    <h3>
-      @if (isEdit()) {
-        <app-icon concept="modifier" size="md" /> Modifier la partie
-      } @else {
-        <app-icon concept="ajouter" size="md" /> Nouvelle partie
-      }
-    </h3>
-
-    @if (formError()) {
-      <div class="form-error">{{ formError() }}</div>
+  <h3>
+    @if (isEdit()) {
+      <app-icon concept="modifier" size="md" /> Modifier la partie
+    } @else {
+      <app-icon concept="ajouter" size="md" /> Nouvelle partie
     }
+  </h3>
 
-    <div class="form-group">
-      <label for="game-scenario">Scénario *</label>
-      @if (scenarios().length > 0) {
-        <select
-          id="game-scenario"
-          [ngModel]="formScenarioId()"
-          (ngModelChange)="formScenarioId.set($event)">
-          <option value="">— Choisir un scénario —</option>
-          @for (scenario of scenarios(); track scenario.nom_interne) {
-            <option [value]="scenario.nom_interne">
-              {{ scenario.nom }} ({{ scenario.type === 'EVENEMENT_TELE' ? 'Événement Télévisé' : 'Escarmouche' }})
-            </option>
-          }
-        </select>
-      } @else {
-        <p class="form-hint">Aucun scénario disponible.</p>
-      }
-    </div>
+  @if (formError()) {
+    <div class="form-error">{{ formError() }}</div>
+  }
 
-    <div class="form-actions">
-      <button class="btn-secondary" type="button" (click)="cancelForm()" [disabled]="saving()">
-        Annuler
-      </button>
-      <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
-        @if (saving()) { Enregistrement... } @else { Enregistrer }
-      </button>
-    </div>
-
+  <div class="form-group">
+    <label for="game-scenario">Scénario *</label>
+    @if (scenarios().length > 0) {
+      <select
+        id="game-scenario"
+        [ngModel]="formScenarioId()"
+        (ngModelChange)="formScenarioId.set($event)">
+        <option value="">— Choisir un scénario —</option>
+        @for (scenario of scenarios(); track scenario.nom_interne) {
+          <option [value]="scenario.nom_interne">
+            {{ scenario.nom }} ({{ scenario.type === 'EVENEMENT_TELE' ? 'Événement Télévisé' : 'Escarmouche' }})
+          </option>
+        }
+      </select>
+    } @else {
+      <p class="form-hint">Aucun scénario disponible.</p>
+    }
   </div>
-</div>
+
+</app-modal-shell>
