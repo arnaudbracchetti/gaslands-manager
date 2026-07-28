@@ -43,6 +43,7 @@ import { ChangeMyTeamUseCase } from './application/change-my-team.usecase';
 import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
+import { ReorderGamesUseCase } from './application/reorder-games.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
 import { ResetResultUseCase } from './application/reset-result.usecase';
 import { RollIncomeUseCase } from './application/roll-income.usecase';
@@ -167,6 +168,12 @@ import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop
       provide: RemoveGameUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
         new RemoveGameUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: ReorderGamesUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new ReorderGamesUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {

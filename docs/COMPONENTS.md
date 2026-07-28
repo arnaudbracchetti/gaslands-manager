@@ -1125,7 +1125,7 @@ Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. L
 
 ### `CampaignProgram` — `campaigns/campaign-program/` 🧠
 
-Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline) et la suppression (confirmation). Toujours affiché par le parent ; la gestion (ajout/édition/suppression) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
+Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline), la suppression (confirmation) et le réordonnancement des parties `PLANIFIE` (`onReorder`, US-A4, cf. `GameList` ci-dessous — délègue à `CampaignsService.reorderGames` puis recharge systématiquement, succès ou échec, pour resynchroniser l'affichage sur l'état serveur). Toujours affiché par le parent ; la gestion (ajout/édition/suppression/réordonnancement) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
 
 | | |
 |---|---|
@@ -1157,6 +1157,21 @@ Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les part
 
 Liste ordonnée des parties du programme (numéro, scénario, badges type/statut). Émet les actions Modifier/Supprimer/Enregistrer, affichées uniquement pour les parties `PLANIFIE` gérables.
 
+**Réordonnancement (US-A4)** : même idiome que l'écran Classement du wizard de fin
+de partie (`RankingStep`, cf. ci-dessous) — glisser-déposer Angular CDK (poignée
+⠿) ou flèches ▲▼ — mais restreint aux lignes `PLANIFIE` : une partie
+`ATELIER`/`JOUE` n'est ni draggable (`cdkDragDisabled`) ni un point de chute
+valide (`cdkDropListSortPredicate` refuse tout index actuellement occupé par une
+partie non-`PLANIFIE`), donc sa position ne bouge jamais, y compris pendant le
+survol d'un glisser. `orderedGames`, copie locale réordonnable de `games()`
+(même pattern `effect()` que `RankingStep.orderedParticipants`, réinitialisée à
+chaque changement de l'input), porte l'affichage ; `moveUp`/`moveDown` permutent
+directement deux parties `PLANIFIE` (jamais un décalage qui déplacerait une
+partie non-`PLANIFIE` intercalée). Chaque déplacement (drag ou flèche) émet
+aussitôt `reorderRequested` — pas de bouton de validation séparé, le parent
+(`CampaignProgram`) persiste puis recharge dans tous les cas (succès ou échec)
+pour resynchroniser l'affichage sur l'état serveur.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-game-list` |
@@ -1167,7 +1182,7 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `games` | `Game[]` | — | Parties, déjà triées par le backend |
-| `canManage` | `boolean` | `false` | Organisateur hors `TERMINEE` — active Modifier/Supprimer |
+| `canManage` | `boolean` | `false` | Organisateur hors `TERMINEE` — active Modifier/Supprimer/Réordonner |
 | `canRecord` | `boolean` | `false` | Organisateur + campagne `EN_COURS` — active Enregistrer résultat |
 
 **Outputs**
@@ -1179,6 +1194,7 @@ Liste ordonnée des parties du programme (numéro, scénario, badges type/statut
 | `recordGame` | `Game` | Ouvre le formulaire d'enregistrement de résultat |
 | `openJournal` | `Game` | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
 | `openAtelier` | `Game` | Ouvre l'atelier (bouton 🔧 visible pour **tout participant** sur une partie en `ATELIER`) — le parent navigue vers `/campaigns/:id/atelier` (l'atelier est au niveau campagne, pas de la partie) |
+| `reorderRequested` | `number[]` | Ids des parties `PLANIFIE` dans leur nouvel ordre relatif (jamais les ids `ATELIER`/`JOUE`) — émis après un drag ou un clic sur ▲▼ |
 
 ---
 

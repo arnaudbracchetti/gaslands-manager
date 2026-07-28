@@ -45,7 +45,7 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
     // de Convoi", ESCARMOUCHE avec gain_jerricans: true.
     await addGame(page, { scenarioIndex: 7 });
 
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
 
     // ── Écran Présence : deux équipes cochées (minimum requis) ──────────────
     await page.locator('.pst__participant-row').filter({ hasText: teamName }).locator('input[type="checkbox"]').check();
@@ -107,7 +107,7 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
 
     const gameItem = page.locator('.game-list__item').first();
 
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
     await page.locator('.pst__participant-row').filter({ hasText: teamName })
       .locator('input[type="checkbox"]').check();
     await page.locator('.pst__participant-row').filter({ hasText: joineeTeamName })
@@ -141,7 +141,7 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
 
     // Rouvrir le wizard démarre un parcours vierge (aucun résidu du lot annulé) :
     // preuve que le reset serveur a bien vidé le journal, pas seulement fermé la pop-up.
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
     await expect(page.locator('.pst__participant-row').filter({ hasText: teamName })).toBeVisible();
 
     await joineeContext.close();

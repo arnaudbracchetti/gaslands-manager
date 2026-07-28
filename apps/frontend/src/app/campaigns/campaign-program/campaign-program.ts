@@ -227,6 +227,25 @@ export class CampaignProgram implements OnInit {
     });
   }
 
+  /**
+   * Réordonnancement du Programme (US-A4) — GameList a déjà appliqué le nouvel
+   * ordre localement (retour visuel immédiat pendant le drag) ; on persiste
+   * puis on recharge dans tous les cas, succès ou échec, pour resynchroniser
+   * l'affichage sur l'état serveur (l'`order` réel n'est jamais recalculé
+   * côté client).
+   */
+  onReorder(gameIds: number[]): void {
+    this.campaignsService.reorderGames(this.campaignId(), gameIds).subscribe({
+      next: () => this.loadGames(),
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du réordonnancement du programme.';
+        console.error(msg);
+        this.error.set(msg);
+        this.loadGames();
+      },
+    });
+  }
+
   /** Ouvre le wizard de fin de partie pour la partie donnée. */
   onRecordGame(game: Game): void {
     this.recordingGame.set(game);

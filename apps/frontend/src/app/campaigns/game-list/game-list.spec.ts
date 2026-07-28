@@ -6,6 +6,7 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { GameList } from './game-list';
 import { Game } from '../game.model';
 
@@ -105,7 +106,25 @@ describe('GameList', () => {
     expect(component.statusLabel(makeGame({ status: 'JOUE' }))).toBe('Jouée');
   });
 
-  it('affiche le bouton "Saisir les rangs" pour une partie PLANIFIE quand canRecord=true', () => {
+  it('affiche la date de la séquence de fin de partie quand playedAt est renseigné', () => {
+    fixture.componentRef.setInput('games', [
+      makeGame({ status: 'JOUE', playedAt: '2026-03-05T00:00:00.000Z' }),
+    ]);
+    fixture.detectChanges();
+
+    const dateEl = fixture.nativeElement.querySelector('.game-list__played-date');
+    expect(dateEl?.textContent?.trim()).toBe('05/03/2026');
+  });
+
+  it('n\'affiche aucune date pour une partie PLANIFIE (playedAt null)', () => {
+    fixture.componentRef.setInput('games', [makeGame({ status: 'PLANIFIE', playedAt: null })]);
+    fixture.detectChanges();
+
+    const dateEl = fixture.nativeElement.querySelector('.game-list__played-date');
+    expect(dateEl).toBeFalsy();
+  });
+
+  it('affiche le bouton "Fin de partie" pour une partie PLANIFIE quand canRecord=true', () => {
     fixture.componentRef.setInput('games', [makeGame()]);
     fixture.componentRef.setInput('canManage', true);
     fixture.componentRef.setInput('canRecord', true);
@@ -113,7 +132,7 @@ describe('GameList', () => {
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
     const recordBtn = Array.from(buttons).find((b: unknown) =>
-      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+      (b as HTMLElement).textContent?.includes('Fin de partie')
     );
     expect(recordBtn).toBeTruthy();
   });
@@ -125,7 +144,7 @@ describe('GameList', () => {
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
     const recordBtn = Array.from(buttons).find((b: unknown) =>
-      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+      (b as HTMLElement).textContent?.includes('Fin de partie')
     );
     expect(recordBtn).toBeFalsy();
   });
@@ -137,7 +156,7 @@ describe('GameList', () => {
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
     const recordBtn = Array.from(buttons).find((b: unknown) =>
-      (b as HTMLElement).textContent?.includes('Saisir les rangs')
+      (b as HTMLElement).textContent?.includes('Fin de partie')
     );
     expect(recordBtn).toBeFalsy();
   });
@@ -197,12 +216,106 @@ describe('GameList', () => {
     const emitted: Game[] = [];
     outputToObservable(component.recordGame).subscribe((g) => emitted.push(g));
 
-    const recordBtn = fixture.nativeElement.querySelector('button:not(.game-list__edit):not(.game-list__delete)');
+    const recordBtn = fixture.nativeElement.querySelector('.game-list__record');
     if (recordBtn) {
       recordBtn.click();
     }
 
     expect(emitted).toHaveLength(1);
     expect(emitted[0].id).toBe(game.id);
+  });
+
+  describe('réordonnancement (US-A4)', () => {
+    const planifieA = makeGame({ id: 10, order: 1, status: 'PLANIFIE' });
+    const joue = makeGame({ id: 20, order: 2, status: 'JOUE' });
+    const planifieB = makeGame({ id: 30, order: 3, status: 'PLANIFIE' });
+
+    function setupThreeGames(canManage = true): void {
+      fixture.componentRef.setInput('games', [planifieA, joue, planifieB]);
+      fixture.componentRef.setInput('canManage', canManage);
+      fixture.detectChanges();
+    }
+
+    it('initialise orderedGames() depuis games()', () => {
+      setupThreeGames();
+      expect(component.orderedGames().map((g) => g.id)).toEqual([10, 20, 30]);
+    });
+
+    it('affiche la poignée et les flèches uniquement pour les parties PLANIFIE', () => {
+      setupThreeGames();
+      const handles = fixture.nativeElement.querySelectorAll('.game-list__handle');
+      expect(handles.length).toBe(2);
+    });
+
+    it('n\'affiche aucune poignée/flèche quand non gérable', () => {
+      setupThreeGames(false);
+      expect(fixture.nativeElement.querySelectorAll('.game-list__handle').length).toBe(0);
+    });
+
+    it('moveDown permute deux parties PLANIFIE en sautant la partie JOUE intercalée', () => {
+      setupThreeGames();
+      const emitted: number[][] = [];
+      outputToObservable(component.reorderRequested).subscribe((ids) => emitted.push(ids));
+
+      component.moveDown(10);
+
+      // La partie JOUE (id 20) garde sa position 1 (index) dans orderedGames() ;
+      // seules les 2 parties PLANIFIE ont permuté entre elles.
+      expect(component.orderedGames().map((g) => g.id)).toEqual([30, 20, 10]);
+      expect(emitted).toEqual([[30, 10]]);
+    });
+
+    it('moveUp est un no-op s\'il n\'y a pas de partie PLANIFIE précédente', () => {
+      setupThreeGames();
+      component.moveUp(10);
+      expect(component.orderedGames().map((g) => g.id)).toEqual([10, 20, 30]);
+    });
+
+    it('moveDown est un no-op s\'il n\'y a pas de partie PLANIFIE suivante', () => {
+      setupThreeGames();
+      component.moveDown(30);
+      expect(component.orderedGames().map((g) => g.id)).toEqual([10, 20, 30]);
+    });
+
+    it('hasPreviousPlanifie/hasNextPlanifie ignorent les parties non-PLANIFIE', () => {
+      setupThreeGames();
+      expect(component.hasPreviousPlanifie(10)).toBe(false);
+      expect(component.hasNextPlanifie(10)).toBe(true);
+      expect(component.hasPreviousPlanifie(30)).toBe(true);
+      expect(component.hasNextPlanifie(30)).toBe(false);
+    });
+
+    it('sortPredicate refuse un index occupé par une partie non-PLANIFIE', () => {
+      setupThreeGames();
+      const drop = { data: component.orderedGames() } as unknown as CdkDropList<Game[]>;
+      const drag = {} as unknown as CdkDrag<Game>;
+      expect(component.sortPredicate(1, drag, drop)).toBe(false);
+      expect(component.sortPredicate(0, drag, drop)).toBe(true);
+      expect(component.sortPredicate(2, drag, drop)).toBe(true);
+    });
+
+    it('drop réordonne et émet uniquement les ids des parties PLANIFIE', () => {
+      setupThreeGames();
+      const emitted: number[][] = [];
+      outputToObservable(component.reorderRequested).subscribe((ids) => emitted.push(ids));
+
+      component.drop(
+        { previousIndex: 0, currentIndex: 2 } as unknown as CdkDragDrop<Game[]>,
+      );
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0]).not.toContain(20);
+    });
+
+    it('orderedGames() se réinitialise si games() change (ex. rechargement serveur)', () => {
+      setupThreeGames();
+      component.moveDown(10);
+      expect(component.orderedGames().map((g) => g.id)).toEqual([30, 20, 10]);
+
+      fixture.componentRef.setInput('games', [planifieA, joue, planifieB]);
+      fixture.detectChanges();
+
+      expect(component.orderedGames().map((g) => g.id)).toEqual([10, 20, 30]);
+    });
   });
 });

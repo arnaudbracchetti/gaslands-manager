@@ -39,7 +39,7 @@ test.describe('Campagnes — Journal de partie', () => {
     });
 
     await addGame(page);
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
     await completePreDesignationSteps(page, [organizerTeam, joineeTeam]);
 
     const recordResultResponse = page.waitForResponse(

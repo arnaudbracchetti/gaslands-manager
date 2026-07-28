@@ -23,7 +23,7 @@
 | CRUD Équipes (création, édition, suppression, verrouillage sponsor) | ✅ Implémenté |
 | Construction de véhicule (choix, équipement armes/améliorations, budget) | ✅ Implémenté |
 | Campagnes (ligue, inscriptions, validation, transitions d'état) | ✅ Implémenté |
-| Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios) | ✅ Implémenté (US-A1/A2/A3) |
+| Mode campagne — Programme Télé (parties planifiées, catalogue de scénarios, réordonnancement) | ✅ Implémenté (US-A1/A2/A3/A4) |
 | Mode campagne — Résultats & classement (rang, PC de classement 10/5/2/1) | ✅ Implémenté (US-B1/B3/C1) |
 | Mode campagne — Exploits de partie (portes franchies, véhicules ennemis détruits) | ✅ Implémenté (US-B2) |
 | Mode campagne — Atelier (cagnotte, achat/revente d'équipement) | 🟡 Partiel — **UI Temps 1 implémentée** (page `/campaigns/:id/atelier` réutilisant `EquipmentManager` : achat/retrait armes + améliorations + avantages via la cagnotte, y compris le montage sur Tourelle — attribut de l'arme, cf. [spec/VEHICLES.md](spec/VEHICLES.md#montage-sur-tourelle-attribut-de-larme)). Revente à moitié prix (perte totale pour un avantage) et annulation d'achat vs revente **implémentées** (cf. [spec/CAMPAIGN.md](spec/CAMPAIGN.md#annulation-dachat-vs-revente)). L'UI des Chocs et séquelles est désormais implémentée (intégrée à `EquipmentManager`, cf. ligne Séquelles ci-dessous). Restent en Temps 2 : enforcement des règles au write, gardes sponsor/limite 8, UI des véhicules perdus (Table des Épaves) (cf. [design](plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) |

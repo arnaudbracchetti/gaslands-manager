@@ -368,3 +368,62 @@ describe('Campaign — addGame / updateGame / removeGame', () => {
   });
 });
 
+describe('Campaign — reorderGames', () => {
+  it('réattribue les order des parties PLANIFIE selon le nouvel ordre demandé', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const g2 = makeGame(20, 2);
+    const g3 = makeGame(30, 3);
+    const campaign = makeCampaign([participant], [g1, g2, g3]);
+
+    campaign.reorderGames([30, 10, 20]);
+
+    expect(campaign.findGame(30).order).toBe(1);
+    expect(campaign.findGame(10).order).toBe(2);
+    expect(campaign.findGame(20).order).toBe(3);
+  });
+
+  it('ne touche jamais à l\'order d\'une partie ATELIER/JOUE, même intercalée', () => {
+    const { participant } = makeTestParticipant();
+    const planifieA = makeGame(10, 1);
+    const joue = new EvenementTeleGame(20, 1, GameStatus.JOUE, 2, 'scen_20', new Date(), []);
+    const planifieB = makeGame(30, 3);
+    const campaign = makeCampaign([participant], [planifieA, joue, planifieB]);
+
+    campaign.reorderGames([30, 10]);
+
+    // Les 2 emplacements PLANIFIE (order 1 et 3) sont réattribués entre eux ;
+    // la partie JOUE garde son order 2, intact.
+    expect(campaign.findGame(30).order).toBe(1);
+    expect(campaign.findGame(20).order).toBe(2);
+    expect(campaign.findGame(10).order).toBe(3);
+  });
+
+  it('lève DomainException si un id fourni ne correspond pas à une partie PLANIFIE', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const joue = new EvenementTeleGame(20, 1, GameStatus.JOUE, 2, 'scen_20', new Date(), []);
+    const campaign = makeCampaign([participant], [g1, joue]);
+
+    expect(() => campaign.reorderGames([10, 20])).toThrow('planifiées');
+  });
+
+  it('lève DomainException si une partie PLANIFIE est absente de la liste fournie', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const g2 = makeGame(20, 2);
+    const campaign = makeCampaign([participant], [g1, g2]);
+
+    expect(() => campaign.reorderGames([10])).toThrow('planifiées');
+  });
+
+  it('lève DomainException si la campagne est TERMINEE', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const g2 = makeGame(20, 2);
+    const campaign = makeCampaign([participant], [g1, g2], CampaignState.TERMINEE);
+
+    expect(() => campaign.reorderGames([20, 10])).toThrow();
+  });
+});
+

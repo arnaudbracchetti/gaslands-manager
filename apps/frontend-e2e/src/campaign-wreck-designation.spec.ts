@@ -36,7 +36,7 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await addGame(page);
 
     // ── Présence + écrans intermédiaires variables ──────────────────────────
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
     await completePreDesignationSteps(page, [teamName, joineeTeamName]);
 
     // ── Désignation — "Mis en épave seul" ───────────────────────────────────
@@ -97,7 +97,7 @@ test.describe('Campagnes — Désignation des épaves', () => {
     await addGame(page);
 
     // ── Les deux équipes présentes + écrans intermédiaires variables ───────
-    await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+    await page.getByRole('button', { name: 'Fin de partie' }).click();
     await completePreDesignationSteps(page, [organizerTeam, joineeTeam]);
 
     // ── Le véhicule de l'organisateur est "Mis en épave par…" l'autre ───────

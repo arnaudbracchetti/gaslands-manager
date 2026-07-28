@@ -212,6 +212,16 @@ export class CampaignsService {
   }
 
   /**
+   * PUT /api/campaigns/:id/games/reorder → réordonne les parties encore
+   * PLANIFIE du programme (US-A4, organisateur). `gameIds` doit être
+   * exactement l'ensemble de ces parties, dans le nouvel ordre voulu — les
+   * parties ATELIER/JOUE gardent leur position, jamais transmises ici.
+   */
+  reorderGames(campaignId: number, gameIds: number[]): Observable<void> {
+    return this.http.put<void>(`/api/campaigns/${campaignId}/games/reorder`, { gameIds });
+  }
+
+  /**
    * POST /api/campaigns/:id/games/:gameId/results → enregistre les résultats
    * d'une partie PLANIFIE (classement + exploits, organisateur). Ne fait PAS
    * entrer la partie en atelier — elle reste PLANIFIE jusqu'à l'appel explicite

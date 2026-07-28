@@ -756,6 +756,7 @@ classDiagram
         +findGame(gameId) Game
         +findParticipant(participantId) CampaignParticipant
         +findAtelierGame() Game
+        +reorderGames(gameIds) void
     }
 
     class CampaignParticipant {
@@ -787,6 +788,7 @@ classDiagram
         +addEvent(event) void
         +apply(participants) void
         +revert(participants) void
+        +reorder(newOrder) void
         +recordResult(rankings, participants) GameEvent[]
         +resolveWreck(participant, vehicleId, wreckTable) WreckTableResult
         +creditFavoriDuPublicBonus(participantId, vehicleId, wasDestroyed) GameEvent?

@@ -120,7 +120,7 @@ export async function designateWreck(
 
 /**
  * Pilote entièrement le wizard de fin de partie (étapes variables E/ET)
- * depuis le bouton "🎯 Saisir les rangs" jusqu'à l'entrée en Atelier ("Terminer").
+ * depuis le bouton "Fin de partie" jusqu'à l'entrée en Atelier ("Terminer").
  *
  * `teamNames` : équipes à cocher présentes à l'écran Présence (l'ordre de
  * classement lui-même n'a pas d'importance pour les specs qui utilisent ce
@@ -144,7 +144,7 @@ export async function runResultWizard(
     }>;
   },
 ): Promise<void> {
-  await page.getByRole('button', { name: '🎯 Saisir les rangs' }).click();
+  await page.getByRole('button', { name: 'Fin de partie' }).click();
   await completePreDesignationSteps(page, options.teamNames);
 
   const recordResultResponse = page.waitForResponse(

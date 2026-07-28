@@ -30,6 +30,7 @@ describe('CampaignController (câblage)', () => {
   let getWorkshopAvailableSequellesUseCase: ReturnType<typeof uc>;
   let renameCampaignVehicleUseCase: ReturnType<typeof uc>;
   let getCampaignTeamSheetUseCase: ReturnType<typeof uc>;
+  let reorderGamesUseCase: ReturnType<typeof uc>;
   let controller: CampaignController;
 
   beforeEach(() => {
@@ -56,6 +57,7 @@ describe('CampaignController (câblage)', () => {
     getWorkshopAvailableSequellesUseCase = uc(['sequelle']);
     renameCampaignVehicleUseCase = uc(undefined);
     getCampaignTeamSheetUseCase = uc('<!doctype html>...');
+    reorderGamesUseCase = uc(undefined);
 
     controller = new CampaignController(
       query as never,
@@ -71,6 +73,7 @@ describe('CampaignController (câblage)', () => {
       addGameUseCase as never,
       uc(7) as never,           // updateGame
       uc() as never,            // removeGame
+      reorderGamesUseCase as never,
       recordResultUseCase as never,
       uc() as never,            // resetResult
       uc() as never,            // rollIncome
@@ -129,6 +132,13 @@ describe('CampaignController (câblage)', () => {
     });
     expect(query.getGame).toHaveBeenCalledWith(1, 7);
     expect(result).toEqual({ id: 7, status: 'JOUE' });
+  });
+
+  it('reorderGames délègue au use case avec campaignId/userId/gameIds', async () => {
+    await controller.reorderGames(req as never, 1, { gameIds: [30, 10] });
+    expect(reorderGamesUseCase.execute).toHaveBeenCalledWith({
+      campaignId: 1, userId: 42, gameIds: [30, 10],
+    });
   });
 
   it('recordResult exécute le use case puis recompose via query.getGame (ne finalise plus la partie elle-même)', async () => {

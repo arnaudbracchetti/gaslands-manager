@@ -44,6 +44,7 @@ describe('CampaignProgram Component', () => {
     createGame: ReturnType<typeof vi.fn>;
     updateGame: ReturnType<typeof vi.fn>;
     deleteGame: ReturnType<typeof vi.fn>;
+    reorderGames: ReturnType<typeof vi.fn>;
     getParticipants: ReturnType<typeof vi.fn>;
     recordResult: ReturnType<typeof vi.fn>;
     resetResult: ReturnType<typeof vi.fn>;
@@ -61,6 +62,7 @@ describe('CampaignProgram Component', () => {
       createGame: vi.fn().mockReturnValue(of(mockGame)),
       updateGame: vi.fn().mockReturnValue(of(mockGame)),
       deleteGame: vi.fn().mockReturnValue(of(undefined)),
+      reorderGames: vi.fn().mockReturnValue(of(undefined)),
       getParticipants: vi.fn().mockReturnValue(of([])),
       recordResult: vi.fn().mockReturnValue(of({ ...mockGame, status: 'PLANIFIE' })),
       resetResult: vi.fn().mockReturnValue(of(undefined)),
@@ -173,6 +175,27 @@ describe('CampaignProgram Component', () => {
     expect(mockService.deleteGame).toHaveBeenCalledWith(1, 10);
     expect(mockService.getGames).toHaveBeenCalledWith(1);
     expect(component.pendingDeleteGame()).toBeNull();
+  });
+
+  it('réordonne le programme puis recharge (US-A4)', () => {
+    fixture.detectChanges();
+    mockService.getGames.mockClear();
+
+    component.onReorder([30, 10]);
+
+    expect(mockService.reorderGames).toHaveBeenCalledWith(1, [30, 10]);
+    expect(mockService.getGames).toHaveBeenCalledWith(1);
+  });
+
+  it('recharge quand même le programme si le réordonnancement échoue (resync serveur)', () => {
+    mockService.reorderGames.mockReturnValue(throwError(() => new Error('boom')));
+    fixture.detectChanges();
+    mockService.getGames.mockClear();
+
+    component.onReorder([30, 10]);
+
+    expect(component.error()).not.toBe('');
+    expect(mockService.getGames).toHaveBeenCalledWith(1);
   });
 
   it('affiche une erreur si le chargement échoue', () => {

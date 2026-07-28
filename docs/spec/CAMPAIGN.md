@@ -99,9 +99,23 @@ programme reste **visible en lecture seule**.
 - **Consultation** (`GET /api/campaigns/:id/games`) : tout participant `VALIDATED`
   voit le programme trié, en lecture seule, **quel que soit l'état** de la campagne.
   Les actions de gestion ne s'affichent que pour l'organisateur et hors `TERMINEE`.
-- **Réordonnancement** (changer l'ordre au-delà de l'auto-append) : **hors
-  périmètre d'US-A1**, suivi en US-A4 (cf.
-  [backlog](../plans/2026-06-21-mode-campagne-backlog.md)).
+- **Réordonnancement** (US-A4, `PUT /api/campaigns/:id/games/reorder`,
+  organisateur, `EN_CONSTRUCTION`/`EN_COURS`) : porte **uniquement** sur les
+  parties encore `PLANIFIE` — une partie `ATELIER`/`JOUE` garde sa position
+  figée dans le Programme, jamais déplacée. Le corps (`{ gameIds: number[] }`)
+  doit contenir exactement l'ensemble des parties `PLANIFIE` actuelles de la
+  campagne, dans le nouvel ordre voulu (HTTP 400 sinon) —
+  `Campaign.reorderGames` réattribue alors les valeurs d'`order` que ces
+  parties occupaient déjà (les emplacements laissés entre deux parties déjà
+  jouées) selon ce nouvel ordre, sans jamais toucher à l'`order` d'une partie
+  `ATELIER`/`JOUE`. Interface (`GameList`) : glisser-déposer (poignée ⠿,
+  Angular CDK) ou flèches ▲▼ — même idiome que l'écran Classement du wizard de
+  fin de partie (`RankingStep`) — restreint aux lignes `PLANIFIE`
+  (`cdkDragDisabled` sur les autres, `cdkDropListSortPredicate` empêchant tout
+  point de chute sur une ligne non-`PLANIFIE`, pour que leur position ne
+  bouge jamais visuellement). Chaque déplacement (drag ou flèche) appelle
+  immédiatement l'API puis recharge le programme depuis le serveur (pas de
+  bouton de validation séparé).
 
 Sécurité : autorisation assurée dans chaque use case (écritures) via les helpers
 `assertOrganizer` / `assertParticipant` opérant sur l'état replay, et dans
@@ -870,8 +884,8 @@ créditera un jour un solde de VP réellement suivi ; ici, seule la valeur
 
 ## Hors scope de l'itération actuelle
 
-Réordonnancement du Programme (US-A4), visibilité partielle pour un `PENDING`,
-quitter une campagne volontairement, rotation du code d'invitation.
+Visibilité partielle pour un `PENDING`, quitter une campagne volontairement,
+rotation du code d'invitation.
 
 Le verrouillage de l'équipe engagée (interdiction de toute modification directe
 dès que la campagne n'est plus `EN_CONSTRUCTION`) est désormais **implémenté**,
@@ -1104,6 +1118,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/catalog/scenarios` | Non | Liste publique des scénarios du catalogue |
 | GET | `/api/campaigns/:id/games` | JWT | Programme trié (participant `VALIDATED`) |
 | POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
+| PUT | `/api/campaigns/:id/games/reorder` | JWT | Réordonne les parties encore `PLANIFIE` (US-A4, `{ gameIds: number[] }` — exactement l'ensemble des parties `PLANIFIE` actuelles, dans le nouvel ordre voulu — organisateur, `EN_CONSTRUCTION`/`EN_COURS`) — 204. Déclarée **avant** `PUT .../games/:gameId` ci-dessous (même précaution que `PUT .../participants/me`) |
 | PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
 | POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistre le lot accumulé par le wizard (organisateur). `results` (classement + exploits, `{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }[]`) est optionnel — Événement Télévisé uniquement, `Game.recordResult` rejette (400) tout appel avec `results` sur une Escarmouche. `jerricanGains` (`{ participantId, amount }[]`) et `destroyedVehicles` (à plat, `{ destroyerId, vehicleId }[]`) sont optionnels — Escarmouche uniquement (`Game.recordJerricanGains`/`recordDestroyedVehicleTraces`, ce dernier à **0 PC**, trace journal uniquement). `weightClass` n'est jamais transmis, toujours dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). Ne finalise pas la partie (reste `PLANIFIE`, cf. §Wizard de fin de partie) |

@@ -1,8 +1,43 @@
 <!-- Programme Télé : liste ordonnée des parties -->
-<ol class="game-list">
-  @for (game of games(); track game.id) {
-    <li class="game-list__item" [class.game-list__item--played]="game.status === 'JOUE'">
+@if (canManage()) {
+  <p class="game-list__hint">
+    Glissez la poignée ⠿ ou utilisez les flèches pour réordonner les parties non jouées.
+  </p>
+}
+<ol
+  cdkDropList
+  [cdkDropListData]="orderedGames()"
+  [cdkDropListSortPredicate]="sortPredicate"
+  (cdkDropListDropped)="drop($event)"
+  class="game-list"
+>
+  @for (game of orderedGames(); track game.id) {
+    <li
+      cdkDrag
+      [cdkDragDisabled]="!canModify(game)"
+      class="game-list__item"
+      [class.game-list__item--played]="game.status === 'JOUE'"
+    >
 
+      @if (canModify(game)) {
+        <span class="game-list__handle" cdkDragHandle aria-hidden="true">⠿</span>
+        <span class="game-list__reorder">
+          <button
+            type="button"
+            class="game-list__move"
+            [disabled]="!hasPreviousPlanifie(game.id)"
+            (click)="moveUp(game.id)"
+            aria-label="Monter {{ game.scenarioName }} d'un rang"
+          >▲</button>
+          <button
+            type="button"
+            class="game-list__move"
+            [disabled]="!hasNextPlanifie(game.id)"
+            (click)="moveDown(game.id)"
+            aria-label="Descendre {{ game.scenarioName }} d'un rang"
+          >▼</button>
+        </span>
+      }
       <span class="game-list__order">{{ game.order }}</span>
 
       <div class="game-list__info">
@@ -16,22 +51,25 @@
           [class.game-list__badge--atelier]="game.status === 'ATELIER'">
           {{ statusLabel(game) }}
         </span>
+        @if (game.playedAt) {
+          <span class="game-list__played-date">{{ game.playedAt | date: 'dd/MM/yyyy' }}</span>
+        }
       </div>
 
       @if (canModify(game)) {
         <div class="game-list__actions">
-          <button type="button" class="game-list__edit" (click)="editGame.emit(game)">
-            <app-icon concept="modifier" size="sm" /> Modifier
+          <button type="button" class="game-list__edit" (click)="editGame.emit(game)" aria-label="Modifier {{ game.scenarioName }}">
+            <app-icon concept="modifier" size="sm" />
           </button>
-          <button type="button" class="game-list__delete" (click)="deleteGame.emit(game)">
-            <app-icon concept="supprimer" size="sm" /> Supprimer
+          <button type="button" class="game-list__delete" (click)="deleteGame.emit(game)" aria-label="Supprimer {{ game.scenarioName }}">
+            <app-icon concept="supprimer" size="sm" />
           </button>
         </div>
       }
 
       @if (canRecord() && game.status === 'PLANIFIE') {
         <button type="button" class="game-list__record" (click)="onRecord(game)">
-          🎯 Saisir les rangs
+          <app-icon concept="points_championnat" size="sm" /> Fin de partie
         </button>
       }
 

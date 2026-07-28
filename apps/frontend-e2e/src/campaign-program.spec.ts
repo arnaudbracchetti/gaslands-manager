@@ -58,7 +58,7 @@ test.describe('Campagnes — Programme Télé et wizard de fin de partie', () =>
     await expect(gameItem.locator('.game-list__badge--status')).toHaveText('Atelier');
     await expect(gameItem.locator('.game-list__badge--status')).toHaveClass(/game-list__badge--atelier/);
     // Une partie en ATELIER n'est plus "à enregistrer" : le bouton disparaît.
-    await expect(gameItem.getByRole('button', { name: '🎯 Saisir les rangs' })).toHaveCount(0);
+    await expect(gameItem.getByRole('button', { name: 'Fin de partie' })).toHaveCount(0);
 
     // La persistance se vérifie par un rechargement complet de la page.
     await page.reload();

@@ -100,7 +100,7 @@ apps/backend/src/app/
 │   ├── application/     ← 16 Use Cases (4 équipe + 3 véhicule + 3 arme + 3 amélioration + 3 avantage)
 │   └── infrastructure/  ← TeamRepository, TeamMapper, CatalogAdapter, team-http.mapper, entités ORM
 └── campaign/            ← Module campagne unifié (DDD event-sourcing — voir §3.8), ex-`season/` + ex-`game/`
-    ├── campaign.controller.ts       ← Controller HTTP unique (38 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
+    ├── campaign.controller.ts       ← Controller HTTP unique (39 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
     ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
     ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome, WreckTable, IRandomizer
@@ -108,7 +108,7 @@ apps/backend/src/app/
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckTable (domain service, 9 lignes + événements), WreckOutcome (Value Object), IRandomizer (port hexagonal)
-    ├── application/     ← 28 Use Cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing)
+    ├── application/     ← 29 Use Cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing)
     └── infrastructure/  ← CampaignRepository, CampaignMapper, CampaignReplayService, RandomProvider, entités ORM
 ```
 
@@ -300,7 +300,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/infrastructure/team-sheet.mapper.ts` | Fonction pure `Vehicle`/`Team` → DTOs de fiche exportable — zéro dépendance catalogue (`.type` déjà résolu), partagée entre le point d'entrée équipe directe et le point d'entrée campagne (replay), cf. §3.4 |
 | `apps/backend/src/app/team/infrastructure/team-sheet.renderer.ts` | Assemble le HTML imprimable (A4) depuis ces DTOs — templates littéraux TypeScript, dédup des renvois de règles, échappement XSS du texte utilisateur (nom d'équipe, renommage de véhicule) |
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
-| `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (38 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
+| `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (39 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
 | `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
 | `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
@@ -310,7 +310,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay` — unique point d'entrée des use cases (charge et rejoue systématiquement ; un ancien `.load()` sans replay a été supprimé après avoir causé deux bugs de résolution d'entités transientes) |
 | `apps/backend/src/app/campaign/infrastructure/random-provider.ts` | Adaptateur `IRandomizer` (port hexagonal) → `Math.random()` — remplace l'ex-`WreckResolverService` |
 | `apps/backend/src/app/campaign/domain/wreck/wreck-table.ts` | Domain service : 9 lignes de la Table des Épaves, tirage D6 + pool d'équipements + création des événements domaine. Dépend d'`ICatalogRepository` (résout les séquelles imposées automatiquement, `siege_irrecuperable`/`chassis_fragilise`) en plus d'`IRandomizer` — deux modificateurs permanents (`legende_vivante` force le D6 à 1, `maintenu_par_la_rouille` chaîne un second tirage), cf. §Séquelles ci-dessous |
-| `apps/backend/src/app/campaign/application/` | 29 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
+| `apps/backend/src/app/campaign/application/` | 30 use cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing) |
 | `database_init/data/*.yml` | Données statiques (sponsors, véhicules, armes, améliorations, scénarios) |
 
 ### 3.8 Mode Campagne — Event Sourcing (`campaign/`)

@@ -9,6 +9,13 @@
   padding: 0;
   margin: 0;
 
+  &__hint {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin: 0 0 0.5rem;
+  }
+
   &__item {
     background: var(--tb-bitume-2);
     border: 2px solid var(--border-hair);
@@ -23,6 +30,60 @@
     // Partie jouée : visuellement atténuée (figée)
     &--played {
       opacity: 0.72;
+    }
+
+    &.cdk-drag-preview {
+      box-shadow: var(--shadow-stamp), 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    &.cdk-drag-placeholder {
+      opacity: 0.3;
+    }
+  }
+
+  &.cdk-drop-list-dragging &__item:not(.cdk-drag-placeholder) {
+    transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  &__handle {
+    cursor: grab;
+    color: var(--tb-sand);
+    font-size: 1rem;
+    line-height: 1;
+    user-select: none;
+    flex-shrink: 0;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__reorder {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  &__move {
+    background: transparent;
+    border: 1px solid var(--tb-sand);
+    color: var(--tb-os);
+    border-radius: var(--r-sm);
+    font-size: 0.65rem;
+    line-height: 1;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: background 160ms, border-color 160ms;
+
+    &:hover:not(:disabled) {
+      background: var(--tb-bitume-4);
+      border-color: var(--tb-danger);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
   }
 
@@ -92,6 +153,12 @@
     }
   }
 
+  &__played-date {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
   &__actions {
     display: flex;
     gap: 8px;
@@ -109,11 +176,12 @@
     background: var(--tb-bitume);
     border: 1px solid var(--border-rust);
     color: var(--tb-os);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 6px 12px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
     border-radius: var(--r-sm);
     cursor: pointer;
     transition: border-color 160ms, color 160ms;

@@ -46,6 +46,7 @@ import { ChangeMyTeamUseCase } from './application/change-my-team.usecase';
 import { AddGameUseCase } from './application/add-game.usecase';
 import { UpdateGameUseCase } from './application/update-game.usecase';
 import { RemoveGameUseCase } from './application/remove-game.usecase';
+import { ReorderGamesUseCase } from './application/reorder-games.usecase';
 import { RecordResultUseCase } from './application/record-result.usecase';
 import { ResetResultUseCase } from './application/reset-result.usecase';
 import { RollIncomeUseCase } from './application/roll-income.usecase';
@@ -78,6 +79,7 @@ import { ChangeStateDto } from './dto/change-state.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
+import { ReorderGamesDto } from './dto/reorder-games.dto';
 import { GameResponseDto } from './dto/game-response.dto';
 import type { GameResultResponseDto } from './dto/game-result-response.dto';
 import type { GameJournalEntryDto } from './dto/game-journal-response.dto';
@@ -125,6 +127,7 @@ export class CampaignController {
     private readonly addGameUseCase: AddGameUseCase,
     private readonly updateGameUseCase: UpdateGameUseCase,
     private readonly removeGameUseCase: RemoveGameUseCase,
+    private readonly reorderGamesUseCase: ReorderGamesUseCase,
     private readonly recordResultUseCase: RecordResultUseCase,
     private readonly resetResultUseCase: ResetResultUseCase,
     private readonly rollIncomeUseCase: RollIncomeUseCase,
@@ -430,6 +433,27 @@ export class CampaignController {
       type: dto.type,
     });
     return this.query.getGame(id, gameId);
+  }
+
+  /**
+   * PUT /api/campaigns/:id/games/reorder — réordonne les parties encore PLANIFIE
+   * (US-A4, organisateur). Déclarée AVANT `PUT .../games/:gameId` ci-dessous —
+   * sinon NestJS capturerait "reorder" comme valeur de `:gameId` (même
+   * précaution que `PUT .../participants/me` avant `.../participants/:pid/validate`).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/games/reorder')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  reorderGames(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ReorderGamesDto,
+  ): Promise<void> {
+    return this.reorderGamesUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      gameIds: dto.gameIds,
+    });
   }
 
   /** PUT /api/campaigns/:id/games/:gameId — édite une partie PLANIFIE (organisateur). */

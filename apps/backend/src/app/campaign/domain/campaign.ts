@@ -270,6 +270,35 @@ export class Campaign {
     if (game.id > 0) this._removedGameIds.push(game.id);
   }
 
+  /**
+   * Réordonnancement du Programme (US-A4) — ne porte que sur les parties encore
+   * PLANIFIE : une partie ATELIER/JOUE garde sa position figée dans la liste
+   * triée (déjà génératrice d'événements, la déplacer romprait la lecture
+   * chronologique du journal). `gameIds` doit être exactement l'ensemble des
+   * parties PLANIFIE actuelles, dans le nouvel ordre voulu — les valeurs
+   * d'`order` qu'elles occupaient déjà (les "emplacements" laissés entre les
+   * parties déjà jouées) sont réattribuées dans ce nouvel ordre, sans jamais
+   * toucher à l'`order` d'une partie ATELIER/JOUE.
+   */
+  reorderGames(gameIds: number[]): void {
+    this.assertManageable();
+    const planifieGames = this._games.filter((g) => g.status === GameStatus.PLANIFIE);
+    const currentIds = new Set(planifieGames.map((g) => g.id));
+    const providedIds = new Set(gameIds);
+    const sameSet =
+      gameIds.length === planifieGames.length &&
+      gameIds.every((id) => currentIds.has(id)) &&
+      planifieGames.every((g) => providedIds.has(g.id));
+    if (!sameSet) {
+      throw new DomainException(
+        'Le réordonnancement doit porter exactement sur les parties encore planifiées.',
+      );
+    }
+
+    const slots = planifieGames.map((g) => g.order).sort((a, b) => a - b);
+    gameIds.forEach((gameId, i) => this.findGame(gameId).reorder(slots[i]));
+  }
+
   // ── Cycle de vie des parties (event sourcing) ────────────────────────────────
 
   /**

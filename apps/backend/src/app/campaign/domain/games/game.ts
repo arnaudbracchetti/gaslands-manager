@@ -47,20 +47,23 @@ const FAVORI_DU_PUBLIC_BONUS_POINTS = 5;
  */
 export abstract class Game {
   protected readonly _events: GameEvent[];
-  // status / playedAt sont mutés par les transitions enterAtelier()/closeAtelier() —
-  // privés pour que ces changements passent par des méthodes de domaine (plus de cast readonly).
+  // status / playedAt / order sont mutés par des méthodes de domaine dédiées
+  // (transitions enterAtelier()/closeAtelier(), réordonnancement) — privés pour
+  // que ces changements ne passent jamais par un cast readonly depuis l'extérieur.
   private _status: GameStatus;
   private _playedAt: Date | null;
+  private _order: number;
 
   constructor(
     readonly id: number,
     readonly campaignId: number,
     status: GameStatus,
-    readonly order: number,
+    order: number,
     playedAt: Date | null,
     events: GameEvent[],
   ) {
     this._status = status;
+    this._order = order;
     this._playedAt = playedAt;
     this._events = [...events].sort((a, b) => a.eventOrder - b.eventOrder);
   }
@@ -68,6 +71,7 @@ export abstract class Game {
   get events(): readonly GameEvent[] { return this._events; }
   get status(): GameStatus { return this._status; }
   get playedAt(): Date | null { return this._playedAt; }
+  get order(): number { return this._order; }
 
   /** Sous-type de partie. Utilisé par le mapper ORM pour l'hydratation STI. */
   abstract get type(): string;
@@ -112,6 +116,16 @@ export abstract class Game {
       throw new DomainException("Cette partie n'est pas en atelier.");
     }
     this._status = GameStatus.JOUE;
+  }
+
+  /**
+   * Réordonnancement du Programme (US-A4) — repositionne cette partie parmi les
+   * autres. Ne porte elle-même aucune règle (le calcul des nouvelles valeurs
+   * d'`order`, et la garde "uniquement les parties PLANIFIE", vivent sur
+   * `Campaign.reorderGames` — la seule invariante qui dépasse une partie isolée).
+   */
+  reorder(newOrder: number): void {
+    this._order = newOrder;
   }
 
   /**
