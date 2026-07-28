@@ -1,40 +1,39 @@
 <!--
-  GameJournalModal — overlay listant tous les événements d'une partie, groupés
-  par participant. Structure calquée sur ChangeTeamModal (.gjm-*).
+  GameJournalModal — événements d'une partie, groupés par participant. Chrome
+  délégué à ModalShell, mode "consultation" (Fermer, clic-extérieur, Échap).
 -->
-<div class="gjm-overlay" role="dialog" aria-modal="true" aria-label="Journal de la partie">
-  <div class="gjm-modal">
-    <h4 class="gjm-modal__title">
-      <app-icon concept="journal" size="md" /> Journal — {{ game().scenarioName }}
-      <span class="gjm-modal__status">({{ statusLabel() }})</span>
-    </h4>
+<app-modal-shell
+  mode="consultation"
+  size="xl"
+  ariaLabel="Journal de la partie"
+  cancelLabel="Fermer"
+  (cancelled)="closed.emit()">
 
-    @if (loading()) {
-      <p class="gjm-modal__loading">Chargement du journal...</p>
-    } @else if (groupedEntries().length === 0) {
-      <p class="gjm-modal__empty">Aucun événement enregistré.</p>
-    } @else {
-      <div class="gjm-modal__groups">
-        @for (group of groupedEntries(); track group.participantId) {
-          <div class="gjm-group">
-            <h5 class="gjm-group__title">{{ group.userName }} ({{ group.teamName }})</h5>
-            <ul class="gjm-group__entries">
-              @for (entry of group.entries; track entry) {
-                <li class="gjm-group__entry">
-                  <span class="gjm-group__description">{{ entry.description }}</span>
-                  <span class="gjm-group__time">{{ entry.createdAt | date: 'short' }}</span>
-                </li>
-              }
-            </ul>
-          </div>
-        }
-      </div>
-    }
+  <h4 class="gjm-modal__title">
+    <app-icon concept="journal" size="md" /> Journal — {{ game().scenarioName }}
+    <span class="gjm-modal__status">({{ statusLabel() }})</span>
+  </h4>
 
-    <div class="gjm-modal__actions">
-      <button class="gjm-modal__close" type="button" (click)="closed.emit()">
-        Fermer
-      </button>
+  @if (loading()) {
+    <p class="gjm-modal__loading">Chargement du journal...</p>
+  } @else if (groupedEntries().length === 0) {
+    <p class="gjm-modal__empty">Aucun événement enregistré.</p>
+  } @else {
+    <div class="gjm-modal__groups">
+      @for (group of groupedEntries(); track group.participantId) {
+        <div class="gjm-group">
+          <h5 class="gjm-group__title">{{ group.userName }} ({{ group.teamName }})</h5>
+          <ul class="gjm-group__entries">
+            @for (entry of group.entries; track entry) {
+              <li class="gjm-group__entry">
+                <span class="gjm-group__description">{{ entry.description }}</span>
+                <span class="gjm-group__time">{{ entry.createdAt | date: 'short' }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
     </div>
-  </div>
-</div>
+  }
+
+</app-modal-shell>

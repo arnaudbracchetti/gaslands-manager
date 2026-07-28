@@ -1,40 +1,38 @@
 <!--
-  SequellaAdvantagePicker — overlay de choix de l'avantage gratuit "Dur à Cuire".
-  Structure calquée sur ChangeTeamModal (.ctm-*) : fond semi-transparent, boîte
-  centrale, liste sélectionnable, actions Valider/Annuler.
+  SequellaAdvantagePicker — choix de l'avantage gratuit "Dur à Cuire". Chrome
+  délégué à ModalShell (mode "action" par défaut). `variant="primary"`
+  reproduit la couleur ambre (--tb-danger) du bouton Valider actuel — même
+  raison que ChangeTeamModal.
 -->
-<div class="sap-overlay" role="dialog" aria-modal="true" aria-label="Choisir l'avantage gratuit (Dur à Cuire)">
-  <div class="sap-modal">
-    <h4 class="sap-modal__title">Choisir l'avantage gratuit (Dur à Cuire)</h4>
-    <p class="sap-modal__hint">
-      Cet avantage est accordé gratuitement, même s'il n'est pas normalement accessible au sponsor de l'équipe.
-    </p>
+<app-modal-shell
+  ariaLabel="Choisir l'avantage gratuit (Dur à Cuire)"
+  variant="primary"
+  confirmLabel="Valider"
+  [confirmDisabled]="!selectedNomInterne()"
+  (confirmed)="onConfirm()"
+  (cancelled)="cancelled.emit()">
 
-    <ul class="sap-list">
-      @for (advantage of advantages(); track advantage.nom_interne) {
-        <li class="sap-item" [class.sap-item--selected]="selectedNomInterne() === advantage.nom_interne">
-          <label class="sap-item__label">
-            <input
-              type="radio"
-              name="sap-advantage"
-              class="sap-item__radio"
-              [checked]="selectedNomInterne() === advantage.nom_interne"
-              (change)="select(advantage.nom_interne)" />
-            <span class="sap-item__name">{{ advantage.nom }}</span>
-          </label>
-          <!-- [innerHTML] : description convertie en HTML au chargement du catalogue (marked). -->
-          <div class="sap-item__description" [innerHTML]="advantage.description"></div>
-        </li>
-      }
-    </ul>
+  <h4 class="sap-modal__title">Choisir l'avantage gratuit (Dur à Cuire)</h4>
+  <p class="sap-modal__hint">
+    Cet avantage est accordé gratuitement, même s'il n'est pas normalement accessible au sponsor de l'équipe.
+  </p>
 
-    <div class="sap-modal__actions">
-      <button class="sap-modal__cancel" type="button" (click)="cancelled.emit()">
-        Annuler
-      </button>
-      <button class="sap-modal__confirm" type="button" [disabled]="!selectedNomInterne()" (click)="onConfirm()">
-        Valider
-      </button>
-    </div>
-  </div>
-</div>
+  <ul class="sap-list">
+    @for (advantage of advantages(); track advantage.nom_interne) {
+      <li class="sap-item" [class.sap-item--selected]="selectedNomInterne() === advantage.nom_interne">
+        <label class="sap-item__label">
+          <input
+            type="radio"
+            name="sap-advantage"
+            class="sap-item__radio"
+            [checked]="selectedNomInterne() === advantage.nom_interne"
+            (change)="select(advantage.nom_interne)" />
+          <span class="sap-item__name">{{ advantage.nom }}</span>
+        </label>
+        <!-- [innerHTML] : description convertie en HTML au chargement du catalogue (marked). -->
+        <div class="sap-item__description" [innerHTML]="advantage.description"></div>
+      </li>
+    }
+  </ul>
+
+</app-modal-shell>

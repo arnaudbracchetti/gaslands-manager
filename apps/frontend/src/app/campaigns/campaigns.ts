@@ -20,11 +20,12 @@ import { CampaignForm } from './campaign-form/campaign-form';
 import { TeamsService } from '../teams/teams.service';
 import { Team, CreateTeamDto } from '../teams/team.model';
 import { Icon } from '../shared/icon/icon';
+import { ModalShell } from '../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-campaigns',
   standalone: true,
-  imports: [CampaignCard, CampaignForm, FormsModule, Icon],
+  imports: [CampaignCard, CampaignForm, FormsModule, Icon, ModalShell],
   templateUrl: './campaigns.html',
   styleUrl: './campaigns.scss',
 })

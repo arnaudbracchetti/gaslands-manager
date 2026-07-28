@@ -10,11 +10,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, effect, input, output, signal } from '@angular/core';
 import type { Team } from '../../teams/team.model';
+import { ModalShell } from '../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-change-team-modal',
   standalone: true,
-  imports: [],
+  imports: [ModalShell],
   templateUrl: './change-team-modal.html',
   styleUrl: './change-team-modal.scss',
 })

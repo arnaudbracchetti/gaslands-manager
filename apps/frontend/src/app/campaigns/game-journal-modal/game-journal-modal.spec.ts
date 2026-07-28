@@ -76,7 +76,7 @@ describe('GameJournalModal', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.closed).subscribe(() => emitted.push(true));
 
-    fixture.nativeElement.querySelector('.gjm-modal__close').click();
+    fixture.nativeElement.querySelector('.ms-modal__cancel').click();
 
     expect(emitted).toHaveLength(1);
   });

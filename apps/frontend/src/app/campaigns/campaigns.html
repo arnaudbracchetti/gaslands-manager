@@ -42,48 +42,48 @@
     </div>
   }
 
-  <!-- Modale : Créer une saison -->
+  <!-- Modale : Créer une saison — chrome délégué à ModalShell, porté par CampaignForm elle-même. -->
   @if (showForm()) {
-    <div class="campaigns-modal-overlay" role="dialog" aria-modal="true" (click)="cancelForm()">
-      <div class="campaigns-modal-content" (click)="$event.stopPropagation()">
-        <app-campaign-form
-          [saving]="saving()"
-          [teams]="userTeams()"
-          [creatingTeam]="creatingTeam()"
-          (saved)="onSaved($event)"
-          (formCancel)="cancelForm()"
-          (teamCreated)="onTeamCreated($event)" />
-      </div>
-    </div>
+    <app-campaign-form
+      [saving]="saving()"
+      [teams]="userTeams()"
+      [creatingTeam]="creatingTeam()"
+      (saved)="onSaved($event)"
+      (formCancel)="cancelForm()"
+      (teamCreated)="onTeamCreated($event)" />
   }
 
-  <!-- Modale : Rejoindre via code -->
+  <!--
+    Modale : Rejoindre via code. Le bouton de confirmation de ModalShell est
+    hors du <form> ci-dessous — le bouton submit caché à l'intérieur ne sert
+    qu'à préserver la soumission au clavier (Entrée dans le champ), même
+    convention que UserDetailsModal/ChangePasswordModal.
+  -->
   @if (showJoinModal()) {
-    <div class="campaigns-modal-overlay" role="dialog" aria-modal="true" (click)="closeJoinModal()">
-      <div class="campaigns-modal-content campaigns-join-modal" (click)="$event.stopPropagation()">
-        <h2>⌗ Rejoindre via code</h2>
-        <p class="campaigns-join-modal__hint">Saisissez le code d'invitation fourni par l'organisateur.</p>
-        <form (ngSubmit)="goToJoin()">
-          <div class="form-group">
-            <label for="join-code">Code d'invitation</label>
-            <input
-              id="join-code"
-              type="text"
-              placeholder="Ex : abc123def456"
-              [ngModel]="joinCode()"
-              (ngModelChange)="joinCode.set($event)"
-              name="joinCode"
-              autocomplete="off" />
-          </div>
-          <div class="campaigns-join-modal__actions">
-            <button class="btn-secondary" type="button" (click)="closeJoinModal()">Annuler</button>
-            <button class="btn-primary" type="submit" [disabled]="!joinCode().trim()">
-              Valider le code →
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <app-modal-shell
+      ariaLabel="Rejoindre via code"
+      variant="primary"
+      confirmLabel="Valider le code →"
+      [confirmDisabled]="!joinCode().trim()"
+      (confirmed)="goToJoin()"
+      (cancelled)="closeJoinModal()">
+      <h2 class="campaigns-join-modal__title">⌗ Rejoindre via code</h2>
+      <p class="campaigns-join-modal__hint">Saisissez le code d'invitation fourni par l'organisateur.</p>
+      <form (ngSubmit)="goToJoin()">
+        <div class="form-group">
+          <label for="join-code">Code d'invitation</label>
+          <input
+            id="join-code"
+            type="text"
+            placeholder="Ex : abc123def456"
+            [ngModel]="joinCode()"
+            (ngModelChange)="joinCode.set($event)"
+            name="joinCode"
+            autocomplete="off" />
+        </div>
+        <button type="submit" class="campaigns-join-modal__hidden-submit" tabindex="-1" aria-hidden="true"></button>
+      </form>
+    </app-modal-shell>
   }
 
 </div>

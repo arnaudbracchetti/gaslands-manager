@@ -323,7 +323,7 @@ describe('EquipmentOption', () => {
     (el.querySelector('.option') as HTMLElement).click();
     fixture.detectChanges();
 
-    (el.querySelector('.edm-modal__cancel') as HTMLButtonElement).click();
+    (el.querySelector('.ms-modal__cancel') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(component.detailsOpen()).toBe(false);

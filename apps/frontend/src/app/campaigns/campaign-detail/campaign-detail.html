@@ -104,15 +104,6 @@
             (changeTeam)="openChangeTeamModal()"
             (viewJournal)="onViewJournal($event)"
             (exportSheet)="onExportSheet($event)" />
-
-          @if (showChangeTeamModal()) {
-            <app-change-team-modal
-              [teams]="myTeams()"
-              [currentTeamId]="myParticipant()?.teamId ?? null"
-              [isOrganizer]="isOrganizer()"
-              (confirmed)="onConfirmChangeTeam($event)"
-              (cancelled)="showChangeTeamModal.set(false)" />
-          }
         </section>
 
       </aside>
@@ -183,6 +174,15 @@
        sticky peut piéger un descendant position:fixed dans son propre
        rectangle au lieu du viewport complet, faisant apparaître le contenu
        du Programme (colonne principale) par-dessus la modale. -->
+  @if (showChangeTeamModal()) {
+    <app-change-team-modal
+      [teams]="myTeams()"
+      [currentTeamId]="myParticipant()?.teamId ?? null"
+      [isOrganizer]="isOrganizer()"
+      (confirmed)="onConfirmChangeTeam($event)"
+      (cancelled)="showChangeTeamModal.set(false)" />
+  }
+
   @if (journalParticipant(); as participant) {
     <app-participant-journal-modal
       [participant]="participant"

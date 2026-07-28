@@ -1,42 +1,3 @@
-// Styles calqués sur GameJournalModal (.gjm-*) pour cohérence visuelle.
-@use '../../shared/styles/breakpoints' as bp;
-
-.pjm-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--clr-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-
-  @include bp.mobile {
-    align-items: flex-end;
-  }
-}
-
-.pjm-modal {
-  background: var(--surface-raised);
-  border: 2px solid var(--border-rust);
-  border-radius: var(--r-sm);
-  padding: 24px;
-  width: min(560px, 92vw);
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-shadow: var(--shadow-stamp-lg);
-
-  @include bp.mobile {
-    width: 100vw;
-    max-width: 100vw;
-    max-height: 92vh;
-    padding: 16px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    border-radius: var(--r-sm) var(--r-sm) 0 0;
-  }
-}
-
 .pjm-modal__title {
   margin: 0;
   font-family: var(--font-display);
@@ -107,34 +68,4 @@
   color: var(--text-dim);
   white-space: nowrap;
   font-size: 0.72rem;
-}
-
-.pjm-modal__actions {
-  display: flex;
-  justify-content: flex-end;
-
-  @include bp.mobile {
-    position: sticky;
-    bottom: 0;
-    background: var(--surface-raised);
-  }
-}
-
-.pjm-modal__close {
-  background: transparent;
-  border: 1px solid var(--border-rust);
-  color: var(--text-dim);
-  padding: 7px 20px;
-  border-radius: var(--r-sm);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: border-color 160ms, color 160ms;
-
-  &:hover {
-    border-color: var(--tb-os);
-    color: var(--tb-os);
-  }
 }

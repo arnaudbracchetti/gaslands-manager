@@ -84,7 +84,7 @@ test.describe('Campagnes — Journal de partie', () => {
     const joineeGroup = modal.locator('.gjm-group').filter({ hasText: joineeTeam });
     await expect(joineeGroup.locator('.gjm-group__title')).toContainText(joineeTeam);
 
-    await modal.locator('.gjm-modal__close').click();
+    await modal.locator('.ms-modal__cancel').click();
     await expect(modal).toHaveCount(0);
 
     await joineeContext.close();

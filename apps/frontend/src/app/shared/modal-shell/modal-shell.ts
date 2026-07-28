@@ -30,8 +30,8 @@ export class ModalShell {
   /** Couleur des coins d'enregistrement + de la bande HazardTape + du bouton d'action. */
   variant: InputSignal<'danger' | 'primary'> = input<'danger' | 'primary'>('danger');
 
-  /** Largeur du panel : 'md' (440px) ou 'lg' (480px, contenu structuré dense). */
-  size: InputSignal<'md' | 'lg'> = input<'md' | 'lg'>('md');
+  /** Largeur du panel : 'md' (440px), 'lg' (480px, contenu structuré dense) ou 'xl' (560px, contenu riche : listes, règles détaillées). */
+  size: InputSignal<'md' | 'lg' | 'xl'> = input<'md' | 'lg' | 'xl'>('md');
 
   /** Ignoré en mode 'consultation' (pas de bouton de confirmation). */
   confirmLabel: InputSignal<string> = input<string>('Confirmer');

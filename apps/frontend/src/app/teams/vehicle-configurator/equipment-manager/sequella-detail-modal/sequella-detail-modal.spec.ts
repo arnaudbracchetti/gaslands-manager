@@ -82,7 +82,7 @@ describe('SequellaDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.sdm-modal__cancel') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLButtonElement).click();
 
     expect(emittedCount).toBe(1);
   });
@@ -93,7 +93,7 @@ describe('SequellaDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.sdm-overlay') as HTMLElement)
+    (fixture.nativeElement.querySelector('.ms-overlay') as HTMLElement)
       .dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(emittedCount).toBe(1);
@@ -105,7 +105,7 @@ describe('SequellaDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.sdm-modal') as HTMLElement)
+    (fixture.nativeElement.querySelector('.ms-modal') as HTMLElement)
       .dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(emittedCount).toBe(0);

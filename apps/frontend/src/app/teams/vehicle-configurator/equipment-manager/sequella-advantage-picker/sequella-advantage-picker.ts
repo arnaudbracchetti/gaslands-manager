@@ -11,11 +11,12 @@
  */
 import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import type { Avantage } from '../../../../catalog/catalog.model';
+import { ModalShell } from '../../../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-sequella-advantage-picker',
   standalone: true,
-  imports: [],
+  imports: [ModalShell],
   templateUrl: './sequella-advantage-picker.html',
   styleUrl: './sequella-advantage-picker.scss',
 })

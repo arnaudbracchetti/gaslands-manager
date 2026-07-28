@@ -9,17 +9,18 @@
  * d'emplacement).
  *
  * Purement informative, même contrat que `EquipmentDetailModal` : la seule sortie est
- * `closed` ("Annuler" ou clic sur l'overlay) — l'achat reste l'action exclusive du
- * bouton "Acquérir" de la carte, non dupliqué ici.
+ * `closed` — l'achat reste l'action exclusive du bouton "Acquérir" de la carte, non
+ * dupliqué ici. Chrome délégué à `ModalShell` (mode `consultation`).
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { AvailableSequellaDto } from '../../../../campaigns/workshop.model';
 import { Icon } from '../../../../shared/icon/icon';
+import { ModalShell } from '../../../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-sequella-detail-modal',
   standalone: true,
-  imports: [Icon],
+  imports: [Icon, ModalShell],
   templateUrl: './sequella-detail-modal.html',
   styleUrl: './sequella-detail-modal.scss',
 })

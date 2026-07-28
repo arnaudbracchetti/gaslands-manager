@@ -1,55 +1,46 @@
 <!--
-  EquipmentDetailModal — overlay de détail d'un équipement (cf. en-tête .ts).
-
-  Structure calquée sur TourelleAssignmentModal (.tam-*) : fond semi-transparent
-  plein écran (.edm-overlay) + boîte centrale (.edm-modal). Le clic sur l'overlay
-  émet `closed` (fermeture "en cliquant à l'extérieur") ; `$event.stopPropagation()`
-  sur la boîte empêche qu'un clic À L'INTÉRIEUR ne remonte jusqu'à l'overlay et
-  ne ferme la popup par erreur.
+  EquipmentDetailModal — détail d'un équipement (cf. en-tête .ts). Chrome
+  (overlay, panel, coins, bouton Annuler, fermeture clic-extérieur/Échap)
+  entièrement délégué à ModalShell, mode "consultation".
 -->
-<div class="edm-overlay" role="dialog" aria-modal="true" [attr.aria-label]="option().nom"
-     (click)="closed.emit()">
-  <div class="edm-modal" (click)="$event.stopPropagation()">
+<app-modal-shell
+  mode="consultation"
+  size="xl"
+  [ariaLabel]="option().nom"
+  (cancelled)="closed.emit()">
 
-    <header class="edm-modal__header">
-      <h3 class="edm-modal__name">{{ option().nom }}</h3>
-      <div class="edm-modal__badges">
-        <span class="edm-modal__badge" title="Coût en jerricans">
-          <app-icon concept="argent" size="sm" />
-          {{ option().prix }}
-        </span>
-        <span class="edm-modal__badge" title="Emplacements requis">
-          <app-icon concept="atelier" size="sm" />
-          {{ option().emplacement }}
-        </span>
-      </div>
-    </header>
-
-    @if (option().description) {
-      <!-- [innerHTML] : description/regles convertis en HTML au chargement du
-           catalogue (CatalogService.onModuleInit, marked) — <div> et non <p>
-           car le HTML généré contient déjà ses propres balises (<p>, <ul>...),
-           cf. equipment-detail-modal.scss (::ng-deep). -->
-      <div class="edm-modal__description" [innerHTML]="option().description"></div>
-    }
-
-    @if (option().regles) {
-      <section class="edm-modal__regles">
-        <h4 class="edm-modal__regles-title">Règles</h4>
-        <div [innerHTML]="option().regles"></div>
-      </section>
-    }
-
-    @if (!option().disponible && !requiresOrientation()) {
-      <!-- Refus définitif — même message que .option__reason sur la carte. -->
-      <p class="edm-modal__reason">{{ option().raison }}</p>
-    }
-
-    <div class="edm-modal__actions">
-      <button class="edm-modal__cancel" type="button" (click)="closed.emit()">
-        Annuler
-      </button>
+  <header class="edm-modal__header">
+    <h3 class="edm-modal__name">{{ option().nom }}</h3>
+    <div class="edm-modal__badges">
+      <span class="edm-modal__badge" title="Coût en jerricans">
+        <app-icon concept="argent" size="sm" />
+        {{ option().prix }}
+      </span>
+      <span class="edm-modal__badge" title="Emplacements requis">
+        <app-icon concept="atelier" size="sm" />
+        {{ option().emplacement }}
+      </span>
     </div>
+  </header>
 
-  </div>
-</div>
+  @if (option().description) {
+    <!-- [innerHTML] : description/regles convertis en HTML au chargement du
+         catalogue (CatalogService.onModuleInit, marked) — <div> et non <p>
+         car le HTML généré contient déjà ses propres balises (<p>, <ul>...),
+         cf. equipment-detail-modal.scss (::ng-deep). -->
+    <div class="edm-modal__description" [innerHTML]="option().description"></div>
+  }
+
+  @if (option().regles) {
+    <section class="edm-modal__regles">
+      <h4 class="edm-modal__regles-title">Règles</h4>
+      <div [innerHTML]="option().regles"></div>
+    </section>
+  }
+
+  @if (!option().disponible && !requiresOrientation()) {
+    <!-- Refus définitif — même message que .option__reason sur la carte. -->
+    <p class="edm-modal__reason">{{ option().raison }}</p>
+  }
+
+</app-modal-shell>

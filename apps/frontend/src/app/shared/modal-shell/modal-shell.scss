@@ -29,6 +29,10 @@
     width: min(480px, 92vw);
   }
 
+  &.ms-modal--xl {
+    width: min(560px, 92vw);
+  }
+
   background-image: var(--metal-sheen);
   border: 2px solid var(--border-hair);
   box-shadow: var(--shadow-stamp-lg);

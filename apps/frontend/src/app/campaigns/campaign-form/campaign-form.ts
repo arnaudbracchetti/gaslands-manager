@@ -10,6 +10,10 @@
  *
  * CA3 : si l'utilisateur n'a aucune équipe, le formulaire affiche un message
  * et désactive la soumission au lieu de présenter un select vide.
+ *
+ * Chrome (panel métal + coins + bande HazardTape + boutons) délégué à
+ * ModalShell (mode "action") — le parent (Campaigns) n'a plus besoin
+ * d'envelopper ce composant dans son propre overlay.
  */
 import {
   Component,
@@ -26,11 +30,12 @@ import { Team, CreateTeamDto } from '../../teams/team.model';
 import { CreateCampaignDto } from '../campaign.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 import { Icon } from '../../shared/icon/icon';
+import { ModalShell } from '../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [FormsModule, QuickTeamCreate, Icon],
+  imports: [FormsModule, QuickTeamCreate, Icon, ModalShell],
   templateUrl: './campaign-form.html',
   styleUrl: './campaign-form.scss',
 })

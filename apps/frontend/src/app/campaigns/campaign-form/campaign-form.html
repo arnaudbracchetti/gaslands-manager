@@ -1,5 +1,11 @@
-<!-- Formulaire de création d'une saison -->
-<div class="campaign-form-card">
+<!-- Formulaire de création d'une saison. Chrome délégué à ModalShell (mode "action"). -->
+<app-modal-shell
+  ariaLabel="Nouvelle saison"
+  variant="primary"
+  [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
+  [confirmDisabled]="saving()"
+  (confirmed)="saveForm()"
+  (cancelled)="cancelForm()">
 
   <h2><app-icon concept="ajouter" size="lg" /> Nouvelle saison</h2>
 
@@ -44,14 +50,4 @@
 
   </div>
 
-  <!-- Boutons Annuler / Enregistrer -->
-  <div class="form-actions">
-    <button class="btn-secondary" type="button" (click)="cancelForm()" [disabled]="saving()">
-      Annuler
-    </button>
-    <button class="btn-primary" type="button" (click)="saveForm()" [disabled]="saving()">
-      @if (saving()) { Enregistrement... } @else { Enregistrer }
-    </button>
-  </div>
-
-</div>
+</app-modal-shell>

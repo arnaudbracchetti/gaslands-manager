@@ -97,7 +97,7 @@ describe('EquipmentDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.edm-modal__cancel') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLButtonElement).click();
 
     expect(emittedCount).toBe(1);
   });
@@ -108,7 +108,7 @@ describe('EquipmentDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.edm-overlay') as HTMLElement)
+    (fixture.nativeElement.querySelector('.ms-overlay') as HTMLElement)
       .dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(emittedCount).toBe(1);
@@ -120,7 +120,7 @@ describe('EquipmentDetailModal', () => {
     let emittedCount = 0;
     outputToObservable(component.closed).subscribe(() => emittedCount++);
 
-    (fixture.nativeElement.querySelector('.edm-modal') as HTMLElement)
+    (fixture.nativeElement.querySelector('.ms-modal') as HTMLElement)
       .dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(emittedCount).toBe(0);

@@ -49,7 +49,7 @@ describe('SequellaAdvantagePicker', () => {
 
   it('désactive "Valider" tant qu\'aucun avantage n\'est sélectionné', () => {
     const el = fixture.nativeElement as HTMLElement;
-    const confirmBtn = el.querySelector('.sap-modal__confirm') as HTMLButtonElement;
+    const confirmBtn = el.querySelector('.ms-modal__confirm') as HTMLButtonElement;
 
     expect(confirmBtn.disabled).toBe(true);
   });
@@ -62,7 +62,7 @@ describe('SequellaAdvantagePicker', () => {
     fixture.detectChanges();
 
     expect(component.selectedNomInterne()).toBe('sens_du_spectacle');
-    const confirmBtn = el.querySelector('.sap-modal__confirm') as HTMLButtonElement;
+    const confirmBtn = el.querySelector('.ms-modal__confirm') as HTMLButtonElement;
     expect(confirmBtn.disabled).toBe(false);
   });
 
@@ -73,7 +73,7 @@ describe('SequellaAdvantagePicker', () => {
     component.select('baril_de_poudre');
     fixture.detectChanges();
 
-    (fixture.nativeElement.querySelector('.sap-modal__confirm') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.ms-modal__confirm') as HTMLButtonElement).click();
 
     expect(emitted).toEqual(['baril_de_poudre']);
   });
@@ -91,7 +91,7 @@ describe('SequellaAdvantagePicker', () => {
     const emitted: void[] = [];
     outputToObservable(component.cancelled).subscribe(() => emitted.push(undefined));
 
-    (fixture.nativeElement.querySelector('.sap-modal__cancel') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLButtonElement).click();
 
     expect(emitted).toHaveLength(1);
   });

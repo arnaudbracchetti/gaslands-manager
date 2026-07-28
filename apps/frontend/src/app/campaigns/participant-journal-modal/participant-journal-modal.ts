@@ -14,6 +14,7 @@ import { DatePipe } from '@angular/common';
 import type { CampaignParticipant } from '../campaign-participant.model';
 import type { ParticipantJournalEntryDto } from '../game.model';
 import { Icon } from '../../shared/icon/icon';
+import { ModalShell } from '../../shared/modal-shell/modal-shell';
 
 /** Événements d'une partie, regroupés et gardés dans l'ordre du Programme. */
 export interface ParticipantJournalGroup {
@@ -26,7 +27,7 @@ export interface ParticipantJournalGroup {
 @Component({
   selector: 'app-participant-journal-modal',
   standalone: true,
-  imports: [DatePipe, Icon],
+  imports: [DatePipe, Icon, ModalShell],
   templateUrl: './participant-journal-modal.html',
   styleUrl: './participant-journal-modal.scss',
 })

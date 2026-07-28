@@ -6,21 +6,21 @@
  * description ET règles complètes (`regles`, absent de la carte pour la garder
  * compacte, cf. `vehicle-builder.model.ts`) — dans une mise en page aérée.
  *
- * Composant **dumb** : overlay plein écran + boîte centrale, `role="dialog"`/
- * `aria-modal`, même pattern que `ConfirmModal`. Purement informative : la
- * seule sortie est `closed` ("Annuler" OU clic sur l'overlay, en dehors de la
- * boîte) — le parent referme la popup sans action. L'ajout au véhicule reste
- * l'action exclusive du bouton "+" de la carte (`EquipmentOption.onAddClicked`),
- * non dupliquée ici.
+ * Composant **dumb**, chrome délégué à `ModalShell` (mode `consultation` :
+ * fermeture par le bouton "Annuler", clic sur l'overlay ou touche Échap).
+ * Purement informative : la seule sortie est `closed` — le parent referme la
+ * popup sans action. L'ajout au véhicule reste l'action exclusive du bouton
+ * "+" de la carte (`EquipmentOption.onAddClicked`), non dupliquée ici.
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
 import { EquipmentOption as EquipmentOptionDto } from '../../vehicle-builder.model';
 import { Icon } from '../../../../shared/icon/icon';
+import { ModalShell } from '../../../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-equipment-detail-modal',
   standalone: true,
-  imports: [Icon],
+  imports: [Icon, ModalShell],
   templateUrl: './equipment-detail-modal.html',
   styleUrl: './equipment-detail-modal.scss',
 })

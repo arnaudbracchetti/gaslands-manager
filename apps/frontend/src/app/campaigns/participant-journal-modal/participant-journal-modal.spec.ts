@@ -72,7 +72,7 @@ describe('ParticipantJournalModal', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.closed).subscribe(() => emitted.push(true));
 
-    fixture.nativeElement.querySelector('.pjm-modal__close').click();
+    fixture.nativeElement.querySelector('.ms-modal__cancel').click();
 
     expect(emitted).toHaveLength(1);
   });

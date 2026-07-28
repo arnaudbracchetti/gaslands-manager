@@ -59,15 +59,16 @@ shell ne s'appliquent qu'à son propre chrome, jamais au contenu projeté
 composant qui l'a créé, pas celui du shell).
 
 Couvre les **deux familles** de modales de l'application via `mode` :
-- `action` (défaut) : deux boutons (Annuler/Action) — seuls eux ferment la
-  modale, aucune fermeture au clic hors de la boîte. Utilisé aujourd'hui par
-  les 4 consommateurs ci-dessous.
+- `action` : deux boutons (Annuler/Action) — seuls eux ferment la modale,
+  aucune fermeture au clic hors de la boîte. Ex. `ConfirmModal`,
+  `SellVehicleModal`, `UserDetailsModal`, `ChangePasswordModal`,
+  `ChangeTeamModal`, `SequellaAdvantagePicker`.
 - `consultation` : un seul bouton (Fermer) — fermeture par ce bouton **ou**
-  par un clic hors de la boîte (ou touche Échap). Modélisé dès maintenant
-  mais non encore consommé par une modale existante — candidat naturel pour
-  une future migration de `GameJournalModal`/`ParticipantJournalModal`/
-  `EquipmentDetailModal`/`SequellaDetailModal`, qui réimplémentent aujourd'hui
-  à la main ce même clic-overlay-pour-fermer.
+  par un clic hors de la boîte (ou touche Échap). Ex. `EquipmentDetailModal`,
+  `SequellaDetailModal`, `GameJournalModal`, `ParticipantJournalModal` — ces
+  deux derniers gagnent au passage la fermeture au clic extérieur/Échap
+  qu'ils n'avaient pas avant leur migration sur ce shell (lecture seule,
+  aucun état non sauvegardé — changement de comportement sans risque).
 
 | | |
 |---|---|
@@ -81,7 +82,7 @@ Couvre les **deux familles** de modales de l'application via `mode` :
 | `ariaLabel` | `string` | — | Libellé accessible du dialog (requis) |
 | `mode` | `'action' \| 'consultation'` | `'action'` | Nombre de boutons et mécanisme de fermeture, cf. ci-dessus |
 | `variant` | `'danger' \| 'primary'` | `'danger'` | Couleur des coins/bande/bouton d'action (rouille / ambre) |
-| `size` | `'md' \| 'lg'` | `'md'` | Largeur du panel (440px / 480px) |
+| `size` | `'md' \| 'lg' \| 'xl'` | `'md'` | Largeur du panel (440px / 480px / 560px — `xl` pour un contenu riche : listes, règles détaillées) |
 | `confirmLabel` | `string` | `'Confirmer'` | Ignoré en mode `consultation` |
 | `cancelLabel` | `string` | `'Annuler'` | Libellé du bouton de fermeture |
 | `confirmDisabled` | `boolean` | `false` | Ignoré en mode `consultation` |
@@ -93,7 +94,19 @@ Couvre les **deux familles** de modales de l'application via `mode` :
 | `confirmed` | `void` | Clic sur le bouton d'action (mode `action` uniquement — le bouton n'existe pas en `consultation`) |
 | `cancelled` | `void` | Fermeture — clic bouton dans les deux modes, plus clic/Échap hors de la boîte en mode `consultation` |
 
-Utilisé par : `ConfirmModal`, `SellVehicleModal`, `UserDetailsModal`, `ChangePasswordModal`.
+**Comportement mobile délibérément simplifié** : `ModalShell` ne rétrécit le
+panel que dans une limite `min(…, 96vw)` centrée — pas de bottom-sheet plein
+écran ancré en bas ni de footer d'actions sticky. Plusieurs des modales
+migrées vers ce shell (`ChangeTeamModal`, `GameJournalModal`,
+`ParticipantJournalModal`, `SequellaAdvantagePicker`) implémentaient
+auparavant un tel bottom-sheet à la main ; il a été abandonné au profit de ce
+comportement uniforme plutôt que d'étendre l'API du shell pour un seul usage.
+
+Utilisé par : `ConfirmModal`, `SellVehicleModal`, `UserDetailsModal`,
+`ChangePasswordModal`, `EquipmentDetailModal`, `SequellaDetailModal`,
+`GameJournalModal`, `ParticipantJournalModal`, `ChangeTeamModal`,
+`SequellaAdvantagePicker`, `CampaignForm`, et directement par `Campaigns`
+(modale "Rejoindre via code", markup inline sans composant dédié).
 
 ---
 
@@ -287,6 +300,14 @@ graph TD
     SellVehicleModal --> ModalShell
     UserDetailsModal --> ModalShell
     ChangePasswordModal --> ModalShell
+    EquipmentDetailModal --> ModalShell
+    SequellaDetailModal --> ModalShell
+    GameJournalModal --> ModalShell
+    ParticipantJournalModal --> ModalShell
+    ChangeTeamModal --> ModalShell
+    SequellaAdvantagePicker --> ModalShell
+    CampaignForm --> ModalShell
+    CampaignsPage --> ModalShell
 ```
 
 ---
@@ -774,12 +795,13 @@ Carte d'un équipement disponible dans le catalogue. Si orientable, affiche un s
 
 ### `EquipmentDetailModal` — `teams/vehicle-configurator/equipment-option/equipment-detail-modal/`
 
-Popup d'information sur un équipement : nom, coût, emplacement, description, règles complètes. Purement informative — aucune action d'ajout.
+Popup d'information sur un équipement : nom, coût, emplacement, description, règles complètes. Purement informative — aucune action d'ajout. Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-equipment-detail-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -792,7 +814,7 @@ Popup d'information sur un équipement : nom, coût, emplacement, description, r
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `closed` | `void` | Fermeture de la popup (bouton ou clic overlay) |
+| `closed` | `void` | Fermeture de la popup ("Annuler", clic hors de la boîte ou touche Échap) |
 
 ---
 
@@ -890,7 +912,7 @@ Récapitulatif du coût du véhicule en cours : nom **éditable** (champ texte, 
 
 ### `Campaigns` — `campaigns/` 🧠
 
-Page principale listant toutes les campagnes de l'utilisateur. Gère la création via une modale et affiche les badges de demandes en attente.
+Page principale listant toutes les campagnes de l'utilisateur. Gère la création via une modale et affiche les badges de demandes en attente. Porte aussi la modale "Rejoindre via code" (markup inline, pas de composant dédié — un seul champ, pas de logique propre à extraire) : chrome délégué à `ModalShell` directement dans `campaigns.html`, même convention de bouton submit caché dans le `<form>` qu'`UserDetailsModal`/`ChangePasswordModal` pour préserver la soumission au clavier.
 
 | | |
 |---|---|
@@ -898,7 +920,7 @@ Page principale listant toutes les campagnes de l'utilisateur. Gère la créatio
 | **Type** | Smart |
 | **Route** | `/campaigns` |
 | **Services** | `CampaignsService`, `TeamsService`, `Router` |
-| **Compose** | `CampaignCard`, `CampaignForm` |
+| **Compose** | `CampaignCard`, `CampaignForm`, `ModalShell` (modale "Rejoindre via code" inline) |
 
 **Signals clés** : `campaigns`, `loading`, `showForm`, `userTeams`, `pendingCampaignIds`, `organizedPendingCounts`.
 
@@ -926,13 +948,13 @@ Carte d'affichage d'une campagne : nom, état, badge de rôle (🏆 Organisateur
 
 ### `CampaignForm` — `campaigns/campaign-form/`
 
-Formulaire de création d'une campagne (nom + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`.
+Formulaire de création d'une campagne (nom + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) — le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-form` |
 | **Type** | Dumb |
-| **Compose** | `QuickTeamCreate` |
+| **Compose** | `QuickTeamCreate`, `ModalShell` |
 
 **Inputs**
 
@@ -1033,12 +1055,13 @@ Liste unifiée des participants d'une campagne avec boutons d'action adaptés au
 
 ### `ParticipantJournalModal` — `campaigns/participant-journal-modal/`
 
-Historique complet d'un participant, toutes parties de la campagne confondues — mirroir de `GameJournalModal` (cf. ci-dessous), mais groupé par **partie** (`gameId`) plutôt que par participant, puisque le participant est ici fixe et les parties multiples. Composant dumb : reçoit la liste plate des événements (`ParticipantJournalEntryDto`, avec `gameId`/`gameOrder`/`scenarioName` par entrée) et les regroupe via un `computed()` (`Map`, ordre d'insertion préservé) — le backend renvoie déjà les entrées triées par ordre de partie puis chronologiquement à l'intérieur de chaque partie. Ouverte depuis le bouton/menu "Voir l'historique" de `ParticipantList`, possédée par `CampaignDetail`.
+Historique complet d'un participant, toutes parties de la campagne confondues — mirroir de `GameJournalModal` (cf. ci-dessous), mais groupé par **partie** (`gameId`) plutôt que par participant, puisque le participant est ici fixe et les parties multiples. Composant dumb : reçoit la liste plate des événements (`ParticipantJournalEntryDto`, avec `gameId`/`gameOrder`/`scenarioName` par entrée) et les regroupe via un `computed()` (`Map`, ordre d'insertion préservé) — le backend renvoie déjà les entrées triées par ordre de partie puis chronologiquement à l'intérieur de chaque partie. Ouverte depuis le bouton/menu "Voir l'historique" de `ParticipantList`, possédée par `CampaignDetail`. Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-participant-journal-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -1075,12 +1098,13 @@ Affiche le code d'invitation d'une campagne avec un bouton "Copier". Feedback vi
 
 ### `ChangeTeamModal` — `campaigns/change-team-modal/`
 
-Overlay de sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. Le parent contrôle la visibilité.
+Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. Le parent contrôle la visibilité. Chrome délégué à `ModalShell` (mode `action`, `variant="primary"` — reproduit l'ambre `--tb-danger` du bouton "Valider", une action réversible, pas destructive).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-change-team-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -1474,12 +1498,14 @@ traduits en texte lisible par `GameEvent.describe()` (backend). Regroupe les
 entrées reçues à plat par participant, en préservant l'ordre d'apparition (le
 premier événement chronologique d'un participant détermine la position de son
 groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
-"📜 Journal" de `GameList`, visible par tout participant `VALIDATED`.
+"📜 Journal" de `GameList`, visible par tout participant `VALIDATED`. Chrome
+délégué à `ModalShell` (mode `consultation`, `size="xl"`).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-game-journal-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -1621,12 +1647,13 @@ véhicule de la route).
 
 ### `SequellaAdvantagePicker` — `teams/vehicle-configurator/equipment-manager/sequella-advantage-picker/`
 
-Modale de choix de l'avantage gratuit accordé par la séquelle Dur à Cuire. Composant dumb, structure calquée sur `ChangeTeamModal` (fond semi-transparent, boîte centrale, liste sélectionnable par radio, actions Valider/Annuler) — reçoit la liste déjà filtrée aux 6 avantages de catégorie "Dur à Cuire" (tous sponsors confondus — la règle du livre les accorde même hors accès normal du sponsor), sélection locale, "Valider" désactivé tant qu'aucun choix n'est fait.
+Modale de choix de l'avantage gratuit accordé par la séquelle Dur à Cuire. Composant dumb — reçoit la liste déjà filtrée aux 6 avantages de catégorie "Dur à Cuire" (tous sponsors confondus — la règle du livre les accorde même hors accès normal du sponsor), sélection locale, "Valider" désactivé tant qu'aucun choix n'est fait (`confirmDisabled` de `ModalShell`). Chrome délégué à `ModalShell` (mode `action`, `variant="primary"` — même raison que `ChangeTeamModal`).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-sequella-advantage-picker` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -1645,12 +1672,13 @@ Modale de choix de l'avantage gratuit accordé par la séquelle Dur à Cuire. Co
 
 ### `SequellaDetailModal` — `teams/vehicle-configurator/equipment-manager/sequella-detail-modal/`
 
-Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mirroir d'`EquipmentDetailModal` pour les séquelles : nom, coût en Chocs, description ET règles complètes. Composant dédié plutôt que réutilisation d'`EquipmentDetailModal` (qui suppose un coût en jerricans et un emplacement, deux notions absentes d'une séquelle). Purement informative — la seule sortie est `closed` ("Annuler" ou clic sur l'overlay) ; l'achat reste l'action exclusive du bouton "Acquérir" de la carte, qui stoppe la propagation du clic pour ne pas ouvrir la modale en même temps.
+Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mirroir d'`EquipmentDetailModal` pour les séquelles : nom, coût en Chocs, description ET règles complètes. Composant dédié plutôt que réutilisation d'`EquipmentDetailModal` (qui suppose un coût en jerricans et un emplacement, deux notions absentes d'une séquelle). Purement informative — la seule sortie est `closed` ("Annuler", clic hors de la boîte ou touche Échap). Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`) — la carte, elle, stoppe la propagation du clic sur le bouton "Acquérir" pour ne pas ouvrir la modale en même temps.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-sequella-detail-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 

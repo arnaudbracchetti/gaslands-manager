@@ -169,7 +169,7 @@ test.describe('Campagnes — Gestion des participants', () => {
 
     // Cas négatif : "Annuler" ne change rien.
     await changeTeamModal.locator('.ctm-modal__select').selectOption({ label: secondTeamName });
-    await changeTeamModal.locator('.ctm-modal__cancel').click();
+    await changeTeamModal.locator('.ms-modal__cancel').click();
     await expect(changeTeamModal).toHaveCount(0);
     await expect(page.locator('.participant-list__item').filter({ hasText: organizerTeam })).toHaveCount(1);
 
@@ -181,7 +181,7 @@ test.describe('Campagnes — Gestion des participants', () => {
       (r) => r.request().method() === 'PUT' && /\/api\/campaigns\/\d+\/participants\/me$/.test(r.url()),
     );
     await page.getByRole('dialog', { name: 'Choisir votre équipe' })
-      .locator('.ctm-modal__confirm').click();
+      .locator('.ms-modal__confirm').click();
     await changeTeamResponse;
 
     await expect(page.locator('.participant-list__item').filter({ hasText: secondTeamName })).toHaveCount(1);
