@@ -1,0 +1,51 @@
+<!--
+  ModalShell — chrome commun (overlay + panel métal + coins + bande HazardTape
+  + footer d'actions), contenu laissé entièrement au consommateur via
+  <ng-content>. `$event.stopPropagation()` sur la boîte empêche qu'un clic À
+  L'INTÉRIEUR ne remonte jusqu'à l'overlay (pertinent uniquement en mode
+  'consultation', inoffensif en mode 'action' où l'overlay n'a pas de handler).
+
+  Coins d'enregistrement en `<span>` réels (pas ::before/::after) : la classe
+  .tb-grain (texture de grain, styles.scss) définit elle-même un ::after sur
+  l'élément qu'elle décore — un ::after de coin sur .ms-modal entrerait en
+  collision avec celui de .tb-grain (un seul ::after possible par élément) et
+  rendrait le coin bas-droit invisible (constaté : opacity/inset écrasés par
+  la règle du grain). Deux éléments dédiés évitent structurellement le conflit.
+-->
+<div
+  class="ms-overlay"
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  [attr.aria-label]="ariaLabel()"
+  (click)="onOverlayClick()"
+  (keydown.escape)="onOverlayClick()">
+  <div
+    class="ms-modal tb-grain"
+    [class.ms-modal--primary]="variant() === 'primary'"
+    [class.ms-modal--lg]="size() === 'lg'"
+    (click)="$event.stopPropagation()">
+    <span class="ms-corner ms-corner--tl" aria-hidden="true"></span>
+    <span class="ms-corner ms-corner--br" aria-hidden="true"></span>
+    <div class="ms-modal__tape"></div>
+
+    <div class="ms-modal__body">
+      <ng-content></ng-content>
+
+      <div class="ms-modal__actions">
+        <button class="ms-modal__cancel" type="button" (click)="cancelled.emit()">
+          {{ cancelLabel() }}
+        </button>
+        @if (mode() === 'action') {
+          <button
+            class="ms-modal__confirm"
+            type="button"
+            [disabled]="confirmDisabled()"
+            (click)="confirmed.emit()">
+            {{ confirmLabel() }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>

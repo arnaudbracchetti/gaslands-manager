@@ -64,31 +64,35 @@ Chaque utilisateur ne peut voir et modifier que ses propres données.
 
 Un utilisateur connecté peut consulter et modifier ses propres informations
 depuis le menu ouvert au clic sur son prénom, tout en haut de la navbar
-(`App`) — entrée "Détails du compte", qui ouvre `UserDetailsModal` (cf.
-[COMPONENTS.md](../COMPONENTS.md#userdetailsmodal--authuser-details-modal)).
-Le dialog contient deux sous-formulaires indépendants :
+(`App`) — deux entrées indépendantes, chacune ouvrant sa propre modale avec
+son propre état de sauvegarde/erreur possédé par `App` :
 
-- **Informations** (`PATCH /api/auth/me`) : prénom, nom, pseudo, email. Le champ
-  édité est le pseudo **brut**, pas le `callName` qui en dérive (cf. §Nom
-  d'affichage ci-dessus). Le rôle est
-  affiché en lecture seule — jamais modifiable par ce endpoint ni par
-  l'utilisateur lui-même (garantie structurelle : `User._role` est `readonly`,
-  `updateProfile()` ne peut pas y toucher ; seul `AdminSeedService`, cf.
-  ci-dessous, ou un futur écran admin dédié, peut changer un rôle). L'email est revérifié unique en
-  base au même titre qu'à l'inscription (contrainte `unique` PostgreSQL,
-  capturée comme à l'inscription — HTTP 409 si déjà pris par un autre
-  compte). En cas de succès, la réponse (profil à jour) remplace directement
-  le `currentUser` du frontend : la navbar reflète le changement sans
-  requête supplémentaire.
-- **Mot de passe** (`PATCH /api/auth/me/password`) : exige le mot de passe
-  actuel (vérifié par `bcrypt.compare`, même principe que la connexion) en
-  plus du nouveau mot de passe (même règle de longueur minimale — 6
-  caractères — qu'à l'inscription). **Après un changement réussi,
-  l'utilisateur est automatiquement déconnecté** (`authService.logout()`,
-  redirection vers `/login`) : ce projet n'a pas de mécanisme de révocation
-  JWT (token stateless), la reconnexion avec le nouveau mot de passe est donc
-  le seul moyen de garantir qu'aucune session active ne continue de tourner
-  avec l'ancien mot de passe implicitement validé.
+- **"Détails du compte"** ouvre `UserDetailsModal` (cf.
+  [COMPONENTS.md](../COMPONENTS.md#userdetailsmodal--authuser-details-modal)) :
+  formulaire Informations (`PATCH /api/auth/me`) — prénom, nom, pseudo, email.
+  Le champ édité est le pseudo **brut**, pas le `callName` qui en dérive (cf.
+  §Nom d'affichage ci-dessus). Le rôle n'est pas affiché sur ce dialog (seul
+  `AdminUsers` croise pseudo et identité légale, cf. "Administration des
+  comptes" ci-dessous) — il reste de toute façon non modifiable par ce
+  endpoint ni par l'utilisateur lui-même (garantie structurelle : `User._role`
+  est `readonly`, `updateProfile()` ne peut pas y toucher ; seul
+  `AdminSeedService`, cf. ci-dessous, ou un futur écran admin dédié, peut
+  changer un rôle). L'email est revérifié unique en base au même titre qu'à
+  l'inscription (contrainte `unique` PostgreSQL, capturée comme à
+  l'inscription — HTTP 409 si déjà pris par un autre compte). En cas de
+  succès, la réponse (profil à jour) remplace directement le `currentUser` du
+  frontend : la navbar reflète le changement sans requête supplémentaire.
+- **"Changer le mot de passe"** ouvre `ChangePasswordModal` (cf.
+  [COMPONENTS.md](../COMPONENTS.md#changepasswordmodal--authchange-password-modal)) :
+  `PATCH /api/auth/me/password`, exige le mot de passe actuel (vérifié par
+  `bcrypt.compare`, même principe que la connexion) en plus du nouveau mot de
+  passe (même règle de longueur minimale — 6 caractères — qu'à l'inscription).
+  **Après un changement réussi, l'utilisateur est automatiquement
+  déconnecté** (`authService.logout()`, redirection vers `/login`) : ce
+  projet n'a pas de mécanisme de révocation JWT (token stateless), la
+  reconnexion avec le nouveau mot de passe est donc le seul moyen de
+  garantir qu'aucune session active ne continue de tourner avec l'ancien mot
+  de passe implicitement validé.
 
 ---
 

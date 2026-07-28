@@ -1,27 +1,32 @@
 <!--
-  UserDetailsModal — dialog "Détails du compte".
-
-  Deux sous-formulaires indépendants (Informations / Mot de passe), chacun
-  avec son propre bouton, sa propre erreur et son propre état de sauvegarde
-  — ils correspondent à deux appels backend distincts avec des échecs
-  indépendants (email pris vs mot de passe actuel incorrect).
+  UserDetailsModal — dialog "Détails du compte" (Informations uniquement —
+  le changement de mot de passe vit dans sa propre modale, ChangePasswordModal).
+  Chrome (panel métal + coins + bande HazardTape + boutons) porté par
+  ModalShell (mode "action") — le bouton de confirmation, hors du <form>
+  ci-dessous, appelle directement onProfileSubmit(). Le bouton submit caché
+  dans le <form> ne sert qu'à préserver la soumission au clavier (Entrée dans
+  un champ) : un formulaire à plusieurs champs sans AUCUN bouton submit ne
+  déclenche pas fiablement la soumission implicite.
 -->
-<div class="udm-overlay" role="dialog" aria-modal="true" aria-label="Détails du compte">
-  <div class="udm-modal">
-    <div class="udm-modal__header">
-      <h4 class="udm-modal__title">Détails du compte</h4>
-      <button type="button" class="udm-close" aria-label="Fermer" (click)="onClose()">✕</button>
-    </div>
+<app-modal-shell
+  ariaLabel="Détails du compte"
+  variant="primary"
+  [confirmLabel]="confirmLabel()"
+  cancelLabel="Fermer"
+  [confirmDisabled]="profileSubmitDisabled()"
+  (confirmed)="onProfileSubmit()"
+  (cancelled)="cancelled.emit()">
+  <h3 class="udm-title">Détails du compte</h3>
 
-    <!-- Section Informations -->
-    <section class="udm-section">
-      <h5 class="udm-section__title">Informations</h5>
+  <section class="udm-section">
+    <h5 class="udm-section__title">Informations</h5>
 
-      @if (profileError()) {
-        <div class="auth-error" role="alert">{{ profileError() }}</div>
-      }
+    @if (profileError()) {
+      <div class="auth-error" role="alert">{{ profileError() }}</div>
+    }
 
-      <form (ngSubmit)="onProfileSubmit()">
+    <form (ngSubmit)="onProfileSubmit()">
+      <div class="form-grid">
         <div class="form-group">
           <label for="udm-first-name">Prénom</label>
           <input
@@ -46,7 +51,7 @@
           />
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-group--full">
           <label for="udm-pseudo">Pseudo</label>
           <input
             id="udm-pseudo"
@@ -59,7 +64,7 @@
           />
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-group--full">
           <label for="udm-email">Email</label>
           <input
             id="udm-email"
@@ -71,82 +76,9 @@
             required
           />
         </div>
+      </div>
 
-        <div class="udm-readonly">
-          <span class="udm-readonly__label">Rôle</span>
-          <span class="udm-readonly__value">{{ roleLabel() }}</span>
-        </div>
-
-        <button type="submit" class="udm-submit" [disabled]="profileSubmitDisabled()">
-          @if (profileSaving()) {
-            Enregistrement…
-          } @else {
-            Enregistrer
-          }
-        </button>
-      </form>
-    </section>
-
-    <!-- Section Mot de passe -->
-    <section class="udm-section">
-      <h5 class="udm-section__title">Mot de passe</h5>
-
-      @if (passwordError()) {
-        <div class="auth-error" role="alert">{{ passwordError() }}</div>
-      }
-      @if (passwordMismatch()) {
-        <div class="auth-error" role="alert">Les mots de passe ne correspondent pas</div>
-      }
-
-      <form (ngSubmit)="onPasswordSubmit()">
-        <div class="form-group">
-          <label for="udm-current-password">Mot de passe actuel</label>
-          <input
-            id="udm-current-password"
-            type="password"
-            [ngModel]="currentPassword()"
-            (ngModelChange)="currentPassword.set($event)"
-            name="currentPassword"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="udm-new-password">Nouveau mot de passe</label>
-          <input
-            id="udm-new-password"
-            type="password"
-            [ngModel]="newPassword()"
-            (ngModelChange)="newPassword.set($event)"
-            name="newPassword"
-            autocomplete="new-password"
-            placeholder="6 caractères minimum"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="udm-confirm-new-password">Confirmer le nouveau mot de passe</label>
-          <input
-            id="udm-confirm-new-password"
-            type="password"
-            [ngModel]="confirmNewPassword()"
-            (ngModelChange)="confirmNewPassword.set($event)"
-            name="confirmNewPassword"
-            autocomplete="new-password"
-            required
-          />
-        </div>
-
-        <button type="submit" class="udm-submit" [disabled]="passwordSubmitDisabled()">
-          @if (passwordSaving()) {
-            Enregistrement…
-          } @else {
-            Changer le mot de passe
-          }
-        </button>
-      </form>
-    </section>
-  </div>
-</div>
+      <button type="submit" class="udm-hidden-submit" tabindex="-1" aria-hidden="true"></button>
+    </form>
+  </section>
+</app-modal-shell>

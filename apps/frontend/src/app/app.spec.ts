@@ -134,10 +134,30 @@ describe('App (composant racine)', () => {
       expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
     });
 
-    it('onProfileSubmitted() appelle authService.updateProfile() et efface profileSaving au succès', async () => {
+    it('ouvre le dialog "Changer le mot de passe" et ferme le menu', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      (compiled.querySelector('.user-name--trigger') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const menuButtons = compiled.querySelectorAll<HTMLButtonElement>('.navbar-user-menu__panel button');
+      menuButtons[1].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(compiled.querySelector('app-change-password-modal')).toBeTruthy();
+      expect(compiled.querySelector('app-user-details-modal')).toBeFalsy();
+      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+    });
+
+    it('onProfileSubmitted() appelle authService.updateProfile(), efface profileSaving et ferme le dialog au succès', async () => {
       mockAuthService.updateProfile.mockReturnValue(of(undefined));
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
+      fixture.componentInstance.activeAccountModal.set('userDetails');
 
       const dto = { firstName: 'Jeanne', lastName: 'Martin', pseudo: 'Furiosa', email: 'jeanne@test.com' };
       fixture.componentInstance.onProfileSubmitted(dto);
@@ -145,6 +165,7 @@ describe('App (composant racine)', () => {
       expect(mockAuthService.updateProfile).toHaveBeenCalledWith(dto);
       expect(fixture.componentInstance.profileSaving()).toBe(false);
       expect(fixture.componentInstance.profileError()).toBe('');
+      expect(fixture.componentInstance.activeAccountModal()).toBeNull();
     });
 
     it('onProfileSubmitted() renseigne profileError() en cas d\'erreur HTTP', async () => {
@@ -160,15 +181,17 @@ describe('App (composant racine)', () => {
       expect(fixture.componentInstance.profileSaving()).toBe(false);
     });
 
-    it('onPasswordSubmitted() appelle authService.changePassword() puis logout() au succès', async () => {
+    it('onPasswordSubmitted() appelle authService.changePassword(), ferme le dialog puis logout() au succès', async () => {
       mockAuthService.changePassword.mockReturnValue(of(undefined));
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
+      fixture.componentInstance.activeAccountModal.set('changePassword');
 
       const dto = { currentPassword: 'ancien', newPassword: 'nouveauMdp123' };
       fixture.componentInstance.onPasswordSubmitted(dto);
 
       expect(mockAuthService.changePassword).toHaveBeenCalledWith(dto);
+      expect(fixture.componentInstance.activeAccountModal()).toBeNull();
       expect(mockAuthService.logout).toHaveBeenCalled();
     });
 

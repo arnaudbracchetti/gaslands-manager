@@ -2,10 +2,9 @@
  * SellVehicleModal — fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier.
  *
  * Composant dumb : reçoit une `VehicleSaleSummary` déjà calculée (`buildVehicleSaleSummary`,
- * `AtelierPage`) et émet le choix de l'utilisateur. Reprend le style visuel de `ConfirmModal`
- * (Panel métal + bande HazardTape) mais dupliqué plutôt que projeté en `ng-content` générique :
- * seul cet écran a besoin d'un contenu structuré (liste d'équipement + totaux), les 4 autres
- * consommateurs de `ConfirmModal` n'en ont pas besoin.
+ * `AtelierPage`) et émet le choix de l'utilisateur. Compose `ModalShell` (chrome Panel
+ * métal + coins + HazardTape mutualisé, mode "action") — ne garde que son contenu
+ * structuré propre (véhicule, liste d'équipement, totaux) comme contenu projeté.
  *
  * Texte et libellé du bouton de confirmation discriminés par `summary.purchasedThisSession` :
  * "Annuler l'achat" (remboursement intégral, véhicule acheté cette session) vs "Vendre"
@@ -14,11 +13,12 @@
 import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { VehicleSaleSummary } from '../vehicle-sale-summary';
 import { Icon } from '../../../shared/icon/icon';
+import { ModalShell } from '../../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-sell-vehicle-modal',
   standalone: true,
-  imports: [Icon],
+  imports: [Icon, ModalShell],
   templateUrl: './sell-vehicle-modal.html',
   styleUrl: './sell-vehicle-modal.scss',
 })

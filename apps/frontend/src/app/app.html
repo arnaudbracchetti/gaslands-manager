@@ -65,7 +65,8 @@
             (keydown.enter)="closeUserMenu()"
             (keydown.space)="closeUserMenu()"></div>
           <div class="navbar-user-menu__panel" role="menu">
-            <button type="button" role="menuitem" (click)="openUserDetails()">Détails du compte</button>
+            <button type="button" role="menuitem" (click)="openAccountModal('userDetails')">Détails du compte</button>
+            <button type="button" role="menuitem" (click)="openAccountModal('changePassword')">Changer le mot de passe</button>
           </div>
         }
       </div>
@@ -84,21 +85,28 @@
 </main>
 
 <!--
-  Dialog "Détails du compte" — rendu en dehors de <nav> (ancêtre sticky) et
-  de <main>, au même niveau que le reste du shell : un descendant
-  position:fixed peut être piégé dans le rectangle d'un ancêtre sticky au
-  lieu du viewport complet (piège déjà documenté pour ParticipantJournalModal).
+  Dialogs du menu compte ("Détails du compte" / "Changer le mot de passe",
+  au plus un ouvert à la fois via activeAccountModal) — rendus en dehors de
+  <nav> (ancêtre sticky) et de <main>, au même niveau que le reste du shell :
+  un descendant position:fixed peut être piégé dans le rectangle d'un
+  ancêtre sticky au lieu du viewport complet (piège déjà documenté pour
+  ParticipantJournalModal).
 -->
-@if (showUserDetailsModal()) {
+@if (activeAccountModal() === 'userDetails') {
   @if (authService.currentUser(); as user) {
     <app-user-details-modal
       [user]="user"
       [profileSaving]="profileSaving()"
       [profileError]="profileError()"
-      [passwordSaving]="passwordSaving()"
-      [passwordError]="passwordError()"
-      (closed)="closeUserDetails()"
-      (profileSubmitted)="onProfileSubmitted($event)"
-      (passwordSubmitted)="onPasswordSubmitted($event)" />
+      (cancelled)="closeAccountModal()"
+      (profileSubmitted)="onProfileSubmitted($event)" />
   }
+}
+
+@if (activeAccountModal() === 'changePassword') {
+  <app-change-password-modal
+    [saving]="passwordSaving()"
+    [error]="passwordError()"
+    (cancelled)="closeAccountModal()"
+    (submitted)="onPasswordSubmitted($event)" />
 }

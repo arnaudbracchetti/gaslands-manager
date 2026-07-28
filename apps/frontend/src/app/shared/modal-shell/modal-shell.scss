@@ -1,0 +1,157 @@
+// ModalShell — Panel métal + coins d'enregistrement + bande HazardTape,
+// extrait de ConfirmModal/SellVehicleModal (duplication d'origine) pour
+// devenir le chrome commun aux modales "action"/"consultation" de l'app.
+@use '../styles/breakpoints' as bp;
+
+.ms-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.ms-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: min(440px, 92vw);
+  max-height: 90vh;
+
+  @include bp.mobile {
+    width: min(480px, 96vw);
+  }
+
+  &.ms-modal--lg {
+    width: min(480px, 92vw);
+  }
+
+  background-image: var(--metal-sheen);
+  border: 2px solid var(--border-hair);
+  box-shadow: var(--shadow-stamp-lg);
+}
+
+// Coins d'enregistrement — éléments réels plutôt que ::before/::after : la
+// classe .tb-grain (texture de grain) définit elle-même un ::after sur
+// .ms-modal, un ::after de coin y entrerait en collision (un seul ::after
+// possible par élément) et rendrait le coin invisible. Rouille par défaut.
+.ms-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  z-index: 7;
+  pointer-events: none;
+  border-style: solid;
+  border-color: var(--tb-rouille);
+}
+
+.ms-corner--tl {
+  top: 10px;
+  left: 10px;
+  border-width: 3px 0 0 3px;
+}
+
+.ms-corner--br {
+  bottom: 10px;
+  right: 10px;
+  border-width: 0 3px 3px 0;
+}
+
+// Variant "primary" : coins ambre, alignés sur la couleur de la bande
+// (correction — ConfirmModal avait ce cas incohérent : coins toujours
+// ambre, bande seule suivant le variant).
+.ms-modal--primary .ms-corner {
+  border-color: var(--tb-danger);
+}
+
+.ms-modal__tape {
+  flex: 0 0 auto;
+  height: 10px;
+  background-image: var(--stripe-rust);
+  box-shadow: var(--shadow-stamp);
+  position: relative;
+  z-index: 6;
+
+  .ms-modal--primary & {
+    background-image: var(--stripe-danger-ui);
+  }
+}
+
+.ms-modal__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  position: relative;
+  z-index: 6;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  @include bp.mobile {
+    padding: 20px;
+  }
+}
+
+.ms-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+%btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-text);
+  font-weight: 600;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 12px 24px;
+  min-height: 44px;
+  cursor: pointer;
+  box-shadow: var(--shadow-stamp);
+  transition:
+    filter 160ms var(--ease-mech),
+    transform 90ms var(--ease-mech),
+    box-shadow 90ms var(--ease-mech);
+
+  &:hover {
+    filter: brightness(1.12);
+  }
+
+  &:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.ms-modal__confirm {
+  @extend %btn-base;
+  background: var(--tb-rouille);
+  color: var(--tb-os);
+  border: 2px solid var(--tb-rouille);
+
+  .ms-modal--primary & {
+    background: var(--tb-danger);
+    color: var(--tb-bitume);
+    border-color: var(--tb-danger);
+  }
+}
+
+.ms-modal__cancel {
+  @extend %btn-base;
+  background: transparent;
+  color: var(--tb-os);
+  border: 2px solid var(--border-strong);
+}

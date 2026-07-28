@@ -1,55 +1,42 @@
 /**
  * UserDetailsModal — dialog "Détails du compte".
  *
- * Composant **dumb** : reçoit l'utilisateur courant et pré-remplit deux
- * sous-formulaires indépendants (Informations / Mot de passe), chacun avec
- * son propre état de sauvegarde/erreur possédé par le parent (App) — même
- * principe que ChangeTeamModal (pré-remplissage via effect() sur l'input
- * `user`, resynchronisé à chaque ouverture puisque l'instance du composant
- * persiste entre deux ouvertures du dialog).
- *
- * Le rôle est affiché en texte, jamais dans un champ éditable : ce dialog
- * ne permet à un utilisateur de modifier que sa propre identité, jamais son
- * rôle (réservé à AdminSeedService / à un futur écran admin dédié).
+ * Composant **dumb** : reçoit l'utilisateur courant et pré-remplit le
+ * formulaire Informations (prénom/nom/pseudo/email), avec son propre état
+ * de sauvegarde/erreur possédé par le parent (App) — même principe que
+ * ChangeTeamModal (pré-remplissage via effect() sur l'input `user`,
+ * resynchronisé à chaque ouverture puisque l'instance du composant persiste
+ * entre deux ouvertures du dialog). Le changement de mot de passe vit dans
+ * sa propre modale, ChangePasswordModal. Compose `ModalShell` (chrome
+ * Panel métal + coins + HazardTape mutualisé, mode "action").
  */
 import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { ChangePasswordDto, UpdateProfileDto, User } from '../auth.model';
+import type { UpdateProfileDto, User } from '../auth.model';
+import { ModalShell } from '../../shared/modal-shell/modal-shell';
 
 @Component({
   selector: 'app-user-details-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ModalShell],
   templateUrl: './user-details-modal.html',
   styleUrl: './user-details-modal.scss',
 })
 export class UserDetailsModal {
-  /** Utilisateur courant — source de pré-remplissage des deux formulaires. */
+  /** Utilisateur courant — source de pré-remplissage du formulaire. */
   user: InputSignal<User> = input.required<User>();
 
-  /** État de sauvegarde/erreur du sous-formulaire "Informations" — possédés par le parent. */
+  /** État de sauvegarde/erreur du formulaire "Informations" — possédés par le parent. */
   profileSaving: InputSignal<boolean> = input(false);
   profileError: InputSignal<string> = input('');
 
-  /** État de sauvegarde/erreur du sous-formulaire "Mot de passe" — possédés par le parent. */
-  passwordSaving: InputSignal<boolean> = input(false);
-  passwordError: InputSignal<string> = input('');
-
-  closed: OutputEmitterRef<void> = output<void>();
+  cancelled: OutputEmitterRef<void> = output<void>();
   profileSubmitted: OutputEmitterRef<UpdateProfileDto> = output<UpdateProfileDto>();
-  passwordSubmitted: OutputEmitterRef<ChangePasswordDto> = output<ChangePasswordDto>();
 
   firstName: WritableSignal<string> = signal('');
   lastName: WritableSignal<string> = signal('');
   pseudo: WritableSignal<string> = signal('');
   email: WritableSignal<string> = signal('');
-
-  currentPassword: WritableSignal<string> = signal('');
-  newPassword: WritableSignal<string> = signal('');
-  confirmNewPassword: WritableSignal<string> = signal('');
-
-  /** Rôle affiché en lecture seule — jamais éditable ici. */
-  roleLabel: Signal<string> = computed(() => (this.user().role === 'admin' ? 'Administrateur' : 'Utilisateur'));
 
   profileSubmitDisabled: Signal<boolean> = computed(
     () =>
@@ -60,20 +47,7 @@ export class UserDetailsModal {
       !this.email().trim(),
   );
 
-  /** Coche client uniquement — indépendante de passwordError() (erreur serveur). */
-  passwordMismatch: Signal<boolean> = computed(
-    () => this.newPassword() !== '' && this.newPassword() !== this.confirmNewPassword(),
-  );
-
-  passwordTooShort: Signal<boolean> = computed(() => this.newPassword().length > 0 && this.newPassword().length < 6);
-
-  passwordSubmitDisabled: Signal<boolean> = computed(
-    () =>
-      this.passwordSaving() ||
-      this.currentPassword() === '' ||
-      this.newPassword().length < 6 ||
-      this.newPassword() !== this.confirmNewPassword(),
-  );
+  confirmLabel: Signal<string> = computed(() => (this.profileSaving() ? 'Enregistrement…' : 'Enregistrer'));
 
   constructor() {
     // Pré-remplissage — même pattern que ChangeTeamModal : l'instance du
@@ -100,19 +74,5 @@ export class UserDetailsModal {
       pseudo: this.pseudo(),
       email: this.email(),
     });
-  }
-
-  onPasswordSubmit(): void {
-    if (this.passwordSubmitDisabled()) {
-      return;
-    }
-    this.passwordSubmitted.emit({
-      currentPassword: this.currentPassword(),
-      newPassword: this.newPassword(),
-    });
-  }
-
-  onClose(): void {
-    this.closed.emit();
   }
 }

@@ -5,15 +5,16 @@
  * émet le choix via outputs. La visibilité est contrôlée par le parent via
  * `@if (showX())` — même pattern que `ChangeTeamModal`.
  *
- * Design : Panel métal + coins d'enregistrement + bande HazardTape en tête,
- * boutons fidèles au composant Button du design system Terres Brûlées.
+ * Compose `ModalShell` (chrome Panel métal + coins + HazardTape mutualisé,
+ * mode "action") — ne garde en propre que le message projeté.
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
+import { ModalShell } from '../modal-shell/modal-shell';
 
 @Component({
   selector: 'app-confirm-modal',
   standalone: true,
-  imports: [],
+  imports: [ModalShell],
   templateUrl: './confirm-modal.html',
   styleUrl: './confirm-modal.scss',
 })

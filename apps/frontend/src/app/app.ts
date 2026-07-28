@@ -4,6 +4,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/ro
 import { filter } from 'rxjs/operators';
 import type { ChangePasswordDto, UpdateProfileDto } from './auth/auth.model';
 import { AuthService } from './auth/auth.service';
+import { ChangePasswordModal } from './auth/change-password-modal/change-password-modal';
 import { UserDetailsModal } from './auth/user-details-modal/user-details-modal';
 import { Icon } from './shared/icon/icon';
 // AuthService importé pour annoter le membre de classe (règle memberVariableDeclaration).
@@ -11,7 +12,7 @@ import { Icon } from './shared/icon/icon';
 // App est le composant racine : il est chargé en premier et encadre toute l'application
 // RouterModule fournit les directives routerLink, routerLinkActive et router-outlet
 @Component({
-  imports: [RouterModule, Icon, UserDetailsModal],
+  imports: [RouterModule, Icon, UserDetailsModal, ChangePasswordModal],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -43,14 +44,19 @@ export class App implements OnInit {
   /** Menu déroulant ouvert au clic sur le prénom dans la navbar. */
   userMenuOpen: WritableSignal<boolean> = signal(false);
 
-  /** Dialog "Détails du compte", ouvert depuis l'entrée du menu ci-dessus. */
-  showUserDetailsModal: WritableSignal<boolean> = signal(false);
+  /**
+   * Modale du menu compte actuellement ouverte (au plus une à la fois) —
+   * union discriminée plutôt qu'une paire de booléens par modale, pour
+   * qu'une future 3ᵉ entrée de menu n'ajoute pas une 3ᵉ paire signal/
+   * open()/close().
+   */
+  activeAccountModal: WritableSignal<'userDetails' | 'changePassword' | null> = signal(null);
 
-  /** État du sous-formulaire "Informations" du dialog — possédé ici (parent smart). */
+  /** État du formulaire "Informations" du dialog — possédé ici (parent smart). */
   profileSaving: WritableSignal<boolean> = signal(false);
   profileError: WritableSignal<string> = signal('');
 
-  /** État du sous-formulaire "Mot de passe" du dialog — possédé ici (parent smart). */
+  /** État du dialog "Changer le mot de passe" — possédé ici (parent smart). */
   passwordSaving: WritableSignal<boolean> = signal(false);
   passwordError: WritableSignal<string> = signal('');
 
@@ -85,15 +91,18 @@ export class App implements OnInit {
     this.userMenuOpen.set(false);
   }
 
-  openUserDetails(): void {
+  openAccountModal(name: 'userDetails' | 'changePassword'): void {
     this.closeUserMenu();
-    this.profileError.set('');
-    this.passwordError.set('');
-    this.showUserDetailsModal.set(true);
+    if (name === 'userDetails') {
+      this.profileError.set('');
+    } else {
+      this.passwordError.set('');
+    }
+    this.activeAccountModal.set(name);
   }
 
-  closeUserDetails(): void {
-    this.showUserDetailsModal.set(false);
+  closeAccountModal(): void {
+    this.activeAccountModal.set(null);
   }
 
   onProfileSubmitted(dto: UpdateProfileDto): void {
@@ -102,6 +111,7 @@ export class App implements OnInit {
     this.authService.updateProfile(dto).subscribe({
       next: (): void => {
         this.profileSaving.set(false);
+        this.closeAccountModal();
       },
       error: (err: HttpErrorResponse): void => {
         this.profileError.set(err.error?.message ?? 'Erreur lors de la mise à jour du profil');
@@ -113,13 +123,15 @@ export class App implements OnInit {
   // Après un changement de mot de passe réussi, on force la déconnexion
   // (pas de mécanisme de révocation JWT côté serveur) : la reconnexion se
   // fait naturellement avec le nouveau mot de passe. logout() redirige vers
-  // /login, ce qui démonte le dialog par la même occasion.
+  // /login — App (racine) persistant au travers de la navigation,
+  // closeAccountModal() évite que le dialog reste affiché par-dessus /login.
   onPasswordSubmitted(dto: ChangePasswordDto): void {
     this.passwordSaving.set(true);
     this.passwordError.set('');
     this.authService.changePassword(dto).subscribe({
       next: (): void => {
         this.passwordSaving.set(false);
+        this.closeAccountModal();
         this.authService.logout();
       },
       error: (err: HttpErrorResponse): void => {

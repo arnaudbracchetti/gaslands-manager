@@ -23,7 +23,7 @@ Zone.js est absent — tout changement d'état doit passer par un Signal (`signa
 
 ## Composants réutilisables
 
-Ces trois composants sont indépendants de tout domaine métier et utilisables partout.
+Ces quatre composants sont indépendants de tout domaine métier et utilisables partout.
 
 ### `SlotGauge` — `shared/slot-gauge/`
 
@@ -46,14 +46,68 @@ Utilisé par : `TeamCard`, `VehicleChoiceCard`, `VehicleSummaryCard`, `VehicleCo
 
 ---
 
+### `ModalShell` — `shared/modal-shell/`
+
+Coquille de présentation commune à toutes les modales "standard" du design
+system Terres Brûlées (panel métal + coins d'enregistrement + bande
+HazardTape). Composant **dumb** malgré la projection de contenu via
+`<ng-content>` (première utilisation de ce mécanisme dans le projet) — il ne
+détient aucun service, seulement le chrome. Le contenu (titre, message,
+formulaire, liste...) est entièrement laissé au consommateur ; les styles du
+shell ne s'appliquent qu'à son propre chrome, jamais au contenu projeté
+(encapsulation de vue Angular : un nœud projeté garde l'attribut de portée du
+composant qui l'a créé, pas celui du shell).
+
+Couvre les **deux familles** de modales de l'application via `mode` :
+- `action` (défaut) : deux boutons (Annuler/Action) — seuls eux ferment la
+  modale, aucune fermeture au clic hors de la boîte. Utilisé aujourd'hui par
+  les 4 consommateurs ci-dessous.
+- `consultation` : un seul bouton (Fermer) — fermeture par ce bouton **ou**
+  par un clic hors de la boîte (ou touche Échap). Modélisé dès maintenant
+  mais non encore consommé par une modale existante — candidat naturel pour
+  une future migration de `GameJournalModal`/`ParticipantJournalModal`/
+  `EquipmentDetailModal`/`SequellaDetailModal`, qui réimplémentent aujourd'hui
+  à la main ce même clic-overlay-pour-fermer.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-modal-shell` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `ariaLabel` | `string` | — | Libellé accessible du dialog (requis) |
+| `mode` | `'action' \| 'consultation'` | `'action'` | Nombre de boutons et mécanisme de fermeture, cf. ci-dessus |
+| `variant` | `'danger' \| 'primary'` | `'danger'` | Couleur des coins/bande/bouton d'action (rouille / ambre) |
+| `size` | `'md' \| 'lg'` | `'md'` | Largeur du panel (440px / 480px) |
+| `confirmLabel` | `string` | `'Confirmer'` | Ignoré en mode `consultation` |
+| `cancelLabel` | `string` | `'Annuler'` | Libellé du bouton de fermeture |
+| `confirmDisabled` | `boolean` | `false` | Ignoré en mode `consultation` |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `confirmed` | `void` | Clic sur le bouton d'action (mode `action` uniquement — le bouton n'existe pas en `consultation`) |
+| `cancelled` | `void` | Fermeture — clic bouton dans les deux modes, plus clic/Échap hors de la boîte en mode `consultation` |
+
+Utilisé par : `ConfirmModal`, `SellVehicleModal`, `UserDetailsModal`, `ChangePasswordModal`.
+
+---
+
 ### `ConfirmModal` — `shared/confirm-modal/`
 
 Dialog de confirmation générique. Le parent contrôle la visibilité via `@if`.
+Compose `ModalShell` (mode `action`) — ne garde en propre que le message
+projeté ; API externe inchangée par cette composition.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-confirm-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -101,10 +155,12 @@ graph TD
     subgraph Shell
         App["App (smart, racine)"]
         UserDetailsModal
+        ChangePasswordModal
     end
 
     subgraph Shared["Shared (réutilisables)"]
         SlotGauge
+        ModalShell
         ConfirmModal
         Breadcrumb
     end
@@ -158,6 +214,7 @@ graph TD
         WreckResolutionStep
         GameJournalModal
         AtelierPage["AtelierPage (smart)"]
+        SellVehicleModal
         AtelierVehiclePage["AtelierVehiclePage (smart)"]
         ParticipantAtelierPage["ParticipantAtelierPage (smart)"]
     end
@@ -206,6 +263,7 @@ graph TD
     CampaignProgram --> ConfirmModal
     CampaignProgram -.->|navigate| AtelierPage
     AtelierPage --> VehicleSummaryCard
+    AtelierPage --> SellVehicleModal
     AtelierPage --> Breadcrumb
     AtelierPage -.->|navigate| AtelierVehiclePage
     AtelierVehiclePage --> EquipmentManager
@@ -224,6 +282,11 @@ graph TD
     GameResultWizard --> WreckResolutionStep
     AdminUsers --> ConfirmModal
     App --> UserDetailsModal
+    App --> ChangePasswordModal
+    ConfirmModal --> ModalShell
+    SellVehicleModal --> ModalShell
+    UserDetailsModal --> ModalShell
+    ChangePasswordModal --> ModalShell
 ```
 
 ---
@@ -260,40 +323,77 @@ Page d'inscription (prénom, nom, **pseudo**, email, mot de passe). Tous les cha
 
 Dialog "Détails du compte", ouvert depuis le menu utilisateur de la navbar
 (`App`, clic sur le pseudo en haut à droite — même structure trigger/
-backdrop/panel que le menu "⋯" de `ParticipantList`). Deux sous-formulaires
-indépendants (Informations / Mot de passe), chacun avec son propre bouton,
-son propre état de sauvegarde et sa propre erreur possédés par le parent
-(`App`) — même pattern que `ChangeTeamModal` (pré-remplissage via `effect()`
-sur l'input `user`, resynchronisé à chaque ouverture puisque l'instance du
-composant persiste entre deux ouvertures). Le rôle est affiché en texte,
-jamais dans un champ éditable. Après un changement de mot de passe réussi,
-le parent appelle `authService.logout()` (déconnexion forcée, cf.
-[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)) — le dialog n'a donc
-pas besoin de vider ses propres champs mot de passe, la redirection vers
-`/login` le démonte.
+backdrop/panel que le menu "⋯" de `ParticipantList`). Porte le formulaire
+Informations (prénom/nom/pseudo/email), avec son propre état de sauvegarde
+et sa propre erreur possédés par le parent (`App`) — même pattern que
+`ChangeTeamModal` (pré-remplissage via `effect()` sur l'input `user`,
+resynchronisé à chaque ouverture puisque l'instance du composant persiste
+entre deux ouvertures). Le rôle n'est pas affiché sur ce dialog (cf.
+[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)). Le changement de mot
+de passe vit dans sa propre modale, `ChangePasswordModal` (cf. ci-dessous),
+ouverte depuis une entrée de menu séparée. Compose `ModalShell` (mode
+`action`) — le bouton d'action du shell, hors de tout `<form>`, appelle
+directement `onProfileSubmit()` ; un bouton submit invisible reste dans le
+`<form>` pour préserver la soumission au clavier (Entrée dans un champ).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-user-details-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `user` | `User` | — | Utilisateur courant (pré-remplissage des deux sous-formulaires) |
-| `profileSaving` | `boolean` | `false` | Sauvegarde du sous-formulaire Informations en cours |
-| `profileError` | `string` | `''` | Message d'erreur serveur du sous-formulaire Informations |
-| `passwordSaving` | `boolean` | `false` | Sauvegarde du sous-formulaire Mot de passe en cours |
-| `passwordError` | `string` | `''` | Message d'erreur serveur du sous-formulaire Mot de passe |
+| `user` | `User` | — | Utilisateur courant (pré-remplissage du formulaire) |
+| `profileSaving` | `boolean` | `false` | Sauvegarde du formulaire Informations en cours |
+| `profileError` | `string` | `''` | Message d'erreur serveur du formulaire Informations |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `closed` | `void` | Fermeture du dialog |
-| `profileSubmitted` | `UpdateProfileDto` | Sous-formulaire Informations validé (prénom/nom/pseudo/email non vides). Le champ pseudo est pré-rempli avec `user.pseudo` — la valeur BRUTE, pas `user.callName` qui en dérive côté backend |
-| `passwordSubmitted` | `ChangePasswordDto` | Sous-formulaire Mot de passe validé (correspondance + longueur ≥ 6 côté client) |
+| `cancelled` | `void` | Fermeture du dialog (bouton du shell) |
+| `profileSubmitted` | `UpdateProfileDto` | Formulaire Informations validé (prénom/nom/pseudo/email non vides). Le champ pseudo est pré-rempli avec `user.pseudo` — la valeur BRUTE, pas `user.callName` qui en dérive côté backend |
+
+Utilisé par : `App` (composant racine).
+
+---
+
+### `ChangePasswordModal` — `auth/change-password-modal/`
+
+Dialog "Changer le mot de passe", ouvert depuis le menu utilisateur de la
+navbar (`App`), à côté de "Détails du compte" — extrait de
+`UserDetailsModal` pour devenir son propre point d'entrée. Pas d'input
+`user` (`ChangePasswordDto` ne référence aucune donnée de profil à
+pré-remplir), état de sauvegarde/erreur possédés par le parent (`App`),
+même principe que `UserDetailsModal`. Après un changement réussi, le parent
+appelle `authService.logout()` (déconnexion forcée, cf.
+[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)) — le dialog n'a donc
+pas besoin de vider ses propres champs, la redirection vers `/login` le
+démonte. Compose `ModalShell` (mode `action`), même traitement du bouton
+submit invisible que `UserDetailsModal` ci-dessus.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-change-password-modal` |
+| **Type** | Dumb |
+| **Compose** | `ModalShell` |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `saving` | `boolean` | `false` | Sauvegarde en cours |
+| `error` | `string` | `''` | Message d'erreur serveur |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `cancelled` | `void` | Fermeture du dialog (bouton du shell) |
+| `submitted` | `ChangePasswordDto` | Formulaire validé (correspondance + longueur ≥ 6 côté client) |
 
 Utilisé par : `App` (composant racine).
 
@@ -1417,12 +1517,13 @@ groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
 
 ### `SellVehicleModal` — `campaigns/atelier-page/sell-vehicle-modal/`
 
-Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément) sinon. Dans ce dernier cas, **chaque ligne** (châssis compris) affiche à la fois le prix initial et le montant de la vente pour cet élément précis (`item.price` → `item.refund`, `summary.chassisPrice` → `summary.chassisRefund`) — valeurs backend (`Weapon`/`Improvement`/`Advantage.resaleRefund`, `Vehicle.chassisResaleRefund`), jamais recalculées côté client. Le pied de modale garde le total agrégé (`summary.refund` — `Vehicle.resaleRefund`).
+Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément) sinon. Dans ce dernier cas, **chaque ligne** (châssis compris) affiche à la fois le prix initial et le montant de la vente pour cet élément précis (`item.price` → `item.refund`, `summary.chassisPrice` → `summary.chassisRefund`) — valeurs backend (`Weapon`/`Improvement`/`Advantage.resaleRefund`, `Vehicle.chassisResaleRefund`), jamais recalculées côté client. Le pied de modale garde le total agrégé (`summary.refund` — `Vehicle.resaleRefund`). Compose `ModalShell` (mode `action`, `size="lg"`) — ne garde que son contenu structuré propre (véhicule, liste d'équipement, totaux) comme contenu projeté.
 
 | | |
 |---|---|
 | **Sélecteur** | `app-sell-vehicle-modal` |
 | **Type** | Dumb |
+| **Compose** | `ModalShell` |
 
 **Inputs**
 
@@ -1436,6 +1537,8 @@ Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affich
 |-----|------|-------------|
 | `confirmed` | `void` | Vente/annulation confirmée |
 | `cancelled` | `void` | Fermeture sans action |
+
+Utilisé par : `AtelierPage`.
 
 ---
 

@@ -1,9 +1,8 @@
 /**
  * Tests unitaires pour UserDetailsModal (composant dumb).
  *
- * Vérifie le pré-remplissage depuis l'input `user`, l'émission des deux
- * sous-formulaires (Informations / Mot de passe), la validation client du
- * mot de passe (correspondance/longueur), et l'affichage des erreurs serveur.
+ * Vérifie le pré-remplissage depuis l'input `user`, l'émission du
+ * formulaire Informations, et l'affichage des erreurs serveur.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
@@ -41,20 +40,6 @@ describe('UserDetailsModal', () => {
     expect(component.email()).toBe('jean@test.com');
   });
 
-  it('affiche le rôle en lecture seule (aucun champ éditable)', () => {
-    expect(component.roleLabel()).toBe('Utilisateur');
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Utilisateur');
-    expect((fixture.nativeElement as HTMLElement).querySelector('[name="role"]')).toBeFalsy();
-  });
-
-  it('affiche "Administrateur" pour un utilisateur admin', () => {
-    fixture.componentRef.setInput('user', { ...mockUser, role: 'admin' as const });
-    fixture.detectChanges();
-
-    expect(component.roleLabel()).toBe('Administrateur');
-  });
-
   it('émet profileSubmitted avec les champs modifiés', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.profileSubmitted).subscribe((dto) => emitted.push(dto));
@@ -78,43 +63,6 @@ describe('UserDetailsModal', () => {
     expect(emitted).toEqual([]);
   });
 
-  it('émet passwordSubmitted sans confirmNewPassword quand les mots de passe correspondent', () => {
-    const emitted: unknown[] = [];
-    outputToObservable(component.passwordSubmitted).subscribe((dto) => emitted.push(dto));
-
-    component.currentPassword.set('ancienMdp');
-    component.newPassword.set('nouveauMdp123');
-    component.confirmNewPassword.set('nouveauMdp123');
-    component.onPasswordSubmit();
-
-    expect(emitted).toEqual([{ currentPassword: 'ancienMdp', newPassword: 'nouveauMdp123' }]);
-  });
-
-  it('n\'émet pas passwordSubmitted si les mots de passe ne correspondent pas', () => {
-    const emitted: unknown[] = [];
-    outputToObservable(component.passwordSubmitted).subscribe((dto) => emitted.push(dto));
-
-    component.currentPassword.set('ancienMdp');
-    component.newPassword.set('nouveauMdp123');
-    component.confirmNewPassword.set('autreChose');
-    component.onPasswordSubmit();
-
-    expect(component.passwordMismatch()).toBe(true);
-    expect(emitted).toEqual([]);
-  });
-
-  it('n\'émet pas passwordSubmitted si le nouveau mot de passe est trop court', () => {
-    const emitted: unknown[] = [];
-    outputToObservable(component.passwordSubmitted).subscribe((dto) => emitted.push(dto));
-
-    component.currentPassword.set('ancienMdp');
-    component.newPassword.set('abc');
-    component.confirmNewPassword.set('abc');
-    component.onPasswordSubmit();
-
-    expect(emitted).toEqual([]);
-  });
-
   it('affiche l\'erreur serveur du sous-formulaire Informations', () => {
     fixture.componentRef.setInput('profileError', 'Cet email est déjà utilisé');
     fixture.detectChanges();
@@ -122,18 +70,20 @@ describe('UserDetailsModal', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Cet email est déjà utilisé');
   });
 
-  it('affiche l\'erreur serveur du sous-formulaire Mot de passe', () => {
-    fixture.componentRef.setInput('passwordError', 'Mot de passe actuel incorrect');
-    fixture.detectChanges();
+  it('émet cancelled au clic sur le bouton de fermeture du shell', () => {
+    const emitted: unknown[] = [];
+    outputToObservable(component.cancelled).subscribe(() => emitted.push(true));
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Mot de passe actuel incorrect');
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.ms-modal__cancel')?.click();
+
+    expect(emitted).toHaveLength(1);
   });
 
-  it('émet closed au clic sur le bouton de fermeture', () => {
+  it('émet profileSubmitted au clic sur le bouton d\'action du shell', () => {
     const emitted: unknown[] = [];
-    outputToObservable(component.closed).subscribe(() => emitted.push(true));
+    outputToObservable(component.profileSubmitted).subscribe((dto) => emitted.push(dto));
 
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.udm-close')?.click();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.ms-modal__confirm')?.click();
 
     expect(emitted).toHaveLength(1);
   });
