@@ -14,7 +14,11 @@ utilisateur crée la campagne (devenant automatiquement son organisateur), peut 
 d'autres joueurs via un code partageable, et valide leurs demandes d'inscription.
 
 **Cycle de vie** (`CampaignState`) : `EN_CONSTRUCTION` (état initial — gestion libre des
-inscriptions) → `EN_COURS` → `TERMINEE` (séquentiel, pas de retour en arrière).
+inscriptions) → `EN_COURS` → `TERMINEE`. Transitions **bidirectionnelles** en
+pratique (`Campaign.changeState()`, décision de design du refactor DDD Phase 2) :
+un organisateur peut aussi bien faire avancer que reculer la campagne (ex. revenir
+en `EN_CONSTRUCTION` depuis `EN_COURS` pour rouvrir les inscriptions) — ce n'est
+donc pas un cycle strictement séquentiel malgré l'ordre naturel ci-dessus.
 
 ---
 
@@ -38,6 +42,16 @@ inscriptions) → `EN_COURS` → `TERMINEE` (séquentiel, pas de retour en arri�
 **Changer l'équipe engagée** : tant que la campagne est `EN_CONSTRUCTION`, chaque
 participant `VALIDATED` (organisateur ou non) peut changer l'équipe qu'il engage parmi
 ses propres équipes, via le sélecteur "Votre équipe" de l'écran `/campaigns/:id`.
+**Verrou supplémentaire** (`Campaign.changeParticipantTeam`) : ce changement reste
+bloqué (`DomainException` → HTTP 400) dès que le participant a déjà au moins un
+`GameEvent` journalisé dans la campagne (a déjà joué une partie) — même si la
+campagne est revenue en `EN_CONSTRUCTION` (cf. transitions bidirectionnelles
+ci-dessus). Sans ce verrou, rattacher le participant à une autre équipe ferait
+échouer le prochain replay complet de la campagne : tout événement historique qui
+référence un véhicule de l'équipe d'origine (achat/revente d'équipement,
+renommage, résultat de Table des Épaves…) ne le retrouverait plus
+(`Team.findVehicle` introuvable) dans la nouvelle équipe attachée. "Changer" vers
+la MÊME équipe déjà engagée reste toujours autorisé (no-op).
 
 ---
 

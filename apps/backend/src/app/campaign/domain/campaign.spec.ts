@@ -300,6 +300,36 @@ describe('Campaign — changeParticipantTeam', () => {
     const campaign = makeCampaign([member], []);
     expect(() => campaign.changeParticipantTeam(7, null)).toThrow('organisateur');
   });
+
+  it('interdit de changer vers une AUTRE équipe si le participant a déjà des événements journalisés', () => {
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = makeGame(10, 1, [makeRankingEvent(2, 10, 10)]);
+    const campaign = makeCampaign([member], [game]);
+
+    expect(() => campaign.changeParticipantTeam(7, 9)).toThrow('événements journalisés');
+    expect(member.teamId).toBe(3);
+  });
+
+  it('autorise de "changer" vers la MÊME équipe déjà engagée malgré un historique existant', () => {
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = makeGame(10, 1, [makeRankingEvent(2, 10, 10)]);
+    const campaign = makeCampaign([member], [game]);
+
+    campaign.changeParticipantTeam(7, 3);
+
+    expect(member.teamId).toBe(3);
+  });
+
+  it('autorise le changement d\'équipe pour un participant SANS historique, même si d\'autres parties existent', () => {
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const other = new CampaignParticipant(5, 99, 6, false, ParticipantStatus.VALIDATED);
+    const game = makeGame(10, 1, [makeRankingEvent(5, 10, 10)]);
+    const campaign = makeCampaign([member, other], [game]);
+
+    campaign.changeParticipantTeam(7, 9);
+
+    expect(member.teamId).toBe(9);
+  });
 });
 
 describe('Campaign — addGame / updateGame / removeGame', () => {

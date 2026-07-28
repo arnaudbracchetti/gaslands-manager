@@ -212,8 +212,26 @@ export class Campaign {
     if (teamId === null && !participant.isOrganizer) {
       throw new DomainException('Seul un organisateur peut retirer son équipe sans en choisir une autre.');
     }
+    if (teamId !== participant.teamId && this.hasParticipantHistory(participant.id)) {
+      throw new DomainException(
+        'Ce participant a déjà des événements journalisés dans cette campagne : ' +
+          'son équipe engagée ne peut plus être changée.',
+      );
+    }
     participant.changeTeam(teamId);
     return participant;
+  }
+
+  /**
+   * Vrai si ce participant a au moins un `GameEvent` journalisé dans cette campagne
+   * (a déjà joué). Verrouille son équipe engagée même si la campagne revient en
+   * `EN_CONSTRUCTION` (transitions bidirectionnelles, cf. `changeState`) — sans cette
+   * garde, rattacher le participant à une autre équipe au prochain replay fait
+   * échouer tout événement historique qui référence un véhicule de l'équipe
+   * d'origine (`Team.findVehicle` introuvable), cf. spec/CAMPAIGN.md.
+   */
+  private hasParticipantHistory(participantId: number): boolean {
+    return this._games.some((g) => g.events.some((e) => e.participantId === participantId));
   }
 
   // ── Commandes CRUD — parties ─────────────────────────────────────────────────
