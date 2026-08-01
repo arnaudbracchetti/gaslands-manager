@@ -14,6 +14,6 @@ export function assertOrganizer(campaign: Campaign, userId: number): CampaignPar
 
 export function assertParticipant(campaign: Campaign, userId: number): CampaignParticipant {
   const p = campaign.participants.find((x) => x.userId === userId);
-  if (!p) throw new NotFoundException('Saison introuvable ou accès non autorisé.');
+  if (!p) throw new NotFoundException('Saison introuvable ou accès non autorisé.');   //TODO: Le message est il le bon ?
   return p;
 }
