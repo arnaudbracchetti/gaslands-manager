@@ -30,6 +30,7 @@ import type {
   AvailableWeaponDto,
   AvailableImprovementDto,
   AvailableAdvantageDto,
+  AvailableVehicleDto,
 } from '../teams/vehicle-configurator/vehicle-builder.model';
 
 @Injectable({ providedIn: 'root' })
@@ -396,6 +397,17 @@ export class CampaignsService {
     return this.http.get<AvailableSequellaDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-sequelles`,
     );
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/available-vehicles → véhicules du sponsor avec
+   * verdict de disponibilité budgétaire pour l'achat d'un nouveau véhicule en atelier
+   * (budget = cagnotte du participant). Pas de `vehicleId` : aucun véhicule n'existe
+   * encore avant cet achat — mirroir léger (`AvailableVehicleDto`) des 4 verdicts
+   * ci-dessus, sans nom/prix/stats (déjà connus via `sponsorCatalog().vehicules`).
+   */
+  getWorkshopAvailableVehicles(campaignId: number): Observable<AvailableVehicleDto[]> {
+    return this.http.get<AvailableVehicleDto[]>(`/api/campaigns/${campaignId}/workshop/available-vehicles`);
   }
 
   /**

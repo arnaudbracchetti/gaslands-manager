@@ -31,6 +31,7 @@ import { RemoveTeamUseCase } from './application/remove-team.usecase';
 
 // Use cases — véhicule
 import { AddVehicleUseCase } from './application/add-vehicle.usecase';
+import { GetAvailableVehiclesUseCase } from './application/get-available-vehicles.usecase';
 import { RemoveVehicleUseCase } from './application/remove-vehicle.usecase';
 import { RenameVehicleUseCase } from './application/rename-vehicle.usecase';
 import { GetVehicleDetailUseCase } from './application/get-vehicle-detail.usecase';
@@ -105,6 +106,11 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     {
       provide: AddVehicleUseCase,
       useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new AddVehicleUseCase(tr, cr),
+      inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
+    },
+    {
+      provide: GetAvailableVehiclesUseCase,
+      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new GetAvailableVehiclesUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {

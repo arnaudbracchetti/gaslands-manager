@@ -35,11 +35,30 @@ export class VehicleChoiceCard {
   index: InputSignal<number> = input<number>(1);
 
   /**
+   * Verdict de disponibilité budgétaire (`GetAvailableVehiclesUseCase`/
+   * `GetWorkshopAvailableVehiclesUseCase`, `Team.canAddVehicle`). `true` par défaut :
+   * un consommateur qui ne fournit pas ce verdict garde le comportement historique
+   * (carte toujours cliquable) — cf. `equipment-option.html`, même convention
+   * `disponible`/`raison` que les armes/améliorations/avantages.
+   */
+  disponible: InputSignal<boolean> = input<boolean>(true);
+
+  /** Raison du refus (backend, `RuleResult.reason`) — affichée à la place du bouton si `!disponible()`. */
+  raison: InputSignal<string | undefined> = input<string | undefined>(undefined);
+
+  /**
    * Émis quand l'utilisateur choisit ce véhicule.
    * Le parent déclenche alors `vehicleService.create()` — persistance immédiate
    * (cf. plan, "Décisions actées" : un véhicule "nu" reste un véhicule valide).
+   * Défense en profondeur : n'émet jamais si `!disponible()` — le backend reste
+   * la seule source de vérité (il refuserait de toute façon la création).
    */
   chosen: OutputEmitterRef<Vehicule> = output<Vehicule>();
+
+  onChoose(): void {
+    if (!this.disponible()) return;
+    this.chosen.emit(this.vehicule());
+  }
 
   /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
   indexFormate: Signal<string> = computed(() =>

@@ -92,6 +92,7 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // getWorkshopAvailableImprovements
       getWorkshopAvailableAdvantagesUseCase as never,
       getWorkshopAvailableSequellesUseCase as never,
+      uc() as never,            // getWorkshopAvailableVehicles
       renameCampaignVehicleUseCase as never,
     );
   });

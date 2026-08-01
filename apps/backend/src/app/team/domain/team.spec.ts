@@ -306,6 +306,61 @@ describe('Team — canAddXToVehicle (verdict de disponibilité, sans mutation)',
   });
 });
 
+// Régression : l'achat d'un véhicule (construction d'équipe) n'était gardé par aucune
+// vérification de budget — un véhicule plus cher que le budget restant était accepté,
+// laissant l'équipe en budget négatif.
+describe('Team.addVehicle — garde budget', () => {
+  it('refuse un véhicule dont le prix dépasse le budget restant', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 10, null, []);
+    expect(() => team.addVehicle(makeVehicleType(), [])).toThrow(DomainException);
+    expect(team.vehicles).toHaveLength(0);
+  });
+
+  it('accepte un véhicule dont le prix ne dépasse pas le budget restant', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []);
+    const vehicle = team.addVehicle(makeVehicleType(), []);
+    expect(team.vehicles).toContain(vehicle);
+  });
+
+  it('le budget restant tient compte des véhicules déjà achetés', () => {
+    // 50 de budget, un premier véhicule à 12 déjà acheté → il reste 38, largement
+    // suffisant pour un second à 12 — vérifie que remainingBudget (pas cans) est utilisé.
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []);
+    team.addVehicle(makeVehicleType(), []);
+    expect(() => team.addVehicle(makeVehicleType(), [])).not.toThrow();
+    expect(team.vehicles).toHaveLength(2);
+  });
+});
+
+describe('Team.canAddVehicle — verdict de disponibilité (sans mutation)', () => {
+  it('fail("Équipe verrouillée...") si l\'équipe est verrouillée, même avec assez de budget', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [], true);
+    const result = team.canAddVehicle(makeVehicleType(), 50);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('verrouillée');
+  });
+
+  it('fail("...insuffisant") si le prix dépasse le budget fourni', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []);
+    const result = team.canAddVehicle(makeVehicleType(), 5); // prix 12 > 5
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain('insuffisant');
+  });
+
+  it('ok() si le budget fourni couvre le prix', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []);
+    expect(team.canAddVehicle(makeVehicleType(), 12).ok).toBe(true);
+  });
+
+  it('le budget est injecté explicitement — indépendant de team.remainingBudget (atelier, cf. wallet)', () => {
+    // Une équipe sans véhicule a remainingBudget = 50, mais le verdict doit suivre le
+    // budget FOURNI (ex. cagnotte atelier), pas remainingBudget, pour rester réutilisable
+    // côté GetWorkshopAvailableVehiclesUseCase.
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, []);
+    expect(team.canAddVehicle(makeVehicleType(), 3).ok).toBe(false);
+  });
+});
+
 describe('Team — mutations de base', () => {
   it('update() modifie le nom', () => {
     const team = makeTeam();

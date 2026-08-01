@@ -212,6 +212,20 @@ export interface AvailableWeaponDto {
   montableSurTourelle: boolean;
 }
 
+/**
+ * Ligne de `GET /api/teams/:teamId/vehicles/available` (construction d'équipe) et
+ * `GET /api/campaigns/:id/workshop/available-vehicles` (atelier) — miroir de
+ * `AvailableVehicleDto` backend. Volontairement léger (pas de nom/prix/stats) :
+ * le catalogue véhicule complet du sponsor est déjà chargé par ailleurs
+ * (`sponsorCatalog().vehicules`) — ce DTO n'ajoute qu'un verdict à croiser par
+ * `nomInterne`.
+ */
+export interface AvailableVehicleDto {
+  nomInterne: string;
+  disponible: boolean;
+  raison?: string;
+}
+
 /** Corps de `POST /api/vehicles/:id/advantages` — miroir de `AddAdvantageDto`. Pas d'orientation. */
 export interface AddAdvantageDto {
   nomInterne: string;

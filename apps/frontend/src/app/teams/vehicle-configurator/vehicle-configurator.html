@@ -67,7 +67,12 @@
       } @else {
         <div class="vc-vehicle-grid">
           @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i = $index) {
-            <app-vehicle-choice-card [vehicule]="vehicule" [index]="i + 1" (chosen)="selectVehicle($event)" />
+            <app-vehicle-choice-card
+              [vehicule]="vehicule"
+              [index]="i + 1"
+              [disponible]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible ?? true"
+              [raison]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.raison"
+              (chosen)="selectVehicle($event)" />
           }
         </div>
       }

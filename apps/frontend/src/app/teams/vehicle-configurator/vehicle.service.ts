@@ -40,6 +40,7 @@ import {
   AvailableWeaponDto,
   AddAdvantageDto,
   AvailableAdvantageDto,
+  AvailableVehicleDto,
 } from './vehicle-builder.model';
 
 @Injectable({ providedIn: 'root' })
@@ -58,6 +59,16 @@ export class VehicleService {
    */
   create(teamId: number, dto: CreateVehicleDto): Observable<Vehicle> {
     return this.http.post<Vehicle>(`/api/teams/${teamId}/vehicles`, dto);
+  }
+
+  /**
+   * GET /api/teams/:teamId/vehicles/available → catalogue de véhicules du sponsor,
+   * chacun accompagné de son verdict de disponibilité budgétaire (`disponible`/`raison`,
+   * calculé par `Team.canAddVehicle`). Léger (pas de nom/prix/stats, cf.
+   * `AvailableVehicleDto`) : le catalogue complet est déjà chargé par ailleurs.
+   */
+  getAvailableVehicles(teamId: number): Observable<AvailableVehicleDto[]> {
+    return this.http.get<AvailableVehicleDto[]>(`/api/teams/${teamId}/vehicles/available`);
   }
 
   /**

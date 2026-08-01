@@ -68,6 +68,7 @@ import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-a
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-workshop-available-advantages.usecase';
 import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop-available-sequelles.usecase';
+import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-available-vehicles.usecase';
 
 // DTOs
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -99,6 +100,7 @@ import type { AvailableWeaponDto } from '../team/dto/available-weapon.dto';
 import type { AvailableImprovementDto } from '../team/dto/available-improvement.dto';
 import type { AvailableAdvantageDto } from '../team/dto/available-advantage.dto';
 import type { AvailableSequellaDto } from '../team/dto/available-sequella.dto';
+import type { AvailableVehicleDto } from '../team/dto/available-vehicle.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
@@ -147,6 +149,7 @@ export class CampaignController {
     private readonly getWorkshopAvailableImprovementsUseCase: GetWorkshopAvailableImprovementsUseCase,
     private readonly getWorkshopAvailableAdvantagesUseCase: GetWorkshopAvailableAdvantagesUseCase,
     private readonly getWorkshopAvailableSequellesUseCase: GetWorkshopAvailableSequellesUseCase,
+    private readonly getWorkshopAvailableVehiclesUseCase: GetWorkshopAvailableVehiclesUseCase,
     private readonly renameCampaignVehicleUseCase: RenameCampaignVehicleUseCase,
   ) {}
 
@@ -347,6 +350,21 @@ export class CampaignController {
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableSequellaDto[]> {
     return this.getWorkshopAvailableSequellesUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+  }
+
+  /**
+   * GET /api/campaigns/:id/workshop/available-vehicles — verdict de disponibilité
+   * budgétaire des véhicules du sponsor pour l'achat d'un nouveau véhicule en atelier
+   * (budget = cagnotte). Pas de `:vehicleId` dans le chemin, contrairement aux 4 routes
+   * sœurs ci-dessus : il n'y a justement pas encore de véhicule.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('campaigns/:id/workshop/available-vehicles')
+  getWorkshopAvailableVehicles(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<AvailableVehicleDto[]> {
+    return this.getWorkshopAvailableVehiclesUseCase.execute({ campaignId, userId: req.user.id });
   }
 
   /** GET /api/campaigns/:id/games/:gameId/results — résultats triés (dérivés du journal). */

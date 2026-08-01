@@ -65,6 +65,7 @@ import { GetWorkshopAvailableWeaponsUseCase } from './application/get-workshop-a
 import { GetWorkshopAvailableImprovementsUseCase } from './application/get-workshop-available-improvements.usecase';
 import { GetWorkshopAvailableAdvantagesUseCase } from './application/get-workshop-available-advantages.usecase';
 import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop-available-sequelles.usecase';
+import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-available-vehicles.usecase';
 
 /**
  * Module Campagne unifié (DDD). Agrégat racine `Campaign` (domain/campaign.ts) ;
@@ -287,6 +288,12 @@ import { GetWorkshopAvailableSequellesUseCase } from './application/get-workshop
       provide: GetWorkshopAvailableSequellesUseCase,
       useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
         new GetWorkshopAvailableSequellesUseCase(replay, catalog),
+      inject: [CampaignReplayService, CatalogService],
+    },
+    {
+      provide: GetWorkshopAvailableVehiclesUseCase,
+      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+        new GetWorkshopAvailableVehiclesUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
   ],

@@ -1,5 +1,5 @@
 <!-- Carte de présentation d'un véhicule du catalogue — cf. en-tête de vehicle-choice-card.ts -->
-<div class="choice-card">
+<div class="choice-card" [class.choice-card--unavailable]="!disponible()">
 
   <span class="choice-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
 
@@ -25,12 +25,18 @@
 
   <div class="choice-card__footer">
     <span class="choice-card__price">{{ vehicule().prix }} <app-icon concept="prix" size="sm" /></span>
-    <button
-      class="choice-card__choose"
-      type="button"
-      (click)="chosen.emit(vehicule())">
-      Choisir ce véhicule
-    </button>
+    @if (disponible()) {
+      <button
+        class="choice-card__choose"
+        type="button"
+        (click)="onChoose()">
+        Choisir ce véhicule
+      </button>
+    } @else {
+      <!-- Refus définitif — la raison vient du backend (RuleResult.reason),
+           cf. Team.canAddVehicle. Même convention que EquipmentOption.__reason. -->
+      <p class="choice-card__reason">{{ raison() }}</p>
+    }
   </div>
 
 </div>

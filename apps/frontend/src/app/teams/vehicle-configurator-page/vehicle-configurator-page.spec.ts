@@ -78,6 +78,7 @@ describe('VehicleConfiguratorPage', () => {
     getAllForTeam: ReturnType<typeof vi.fn>;
     getAvailableWeapons: ReturnType<typeof vi.fn>;
     getAvailableImprovements: ReturnType<typeof vi.fn>;
+    getAvailableVehicles: ReturnType<typeof vi.fn>;
   };
   let router: Router;
 
@@ -95,6 +96,9 @@ describe('VehicleConfiguratorPage', () => {
       // (mode édition) — `of([])` suffit, son affichage n'est pas testé ici.
       getAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getAvailableImprovements: vi.fn().mockReturnValue(of([])),
+      // Verdicts de disponibilité budgétaire des véhicules (grille de choix) —
+      // `of([])` suffit, aucun de ces tests n'exerce le grisage.
+      getAvailableVehicles: vi.fn().mockReturnValue(of([])),
     };
   });
 

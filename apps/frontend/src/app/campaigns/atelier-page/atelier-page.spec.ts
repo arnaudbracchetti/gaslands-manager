@@ -88,6 +88,7 @@ describe('AtelierPage', () => {
   let mockCampaignsService: {
     getOne: ReturnType<typeof vi.fn>;
     getWorkshop: ReturnType<typeof vi.fn>;
+    getWorkshopAvailableVehicles: ReturnType<typeof vi.fn>;
   };
   let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn> };
 
@@ -95,6 +96,9 @@ describe('AtelierPage', () => {
     mockCampaignsService = {
       getOne: vi.fn().mockReturnValue(of(mockCampaign)),
       getWorkshop: vi.fn().mockReturnValue(of(mockWorkshop)),
+      // Verdicts de disponibilité budgétaire des véhicules (grille "+ Ajouter un
+      // véhicule") — `of([])` suffit, aucun de ces tests n'exerce le grisage.
+      getWorkshopAvailableVehicles: vi.fn().mockReturnValue(of([])),
     };
     mockCatalogService = {
       getSponsorByName: vi.fn().mockReturnValue(of(mockSponsorCatalog)),

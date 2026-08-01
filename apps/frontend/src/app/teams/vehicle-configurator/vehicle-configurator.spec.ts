@@ -114,6 +114,7 @@ describe('VehicleConfigurator', () => {
     getAvailableWeapons: ReturnType<typeof vi.fn>;
     getAvailableImprovements: ReturnType<typeof vi.fn>;
     getAvailableAdvantages: ReturnType<typeof vi.fn>;
+    getAvailableVehicles: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -129,6 +130,9 @@ describe('VehicleConfigurator', () => {
       getAvailableWeapons: vi.fn().mockReturnValue(of([])),
       getAvailableImprovements: vi.fn().mockReturnValue(of([])),
       getAvailableAdvantages: vi.fn().mockReturnValue(of([])),
+      // Verdicts de disponibilité budgétaire des véhicules (grille de choix) —
+      // `of([])` suffit, aucun de ces tests n'exerce le grisage.
+      getAvailableVehicles: vi.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({

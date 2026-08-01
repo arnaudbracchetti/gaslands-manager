@@ -30,7 +30,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CampaignsService } from '../campaigns.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { Sponsor, Vehicule } from '../../catalog/catalog.model';
-import { Vehicle } from '../../teams/vehicle-configurator/vehicle-builder.model';
+import { AvailableVehicleDto, Vehicle } from '../../teams/vehicle-configurator/vehicle-builder.model';
 import { VehicleChoiceCard } from '../../teams/vehicle-configurator/vehicle-choice-card/vehicle-choice-card';
 import { buildVehicleSummary, VehicleSummary } from '../../teams/vehicle-summary';
 import { VehicleSummaryCard } from '../../teams/vehicle-summary-card/vehicle-summary-card';
@@ -61,6 +61,22 @@ export class AtelierPage implements OnInit {
   workshop: WritableSignal<WorkshopStateDto | null> = signal<WorkshopStateDto | null>(null);
   sponsorCatalog: WritableSignal<Sponsor | null> = signal<Sponsor | null>(null);
   campaignName: WritableSignal<string> = signal('');
+
+  /**
+   * Verdicts de disponibilité budgétaire des véhicules du sponsor pour l'achat d'un
+   * nouveau véhicule (`Team.canAddVehicle`, budget = cagnotte — cf.
+   * `GetWorkshopAvailableVehiclesUseCase`). Chargement indépendant du reste (le use
+   * case résout lui-même le sponsor de l'équipe engagée) — échec silencieux, comme
+   * `loadCampaignName` : sans ce verdict, la grille retombe sur son ancien
+   * comportement (tout cliquable), le backend refusant de toute façon l'achat.
+   */
+  availableVehicles: WritableSignal<AvailableVehicleDto[]> = signal<AvailableVehicleDto[]>([]);
+
+  /** Verdict par `nomInterne`, pour une résolution O(1) dans le `@for` du template. */
+  availableVehiclesByNomInterne: Signal<Map<string, AvailableVehicleDto>> = computed(
+    (): Map<string, AvailableVehicleDto> =>
+      new Map(this.availableVehicles().map((v: AvailableVehicleDto): [string, AvailableVehicleDto] => [v.nomInterne, v])),
+  );
 
   /** Cagnotte courante — solde restant à dépenser en atelier. */
   wallet: Signal<number> = computed((): number => this.workshop()?.wallet ?? 0);
@@ -108,6 +124,7 @@ export class AtelierPage implements OnInit {
   ngOnInit(): void {
     this.loadCampaignName();
     this.loadWorkshop();
+    this.loadAvailableVehicles();
   }
 
   private loadCampaignName(): void {
@@ -131,6 +148,14 @@ export class AtelierPage implements OnInit {
         this.error.set("Impossible de charger l'atelier. Réessayez.");
         this.loading.set(false);
       },
+    });
+  }
+
+  /** Charge les verdicts de disponibilité budgétaire — échec silencieux (cf. `availableVehicles`, doc). */
+  private loadAvailableVehicles(): void {
+    this.campaignsService.getWorkshopAvailableVehicles(this.campaignId).subscribe({
+      next: (verdicts: AvailableVehicleDto[]): void => this.availableVehicles.set(verdicts),
+      error: (): void => undefined,
     });
   }
 
@@ -197,6 +222,7 @@ export class AtelierPage implements OnInit {
         this.pendingSaleVehicleId.set(null);
         this.sellingVehicle.set(false);
         this.loadWorkshop();
+        this.loadAvailableVehicles(); // la vente change la cagnotte → nouveau budget
       },
       error: (err: HttpErrorResponse): void => {
         this.error.set(err.error?.message ?? 'Impossible de vendre ce véhicule. Réessayez.');
@@ -212,6 +238,11 @@ export class AtelierPage implements OnInit {
   }
 
   onVehicleChosen(vehicule: Vehicule): void {
+    // Défense en profondeur — `VehicleChoiceCard` n'émet déjà pas `chosen` si le
+    // verdict est indisponible ; le backend reste la seule source de vérité
+    // (assertCanAfford, cf. Game.changeEquipment).
+    if (this.availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible === false) return;
+
     this.addingVehicle.set(true);
     this.error.set('');
 
@@ -222,6 +253,7 @@ export class AtelierPage implements OnInit {
         this.addingVehicle.set(false);
         this.showAddVehicle.set(false);
         this.loadWorkshop();
+        this.loadAvailableVehicles(); // l'achat change la cagnotte → nouveau budget
       },
       error: (err: HttpErrorResponse): void => {
         this.error.set(err.error?.message ?? 'Impossible d\'acheter ce véhicule. Réessayez.');

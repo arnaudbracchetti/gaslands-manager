@@ -134,9 +134,27 @@ export class Team {
    */
   addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[], defaultWeapons: Weapon[] = []): Vehicle {
     this.assertNotLocked();
+    if (vehicleType.price > this.remainingBudget) {
+      throw new DomainException("Budget de l'équipe insuffisant pour ce véhicule");
+    }
     const vehicle = new Vehicle(0, this.id, vehicleType, defaultWeapons, defaultImprovements);
     this._vehicles.push(vehicle);
     return vehicle;
+  }
+
+  /**
+   * Verdict d'achat d'un véhicule (lecture, pas de mutation) — mirroir de
+   * `canAddWeaponToVehicle` mais sans vehicleId : aucun véhicule n'existe
+   * encore au moment de ce verdict, seuls le verrouillage et le budget sont
+   * pertinents (pas d'emplacements/orientation pour un simple châssis).
+   * `budget` est injecté explicitement (`team.remainingBudget` en construction
+   * d'équipe, `participant.wallet` en atelier) pour rester réutilisable des
+   * deux côtés — mêmes conventions que `Vehicle.canAddWeapon`.
+   */
+  canAddVehicle(vehicleType: VehicleType, budget: number): RuleResult {
+    if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
+    if (vehicleType.price > budget) return fail("Budget de l'équipe insuffisant");
+    return ok();
   }
 
   removeVehicle(vehicleId: number): void {

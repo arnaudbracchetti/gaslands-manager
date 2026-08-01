@@ -56,7 +56,7 @@ import { Team } from '../team.model';
 import { CatalogService } from '../../catalog/catalog.service';
 import { Sponsor, Vehicule } from '../../catalog/catalog.model';
 import { VehicleService } from './vehicle.service';
-import { Vehicle } from './vehicle-builder.model';
+import { Vehicle, AvailableVehicleDto } from './vehicle-builder.model';
 import { buildVehicleSummary } from '../vehicle-summary';
 import { EQUIPMENT_DATA_SOURCE, BudgetView } from './equipment-data-source';
 import { TeamEquipmentDataSource } from './team-equipment.datasource';
@@ -113,6 +113,20 @@ export class VehicleConfigurator implements OnInit {
   sponsorCatalog: WritableSignal<Sponsor | null> = signal<Sponsor | null>(null);
   loadingCatalog: WritableSignal<boolean> = signal(true);
   catalogError: WritableSignal<string> = signal('');
+
+  /**
+   * Verdicts de disponibilité budgétaire des véhicules du sponsor (`Team.canAddVehicle`,
+   * cf. `GetAvailableVehiclesUseCase`) — chargés une fois, à côté du catalogue. Échec
+   * silencieux (comme `allTeamVehicles`) : sans ce verdict, la grille retombe sur son
+   * ancien comportement (tout cliquable), le backend refusant de toute façon l'achat.
+   */
+  availableVehicles: WritableSignal<AvailableVehicleDto[]> = signal<AvailableVehicleDto[]>([]);
+
+  /** Verdict par `nomInterne`, pour une résolution O(1) dans le `@for` du template. */
+  availableVehiclesByNomInterne: Signal<Map<string, AvailableVehicleDto>> = computed(
+    (): Map<string, AvailableVehicleDto> =>
+      new Map(this.availableVehicles().map((v: AvailableVehicleDto): [string, AvailableVehicleDto] => [v.nomInterne, v])),
+  );
 
   // ── Le véhicule géré — créé (mode création) OU chargé (mode édition) ────────
 
@@ -200,6 +214,10 @@ export class VehicleConfigurator implements OnInit {
     // Toujours charger les véhicules de l'équipe : nécessaires au budget dans les DEUX
     // modes (coût des autres véhicules), et en édition à isoler le véhicule visé.
     this.loadTeamVehicles();
+    // Verdicts de disponibilité budgétaire — utile uniquement en mode création
+    // (grille de choix), mais chargé inconditionnellement comme le reste : coût
+    // négligeable, évite un chargement paresseux supplémentaire à gérer.
+    this.loadAvailableVehicles();
   }
 
   // ── Chargement du catalogue (sert aux deux modes) ───────────────────────────
@@ -225,6 +243,14 @@ export class VehicleConfigurator implements OnInit {
     });
   }
 
+  /** Charge les verdicts de disponibilité budgétaire — échec silencieux (cf. `availableVehicles`, doc). */
+  private loadAvailableVehicles(): void {
+    this.vehicleService.getAvailableVehicles(this.team().id).subscribe({
+      next: (verdicts: AvailableVehicleDto[]): void => this.availableVehicles.set(verdicts),
+      error: (): void => undefined,
+    });
+  }
+
   // ── Mode création : choix et persistance immédiate du véhicule ───────────────
 
   /**
@@ -235,6 +261,9 @@ export class VehicleConfigurator implements OnInit {
    */
   selectVehicle(vehicule: Vehicule): void {
     if (this.locked()) return;
+    // Défense en profondeur — `VehicleChoiceCard` n'émet déjà pas `chosen` si le
+    // verdict est indisponible ; le backend reste la seule source de vérité.
+    if (this.availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible === false) return;
     this.creatingVehicle.set(true);
     this.error.set('');
 

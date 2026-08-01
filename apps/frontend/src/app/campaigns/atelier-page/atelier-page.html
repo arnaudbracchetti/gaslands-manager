@@ -49,7 +49,12 @@
         } @else if (sponsorCatalog(); as catalog) {
           <div class="atp-vehicles-grid">
             @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i = $index) {
-              <app-vehicle-choice-card [vehicule]="vehicule" [index]="i + 1" (chosen)="onVehicleChosen($event)" />
+              <app-vehicle-choice-card
+                [vehicule]="vehicule"
+                [index]="i + 1"
+                [disponible]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible ?? true"
+                [raison]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.raison"
+                (chosen)="onVehicleChosen($event)" />
             }
           </div>
         }

@@ -22,6 +22,18 @@
     transform: translateY(-2px);
   }
 
+  // Budget insuffisant (Team.canAddVehicle) — même traitement qu'EquipmentOption
+  // (opacity réduite, pas de hover décoratif).
+  &--unavailable {
+    opacity: 0.45;
+
+    &:hover {
+      border-color: var(--border-rust);
+      box-shadow: var(--shadow-stamp);
+      transform: none;
+    }
+  }
+
   // ─── Filigrane — grand numéro en fond ──────────────────────────────────────
 
   &__watermark {
@@ -135,5 +147,15 @@
     &:hover {
       background: var(--tint-accent-bg-hover);
     }
+  }
+
+  // Refus définitif (budget insuffisant) — même style qu'EquipmentOption.__reason.
+  &__reason {
+    font-family: var(--font-mono);
+    color: var(--tb-rouille-lt);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    margin: 0;
+    text-align: right;
   }
 }
