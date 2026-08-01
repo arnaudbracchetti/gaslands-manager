@@ -1,15 +1,15 @@
 ---
 id: "us-f1-contacter-la-resistance-2026-07-03"
-status: "todo"
+status: "done"
 priority: "low"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T15:39:48.403Z"
-completedAt: null
+modified: "2026-07-28T16:12:05.096Z"
+completedAt: "2026-07-28T16:12:05.100Z"
 labels: ["mode-campagne", "resistance"]
-order: "a1"
+order: "Zv"
 ---
 # Contacter la Résistance
 

@@ -6,7 +6,7 @@ assignee: null
 epic: null
 dueDate: null
 created: "2026-07-17T00:00:00.000Z"
-modified: "2026-07-17T15:27:39.044Z"
+modified: "2026-07-29T00:00:00.000Z"
 completedAt: null
 labels: ["mode-campagne", "cagnotte-atelier"]
 order: "a6"
@@ -34,3 +34,7 @@ définitivement.
 Limitation actuelle : `GetWorkshopUseCase` expose `isLost` sur les véhicules mais
 ne les filtre pas de la liste (contrairement au filtrage des vendus). Reste à
 implémenter : UI de distinction et regroupement.
+
+Le critère "véhicule détruit disparaît des vues actives" de US-E2 (dernier CA non
+coché de cette carte) recoupe exactement le périmètre backend ci-dessus — traité
+ici, pas dupliqué là-bas.

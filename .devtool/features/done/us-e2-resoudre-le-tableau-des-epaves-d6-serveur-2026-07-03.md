@@ -6,7 +6,7 @@ assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T15:27:23.022Z"
+modified: "2026-07-29T00:00:00.000Z"
 completedAt: "2026-07-17T15:27:23.022Z"
 labels: ["mode-campagne", "degats-sequelles"]
 order: "a0"
@@ -31,6 +31,7 @@ tricher.
       l'équipage du véhicule est réduit de 1 (borné à 1 minimum) via une séquelle.
 - [ ] Étant donné un résultat « Véhicule détruit, pilote mort », quand il
       s'applique, alors le véhicule disparaît des vues actives.
+      → périmètre repris intégralement par US-D5 (carte dédiée, backlog), pas dupliqué ici.
 
 ## Vérification code (2026-07-03)
 

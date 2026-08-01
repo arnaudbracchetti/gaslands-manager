@@ -1,15 +1,15 @@
 ---
 id: "us-a4-reordonner-les-parties-du-programme-2026-07-03"
-status: "todo"
+status: "done"
 priority: "low"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-03T19:28:55.333Z"
-modified: "2026-07-17T15:39:37.771Z"
-completedAt: null
+modified: "2026-07-28T18:40:52.539Z"
+completedAt: "2026-07-28T18:40:52.542Z"
 labels: ["mode-campagne", "programme-tele"]
-order: "a0"
+order: "Zu"
 ---
 # Réordonner les parties du Programme
 
