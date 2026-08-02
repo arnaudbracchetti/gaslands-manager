@@ -58,3 +58,6 @@ Thumbs.db
 __screenshots__/
 
 test-output
+
+# Cache/état local de l'outil impeccable (consentement hook, snapshots de session)
+.impeccable/
