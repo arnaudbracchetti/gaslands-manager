@@ -11,8 +11,6 @@
     @if (authService.isLoggedIn()) {
       <li><a routerLink="/campaigns" routerLinkActive="active">Saisons</a></li>
     }
-    <li><a routerLink="/vehicles" routerLinkActive="active">Véhicules</a></li>
-    <li><a routerLink="/weapons" routerLinkActive="active">Armes</a></li>
     <li><a routerLink="/documentation" routerLinkActive="active"><app-icon concept="journal" size="sm" /> Documentation</a></li>
     @if (authService.currentUser()?.role === 'admin') {
       <li><a routerLink="/admin/users" routerLinkActive="active">Utilisateurs</a></li>

@@ -1,4 +1,4 @@
-<!-- Section "hero" : la grande bannière d'accueil -->
+<!-- Section "hero" : la grande bannière d'accueil, cadre unique englobant le logo et les 3 cartes d'action -->
 <section class="hero">
   <div class="hero-content">
     <h1 class="hero-title">
@@ -7,41 +7,29 @@
     <p class="hero-subtitle">
       Construisez vos équipes, armez vos véhicules et préparez-vous à la destruction dans l'arène post-apocalyptique.
     </p>
-    <div class="hero-actions">
-      <!-- routerLink navigue sans rechargement de page (SPA = Single Page Application) -->
-      <a routerLink="/teams" class="btn btn-primary"><app-icon concept="drapeau" size="md" /> Mes Équipes</a>
-      <a routerLink="/documentation" class="btn btn-secondary"><app-icon concept="journal" size="md" /> Documentation</a>
-    </div>
   </div>
-</section>
 
-<!-- Grille des 4 sections principales -->
-<section class="features">
-  <a routerLink="/teams" class="feature-card">
-    <div class="feature-icon">👥</div>
-    <h2>Équipes</h2>
-    <p>Créez et gérez vos équipes avec leur budget en jerricans et leur sponsor.</p>
-    <span class="feature-link">Gérer mes équipes →</span>
-  </a>
+  <!-- Grille des 3 sections principales, à l'intérieur du même cadre que le hero -->
+  <div class="features">
+    <a routerLink="/teams" class="feature-card">
+      <div class="feature-icon">👥</div>
+      <h2>Équipes</h2>
+      <p>Créez et gérez vos équipes avec leur budget en jerricans et leur sponsor.</p>
+      <span class="feature-link">Gérer mes équipes →</span>
+    </a>
 
-  <a routerLink="/vehicles" class="feature-card">
-    <div class="feature-icon">🚗</div>
-    <h2>Véhicules</h2>
-    <p>Configurez vos véhicules, choisissez leur type et ajoutez des améliorations.</p>
-    <span class="feature-link">Configurer →</span>
-  </a>
+    <a routerLink="/campaigns" class="feature-card">
+      <div class="feature-icon">🏆</div>
+      <h2>Campagnes</h2>
+      <p>Rejoignez ou organisez une campagne multi-équipes, suivez le classement et le Programme Télé.</p>
+      <span class="feature-link">Voir mes campagnes →</span>
+    </a>
 
-  <a routerLink="/weapons" class="feature-card">
-    <div class="feature-icon">💣</div>
-    <h2>Armes</h2>
-    <p>Explorez l'arsenal disponible, leurs coûts et leurs caractéristiques.</p>
-    <span class="feature-link">Explorer l'arsenal →</span>
-  </a>
-
-  <a routerLink="/documentation" class="feature-card">
-    <div class="feature-icon"><app-icon concept="journal" size="xl" /></div>
-    <h2>Documentation</h2>
-    <p>Découvrez comment utiliser l'application : équipes, campagnes, atelier, séquelles...</p>
-    <span class="feature-link">Consulter la documentation →</span>
-  </a>
+    <a routerLink="/documentation" class="feature-card">
+      <div class="feature-icon"><app-icon concept="journal" size="xl" /></div>
+      <h2>Documentation</h2>
+      <p>Découvrez comment utiliser l'application : équipes, campagnes, atelier, séquelles...</p>
+      <span class="feature-link">Consulter la documentation →</span>
+    </a>
+  </div>
 </section>

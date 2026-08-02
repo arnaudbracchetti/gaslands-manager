@@ -3,12 +3,11 @@
 .hero {
   background: var(--earth-glow);
   color: var(--tb-os);
-  padding: 80px 20px;
+  padding: 64px 20px 48px;
   text-align: center;
-  min-height: 70vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   position: relative;
   overflow: hidden;
 
@@ -60,54 +59,8 @@
   font-size: 1.1rem;
   color: var(--text-body);
   line-height: 1.6;
-  margin-bottom: 2.5rem;
+  margin-bottom: 0;
   letter-spacing: 0.02em;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 12px 28px;
-  border-radius: var(--r-sm);
-  font-family: var(--font-text);
-  font-weight: 600;
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.95rem;
-  transition: all 160ms var(--ease-mech);
-  display: inline-block;
-  box-shadow: var(--shadow-stamp);
-
-  &-primary {
-    background: var(--tb-danger);
-    color: var(--tb-bitume);
-    border: 2px solid var(--tb-danger);
-
-    &:hover {
-      background: var(--tb-danger-lt);
-      border-color: var(--tb-danger-lt);
-      transform: translateY(-2px);
-      box-shadow: var(--glow-danger);
-    }
-  }
-
-  &-secondary {
-    background: transparent;
-    border: 2px solid var(--border-rust);
-    color: var(--tb-os);
-
-    &:hover {
-      background: var(--tb-bitume-4);
-      border-color: var(--border-strong);
-      transform: translateY(-2px);
-    }
-  }
 }
 
 // ─── Section features ─────────────────────────────────────────────────────────
@@ -116,9 +69,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  padding: 60px 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 1100px;
+  margin: 40px auto 0;
+  position: relative;
+  z-index: 2;
 }
 
 .feature-card {
