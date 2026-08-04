@@ -1,9 +1,13 @@
 <!--
   ModalShell — chrome commun (overlay + panel métal + coins + bande HazardTape
   + footer d'actions), contenu laissé entièrement au consommateur via
-  <ng-content>. `$event.stopPropagation()` sur la boîte empêche qu'un clic À
-  L'INTÉRIEUR ne remonte jusqu'à l'overlay (pertinent uniquement en mode
-  'consultation', inoffensif en mode 'action' où l'overlay n'a pas de handler).
+  <ng-content>. Un clic À L'INTÉRIEUR de la boîte (`.ms-modal`) déclenche
+  aussi le `(click)` de `.ms-overlay` par bubbling naturel - plutôt que de
+  poser un second handler `(click)="$event.stopPropagation()"` sur `.ms-modal`
+  (un div sans action propre, donc non focusable/non clavier-opérable :
+  viole `click-events-have-key-events`/`interactive-supports-focus`),
+  `onOverlayClick($event)` compare `event.target`/`event.currentTarget` et
+  ignore tout clic dont la cible n'est pas l'overlay lui-même.
 
   Coins d'enregistrement en `<span>` réels (pas ::before/::after) : la classe
   .tb-grain (texture de grain, styles.scss) définit elle-même un ::after sur
@@ -24,7 +28,7 @@
   aria-modal="true"
   tabindex="-1"
   [attr.aria-label]="ariaLabel()"
-  (click)="onOverlayClick()"
+  (click)="onOverlayClick($event)"
   (keydown.escape)="onOverlayClick()">
   <div
     class="ms-modal tb-grain"
@@ -32,8 +36,7 @@
     [class.ms-modal--lg]="size() === 'lg'"
     [class.ms-modal--xl]="size() === 'xl'"
     cdkTrapFocus
-    [cdkTrapFocusAutoCapture]="true"
-    (click)="$event.stopPropagation()">
+    [cdkTrapFocusAutoCapture]="true">
     <span class="ms-corner ms-corner--tl" aria-hidden="true"></span>
     <span class="ms-corner ms-corner--br" aria-hidden="true"></span>
     <div class="ms-modal__tape"></div>

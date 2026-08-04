@@ -7,7 +7,7 @@
  * Composant "dumb" : extrait de l'ancien champ intégré à `RankingStep` — même
  * mécanique de saisie, désormais son propre écran.
  */
-import { Component, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { CampaignParticipant } from '../../campaign-participant.model';
 import type { GatesEntry } from '../../game.model';
@@ -23,21 +23,21 @@ export class GatesStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Participants classés à l'écran Classement, dans l'ordre du rang. */
-  participants = input.required<CampaignParticipant[]>();
+  participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de l'API. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  next = output<GatesEntry[]>();
-  back = output<void>();
-  formCancel = output<void>();
+  next: OutputEmitterRef<GatesEntry[]> = output<GatesEntry[]>();
+  back: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Portes franchies par participant — clé = participantId. */
-  private gatesCrossed = signal<Map<number, number>>(new Map());
+  private gatesCrossed: WritableSignal<Map<number, number>> = signal<Map<number, number>>(new Map());
 
   // ── Méthodes publiques ───────────────────────────────────────────────────────
 

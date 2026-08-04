@@ -13,7 +13,7 @@
  * `outcomes`+`descriptions`, alimentés par le parent en retour de
  * `CampaignsService.rollIncome()`/`resolveWreck()`.
  */
-import { Component, computed, input, output } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Icon } from '../../../shared/icon/icon';
 import type { CampaignParticipant } from '../../campaign-participant.model';
@@ -35,47 +35,47 @@ export class WreckResolutionStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Véhicules désignés à l'écran 2 — un bloc de synthèse par entrée. */
-  wreckedVehicles = input.required<WreckedVehicleEntry[]>();
+  wreckedVehicles: InputSignal<WreckedVehicleEntry[]> = input.required<WreckedVehicleEntry[]>();
 
   /** Libellé affiché par véhicule (nom + équipe), résolu par le parent. */
-  vehicleLabels = input<ReadonlyMap<number, string>>(new Map());
+  vehicleLabels: InputSignal<ReadonlyMap<number, string>> = input<ReadonlyMap<number, string>>(new Map());
 
   /** Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent. */
-  destroyedBy = input<ReadonlyMap<number, string>>(new Map());
+  destroyedBy: InputSignal<ReadonlyMap<number, string>> = input<ReadonlyMap<number, string>>(new Map());
 
   /** Résultats reçus, clé = vehicleId — alimenté par le parent après chaque tirage. */
-  outcomes = input<ReadonlyMap<number, WreckOutcomeDto>>(new Map());
+  outcomes: InputSignal<ReadonlyMap<number, WreckOutcomeDto>> = input<ReadonlyMap<number, WreckOutcomeDto>>(new Map());
 
   /** Lignes de texte décrivant les événements de chaque tirage, clé = vehicleId. */
-  descriptions = input<ReadonlyMap<number, string[]>>(new Map());
+  descriptions: InputSignal<ReadonlyMap<number, string[]>> = input<ReadonlyMap<number, string[]>>(new Map());
 
   /** Vrai pendant que la finalisation (clic "Terminer") est en cours. */
-  finalizing = input<boolean>(false);
+  finalizing: InputSignal<boolean> = input<boolean>(false);
 
   /** Vrai pendant qu'une annulation (clic "Annuler", DELETE .../results) est en cours. */
-  resetting = input<boolean>(false);
+  resetting: InputSignal<boolean> = input<boolean>(false);
 
   /**
    * Affiche la section "Revenus" — Escarmouche uniquement (gate explicite, même
    * principe que `EquipmentManager.showSequellas`, cf. COMPONENTS.md).
    */
-  showIncome = input<boolean>(false);
+  showIncome: InputSignal<boolean> = input<boolean>(false);
 
   /** Participants présents — source de la section "Revenus" (Escarmouche uniquement). */
-  presentParticipants = input<CampaignParticipant[]>([]);
+  presentParticipants: InputSignal<CampaignParticipant[]> = input<CampaignParticipant[]>([]);
 
   /** Résultats de revenu reçus, clé = participantId — alimenté par le parent après chaque tirage. */
-  incomeResults = input<ReadonlyMap<number, RollIncomeResultDto>>(new Map());
+  incomeResults: InputSignal<ReadonlyMap<number, RollIncomeResultDto>> = input<ReadonlyMap<number, RollIncomeResultDto>>(new Map());
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  completed = output<void>();
-  formCancel = output<void>();
+  completed: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── Calculs ──────────────────────────────────────────────────────────────────
 
   /** Vrai quand tous les revenus (si affichés) et tous les véhicules désignés ont un résultat. */
-  allResolved = computed<boolean>(() =>
+  allResolved: Signal<boolean> = computed<boolean>(() =>
     (!this.showIncome() || this.presentParticipants().every((p) => this.incomeResults().has(p.id)))
     && this.wreckedVehicles().every((v) => this.outcomes().has(v.vehicleId)),
   );

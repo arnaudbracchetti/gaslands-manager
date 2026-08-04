@@ -25,7 +25,6 @@
 import {
   Component,
   InputSignal,
-  OnInit,
   OutputEmitterRef,
   Signal,
   WritableSignal,
@@ -50,7 +49,7 @@ import { Icon } from '../../shared/icon/icon';
   templateUrl: './sponsor-carousel.html',
   styleUrl: './sponsor-carousel.scss',
 })
-export class SponsorCarousel implements OnInit {
+export class SponsorCarousel {
   private sanitizer: DomSanitizer = inject(DomSanitizer);
 
   // ── Inputs ──────────────────────────────────────────────────────────────────
@@ -130,11 +129,6 @@ export class SponsorCarousel implements OnInit {
       const idx = list.findIndex((s: SponsorInfo): boolean => s.nom === selected);
       this.currentIndex.set(idx !== -1 ? idx : 0);
     });
-  }
-
-  ngOnInit(): void {
-    // L'initialisation est gérée par l'effect() dans le constructeur.
-    // ngOnInit est ici pour respecter l'interface OnInit (explicite = lisible).
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────────

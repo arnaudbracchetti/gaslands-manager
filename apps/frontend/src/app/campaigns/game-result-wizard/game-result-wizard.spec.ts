@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GameResultWizard } from './game-result-wizard';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { CampaignParticipant } from '../campaign-participant.model';
 import type { Game, RecordResultDto, WreckResolveRequestDto } from '../game.model';
 
-const mockParticipants = [
-  { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
-  { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
+const mockParticipants: CampaignParticipant[] = [
+  { id: 1, userId: 1, teamId: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false },
+  { id: 2, userId: 2, teamId: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false },
 ];
 
 const mockEvenementTele: Game = {

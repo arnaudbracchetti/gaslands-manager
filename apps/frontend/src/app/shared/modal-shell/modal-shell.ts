@@ -47,7 +47,17 @@ export class ModalShell {
   /** Fermeture — clic sur le bouton dans les deux modes, plus clic hors de la boîte en mode 'consultation'. */
   cancelled: OutputEmitterRef<void> = output<void>();
 
-  onOverlayClick(): void {
+  /**
+   * `event` absent (appel depuis `(keydown.escape)`) : ferme sans condition
+   * de cible. `event` présent (appel depuis `(click)` sur `.ms-overlay`) :
+   * ignore le clic si sa cible n'est pas l'overlay lui-même — un clic sur
+   * `.ms-modal` (ou un de ses descendants) déclenche aussi ce listener par
+   * bubbling naturel, sans qu'il faille de handler de clic dédié sur
+   * `.ms-modal` (qui n'aurait aucune action propre, seulement contraire à
+   * l'accessibilité clavier — cf. modal-shell.html).
+   */
+  onOverlayClick(event?: MouseEvent): void {
+    if (event && event.target !== event.currentTarget) return;
     if (this.mode() === 'consultation') {
       this.cancelled.emit();
     }

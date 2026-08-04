@@ -7,7 +7,7 @@
  *
  * Composant "dumb" : aucun appel HTTP ici.
  */
-import { Component, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { CampaignParticipant } from '../../campaign-participant.model';
 import type { JerricanGainDto } from '../../game.model';
@@ -23,21 +23,21 @@ export class JerricansStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Participants présents à la partie. */
-  participants = input.required<CampaignParticipant[]>();
+  participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de l'API. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  next = output<JerricanGainDto[]>();
-  back = output<void>();
-  formCancel = output<void>();
+  next: OutputEmitterRef<JerricanGainDto[]> = output<JerricanGainDto[]>();
+  back: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Jerricans gagnés par participant — clé = participantId. */
-  private amounts = signal<Map<number, number>>(new Map());
+  private amounts: WritableSignal<Map<number, number>> = signal<Map<number, number>>(new Map());
 
   // ── Méthodes publiques ───────────────────────────────────────────────────────
 

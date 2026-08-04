@@ -122,7 +122,7 @@ describe('ModalShell', () => {
       expect(host.cancelledCount()).toBe(1);
     });
 
-    it('n\'émet rien au clic à l\'intérieur de la boîte (stopPropagation)', () => {
+    it('n\'émet rien au clic à l\'intérieur de la boîte (target != overlay)', () => {
       (fixture.nativeElement.querySelector('.ms-modal') as HTMLDivElement).click();
       expect(host.cancelledCount()).toBe(0);
     });

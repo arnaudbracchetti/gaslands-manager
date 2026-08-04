@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WreckResolutionStep } from './wreck-resolution-step';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { CampaignParticipant } from '../../campaign-participant.model';
 import type { WreckOutcomeDto, WreckedVehicleEntry } from '../../game.model';
 
 const mockWrecked: WreckedVehicleEntry[] = [
@@ -101,9 +102,9 @@ describe('WreckResolutionStep — revenu Escarmouche (showIncome)', () => {
   let fixture: ComponentFixture<WreckResolutionStep>;
   let component: WreckResolutionStep;
 
-  const mockPresent = [
-    { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
-    { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
+  const mockPresent: CampaignParticipant[] = [
+    { id: 1, userId: 1, teamId: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false },
+    { id: 2, userId: 2, teamId: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false },
   ];
 
   beforeEach(async () => {

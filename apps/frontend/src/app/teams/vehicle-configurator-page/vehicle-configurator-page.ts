@@ -38,12 +38,12 @@ export class VehicleConfiguratorPage implements OnInit {
   private returnTo: WritableSignal<string> = signal('teams');
 
   /** Route de retour — conservée pour onDone() */
-  backRoute = computed((): string[] => {
+  backRoute: Signal<string[]> = computed((): string[] => {
     const t = this.team();
     return this.returnTo() === 'edit' && t ? ['/teams', String(t.id), 'edit'] : ['/teams'];
   });
 
-  breadcrumbs = computed((): BreadcrumbItem[] => {
+  breadcrumbs: Signal<BreadcrumbItem[]> = computed((): BreadcrumbItem[] => {
     const t = this.team();
     const isEdit = this.returnTo() === 'edit';
     const current = this.vehicleId() === null ? 'Ajouter un véhicule' : "Gérer l'équipement";

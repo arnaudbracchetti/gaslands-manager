@@ -15,7 +15,7 @@
  * Règle de classement : seuls les `ceil(n/2)` premiers sont "classés".
  * Ex. : 3 présents → 2 classés ; 4 présents → 2 classés ; 5 → 3 classés.
  */
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   CdkDragDrop,
@@ -44,35 +44,35 @@ export class RankingStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Partie dont on saisit le résultat - fournit le type (barème PC) et le scénario. */
-  game = input.required<Game>();
+  game: InputSignal<Game> = input.required<Game>();
 
   /** Participants présents, déjà sélectionnés à l'écran Présence (ordre de départ). */
-  presentParticipants = input.required<CampaignParticipant[]>();
+  presentParticipants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de l'API. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   /** Émis avec le classement une fois l'étape validée. */
-  next = output<RankingEntry[]>();
+  next: OutputEmitterRef<RankingEntry[]> = output<RankingEntry[]>();
 
   /** Émis pour revenir à l'écran Présence. */
-  back = output<void>();
+  back: OutputEmitterRef<void> = output<void>();
 
   /** Émis quand l'utilisateur annule sans soumettre. */
-  formCancel = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Copie réordonnable de `presentParticipants()` — initialisée à chaque changement de l'input. */
-  orderedParticipants = signal<CampaignParticipant[]>([]);
+  orderedParticipants: WritableSignal<CampaignParticipant[]> = signal<CampaignParticipant[]>([]);
 
   /**
    * Nombre d'équipes "classées" : ceil(n/2) des présents.
    * Les autres sont "non classés" (hors points de championnat).
    */
-  classifiedCount = computed<number>(() =>
+  classifiedCount: Signal<number> = computed<number>(() =>
     Math.ceil(this.orderedParticipants().length / 2),
   );
 

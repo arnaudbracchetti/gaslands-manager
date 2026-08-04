@@ -7,7 +7,7 @@
  * à `RankingStep` (Événement Télévisé uniquement) — cet écran ne fait que
  * déterminer QUI a joué, jamais dans quel ordre.
  */
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { CampaignParticipant } from '../../campaign-participant.model';
 
@@ -25,31 +25,31 @@ export class PresenceStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Participants VALIDATED de la campagne — source de la liste de présence. */
-  participants = input.required<CampaignParticipant[]>();
+  participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend une réponse de l'API. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   /** Émis avec les ids présents (ordre de coche) une fois l'étape validée. */
-  next = output<number[]>();
+  next: OutputEmitterRef<number[]> = output<number[]>();
 
   /** Émis à chaque changement de la liste des présents. */
-  presentParticipantsChanged = output<number[]>();
+  presentParticipantsChanged: OutputEmitterRef<number[]> = output<number[]>();
 
   /** Émis quand l'utilisateur annule sans soumettre. */
-  formCancel = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Ids présents, dans l'ordre de coche. */
-  presentIds = signal<number[]>([]);
+  presentIds: WritableSignal<number[]> = signal<number[]>([]);
 
-  presentCount = computed<number>(() => this.presentIds().length);
+  presentCount: Signal<number> = computed<number>(() => this.presentIds().length);
 
   /** Une partie oppose au moins deux participants — jamais une partie en solo. */
-  hasMinimumPresence = computed<boolean>(() => this.presentCount() >= MIN_PRESENT);
+  hasMinimumPresence: Signal<boolean> = computed<boolean>(() => this.presentCount() >= MIN_PRESENT);
 
   // ── Méthodes publiques ───────────────────────────────────────────────────────
 

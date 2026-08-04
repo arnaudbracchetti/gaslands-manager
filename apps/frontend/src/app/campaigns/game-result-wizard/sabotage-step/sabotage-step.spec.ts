@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SabotageStep } from './sabotage-step';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { CampaignParticipant } from '../../campaign-participant.model';
+import type { SabotageSpentEntry } from '../../game.model';
 
-const mockParticipants = [
-  { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
-  { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
+const mockParticipants: CampaignParticipant[] = [
+  { id: 1, userId: 1, teamId: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false },
+  { id: 2, userId: 2, teamId: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false },
 ];
 
 describe('SabotageStep', () => {
@@ -39,14 +41,14 @@ describe('SabotageStep', () => {
 
   it('next n\'inclut que les participants avec un montant > 0', () => {
     component.setPointsSpent(2, '3');
-    const emitted: any[] = [];
+    const emitted: SabotageSpentEntry[][] = [];
     outputToObservable(component.next).subscribe(v => emitted.push(v));
     component.onNext();
     expect(emitted[0]).toEqual([{ participantId: 2, pointsSpent: 3 }]);
   });
 
   it('next émet un tableau vide si rien n\'a été déclaré (clic "Suivant" sans saisie)', () => {
-    const emitted: any[] = [];
+    const emitted: SabotageSpentEntry[][] = [];
     outputToObservable(component.next).subscribe(v => emitted.push(v));
     component.onNext();
     expect(emitted[0]).toEqual([]);

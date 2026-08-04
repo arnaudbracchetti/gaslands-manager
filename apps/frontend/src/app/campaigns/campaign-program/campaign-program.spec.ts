@@ -216,13 +216,13 @@ describe('CampaignProgram Component', () => {
   });
 
   it('onRecordGame met à jour recordingGame', () => {
-    const game = { id: 2, status: 'PLANIFIE' } as any;
+    const game: Game = { ...mockGame, id: 2, status: 'PLANIFIE' };
     component.onRecordGame(game);
     expect(component.recordingGame()).toEqual(game);
   });
 
   it('onWizardCancelled remet recordingGame à null sans appel réseau si rien n\'a été persisté', () => {
-    component.recordingGame.set({ id: 1 } as any);
+    component.recordingGame.set({ ...mockGame, id: 1 });
     component.onWizardCancelled();
     expect(component.recordingGame()).toBeNull();
     expect(mockService.resetResult).not.toHaveBeenCalled();

@@ -23,12 +23,17 @@
   .ts de `openDetails`) : nom, coût, emplacement, description ET règles
   complètes, dans une mise en page aérée — purement informative, fermée par
   "Annuler" ou un clic à l'extérieur. Chaque bouton interne (+, choix
-  d'orientation, Annuler) appelle `$event.stopPropagation()` pour ne pas
-  déclencher cette ouverture.
+  d'orientation, Annuler) appelle `$event.stopPropagation()` (clic ET clavier)
+  pour ne pas déclencher cette ouverture — la carte entière est par ailleurs
+  rendue clavier-opérable (role="button"/tabindex/keydown.enter/space), même
+  pattern que VehicleSummaryCard/TeamCard/CampaignCard, cf. COMPONENTS.md.
 -->
 
 <div class="option option--side-actions" [class.option--unavailable]="!option().disponible && !requiresOrientation()"
-     (click)="openDetails()">
+     role="button" tabindex="0"
+     (click)="openDetails()"
+     (keydown.enter)="openDetails()"
+     (keydown.space)="openDetails()">
   <div class="option__header">
     <span class="option__name" [title]="option().nom">{{ option().nom }}</span>
     <div class="option__badges">
@@ -60,22 +65,29 @@
       <span class="option__orientations-label">Orientation :</span>
       @for (orientation of orientations; track orientation) {
         <button class="orientation-btn" type="button"
-                (click)="$event.stopPropagation(); onOrientationChosen(orientation)">
+                (click)="$event.stopPropagation(); onOrientationChosen(orientation)"
+                (keydown)="$event.stopPropagation()">
           {{ orientation }}
         </button>
       }
       @if (option().montableSurTourelle) {
         <button class="orientation-btn" type="button"
-                (click)="$event.stopPropagation(); onOrientationChosen('tourelle')">
+                (click)="$event.stopPropagation(); onOrientationChosen('tourelle')"
+                (keydown)="$event.stopPropagation()">
           Tourelle x3
         </button>
       }
-      <button class="orientation-cancel" type="button" (click)="$event.stopPropagation(); cancelOrientation()">
+      <button class="orientation-cancel" type="button"
+              (click)="$event.stopPropagation(); cancelOrientation()"
+              (keydown)="$event.stopPropagation()">
         Annuler
       </button>
     </div>
   } @else {
-    <button class="option__add" type="button" (click)="$event.stopPropagation(); onAddClicked()" aria-label="Ajouter">
+    <button class="option__add" type="button"
+            (click)="$event.stopPropagation(); onAddClicked()"
+            (keydown)="$event.stopPropagation()"
+            aria-label="Ajouter">
       <span aria-hidden="true">+</span>
     </button>
   }

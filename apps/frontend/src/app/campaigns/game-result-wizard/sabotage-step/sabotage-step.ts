@@ -8,7 +8,7 @@
  *
  * Composant "dumb" : aucun appel HTTP ici.
  */
-import { Component, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, WritableSignal, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { CampaignParticipant } from '../../campaign-participant.model';
 import type { SabotageSpentEntry } from '../../game.model';
@@ -24,21 +24,21 @@ export class SabotageStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Participants présents à la partie. */
-  participants = input.required<CampaignParticipant[]>();
+  participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de l'API. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  next = output<SabotageSpentEntry[]>();
-  back = output<void>();
-  formCancel = output<void>();
+  next: OutputEmitterRef<SabotageSpentEntry[]> = output<SabotageSpentEntry[]>();
+  back: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Points de sabotage déclarés par participant — clé = participantId. */
-  private pointsSpent = signal<Map<number, number>>(new Map());
+  private pointsSpent: WritableSignal<Map<number, number>> = signal<Map<number, number>>(new Map());
 
   // ── Méthodes publiques ───────────────────────────────────────────────────────
 

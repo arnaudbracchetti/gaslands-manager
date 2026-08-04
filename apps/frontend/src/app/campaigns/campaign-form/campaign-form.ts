@@ -68,7 +68,7 @@ export class CampaignForm {
   formError: WritableSignal<string> = signal('');
 
   /** Nombre d'équipes lors du dernier passage de l'effect — détecte un ajout. */
-  private previousTeamsLength = 0;
+  private previousTeamsLength: number = 0;
 
   constructor() {
     // Après une création rapide (QuickTeamCreate), sélectionne automatiquement

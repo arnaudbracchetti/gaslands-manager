@@ -29,7 +29,7 @@
  * et repasse les résultats via les inputs `resultRecorded`/`wreckOutcomes`/
  * `incomeResults`.
  */
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { CampaignParticipant } from '../campaign-participant.model';
 import type {
@@ -81,69 +81,69 @@ const STEP_LABELS: Record<WizardStepId, string> = {
 export class GameResultWizard {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
-  game = input.required<Game>();
-  participants = input.required<CampaignParticipant[]>();
+  game: InputSignal<Game> = input.required<Game>();
+  participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Vrai pendant que le parent attend la réponse de `recordResult()`. */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   /** Véhicules courants par participant — alimenté par le parent après chaque changement de présence. */
-  participantVehicles = input<ReadonlyMap<number, ParticipantVehicleDto[]>>(new Map());
+  participantVehicles: InputSignal<ReadonlyMap<number, ParticipantVehicleDto[]>> = input<ReadonlyMap<number, ParticipantVehicleDto[]>>(new Map());
 
   /**
    * Non-null une fois `recordResult()` résolu avec succès — fait avancer le
    * wizard de l'écran Désignation vers l'écran Résolution (via `effect()` ci-dessous).
    */
-  resultRecorded = input<Game | null>(null);
+  resultRecorded: InputSignal<Game | null> = input<Game | null>(null);
 
   /** Résultats de tirage d'épave reçus, clé = vehicleId — alimenté par le parent après chaque tirage. */
-  wreckOutcomes = input<ReadonlyMap<number, WreckOutcomeDto>>(new Map());
+  wreckOutcomes: InputSignal<ReadonlyMap<number, WreckOutcomeDto>> = input<ReadonlyMap<number, WreckOutcomeDto>>(new Map());
 
   /** Lignes de texte décrivant les événements générés par chaque tirage d'épave, clé = vehicleId. */
-  wreckDescriptions = input<ReadonlyMap<number, string[]>>(new Map());
+  wreckDescriptions: InputSignal<ReadonlyMap<number, string[]>> = input<ReadonlyMap<number, string[]>>(new Map());
 
   /** Résultats de revenu Escarmouche reçus, clé = participantId. */
-  incomeResults = input<ReadonlyMap<number, RollIncomeResultDto>>(new Map());
+  incomeResults: InputSignal<ReadonlyMap<number, RollIncomeResultDto>> = input<ReadonlyMap<number, RollIncomeResultDto>>(new Map());
 
   /** Vrai pendant qu'un tirage (revenu ou épave) est en cours — un seul à la fois. */
-  resolving = input<boolean>(false);
+  resolving: InputSignal<boolean> = input<boolean>(false);
 
   /** Vrai pendant que la finalisation de la partie (clic "Terminer") est en cours. */
-  finalizingGame = input<boolean>(false);
+  finalizingGame: InputSignal<boolean> = input<boolean>(false);
 
   /** Vrai pendant qu'une annulation à l'écran Résolution (DELETE .../results) est en cours. */
-  resetting = input<boolean>(false);
+  resetting: InputSignal<boolean> = input<boolean>(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  presentParticipantsChanged = output<number[]>();
+  presentParticipantsChanged: OutputEmitterRef<number[]> = output<number[]>();
   /** Lot accumulé (classement OU jerricans/destructions) — émis à la transition Désignation → Résolution. */
-  batchReady = output<RecordResultDto>();
-  incomeRollRequested = output<number>();
-  wreckRollRequested = output<WreckResolveRequestDto>();
-  wizardCompleted = output<void>();
-  formCancel = output<void>();
+  batchReady: OutputEmitterRef<RecordResultDto> = output<RecordResultDto>();
+  incomeRollRequested: OutputEmitterRef<number> = output<number>();
+  wreckRollRequested: OutputEmitterRef<WreckResolveRequestDto> = output<WreckResolveRequestDto>();
+  wizardCompleted: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
   /** Ids présents, dans l'ordre de coche (écran Présence). */
-  private presentParticipantIds = signal<number[]>([]);
-  private sabotageSpentEntries = signal<SabotageSpentEntry[]>([]);
-  private rankingResult = signal<RankingEntry[]>([]);
-  private gatesEntries = signal<GatesEntry[]>([]);
-  private jerricanGainEntries = signal<JerricanGainDto[]>([]);
+  private presentParticipantIds: WritableSignal<number[]> = signal<number[]>([]);
+  private sabotageSpentEntries: WritableSignal<SabotageSpentEntry[]> = signal<SabotageSpentEntry[]>([]);
+  private rankingResult: WritableSignal<RankingEntry[]> = signal<RankingEntry[]>([]);
+  private gatesEntries: WritableSignal<GatesEntry[]> = signal<GatesEntry[]>([]);
+  private jerricanGainEntries: WritableSignal<JerricanGainDto[]> = signal<JerricanGainDto[]>([]);
   /** Véhicules désignés à l'écran Désignation — pilote l'écran Résolution. */
-  wreckedVehicles = signal<WreckedVehicleEntry[]>([]);
+  wreckedVehicles: WritableSignal<WreckedVehicleEntry[]> = signal<WreckedVehicleEntry[]>([]);
   /** Véhicules ennemis détruits capturés à l'écran Désignation — clé = destructeur (participantId). */
-  private rawDestroyedVehicles = signal<ReadonlyMap<number, DestroyedVehicleDto[]>>(new Map());
+  private rawDestroyedVehicles: WritableSignal<ReadonlyMap<number, DestroyedVehicleDto[]>> = signal<ReadonlyMap<number, DestroyedVehicleDto[]>>(new Map());
 
-  currentStepIndex = signal(0);
+  currentStepIndex: WritableSignal<number> = signal(0);
 
   /**
    * Étapes actives, dans l'ordre — dépend du type de partie et des métadonnées
    * du scénario (cf. en-tête de fichier).
    */
-  activeSteps = computed<WizardStepId[]>(() => {
+  activeSteps: Signal<WizardStepId[]> = computed<WizardStepId[]>(() => {
     const isEvenementTele = this.game().type === 'EVENEMENT_TELE';
     const steps: WizardStepId[] = ['presence', 'sabotage'];
     if (isEvenementTele) steps.push('ranking');
@@ -153,16 +153,16 @@ export class GameResultWizard {
     return steps;
   });
 
-  currentStepId = computed<WizardStepId>(() => this.activeSteps()[this.currentStepIndex()]);
+  currentStepId: Signal<WizardStepId> = computed<WizardStepId>(() => this.activeSteps()[this.currentStepIndex()]);
 
   /** Participants présents (écran Présence), résolus en objets complets. */
-  presentParticipants = computed<CampaignParticipant[]>(() => {
+  presentParticipants: Signal<CampaignParticipant[]> = computed<CampaignParticipant[]>(() => {
     const ids = new Set(this.presentParticipantIds());
     return this.participants().filter((p) => ids.has(p.id));
   });
 
   /** Participants classés (écran Classement), dans l'ordre du rang — alimente l'écran Portes. */
-  rankedParticipants = computed<CampaignParticipant[]>(() => {
+  rankedParticipants: Signal<CampaignParticipant[]> = computed<CampaignParticipant[]>(() => {
     const byId = new Map(this.participants().map((p) => [p.id, p]));
     return this.rankingResult()
       .map((r) => byId.get(r.participantId))
@@ -170,7 +170,7 @@ export class GameResultWizard {
   });
 
   /** Libellé "nom (équipe)" par véhicule, pour l'affichage à l'écran Résolution. */
-  vehicleLabels = computed<ReadonlyMap<number, string>>(() => {
+  vehicleLabels: Signal<ReadonlyMap<number, string>> = computed<ReadonlyMap<number, string>>(() => {
     const map = new Map<number, string>();
     for (const [participantId, vehicles] of this.participantVehicles()) {
       const owner = this.participants().find((p) => p.id === participantId);
@@ -182,7 +182,7 @@ export class GameResultWizard {
   });
 
   /** Libellé du destructeur par véhicule détruit, pour l'affichage à l'écran Résolution. */
-  destroyedBy = computed<ReadonlyMap<number, string>>(() => {
+  destroyedBy: Signal<ReadonlyMap<number, string>> = computed<ReadonlyMap<number, string>>(() => {
     const map = new Map<number, string>();
     for (const [destroyerId, destroyed] of this.rawDestroyedVehicles()) {
       const destroyer = this.participants().find((p) => p.id === destroyerId);

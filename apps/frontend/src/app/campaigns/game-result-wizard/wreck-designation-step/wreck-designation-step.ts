@@ -14,7 +14,7 @@
  * - `wreckedVehicles` (toutes les désignations, avec ou sans destructeur) →
  *   pilote l'écran 3 (résolution de la Table des Épaves), état purement client.
  */
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Icon } from '../../../shared/icon/icon';
@@ -58,33 +58,33 @@ export class WreckDesignationStep {
   // ── Inputs ──────────────────────────────────────────────────────────────────
 
   /** Participants classés à l'écran 1 — source des véhicules à désigner. */
-  presentParticipants = input.required<CampaignParticipant[]>();
+  presentParticipants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 
   /** Véhicules courants par participant (clé = participantId), tous présents confondus. */
-  participantVehicles = input<ReadonlyMap<number, ParticipantVehicleDto[]>>(new Map());
+  participantVehicles: InputSignal<ReadonlyMap<number, ParticipantVehicleDto[]>> = input<ReadonlyMap<number, ParticipantVehicleDto[]>>(new Map());
 
   /** Vrai pendant que le parent attend la réponse de l'API (classement en cours d'enregistrement). */
-  saving = input<boolean>(false);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
   /**
    * Affiche la case "Favori du public" — Événement Télévisé uniquement (bonus PC,
    * cf. spec/CAMPAIGN.md). Toujours `false` pour une Escarmouche : le picker
    * destructeur reste actif dans les deux cas, seule cette case est masquée.
    */
-  showFavoriDuPublic = input<boolean>(true);
+  showFavoriDuPublic: InputSignal<boolean> = input<boolean>(true);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
-  next = output<WreckDesignationResult>();
-  back = output<void>();
-  formCancel = output<void>();
+  next: OutputEmitterRef<WreckDesignationResult> = output<WreckDesignationResult>();
+  back: OutputEmitterRef<void> = output<void>();
+  formCancel: OutputEmitterRef<void> = output<void>();
 
   // ── État interne ─────────────────────────────────────────────────────────────
 
-  private vehicleStates = signal<Map<number, VehicleDesignationState>>(new Map());
+  private vehicleStates: WritableSignal<Map<number, VehicleDesignationState>> = signal<Map<number, VehicleDesignationState>>(new Map());
 
   /** Tous les véhicules des participants présents, avec leur propriétaire. */
-  allVehicles = computed<VehicleRow[]>(() => {
+  allVehicles: Signal<VehicleRow[]> = computed<VehicleRow[]>(() => {
     const rows: VehicleRow[] = [];
     for (const participant of this.presentParticipants()) {
       const vehicles = this.participantVehicles().get(participant.id) ?? [];

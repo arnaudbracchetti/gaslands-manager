@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GatesStep } from './gates-step';
 import { outputToObservable } from '@angular/core/rxjs-interop';
+import type { CampaignParticipant } from '../../campaign-participant.model';
+import type { GatesEntry } from '../../game.model';
 
-const mockParticipants = [
-  { id: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false } as any,
-  { id: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false } as any,
+const mockParticipants: CampaignParticipant[] = [
+  { id: 1, userId: 1, teamId: 1, teamName: 'Équipe Alpha', userName: 'Alice', status: 'VALIDATED', isOrganizer: false },
+  { id: 2, userId: 2, teamId: 2, teamName: 'Équipe Beta', userName: 'Bob', status: 'VALIDATED', isOrganizer: false },
 ];
 
 describe('GatesStep', () => {
@@ -39,14 +41,14 @@ describe('GatesStep', () => {
 
   it('next n\'inclut que les participants avec gatesCrossed > 0', () => {
     component.setGatesCrossed(1, '3');
-    const emitted: any[] = [];
+    const emitted: GatesEntry[][] = [];
     outputToObservable(component.next).subscribe(v => emitted.push(v));
     component.onNext();
     expect(emitted[0]).toEqual([{ participantId: 1, gatesCrossed: 3 }]);
   });
 
   it('next émet un tableau vide si aucune porte franchie', () => {
-    const emitted: any[] = [];
+    const emitted: GatesEntry[][] = [];
     outputToObservable(component.next).subscribe(v => emitted.push(v));
     component.onNext();
     expect(emitted[0]).toEqual([]);

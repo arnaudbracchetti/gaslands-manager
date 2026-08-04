@@ -7,7 +7,7 @@
  * appelant (gérer l'équipement, sélectionner pour consultation…). Le bouton
  * supprimer/vendre reste une action séparée (`deleteClicked`).
  */
-import { Component, Signal, computed, input, output } from '@angular/core';
+import { Component, InputSignal, OutputEmitterRef, Signal, computed, input, output } from '@angular/core';
 import { SlicePipe, UpperCasePipe } from '@angular/common';
 import { VehicleSummary } from '../vehicle-summary';
 import { SlotGauge } from '../../shared/slot-gauge/slot-gauge';
@@ -22,29 +22,29 @@ import { IconConcept } from '../../shared/icon/icon-sheet.map';
   styleUrl: './vehicle-summary-card.scss',
 })
 export class VehicleSummaryCard {
-  vehicle = input.required<VehicleSummary>();
+  vehicle: InputSignal<VehicleSummary> = input.required<VehicleSummary>();
 
   /** Position dans la liste (1-based) — affichée en filigrane. */
-  index = input<number>(1);
+  index: InputSignal<number> = input<number>(1);
 
   /** Affiche le bouton de suppression/vente. */
-  showDelete = input<boolean>(true);
+  showDelete: InputSignal<boolean> = input<boolean>(true);
 
   /** Surbrillance "sélectionné" — utilisé par la vue maître-détail en lecture seule
    *  (`ParticipantAtelierPage`) pour indiquer le véhicule actuellement consulté. */
-  selected = input<boolean>(false);
+  selected: InputSignal<boolean> = input<boolean>(false);
 
   /** Titre (tooltip) du bouton — "Supprimer ce véhicule" par défaut (construction d'équipe),
    *  adapté par l'atelier ("Vendre ce véhicule"/"Annuler l'achat"). */
-  deleteTitle = input<string>('Supprimer ce véhicule');
+  deleteTitle: InputSignal<string> = input<string>('Supprimer ce véhicule');
 
   /** Icône du bouton — `supprimer` (poubelle) par défaut, adaptée par l'atelier
    *  (ex. `argent` pour une vente). */
-  deleteIconConcept = input<IconConcept | null>('supprimer');
+  deleteIconConcept: InputSignal<IconConcept | null> = input<IconConcept | null>('supprimer');
 
   /** Texte brut utilisé UNIQUEMENT si `deleteIconConcept` est `null` — seul cas
    *  restant : annulation d'achat en atelier (↩️, aucune icône peinte correspondante). */
-  deleteIconFallback = input<string>('');
+  deleteIconFallback: InputSignal<string> = input<string>('');
 
   /** Numéro formaté sur 2 chiffres pour le filigrane : 1 → "01". */
   indexFormate: Signal<string> = computed(() =>
@@ -53,8 +53,8 @@ export class VehicleSummaryCard {
 
   /** Émet l'id du véhicule au clic sur la carte — le parent décide de l'action
    *  (naviguer vers la page d'équipement, sélectionner pour consultation…). */
-  cardClicked = output<number>();
+  cardClicked: OutputEmitterRef<number> = output<number>();
 
   /** Émet le VehicleSummary complet — le parent a besoin du nom pour la confirmation. */
-  deleteClicked = output<VehicleSummary>();
+  deleteClicked: OutputEmitterRef<VehicleSummary> = output<VehicleSummary>();
 }

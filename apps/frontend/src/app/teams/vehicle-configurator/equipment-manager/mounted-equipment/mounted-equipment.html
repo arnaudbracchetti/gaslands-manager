@@ -29,7 +29,7 @@
   } @else {
     <ul class="me-list">
       @for (weapon of visibleWeapons(); track weapon.id) {
-        <li class="me-item" [class.me-item--sold]="weapon.sold || weapon.lost" [attr.title]="weapon.sold ? 'Revendue (atelier)' : weapon.lost ? 'Perdue (Table des Épaves)' : null" (click)="openWeaponDetails(weapon)">
+        <li class="me-item" [class.me-item--sold]="weapon.sold || weapon.lost" [attr.title]="weapon.sold ? 'Revendue (atelier)' : weapon.lost ? 'Perdue (Table des Épaves)' : null" role="button" tabindex="0" (click)="openWeaponDetails(weapon)" (keydown.enter)="openWeaponDetails(weapon)" (keydown.space)="openWeaponDetails(weapon)">
           @if (weapon.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (weapon.lost) {
@@ -62,7 +62,8 @@
               class="me-remove"
               type="button"
               title="Retirer cette arme"
-              (click)="$event.stopPropagation(); weaponRemoved.emit(weapon)">
+              (click)="$event.stopPropagation(); weaponRemoved.emit(weapon)"
+              (keydown)="$event.stopPropagation()">
               Retirer
             </button>
           }
@@ -84,7 +85,7 @@
   } @else {
     <ul class="me-list">
       @for (improvement of visibleImprovements(); track improvement.id) {
-        <li class="me-item" [class.me-item--sold]="improvement.sold || improvement.lost" [attr.title]="improvement.sold ? 'Revendue (atelier)' : improvement.lost ? 'Perdue (Table des Épaves)' : null" (click)="openImprovementDetails(improvement)">
+        <li class="me-item" [class.me-item--sold]="improvement.sold || improvement.lost" [attr.title]="improvement.sold ? 'Revendue (atelier)' : improvement.lost ? 'Perdue (Table des Épaves)' : null" role="button" tabindex="0" (click)="openImprovementDetails(improvement)" (keydown.enter)="openImprovementDetails(improvement)" (keydown.space)="openImprovementDetails(improvement)">
           @if (improvement.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (improvement.lost) {
@@ -117,7 +118,8 @@
               class="me-remove"
               type="button"
               title="Retirer cette amélioration"
-              (click)="$event.stopPropagation(); improvementRemoved.emit(improvement)">
+              (click)="$event.stopPropagation(); improvementRemoved.emit(improvement)"
+              (keydown)="$event.stopPropagation()">
               Retirer
             </button>
           }
@@ -139,7 +141,7 @@
   } @else {
     <ul class="me-list">
       @for (advantage of visibleAdvantages(); track advantage.id) {
-        <li class="me-item" [class.me-item--sold]="advantage.sold || advantage.lost" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : advantage.lost ? 'Perdu (Table des Épaves) — aucun remboursement' : null" (click)="openAdvantageDetails(advantage)">
+        <li class="me-item" [class.me-item--sold]="advantage.sold || advantage.lost" [attr.title]="advantage.sold ? 'Revendu (atelier) — prix perdu, aucun remboursement' : advantage.lost ? 'Perdu (Table des Épaves) — aucun remboursement' : null" role="button" tabindex="0" (click)="openAdvantageDetails(advantage)" (keydown.enter)="openAdvantageDetails(advantage)" (keydown.space)="openAdvantageDetails(advantage)">
           @if (advantage.sold) {
             <span class="me-item__watermark">Vendu</span>
           } @else if (advantage.lost) {
@@ -159,7 +161,8 @@
               class="me-remove"
               type="button"
               title="Retirer cet avantage"
-              (click)="$event.stopPropagation(); advantageRemoved.emit(advantage)">
+              (click)="$event.stopPropagation(); advantageRemoved.emit(advantage)"
+              (keydown)="$event.stopPropagation()">
               Retirer
             </button>
           }
@@ -181,7 +184,7 @@
     } @else {
       <ul class="me-list">
         @for (sequella of visibleSequellas(); track sequella.id) {
-          <li class="me-item" [class.me-item--sold]="sequella.isSold" [attr.title]="sequella.isSold ? 'Revendue (atelier) — perte totale de Chocs' : null" (click)="openSequellaRowDetails(sequella)">
+          <li class="me-item" [class.me-item--sold]="sequella.isSold" [attr.title]="sequella.isSold ? 'Revendue (atelier) — perte totale de Chocs' : null" role="button" tabindex="0" (click)="openSequellaRowDetails(sequella)" (keydown.enter)="openSequellaRowDetails(sequella)" (keydown.space)="openSequellaRowDetails(sequella)">
             @if (sequella.isSold) {
               <span class="me-item__watermark">Vendue</span>
             }
@@ -203,7 +206,8 @@
                   class="me-remove"
                   type="button"
                   title="Retirer cette séquelle"
-                  (click)="$event.stopPropagation(); sequellaRemoved.emit(sequella)">
+                  (click)="$event.stopPropagation(); sequellaRemoved.emit(sequella)"
+                  (keydown)="$event.stopPropagation()">
                   Retirer
                 </button>
               } @else {

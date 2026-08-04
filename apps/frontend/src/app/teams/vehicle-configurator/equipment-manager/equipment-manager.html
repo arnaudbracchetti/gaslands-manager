@@ -244,7 +244,10 @@
                   <div
                     class="em-sequella-card"
                     [class.em-sequella-card--unavailable]="!sequella.disponible"
-                    (click)="openSequellaDetails(sequella)">
+                    role="button" tabindex="0"
+                    (click)="openSequellaDetails(sequella)"
+                    (keydown.enter)="openSequellaDetails(sequella)"
+                    (keydown.space)="openSequellaDetails(sequella)">
                     <span class="em-sequella-card__name">{{ sequella.nom }}</span>
                     <span class="em-sequella-card__badge" title="Coût en Chocs">
                       <app-icon concept="chocs" size="xs" /> {{ sequella.chocsCost }}
@@ -258,6 +261,7 @@
                         class="em-sequella-card__acquire"
                         type="button"
                         (click)="$event.stopPropagation(); onAcquireSequella(sequella)"
+                        (keydown)="$event.stopPropagation()"
                         aria-label="Acquérir">
                         <span aria-hidden="true">+</span>
                       </button>

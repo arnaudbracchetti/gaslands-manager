@@ -24,6 +24,7 @@
 import {
   Component,
   OnInit,
+  Signal,
   WritableSignal,
   computed,
   effect,
@@ -70,7 +71,7 @@ export class TeamEditPage implements OnInit {
   vehicles: WritableSignal<VehicleSummary[]> = signal<VehicleSummary[]>([]);
 
   /** Vrai si l'équipe possède au moins un véhicule (verrouille le carousel sponsor). */
-  hasVehicles = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
+  hasVehicles: Signal<boolean> = computed((): boolean => (this.team()?.vehicleCount ?? 0) > 0);
 
   /**
    * Vrai si l'équipe participe à une campagne qui n'est plus EN_CONSTRUCTION —
@@ -78,7 +79,7 @@ export class TeamEditPage implements OnInit {
    * ici proactivement toute l'édition plutôt que de laisser l'utilisateur découvrir
    * le blocage via une erreur HTTP 400.
    */
-  isLocked = computed((): boolean => this.team()?.isLockedByCampaign ?? false);
+  isLocked: Signal<boolean> = computed((): boolean => this.team()?.isLockedByCampaign ?? false);
 
   // ── État formulaire (migré depuis TeamForm) ────────────────────────────────
 
@@ -89,17 +90,17 @@ export class TeamEditPage implements OnInit {
   formError: WritableSignal<string>       = signal('');
 
   /** Budget utilisé = coût total de tous les véhicules. */
-  budgetUtilise = computed((): number =>
+  budgetUtilise: Signal<number> = computed((): number =>
     this.vehicles().reduce((sum: number, v: VehicleSummary): number => sum + v.cout, 0),
   );
 
   /** Pourcentage du budget utilisé, plafonné à 100%. */
-  budgetPourcentage = computed((): number =>
+  budgetPourcentage: Signal<number> = computed((): number =>
     Math.min(100, Math.round((this.budgetUtilise() / (this.formCans() || 1)) * 100)),
   );
 
   /** Solde restant (peut être négatif si dépassement). */
-  budgetRestant = computed((): number => this.formCans() - this.budgetUtilise());
+  budgetRestant: Signal<number> = computed((): number => this.formCans() - this.budgetUtilise());
 
   // ── Catalogue des sponsors ─────────────────────────────────────────────────
 
@@ -122,11 +123,11 @@ export class TeamEditPage implements OnInit {
   private fromParam: WritableSignal<string>            = signal('teams');
   private campaignIdParam: WritableSignal<string | null> = signal<string | null>(null);
 
-  breadcrumbs = computed((): BreadcrumbItem[] => {
-    const isFromCampaign = this.fromParam() === 'campaign' && this.campaignIdParam();
+  breadcrumbs: Signal<BreadcrumbItem[]> = computed((): BreadcrumbItem[] => {
+    const campaignId = this.campaignIdParam();
     return [
-      isFromCampaign
-        ? { label: 'Saisons', route: ['/seasons', this.campaignIdParam()!] }
+      this.fromParam() === 'campaign' && campaignId
+        ? { label: 'Saisons', route: ['/seasons', campaignId] }
         : { label: 'Mes Équipes', route: ['/teams'] },
       { label: this.team()?.name ?? '…' },
     ];
