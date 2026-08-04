@@ -43,10 +43,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // Ne pas ignorer les tokens expirés
       ignoreExpiration: false,
-      // config.get<string>() retourne `string | undefined`.
-      // L'assertion `!` garantit à TypeScript que la valeur est présente (définie dans .env).
-      // Si JWT_SECRET est absent, le serveur crashera au démarrage — c'est le comportement voulu.
-      secretOrKey: config.get<string>('JWT_SECRET')!,
+      // JWT_SECRET est déjà garanti présent par EnvVars/validateEnv (config/
+      // env.validation.ts), vérifié au tout premier démarrage du module de
+      // configuration — getOrThrow() reste une défense en profondeur peu
+      // coûteuse plutôt qu'une seconde source de vérité.
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });
   }
 

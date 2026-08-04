@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UserOrm } from './auth/infrastructure/entities/user.entity';
 import { CatalogModule } from './catalog/catalog.module';
+import { validateEnv } from './config/env.validation';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
 import { TeamOrm } from './team/infrastructure/entities/team.entity';
@@ -26,6 +27,14 @@ import { GameEventOrm } from './campaign/infrastructure/entities/game-event.enti
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/backend/.env',
+      // `validate` transforme/valide process.env au démarrage via `EnvVars`
+      // (class-validator) — une variable manquante ou invalide fait échouer
+      // le démarrage avec un message nommant la variable, plutôt que de
+      // laisser `ConfigService.get()` renvoyer silencieusement `undefined`
+      // en aval. `cache: true` évite de relire/revalider le fichier .env à
+      // chaque `ConfigService.get()`.
+      validate: validateEnv,
+      cache: true,
     }),
 
     TypeOrmModule.forRootAsync({
