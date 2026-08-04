@@ -13,6 +13,11 @@
  *
  * `role` en est volontairement absent : c'est ce qui rend impossible la
  * création d'un compte admin par inscription.
+ *
+ * `captchaToken`/`remoteIp` (P0-6) ne sont jamais lus par `User.register()` -
+ * ils alimentent uniquement `ICaptchaVerifier.assertHuman()`, appelé par
+ * `RegisterUseCase` avant l'agrégat. Optionnels : le chemin `NoopCaptchaVerifier`
+ * (dev/e2e) et le `{}` posté par `backend-e2e` continuent de compiler.
  */
 export class RegisterDto {
   firstName: string;
@@ -21,4 +26,8 @@ export class RegisterDto {
   pseudo: string;
   email: string;
   password: string;
+  /** Jeton résolu par le widget Turnstile côté frontend. */
+  captchaToken?: string;
+  /** IP du demandeur, renseignée par le contrôleur via `@Ip()` - jamais par le client. */
+  remoteIp?: string;
 }

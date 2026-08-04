@@ -83,7 +83,13 @@
         />
       </div>
 
-      <button type="submit" class="btn-primary" [disabled]="isLoading()">
+      @if (captchaEnabled()) {
+        <div class="form-group">
+          <div #turnstileHost class="turnstile-widget"></div>
+        </div>
+      }
+
+      <button type="submit" class="btn-primary" [disabled]="isLoading() || !canSubmit()">
         @if (isLoading()) {
           Création en cours…
         } @else {

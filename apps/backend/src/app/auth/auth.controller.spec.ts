@@ -18,7 +18,7 @@ import { UpdateProfileUseCase } from './application/update-profile.usecase';
 import { User } from './domain/user';
 import { UserRole } from './domain/user-role';
 
-/** Agrégat déposé dans req.user par JwtStrategy — une vraie instance, pas un objet plat. */
+/** Agrégat déposé dans req.user par JwtStrategy - une vraie instance, pas un objet plat. */
 const currentUser = new User(
   1,
   'Jean',
@@ -74,7 +74,7 @@ describe('AuthController', () => {
   // ── register ───────────────────────────────────────────────────────────────
 
   describe('register()', () => {
-    it('appelle RegisterUseCase avec le DTO et retourne la réponse', async () => {
+    it('appelle RegisterUseCase avec le DTO et l\'IP du demandeur (@Ip(), P0-6), retourne la réponse', async () => {
       const dto = {
         firstName: 'Jean',
         lastName: 'Dupont',
@@ -84,9 +84,9 @@ describe('AuthController', () => {
       };
       mockRegister.execute.mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.register(dto);
+      const result = await controller.register('1.2.3.4', dto);
 
-      expect(mockRegister.execute).toHaveBeenCalledWith(dto);
+      expect(mockRegister.execute).toHaveBeenCalledWith({ ...dto, remoteIp: '1.2.3.4' });
       expect(result).toEqual(mockAuthResponse);
     });
   });
@@ -108,7 +108,7 @@ describe('AuthController', () => {
   // ── getProfile ─────────────────────────────────────────────────────────────
 
   describe('getProfile()', () => {
-    it("expose callName dans la réponse — le getter de l'agrégat serait sinon perdu par JSON.stringify", () => {
+    it("expose callName dans la réponse - le getter de l'agrégat serait sinon perdu par JSON.stringify", () => {
       const result = controller.getProfile({ user: currentUser });
 
       expect(result.callName).toBe('JeanLeFou');

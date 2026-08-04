@@ -19,12 +19,12 @@ export interface User {
   lastName: string;
   /**
    * Valeur BRUTE du pseudo. Sert uniquement à pré-remplir le champ éditable du
-   * formulaire "Détails du compte" — pour afficher un utilisateur, utiliser
+   * formulaire "Détails du compte" - pour afficher un utilisateur, utiliser
    * `callName` ci-dessous.
    */
   pseudo: string;
   /**
-   * Nom d'affichage — À UTILISER PARTOUT où l'on montre "qui" est quelqu'un
+   * Nom d'affichage - À UTILISER PARTOUT où l'on montre "qui" est quelqu'un
    * (navbar, listes, en-têtes…). Champ calculé côté backend par le getter
    * `User.callName` de l'agrégat : la règle "quel nom afficher" n'existe qu'à
    * cet endroit-là, jamais dupliquée côté client.
@@ -49,6 +49,9 @@ export interface AuthResponse {
 
 /**
  * Données envoyées au backend pour l'inscription.
+ *
+ * `captchaToken` (P0-6) : jeton résolu par le widget Turnstile - optionnel,
+ * absent tant que `environment.turnstileSiteKey` est vide (dev/e2e).
  */
 export interface RegisterDto {
   firstName: string;
@@ -56,6 +59,7 @@ export interface RegisterDto {
   pseudo: string;
   email: string;
   password: string;
+  captchaToken?: string;
 }
 
 /**

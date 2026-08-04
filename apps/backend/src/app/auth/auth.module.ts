@@ -1,9 +1,9 @@
 /**
- * AuthModule — module NestJS du domaine Authentification (architecture DDD,
+ * AuthModule - module NestJS du domaine Authentification (architecture DDD,
  * même standard que TeamModule / CampaignModule).
  *
  * Câblage : les interfaces du domaine (`IUserRepository`, `IPasswordHasher`,
- * `ITokenIssuer`) n'existent pas à l'exécution — elles sont fournies via les
+ * `ITokenIssuer`) n'existent pas à l'exécution - elles sont fournies via les
  * tokens string d'`auth.tokens.ts`, et les use cases sont construits en
  * `useFactory` pour rester des classes pures, sans décorateur NestJS.
  *
@@ -12,13 +12,13 @@
  * en dur les valeurs.
  */
 
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminSeedService } from './admin-seed.service';
-import { PASSWORD_HASHER, TOKEN_ISSUER, USER_REPOSITORY } from './auth.tokens';
+import { CAPTCHA_VERIFIER, PASSWORD_HASHER, TOKEN_ISSUER, USER_REPOSITORY } from './auth.tokens';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { LoginUseCase } from './application/login.usecase';
@@ -27,16 +27,21 @@ import { RemoveUserUseCase } from './application/remove-user.usecase';
 import { SetActiveUseCase } from './application/set-active.usecase';
 import { UpdateProfileUseCase } from './application/update-profile.usecase';
 import { AuthController } from './auth.controller';
+import type { ICaptchaVerifier } from './domain/captcha-verifier.interface';
 import type { IPasswordHasher } from './domain/password-hasher.interface';
 import type { ITokenIssuer } from './domain/token-issuer.interface';
 import type { IUserRepository } from './domain/user.repository.interface';
 import { BcryptPasswordHasher } from './infrastructure/bcrypt-password-hasher';
 import { UserOrm } from './infrastructure/entities/user.entity';
 import { JwtTokenIssuer } from './infrastructure/jwt-token-issuer';
+import { NoopCaptchaVerifier } from './infrastructure/noop-captcha-verifier';
+import { TurnstileVerifier } from './infrastructure/turnstile-verifier';
 import { UserRepository } from './infrastructure/user.repository';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './roles.guard';
 import { UsersController } from './users.controller';
+
+const authModuleLogger = new Logger('AuthModule');
 
 @Module({
   imports: [
@@ -68,13 +73,32 @@ import { UsersController } from './users.controller';
       useFactory: (jwt: JwtService): JwtTokenIssuer => new JwtTokenIssuer(jwt),
       inject: [JwtService],
     },
+    {
+      // Choix d'adaptateur (P0-6) : Turnstile si la clé secrète est fournie,
+      // sinon un vérificateur neutre - c'est ce qui neutralise le captcha en
+      // dev/e2e sans toucher au code de RegisterUseCase.
+      provide: CAPTCHA_VERIFIER,
+      useFactory: (config: ConfigService): ICaptchaVerifier => {
+        const secret = config.get<string>('TURNSTILE_SECRET_KEY');
+        if (!secret) {
+          authModuleLogger.warn('Captcha désactivé - TURNSTILE_SECRET_KEY absent (NoopCaptchaVerifier)');
+          return new NoopCaptchaVerifier();
+        }
+        return new TurnstileVerifier(secret);
+      },
+      inject: [ConfigService],
+    },
 
     // ── Use cases ──────────────────────────────────────────────────────────
     {
       provide: RegisterUseCase,
-      useFactory: (r: IUserRepository, h: IPasswordHasher, t: ITokenIssuer): RegisterUseCase =>
-        new RegisterUseCase(r, h, t),
-      inject: [USER_REPOSITORY, PASSWORD_HASHER, TOKEN_ISSUER],
+      useFactory: (
+        r: IUserRepository,
+        h: IPasswordHasher,
+        t: ITokenIssuer,
+        c: ICaptchaVerifier,
+      ): RegisterUseCase => new RegisterUseCase(r, h, t, c),
+      inject: [USER_REPOSITORY, PASSWORD_HASHER, TOKEN_ISSUER, CAPTCHA_VERIFIER],
     },
     {
       provide: LoginUseCase,
@@ -115,7 +139,7 @@ import { UsersController } from './users.controller';
   ],
   // USER_REPOSITORY est exporté pour les modules qui doivent résoudre un
   // utilisateur (le mapper ORM→domaine, lui, est une fonction pure importée
-  // directement — cf. UserMapper, utilisé par CampaignQueryService).
+  // directement - cf. UserMapper, utilisé par CampaignQueryService).
   exports: [USER_REPOSITORY],
 })
 export class AuthModule {}

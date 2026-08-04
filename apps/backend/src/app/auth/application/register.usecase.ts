@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { DomainException } from '../../shared/domain/domain-exception';
+import type { ICaptchaVerifier } from '../domain/captcha-verifier.interface';
 import type { IPasswordHasher } from '../domain/password-hasher.interface';
 import type { ITokenIssuer } from '../domain/token-issuer.interface';
 import type { IUserRepository } from '../domain/user.repository.interface';
@@ -10,7 +11,7 @@ import { userDomainToDto } from '../infrastructure/user-http.mapper';
 
 /**
  * Inscription : l'agrégat fabrique et valide, le repository persiste, le port
- * émet le jeton. Aucune règle ici — orchestration pure.
+ * émet le jeton. Aucune règle ici - orchestration pure.
  *
  * Pas de `@LogUseCase()` : ce décorateur sérialise la commande entière dans les
  * logs, ce qui écrirait le mot de passe en clair.
@@ -20,11 +21,16 @@ export class RegisterUseCase {
     private readonly userRepo: IUserRepository,
     private readonly hasher: IPasswordHasher,
     private readonly tokenIssuer: ITokenIssuer,
+    private readonly captchaVerifier: ICaptchaVerifier,
   ) {}
 
   async execute(dto: RegisterDto): Promise<AuthResponseDto> {
     let user: User;
     try {
+      // Le captcha (P0-6) est vérifié AVANT User.register() : bcrypt coût 10
+      // représente ~100 ms de CPU, un flot de bots ne doit pas pouvoir le
+      // brûler avant d'être rejeté.
+      await this.captchaVerifier.assertHuman(dto.captchaToken, dto.remoteIp);
       user = await User.register(dto, this.hasher);
     } catch (e) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);

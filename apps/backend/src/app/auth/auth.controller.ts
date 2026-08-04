@@ -1,5 +1,5 @@
 /**
- * AuthController — expose les endpoints REST d'authentification.
+ * AuthController - expose les endpoints REST d'authentification.
  *
  * Préfixe de module : 'auth' + préfixe global '/api' → tous les endpoints
  * commencent par /api/auth/...
@@ -15,7 +15,7 @@
  * use case et renvoyer la réponse. Pas de logique métier ici.
  */
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { Throttle, seconds } from '@nestjs/throttler';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { LoginUseCase } from './application/login.usecase';
@@ -33,7 +33,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 
 /**
  * `req.user` est l'agrégat `User` lui-même, déposé par `JwtStrategy.validate()`
- * — d'où l'accès direct à `req.user.callName` depuis n'importe quel controller.
+ * - d'où l'accès direct à `req.user.callName` depuis n'importe quel controller.
  */
 interface AuthenticatedRequest {
   user: User;
@@ -50,18 +50,21 @@ export class AuthController {
 
   /**
    * POST /api/auth/register
-   * Corps attendu : { firstName, lastName, pseudo, email, password }
+   * Corps attendu : { firstName, lastName, pseudo, email, password, captchaToken? }
    * Retourne : { access_token: string, user: UserResponseDto }
-   * Codes HTTP : 201 Created, 409 Conflict (email déjà pris), 400 (données invalides)
+   * Codes HTTP : 201 Created, 409 Conflict (email déjà pris), 400 (données
+   * invalides OU captcha refusé)
    *
-   * Limite de débit (P0-5) : 3 requêtes/heure par IP — le captcha (P0-6) est
-   * le contrôle principal anti-inscription massive, ceci est le filet si la
-   * clé de site fuite vers une ferme à bots.
+   * Le captcha Turnstile (P0-6) est le contrôle PRINCIPAL anti-inscription
+   * massive, vérifié dans `RegisterUseCase` (`ICaptchaVerifier.assertHuman`) -
+   * `@Ip()` n'est fiable que grâce au `trust proxy` posé en P0-3. La limite de
+   * débit ci-dessous (P0-5, 3 requêtes/heure/IP) n'est que le filet si la clé
+   * de site fuite vers une ferme à bots.
    */
   @Post('register')
   @Throttle({ default: { limit: 3, ttl: seconds(3600) } })
-  register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
-    return this.registerUseCase.execute(dto);
+  register(@Ip() ip: string, @Body() dto: RegisterDto): Promise<AuthResponseDto> {
+    return this.registerUseCase.execute({ ...dto, remoteIp: ip });
   }
 
   /**
@@ -69,7 +72,7 @@ export class AuthController {
    * Corps attendu : { email, password }
    * Codes HTTP : 200 OK, 401 Unauthorized (identifiants invalides / compte désactivé)
    *
-   * Limite de débit (P0-5) : double fenêtre — 5 requêtes/minute ET 20/heure
+   * Limite de débit (P0-5) : double fenêtre - 5 requêtes/minute ET 20/heure
    * par IP. La seconde fenêtre (throttler nommé `secondary`, cf. AppModule)
    * bloque l'attaque lente qui resterait sous le plafond par minute.
    */
@@ -83,7 +86,7 @@ export class AuthController {
    * GET /api/auth/me
    * Requiert un header : Authorization: Bearer <jwt_token>
    *
-   * `req.user` est un agrégat de domaine : il DOIT passer par le mapper —
+   * `req.user` est un agrégat de domaine : il DOIT passer par le mapper -
    * `JSON.stringify` ne sérialiserait pas son getter `callName`.
    */
   @UseGuards(JwtAuthGuard)
@@ -112,7 +115,7 @@ export class AuthController {
    * Retourne : rien (204 No Content)
    * Codes HTTP : 400 (mot de passe actuel incorrect / nouveau trop court), 401
    *
-   * Limite de débit (P0-5) : 5 requêtes/5 minutes par IP — protège le CPU
+   * Limite de débit (P0-5) : 5 requêtes/5 minutes par IP - protège le CPU
    * derrière un `bcrypt.compare()` répété sur une session déjà authentifiée.
    */
   @UseGuards(JwtAuthGuard)
