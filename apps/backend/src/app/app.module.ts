@@ -4,23 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { UserOrm } from './auth/infrastructure/entities/user.entity';
 import { CatalogModule } from './catalog/catalog.module';
 import { validateEnv } from './config/env.validation';
 import { ContentModule } from './content/content.module';
 import { TeamModule } from './team/team.module';
-import { TeamOrm } from './team/infrastructure/entities/team.entity';
-import {
-  VehicleOrm,
-  VehicleImprovementOrm,
-  VehicleAdvantageOrm,
-} from './team/infrastructure/entities/vehicle.entity';
-import { WeaponOrm } from './team/infrastructure/entities/weapon.entity';
 import { CampaignModule } from './campaign/campaign.module';
-import { CampaignOrm } from './campaign/infrastructure/entities/campaign.entity';
-import { CampaignParticipantOrm } from './campaign/infrastructure/entities/campaign-participant.entity';
-import { GameOrm } from './campaign/infrastructure/entities/game.entity';
-import { GameEventOrm } from './campaign/infrastructure/entities/game-event.entity';
+import { ALL_ENTITIES } from './entities';
+import { ALL_MIGRATIONS } from '../migrations';
 
 @Module({
   imports: [
@@ -47,8 +37,21 @@ import { GameEventOrm } from './campaign/infrastructure/entities/game-event.enti
         username: config.get('DATABASE_USER', 'gaslands'),
         password: config.getOrThrow<string>('DATABASE_PASSWORD'),
         database: config.get('DATABASE_NAME', 'gaslands'),
-        entities: [TeamOrm, UserOrm, VehicleOrm, VehicleImprovementOrm, VehicleAdvantageOrm, WeaponOrm, CampaignOrm, CampaignParticipantOrm, GameOrm, GameEventOrm],
-        synchronize: true,
+        ssl: config.get<string>('DB_SSL') === 'true',
+        entities: [...ALL_ENTITIES],
+        migrations: [...ALL_MIGRATIONS],
+        // `DB_SYNCHRONIZE` explicite (docker-compose.prod.yml, .env) gagne
+        // toujours. Sinon, le défaut dépend de NODE_ENV : `true` en dev/test
+        // (comportement historique préservé pour `frontend-e2e`, qui lance
+        // `backend:serve --configuration=e2e` sans NODE_ENV=production ni
+        // DB_SYNCHRONIZE dans apps/backend/.env — cf. backend-process.ts),
+        // `false` en production, où le schéma évolue uniquement par les
+        // migrations explicites de ALL_MIGRATIONS (cf. migrationsRun).
+        synchronize:
+          config.get<string>('DB_SYNCHRONIZE') !== undefined
+            ? config.get<string>('DB_SYNCHRONIZE') === 'true'
+            : config.get<string>('NODE_ENV') !== 'production',
+        migrationsRun: config.get<string>('DB_MIGRATIONS_RUN') === 'true',
         logging: false,
       }),
     }),

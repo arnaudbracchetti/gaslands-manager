@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "noEmit": false
+  },
+  "ts-node": {
+    // Le build réel (NxAppWebpackPlugin, `compiler: 'tsc'`) utilise
+    // `ts-loader` en `transpileOnly: true` (cf. @nx/webpack/.../compiler-
+    // loaders.js) — aucun type-check complet n'a donc jamais lieu sur ce
+    // code, y compris sur les entités TypeORM qui violent `strict`
+    // (`strictPropertyInitialization` : propriétés sans initialiseur ni
+    // `!`, cf. `UserOrm`/`TeamOrm`/etc.). ts-node type-check par défaut ;
+    // sans ce réglage, la CLI TypeORM échouerait sur des violations déjà
+    // présentes et tolérées par le build réel — pas des régressions
+    // introduites ici, hors périmètre de P0-2 à corriger.
+    "transpileOnly": true
+  }
+}

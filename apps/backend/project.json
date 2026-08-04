@@ -23,6 +23,50 @@
           "command": "npx vitest --config vitest.config.ts"
         }
       }
+    },
+    "migration:generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "envFile": "apps/backend/.env",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "npx typeorm-ts-node-commonjs migration:generate -d src/data-source.ts"
+      }
+    },
+    "migration:run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "envFile": "apps/backend/.env",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "npx typeorm-ts-node-commonjs migration:run -d src/data-source.ts"
+      }
+    },
+    "migration:revert": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "envFile": "apps/backend/.env",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "npx typeorm-ts-node-commonjs migration:revert -d src/data-source.ts"
+      }
+    },
+    "schema:log": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "envFile": "apps/backend/.env",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "npx typeorm-ts-node-commonjs schema:log -d src/data-source.ts"
+      }
     }
   }
 }

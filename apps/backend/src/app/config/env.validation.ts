@@ -29,7 +29,20 @@ import {
   validateSync,
 } from 'class-validator';
 
-type NodeEnv = 'development' | 'test' | 'production';
+// `'e2e'` n'est pas une valeur "métier" — c'est une valeur que Nx impose
+// lui-même : l'exécuteur `@nx/js:node` (cible `serve`, utilisé par
+// `frontend-e2e/src/support/backend-process.ts` via
+// `nx run backend:serve --configuration=e2e`) fait
+// `process.env.NODE_ENV ??= context.configurationName` AVANT même de
+// démarrer le process Node (cf. node_modules/@nx/js/src/executors/node/
+// node.impl.js) — impossible à corriger depuis `apps/backend/.env`, chargé
+// bien plus tard par `ConfigModule` et qui ne peut de toute façon jamais
+// écraser une variable de process déjà définie (comportement par défaut de
+// dotenv). Sans cette valeur acceptée ici, toute la suite `frontend-e2e`
+// échoue au démarrage du backend de test. Tous les points de contrôle du
+// code ne testent que `=== 'production'` : `'e2e'` se comporte donc partout
+// exactement comme `'development'`, sans branchement dédié à ajouter.
+type NodeEnv = 'development' | 'test' | 'production' | 'e2e';
 
 /**
  * Secrets soumis à une règle RENFORCÉE en production (longueur minimale,
@@ -64,7 +77,7 @@ const FORBIDDEN_DEV_VALUE = 'change_me';
  */
 export class EnvVars {
   // ── Environnement ──────────────────────────────────────────────────────
-  @IsIn(['development', 'test', 'production'])
+  @IsIn(['development', 'test', 'production', 'e2e'])
   NODE_ENV: NodeEnv = 'development';
 
   // ── Base de données (toujours requis) ──────────────────────────────────
@@ -125,9 +138,12 @@ export class EnvVars {
   @IsOptional()
   CONTENT_DIR: string = 'content';
 
+  // Pas de défaut en dur ici : `app.module.ts` doit pouvoir distinguer
+  // "l'opérateur a fixé DB_SYNCHRONIZE explicitement" (`undefined` sinon)
+  // pour appliquer son propre défaut basé sur NODE_ENV (cf. P0-2).
   @IsString()
   @IsOptional()
-  DB_SYNCHRONIZE: string = 'true';
+  DB_SYNCHRONIZE?: string;
 
   @IsString()
   @IsOptional()

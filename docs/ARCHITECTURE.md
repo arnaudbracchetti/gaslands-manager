@@ -426,10 +426,44 @@ Credentials dans `.env` à la racine (jamais commité, template dans `.env.examp
 Dev local (`nx serve`) : variables depuis `apps/backend/.env` (hôte `localhost`).
 Dev Docker : hôte `postgres` (DNS interne Docker).
 
-| Mode | `synchronize` | Tables |
-|------|--------------|--------|
-| **Dev** | `true` | Créées/modifiées automatiquement au démarrage |
-| **Prod** | `false` ⚠️ | Migrations TypeORM explicites (`migration:generate` + `migration:run`) |
+**`ALL_ENTITIES`/`ALL_MIGRATIONS`** (`apps/backend/src/app/entities.ts` /
+`apps/backend/src/migrations/index.ts`) — sources uniques consommées à la fois par
+`app.module.ts` (`TypeOrmModule.forRootAsync`) et par `apps/backend/src/data-source.ts`
+(DataSource CLI, hors Nest). `ALL_MIGRATIONS` est un **tableau explicite**, jamais un
+glob : le backend est empaqueté en un `main.js` unique par `NxAppWebpackPlugin`, un glob
+`dist/migrations/*.js` ne résoudrait rien à l'exécution dans le conteneur — l'import
+statique dans `migrations/index.ts` est ce qui fait entrer les classes de migration dans
+le graphe de dépendances de `main.ts`, donc dans le bundle webpack.
+
+| Mode | `synchronize` | `migrationsRun` | Tables |
+|------|--------------|-----------------|--------|
+| **Dev/test/e2e** (`NODE_ENV` ≠ `production`) | `true` (défaut) | `false` (défaut) | Créées/modifiées automatiquement au démarrage |
+| **Prod** (`NODE_ENV=production`, ou `DB_SYNCHRONIZE=false` explicite) | `false` | piloté par `DB_MIGRATIONS_RUN` | Migrations explicites, appliquées au démarrage de l'app si `DB_MIGRATIONS_RUN=true` |
+
+`synchronize` (factory `app.module.ts`) : si `DB_SYNCHRONIZE` est explicitement fixé dans
+l'environnement, sa valeur gagne toujours ; sinon le défaut dépend de `NODE_ENV`. Ce
+fallback ne casse pas `frontend-e2e` : `backend-process.ts` lance `nx run backend:serve
+--configuration=e2e`, et l'exécuteur `@nx/js:node` fixe lui-même `NODE_ENV` à sa
+`configurationName` (`'e2e'`) si absent — valeur ajoutée à l'union acceptée par
+`EnvVars`/`@IsIn` (`config/env.validation.ts`), au même titre que `development`/`test`/
+`production`, puisque tout le code ne teste jamais que `=== 'production'`.
+
+**Cibles Nx CLI** (`apps/backend/project.json`) : `migration:generate` / `migration:run` /
+`migration:revert` / `schema:log`, toutes `nx:run-commands` invoquant
+`typeorm-ts-node-commonjs ... -d src/data-source.ts` (`cwd: apps/backend`). Deux pièges
+non documentés par TypeORM, résolus par `apps/backend/tsconfig.datasource.json`
+(`TS_NODE_PROJECT`, injecté via l'option `env` de la cible) :
+- `tsconfig.base.json` porte `composite: true`/`emitDeclarationOnly: true` (nécessaires
+  aux project references Nx) — `emitDeclarationOnly` empêche ts-node d'émettre le moindre
+  JS exécutable. Surchargés à `false` dans ce tsconfig dédié.
+- ts-node type-check par défaut, alors que le build réel (`ts-loader` via
+  `NxAppWebpackPlugin`, `transpileOnly: !hasPlugin` → `true` ici) ne l'a **jamais** fait —
+  la CLI échouerait sinon sur des violations `strictPropertyInitialization` déjà présentes
+  (et tolérées) dans les entités TypeORM (`id: number;` sans `!`/initialiseur). D'où
+  `"ts-node": { "transpileOnly": true }` dans `tsconfig.datasource.json`.
+
+Procédure de génération d'une migration de référence et garde-fou de non-régression
+(comparaison contre `synchronize`) : cf. `docs/plans/2026-08-02-durcissement-securite-vps-design.md#p0-2--entités-synchronize-migration-de-référence`.
 
 ---
 
