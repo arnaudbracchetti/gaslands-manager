@@ -1,12 +1,12 @@
 ---
 id: "p0-3-bootstrap-securite-main-ts-2026-08-02"
-status: "backlog"
+status: "done"
 priority: "critical"
 assignee: null
 dueDate: null
 created: "2026-08-02T05:39:41.000Z"
-modified: "2026-08-02T05:39:41.000Z"
-completedAt: null
+modified: "2026-08-04T16:20:00.000Z"
+completedAt: "2026-08-04T16:20:00.000Z"
 labels: ["securite", "auth"]
 order: "aJ"
 ---
@@ -19,18 +19,18 @@ sécurité, limites de taille de corps, CORS restreint), afin qu'il soit prêt �
 
 ## Critères d'acceptation
 
-- [ ] `NestFactory.create<NestExpressApplication>(AppModule)` puis
+- [x] `NestFactory.create<NestExpressApplication>(AppModule)` puis
       `app.set('trust proxy', 1)` — exactement un saut (Caddy).
-- [ ] `app.use(helmet({ contentSecurityPolicy: false }))` — la CSP vit
+- [x] `app.use(helmet({ contentSecurityPolicy: false }))` — la CSP vit
       uniquement dans Caddy (pas de double source de CSP).
-- [ ] `app.use(json({ limit: '128kb' }))` +
+- [x] `app.use(json({ limit: '128kb' }))` +
       `urlencoded({ limit: '16kb' })`.
-- [ ] CORS configuré depuis `CORS_ORIGIN` (liste séparée par virgules), repli
+- [x] CORS configuré depuis `CORS_ORIGIN` (liste séparée par virgules), repli
       `http://localhost:4200` en dev.
-- [ ] La ligne de log `🚀 Backend Gaslands démarré sur
+- [x] La ligne de log `🚀 Backend Gaslands démarré sur
       http://localhost:${port}/api` est conservée **verbatim** —
       `frontend-e2e/src/support/backend-process.ts` la cherche dans stdout.
-- [ ] `@Get('health')` ajouté dans `app.controller.ts` (`SELECT 1` via
+- [x] `@Get('health')` ajouté dans `app.controller.ts` (`SELECT 1` via
       `DataSource`), décoré `@SkipThrottle()`, consommé par le healthcheck
       Docker de P0-8.
 

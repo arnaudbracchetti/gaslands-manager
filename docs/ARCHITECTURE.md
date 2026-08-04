@@ -487,9 +487,14 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 | Mots de passe | bcrypt coût 10, jamais stockés en clair |
 | Tokens JWT | Signés avec `JWT_SECRET` (.env), durée 7 jours |
 | Réponses API | `sanitize()` exclut `password` de toutes les réponses |
-| CORS | Limité à `http://localhost:4200` en dev |
+| Proxy de confiance | `app.set('trust proxy', 1)` (`main.ts`) - exactement un saut, celui du reverse proxy public (Caddy) |
+| En-têtes HTTP | `helmet()` (`main.ts`) - CSP désactivée volontairement, elle vit uniquement dans Caddy (jamais deux sources) |
+| Taille de corps | `json` 128kb / `urlencoded` 16kb (`main.ts`) - largement au-dessus du plus gros DTO réel (`RecordResultDto`) |
+| CORS | `CORS_ORIGIN` (liste séparée par virgules, obligatoire en production), repli `http://localhost:4200` hors production |
 | Erreurs login | Message générique (évite l'énumération d'emails) |
 | `.env` | Non committé (`.gitignore`), exemple dans `.env.example` |
+
+`GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - cf. P0-8) - décorée `@SkipThrottle()` en anticipation de P0-5 (`ThrottlerGuard` pas encore enregistré à ce stade, décorateur inerte jusqu'à son installation).
 
 ---
 

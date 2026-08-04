@@ -97,6 +97,17 @@ describe('GET /api/catalog/sponsors/:nom', () => {
   });
 });
 
+// ── Bootstrap sécurisé (P0-3) ────────────────────────────────────────────────
+
+describe('GET /api/health', () => {
+  it('retourne 200 avec { status: "ok" } quand la base de données répond', async () => {
+    const res = await axios.get('/api/health');
+
+    expect(res.status).toBe(200);
+    expect(res.data).toEqual({ status: 'ok' });
+  });
+});
+
 // ── Auth (routes publiques) ───────────────────────────────────────────────────
 
 describe('POST /api/auth/register', () => {
