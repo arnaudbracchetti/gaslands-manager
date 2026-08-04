@@ -8,6 +8,8 @@
  */
 import { Component, WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { ModalShell } from './modal-shell';
 
 // Zoneless : les valeurs mutées entre deux detectChanges() doivent être des
@@ -48,6 +50,19 @@ describe('ModalShell', () => {
   it('rend le contenu projeté', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.probe')?.textContent).toContain('Contenu projeté');
+  });
+
+  it('pose cdkTrapFocus (avec capture automatique) sur la boîte de dialogue', () => {
+    // Le déplacement de focus réel dépend de la géométrie de l'élément
+    // (FocusTrap.isVisible() → hasGeometry(), toujours 0 en jsdom - aucun
+    // moteur de layout) : impossible à observer de façon fiable ici, et ce
+    // serait tester le comportement de CDK lui-même plutôt que notre
+    // câblage. On vérifie donc que la directive est bien posée sur
+    // `.ms-modal` (pas `.ms-overlay`) avec la capture automatique activée.
+    const trapDebugEl = fixture.debugElement.query(By.directive(CdkTrapFocus));
+    expect(trapDebugEl).not.toBeNull();
+    expect((trapDebugEl!.nativeElement as HTMLElement).classList.contains('ms-modal')).toBe(true);
+    expect(trapDebugEl!.injector.get(CdkTrapFocus).autoCapture).toBe(true);
   });
 
   describe('mode "action" (défaut)', () => {

@@ -13,11 +13,12 @@
  *   aujourd'hui dans EquipmentDetailModal/SequellaDetailModal.
  */
 import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 
 @Component({
   selector: 'app-modal-shell',
   standalone: true,
-  imports: [],
+  imports: [CdkTrapFocus],
   templateUrl: './modal-shell.html',
   styleUrl: './modal-shell.scss',
 })

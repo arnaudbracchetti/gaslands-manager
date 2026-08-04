@@ -11,6 +11,12 @@
   collision avec celui de .tb-grain (un seul ::after possible par élément) et
   rendrait le coin bas-droit invisible (constaté : opacity/inset écrasés par
   la règle du grain). Deux éléments dédiés évitent structurellement le conflit.
+
+  cdkTrapFocus + cdkTrapFocusAutoCapture sur .ms-modal : sans focus trap,
+  Tab pouvait sortir de la boîte de dialogue vers le reste de la page (le
+  shell n'a pas de bouton "ouvrir" séparé à gérer - chaque consommateur
+  monte/démonte ModalShell via @if, autoCapture déplace donc le focus au
+  montage et le restaure au démontage).
 -->
 <div
   class="ms-overlay"
@@ -25,6 +31,8 @@
     [class.ms-modal--primary]="variant() === 'primary'"
     [class.ms-modal--lg]="size() === 'lg'"
     [class.ms-modal--xl]="size() === 'xl'"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
     (click)="$event.stopPropagation()">
     <span class="ms-corner ms-corner--tl" aria-hidden="true"></span>
     <span class="ms-corner ms-corner--br" aria-hidden="true"></span>

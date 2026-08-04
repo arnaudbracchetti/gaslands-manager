@@ -388,12 +388,14 @@ main {
   letter-spacing: 0.12em;
 }
 
-// Menu utilisateur — même structure trigger/backdrop/panel que le menu "⋯"
-// de ParticipantList (participant-list.scss &__menu-wrap/&__menu-backdrop/
-// &__menu), adaptée au scope global (app.scss est vide par convention, cf.
-// ARCHITECTURE.md) et ancrée à gauche plutôt qu'à droite du trigger.
+// Menu utilisateur — même mécanisme CDK Overlay (cdkConnectedOverlay) que le
+// menu "⋯" de ParticipantList (participant-list.scss &__menu-wrap/&__menu),
+// adapté au scope global (app.scss est vide par convention, cf.
+// ARCHITECTURE.md). Le positionnement (ancré à gauche du trigger) et le
+// backdrop clic-extérieur sont entièrement gérés par CDK (userMenuPositions/
+// cdkConnectedOverlayHasBackdrop, app.ts/app.html) — seul le style visuel du
+// panneau reste ici.
 .navbar-user-menu {
-  position: relative;
   display: inline-flex;
 }
 
@@ -409,20 +411,7 @@ main {
   }
 }
 
-.navbar-user-menu__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: transparent;
-  border: none;
-  cursor: default;
-}
-
 .navbar-user-menu__panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 41;
   min-width: 170px;
   display: flex;
   flex-direction: column;

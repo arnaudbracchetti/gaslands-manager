@@ -13,6 +13,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { of, throwError } from 'rxjs';
 import { App } from './app';
 import type { User } from './auth/auth.model';
@@ -85,16 +86,34 @@ describe('App (composant racine)', () => {
   // ── Menu utilisateur + dialog "Détails du compte" ─────────────────────────
 
   describe('Menu utilisateur', () => {
+    let overlayContainer: OverlayContainer;
+
+    /**
+     * Le menu utilisateur est rendu via Angular CDK Overlay
+     * (cdkConnectedOverlay, app.html) - son contenu est porté dans le
+     * conteneur global de l'overlay (attaché à <body>, cf.
+     * `OverlayContainer`), PAS dans le sous-arbre DOM de `compiled`. Même
+     * pattern que `ParticipantList` (cf. participant-list.spec.ts).
+     */
+    function menuContainer(): HTMLElement {
+      return overlayContainer.getContainerElement();
+    }
+
     beforeEach(() => {
       // vi.restoreAllMocks() (afterEach global) ne réinitialise pas
       // l'historique d'appel des vi.fn() sans implémentation d'origine —
       // clearAllMocks() efface calls/results explicitement avant chaque test.
       vi.clearAllMocks();
       mockAuthService.currentUser.set(mockUser);
+      overlayContainer = TestBed.inject(OverlayContainer);
     });
 
     afterEach(() => {
       mockAuthService.currentUser.set(null);
+      // Un overlay laissé ouvert par un test survivrait dans le DOM partagé
+      // de l'environnement de test (le conteneur est un singleton par
+      // TestBed) et fausserait `menuContainer()` du test suivant.
+      overlayContainer.ngOnDestroy();
     });
 
     it('ouvre le menu au clic sur le prénom, et le ferme au clic sur le backdrop', async () => {
@@ -102,19 +121,19 @@ describe('App (composant racine)', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+      expect(menuContainer().querySelector('.navbar-user-menu__panel')).toBeFalsy();
 
       (compiled.querySelector('.user-name--trigger') as HTMLButtonElement).click();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeTruthy();
+      expect(menuContainer().querySelector('.navbar-user-menu__panel')).toBeTruthy();
 
-      (compiled.querySelector('.navbar-user-menu__backdrop') as HTMLDivElement).click();
+      (menuContainer().querySelector('.cdk-overlay-backdrop') as HTMLDivElement).click();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+      expect(menuContainer().querySelector('.navbar-user-menu__panel')).toBeFalsy();
     });
 
     it('ouvre le dialog "Détails du compte" et ferme le menu', async () => {
@@ -126,12 +145,12 @@ describe('App (composant racine)', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      (compiled.querySelector('.navbar-user-menu__panel button') as HTMLButtonElement).click();
+      (menuContainer().querySelector('.navbar-user-menu__panel button') as HTMLButtonElement).click();
       fixture.detectChanges();
       await fixture.whenStable();
 
       expect(compiled.querySelector('app-user-details-modal')).toBeTruthy();
-      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+      expect(menuContainer().querySelector('.navbar-user-menu__panel')).toBeFalsy();
     });
 
     it('ouvre le dialog "Changer le mot de passe" et ferme le menu', async () => {
@@ -143,14 +162,14 @@ describe('App (composant racine)', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      const menuButtons = compiled.querySelectorAll<HTMLButtonElement>('.navbar-user-menu__panel button');
+      const menuButtons = menuContainer().querySelectorAll<HTMLButtonElement>('.navbar-user-menu__panel button');
       menuButtons[1].click();
       fixture.detectChanges();
       await fixture.whenStable();
 
       expect(compiled.querySelector('app-change-password-modal')).toBeTruthy();
       expect(compiled.querySelector('app-user-details-modal')).toBeFalsy();
-      expect(compiled.querySelector('.navbar-user-menu__panel')).toBeFalsy();
+      expect(menuContainer().querySelector('.navbar-user-menu__panel')).toBeFalsy();
     });
 
     it('onProfileSubmitted() appelle authService.updateProfile(), efface profileSaving et ferme le dialog au succès', async () => {

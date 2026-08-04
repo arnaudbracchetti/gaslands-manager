@@ -32,9 +32,12 @@
   <div class="navbar-user">
     @if (authService.isLoggedIn()) {
       <!--
-        Menu utilisateur — même structure trigger/backdrop/panel que le menu
-        "⋯" de ParticipantList : un backdrop plein écran transparent ferme le
-        menu au clic hors du panel, sans HostListener document-level.
+        Menu utilisateur — même mécanisme CDK Overlay que le menu "⋯" de
+        ParticipantList (cdkConnectedOverlay, rendu dans le conteneur global
+        attaché à <body>) plutôt qu'un backdrop position:fixed + panel
+        position:absolute posés à la main : positionnement viewport-aware
+        (repli au-dessus si le menu déborderait en bas) et fermeture au clic
+        extérieur gérée par CDK, sans HostListener document-level.
       -->
       <div class="navbar-user-menu">
         <button
@@ -42,31 +45,24 @@
           class="user-name user-name--trigger"
           aria-haspopup="menu"
           [attr.aria-expanded]="userMenuOpen()"
+          cdkOverlayOrigin #userMenuTrigger="cdkOverlayOrigin"
           (click)="toggleUserMenu()">
           {{ authService.currentUser()?.callName }}
         </button>
 
-        @if (userMenuOpen()) {
-          <!--
-            Zone de fermeture — role="button" + tabindex + gestion clavier
-            (même pattern que VehicleSummaryCard/TeamCard/CampaignCard, cf.
-            COMPONENTS.md) plutôt qu'un simple (click) : un backdrop cliquable
-            doit rester atteignable au clavier (Entrée/Espace), pas seulement
-            à la souris.
-          -->
-          <div
-            class="navbar-user-menu__backdrop"
-            role="button"
-            tabindex="0"
-            aria-label="Fermer le menu"
-            (click)="closeUserMenu()"
-            (keydown.enter)="closeUserMenu()"
-            (keydown.space)="closeUserMenu()"></div>
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="userMenuTrigger"
+          [cdkConnectedOverlayOpen]="userMenuOpen()"
+          [cdkConnectedOverlayPositions]="userMenuPositions"
+          [cdkConnectedOverlayHasBackdrop]="true"
+          cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+          (backdropClick)="closeUserMenu()">
           <div class="navbar-user-menu__panel" role="menu">
             <button type="button" role="menuitem" (click)="openAccountModal('userDetails')">Détails du compte</button>
             <button type="button" role="menuitem" (click)="openAccountModal('changePassword')">Changer le mot de passe</button>
           </div>
-        }
+        </ng-template>
       </div>
       <!-- (click) appelle logout() qui efface le token et redirige vers /login -->
       <button class="btn-logout" (click)="authService.logout()">Déconnexion</button>

@@ -70,6 +70,12 @@ Couvre les **deux familles** de modales de l'application via `mode` :
   qu'ils n'avaient pas avant leur migration sur ce shell (lecture seule,
   aucun état non sauvegardé — changement de comportement sans risque).
 
+`.ms-modal` porte `cdkTrapFocus`/`cdkTrapFocusAutoCapture` (Angular CDK) :
+`Tab` reste confiné à la boîte de dialogue, et le focus se déplace
+automatiquement vers son premier élément focusable à l'ouverture (restauré à
+la fermeture) — gratuit pour tous les consommateurs du shell, sans code
+supplémentaire de leur côté.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-modal-shell` |

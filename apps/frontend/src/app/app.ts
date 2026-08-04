@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
+import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { filter } from 'rxjs/operators';
 import type { ChangePasswordDto, UpdateProfileDto } from './auth/auth.model';
 import { AuthService } from './auth/auth.service';
@@ -12,7 +13,7 @@ import { Icon } from './shared/icon/icon';
 // App est le composant racine : il est chargé en premier et encadre toute l'application
 // RouterModule fournit les directives routerLink, routerLinkActive et router-outlet
 @Component({
-  imports: [RouterModule, Icon, UserDetailsModal, ChangePasswordModal],
+  imports: [RouterModule, Icon, UserDetailsModal, ChangePasswordModal, CdkConnectedOverlay, CdkOverlayOrigin],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -43,6 +44,17 @@ export class App implements OnInit {
 
   /** Menu déroulant ouvert au clic sur le prénom dans la navbar. */
   userMenuOpen: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Positions du menu utilisateur — ancré sous le bouton, aligné à gauche
+   * (reproduit l'ancien `position: absolute; top: calc(100% + 4px); left: 0`),
+   * repli au-dessus en 2e position si le viewport manque de place dessous.
+   * Même mécanisme que `ParticipantList.menuPositions`.
+   */
+  readonly userMenuPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
 
   /**
    * Modale du menu compte actuellement ouverte (au plus une à la fois) —
