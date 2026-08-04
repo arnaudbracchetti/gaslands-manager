@@ -1,5 +1,11 @@
 @use './app/shared/styles/breakpoints' as bp;
 
+// CSS de base d'Angular CDK Overlay (.cdk-overlay-container/-pane/-backdrop) -
+// requis dès qu'un composant utilise `cdkConnectedOverlay` (ex. le menu "⋯"
+// de ParticipantList), sans quoi le panneau flottant n'est ni positionné ni
+// stylé correctement (le module ne l'injecte pas lui-même).
+@import '@angular/cdk/overlay-prebuilt.css';
+
 // ─── Polices — Terres Brûlées ────────────────────────────────────────────────
 // Anton (display), Oswald (titres + corps), Space Mono (données / tags)
 // Stick No Bills, graisse 800 (test display, cf. --font-display ci-dessous)

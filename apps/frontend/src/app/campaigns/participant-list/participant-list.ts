@@ -23,6 +23,7 @@
  */
 import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { CampaignParticipant } from '../campaign-participant.model';
 import { CampaignState } from '../campaign.model';
 import { Icon } from '../../shared/icon/icon';
@@ -30,11 +31,23 @@ import { Icon } from '../../shared/icon/icon';
 @Component({
   selector: 'app-participant-list',
   standalone: true,
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, CdkConnectedOverlay, CdkOverlayOrigin],
   templateUrl: './participant-list.html',
   styleUrl: './participant-list.scss',
 })
 export class ParticipantList {
+  /**
+   * Position du menu "⋯" ancrée en bas-droite du bouton déclencheur - reproduit
+   * l'emplacement visuel de l'ancien `position: absolute; top: calc(100% + 4px);
+   * right: 0;`. Repli au-dessus du bouton en 2e position : pour une ligne
+   * proche du bas du viewport (ex. 3e participant et plus), le menu ouvert
+   * dessous déborderait hors écran - CDK Overlay choisit automatiquement la
+   * première position qui tient entièrement dans le viewport.
+   */
+  readonly menuPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
+  ];
   /** Tous les participants de la saison (tous statuts). */
   participants: InputSignal<CampaignParticipant[]> = input.required<CampaignParticipant[]>();
 

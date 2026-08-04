@@ -84,10 +84,34 @@
                 <button type="button" class="participant-list__icon-btn participant-list__menu-trigger"
                   title="Plus d'actions" aria-label="Plus d'actions"
                   aria-haspopup="menu" [attr.aria-expanded]="openMenuId() === participant.id"
+                  cdkOverlayOrigin #trigger="cdkOverlayOrigin"
                   (click)="toggleMenu(participant.id)">⋯</button>
 
-                @if (openMenuId() === participant.id) {
-                  <div class="participant-list__menu-backdrop" (click)="closeMenu()"></div>
+                <!-- CDK Overlay plutôt qu'un backdrop position:fixed + panel
+                     position:absolute posés à la main : un descendant fixe
+                     hérité de l'ancien design se fait piéger dans le
+                     rectangle de `.campaign-detail-rail` (position: sticky
+                     ≥900px) au lieu du viewport complet - même piège déjà
+                     rencontré et corrigé pour ChangeTeamModal/les modales de
+                     compte (cf. campaign-detail.html/app.html). L'overlay CDK
+                     se rend dans un conteneur global attaché à <body>, donc
+                     structurellement immunisé, quel que soit l'ancêtre. -->
+                <!-- Pas de (detach) ici : fermer explicitement sur ce signal
+                     créerait une course quand on bascule directement du menu
+                     d'une ligne à celui d'une autre (`toggleMenu` réattribue
+                     openMenuId à la nouvelle ligne AVANT que CDK ne détache
+                     l'overlay de l'ancienne - un (detach)="closeMenu()" ici
+                     écraserait ce nouvel id avec null sur le même cycle). Le
+                     clic extérieur (backdropClick) suffit à fermer sans ce
+                     risque, puisqu'aucune ligne n'est alors en train de s'ouvrir. -->
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="trigger"
+                  [cdkConnectedOverlayOpen]="openMenuId() === participant.id"
+                  [cdkConnectedOverlayPositions]="menuPositions"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                  (backdropClick)="closeMenu()">
                   <div class="participant-list__menu" role="menu">
                     @if (isOrganizer()) {
                       @if (canPromote(participant)) {
@@ -108,7 +132,7 @@
                       <a role="menuitem" [routerLink]="['/campaigns', campaignId(), 'participants', participant.id, 'atelier']" (click)="closeMenu()">Voir l'atelier</a>
                     }
                   </div>
-                }
+                </ng-template>
               </div>
             }
 

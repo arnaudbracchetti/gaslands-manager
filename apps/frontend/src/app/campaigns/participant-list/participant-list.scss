@@ -147,27 +147,21 @@
     }
   }
 
-  // Ancre du menu ⋯ — position:relative pour que le menu s'ancre dessous.
+  // Conteneur du bouton "⋯" - l'ancrage du menu lui-même est délégué à
+  // l'origine CDK (`cdkOverlayOrigin` sur le bouton), plus besoin de
+  // position:relative ici.
   &__menu-wrap {
-    position: relative;
     display: inline-flex;
   }
 
-  // Capte le clic hors-menu pour le refermer — invisible, plein viewport.
-  &__menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    background: transparent;
-    border: none;
-    cursor: default;
-  }
-
+  // Rendu par Angular CDK Overlay (cdkConnectedOverlay) dans le conteneur
+  // global attaché à <body> - jamais un descendant direct de `.participant-
+  // list__item`, donc jamais piégé par un ancêtre `position: sticky` (ex.
+  // `.campaign-detail-rail` ≥900px). Le backdrop clic-extérieur et le
+  // positionnement bas-droite du bouton sont entièrement gérés par CDK
+  // (`menuPositions`/`cdkConnectedOverlayHasBackdrop`, participant-list.ts) -
+  // seul le style visuel du panneau reste ici.
   &__menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    z-index: 41;
     min-width: 150px;
     display: flex;
     flex-direction: column;

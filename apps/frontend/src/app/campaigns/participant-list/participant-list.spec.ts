@@ -8,6 +8,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { provideRouter } from '@angular/router';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { ParticipantList } from './participant-list';
 import { CampaignParticipant } from '../campaign-participant.model';
 
@@ -16,27 +17,40 @@ const mockParticipants: CampaignParticipant[] = [
   { id: 2, userId: 43, teamId: 8, status: 'PENDING', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
 ];
 
-/** Retrouve un bouton du menu ⋯ (déjà ouvert) par son libellé exact. */
-function findMenuButtonByLabel(item: Element, label: string): HTMLButtonElement | null {
-  const buttons = item.querySelectorAll('.participant-list__menu button');
-  for (const btn of Array.from(buttons)) {
-    if (btn.textContent?.trim() === label) return btn as HTMLButtonElement;
-  }
-  return null;
-}
-
-/** Mirroir de `findMenuButtonByLabel`, pour les entrées de menu en lien (`<a>`). */
-function findMenuLinkByLabel(item: Element, label: string): HTMLAnchorElement | null {
-  const links = item.querySelectorAll('.participant-list__menu a');
-  for (const link of Array.from(links)) {
-    if (link.textContent?.trim() === label) return link as HTMLAnchorElement;
-  }
-  return null;
-}
-
 describe('ParticipantList', () => {
   let component: ParticipantList;
   let fixture: ComponentFixture<ParticipantList>;
+  let overlayContainer: OverlayContainer;
+
+  /**
+   * Le menu ⋯ est rendu via Angular CDK Overlay (cdkConnectedOverlay,
+   * participant-list.html) - son contenu est porté dans le conteneur global
+   * de l'overlay (attaché à <body>, cf. `OverlayContainer`), PAS dans le
+   * sous-arbre DOM de `.participant-list__item` d'où le clic est parti. Un
+   * seul menu peut être ouvert à la fois (`openMenuId`), donc une recherche
+   * globale dans le conteneur suffit - pas besoin de re-scoper par ligne.
+   */
+  function menuContainer(): HTMLElement {
+    return overlayContainer.getContainerElement();
+  }
+
+  /** Retrouve un bouton du menu ⋯ (déjà ouvert) par son libellé exact. */
+  function findMenuButtonByLabel(label: string): HTMLButtonElement | null {
+    const buttons = menuContainer().querySelectorAll('.participant-list__menu button');
+    for (const btn of Array.from(buttons)) {
+      if (btn.textContent?.trim() === label) return btn as HTMLButtonElement;
+    }
+    return null;
+  }
+
+  /** Mirroir de `findMenuButtonByLabel`, pour les entrées de menu en lien (`<a>`). */
+  function findMenuLinkByLabel(label: string): HTMLAnchorElement | null {
+    const links = menuContainer().querySelectorAll('.participant-list__menu a');
+    for (const link of Array.from(links)) {
+      if (link.textContent?.trim() === label) return link as HTMLAnchorElement;
+    }
+    return null;
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -46,6 +60,14 @@ describe('ParticipantList', () => {
 
     fixture = TestBed.createComponent(ParticipantList);
     component = fixture.componentInstance;
+    overlayContainer = TestBed.inject(OverlayContainer);
+  });
+
+  // Un overlay laissé ouvert par un test survivrait dans le DOM partagé de
+  // l'environnement de test (le conteneur est un singleton par TestBed) et
+  // fausserait `menuContainer()` du test suivant.
+  afterEach(() => {
+    overlayContainer.ngOnDestroy();
   });
 
   // ── Affichage de base ────────────────────────────────────────────────────
@@ -142,9 +164,9 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[1], 'Retirer')).toBeNull();
-    expect(findMenuButtonByLabel(items[1], 'Promouvoir')).toBeNull();
-    expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
+    expect(findMenuButtonByLabel('Retirer')).toBeNull();
+    expect(findMenuButtonByLabel('Promouvoir')).toBeNull();
+    expect(findMenuButtonByLabel('Voir l\'historique')).not.toBeNull();
   });
 
   it('affiche Retirer dans le menu ⋯ et émet remove(pid) quand organisateur', () => {
@@ -163,7 +185,7 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    const removeBtn = findMenuButtonByLabel(items[1], 'Retirer');
+    const removeBtn = findMenuButtonByLabel('Retirer');
     expect(removeBtn).not.toBeNull();
     removeBtn!.click();
     expect(emitted).toEqual([2]);
@@ -185,8 +207,8 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[0], 'Retirer')).toBeNull();
-    expect(findMenuButtonByLabel(items[0], 'Promouvoir')).toBeNull();
+    expect(findMenuButtonByLabel('Retirer')).toBeNull();
+    expect(findMenuButtonByLabel('Promouvoir')).toBeNull();
   });
 
   it('affiche le menu ⋯ (Retirer) pour un organisateur s\'il en reste un autre (CA5)', () => {
@@ -221,7 +243,7 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[1], 'Promouvoir')).toBeNull();
+    expect(findMenuButtonByLabel('Promouvoir')).toBeNull();
   });
 
   // ── Classement (Points de Championnat) ───────────────────────────────────
@@ -352,13 +374,13 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    const historyBtn = findMenuButtonByLabel(items[1], 'Voir l\'historique');
+    const historyBtn = findMenuButtonByLabel('Voir l\'historique');
     expect(historyBtn).not.toBeNull();
     historyBtn!.click();
     fixture.detectChanges();
 
     expect(emitted).toEqual([2]);
-    expect(items[1].querySelector('.participant-list__menu')).toBeNull();
+    expect(menuContainer().querySelector('.participant-list__menu')).toBeNull();
   });
 
   it('le menu ⋯ d\'un autre participant affiche les actions organisateur en plus de l\'historique quand isOrganizer', () => {
@@ -373,8 +395,8 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[1], 'Retirer')).not.toBeNull();
-    expect(findMenuButtonByLabel(items[1], 'Voir l\'historique')).not.toBeNull();
+    expect(findMenuButtonByLabel('Retirer')).not.toBeNull();
+    expect(findMenuButtonByLabel('Voir l\'historique')).not.toBeNull();
   });
 
   // ── Fiche d'équipe (déplacée depuis le Programme Télé) ───────────────────
@@ -440,7 +462,7 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[1], 'Fiche d\'équipe')).not.toBeNull();
+    expect(findMenuButtonByLabel('Fiche d\'équipe')).not.toBeNull();
   });
 
   it('un non-organisateur ne voit PAS "Fiche d\'équipe" dans le menu ⋯ d\'un autre participant', () => {
@@ -456,7 +478,7 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuButtonByLabel(items[1], 'Fiche d\'équipe')).toBeNull();
+    expect(findMenuButtonByLabel('Fiche d\'équipe')).toBeNull();
   });
 
   it('émet exportSheet(pid) et ferme le menu au clic sur "Fiche d\'équipe" (organisateur, autre participant)', () => {
@@ -475,12 +497,12 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    const sheetBtn = findMenuButtonByLabel(items[1], 'Fiche d\'équipe');
+    const sheetBtn = findMenuButtonByLabel('Fiche d\'équipe');
     sheetBtn!.click();
     fixture.detectChanges();
 
     expect(emitted).toEqual([2]);
-    expect(items[1].querySelector('.participant-list__menu')).toBeNull();
+    expect(menuContainer().querySelector('.participant-list__menu')).toBeNull();
   });
 
   // ── Consultation en lecture seule de l'atelier d'un tiers ────────────────
@@ -499,7 +521,7 @@ describe('ParticipantList', () => {
     fixture.detectChanges();
 
     // items[1] = Alice (id 2, teamId 8).
-    const atelierLink = findMenuLinkByLabel(items[1], 'Voir l\'atelier');
+    const atelierLink = findMenuLinkByLabel('Voir l\'atelier');
     expect(atelierLink).not.toBeNull();
     expect(atelierLink!.getAttribute('href')).toBe('/campaigns/5/participants/2/atelier');
   });
@@ -517,7 +539,7 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuLinkByLabel(items[1], 'Voir l\'atelier')).toBeNull();
+    expect(findMenuLinkByLabel('Voir l\'atelier')).toBeNull();
   });
 
   it('n\'affiche pas "Voir l\'atelier" pour un participant sans équipe engagée', () => {
@@ -537,6 +559,6 @@ describe('ParticipantList', () => {
     trigger.click();
     fixture.detectChanges();
 
-    expect(findMenuLinkByLabel(items[1], 'Voir l\'atelier')).toBeNull();
+    expect(findMenuLinkByLabel('Voir l\'atelier')).toBeNull();
   });
 });
