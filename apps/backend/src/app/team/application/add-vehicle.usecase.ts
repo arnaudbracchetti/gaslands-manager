@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { ITeamRepository } from '../domain/team.repository.interface';
 import type { ICatalogRepository } from '../domain/catalog.repository.interface';
 import type { Team } from '../domain/team';
+import { DomainException } from '../domain/team';
 import type { VehicleType } from '../domain/value-objects/vehicle-type';
 import { Improvement } from '../domain/improvement';
 import { Weapon } from '../domain/weapon';
@@ -61,7 +62,13 @@ export class AddVehicleUseCase {
       }
     }
 
-    team.addVehicle(vehicleType, defaultImprovements, defaultWeapons);
+    try {
+      team.addVehicle(vehicleType, defaultImprovements, defaultWeapons);
+    } catch (e) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
+
     return this.teamRepo.save(team);
   }
 }
