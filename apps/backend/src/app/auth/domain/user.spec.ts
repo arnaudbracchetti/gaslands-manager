@@ -164,6 +164,17 @@ describe('User (agrégat)', () => {
     });
   });
 
+  describe('assertCanHoldSession', () => {
+    it('n\'a aucun effet sur un compte actif', () => {
+      expect(() => buildUser({ isActive: true }).assertCanHoldSession()).not.toThrow();
+    });
+
+    it('refuse un compte désactivé', () => {
+      expect(() => buildUser({ isActive: false }).assertCanHoldSession()).toThrow(DomainException);
+      expect(() => buildUser({ isActive: false }).assertCanHoldSession()).toThrow('Ce compte a été désactivé');
+    });
+  });
+
   describe('auto-administration', () => {
     it('refuse qu\'un utilisateur se supprime lui-même', () => {
       expect(() => buildUser({ id: 7 }).assertRemovableBy(7)).toThrow(DomainException);

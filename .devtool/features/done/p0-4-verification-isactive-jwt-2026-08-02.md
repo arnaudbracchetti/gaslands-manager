@@ -1,12 +1,12 @@
 ---
 id: "p0-4-verification-isactive-jwt-2026-08-02"
-status: "backlog"
+status: "done"
 priority: "critical"
 assignee: null
 dueDate: null
 created: "2026-08-02T05:39:41.000Z"
-modified: "2026-08-02T05:39:41.000Z"
-completedAt: null
+modified: "2026-08-04T14:32:47.000Z"
+completedAt: "2026-08-04T14:32:47.000Z"
 labels: ["securite", "auth"]
 order: "aK"
 ---
@@ -19,17 +19,17 @@ de vie actuelle du JWT) après sa désactivation.
 
 ## Critères d'acceptation
 
-- [ ] `auth/domain/user.ts` : nouvelle méthode `assertCanHoldSession()`
+- [x] `auth/domain/user.ts` : nouvelle méthode `assertCanHoldSession()`
       levant `DomainException` si le compte est inactif — règle métier dans
       l'agrégat, pas dans la stratégie Passport (cf. CLAUDE.md).
-- [ ] `assertCanAuthenticate` refactoré pour appeler `assertCanHoldSession()`
+- [x] `assertCanAuthenticate` refactoré pour appeler `assertCanHoldSession()`
       après la comparaison du mot de passe (le message de désactivation
       n'apparaît qu'après un mot de passe valide — pas d'énumération de
       comptes désactivés).
-- [ ] `jwt.strategy.ts` : après `findById`, appel à
+- [x] `jwt.strategy.ts` : après `findById`, appel à
       `user.assertCanHoldSession()`, `DomainException` → traduite en
       `UnauthorizedException`.
-- [ ] Tests : nouveaux cas dans `user.spec.ts` + nouveau
+- [x] Tests : nouveaux cas dans `user.spec.ts` + nouveau
       `jwt.strategy.spec.ts` avec un faux `IUserRepository`.
 
 ## Notes

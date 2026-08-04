@@ -201,6 +201,16 @@ export class User {
     if (!(await hasher.compare(password, this._passwordHash))) {
       throw new DomainException('Identifiants invalides');
     }
+    this.assertCanHoldSession();
+  }
+
+  /**
+   * Un compte désactivé ne peut détenir aucune session, y compris une déjà
+   * émise (JWT) : consultée par `JwtStrategy.validate()` à chaque requête
+   * authentifiée, pas seulement à la connexion — sinon désactiver un compte
+   * n'aurait d'effet qu'après expiration de son token (jusqu'à 7 jours).
+   */
+  assertCanHoldSession(): void {
     if (!this._isActive) {
       throw new DomainException('Ce compte a été désactivé');
     }

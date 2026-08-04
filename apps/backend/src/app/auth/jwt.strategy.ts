@@ -15,10 +15,11 @@
  * 6. La valeur retournée par validate() est attachée à req.user.
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { DomainException } from '../shared/domain/domain-exception';
 import { USER_REPOSITORY } from './auth.tokens';
 import type { User } from './domain/user';
 import type { UserRole } from './domain/user-role';
@@ -63,8 +64,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * On recharge depuis la base pour disposer de données fraîches (rôle,
    * activation) plutôt que de faire confiance au payload du token.
    * null = compte supprimé depuis l'émission du token → 401 automatique.
+   *
+   * `assertCanHoldSession()` (agrégat `User`) coupe l'accès d'un compte
+   * désactivé immédiatement, sans attendre l'expiration du JWT (jusqu'à 7
+   * jours) — la `DomainException` est traduite ici en `UnauthorizedException`
+   * plutôt que laissée remonter à Passport, qui ne ferait pas cette traduction
+   * (elle deviendrait un 500 non géré).
    */
-  validate(payload: JwtPayload): Promise<User | null> {
-    return this.userRepo.findById(payload.sub);
+  async validate(payload: JwtPayload): Promise<User | null> {
+    const user = await this.userRepo.findById(payload.sub);
+    if (!user) return null;
+
+    try {
+      user.assertCanHoldSession();
+    } catch (e) {
+      if (e instanceof DomainException) throw new UnauthorizedException(e.message);
+      throw e;
+    }
+
+    return user;
   }
 }
