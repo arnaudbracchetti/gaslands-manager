@@ -41,7 +41,7 @@ test.describe('Campagnes — Atelier', () => {
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (véhicule) - 2 (Mitrailleuse) = 40.
-    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('40 jerricans');
 
     await page.getByTestId('vehicle-card-manage').first().click();
     await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier\/vehicles\/\d+$/);
@@ -57,7 +57,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(minigunItem.getByText('(Tourelle)')).toBeVisible();
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('25 jerricans'); // 40 - 15
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('25 jerricans'); // 40 - 15
 
     // ── Annulation du même achat (session en cours) : remboursement intégral ──
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -69,7 +69,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Minigun' })).toHaveCount(0);
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('40 jerricans');
 
     // ── Revente de l'arme PRÉ-EXISTANTE (Mitrailleuse, moitié prix floor(2/2)=1) ──
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -85,7 +85,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item--sold').filter({ hasText: 'Mitrailleuse' })).toBeVisible();
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('41 jerricans'); // 40 + 1
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('41 jerricans'); // 40 + 1
 
     // ── Achat d'une amélioration (entityType IMPROVEMENT, Arceaux, prix 4) ──
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -94,7 +94,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Arceaux' })).toBeVisible();
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('37 jerricans'); // 41 - 4
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('37 jerricans'); // 41 - 4
 
     await joineeContext.close();
   });
@@ -125,7 +125,7 @@ test.describe('Campagnes — Atelier', () => {
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (véhicule) - 2 (Tireur d'Élite) = 40.
-    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('40 jerricans');
 
     await page.getByTestId('vehicle-card-manage').first().click();
 
@@ -135,7 +135,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Baril de Poudre' })).toBeVisible();
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('39 jerricans'); // 40 - 1
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('39 jerricans'); // 40 - 1
 
     // ── Annulation du même achat (session en cours) : remboursement intégral ──
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -147,7 +147,7 @@ test.describe('Campagnes — Atelier', () => {
     await expect(page.locator('.me-item').filter({ hasText: 'Baril de Poudre' })).toHaveCount(0);
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('40 jerricans');
 
     // ── Revente de l'avantage PRÉ-EXISTANT (Tireur d'Élite) : PERTE TOTALE ──
     await page.getByTestId('vehicle-card-manage').first().click();
@@ -165,7 +165,7 @@ test.describe('Campagnes — Atelier', () => {
     await page.goto(`/campaigns/${campaignId}/atelier`);
     // Aucun remboursement — la cagnotte reste à 40 (contrairement à la moitié-prix
     // récupérée pour une arme/amélioration revendue).
-    await expect(page.locator('.atp-wallet-value')).toHaveText('40 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('40 jerricans');
 
     await joineeContext.close();
   });
@@ -217,14 +217,14 @@ test.describe('Campagnes — Atelier', () => {
 
     await openAtelier(page);
     // Cagnotte de départ : 50 (budget) - 8 (Camion à glaces, sans équipement) = 42.
-    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('42 jerricans');
 
     // ── Achat d'un second véhicule (Ambulance, prix 20) ──
     await page.getByRole('button', { name: /AJOUTER UN VÉHICULE/i }).click();
     const ambulanceCard = page.locator('.choice-card').filter({ hasText: 'Ambulance' });
     await waitForEquipmentEvent(page, () => ambulanceCard.getByRole('button', { name: 'Choisir ce véhicule' }).click());
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(2);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('22 jerricans'); // 42 - 20
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('22 jerricans'); // 42 - 20
 
     // ── Équipement de ce véhicule DANS LA MÊME SESSION (arme + amélioration) ──
     // L'Ambulance vient d'être ajoutée en fin de liste (index 1). Son id est
@@ -243,7 +243,7 @@ test.describe('Campagnes — Atelier', () => {
 
     await page.goto(`/campaigns/${campaignId}/atelier`);
     // 22 - 2 (Mitrailleuse) - 4 (Arceaux) = 16.
-    await expect(page.locator('.atp-wallet-value')).toHaveText('16 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('16 jerricans');
 
     // ── Annulation cascade : retirer le véhicule acheté cette session rembourse
     // INTÉGRALEMENT tout ce qui a été dépensé dessus (véhicule + arme +
@@ -256,13 +256,13 @@ test.describe('Campagnes — Atelier', () => {
     await waitForEquipmentEvent(page, () => cancelDialog.getByRole('button', { name: 'Annuler l\'achat' }).click());
 
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(1);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans'); // remboursement intégral
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('42 jerricans'); // remboursement intégral
 
     // Le reste du journal (Camion à glaces initial) doit rester consultable —
     // preuve que la cascade n'a pas cassé le replay de la campagne.
     await page.reload();
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(1);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('42 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('42 jerricans');
 
     await joineeContext.close();
   });
@@ -297,7 +297,7 @@ test.describe('Campagnes — Atelier', () => {
 
     await openAtelier(page);
     // Cagnotte de départ : 50 - 8 (véhicule) - 2 (Mitrailleuse) - 4 (Arceaux) = 36.
-    await expect(page.locator('.atp-wallet-value')).toHaveText('36 jerricans');
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('36 jerricans');
 
     await page.getByTestId('vehicle-card-delete').first().click();
     const sellDialog = page.getByRole('dialog', { name: 'Vendre ce véhicule ?' });
@@ -307,7 +307,7 @@ test.describe('Campagnes — Atelier', () => {
     await waitForEquipmentEvent(page, () => sellDialog.getByRole('button', { name: 'Vendre', exact: true }).click());
 
     await expect(page.locator('.atp-vehicles-grid app-vehicle-summary-card')).toHaveCount(0);
-    await expect(page.locator('.atp-wallet-value')).toHaveText('43 jerricans'); // 36 + 7
+    await expect(page.locator('.atp-summary-value:not(.atp-summary-value--sabotage)')).toHaveText('43 jerricans'); // 36 + 7
 
     await joineeContext.close();
   });

@@ -11,20 +11,23 @@ import { test, expect } from '@playwright/test';
 
 // ── Page d'accueil ───────────────────────────────────────────────────────────
 
-test('la page d\'accueil affiche le titre GASLANDS MANAGER', async ({ page }) => {
+test('la page d\'accueil affiche le logo Gaslands Manager', async ({ page }) => {
   await page.goto('/');
 
-  // La page d'accueil a un <h1 class="hero-title"> avec le titre de l'app
-  const title = await page.locator('h1.hero-title').innerText();
-  expect(title).toContain('GASLANDS MANAGER');
+  // Le <h1 class="hero-title"> ne porte plus le titre en texte - il contient
+  // désormais le logo (home.html), le nom de l'app est porté par son alt.
+  const logo = page.locator('h1.hero-title img.hero-logo');
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute('alt', 'Gaslands Manager');
 });
 
 test('la page d\'accueil contient les liens de navigation principaux', async ({ page }) => {
   await page.goto('/');
 
-  // Les 4 feature cards doivent être présentes
+  // 3 feature cards (Équipes/Saisons/Documentation) - les placeholders
+  // Véhicules/Armes ont été retirés de l'accueil (refactor home).
   const cards = page.locator('.feature-card');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(3);
 });
 
 // ── Authentification ─────────────────────────────────────────────────────────

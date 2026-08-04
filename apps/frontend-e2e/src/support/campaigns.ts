@@ -236,7 +236,9 @@ export async function inviteAndValidateParticipant(
 
   await organizerPage.reload();
   const row: Locator = organizerPage.locator('.participant-list__item').filter({ hasText: options.joineeUser.firstName });
-  await expect(row.locator('.participant-list__badge--pending')).toBeVisible();
+  // Depuis la refonte en cartes compactes (participant-list.ts, `metaText()`),
+  // le statut n'est plus un badge dédié mais un fragment de la ligne 2 atténuée.
+  await expect(row.locator('.participant-list__meta')).toContainText('En attente');
 
   const validateResponse = organizerPage.waitForResponse(
     (r) => r.request().method() === 'PUT' && /\/api\/campaigns\/\d+\/participants\/\d+\/validate$/.test(r.url()),

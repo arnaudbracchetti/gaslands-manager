@@ -172,10 +172,15 @@ test.describe('Vehicle equipment — armes, améliorations, montage sur Tourelle
 
     await createTeam(page);
     const cansInput = page.getByLabel('Budget (Jerricans)');
-    await cansInput.fill('0');
+    // Budget = 8, exactement le prix de "Camion à glaces" (Team.canAddVehicle
+    // rejette tout véhicule dont le prix dépasse le budget - un budget à 0
+    // empêcherait déjà l'achat du véhicule lui-même, avant même d'atteindre
+    // l'écran d'équipement que ce test veut exercer).
+    await cansInput.fill('8');
     await saveAndWait(page, () => cansInput.blur());
 
-    // Camion à glaces coûte déjà 8 — le budget (0) est dépassé dès l'ajout du véhicule.
+    // Camion à glaces coûte 8 - budget restant à 0 après achat, insuffisant
+    // pour la moindre arme/amélioration.
     await addVehicle(page, { vehicleName: 'Camion à glaces' });
     await openEquipmentManager(page);
 

@@ -13,15 +13,16 @@ import { createCampaign, addGame, runResultWizard, openAtelier, addBystanderPart
  * aléatoire côté serveur e2e (pas de randomizer fixé, contrairement aux tests
  * unitaires backend qui utilisent `FixedRandomizer`). L'achat réel d'une
  * séquelle (Dur à Cuire, revente via Légende Vivante) reste couvert uniquement
- * par les tests unitaires (`sequella-manager.spec.ts`,
- * `get-workshop-available-sequelles.usecase.spec.ts`) — obtenir des Chocs de
+ * par les tests unitaires (`equipment-manager.spec.ts`,
+ * `get-workshop-available-sequelles.usecase.spec.ts`) - obtenir des Chocs de
  * façon fiable en e2e nécessiterait un mécanisme de seed du D6 qui n'existe
  * pas encore dans ce projet.
  *
  * Ce test vérifie malgré tout, sur une VRAIE requête HTTP + base de données
  * (pas de mock) : que la nouvelle route `available-sequelles` répond, que
- * `SequellaManager` s'affiche sous `EquipmentManager`, et que le verdict
- * "Chocs insuffisants" est correctement rendu pour chaque séquelle.
+ * les séquelles s'affichent comme 4ᵉ catégorie d'équipement intégrée à
+ * `EquipmentManager` (pas un composant séparé), et que le verdict "Chocs
+ * insuffisants" est correctement rendu pour chaque séquelle.
  */
 test.describe('Campagnes — Atelier — Séquelles', () => {
   test('affiche le solde de Chocs à 0 et grise toutes les séquelles disponibles (Chocs insuffisants)', async ({ page, browser }) => {
@@ -46,27 +47,34 @@ test.describe('Campagnes — Atelier — Séquelles', () => {
     await page.getByTestId('vehicle-card-manage').first().click();
     await expect(page).toHaveURL(/\/campaigns\/\d+\/atelier\/vehicles\/\d+$/);
 
-    await expect(page.locator('app-sequella-manager')).toBeVisible();
-    await expect(page.locator('.sm__chocs')).toContainText('0');
+    // Séquelles intégrées à EquipmentManager (4ᵉ catégorie d'équipement, pas
+    // un composant `app-sequella-manager` séparé) - gated par le même toggle
+    // "Afficher les indisponibles" que les armes/améliorations/avantages. Un
+    // véhicule fraîchement engagé a 0 Chocs, donc les 10 séquelles ATELIER
+    // sont masquées par défaut.
+    await page.getByRole('button', { name: /Afficher les indisponibles/ }).click();
+
+    await expect(page.locator('.vcs-chocs')).toContainText('0');
 
     // La liste "Disponibles" répond bien depuis la vraie route
     // GET .../workshop/vehicles/:id/available-sequelles (10 séquelles ATELIER
-    // dans le catalogue réel — cf. database_init/data/sequelle.yml, PAS 11 comme
+    // dans le catalogue réel - cf. database_init/data/sequelle.yml, PAS 11 comme
     // l'affirme à tort docs/spec/CAMPAIGN.md, un écart pré-existant non lié à
     // cette fonctionnalité).
-    const availableGroup = page.locator('.sm__group').first();
-    await expect(availableGroup.locator('.sm__item')).toHaveCount(10);
+    const sequellaCards = page.locator('.em-sequella-card');
+    await expect(sequellaCards).toHaveCount(10);
+    await expect(page.locator('.em-sequella-card--unavailable')).toHaveCount(10);
 
-    // Chaque séquelle (coût ≥ 1) est indisponible à 0 Choc — aucun bouton
+    // Chaque séquelle (coût ≥ 1) est indisponible à 0 Choc - aucun bouton
     // "Acquérir", et la raison du backend est affichée telle quelle.
-    await expect(availableGroup.locator('.sm__acquire')).toHaveCount(0);
-    const reasons = availableGroup.locator('.sm__reason');
+    await expect(page.locator('.em-sequella-card__acquire')).toHaveCount(0);
+    const reasons = page.locator('.em-sequella-card__reason');
     await expect(reasons.first()).toContainText('Chocs insuffisants');
     expect(await reasons.count()).toBe(10);
 
     // Aucune séquelle acquise sur un véhicule fraîchement engagé.
-    const ownedGroup = page.locator('.sm__group').nth(1);
-    await expect(ownedGroup).toContainText('Aucune séquelle acquise.');
+    await expect(page.getByText('Séquelles (0)')).toBeVisible();
+    await expect(page.getByText('Aucune séquelle acquise.')).toBeVisible();
 
     await joineeContext.close();
   });

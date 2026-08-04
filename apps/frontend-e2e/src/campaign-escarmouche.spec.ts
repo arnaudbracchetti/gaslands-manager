@@ -52,6 +52,9 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
     await page.locator('.pst__participant-row').filter({ hasText: joineeTeamName }).locator('input[type="checkbox"]').check();
     await page.getByRole('button', { name: 'Suivant', exact: true }).click();
 
+    // ── Écran Sabotage (toujours affiché, rien à saisir pour ce test) ───────
+    await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+
     // ── Écran Jerricans directement (ni Classement ni Portes pour une Escarmouche) ──
     await expect(page.locator('.jst__hint')).toBeVisible();
     const jerricanRow = page.locator('.jst__item').filter({ hasText: teamName });
@@ -114,7 +117,10 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
       .locator('input[type="checkbox"]').check();
     await page.getByRole('button', { name: 'Suivant', exact: true }).click();
 
-    // Aucun butin saisi — 0 par défaut, ce test porte sur l'annulation, pas la valeur.
+    // ── Écran Sabotage (toujours affiché, rien à saisir pour ce test) ───────
+    await page.getByRole('button', { name: 'Suivant', exact: true }).click();
+
+    // Aucun butin saisi - 0 par défaut, ce test porte sur l'annulation, pas la valeur.
     await expect(page.locator('.jst__hint')).toBeVisible();
     await page.getByRole('button', { name: 'Suivant', exact: true }).click();
 
