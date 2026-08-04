@@ -31,6 +31,15 @@ describe('validateEnv', () => {
     expect(env.NODE_ENV).toBe('development');
     expect(env.DATABASE_PORT).toBe(5432);
     expect(env.JWT_EXPIRATION).toBe('7d');
+    expect(env.THROTTLE_TTL).toBe(60);
+    expect(env.THROTTLE_LIMIT).toBe(300);
+  });
+
+  it('convertit THROTTLE_TTL/THROTTLE_LIMIT en nombres quand ils sont fournis', () => {
+    const env = validateEnv(baseEnv({ THROTTLE_TTL: '30', THROTTLE_LIMIT: '600' }));
+
+    expect(env.THROTTLE_TTL).toBe(30);
+    expect(env.THROTTLE_LIMIT).toBe(600);
   });
 
   it('rejette une configuration sans JWT_SECRET, en nommant la variable', () => {

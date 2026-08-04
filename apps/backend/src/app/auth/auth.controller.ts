@@ -16,6 +16,7 @@
  */
 
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Throttle, seconds } from '@nestjs/throttler';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { LoginUseCase } from './application/login.usecase';
 import { RegisterUseCase } from './application/register.usecase';
@@ -52,8 +53,13 @@ export class AuthController {
    * Corps attendu : { firstName, lastName, pseudo, email, password }
    * Retourne : { access_token: string, user: UserResponseDto }
    * Codes HTTP : 201 Created, 409 Conflict (email déjà pris), 400 (données invalides)
+   *
+   * Limite de débit (P0-5) : 3 requêtes/heure par IP — le captcha (P0-6) est
+   * le contrôle principal anti-inscription massive, ceci est le filet si la
+   * clé de site fuite vers une ferme à bots.
    */
   @Post('register')
+  @Throttle({ default: { limit: 3, ttl: seconds(3600) } })
   register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
     return this.registerUseCase.execute(dto);
   }
@@ -62,8 +68,13 @@ export class AuthController {
    * POST /api/auth/login
    * Corps attendu : { email, password }
    * Codes HTTP : 200 OK, 401 Unauthorized (identifiants invalides / compte désactivé)
+   *
+   * Limite de débit (P0-5) : double fenêtre — 5 requêtes/minute ET 20/heure
+   * par IP. La seconde fenêtre (throttler nommé `secondary`, cf. AppModule)
+   * bloque l'attaque lente qui resterait sous le plafond par minute.
    */
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: seconds(60) }, secondary: { limit: 20, ttl: seconds(3600) } })
   login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.loginUseCase.execute(dto);
   }
@@ -100,9 +111,13 @@ export class AuthController {
    * Corps attendu : { currentPassword, newPassword }
    * Retourne : rien (204 No Content)
    * Codes HTTP : 400 (mot de passe actuel incorrect / nouveau trop court), 401
+   *
+   * Limite de débit (P0-5) : 5 requêtes/5 minutes par IP — protège le CPU
+   * derrière un `bcrypt.compare()` répété sur une session déjà authentifiée.
    */
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 5, ttl: seconds(300) } })
   @Patch('me/password')
   changePassword(
     @Request() req: AuthenticatedRequest,

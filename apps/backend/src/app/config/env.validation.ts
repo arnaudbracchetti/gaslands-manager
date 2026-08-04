@@ -153,13 +153,15 @@ export class EnvVars {
   @IsOptional()
   DB_SSL: string = 'false';
 
-  @IsString()
+  @IsInt()
   @IsOptional()
-  THROTTLE_TTL?: string;
+  @Transform(({ value }: { value: string }): number => parseInt(value, 10))
+  THROTTLE_TTL: number = 60;
 
-  @IsString()
+  @IsInt()
   @IsOptional()
-  THROTTLE_LIMIT?: string;
+  @Transform(({ value }: { value: string }): number => parseInt(value, 10))
+  THROTTLE_LIMIT: number = 300;
 }
 
 /**

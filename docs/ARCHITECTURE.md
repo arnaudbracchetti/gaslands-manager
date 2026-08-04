@@ -493,8 +493,11 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 | CORS | `CORS_ORIGIN` (liste séparée par virgules, obligatoire en production), repli `http://localhost:4200` hors production |
 | Erreurs login | Message générique (évite l'énumération d'emails) |
 | `.env` | Non committé (`.gitignore`), exemple dans `.env.example` |
+| Limite de débit | `@nestjs/throttler` (`ThrottlerModule.forRootAsync` + `APP_GUARD` dans `app.module.ts`) - 300 req/60s par IP par défaut (`THROTTLE_TTL`/`THROTTLE_LIMIT`), resserré par route via `@Throttle()` : `/auth/login` 5/60s **et** 20/3600s (double fenêtre, throttler nommé `secondary`), `/auth/register` 3/3600s, `/auth/me/password` 5/300s. Désactivé hors production (`skipIf`) - `frontend-e2e` ne serait sinon jamais vert. |
 
-`GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - cf. P0-8) - décorée `@SkipThrottle()` en anticipation de P0-5 (`ThrottlerGuard` pas encore enregistré à ce stade, décorateur inerte jusqu'à son installation).
+`GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - cf. P0-8) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
+
+**Contre-mesure Caddy restant à faire (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - le Caddyfile de P0-8 devra donc forcer `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}`, et router `/api/*` directement vers `backend:3000` (jamais via le conteneur nginx).
 
 ---
 

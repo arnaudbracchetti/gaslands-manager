@@ -18,14 +18,17 @@ export class AppController {
     return this.appService.getData();
   }
 
-  // Sondée par le futur healthcheck Docker (P0-8). @SkipThrottle() anticipe
-  // P0-5 (ThrottlerGuard posé globalement) — un healthcheck ne doit jamais
-  // se faire limiter en débit par sa propre API. Le SELECT 1 n'est jamais
-  // catché : si la base est indisponible, l'exception remonte en 500, le
-  // signal exact qu'un healthcheck Docker doit voir pour marquer le
-  // conteneur "unhealthy".
+  // Sondée par le futur healthcheck Docker (P0-8) — un healthcheck ne doit
+  // jamais se faire limiter en débit par sa propre API. Les deux throttlers
+  // nommés enregistrés dans AppModule (P0-5) doivent être sautés
+  // explicitement : `@SkipThrottle()` sans argument ne saute que le
+  // throttler `default`, `secondary` resterait sinon actif (avec sa config
+  // par défaut, inoffensive mais incohérente avec l'intention "jamais
+  // throttlé"). Le SELECT 1 n'est jamais catché : si la base est
+  // indisponible, l'exception remonte en 500, le signal exact qu'un
+  // healthcheck Docker doit voir pour marquer le conteneur "unhealthy".
   @Get('health')
-  @SkipThrottle()
+  @SkipThrottle({ default: true, secondary: true })
   async getHealth(): Promise<{ status: 'ok' }> {
     await this.dataSource.query('SELECT 1');
     return { status: 'ok' };

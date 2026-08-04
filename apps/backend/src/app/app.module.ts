@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule, seconds } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -56,6 +58,37 @@ import { ALL_MIGRATIONS } from '../migrations';
       }),
     }),
 
+    // Deux throttlers nommés : `default` porte la limite globale
+    // (THROTTLE_TTL/THROTTLE_LIMIT) et est resserré par route via
+    // `@Throttle()` (ex. AuthController). `secondary` partage les mêmes
+    // valeurs par défaut — ThrottlerGuard compte par (contrôleur + handler +
+    // nom de throttler), donc ce doublon ne collisionne jamais avec les
+    // autres routes : il ne devient "actif" que là où une route le resserre
+    // explicitement (double fenêtre de /auth/login, cf. spec P0-5). `skipIf`
+    // est l'unique interrupteur : hors production, aucune route n'est
+    // jamais limitée — `frontend-e2e` crée des dizaines de comptes et se
+    // reconnecte en boucle sur 3 navigateurs, ce qui déclencherait des 429
+    // dès le second spec sous les limites ci-dessous.
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: seconds(config.get<number>('THROTTLE_TTL', 60)),
+            limit: config.get<number>('THROTTLE_LIMIT', 300),
+          },
+          {
+            name: 'secondary',
+            ttl: seconds(config.get<number>('THROTTLE_TTL', 60)),
+            limit: config.get<number>('THROTTLE_LIMIT', 300),
+          },
+        ],
+        skipIf: (): boolean => config.get<string>('NODE_ENV') !== 'production',
+      }),
+    }),
+
     ContentModule,
     TeamModule,
     AuthModule,
@@ -63,6 +96,6 @@ import { ALL_MIGRATIONS } from '../migrations';
     CampaignModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
