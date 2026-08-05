@@ -1,3 +1,8 @@
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+
 export class AddAdvantageDto {
-  nomInterne: string;
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  nomInterne!: string;
 }

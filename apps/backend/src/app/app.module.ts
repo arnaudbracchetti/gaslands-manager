@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule, seconds } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -96,6 +96,29 @@ import { ALL_MIGRATIONS } from '../migrations';
     CampaignModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // P0-7 : valide/transforme tout @Body() entrant selon les décorateurs
+    // class-validator des DTO (27 fichiers, apps/backend/src/app/{auth,team,
+    // campaign}/dto/). `enableImplicitConversion: false` délibérément : une
+    // conversion implicite transformerait une chaîne invalide en `NaN` sur
+    // un `@IsInt()` plutôt que de produire une erreur lisible ; les
+    // paramètres de route restent couverts par les `ParseIntPipe` déjà en
+    // place. Pas de `disableErrorMessages` : les messages restent affichés
+    // à l'utilisateur (UI francophone). `whitelist`/`forbidNonWhitelisted`
+    // resserrés après audit des payloads Angular (`.post(`/`.patch(`/`.put(`
+    // dans apps/frontend/src/app) confirmant qu'aucun champ non déclaré n'est
+    // envoyé par le client.
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transformOptions: { enableImplicitConversion: false },
+      }),
+    },
+  ],
 })
 export class AppModule {}

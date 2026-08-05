@@ -1,4 +1,5 @@
-import type { GameType } from '../game.enums';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { GameType } from '../game.enums';
 
 /**
  * DTO pour la modification d'une partie PLANIFIE du Programme Télé.
@@ -8,6 +9,13 @@ import type { GameType } from '../game.enums';
  * modification d'une partie déjà JOUE.
  */
 export class UpdateGameDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   scenarioId?: string;
+
+  @IsOptional()
+  @IsEnum(GameType)
   type?: GameType;
 }
