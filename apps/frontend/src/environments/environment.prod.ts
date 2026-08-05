@@ -7,5 +7,5 @@
  * vide, le build production se comporte comme le build dev - pas de widget.
  */
 export const environment = {
-  turnstileSiteKey: '', // TODO: renseigner la clé de site Turnstile (publique)
+  turnstileSiteKey: '0x4AAAAAAEHM_Xsa9zKyzEqT',
 };
