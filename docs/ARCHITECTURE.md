@@ -482,21 +482,90 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 
 ### 5.2 Production (`docker-compose.prod.yml`, P0-8)
 
+Le reverse proxy Caddy **n'appartient pas** à ce fichier : il vit dans un
+stack séparé et partagé, `docker/edge/` (voir §5.3), réutilisable par
+d'autres applications hébergées sur le même VPS sans jamais republier les
+ports 80/443. `docker-compose.prod.yml` ne fait jamais de build sur le
+serveur non plus : `backend`/`frontend` portent un champ `image:` (résolu via
+`docker compose pull`) pointant vers des images construites par CI, cf. §5.4.
+
 ```
                         internet
                            │ 80/443 (+ 443/udp) - SEUL point d'entrée publié
                            ▼
-                       caddy (TLS Let's Encrypt automatique, docker/caddy/Caddyfile)
+                caddy (stack docker/edge/, TLS Let's Encrypt automatique)
                     ┌──────┴──────┐
               /api/*│             │reste
                      ▼             ▼
-                 backend:3000   frontend:80 (nginx, fichiers statiques seuls)
+     gaslands-backend:3000   gaslands-frontend:80 (nginx, fichiers statiques)
+       (alias sur edge_net)     (alias sur edge_net, nginx sert du statique)
                      │
                      ▼ réseau gaslands_db_net (internal: true)
                  postgres:5432
 ```
 
-Aucun `ports:` sur `postgres`/`backend`/`frontend` - seul `caddy` publie 80/443/443·udp. pgAdmin est entièrement absent (accès base via `docker compose -f docker-compose.prod.yml exec postgres psql`). Deux réseaux : `gaslands_net` (bridge normal - caddy/backend/frontend, sortie internet nécessaire à l'appel Turnstile du backend) et `gaslands_db_net` (bridge `internal: true` - backend/postgres uniquement, aucune route depuis caddy/frontend même en cas de compromission). `backend` tourne `read_only: true` (+ `tmpfs: [/tmp]`), `USER node`, `init: true` (relai `SIGTERM`/reap des zombies via tini). Détail complet du routage/CSP/en-têtes : `docker/caddy/Caddyfile` et §6 ci-dessous.
+Aucun `ports:` sur `postgres`/`backend`/`frontend` - seul le stack `docker/edge/`
+publie 80/443/443·udp, pour l'ensemble du VPS. pgAdmin est entièrement absent
+(accès base via `docker compose -f docker-compose.prod.yml exec postgres
+psql`). Deux réseaux : `edge_net` (bridge normal, **externe** - créé par
+`docker/edge/`, jamais par ce fichier - point de rencontre avec Caddy ;
+fournit aussi la sortie internet nécessaire à l'appel Turnstile du backend)
+et `gaslands_db_net` (bridge `internal: true` - backend/postgres uniquement,
+aucune route depuis caddy/frontend même en cas de compromission). `backend`
+et `frontend` déclarent sur `edge_net` des **alias explicites**
+(`gaslands-backend`/`gaslands-frontend`) plutôt que les noms de service nus,
+pour ne jamais entrer en collision DNS avec une future 2e application
+partageant ce même réseau. `backend` tourne `read_only: true` (+ `tmpfs:
+[/tmp]`), `USER node`, `init: true` (relai `SIGTERM`/reap des zombies via
+tini). Détail complet du routage/CSP/en-têtes : `docker/caddy/gaslands.caddy`
+et §6 ci-dessous.
+
+### 5.3 Stack partagé `docker/edge/` — reverse proxy multi-applications
+
+Stack Compose indépendant (`name: edge`), déployé **une seule fois** sur le
+VPS, avant toute application : c'est lui, et lui seul, qui possède les ports
+80/443/443·udp de la machine. Il ne connaît aucune application par son nom -
+son `Caddyfile` se limite au bloc global (`email {$LETSENCRYPT_EMAIL}`) suivi
+d'un `import sites/*.caddy`. Chaque application dépose son propre fichier
+`*.caddy` (un bloc de site = un domaine) dans `./sites/` - pour Gaslands,
+`docker/caddy/gaslands.caddy` - puis un `caddy reload` fait relire la
+configuration sans redémarrer le conteneur :
+
+```bash
+docker compose -f docker/edge/docker-compose.yml exec caddy \
+  caddy reload --config /etc/caddy/Caddyfile
+```
+
+Ajouter une 2ᵉ application ne modifie jamais ce stack lui-même : elle crée
+son propre stack Compose (jamais de `ports:` publiés), rejoint `edge_net` en
+`external: true` avec un alias unique, dépose son fichier `.caddy`, puis
+déclenche le `reload` ci-dessus - aucune coupure pour les applications déjà
+en ligne. Limite connue et acceptée : les conteneurs d'`edge_net` peuvent se
+joindre directement entre eux (un bridge Docker ne cloisonne pas ses pairs
+par défaut) - viable sur un VPS à propriétaire unique, sans application
+tierce non maîtrisée ; le pare-feu de l'hôte, lui, continue de ne rien
+exposer d'autre que Caddy vers l'extérieur.
+
+### 5.4 Images construites par CI, jamais sur le VPS
+
+`.github/workflows/docker-publish.yml` construit `apps/backend/Dockerfile` et
+`apps/frontend/Dockerfile` sur un runner GitHub Actions (`ubuntu-latest`,
+amd64 natif - même architecture que le VPS, donc aucune cross-compilation),
+et les pousse vers GitHub Container Registry (`ghcr.io/arnaudbracchetti/
+gaslands-manager-{backend,frontend}`), taguées à la fois `${{ github.ref_name
+}}` (le tag Git, ex. `v1.0.0`) et `latest`. Déclenché uniquement sur un tag de
+version (`v*.*.*`), pas à chaque push sur `main` : chaque publication d'image
+correspond à une release explicite. Packages rendus publics (aucun secret
+n'est jamais intégré à l'image - `JWT_SECRET`/`ADMIN_PASSWORD`/etc. sont
+injectés au démarrage via `.env`, jamais au moment du build), donc le VPS n'a
+besoin d'aucun `docker login` pour `pull`.
+
+Le VPS ne construit donc jamais rien : `docker-compose.prod.yml` référence
+ces images via `image: ghcr.io/.../gaslands-manager-<service>:${IMAGE_TAG:-latest}`
+(`build:` y reste présent pour un usage local ponctuel, jamais utilisé en
+production). Mise à jour : `git tag vX.Y.Z && git push origin vX.Y.Z` (déclenche
+le workflow) puis, sur le VPS, `docker compose -f docker-compose.prod.yml pull
+&& up -d`.
 
 ---
 
@@ -517,7 +586,7 @@ Aucun `ports:` sur `postgres`/`backend`/`frontend` - seul `caddy` publie 80/443/
 
 `GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - sondé par les `healthcheck:` des services `backend` de `docker-compose.yml`/`docker-compose.prod.yml`, cf. P0-8 ci-dessous) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
 
-**Contre-mesure Caddy (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - `docker/caddy/Caddyfile` force donc `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}` (écrasement, pas ajout) sur son bloc `handle /api/*`, qui route directement vers `backend:3000` - jamais via le conteneur nginx (`frontend`), qui ne sert plus que les fichiers statiques en production (cf. §5 ci-dessous).
+**Contre-mesure Caddy (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - `docker/caddy/gaslands.caddy` (importé par le Caddyfile du stack partagé `docker/edge/`, cf. §5.3) force donc `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}` (écrasement, pas ajout) sur son bloc `handle /api/*`, qui route directement vers `gaslands-backend:3000` - jamais via le conteneur nginx (`frontend`), qui ne sert plus que les fichiers statiques en production (cf. §5 ci-dessous).
 
 ---
 

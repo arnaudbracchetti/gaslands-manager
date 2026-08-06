@@ -1,0 +1,68 @@
+name: edge
+
+# ============================================================
+# Stack "edge" - reverse proxy Caddy PARTAGE entre toutes les applications
+# hebergees sur ce VPS (Gaslands Manager aujourd'hui, d'autres demain).
+#
+# Seul ce stack publie des ports sur l'hote (80/443 + 443/udp) - aucune
+# application ne doit jamais publier de port elle-meme, quel que soit son
+# nombre. Chaque application rejoint le reseau externe "edge_net" (cree par
+# ce fichier, reference ailleurs en `external: true`) avec un alias UNIQUE
+# (ex. "gaslands-backend") pour que Caddy puisse la resoudre par son nom -
+# deux applications qui partageraient le meme alias entreraient en collision
+# DNS sur ce reseau.
+#
+# Le fichier Caddyfile (ci-contre) importe tout fichier "*.caddy" depose dans
+# ./sites/ - chaque application y depose le sien (un fichier = un bloc de
+# site, un domaine). Ajouter/retirer une application ne touche jamais ce
+# stack lui-meme : deposer/retirer son fichier .caddy puis recharger Caddy :
+#
+#   docker compose -f docker/edge/docker-compose.yml exec caddy \
+#     caddy reload --config /etc/caddy/Caddyfile
+#
+# Demarrage (une seule fois, avant la premiere application) :
+#   docker compose -f docker/edge/docker-compose.yml up -d
+# ============================================================
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: edge_caddy
+    environment:
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge_net
+    healthcheck:
+      # Interroge l'API d'admin locale de Caddy (liee a l'interface loopback
+      # du conteneur, jamais publiee) plutot que le site public en HTTPS -
+      # evite de dependre d'un certificat deja emis pour verifier le process.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: "0.25"
+    restart: unless-stopped
+
+networks:
+  # Nom stable ("edge_net"), sans prefixe de projet - les stacks applicatifs
+  # le referencent tel quel en `external: true`.
+  edge_net:
+    name: edge_net
+
+volumes:
+  caddy_data:
+  caddy_config:

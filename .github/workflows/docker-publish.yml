@@ -1,0 +1,43 @@
+name: Build and publish Docker images
+
+# Se declenche sur un tag de version (ex. v1.0.0), jamais a chaque push sur
+# main - chaque publication d'image correspond a une release explicite.
+# Runner ubuntu-latest = amd64 natif (meme arch que le VPS de production),
+# donc aucune cross-compilation necessaire ici. Le token GHCR (GITHUB_TOKEN)
+# est fourni automatiquement par le workflow, aucun secret a configurer.
+#
+# Sur le VPS, le deploiement ne fait jamais que `docker compose pull` sur les
+# tags publies ici - cf. docs/plans/2026-08-02-durcissement-securite-vps-design.md
+# et docker-compose.prod.yml (champs `image:`).
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.target }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/arnaudbracchetti/gaslands-manager-${{ matrix.target }}:${{ github.ref_name }}
+            ghcr.io/arnaudbracchetti/gaslands-manager-${{ matrix.target }}:latest

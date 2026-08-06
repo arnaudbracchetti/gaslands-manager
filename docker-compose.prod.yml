@@ -3,8 +3,10 @@ name: gaslands-prod
 # ============================================================
 # Docker Compose - Gaslands Manager (PRODUCTION)
 #
-# Seul Caddy publie des ports (80/443 + 443/udp). Postgres, backend et
-# frontend ne sont accessibles que via le reseau Docker interne. pgAdmin
+# Ce stack ne publie JAMAIS aucun port lui-meme - le reverse proxy Caddy
+# (TLS, 80/443) vit dans un stack SEPARE et PARTAGE, docker/edge/, reutilise
+# par toute autre application hebergee sur le meme VPS. Postgres, backend et
+# frontend ne sont accessibles que via les reseaux Docker internes. pgAdmin
 # est entierement retire (utiliser `docker compose -f docker-compose.prod.yml
 # exec postgres psql`).
 #
@@ -13,16 +15,25 @@ name: gaslands-prod
 # fichiers sont lances sur la meme machine (utile pour tester cette config
 # en local avant la bascule VPS, cf. verification ci-dessous).
 #
-#   browser -> caddy (TLS, 80/443)
-#                |-- /api/*  -> backend:3000 (reseau gaslands_prod_net)
-#                `-- /*      -> frontend:80  (reseau gaslands_prod_net)
-#   backend -> postgres:5432 (reseau gaslands_prod_db_net, INTERNE -
-#              caddy et frontend n'y ont aucune route, meme en cas de
-#              compromission)
+#   internet -> caddy (stack docker/edge/, TLS, 80/443)
+#                 |-- /api/* -> gaslands-backend:3000  (reseau edge_net)
+#                 `-- /*     -> gaslands-frontend:80   (reseau edge_net)
+#   backend -> postgres:5432 (reseau gaslands_db_net, INTERNE - caddy et
+#              frontend n'y ont aucune route, meme en cas de compromission)
 #
-# Demarrage :
-#   docker compose -f docker-compose.prod.yml up --build -d
+# "gaslands-backend"/"gaslands-frontend" : alias EXPLICITES sur edge_net (cf.
+# `networks:` de chaque service ci-dessous) - jamais les noms de service nus
+# ("backend"/"frontend"), qui entreraient en collision DNS avec une future
+# 2e application partageant le meme reseau edge_net. Voir docker/edge/ pour
+# le stack Caddy et docker/caddy/gaslands.caddy pour le bloc de site importe.
+#
+# Demarrage (stack docker/edge/ deja demarre au prealable, cf. son propre
+# README/commentaire) :
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
 #   docker compose -f docker-compose.prod.yml ps   -> tout "healthy"
+#   docker compose -f docker/edge/docker-compose.yml exec caddy \
+#     caddy reload --config /etc/caddy/Caddyfile
 # ============================================================
 
 services:
@@ -51,6 +62,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: ghcr.io/arnaudbracchetti/gaslands-manager-backend:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
@@ -78,8 +90,10 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - gaslands_net
-      - gaslands_db_net
+      edge_net:
+        aliases:
+          - gaslands-backend
+      gaslands_db_net: {}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
@@ -97,6 +111,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: ghcr.io/arnaudbracchetti/gaslands-manager-frontend:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
@@ -105,7 +120,9 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - gaslands_net
+      edge_net:
+        aliases:
+          - gaslands-frontend
     healthcheck:
       # 127.0.0.1 explicite, pas "localhost" : wget/busybox resout "localhost"
       # en IPv6 (::1) en priorite dans cette image, alors que nginx n'ecoute
@@ -122,48 +139,13 @@ services:
     cpus: "0.25"
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: gaslands_prod_caddy
-    environment:
-      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
-      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-    networks:
-      - gaslands_net
-    healthcheck:
-      # Interroge l'API d'admin locale de Caddy (liee a l'interface loopback
-      # du conteneur, jamais publiee/accessible depuis un autre conteneur)
-      # plutot que le site public en HTTPS - evite de dependre d'un
-      # certificat deja emis juste pour verifier que le process tourne.
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    security_opt:
-      - no-new-privileges:true
-    mem_limit: 128m
-    cpus: "0.25"
-    restart: unless-stopped
-
 networks:
-  # Sortie internet necessaire (appel Turnstile par le backend, P0-6) - donc
-  # pas de "internal: true" ici, contrairement au reseau DB ci-dessous.
-  gaslands_net:
-    driver: bridge
+  # Reseau EXTERNE, cree par le stack partage docker/edge/ (jamais par ce
+  # fichier) - point de rencontre avec Caddy. Fournit aussi la sortie
+  # internet du backend (appel Turnstile, P0-6) : un reseau bridge normal
+  # (non "internal") route vers l'exterieur par defaut.
+  edge_net:
+    external: true
   # "internal: true" : aucune route vers l'exterieur ni depuis un conteneur
   # absent de ce reseau (caddy, frontend) - meme compromis, postgres reste
   # injoignable meme si caddy/frontend etaient compromis.
@@ -173,5 +155,3 @@ networks:
 
 volumes:
   postgres_data:
-  caddy_data:
-  caddy_config:

@@ -1,7 +1,8 @@
-{
-	email {$LETSENCRYPT_EMAIL}
-}
-
+# Bloc de site Gaslands Manager, importe par le Caddyfile du stack "edge"
+# partage (docker/edge/Caddyfile) - deploye en copiant ce fichier dans
+# /etc/caddy/sites/ du stack edge (jamais dans le stack applicatif
+# lui-meme, qui ne publie aucun port). Le bloc global (email ACME) vit dans
+# docker/edge/Caddyfile, pas ici.
 {$PUBLIC_DOMAIN} {
 	# Decommenter pour un demarrage prudent : la CSP est alors posee en mode
 	# "Report-Only" (le navigateur journalise les violations en console sans
@@ -37,8 +38,12 @@
 	# API : directement vers le backend, jamais via le conteneur nginx (un
 	# second saut ajouterait un hop non fiable et invaliderait le
 	# "trust proxy: 1" de main.ts - cf. docs/ARCHITECTURE.md section 6).
+	# "gaslands-backend"/"gaslands-frontend" : alias EXPLICITES du stack
+	# applicatif sur le reseau partage "edge_net" (docker-compose.prod.yml)
+	# - jamais juste "backend"/"frontend", pour ne jamais entrer en
+	# collision avec une future 2e application sur ce meme VPS.
 	handle /api/* {
-		reverse_proxy backend:3000 {
+		reverse_proxy gaslands-backend:3000 {
 			# ECRASE (et non ajoute) X-Forwarded-For/X-Real-IP avec la vraie IP
 			# du visiteur - sans cette rewrite explicite, un attaquant pourrait
 			# fournir sa propre valeur, que Caddy ajouterait a la suite : le
@@ -52,6 +57,6 @@
 
 	# Reste de l'application : SPA Angular servie par nginx.
 	handle {
-		reverse_proxy frontend:80
+		reverse_proxy gaslands-frontend:80
 	}
 }

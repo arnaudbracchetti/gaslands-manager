@@ -1,0 +1,8 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+# Chaque application depose son propre fichier dans ./sites/ (un bloc de
+# site = un domaine) - voir docker/caddy/gaslands.caddy pour l'exemple
+# Gaslands Manager. Ce fichier-ci ne connait aucune application par son nom.
+import sites/*.caddy

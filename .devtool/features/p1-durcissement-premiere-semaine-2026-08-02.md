@@ -33,7 +33,7 @@ afin de réduire la surface d'attaque résiduelle sans retarder la MEP initiale
 - [ ] Rédaction des secrets (mot de passe, token) dans les logs de
       `@LogUseCase()` — actuellement en clair pour toute commande décorée.
 - [ ] Sauvegardes automatisées `pg_dump` planifiées sur le VPS.
-- [ ] Resserrage de la CSP (`docker/caddy/Caddyfile`) après une période
+- [ ] Resserrage de la CSP (`docker/caddy/gaslands.caddy`) après une période
       d'observation en production.
 
 ## Notes
