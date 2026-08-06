@@ -536,6 +536,25 @@ docker compose -f docker/edge/docker-compose.yml exec caddy \
   caddy reload --config /etc/caddy/Caddyfile
 ```
 
+**Nom de domaine — substitution texte, pas variable d'environnement Caddy.**
+Chaque fichier `.caddy` doit contenir un **vrai** nom de domaine littéral en
+tête de bloc (`votredomaine.com {`), jamais un placeholder `{$VAR}` : cette
+syntaxe Caddy lit une variable de l'environnement du conteneur qui INTERPRÈTE
+le fichier - ici le conteneur `caddy` du stack `edge`, qui ne connaît que
+`LETSENCRYPT_EMAIL` (cf. `docker/edge/docker-compose.yml`) et jamais le
+domaine d'une application particulière (piège vécu : `{$PUBLIC_DOMAIN}` non
+défini y résout en chaîne vide, produisant un bloc de site sans clé - Caddy le
+prend alors pour un 2ᵉ bloc de configuration globale et refuse de démarrer,
+*"server block without any key ... must be first"*). Le fichier source du
+dépôt (`docker/caddy/gaslands.caddy`) garde donc un placeholder **textuel**
+(`__PUBLIC_DOMAIN__`, jamais interprété par Caddy) substitué par `sed` au
+moment du déploiement, avant même que Caddy ne lise le fichier :
+
+```bash
+sed "s/__PUBLIC_DOMAIN__/<votre domaine>/" docker/caddy/gaslands.caddy \
+  | ssh deploy@vps "cat > /opt/edge/sites/gaslands.caddy"
+```
+
 Ajouter une 2ᵉ application ne modifie jamais ce stack lui-même : elle crée
 son propre stack Compose (jamais de `ports:` publiés), rejoint `edge_net` en
 `external: true` avec un alias unique, dépose son fichier `.caddy`, puis
@@ -587,6 +606,8 @@ le workflow) puis, sur le VPS, `docker compose -f docker-compose.prod.yml pull
 `GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - sondé par les `healthcheck:` des services `backend` de `docker-compose.yml`/`docker-compose.prod.yml`, cf. P0-8 ci-dessous) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
 
 **Contre-mesure Caddy (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - `docker/caddy/gaslands.caddy` (importé par le Caddyfile du stack partagé `docker/edge/`, cf. §5.3) force donc `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}` (écrasement, pas ajout) sur son bloc `handle /api/*`, qui route directement vers `gaslands-backend:3000` - jamais via le conteneur nginx (`frontend`), qui ne sert plus que les fichiers statiques en production (cf. §5 ci-dessous).
+
+**CSP stricte vs CSS critique inliné (`apps/frontend/project.json`)** : le builder Angular (`@angular/build:application`) inline par défaut, en configuration `production`, le CSS "critique" dans le `<head>` et charge le reste via `<link media="print" onload="this.media='all'">` - un attribut `onload` **inline**, bloqué par notre CSP (`script-src` sans `'unsafe-inline'`, cf. §5.2/§5.3). Symptôme observé en bascule VPS réelle : page sans aucun style (seul le CSS critique inliné s'appliquait), avec en console `Executing inline event handler violates ... 'script-src'`. Corrigé en désactivant explicitement cette optimisation (`optimization.styles.inlineCritical: false` dans la configuration `production`) plutôt qu'en autorisant l'attribut via un hash CSP (`'unsafe-hashes'` + hash de `this.media='all'`) : plus simple, aucune dépendance à un détail d'implémentation interne du builder Angular susceptible de changer à la prochaine version.
 
 ---
 

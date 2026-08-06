@@ -3,7 +3,15 @@
 # /etc/caddy/sites/ du stack edge (jamais dans le stack applicatif
 # lui-meme, qui ne publie aucun port). Le bloc global (email ACME) vit dans
 # docker/edge/Caddyfile, pas ici.
-{$PUBLIC_DOMAIN} {
+#
+# __PUBLIC_DOMAIN__ : PAS une variable d'environnement Caddy ({$VAR}) - ce
+# fichier est lu par le conteneur "caddy" du stack edge, qui ne connait que
+# LETSENCRYPT_EMAIL (cf. docker/edge/docker-compose.yml), jamais le domaine
+# de telle ou telle application. Substitution TEXTE par sed, au moment du
+# depot du fichier sur le VPS (cf. docs/ARCHITECTURE.md §5.3) :
+#   sed "s/__PUBLIC_DOMAIN__/<votre domaine>/" docker/caddy/gaslands.caddy \
+#     | ssh deploy@vps "cat > /opt/edge/sites/gaslands.caddy"
+__PUBLIC_DOMAIN__ {
 	# Decommenter pour un demarrage prudent : la CSP est alors posee en mode
 	# "Report-Only" (le navigateur journalise les violations en console sans
 	# jamais bloquer) pendant ~24h avant de revenir a la ligne stricte
