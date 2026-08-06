@@ -1,0 +1,57 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$PUBLIC_DOMAIN} {
+	# Decommenter pour un demarrage prudent : la CSP est alors posee en mode
+	# "Report-Only" (le navigateur journalise les violations en console sans
+	# jamais bloquer) pendant ~24h avant de revenir a la ligne stricte
+	# ci-dessous (header Content-Security-Policy).
+	# header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+
+	encode gzip
+
+	# Corps de requete : borne dure cote proxy, en complement des limites
+	# deja posees par Express (main.ts : json 128kb / urlencoded 16kb).
+	request_body {
+		max_size 1MB
+	}
+
+	# En-tetes de securite - source UNIQUE (ni nginx ni Nest n'en posent,
+	# cf. main.ts : helmet({ contentSecurityPolicy: false })).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# style-src/font-src incluent Google Fonts : apps/frontend/src/styles.scss
+		# importe les polices (Alumni Sans, Anton, Oswald...) via @import url()
+		# vers fonts.googleapis.com et des @font-face vers fonts.gstatic.com -
+		# sans ces deux domaines, la CSP les bloquerait silencieusement (repli
+		# sur la police systeme, aucune erreur HTTP visible).
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# API : directement vers le backend, jamais via le conteneur nginx (un
+	# second saut ajouterait un hop non fiable et invaliderait le
+	# "trust proxy: 1" de main.ts - cf. docs/ARCHITECTURE.md section 6).
+	handle /api/* {
+		reverse_proxy backend:3000 {
+			# ECRASE (et non ajoute) X-Forwarded-For/X-Real-IP avec la vraie IP
+			# du visiteur - sans cette rewrite explicite, un attaquant pourrait
+			# fournir sa propre valeur, que Caddy ajouterait a la suite : le
+			# backend (qui ne lit que le premier hop, cf. trust proxy: 1) verrait
+			# alors la fausse IP fournie par l'attaquant, rendant le
+			# rate-limiting (@nestjs/throttler) contournable a volonte.
+			header_up X-Forwarded-For {http.request.remote.host}
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	# Reste de l'application : SPA Angular servie par nginx.
+	handle {
+		reverse_proxy frontend:80
+	}
+}

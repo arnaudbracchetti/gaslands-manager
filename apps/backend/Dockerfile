@@ -44,33 +44,54 @@ RUN NX_IGNORE_UNSUPPORTED_TS_SETUP=true npx nx build backend
 # ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
+ENV NODE_ENV=production
+
 WORKDIR /app
 
 # ── Copie du bundle compilé ──
 # main.js contient tout le code de l'application (NestJS, services,
 # entités TypeORM…) mais pas les dépendances npm.
-COPY --from=builder /app/apps/backend/dist/main.js ./main.js
+COPY --from=builder --chown=node:node /app/apps/backend/dist/main.js ./main.js
 
 # ── Copie des node_modules depuis le builder ──
 # Nécessaire car webpack garde les modules npm comme dépendances
 # externes (require('@nestjs/common') est résolu à l'exécution).
 #
-# Pour une image plus légère en production avancée, on pourrait :
-# 1. Utiliser "nx run backend:prune" pour n'installer que les deps prod
-# 2. Ou activer le bundling complet dans NxAppWebpackPlugin
-# Pour l'instant, on copie tout pour la simplicité et la fiabilité.
-COPY --from=builder /app/node_modules ./node_modules
+# Volontairement le node_modules COMPLET du builder (dev inclus), pas un
+# second stage "npm ci --omit=dev" isolé : ce monorepo a des paquets requis
+# en production (ex. "express", nécessaire à @nestjs/platform-express) qui
+# se retrouvent marqués "dev" au niveau racine du lockfile parce qu'un
+# devDependency sans rapport en hoiste une autre version - --omit=dev les
+# exclurait alors qu'ils sont bien nécessaires à l'exécution (confirmé par
+# un crash "Cannot find module 'express'"/"body-parser" en testant cette
+# alternative). Le binding natif de bcrypt n'a pas besoin d'être recompilé
+# séparément non plus : builder et runner utilisent la même image de base
+# (node:20-alpine, même libc musl), le node_modules du builder fonctionne
+# donc tel quel.
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 
 # ── Copie des fichiers de contenu Markdown ──
 # Le ContentService lit ces fichiers depuis le chemin défini par
 # la variable d'environnement CONTENT_DIR (définie dans docker-compose.yml)
-COPY --from=builder /app/content ./content
+COPY --from=builder --chown=node:node /app/content ./content
 
 # ── Copie des assets statiques (ex. logo en filigrane de la fiche d'équipe) ──
 # Lus depuis process.cwd()/assets par team-sheet.renderer.ts - même convention
 # que CONTENT_DIR ci-dessus, sans variable d'environnement (chemin fixe, un seul
 # fichier pour l'instant).
-COPY --from=builder /app/assets ./assets
+COPY --from=builder --chown=node:node /app/assets ./assets
+
+# ── Copie du catalogue YAML ──
+# CatalogService et ScenarioCatalogService le lisent depuis
+# process.cwd()/database_init/data au démarrage (OnModuleInit,
+# fail-fast si absent) - sans cette copie, le conteneur crash-loop
+# même une fois les variables d'environnement correctement renseignées.
+COPY --from=builder --chown=node:node /app/database_init ./database_init
+
+# ── Utilisateur non-root ──
+# "node" existe déjà dans l'image node:20-alpine. Posé après les COPY
+# --chown ci-dessus (donc aucun chown supplémentaire nécessaire au runtime).
+USER node
 
 # Port exposé par le serveur NestJS
 EXPOSE 3000

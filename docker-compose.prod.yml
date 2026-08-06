@@ -1,0 +1,177 @@
+name: gaslands-prod
+
+# ============================================================
+# Docker Compose - Gaslands Manager (PRODUCTION)
+#
+# Seul Caddy publie des ports (80/443 + 443/udp). Postgres, backend et
+# frontend ne sont accessibles que via le reseau Docker interne. pgAdmin
+# est entierement retire (utiliser `docker compose -f docker-compose.prod.yml
+# exec postgres psql`).
+#
+# Nom de projet ("gaslands-prod") et container_name distincts de
+# docker-compose.yml (dev, "gaslands") : evite toute collision si les deux
+# fichiers sont lances sur la meme machine (utile pour tester cette config
+# en local avant la bascule VPS, cf. verification ci-dessous).
+#
+#   browser -> caddy (TLS, 80/443)
+#                |-- /api/*  -> backend:3000 (reseau gaslands_prod_net)
+#                `-- /*      -> frontend:80  (reseau gaslands_prod_net)
+#   backend -> postgres:5432 (reseau gaslands_prod_db_net, INTERNE -
+#              caddy et frontend n'y ont aucune route, meme en cas de
+#              compromission)
+#
+# Demarrage :
+#   docker compose -f docker-compose.prod.yml up --build -d
+#   docker compose -f docker-compose.prod.yml ps   -> tout "healthy"
+# ============================================================
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: gaslands_prod_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gaslands_db_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: "0.5"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: gaslands_prod_backend
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${DB_USER}
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      DATABASE_NAME: ${DB_NAME}
+      DB_SYNCHRONIZE: "false"
+      DB_MIGRATIONS_RUN: "true"
+      CONTENT_DIR: /app/content
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+      CORS_ORIGIN: https://${PUBLIC_DOMAIN}
+      THROTTLE_TTL: ${THROTTLE_TTL:-60}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-300}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gaslands_net
+      - gaslands_db_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
+    mem_limit: 512m
+    cpus: "1.0"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: gaslands_prod_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - gaslands_net
+    healthcheck:
+      # 127.0.0.1 explicite, pas "localhost" : wget/busybox resout "localhost"
+      # en IPv6 (::1) en priorite dans cette image, alors que nginx n'ecoute
+      # qu'en IPv4 (listen 80; = 0.0.0.0:80) - "Connection refused" confirme
+      # en testant avec "localhost" avant ce correctif.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: "0.25"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gaslands_prod_caddy
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - gaslands_net
+    healthcheck:
+      # Interroge l'API d'admin locale de Caddy (liee a l'interface loopback
+      # du conteneur, jamais publiee/accessible depuis un autre conteneur)
+      # plutot que le site public en HTTPS - evite de dependre d'un
+      # certificat deja emis juste pour verifier que le process tourne.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: "0.25"
+    restart: unless-stopped
+
+networks:
+  # Sortie internet necessaire (appel Turnstile par le backend, P0-6) - donc
+  # pas de "internal: true" ici, contrairement au reseau DB ci-dessous.
+  gaslands_net:
+    driver: bridge
+  # "internal: true" : aucune route vers l'exterieur ni depuis un conteneur
+  # absent de ce reseau (caddy, frontend) - meme compromis, postgres reste
+  # injoignable meme si caddy/frontend etaient compromis.
+  gaslands_db_net:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

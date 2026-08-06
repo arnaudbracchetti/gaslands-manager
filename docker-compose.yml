@@ -54,6 +54,15 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - gaslands_net
+    healthcheck:
+      # Sonde native Postgres - permet à "backend" (depends_on ci-dessous)
+      # d'attendre que la base accepte vraiment des connexions, pas juste
+      # que le process ait démarré.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────
@@ -70,6 +79,11 @@ services:
       dockerfile: apps/backend/Dockerfile
     container_name: gaslands_backend
     environment:
+      # ── Mode d'exécution NestJS/TypeORM ─────────────────────
+      # Nécessaire : env.validation.ts exige toujours JWT_SECRET/ADMIN_*,
+      # et NODE_ENV pilote entre autres synchronize (cf. app.module.ts).
+      NODE_ENV: development
+
       # ── Variables de connexion PostgreSQL ──────────────────
       # IMPORTANT : DATABASE_HOST = "postgres" (nom du service Docker)
       # et NON "localhost". Dans un réseau Docker bridge, chaque
@@ -89,17 +103,33 @@ services:
 
       # ── Port d'écoute du serveur NestJS ───────────────────
       PORT: 3000
+
+      # ── Authentification ────────────────────────────────────
+      # Requises par env.validation.ts dès le démarrage (JWT_SECRET
+      # pour signer les tokens, ADMIN_* pour AdminSeedService) - sans
+      # elles le backend crash-loop immédiatement.
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     ports:
       # Expose le port 3000 sur le host pour tester l'API directement
       # (ex: curl http://localhost:3000/api/content/regles)
       - "3000:3000"
     depends_on:
-      # Docker attend que postgres soit DÉMARRÉ avant de lancer le backend.
-      # Note : "démarré" ≠ "prêt à accepter des connexions".
-      # TypeORM réessaie automatiquement la connexion (comportement par défaut).
-      - postgres
+      # "service_healthy" (et non plus juste "démarré") : attend que
+      # postgres accepte vraiment des connexions, cf. healthcheck ci-dessus.
+      postgres:
+        condition: service_healthy
     networks:
       - gaslands_net
+    healthcheck:
+      # Sonde /api/health (déjà exposé par AppController) via le fetch
+      # global de Node - aucun outil supplémentaire (wget/curl) requis.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────
@@ -117,9 +147,11 @@ services:
       # Le navigateur accède à l'app sur http://localhost:4200
       - "4200:80"
     depends_on:
-      # Le frontend doit démarrer APRÈS le backend
-      # (nginx a besoin que la cible du proxy soit disponible)
-      - backend
+      # "service_healthy" : le frontend démarre une fois le backend
+      # réellement prêt à répondre (pas juste "lancé"), cf. healthcheck
+      # du service backend ci-dessus.
+      backend:
+        condition: service_healthy
     networks:
       - gaslands_net
     restart: unless-stopped

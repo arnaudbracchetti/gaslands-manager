@@ -469,14 +469,34 @@ Procédure de génération d'une migration de référence et garde-fou de non-r�
 
 ## 5. Infrastructure Docker
 
+### 5.1 Développement (`docker-compose.yml`)
+
 ```
 postgres   → port 5432 (hôte)
-backend    → port 3000, dépend de postgres
-frontend   → nginx port 4200, proxy /api → backend:3000
+backend    → port 3000, dépend de postgres (healthcheck)
+frontend   → nginx port 4200, sert les fichiers statiques uniquement
 pgadmin    → port 5050 (http://localhost:5050)
 ```
 
-Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pgadmin/servers.json` pré-configure la connexion pgAdmin au premier démarrage.
+Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pgadmin/servers.json` pré-configure la connexion pgAdmin au premier démarrage. `./dev.sh` ne démarre que `postgres`/`pgadmin` via ce fichier - `backend`/`frontend` tournent en local via `nx serve` (hot reload), ce qui rend les healthchecks/variables `JWT_SECRET`/`ADMIN_*` de `docker-compose.yml` pertinents uniquement pour qui lance la stack complète en Docker (`docker compose up --build`), un chemin distinct du workflow de dev quotidien.
+
+### 5.2 Production (`docker-compose.prod.yml`, P0-8)
+
+```
+                        internet
+                           │ 80/443 (+ 443/udp) - SEUL point d'entrée publié
+                           ▼
+                       caddy (TLS Let's Encrypt automatique, docker/caddy/Caddyfile)
+                    ┌──────┴──────┐
+              /api/*│             │reste
+                     ▼             ▼
+                 backend:3000   frontend:80 (nginx, fichiers statiques seuls)
+                     │
+                     ▼ réseau gaslands_db_net (internal: true)
+                 postgres:5432
+```
+
+Aucun `ports:` sur `postgres`/`backend`/`frontend` - seul `caddy` publie 80/443/443·udp. pgAdmin est entièrement absent (accès base via `docker compose -f docker-compose.prod.yml exec postgres psql`). Deux réseaux : `gaslands_net` (bridge normal - caddy/backend/frontend, sortie internet nécessaire à l'appel Turnstile du backend) et `gaslands_db_net` (bridge `internal: true` - backend/postgres uniquement, aucune route depuis caddy/frontend même en cas de compromission). `backend` tourne `read_only: true` (+ `tmpfs: [/tmp]`), `USER node`, `init: true` (relai `SIGTERM`/reap des zombies via tini). Détail complet du routage/CSP/en-têtes : `docker/caddy/Caddyfile` et §6 ci-dessous.
 
 ---
 
@@ -495,9 +515,9 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 | `.env` | Non committé (`.gitignore`), exemple dans `.env.example` |
 | Limite de débit | `@nestjs/throttler` (`ThrottlerModule.forRootAsync` + `APP_GUARD` dans `app.module.ts`) - 300 req/60s par IP par défaut (`THROTTLE_TTL`/`THROTTLE_LIMIT`), resserré par route via `@Throttle()` : `/auth/login` 5/60s **et** 20/3600s (double fenêtre, throttler nommé `secondary`), `/auth/register` 3/3600s, `/auth/me/password` 5/300s. Désactivé hors production (`skipIf`) - `frontend-e2e` ne serait sinon jamais vert. |
 
-`GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - cf. P0-8) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
+`GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - sondé par les `healthcheck:` des services `backend` de `docker-compose.yml`/`docker-compose.prod.yml`, cf. P0-8 ci-dessous) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
 
-**Contre-mesure Caddy restant à faire (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - le Caddyfile de P0-8 devra donc forcer `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}`, et router `/api/*` directement vers `backend:3000` (jamais via le conteneur nginx).
+**Contre-mesure Caddy (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui *ajoute* au lieu d'*écraser* cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - `docker/caddy/Caddyfile` force donc `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}` (écrasement, pas ajout) sur son bloc `handle /api/*`, qui route directement vers `backend:3000` - jamais via le conteneur nginx (`frontend`), qui ne sert plus que les fichiers statiques en production (cf. §5 ci-dessous).
 
 ---
 
