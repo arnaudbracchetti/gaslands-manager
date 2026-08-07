@@ -110,4 +110,34 @@ describe('validateEnv', () => {
 
     expect(env.NODE_ENV).toBe('production');
   });
+
+  it('accepte NODE_ENV=production avec un ADMIN_PASSWORD de 6 caractères', () => {
+    const env = validateEnv(
+      baseEnv({
+        NODE_ENV: 'production',
+        JWT_SECRET: VALID_SECRET,
+        DATABASE_PASSWORD: VALID_SECRET,
+        ADMIN_PASSWORD: '123456',
+        CORS_ORIGIN: 'https://gaslands.example',
+        TURNSTILE_SECRET_KEY: 'turnstile-secret',
+      }),
+    );
+
+    expect(env.NODE_ENV).toBe('production');
+  });
+
+  it('rejette NODE_ENV=production avec un ADMIN_PASSWORD de moins de 6 caractères', () => {
+    expect(() =>
+      validateEnv(
+        baseEnv({
+          NODE_ENV: 'production',
+          JWT_SECRET: VALID_SECRET,
+          DATABASE_PASSWORD: VALID_SECRET,
+          ADMIN_PASSWORD: '12345',
+          CORS_ORIGIN: 'https://gaslands.example',
+          TURNSTILE_SECRET_KEY: 'turnstile-secret',
+        }),
+      ),
+    ).toThrow(/ADMIN_PASSWORD/);
+  });
 });

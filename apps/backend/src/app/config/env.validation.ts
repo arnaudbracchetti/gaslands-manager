@@ -45,9 +45,10 @@ import {
 type NodeEnv = 'development' | 'test' | 'production' | 'e2e';
 
 /**
- * Secrets soumis à une règle RENFORCÉE en production (longueur minimale,
- * rejet de la valeur de développement `change_me`) — vérifiés "à la main"
- * dans `validateEnv()`, PAS via un `@ValidateIf` posé sur ces mêmes champs.
+ * Secrets soumis à une règle RENFORCÉE en production (longueur minimale par
+ * secret, rejet de la valeur de développement `change_me`) — vérifiés "à la
+ * main" dans `validateEnv()`, PAS via un `@ValidateIf` posé sur ces mêmes
+ * champs.
  *
  * Piège class-validator : `@ValidateIf(condition)` ne conditionne pas
  * seulement les décorateurs placés après lui, il désactive TOUS les
@@ -57,13 +58,18 @@ type NodeEnv = 'development' | 'test' | 'production' | 'e2e';
  * inverse de l'effet recherché. D'où cette seconde passe manuelle, réservée
  * aux trois secrets qui doivent être simultanément "toujours non vides" ET
  * "renforcés en production".
+ *
+ * `minLength` est propre à chaque secret plutôt qu'un seuil unique partagé :
+ * `ADMIN_PASSWORD` suit la même politique que le mot de passe d'un
+ * utilisateur normal (6 caractères, cf. `MIN_PASSWORD_LENGTH` dans
+ * `auth/domain/user.ts`), alors que `DATABASE_PASSWORD`/`JWT_SECRET` restent
+ * à 32 caractères.
  */
-const PRODUCTION_HARDENED_SECRETS: ReadonlyArray<keyof EnvVars> = [
-  'DATABASE_PASSWORD',
-  'JWT_SECRET',
-  'ADMIN_PASSWORD',
+const PRODUCTION_HARDENED_SECRETS: ReadonlyArray<{ key: keyof EnvVars; minLength: number }> = [
+  { key: 'DATABASE_PASSWORD', minLength: 32 },
+  { key: 'JWT_SECRET', minLength: 32 },
+  { key: 'ADMIN_PASSWORD', minLength: 6 },
 ];
-const MIN_SECRET_LENGTH = 32;
 const FORBIDDEN_DEV_VALUE = 'change_me';
 
 /**
@@ -178,14 +184,14 @@ export function validateEnv(raw: Record<string, unknown>): EnvVars {
   );
 
   if (instance.NODE_ENV === 'production') {
-    for (const key of PRODUCTION_HARDENED_SECRETS) {
+    for (const { key, minLength } of PRODUCTION_HARDENED_SECRETS) {
       // Le champ de base (@IsNotEmpty) a déjà signalé une valeur absente —
       // ne pas dupliquer l'erreur, et éviter un .length sur `undefined`.
       const value = instance[key];
       if (typeof value !== 'string' || value.length === 0) continue;
 
-      if (value.length < MIN_SECRET_LENGTH) {
-        messages.push(`${key} doit faire au moins ${MIN_SECRET_LENGTH} caractères en production`);
+      if (value.length < minLength) {
+        messages.push(`${key} doit faire au moins ${minLength} caractères en production`);
       }
       if (value === FORBIDDEN_DEV_VALUE) {
         messages.push(`${key} ne peut pas être "${FORBIDDEN_DEV_VALUE}" en production`);
