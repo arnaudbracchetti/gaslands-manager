@@ -482,6 +482,11 @@ Réseau privé `gaslands_net`. Images multi-stage (builder + runner). `docker/pg
 
 ### 5.2 Production (`docker-compose.prod.yml`, P0-8)
 
+> Cette section explique les choix d'architecture. Pour le mode d'emploi
+> opérationnel (provisionner un VPS, déployer/mettre à jour une application,
+> ajouter une 2ᵉ application, pièges connus rencontrés en conditions réelles) :
+> [`docs/VPS_DEPLOYMENT.md`](VPS_DEPLOYMENT.md).
+
 Le reverse proxy Caddy **n'appartient pas** à ce fichier : il vit dans un
 stack séparé et partagé, `docker/edge/` (voir §5.3), réutilisable par
 d'autres applications hébergées sur le même VPS sans jamais republier les
