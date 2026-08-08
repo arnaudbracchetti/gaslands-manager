@@ -90,24 +90,34 @@
 }
 
 .admin-users-actions {
-  display: flex;
-  gap: 8px;
   white-space: nowrap;
 }
 
-.btn-toggle,
-.btn-delete {
-  padding: 5px 12px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border-rust);
+// Conteneur du bouton "⋯" — position:relative pour ancrer le panneau du
+// menu, posé à la main (pas de CDK Overlay ici, contrairement à
+// ParticipantList) puisque cette page n'a aucun ancêtre position:sticky
+// susceptible de piéger un panneau position:absolute.
+.admin-users-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.admin-users-menu-trigger {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   background: transparent;
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
   color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1;
   cursor: pointer;
-  transition: border-color 160ms, color 160ms, background 160ms;
+  transition: border-color 160ms, color 160ms;
 
   &:hover {
     border-color: var(--tb-danger);
@@ -115,8 +125,59 @@
   }
 }
 
-.btn-delete:hover {
-  border-color: var(--tb-rouille);
-  color: var(--tint-danger-text);
+// Voile transparent plein écran — ferme le menu au clic extérieur, même
+// principe que le backdrop CDK de ParticipantList mais posé à la main.
+.admin-users-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.admin-users-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 21;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  background: var(--clr-bg-modal);
+  border: 1px solid var(--border-rust);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-stamp);
+  overflow: hidden;
+
+  button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-hair);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 160ms, color 160ms;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: var(--surface-hover);
+      color: var(--tb-os);
+    }
+  }
+}
+
+// Supprimer — poids de sélecteur volontairement supérieur au hover
+// générique ci-dessus (imbriqué dans .admin-users-menu), pas de !important.
+.admin-users-menu-danger:hover {
   background: var(--tint-danger-bg);
+  color: var(--tint-danger-text);
 }

@@ -195,5 +195,23 @@ describe('User (agrégat)', () => {
 
       expect(user.isActive).toBe(false);
     });
+
+    it('refuse qu\'un admin réinitialise le mot de passe de son propre compte', async () => {
+      await expect(buildUser({ id: 7 }).resetPasswordAsAdmin('nouveaumdp', 7, hasher)).rejects.toThrow(
+        DomainException,
+      );
+    });
+
+    it('réinitialise le mot de passe d\'un autre compte', async () => {
+      const user = buildUser({ id: 7 });
+
+      await user.resetPasswordAsAdmin('nouveaumdp', 42, hasher);
+
+      expect(user.passwordHash).toBe('hashed:nouveaumdp');
+    });
+
+    it('applique la policy de longueur minimale lors d\'une réinitialisation admin', async () => {
+      await expect(buildUser({ id: 7 }).resetPasswordAsAdmin('abc', 42, hasher)).rejects.toThrow(DomainException);
+    });
   });
 });

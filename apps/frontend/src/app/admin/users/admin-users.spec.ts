@@ -45,6 +45,7 @@ describe('AdminUsers Component', () => {
     getAll: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
     setActive: ReturnType<typeof vi.fn>;
+    resetPassword: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal<User | null>>;
@@ -57,6 +58,7 @@ describe('AdminUsers Component', () => {
       getAll: vi.fn().mockReturnValue(of(mockUsers)),
       remove: vi.fn(),
       setActive: vi.fn(),
+      resetPassword: vi.fn(),
     };
 
     // Connecté en tant qu'admin (id: 1) — ligne 0 de mockUsers.
@@ -161,16 +163,102 @@ describe('AdminUsers Component', () => {
 
   // ── Masquage des actions sur le compte courant ──────────────────────────────
 
-  it('masque les boutons d\'action sur la ligne du compte courant', () => {
+  it('masque le menu "⋯" sur la ligne du compte courant', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const rows = compiled.querySelectorAll('tbody tr');
 
-    // Ligne 0 = admin (id: 1) = compte courant → pas de boutons
+    // Ligne 0 = admin (id: 1) = compte courant → pas de menu
     const adminActions = rows[0].querySelector('.admin-users-actions') as HTMLElement;
     expect(adminActions.querySelectorAll('button').length).toBe(0);
 
-    // Ligne 1 = jean (id: 2) → boutons présents
+    // Ligne 1 = jean (id: 2) → déclencheur "⋯" présent (menu fermé par défaut)
     const userActions = rows[1].querySelector('.admin-users-actions') as HTMLElement;
-    expect(userActions.querySelectorAll('button').length).toBe(2);
+    expect(userActions.querySelectorAll('button').length).toBe(1);
+  });
+
+  // ── Menu "⋯" ─────────────────────────────────────────────────────────────
+
+  it('ouvre puis referme le menu au clic sur le déclencheur', () => {
+    expect(component.openMenuUserId()).toBeNull();
+
+    component.toggleMenu(2);
+    expect(component.openMenuUserId()).toBe(2);
+
+    component.toggleMenu(2);
+    expect(component.openMenuUserId()).toBeNull();
+  });
+
+  it('ferme le menu ouvert au clic sur le déclencheur d\'une autre ligne', () => {
+    component.toggleMenu(1);
+    component.toggleMenu(2);
+
+    expect(component.openMenuUserId()).toBe(2);
+  });
+
+  it('closeMenu() referme le menu ouvert', () => {
+    component.toggleMenu(2);
+    component.closeMenu();
+
+    expect(component.openMenuUserId()).toBeNull();
+  });
+
+  it('onMenuToggleActive() referme le menu et bascule le statut', () => {
+    mockUsersService.setActive.mockReturnValue(of({ ...mockUsers[1], isActive: false }));
+    component.toggleMenu(2);
+
+    component.onMenuToggleActive(mockUsers[1]);
+
+    expect(component.openMenuUserId()).toBeNull();
+    expect(mockUsersService.setActive).toHaveBeenCalledWith(2, false);
+  });
+
+  it('onMenuResetPassword() referme le menu et ouvre la modale de réinitialisation', () => {
+    component.toggleMenu(2);
+
+    component.onMenuResetPassword(mockUsers[1]);
+
+    expect(component.openMenuUserId()).toBeNull();
+    expect(component.pendingResetPasswordUser()).toEqual(mockUsers[1]);
+  });
+
+  it('onMenuDelete() referme le menu et ouvre la confirmation de suppression', () => {
+    component.toggleMenu(2);
+
+    component.onMenuDelete(mockUsers[1]);
+
+    expect(component.openMenuUserId()).toBeNull();
+    expect(component.pendingDeleteUser()).toEqual(mockUsers[1]);
+  });
+
+  // ── Réinitialisation du mot de passe ────────────────────────────────────────
+
+  it('appelle UsersService.resetPassword() et ferme la modale au succès', () => {
+    mockUsersService.resetPassword.mockReturnValue(of(undefined));
+    component.openResetPassword(mockUsers[1]);
+
+    component.onResetPasswordSubmitted('nouveaumdp');
+
+    expect(mockUsersService.resetPassword).toHaveBeenCalledWith(2, 'nouveaumdp');
+    expect(component.pendingResetPasswordUser()).toBeNull();
+    expect(component.resettingPassword()).toBe(false);
+  });
+
+  it('affiche une erreur si resetPassword échoue, sans fermer la modale', () => {
+    mockUsersService.resetPassword.mockReturnValue(throwError(() => new Error('API error')));
+    component.openResetPassword(mockUsers[1]);
+
+    component.onResetPasswordSubmitted('nouveaumdp');
+
+    expect(component.resetPasswordError()).toContain('réinitialisation');
+    expect(component.pendingResetPasswordUser()).toEqual(mockUsers[1]);
+  });
+
+  it('n\'appelle pas resetPassword() si l\'utilisateur annule', () => {
+    component.openResetPassword(mockUsers[1]);
+
+    component.onCancelResetPassword();
+
+    expect(mockUsersService.resetPassword).not.toHaveBeenCalled();
+    expect(component.pendingResetPasswordUser()).toBeNull();
   });
 });

@@ -378,6 +378,7 @@ classDiagram
         +updateProfile(cmd) void
         +changePassword(current, new, hasher) Promise~void~
         +resetPassword(new, hasher) Promise~void~
+        +resetPasswordAsAdmin(new, requesterId, hasher) Promise~void~
         +changeEmail(email) void
         +setActive(isActive, requesterId) void
         +assertCanAuthenticate(password, hasher) Promise~void~

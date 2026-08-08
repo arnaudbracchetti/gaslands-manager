@@ -160,12 +160,28 @@ export class User {
   }
 
   /**
-   * Réinitialisation du mot de passe sans connaître l'ancien — réservée à la
-   * resynchronisation du compte admin depuis `.env` au démarrage.
+   * Réinitialisation du mot de passe sans connaître l'ancien — point d'entrée
+   * sans garde, utilisé par la resynchronisation du compte admin depuis
+   * `.env` au démarrage ET par `resetPasswordAsAdmin` ci-dessous.
    */
   async resetPassword(newPassword: string, hasher: IPasswordHasher): Promise<void> {
     User.assertPasswordPolicy(newPassword);
     this._passwordHash = await hasher.hash(newPassword);
+  }
+
+  /**
+   * Réinitialisation par un administrateur, sans connaître l'ancien mot de
+   * passe. Même garde que `setActive`/`assertRemovableBy` : un admin ne peut
+   * pas se cibler lui-même par cette action (il dispose déjà de son propre
+   * "Changer le mot de passe", qui vérifie le mot de passe actuel).
+   */
+  async resetPasswordAsAdmin(newPassword: string, requesterId: number, hasher: IPasswordHasher): Promise<void> {
+    if (this.id === requesterId) {
+      throw new DomainException(
+        'Vous ne pouvez pas réinitialiser le mot de passe de votre propre compte par cette action',
+      );
+    }
+    await this.resetPassword(newPassword, hasher);
   }
 
   /** Idem : resynchronisation de l'email admin depuis `.env`, hors auto-édition. */

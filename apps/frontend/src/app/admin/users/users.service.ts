@@ -37,4 +37,12 @@ export class UsersService {
   setActive(id: number, isActive: boolean): Observable<User> {
     return this.http.patch<User>(`/api/users/${id}/active`, { isActive });
   }
+
+  /**
+   * PATCH /api/users/:id/password → réinitialise le mot de passe d'un compte,
+   * sans connaître l'ancien.
+   */
+  resetPassword(id: number, newPassword: string): Observable<void> {
+    return this.http.patch<void>(`/api/users/${id}/password`, { newPassword });
+  }
 }

@@ -241,6 +241,7 @@ graph TD
 
     subgraph Admin
         AdminUsers["AdminUsers (smart)"]
+        AdminResetPasswordModal
     end
 
     TeamsPage --> TeamCard
@@ -302,12 +303,14 @@ graph TD
     GameResultWizard --> WreckDesignationStep
     GameResultWizard --> WreckResolutionStep
     AdminUsers --> ConfirmModal
+    AdminUsers --> AdminResetPasswordModal
     App --> UserDetailsModal
     App --> ChangePasswordModal
     ConfirmModal --> ModalShell
     SellVehicleModal --> ModalShell
     UserDetailsModal --> ModalShell
     ChangePasswordModal --> ModalShell
+    AdminResetPasswordModal --> ModalShell
     EquipmentDetailModal --> ModalShell
     SequellaDetailModal --> ModalShell
     GameJournalModal --> ModalShell
@@ -1772,7 +1775,7 @@ Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mir
 
 ### `AdminUsers` — `admin/users/` 🧠
 
-Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes avec toggle actif/inactif et suppression. Masque les actions sur le compte connecté. Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
+Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes, avec 3 actions par ligne — Activer/Désactiver, Réinitialiser le mot de passe, Supprimer — groupées derrière un menu "⋯" (`openMenuUserId`, un seul ouvert à la fois) plutôt que des boutons pleine largeur, mirroir simplifié du menu ⋯ de `ParticipantList` : même principe visuel (déclencheur + panneau ancré + fermeture au clic extérieur), mais posé à la main (`position: absolute` + backdrop cliquable) plutôt que via Angular CDK Overlay — cette page n'a aucun ancêtre `position: sticky` susceptible de piéger un panneau positionné ainsi, contrairement à `.campaign-detail-rail`. Masque entièrement le menu sur le compte connecté (l'admin garde son propre "Changer le mot de passe" dans son menu utilisateur, cf. [AUTH.md — Auto-édition du profil](spec/AUTH.md#auto-édition-du-profil)). Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
 
 | | |
 |---|---|
@@ -1780,6 +1783,43 @@ Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`
 | **Type** | Smart |
 | **Route** | `/admin/users` |
 | **Services** | `UsersService`, `AuthService` |
-| **Compose** | `ConfirmModal` |
+| **Compose** | `ConfirmModal`, `AdminResetPasswordModal` |
 
-**Signals clés** : `users`, `loading`, `error`, `pendingDeleteUser`.
+**Signals clés** : `users`, `loading`, `error`, `pendingDeleteUser`, `pendingResetPasswordUser`, `resettingPassword`, `resetPasswordError`, `openMenuUserId`.
+
+---
+
+### `AdminResetPasswordModal` — `admin/users/reset-password-modal/`
+
+Dialog "Réinitialiser le mot de passe" d'un compte tiers, ouvert depuis
+`AdminUsers`. Mirroir de `ChangePasswordModal` (auto-service) **sans** le
+champ "mot de passe actuel" — une réinitialisation admin n'a pas à le
+connaître (`User.resetPasswordAsAdmin`, cf.
+[AUTH.md](spec/AUTH.md#administration-des-comptes)). L'input `user`
+supplémentaire affiche la cible dans le titre, pour que l'admin confirme
+visuellement le bon compte avant de soumettre. Compose `ModalShell` (mode
+`action`, `variant="primary"`), même traitement du bouton submit invisible
+que `ChangePasswordModal`.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-admin-reset-password-modal` |
+| **Type** | Dumb |
+| **Compose** | `ModalShell` |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `user` | `User` | — | Compte ciblé (requis) — affiché dans le titre |
+| `saving` | `boolean` | `false` | Sauvegarde en cours |
+| `error` | `string` | `''` | Message d'erreur serveur |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `cancelled` | `void` | Fermeture du dialog (bouton du shell) |
+| `submitted` | `string` | Nouveau mot de passe validé (correspondance + longueur ≥ 6 côté client) — le `userId` est déjà connu du parent via `pendingResetPasswordUser` |
+
+Utilisé par : `AdminUsers`.

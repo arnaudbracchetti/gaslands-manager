@@ -121,12 +121,16 @@ cf. ARCHITECTURE.md §3.3) garantit l'existence d'un unique utilisateur `role: "
 Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masquage de lien) :
 
 - **Backend** : `UsersController` (`GET /api/users`, `DELETE /api/users/:id`,
-  `PATCH /api/users/:id/active`) porte `@UseGuards(JwtAuthGuard, RolesGuard)` +
-  `@Roles(UserRole.ADMIN)` au niveau du controller. `RolesGuard` lit les rôles requis
-  via `Reflector` et lève `ForbiddenException` (403) si `request.user.role` n'y figure
-  pas — générique (`@Roles(...)` accepte plusieurs rôles), pas spécifique à l'admin.
-  L'agrégat interdit en plus qu'un admin s'auto-supprime ou se désactive lui-même
-  (`User.assertRemovableBy` / `User.setActive`, traduits en 403 par les use cases).
+  `PATCH /api/users/:id/active`, `PATCH /api/users/:id/password`) porte
+  `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles(UserRole.ADMIN)` au niveau du
+  controller. `RolesGuard` lit les rôles requis via `Reflector` et lève
+  `ForbiddenException` (403) si `request.user.role` n'y figure pas — générique
+  (`@Roles(...)` accepte plusieurs rôles), pas spécifique à l'admin.
+  L'agrégat interdit en plus qu'un admin s'auto-supprime, se désactive lui-même
+  ou réinitialise le mot de passe de son propre compte par cette action
+  (`User.assertRemovableBy` / `User.setActive` / `User.resetPasswordAsAdmin`,
+  traduits en 403 par les use cases) — l'admin dispose déjà de "Changer le mot
+  de passe" (auto-édition, cf. ci-dessus) pour son propre compte.
 - **Frontend** : la route `/admin/users` (`AdminUsers`, cf.
   [COMPONENTS.md](../COMPONENTS.md#adminusers--adminusers-)) déclare
   `canActivate: [authGuard, adminGuard]` — `adminGuard` vérifie explicitement
@@ -169,3 +173,4 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 | GET | `/api/users` | JWT + admin | Liste tous les comptes (`RolesGuard`) |
 | DELETE | `/api/users/:id` | JWT + admin | Supprime un compte — 403 si auto-suppression (`User.assertRemovableBy`) |
 | PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte — 403 si auto-désactivation (`User.setActive`) |
+| PATCH | `/api/users/:id/password` | JWT + admin | Réinitialise le mot de passe d'un compte, sans connaître l'ancien — 403 si l'admin cible son propre compte (`User.resetPasswordAsAdmin`) |

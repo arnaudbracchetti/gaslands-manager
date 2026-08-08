@@ -80,3 +80,12 @@ export interface ChangePasswordDto {
   currentPassword: string;
   newPassword: string;
 }
+
+/**
+ * Données envoyées à PATCH /api/users/:id/password (réinitialisation du mot
+ * de passe d'un compte par un administrateur) - pas de mot de passe actuel,
+ * contrairement à ChangePasswordDto.
+ */
+export interface AdminResetPasswordDto {
+  newPassword: string;
+}

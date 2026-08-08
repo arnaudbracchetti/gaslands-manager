@@ -11,6 +11,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { UsersController } from './users.controller';
+import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { RemoveUserUseCase } from './application/remove-user.usecase';
 import { SetActiveUseCase } from './application/set-active.usecase';
@@ -48,6 +49,7 @@ describe('UsersController', () => {
   const mockListUsers = { execute: vi.fn() };
   const mockRemoveUser = { execute: vi.fn() };
   const mockSetActive = { execute: vi.fn() };
+  const mockAdminResetPassword = { execute: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -56,6 +58,7 @@ describe('UsersController', () => {
         { provide: ListUsersUseCase, useValue: mockListUsers },
         { provide: RemoveUserUseCase, useValue: mockRemoveUser },
         { provide: SetActiveUseCase, useValue: mockSetActive },
+        { provide: AdminResetPasswordUseCase, useValue: mockAdminResetPassword },
       ],
     }).compile();
 
@@ -99,6 +102,22 @@ describe('UsersController', () => {
 
       expect(mockSetActive.execute).toHaveBeenCalledWith({ userId: 2, requesterId: 1, isActive: false });
       expect(result).toMatchObject({ isActive: false });
+    });
+  });
+
+  // ── PATCH /users/:id/password ───────────────────────────────────────────────
+
+  describe('resetPassword()', () => {
+    it('appelle AdminResetPasswordUseCase avec la cible, le demandeur et le nouveau mot de passe', async () => {
+      mockAdminResetPassword.execute.mockResolvedValue(undefined);
+
+      await controller.resetPassword(2, mockRequest as never, { newPassword: 'nouveaumdp' });
+
+      expect(mockAdminResetPassword.execute).toHaveBeenCalledWith({
+        userId: 2,
+        requesterId: 1,
+        newPassword: 'nouveaumdp',
+      });
     });
   });
 });

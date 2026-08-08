@@ -6,15 +6,18 @@
  * doit peupler req.user AVANT que RolesGuard lise req.user.role.
  *
  * Routes :
- *   GET   /api/users            → liste tous les comptes
- *   DELETE /api/users/:id       → supprime un compte (cascade équipes/véhicules)
- *   PATCH /api/users/:id/active → active/désactive un compte
+ *   GET   /api/users              → liste tous les comptes
+ *   DELETE /api/users/:id         → supprime un compte (cascade équipes/véhicules)
+ *   PATCH /api/users/:id/active   → active/désactive un compte
+ *   PATCH /api/users/:id/password → réinitialise le mot de passe d'un compte
  */
 import { Body, Controller, Delete, Get, Param, Patch, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { RemoveUserUseCase } from './application/remove-user.usecase';
 import { SetActiveUseCase } from './application/set-active.usecase';
 import { UserRole } from './domain/user-role';
+import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
 import { SetActiveDto } from './dto/set-active.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -33,6 +36,7 @@ export class UsersController {
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly removeUserUseCase: RemoveUserUseCase,
     private readonly setActiveUseCase: SetActiveUseCase,
+    private readonly adminResetPasswordUseCase: AdminResetPasswordUseCase,
   ) {}
 
   /**
@@ -65,5 +69,23 @@ export class UsersController {
     @Body() dto: SetActiveDto,
   ): Promise<UserResponseDto> {
     return this.setActiveUseCase.execute({ userId: id, requesterId: req.user.id, isActive: dto.isActive });
+  }
+
+  /**
+   * PATCH /api/users/:id/password
+   * Réinitialise le mot de passe d'un compte, sans connaître l'ancien.
+   * L'agrégat interdit de cibler son propre compte (403).
+   */
+  @Patch(':id/password')
+  resetPassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: AdminResetPasswordDto,
+  ): Promise<void> {
+    return this.adminResetPasswordUseCase.execute({
+      userId: id,
+      requesterId: req.user.id,
+      newPassword: dto.newPassword,
+    });
   }
 }

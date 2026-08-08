@@ -50,12 +50,28 @@
             <td>{{ user.createdAt | date:'dd/MM/yyyy' }}</td>
             <td class="admin-users-actions">
               @if (user.id !== authService.currentUser()?.id) {
-                <button class="btn-toggle" (click)="toggleActive(user)">
-                  {{ user.isActive ? 'Désactiver' : 'Réactiver' }}
-                </button>
-                <button class="btn-delete" (click)="deleteUser(user)">
-                  Supprimer
-                </button>
+                <div class="admin-users-menu-wrap">
+                  <button type="button" class="admin-users-menu-trigger"
+                    title="Plus d'actions" aria-label="Plus d'actions"
+                    aria-haspopup="menu" [attr.aria-expanded]="openMenuUserId() === user.id"
+                    (click)="toggleMenu(user.id)">⋯</button>
+
+                  @if (openMenuUserId() === user.id) {
+                    <div class="admin-users-menu-backdrop" role="presentation" tabindex="-1"
+                      (click)="closeMenu()" (keydown.escape)="closeMenu()"></div>
+                    <div class="admin-users-menu" role="menu">
+                      <button type="button" role="menuitem" (click)="onMenuToggleActive(user)">
+                        {{ user.isActive ? 'Désactiver' : 'Réactiver' }}
+                      </button>
+                      <button type="button" role="menuitem" (click)="onMenuResetPassword(user)">
+                        Réinitialiser le mot de passe
+                      </button>
+                      <button type="button" role="menuitem" class="admin-users-menu-danger" (click)="onMenuDelete(user)">
+                        Supprimer
+                      </button>
+                    </div>
+                  }
+                </div>
               }
             </td>
           </tr>
@@ -70,6 +86,15 @@
       confirmLabel="Supprimer"
       (confirmed)="onConfirmDeleteUser()"
       (cancelled)="pendingDeleteUser.set(null)" />
+  }
+
+  @if (pendingResetPasswordUser()) {
+    <app-admin-reset-password-modal
+      [user]="pendingResetPasswordUser()!"
+      [saving]="resettingPassword()"
+      [error]="resetPasswordError()"
+      (submitted)="onResetPasswordSubmitted($event)"
+      (cancelled)="onCancelResetPassword()" />
   }
 
 </div>

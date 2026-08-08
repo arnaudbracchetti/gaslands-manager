@@ -19,6 +19,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminSeedService } from './admin-seed.service';
 import { CAPTCHA_VERIFIER, PASSWORD_HASHER, TOKEN_ISSUER, USER_REPOSITORY } from './auth.tokens';
+import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { LoginUseCase } from './application/login.usecase';
@@ -131,6 +132,12 @@ const authModuleLogger = new Logger('AuthModule');
       provide: SetActiveUseCase,
       useFactory: (r: IUserRepository): SetActiveUseCase => new SetActiveUseCase(r),
       inject: [USER_REPOSITORY],
+    },
+    {
+      provide: AdminResetPasswordUseCase,
+      useFactory: (r: IUserRepository, h: IPasswordHasher): AdminResetPasswordUseCase =>
+        new AdminResetPasswordUseCase(r, h),
+      inject: [USER_REPOSITORY, PASSWORD_HASHER],
     },
 
     JwtStrategy,      // stratégie Passport pour valider les JWT entrants
