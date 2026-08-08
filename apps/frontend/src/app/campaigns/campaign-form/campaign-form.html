@@ -26,8 +26,21 @@
         (ngModelChange)="formName.set($event)" />
     </div>
 
-    <!-- Équipe engagée (optionnelle) -->
+    <!-- Budget des équipes (jerricans) -->
     <div class="form-group">
+      <label for="campaign-budget">Budget des équipes (jerricans) *</label>
+      <input
+        id="campaign-budget"
+        type="number"
+        min="1"
+        max="999"
+        [ngModel]="formBudget()"
+        (ngModelChange)="formBudget.set(+$event)" />
+      <p class="form-hint">Seules les équipes dont le coût total tient dans ce budget pourront rejoindre la campagne.</p>
+    </div>
+
+    <!-- Équipe engagée (optionnelle) -->
+    <div class="form-group form-group--full">
       <label for="campaign-team">Mon équipe engagée</label>
       @if (teams().length > 0) {
         <select
@@ -36,8 +49,8 @@
           (ngModelChange)="formTeamId.set($event ? +$event : null)">
           <option [ngValue]="null">— Sans équipe —</option>
           @for (team of teams(); track team.id) {
-            <option [value]="team.id" [disabled]="team.isEngaged ?? false">
-              {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : '' }}
+            <option [value]="team.id" [disabled]="(team.isEngaged ?? false) || ineligibleTeamIds().has(team.id)">
+              {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : ineligibleTeamIds().has(team.id) ? ' (hors budget)' : '' }}
             </option>
           }
         </select>

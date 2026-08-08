@@ -1,0 +1,40 @@
+<!-- Formulaire de modification d'une saison EN_CONSTRUCTION. Chrome délégué à ModalShell (mode "action"). -->
+<app-modal-shell
+  ariaLabel="Modifier la saison"
+  variant="primary"
+  [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
+  [confirmDisabled]="saving()"
+  (confirmed)="onConfirm()"
+  (cancelled)="cancelled.emit()">
+
+  <h2><app-icon concept="modifier" size="lg" /> Modifier la saison</h2>
+
+  @if (displayError()) {
+    <div class="form-error">{{ displayError() }}</div>
+  }
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label for="edit-campaign-name">Nom de la saison *</label>
+      <input
+        id="edit-campaign-name"
+        type="text"
+        [ngModel]="formName()"
+        (ngModelChange)="formName.set($event)" />
+    </div>
+
+    <div class="form-group">
+      <label for="edit-campaign-budget">Budget des équipes (jerricans) *</label>
+      <input
+        id="edit-campaign-budget"
+        type="number"
+        min="1"
+        max="999"
+        [ngModel]="formBudget()"
+        (ngModelChange)="formBudget.set(+$event)" />
+    </div>
+
+  </div>
+
+</app-modal-shell>

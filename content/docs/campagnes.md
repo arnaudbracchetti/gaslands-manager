@@ -8,12 +8,21 @@ le mode qui donne accès au [Programme Télé](/documentation/programme-tele),
 
 ## Créer ou rejoindre une campagne
 
-Créer une campagne vous en fait automatiquement l'**organisateur**. Vous
-pouvez ensuite partager son **code d'invitation** : toute personne qui le
-possède peut soumettre une demande d'inscription en choisissant l'une de
-ses [équipes](/documentation/equipes). Un utilisateur ne peut engager
-qu'une seule équipe par campagne à la fois (mais peut en changer tant que
-la campagne n'a pas démarré, voir plus bas).
+Créer une campagne vous en fait automatiquement l'**organisateur**. À la
+création, vous fixez aussi le **budget en jerricans** de la campagne (50 par
+défaut) : cette valeur remplace le budget de chaque équipe engagée pour toute
+la durée de la campagne, y compris la cagnotte de l'[Atelier](/documentation/atelier).
+Vous pouvez ensuite partager le **code d'invitation** de la campagne : toute
+personne qui le possède peut soumettre une demande d'inscription en
+choisissant l'une de ses [équipes](/documentation/equipes) - seules celles dont
+le coût total tient dans le budget de la campagne sont proposées, les autres
+apparaissent grisées ("hors budget"). Un utilisateur ne peut engager qu'une
+seule équipe par campagne à la fois (mais peut en changer tant que la
+campagne n'a pas démarré, voir plus bas - la nouvelle équipe doit elle aussi
+tenir dans le budget). Tant que la campagne est encore en construction,
+l'organisateur peut modifier son nom et son budget depuis le bouton
+"✏️ Modifier" de l'écran de la campagne - une baisse du budget est refusée si
+elle rendrait une équipe déjà engagée hors budget.
 
 ## Rôles : organisateur et participant
 

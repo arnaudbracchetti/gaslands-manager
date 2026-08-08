@@ -81,6 +81,14 @@ export class TeamEditPage implements OnInit {
    */
   isLocked: Signal<boolean> = computed((): boolean => this.team()?.isLockedByCampaign ?? false);
 
+  /**
+   * Vrai dès que l'équipe est engagée dans une campagne qui impose son propre budget
+   * (`Team.campaignBudget`, cf. spec/CAMPAIGN.md § Budget de campagne) - indépendant
+   * d'`isLocked()` : une campagne encore EN_CONSTRUCTION impose déjà son budget, sans
+   * verrouiller le reste de l'équipe.
+   */
+  isBudgetLockedByCampaign: Signal<boolean> = computed((): boolean => this.team()?.campaignBudget != null);
+
   // ── État formulaire (migré depuis TeamForm) ────────────────────────────────
 
   formName: WritableSignal<string>        = signal('');
@@ -94,13 +102,16 @@ export class TeamEditPage implements OnInit {
     this.vehicles().reduce((sum: number, v: VehicleSummary): number => sum + v.cout, 0),
   );
 
+  /** Budget effectif affiché/appliqué : celui de la campagne engageante s'il y en a une, sinon le champ édité. */
+  budgetEffectif: Signal<number> = computed((): number => this.team()?.campaignBudget ?? this.formCans());
+
   /** Pourcentage du budget utilisé, plafonné à 100%. */
   budgetPourcentage: Signal<number> = computed((): number =>
-    Math.min(100, Math.round((this.budgetUtilise() / (this.formCans() || 1)) * 100)),
+    Math.min(100, Math.round((this.budgetUtilise() / (this.budgetEffectif() || 1)) * 100)),
   );
 
   /** Solde restant (peut être négatif si dépassement). */
-  budgetRestant: Signal<number> = computed((): number => this.formCans() - this.budgetUtilise());
+  budgetRestant: Signal<number> = computed((): number => this.budgetEffectif() - this.budgetUtilise());
 
   // ── Catalogue des sponsors ─────────────────────────────────────────────────
 

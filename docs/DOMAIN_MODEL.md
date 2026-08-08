@@ -30,12 +30,16 @@ classDiagram
         -_description : string | null
         -_vehicles : Vehicle[]
         -_isLocked : boolean
+        -_campaignBudget : number | null
         +name : string
         +sponsor : string
         +cans : number
         +description : string | null
         +vehicles : readonly Vehicle[]
         +isLocked : boolean
+        +campaignBudget : number | null
+        +vehiclesCost : number
+        +budget : number
         +remainingBudget : number
         +assertNotLocked() void
         +update(cmd) void
@@ -233,6 +237,16 @@ classDiagram
 jamais via une requête SQL. `Team.remainingBudget` agrège le coût de tous ses véhicules.
 Toute mutation valide d'abord les règles métier et lève `DomainException` si une règle
 est violée. La couche application convertit `DomainException` → `BadRequestException`.
+
+**Budget de campagne** : `Team.budget` (getter) résout le budget applicable - celui de
+la campagne engageante (`_campaignBudget`, hydraté par `TeamRepository` au chargement,
+`null` si l'équipe n'est engagée dans aucune campagne) s'il y en a une, sinon `cans`.
+`remainingBudget` et tous ses appelants (`addVehicle`, `canAddWeapon`...) lisent
+`this.budget`, jamais `this._cans` directement - un seul point de changement pour que
+la règle "le budget de campagne remplace le budget d'équipe" s'applique partout sans
+exception. `vehiclesCost` (Σ `vehicle.cost`) est le pendant exposé côté API
+(`TeamSummaryDto`) pour comparer une équipe non encore engagée au budget d'une
+campagne visée - cf. [spec/CAMPAIGN.md - Budget de campagne](spec/CAMPAIGN.md#budget-de-campagne).
 
 **Montage sur Tourelle** : n'est pas modélisé comme une amélioration indépendante, ni
 comme un booléen orthogonal à l'orientation — c'est la valeur `'tourelle'` du type
@@ -646,6 +660,7 @@ erDiagram
         string name
         enum state "EN_CONSTRUCTION|EN_COURS|TERMINEE"
         string inviteCode UK
+        number budget "défaut 50 - remplace Team.cans pour toute équipe engagée"
         date createdAt
         date updatedAt
     }
@@ -746,9 +761,12 @@ classDiagram
     class Campaign {
         <<Aggregate Root>>
         +id : number
+        +budget : number
         +participants : readonly CampaignParticipant[]
         +games : readonly Game[]
         +replay() void
+        +rename(name) void
+        +changeBudget(budget) void
         +enterAtelier(gameId) autoClosedGameId
         +closeAtelier(gameId) void
         +closeCampaign() void
@@ -757,6 +775,7 @@ classDiagram
         +findParticipant(participantId) CampaignParticipant
         +findAtelierGame() Game
         +reorderGames(gameIds) void
+        +assertTeamFitsBudget(team, budget?) void
     }
 
     class CampaignParticipant {

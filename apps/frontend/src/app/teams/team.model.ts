@@ -37,6 +37,12 @@ export interface Team {
    * Utilisé pour désactiver proactivement l'édition côté IHM.
    */
   isLockedByCampaign?: boolean;
+  /** Coût cumulé de tous les véhicules de l'équipe - critère d'éligibilité budget de campagne. */
+  vehiclesCost?: number;
+  /** Budget applicable (campaignBudget si engagée, sinon cans) - jamais recalculé côté frontend. */
+  budget?: number;
+  /** Non-null ⇒ budget imposé par la campagne qui engage cette équipe - `cans` devient alors en lecture seule côté UI. */
+  campaignBudget?: number | null;
 }
 
 /**

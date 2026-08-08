@@ -39,6 +39,7 @@
         <p class="campaign-join-card__participants">
           {{ summary()!.participantCount }} participant{{ summary()!.participantCount > 1 ? 's' : '' }} validé{{ summary()!.participantCount > 1 ? 's' : '' }}
         </p>
+        <p class="campaign-join-card__budget">Budget des équipes : {{ summary()!.budget }} jerricans</p>
 
         @if (submitError()) {
           <div class="campaign-join-error">{{ submitError() }}</div>
@@ -57,8 +58,8 @@
               [ngModel]="selectedTeamId()"
               (ngModelChange)="selectedTeamId.set(+$event)">
               @for (team of userTeams(); track team.id) {
-                <option [value]="team.id" [disabled]="team.isEngaged ?? false">
-                  {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : '' }}
+                <option [value]="team.id" [disabled]="(team.isEngaged ?? false) || ineligibleTeamIds().has(team.id)">
+                  {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : ineligibleTeamIds().has(team.id) ? ' (hors budget)' : '' }}
                 </option>
               }
             </select>

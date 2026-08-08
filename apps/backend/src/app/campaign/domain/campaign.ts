@@ -1,5 +1,6 @@
 import { DomainException } from '../../shared/domain/domain-exception';
 import { CampaignParticipant } from './campaign-participant';
+import type { Team } from '../../team/domain/team';
 import type { Game } from './games/game';
 import type { GameEvent } from './events/game-event';
 import { GameStatus } from './enums/game-status.enum';
@@ -34,6 +35,7 @@ export class Campaign {
   private _name: string;
   private _state: CampaignState;
   private readonly _inviteCode: string;
+  private _budget: number;
   private readonly _participants: CampaignParticipant[];
   private readonly _games: Game[];
   /** Ids de participants retirés (removeParticipant) — pour la persistance structurelle. */
@@ -48,10 +50,12 @@ export class Campaign {
     inviteCode: string,
     participants: CampaignParticipant[],
     games: Game[],
+    budget = 50,
   ) {
     this._name = name;
     this._state = state;
     this._inviteCode = inviteCode;
+    this._budget = budget;
     this._participants = participants;
     this._games = games;
   }
@@ -59,10 +63,27 @@ export class Campaign {
   get name(): string { return this._name; }
   get state(): CampaignState { return this._state; }
   get inviteCode(): string { return this._inviteCode; }
+  get budget(): number { return this._budget; }
   get participants(): readonly CampaignParticipant[] { return this._participants; }
   get games(): readonly Game[] { return this._games; }
   get removedParticipantIds(): readonly number[] { return this._removedParticipantIds; }
   get removedGameIds(): readonly number[] { return this._removedGameIds; }
+
+  /**
+   * Une équipe ne peut être engagée que si le coût cumulé de ses véhicules tient
+   * dans le budget de la campagne. Méthode publique et autonome (pas inlinée dans
+   * requestJoin) : `budget` optionnel (défaut `this._budget`) permet à
+   * `changeBudget()` de revérifier chaque équipe déjà engagée contre un budget
+   * candidat, avant de l'appliquer.
+   */
+  assertTeamFitsBudget(team: Team, budget: number = this._budget): void {
+    if (team.vehiclesCost > budget) {
+      throw new DomainException(
+        `L'équipe « ${team.name} » coûte ${team.vehiclesCost} jerricans, ` +
+          `au-delà du budget de la campagne (${budget}).`,
+      );
+    }
+  }
 
   findGame(gameId: number): Game {
     const g = this._games.find((x) => x.id === gameId);
@@ -125,8 +146,30 @@ export class Campaign {
 
   // ── Commandes CRUD — campagne ────────────────────────────────────────────────
 
-  /** Renomme la campagne (organisateur — l'autorisation est vérifiée dans le use case). */
-  rename(name: string): void { this._name = name; }
+  /**
+   * Renomme la campagne (organisateur - l'autorisation est vérifiée dans le use
+   * case). EN_CONSTRUCTION uniquement.
+   */
+  rename(name: string): void {
+    this.assertConstruction('Le nom ne peut être modifié que tant que la campagne est en construction.');
+    this._name = name;
+  }
+
+  /**
+   * Modifie le budget de la campagne. EN_CONSTRUCTION uniquement. Revérifie
+   * CHAQUE équipe actuellement engagée (VALIDATED, avec équipe attachée) contre
+   * le nouveau budget avant de l'appliquer - aucune baisse ne peut rendre une
+   * équipe déjà engagée illégale (cf. assertTeamFitsBudget).
+   */
+  changeBudget(budget: number): void {
+    this.assertConstruction('Le budget ne peut être modifié que tant que la campagne est en construction.');
+    for (const p of this._participants) {
+      if (p.status === ParticipantStatus.VALIDATED && p.hasTeam) {
+        this.assertTeamFitsBudget(p.team, budget);
+      }
+    }
+    this._budget = budget;
+  }
 
   /**
    * Change l'état de la campagne. Transitions bidirectionnelles (décision de design).
@@ -144,14 +187,16 @@ export class Campaign {
   /**
    * Enregistre une demande d'inscription (participant PENDING).
    * L'appartenance de l'équipe et son unicité d'engagement sont vérifiées en amont
-   * (use case). Ici : campagne EN_CONSTRUCTION et pas de demande existante.
+   * (use case) ; ici : campagne EN_CONSTRUCTION, pas de demande existante, et
+   * l'équipe tient dans le budget de la campagne (cf. assertTeamFitsBudget).
    */
-  requestJoin(userId: number, teamId: number): CampaignParticipant {
+  requestJoin(userId: number, team: Team): CampaignParticipant {
     this.assertConstruction();
     if (this._participants.some((p) => p.userId === userId)) {
       throw new DomainException('Vous avez déjà une demande d\'inscription pour cette campagne.');
     }
-    const participant = new CampaignParticipant(0, userId, teamId, false, ParticipantStatus.PENDING);
+    this.assertTeamFitsBudget(team);
+    const participant = new CampaignParticipant(0, userId, team.id, false, ParticipantStatus.PENDING);
     this._participants.push(participant);
     return participant;
   }
@@ -159,7 +204,9 @@ export class Campaign {
   /**
    * Valide (accept=true) ou refuse (accept=false) un participant.
    * Refuser un participant déjà VALIDATED n'est possible qu'EN_CONSTRUCTION et
-   * jamais sur le dernier organisateur validé.
+   * jamais sur le dernier organisateur validé. Valider revérifie le budget : le
+   * joueur a pu grossir son équipe entre sa demande et la validation, tant que la
+   * campagne reste EN_CONSTRUCTION.
    */
   validateParticipant(participantId: number, accept: boolean): CampaignParticipant {
     const participant = this.findParticipant(participantId);
@@ -167,8 +214,12 @@ export class Campaign {
       this.assertConstruction('Cette campagne n\'accepte plus de modifications de participants.');
       this.assertNotLastOrganizer(participant, 'Impossible de refuser le dernier organisateur de la campagne.');
     }
-    if (accept) participant.validate();
-    else participant.reject();
+    if (accept) {
+      if (participant.hasTeam) this.assertTeamFitsBudget(participant.team);
+      participant.validate();
+    } else {
+      participant.reject();
+    }
     return participant;
   }
 
@@ -200,24 +251,27 @@ export class Campaign {
 
   /**
    * Change l'équipe engagée par un participant VALIDATED. EN_CONSTRUCTION uniquement.
-   * Le désengagement (teamId null) est réservé à l'organisateur. L'appartenance et
-   * l'unicité de l'équipe sont vérifiées en amont (use case).
+   * Le désengagement (team null) est réservé à l'organisateur. L'appartenance et
+   * l'unicité de l'équipe sont vérifiées en amont (use case) ; la nouvelle équipe
+   * doit tenir dans le budget de la campagne (cf. assertTeamFitsBudget).
    */
-  changeParticipantTeam(userId: number, teamId: number | null): CampaignParticipant {
+  changeParticipantTeam(userId: number, team: Team | null): CampaignParticipant {
     const participant = this._participants.find(
       (p) => p.userId === userId && p.status === ParticipantStatus.VALIDATED,
     );
     if (!participant) throw new DomainException('Participant introuvable dans la campagne.');
     this.assertConstruction('Cette campagne n\'accepte plus de changement d\'équipe.');
-    if (teamId === null && !participant.isOrganizer) {
+    if (team === null && !participant.isOrganizer) {
       throw new DomainException('Seul un organisateur peut retirer son équipe sans en choisir une autre.');
     }
+    const teamId = team?.id ?? null;
     if (teamId !== participant.teamId && this.hasParticipantHistory(participant.id)) {
       throw new DomainException(
         'Ce participant a déjà des événements journalisés dans cette campagne : ' +
           'son équipe engagée ne peut plus être changée.',
       );
     }
+    if (team !== null && teamId !== participant.teamId) this.assertTeamFitsBudget(team);
     participant.changeTeam(teamId);
     return participant;
   }

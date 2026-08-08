@@ -36,6 +36,7 @@ import { ScenarioCatalogService } from './scenario-catalog.service';
 
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
+import { UpdateCampaignUseCase } from './application/update-campaign.usecase';
 import { ChangeStateUseCase } from './application/change-state.usecase';
 import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
 import { RequestJoinUseCase } from './application/request-join.usecase';
@@ -77,6 +78,7 @@ import { CampaignSummaryDto } from './dto/campaign-summary.dto';
 import { JoinCampaignDto } from './dto/join-campaign.dto';
 import { ValidateParticipantDto } from './dto/validate-participant.dto';
 import { ChangeStateDto } from './dto/change-state.dto';
+import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
@@ -119,6 +121,7 @@ export class CampaignController {
     private readonly scenarioCatalog: ScenarioCatalogService,
     // CRUD
     private readonly createCampaignUseCase: CreateCampaignUseCase,
+    private readonly updateCampaignUseCase: UpdateCampaignUseCase,
     private readonly changeStateUseCase: ChangeStateUseCase,
     private readonly deleteCampaignUseCase: DeleteCampaignUseCase,
     private readonly requestJoinUseCase: RequestJoinUseCase,
@@ -181,6 +184,7 @@ export class CampaignController {
       userId: req.user.id,
       name: dto.name,
       teamId: dto.teamId ?? null,
+      budget: dto.budget,
     });
     return this.query.findOne(id, req.user.id);
   }
@@ -793,7 +797,7 @@ export class CampaignController {
     return this.getWorkshopUseCase.execute({ campaignId: id, userId: req.user.id, participantId: pid });
   }
 
-  // ── Détail / suppression campagne (routes :id génériques en dernier) ─────────
+  // ── Détail / suppression / modification campagne (routes :id génériques en dernier) ─
 
   /** GET /api/campaigns/:id — détail (participant VALIDATED). */
   @UseGuards(JwtAuthGuard)
@@ -802,6 +806,23 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<CampaignResponseDto> {
+    return this.query.findOne(id, req.user.id);
+  }
+
+  /** PUT /api/campaigns/:id - modifie nom/budget (organisateur, EN_CONSTRUCTION uniquement). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id')
+  async update(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCampaignDto,
+  ): Promise<CampaignResponseDto> {
+    await this.updateCampaignUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      name: dto.name,
+      budget: dto.budget,
+    });
     return this.query.findOne(id, req.user.id);
   }
 

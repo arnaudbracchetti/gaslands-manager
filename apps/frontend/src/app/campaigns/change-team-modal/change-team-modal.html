@@ -24,8 +24,8 @@
     @for (team of teams(); track team.id) {
       <option
         [value]="team.id"
-        [disabled]="team.isEngaged && team.id !== currentTeamId()">
-        {{ team.name }}{{ team.isEngaged && team.id !== currentTeamId() ? ' (déjà engagée)' : '' }}
+        [disabled]="(team.isEngaged && team.id !== currentTeamId()) || ineligibleTeamIds().has(team.id)">
+        {{ team.name }}{{ team.isEngaged && team.id !== currentTeamId() ? ' (déjà engagée)' : ineligibleTeamIds().has(team.id) ? ' (hors budget)' : '' }}
       </option>
     }
   </select>

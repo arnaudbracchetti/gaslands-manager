@@ -91,6 +91,7 @@ export class CampaignMapper {
       campaignOrm.inviteCode,
       participants,
       games,
+      campaignOrm.budget,
     );
   }
 

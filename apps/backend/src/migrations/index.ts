@@ -9,5 +9,9 @@
  */
 import type { MigrationInterface } from 'typeorm';
 import { InitSchema1785808811325 } from './1785808811325-InitSchema';
+import { AddCampaignBudget1786182754067 } from './1786182754067-AddCampaignBudget';
 
-export const ALL_MIGRATIONS: (new () => MigrationInterface)[] = [InitSchema1785808811325];
+export const ALL_MIGRATIONS: (new () => MigrationInterface)[] = [
+  InitSchema1785808811325,
+  AddCampaignBudget1786182754067,
+];

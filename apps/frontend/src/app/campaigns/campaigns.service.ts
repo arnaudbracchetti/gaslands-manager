@@ -7,7 +7,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto } from './campaign.model';
+import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto, UpdateCampaignDto } from './campaign.model';
 import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
 import type {
   Game,
@@ -151,6 +151,15 @@ export class CampaignsService {
    */
   changeState(campaignId: number, dto: ChangeStateDto): Observable<Campaign> {
     return this.http.put<Campaign>(`/api/campaigns/${campaignId}/state`, dto);
+  }
+
+  /**
+   * PUT /api/campaigns/:id → modifie nom/budget (organisateur, EN_CONSTRUCTION
+   * uniquement). Rejeté (400) si le budget rendrait une équipe déjà engagée
+   * illégale au regard de son coût cumulé de véhicules.
+   */
+  update(campaignId: number, dto: UpdateCampaignDto): Observable<Campaign> {
+    return this.http.put<Campaign>(`/api/campaigns/${campaignId}`, dto);
   }
 
   /**

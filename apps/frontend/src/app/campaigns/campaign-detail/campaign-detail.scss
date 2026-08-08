@@ -69,6 +69,28 @@ $bp-rail: 900px;
   }
 }
 
+// Icône seule, mirroir de .game-list__edit (36×36, carré, fond bitume/bordure
+// rust, hover ambre) - même idiome que le bouton "Modifier" de GameList.
+.campaign-detail-edit-btn {
+  background: var(--tb-bitume);
+  border: 1px solid var(--border-rust);
+  color: var(--tb-os);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: border-color 160ms, color 160ms;
+
+  &:hover {
+    border-color: var(--tb-danger);
+    color: var(--tb-danger);
+  }
+}
+
 .campaign-detail-delete {
   background: transparent;
   border: 1px solid var(--tint-danger-border-strong);
@@ -172,6 +194,23 @@ $bp-rail: 900px;
   background: var(--tint-accent-bg);
   border: 1px solid var(--tint-accent-border);
   color: var(--tint-accent-text);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+// Purement informatif (pas un état de cycle de vie) - registre neutre, mirroir
+// du badge TERMINEE ci-dessus (bordure rust, texte atténué, pas de fond teinté).
+.campaign-detail-budget-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-rust);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }

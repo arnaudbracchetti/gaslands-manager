@@ -43,12 +43,14 @@ export interface ICampaignRepository {
     inviteCode: string,
     organizerUserId: number,
     teamId: number | null,
+    budget: number,
   ): Promise<number>;
 
   /**
-   * Persiste les mutations CRUD de l'agrégat : campagne (name/state), participants
-   * (upsert + suppression via `removedParticipantIds`), parties (upsert +
-   * suppression via `removedGameIds`). Rétro-alimente les ids des entités créées.
+   * Persiste les mutations CRUD de l'agrégat : campagne (name/state/budget),
+   * participants (upsert + suppression via `removedParticipantIds`), parties
+   * (upsert + suppression via `removedGameIds`). Rétro-alimente les ids des
+   * entités créées.
    */
   saveStructural(campaign: Campaign): Promise<void>;
 

@@ -28,6 +28,8 @@ export interface Campaign {
   pendingRequestsCount?: number;
   /** Nom de l'équipe engagée par l'utilisateur connecté — absent si sans équipe */
   myTeamName?: string;
+  /** Budget en jerricans imposé à toutes les équipes de la campagne - remplace Team.cans pour tout calcul en contexte campagne. */
+  budget: number;
 }
 
 /** Corps de la requête POST /api/campaigns */
@@ -35,6 +37,8 @@ export interface CreateCampaignDto {
   name: string;
   /** Optionnel : l'organisateur peut créer sans équipe engagée (décision de design) */
   teamId?: number;
+  /** Budget en jerricans imposé aux équipes - défaut backend 50 si absent. */
+  budget?: number;
 }
 
 /** Informations minimales retournées par GET /api/campaigns/by-code/:code */
@@ -44,6 +48,8 @@ export interface CampaignSummary {
   state: CampaignState;
   organizerName: string;
   participantCount: number;
+  /** Budget en jerricans imposé aux équipes - permet de griser les équipes hors budget avant inscription. */
+  budget: number;
 }
 
 /** Corps de la requête POST /api/campaigns/:id/participants */
@@ -54,4 +60,10 @@ export interface JoinCampaignDto {
 /** Corps de la requête PUT /api/campaigns/:id/state */
 export interface ChangeStateDto {
   state: CampaignState;
+}
+
+/** Corps de la requête PUT /api/campaigns/:id - modification nom/budget (EN_CONSTRUCTION uniquement). */
+export interface UpdateCampaignDto {
+  name: string;
+  budget: number;
 }

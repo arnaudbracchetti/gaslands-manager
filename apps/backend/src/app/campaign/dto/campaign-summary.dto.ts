@@ -15,4 +15,6 @@ export class CampaignSummaryDto {
   state: CampaignState;
   organizerName: string;
   participantCount: number;
+  /** Budget en jerricans imposé aux équipes - permet au frontend de griser les équipes hors budget avant inscription. */
+  budget: number;
 }

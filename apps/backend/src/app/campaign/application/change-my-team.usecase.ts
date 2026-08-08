@@ -23,19 +23,19 @@ export class ChangeMyTeamUseCase {
   ) {}
 
   async execute(cmd: ChangeMyTeamCommand): Promise<number> {
-    if (cmd.teamId !== null) {
+    const team = cmd.teamId !== null
       // Lève NotFoundException si l'équipe n'appartient pas à l'utilisateur.
-      await this.teamRepo.findByIdForUser(cmd.teamId, cmd.userId);
-      if (await this.campaignRepo.isTeamEngaged(cmd.teamId, cmd.campaignId)) {
-        throw new ConflictException('Cette équipe est déjà engagée dans une autre campagne.');
-      }
+      ? await this.teamRepo.findByIdForUser(cmd.teamId, cmd.userId)
+      : null;
+    if (team !== null && (await this.campaignRepo.isTeamEngaged(team.id, cmd.campaignId))) {
+      throw new ConflictException('Cette équipe est déjà engagée dans une autre campagne.');
     }
 
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
 
     let participantId: number;
     try {
-      const participant = campaign.changeParticipantTeam(cmd.userId, cmd.teamId);
+      const participant = campaign.changeParticipantTeam(cmd.userId, team);
       participantId = participant.id;
     } catch (e: unknown) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);

@@ -74,6 +74,7 @@ export class Team {
     private _description: string | null,
     private readonly _vehicles: Vehicle[],
     private readonly _isLocked: boolean = false,
+    private readonly _campaignBudget: number | null = null,
   ) {}
 
   get name(): string { return this._name; }
@@ -82,6 +83,7 @@ export class Team {
   get description(): string | null { return this._description; }
   get vehicles(): readonly Vehicle[] { return this._vehicles; }
   get isLocked(): boolean { return this._isLocked; }
+  get campaignBudget(): number | null { return this._campaignBudget; }
 
   /**
    * Une équipe engagée (participant VALIDATED) dans une campagne qui n'est plus
@@ -97,12 +99,26 @@ export class Team {
     }
   }
 
+  /** Coût cumulé de tous les véhicules de l'équipe. */
+  get vehiclesCost(): number {
+    return this._vehicles.reduce((sum, v) => sum + v.cost, 0);
+  }
+
   /**
-   * Budget restant = budget total - somme des coûts de tous les véhicules.
+   * Budget applicable : celui de la campagne engageante s'il y en a une, sinon `cans`.
+   * Point de vérité unique - `cans` reste la valeur brute (saisie du joueur), jamais
+   * lue pour un calcul. Même couple brut/résolu que `pseudo`/`callName` (cf. spec/AUTH.md).
+   */
+  get budget(): number {
+    return this._campaignBudget ?? this._cans;
+  }
+
+  /**
+   * Budget restant = budget applicable - somme des coûts de tous les véhicules.
    * Calculé en mémoire sur l'agrégat chargé — plus de requête SQL dédiée.
    */
   get remainingBudget(): number {
-    return this._cans - this._vehicles.reduce((sum, v) => sum + v.cost, 0);
+    return this.budget - this.vehiclesCost;
   }
 
   // ── Mutations Team ────────────────────────────────────────────────────────────

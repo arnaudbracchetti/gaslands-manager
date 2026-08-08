@@ -152,11 +152,13 @@ export class CampaignRepository implements ICampaignRepository {
     inviteCode: string,
     organizerUserId: number,
     teamId: number | null,
+    budget: number,
   ): Promise<number> {
     const campaign = this.campaignOrmRepo.create({
       name,
       state: CampaignState.EN_CONSTRUCTION,
       inviteCode,
+      budget,
     });
     const saved = await this.campaignOrmRepo.save(campaign);
 
@@ -172,10 +174,11 @@ export class CampaignRepository implements ICampaignRepository {
   }
 
   async saveStructural(campaign: Campaign): Promise<void> {
-    // 1. Campagne : name/state (inviteCode immuable, non mis à jour).
+    // 1. Campagne : name/state/budget (inviteCode immuable, non mis à jour).
     await this.campaignOrmRepo.update(campaign.id, {
       name: campaign.name,
       state: campaign.state as unknown as CampaignState,
+      budget: campaign.budget,
     });
 
     // 2. Participants retirés.

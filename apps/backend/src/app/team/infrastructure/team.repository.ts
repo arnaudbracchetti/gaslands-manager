@@ -33,31 +33,43 @@ export class TeamRepository implements ITeamRepository {
   // ── Requêtes légères ──────────────────────────────────────────────────────────
 
   async findSummariesForUser(userId: number): Promise<TeamSummaryDto[]> {
-    const teams = await this.teamOrmRepo.find({ where: { userId } });
-    return Promise.all(teams.map((t) => this.toSummaryDto(t)));
+    const orms = await this.teamOrmRepo.find({
+      where: { userId },
+      relations: { vehicles: { weapons: true, improvements: true, advantages: true } },
+    });
+    if (orms.length === 0) return [];
+    const budgets = await this.resolveCampaignBudgets(orms.map((t) => t.id));
+    return Promise.all(orms.map((t) => this.toSummaryDto(t, budgets.get(t.id) ?? null)));
   }
 
   async findSummaryById(teamId: number): Promise<TeamSummaryDto> {
-    const team = await this.teamOrmRepo.findOne({ where: { id: teamId } });
-    if (!team) throw new NotFoundException(`Équipe #${teamId} introuvable`);
-    return this.toSummaryDto(team);
+    const orm = await this.teamOrmRepo.findOne({
+      where: { id: teamId },
+      relations: { vehicles: { weapons: true, improvements: true, advantages: true } },
+    });
+    if (!orm) throw new NotFoundException(`Équipe #${teamId} introuvable`);
+    const budgets = await this.resolveCampaignBudgets([teamId]);
+    return this.toSummaryDto(orm, budgets.get(teamId) ?? null);
   }
 
-  private async toSummaryDto(team: TeamOrm): Promise<TeamSummaryDto> {
-    const vehicleCount = await this.vehicleOrmRepo.count({ where: { teamId: team.id } });
-    const isEngaged = (await this.participantRepo.count({ where: { teamId: team.id } })) > 0;
-    const isLockedByCampaign = await this.isLockedByCampaign(team.id);
+  private async toSummaryDto(orm: TeamOrm, campaignBudget: number | null): Promise<TeamSummaryDto> {
+    const isEngaged = (await this.participantRepo.count({ where: { teamId: orm.id } })) > 0;
+    const isLockedByCampaign = await this.isLockedByCampaign(orm.id);
+    const team = this.mapper.toDomain(orm, isLockedByCampaign, campaignBudget);
     return {
       id: team.id,
       name: team.name,
       sponsor: team.sponsor,
       cans: team.cans,
-      description: team.description ?? null,
-      vehicleCount,
+      description: team.description,
+      vehicleCount: team.vehicles.length,
+      vehiclesCost: team.vehiclesCost,
+      budget: team.budget,
+      campaignBudget: team.campaignBudget,
       isEngaged,
       isLockedByCampaign,
-      createdAt: team.createdAt,
-      updatedAt: team.updatedAt,
+      createdAt: orm.createdAt,
+      updatedAt: orm.updatedAt,
     };
   }
 
@@ -70,7 +82,8 @@ export class TeamRepository implements ITeamRepository {
     });
     if (!orm) throw new NotFoundException(`Équipe #${teamId} introuvable`);
     const isLocked = await this.isLockedByCampaign(teamId);
-    return this.mapper.toDomain(orm, isLocked);
+    const budgets = await this.resolveCampaignBudgets([teamId]);
+    return this.mapper.toDomain(orm, isLocked, budgets.get(teamId) ?? null);
   }
 
   async findByVehicleId(vehicleId: number, userId: number): Promise<Team> {
@@ -132,7 +145,27 @@ export class TeamRepository implements ITeamRepository {
       where: { id: In(ids) },
       relations: { vehicles: { weapons: true, improvements: true, advantages: true } },
     });
-    return orms.map((orm) => this.mapper.toDomain(orm));
+    const budgets = await this.resolveCampaignBudgets(orms.map((t) => t.id));
+    return orms.map((orm) => this.mapper.toDomain(orm, false, budgets.get(orm.id) ?? null));
+  }
+
+  /**
+   * teamId → budget de la campagne qui l'engage (participant VALIDATED), ou absent
+   * si l'équipe n'est engagée dans aucune campagne. Miroir batché d'`isLockedByCampaign`,
+   * mais sans filtre sur `Campaign.state` : le budget de campagne s'applique dès
+   * EN_CONSTRUCTION, contrairement au verrouillage de l'équipe.
+   */
+  private async resolveCampaignBudgets(teamIds: number[]): Promise<Map<number, number>> {
+    if (teamIds.length === 0) return new Map();
+    const engagedParticipants = await this.participantRepo.find({
+      where: { teamId: In(teamIds), status: ParticipantStatus.VALIDATED },
+      relations: { campaign: true },
+    });
+    const budgets = new Map<number, number>();
+    for (const participant of engagedParticipants) {
+      if (participant.teamId !== null) budgets.set(participant.teamId, participant.campaign.budget);
+    }
+    return budgets;
   }
 
   private async reloadById(id: number, userId: number): Promise<Team> {

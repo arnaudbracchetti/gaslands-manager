@@ -26,6 +26,7 @@ const mockCampaign: Campaign = {
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 2,
+  budget: 50,
   myRole: 'organizer',
 };
 
@@ -60,6 +61,7 @@ describe('CampaignDetail', () => {
     removeParticipant: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
     getParticipantJournal: ReturnType<typeof vi.fn>;
     getTeamSheet: ReturnType<typeof vi.fn>;
@@ -95,6 +97,7 @@ describe('CampaignDetail', () => {
       removeParticipant: vi.fn(),
       remove: vi.fn(),
       changeState: vi.fn(),
+      update: vi.fn(),
       promote: vi.fn(),
       getParticipantJournal: vi.fn().mockReturnValue(of([])),
       getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
@@ -482,6 +485,124 @@ describe('CampaignDetail', () => {
     });
   });
 
+  // ── canEditCampaign / modification nom-budget ───────────────────────────
+
+  describe('canEditCampaign', () => {
+    it('vrai pour l\'organisateur tant que la saison est EN_CONSTRUCTION', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.canEditCampaign()).toBe(true);
+    });
+
+    it('faux pour un non-organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.canEditCampaign()).toBe(false);
+    });
+
+    it('faux hors EN_CONSTRUCTION, même pour l\'organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.canEditCampaign()).toBe(false);
+    });
+  });
+
+  describe('onConfirmEditCampaign()', () => {
+    it('met à jour la campagne et ferme la modale en cas de succès', () => {
+      const updated: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
+      mockCampaignsService.update.mockReturnValue(of(updated));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      expect(component.showEditCampaignModal()).toBe(true);
+
+      component.onConfirmEditCampaign({ name: 'Coupe Rutherford', budget: 30 });
+
+      expect(mockCampaignsService.update).toHaveBeenCalledWith(1, { name: 'Coupe Rutherford', budget: 30 });
+      expect(component.campaign()).toEqual(updated);
+      expect(component.showEditCampaignModal()).toBe(false);
+      expect(component.savingCampaign()).toBe(false);
+    });
+
+    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec (budget trop bas)', () => {
+      mockCampaignsService.update.mockReturnValue(
+        throwError(() => ({ error: { message: 'L\'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).' } })),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+
+      expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
+      expect(component.editCampaignError()).toContain('Escouade');
+      expect(component.savingCampaign()).toBe(false);
+      expect(component.campaign()).toEqual(mockCampaign); // inchangé
+    });
+
+    it('affiche un message générique si le serveur ne fournit aucun message', () => {
+      mockCampaignsService.update.mockReturnValue(throwError(() => ({ error: {} })));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+
+      expect(component.editCampaignError()).toBe('Erreur lors de la modification de la saison.');
+    });
+  });
+
+  describe('openEditCampaignModal() / onCancelEditCampaign()', () => {
+    it('ouvre la modale sans appeler l\'API', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+
+      expect(component.showEditCampaignModal()).toBe(true);
+      expect(mockCampaignsService.update).not.toHaveBeenCalled();
+    });
+
+    it('ferme la modale et efface l\'erreur au clic sur Annuler', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.editCampaignError.set('une erreur précédente');
+
+      component.onCancelEditCampaign();
+
+      expect(component.showEditCampaignModal()).toBe(false);
+      expect(component.editCampaignError()).toBe('');
+    });
+  });
+
   // ── onRemoveParticipant() ────────────────────────────────────────────────
 
   describe('onRemoveParticipant()', () => {
@@ -628,6 +749,28 @@ describe('CampaignDetail', () => {
 
       const el = fixture.nativeElement as HTMLElement;
       expect(el.querySelector('.campaign-detail-danger-zone')).toBeNull();
+    });
+
+    it('affiche le bouton Modifier pour l\'organisateur en EN_CONSTRUCTION', () => {
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.campaign-detail-edit-btn')).not.toBeNull();
+    });
+
+    it('masque le bouton Modifier hors EN_CONSTRUCTION', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.campaign-detail-edit-btn')).toBeNull();
     });
 
     it('affiche la carte d\'état pour l\'organisateur', () => {

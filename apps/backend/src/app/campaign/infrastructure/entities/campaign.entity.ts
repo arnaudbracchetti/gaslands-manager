@@ -26,6 +26,11 @@ export class CampaignOrm {
   @Column({ unique: true })
   inviteCode: string;
 
+  // Budget en jerricans imposé par l'organisateur à toutes les équipes engagées -
+  // remplace Team.cans pour tout calcul en contexte campagne (cf. Team.budget).
+  @Column({ default: 50 })
+  budget: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

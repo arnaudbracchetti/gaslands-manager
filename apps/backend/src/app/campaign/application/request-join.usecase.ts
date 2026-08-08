@@ -29,7 +29,7 @@ export class RequestJoinUseCase {
       throw new BadRequestException('Une équipe est requise pour rejoindre la campagne.');
     }
     // Lève NotFoundException si l'équipe n'appartient pas à l'utilisateur.
-    await this.teamRepo.findByIdForUser(cmd.teamId, cmd.userId);
+    const team = await this.teamRepo.findByIdForUser(cmd.teamId, cmd.userId);
     if (await this.campaignRepo.isTeamEngaged(cmd.teamId)) {
       throw new ConflictException('Cette équipe est déjà engagée dans une autre campagne.');
     }
@@ -38,7 +38,7 @@ export class RequestJoinUseCase {
 
     let participantId: number;
     try {
-      const participant = campaign.requestJoin(cmd.userId, cmd.teamId);
+      const participant = campaign.requestJoin(cmd.userId, team);
       await this.campaignRepo.saveStructural(campaign);
       participantId = participant.id;
     } catch (e: unknown) {

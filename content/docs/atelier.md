@@ -25,9 +25,12 @@ aux équipes non engagées et qui ne connaît jamais ces deux informations).
 ## La cagnotte
 
 Votre cagnotte correspond au budget non dépensé de votre équipe, augmenté
-des récompenses gagnées en jouant. Elle diminue à chaque achat, augmente à
-chaque revente — vous n'avez rien à calculer, le solde affiché en haut de
-l'écran est toujours à jour.
+des récompenses gagnées en jouant. Ce budget de départ n'est plus celui que
+vous avez choisi pour votre équipe : c'est le [budget de la
+campagne](/documentation/campagnes#creer-ou-rejoindre-une-campagne), fixé par
+l'organisateur, qui s'applique - le même pour toutes les équipes engagées.
+La cagnotte diminue à chaque achat, augmente à chaque revente - vous n'avez
+rien à calculer, le solde affiché en haut de l'écran est toujours à jour.
 
 ## Points de sabotage
 

@@ -33,6 +33,7 @@ import type { IRandomizer } from './domain/randomizer.interface';
 
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
+import { UpdateCampaignUseCase } from './application/update-campaign.usecase';
 import { ChangeStateUseCase } from './application/change-state.usecase';
 import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
 import { RequestJoinUseCase } from './application/request-join.usecase';
@@ -110,6 +111,12 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
       useFactory: (repo: ICampaignRepository, team: ITeamRepository) =>
         new CreateCampaignUseCase(repo, team),
       inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY],
+    },
+    {
+      provide: UpdateCampaignUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+        new UpdateCampaignUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ChangeStateUseCase,

@@ -332,6 +332,36 @@ describe('Team.addVehicle — garde budget', () => {
   });
 });
 
+describe('Team - budget effectif (campaignBudget)', () => {
+  it('budget vaut cans quand campaignBudget est null (construction d\'équipe)', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [], false, null);
+    expect(team.budget).toBe(50);
+    expect(team.campaignBudget).toBeNull();
+  });
+
+  it('budget vaut campaignBudget quand l\'équipe est engagée dans une campagne, même si cans diffère', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 200, null, [], false, 30);
+    expect(team.budget).toBe(30);
+    expect(team.campaignBudget).toBe(30);
+  });
+
+  it('campaignBudget prend le pas sur cans même quand cans est INFÉRIEUR au budget de campagne', () => {
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 10, null, [], false, 30);
+    expect(team.budget).toBe(30);
+  });
+
+  it('vehiclesCost = somme des coûts de tous les véhicules', () => {
+    const { team } = makeTeamWithVehicle();  // véhicule (12) + arme (5) = 17
+    expect(team.vehiclesCost).toBe(17);
+  });
+
+  it('remainingBudget se base sur le budget effectif (campaignBudget), pas cans', () => {
+    const vehicle = new Vehicle(10, 1, makeVehicleType(), [], []);  // coût 12
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 200, null, [vehicle], false, 20);
+    expect(team.remainingBudget).toBe(8);  // 20 (campagne) - 12, jamais 200 - 12
+  });
+});
+
 describe('Team.canAddVehicle — verdict de disponibilité (sans mutation)', () => {
   it('fail("Équipe verrouillée...") si l\'équipe est verrouillée, même avec assez de budget', () => {
     const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [], true);

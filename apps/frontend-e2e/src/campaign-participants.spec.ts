@@ -151,7 +151,13 @@ test.describe('Campagnes — Gestion des participants', () => {
 
     const organizerTeam = 'Escouade Principale';
     await createTeamWithVehicles(page, { name: organizerTeam, vehicleNames: ['Camion à glaces'] });
-    const campaignId = await createCampaign(page, { name: 'Saison E2E Retrait ChangeTeam', teamName: organizerTeam });
+    // Budget de campagne (15) : couvre l'équipe engagée (Camion à glaces, 8) mais
+    // exclura l'équipe surdimensionnée créée plus bas (Char d'assaut, 40).
+    const campaignId = await createCampaign(page, {
+      name: 'Saison E2E Retrait ChangeTeam',
+      teamName: organizerTeam,
+      budget: 15,
+    });
 
     const { joineeContext } = await inviteAndValidateParticipant(page, browser, {
       joineeUser: {
@@ -186,6 +192,10 @@ test.describe('Campagnes — Gestion des participants', () => {
     // ── Changement d'équipe sur sa propre ligne (organisateur) ──────────────
     const secondTeamName = 'Escouade de Secours';
     await createTeam(page, secondTeamName);
+    // Équipe hors budget (Char d'assaut, 40 > 15) - jamais sélectionnable dans la
+    // modale de changement d'équipe (cf. spec/CAMPAIGN.md § Budget de campagne).
+    const expensiveTeamName = 'Escouade Onéreuse';
+    await createTeamWithVehicles(page, { name: expensiveTeamName, vehicleNames: ["Char d'assaut"] });
     await page.goto(`/campaigns/${campaignId}`);
 
     // Depuis la refonte en cartes compactes, "Changer d'équipe" est un bouton
@@ -197,6 +207,14 @@ test.describe('Campagnes — Gestion des participants', () => {
 
     const changeTeamModal = page.getByRole('dialog', { name: 'Choisir votre équipe' });
     await expect(changeTeamModal).toBeVisible();
+
+    // Budget de campagne : l'équipe surdimensionnée apparaît grisée et non
+    // sélectionnable, l'équipe éligible reste normale.
+    const expensiveOption = changeTeamModal.locator('option').filter({ hasText: expensiveTeamName });
+    await expect(expensiveOption).toBeDisabled();
+    await expect(expensiveOption).toContainText('hors budget');
+    const secondOption = changeTeamModal.locator('option').filter({ hasText: secondTeamName });
+    await expect(secondOption).toBeEnabled();
 
     // Cas négatif : "Annuler" ne change rien.
     await changeTeamModal.locator('.ctm-modal__select').selectOption({ label: secondTeamName });
@@ -217,5 +235,109 @@ test.describe('Campagnes — Gestion des participants', () => {
 
     await expect(page.locator('.participant-list__item').filter({ hasText: secondTeamName })).toHaveCount(1);
     await expect(page.locator('.participant-list__item').filter({ hasText: organizerTeam })).toHaveCount(0);
+  });
+
+  test('rejoindre via code : équipe hors budget grisée, seule l\'équipe éligible peut être soumise', async ({ page, browser }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Organisatrice',
+      email: uniqueEmail('e2e-participants-budget'),
+      password: 'test1234',
+    });
+
+    const organizerTeam = 'Escouade Modeste';
+    await createTeamWithVehicles(page, { name: organizerTeam, vehicleNames: ['Camion à glaces'] });
+    // Budget de campagne (15) : couvre l'équipe légère (8) de l'invité, exclut son
+    // équipe surdimensionnée (Char d'assaut, 40) - cf. spec/CAMPAIGN.md § Budget de campagne.
+    await createCampaign(page, { name: 'Saison E2E Budget Inscription', teamName: organizerTeam, budget: 15 });
+    const code = (await page.locator('.invite-link__code').innerText()).trim();
+
+    const joineeContext = await browser.newContext();
+    const joineePage = await joineeContext.newPage();
+    await registerTestUser(joineePage, {
+      firstName: 'Nux',
+      lastName: 'Candidat',
+      email: uniqueEmail('e2e-participants-budget-joinee'),
+      password: 'test1234',
+    });
+
+    const eligibleTeam = 'Escouade Légère';
+    await createTeamWithVehicles(joineePage, { name: eligibleTeam, vehicleNames: ['Camion à glaces'] });
+    const expensiveTeam = 'Escouade Surarmée';
+    await createTeamWithVehicles(joineePage, { name: expensiveTeam, vehicleNames: ["Char d'assaut"] });
+
+    await joineePage.goto(`/campaigns/join/${code}`);
+    await expect(joineePage.locator('.campaign-join-card')).toBeVisible();
+    await expect(joineePage.locator('.campaign-join-card__budget')).toContainText('15');
+
+    const teamSelect = joineePage.getByLabel('Avec quelle équipe ?');
+    const expensiveOption = teamSelect.locator('option').filter({ hasText: expensiveTeam });
+    await expect(expensiveOption).toBeDisabled();
+    await expect(expensiveOption).toContainText('hors budget');
+    const eligibleOption = teamSelect.locator('option').filter({ hasText: eligibleTeam });
+    await expect(eligibleOption).toBeEnabled();
+
+    // La sélection auto (première équipe éligible) doit déjà pointer sur
+    // l'équipe légère - vérifié explicitement plutôt que supposé.
+    await expect(teamSelect).toHaveValue(await eligibleOption.getAttribute('value') as string);
+
+    const joinResponse = joineePage.waitForResponse(
+      (r) => r.request().method() === 'POST' && /\/api\/campaigns\/\d+\/participants$/.test(r.url()),
+    );
+    await joineePage.getByRole('button', { name: 'Demander à rejoindre →' }).click();
+    await joinResponse;
+    await expect(joineePage.locator('.campaign-join-success')).toBeVisible();
+    await expect(joineePage.locator('.campaign-join-success__team')).toContainText(eligibleTeam);
+
+    await joineeContext.close();
+  });
+
+  test('modification du nom/budget d\'une saison EN_CONSTRUCTION : refus si une équipe déjà engagée deviendrait hors budget', async ({ page }) => {
+    await registerTestUser(page, {
+      firstName: 'Furiosa',
+      lastName: 'Organisatrice',
+      email: uniqueEmail('e2e-participants-edit'),
+      password: 'test1234',
+    });
+
+    const teamName = 'Escouade Modeste';
+    await createTeamWithVehicles(page, { name: teamName, vehicleNames: ['Camion à glaces'] }); // coût 8
+
+    await createCampaign(page, { name: 'Saison E2E Édition', teamName, budget: 20 });
+
+    await page.getByRole('button', { name: 'Modifier la saison' }).click();
+    await expect(page.getByRole('heading', { name: 'Modifier la saison' })).toBeVisible();
+
+    // Budget trop bas pour l'équipe déjà engagée (coût 8) - refusé côté serveur,
+    // la modale reste ouverte avec le message d'erreur inline.
+    const rejectedUpdate = page.waitForResponse(
+      (r) => r.request().method() === 'PUT' && /\/api\/campaigns\/\d+$/.test(r.url()) && r.status() === 400,
+    );
+    await page.getByLabel('Budget des équipes (jerricans) *').fill('5');
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await rejectedUpdate;
+
+    await expect(page.getByRole('heading', { name: 'Modifier la saison' })).toBeVisible(); // toujours ouverte
+    await expect(page.locator('.form-error')).toContainText(teamName);
+    await expect(page.locator('.form-error')).toContainText('8');
+
+    // Budget suffisant + nouveau nom - accepté, la modale se ferme et l'en-tête
+    // se met à jour sans rechargement de page.
+    const acceptedUpdate = page.waitForResponse(
+      (r) => r.request().method() === 'PUT' && /\/api\/campaigns\/\d+$/.test(r.url()) && r.status() === 200,
+    );
+    await page.getByLabel('Nom de la saison *').fill('Saison E2E Éditée');
+    await page.getByLabel('Budget des équipes (jerricans) *').fill('10');
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await acceptedUpdate;
+
+    await expect(page.getByRole('heading', { name: 'Modifier la saison' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Saison E2E Éditée');
+    await expect(page.locator('.campaign-detail-budget-badge')).toContainText('10');
+
+    // Persiste après rechargement.
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Saison E2E Éditée');
+    await expect(page.locator('.campaign-detail-budget-badge')).toContainText('10');
   });
 });

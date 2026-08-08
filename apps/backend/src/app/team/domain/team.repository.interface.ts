@@ -11,6 +11,12 @@ export interface TeamSummaryDto {
   cans: number;
   description: string | null;
   vehicleCount: number;
+  /** Coût cumulé de tous les véhicules de l'équipe - critère d'éligibilité budget de campagne. */
+  vehiclesCost: number;
+  /** Budget applicable (Team.budget) : campaignBudget si engagée, sinon cans. Jamais recalculé par un consommateur. */
+  budget: number;
+  /** Non-null ⇒ budget imposé par la campagne qui engage cette équipe - `cans` devient alors en lecture seule côté UI. */
+  campaignBudget: number | null;
   isEngaged: boolean;
   /**
    * Vrai si l'équipe participe (VALIDATED) à une campagne qui n'est plus

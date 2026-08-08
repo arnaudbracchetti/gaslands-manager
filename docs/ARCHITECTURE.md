@@ -269,11 +269,17 @@ importe bcrypt). `role` (enum `UserRole`, `auth/domain/user-role.ts`) est exclu 
 ```typescript
 export interface TeamSummaryDto {
   id: number; name: string; sponsor: string; cans: number; description: string | null;
-  vehicleCount: number; isEngaged: boolean; createdAt: Date; updatedAt: Date;
+  vehicleCount: number; vehiclesCost: number; budget: number; campaignBudget: number | null;
+  isEngaged: boolean; isLockedByCampaign: boolean; createdAt: Date; updatedAt: Date;
 }
 ```
 
-`vehicleCount` est calculé via `COUNT` SQL dans `TeamRepository.toSummaryDto()` — jamais stocké en colonne.
+`vehicleCount`/`vehiclesCost`/`budget`/`campaignBudget` sont calculés en mémoire depuis l'agrégat
+`Team` chargé (relations véhicules/armes/améliorations/avantages hydratées) dans `TeamRepository.toSummaryDto()`
+- jamais stockés en colonne. `budget`/`campaignBudget` reflètent l'hydratation du budget de campagne
+(`TeamRepository.resolveCampaignBudgets`, miroir batché d'`isLockedByCampaign` mais sans filtre sur
+`Campaign.state` - le budget s'applique dès `EN_CONSTRUCTION`), cf. [spec/CAMPAIGN.md - Budget de
+campagne](spec/CAMPAIGN.md#budget-de-campagne).
 `isEngaged` indique si l'équipe est déjà engagée dans une campagne (via `CampaignParticipant`).
 Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 

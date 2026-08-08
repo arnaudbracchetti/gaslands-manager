@@ -19,14 +19,16 @@ import {
   Component,
   InputSignal,
   OutputEmitterRef,
+  Signal,
   WritableSignal,
+  computed,
   effect,
   input,
   output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Team, CreateTeamDto } from '../../teams/team.model';
+import { Team, CreateTeamDto, DEFAULT_CANS } from '../../teams/team.model';
 import { CreateCampaignDto } from '../campaign.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 import { Icon } from '../../shared/icon/icon';
@@ -63,9 +65,21 @@ export class CampaignForm {
 
   formName: WritableSignal<string> = signal('');
   formTeamId: WritableSignal<number | null> = signal<number | null>(null);
+  /** Budget en jerricans imposé à toutes les équipes de la campagne - pré-rempli au défaut équipe (50). */
+  formBudget: WritableSignal<number> = signal(DEFAULT_CANS);
 
   /** Message d'erreur de validation locale */
   formError: WritableSignal<string> = signal('');
+
+  /** teamId des équipes dont le coût cumulé dépasse le budget actuellement saisi - grisées dans le select. */
+  ineligibleTeamIds: Signal<ReadonlySet<number>> = computed(() => {
+    const budget = this.formBudget();
+    return new Set(
+      this.teams()
+        .filter((t) => (t.vehiclesCost ?? 0) > budget)
+        .map((t) => t.id),
+    );
+  });
 
   /** Nombre d'équipes lors du dernier passage de l'effect — détecte un ajout. */
   private previousTeamsLength: number = 0;
@@ -88,15 +102,20 @@ export class CampaignForm {
   saveForm(): void {
     const name = this.formName().trim();
     const teamId = this.formTeamId();
+    const budget = this.formBudget();
 
     if (!name) {
       this.formError.set('Le nom de la saison est obligatoire.');
       return;
     }
+    if (teamId !== null && this.ineligibleTeamIds().has(teamId)) {
+      this.formError.set('L\'équipe sélectionnée dépasse le budget choisi pour la campagne.');
+      return;
+    }
 
     this.formError.set('');
     // teamId undefined si aucune équipe sélectionnée (organisateur sans équipe)
-    this.saved.emit({ name, ...(teamId !== null ? { teamId } : {}) });
+    this.saved.emit({ name, budget, ...(teamId !== null ? { teamId } : {}) });
   }
 
   /** Ferme le formulaire sans sauvegarder. */

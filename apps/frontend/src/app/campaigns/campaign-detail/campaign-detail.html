@@ -18,6 +18,14 @@
         <span class="campaign-detail-state-badge campaign-detail-state-badge--{{ campaign()!.state }}">
           {{ stateLabel() }}
         </span>
+        <span class="campaign-detail-budget-badge">
+          <app-icon concept="argent" size="xs" alt="jerricans" /> Budget : {{ campaign()!.budget }} jerricans
+        </span>
+        @if (canEditCampaign()) {
+          <button type="button" class="campaign-detail-edit-btn" (click)="openEditCampaignModal()" aria-label="Modifier la saison">
+            <app-icon concept="modifier" size="sm" />
+          </button>
+        }
       </div>
       @if (isOrganizer()) {
         <span class="campaign-detail-role-badge"><app-icon concept="organisateur" size="sm" /> Organisateur</span>
@@ -179,8 +187,18 @@
       [teams]="myTeams()"
       [currentTeamId]="myParticipant()?.teamId ?? null"
       [isOrganizer]="isOrganizer()"
+      [campaignBudget]="campaign()!.budget"
       (confirmed)="onConfirmChangeTeam($event)"
       (cancelled)="showChangeTeamModal.set(false)" />
+  }
+
+  @if (showEditCampaignModal()) {
+    <app-edit-campaign-modal
+      [campaign]="campaign()!"
+      [saving]="savingCampaign()"
+      [error]="editCampaignError()"
+      (confirmed)="onConfirmEditCampaign($event)"
+      (cancelled)="onCancelEditCampaign()" />
   }
 
   @if (journalParticipant(); as participant) {

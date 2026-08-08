@@ -77,7 +77,8 @@
 
   &__state,
   &__organizer,
-  &__participants {
+  &__participants,
+  &__budget {
     font-family: var(--font-mono);
     color: var(--text-dim);
     font-size: 0.78rem;

@@ -6,7 +6,7 @@ import { EvenementTeleGame } from './games/evenement-tele-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GameStatus } from './enums/game-status.enum';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
-import { makeTestParticipant } from './test-helpers';
+import { makeTestParticipant, makeTeam, makeTeamWithVehicles } from './test-helpers';
 
 /** Fabrique une campagne EN_CONSTRUCTION avec le nouveau constructeur unifié. */
 function makeCampaign(
@@ -202,6 +202,74 @@ describe('Campaign — closeCampaign', () => {
   });
 });
 
+describe('Campaign - budget / assertTeamFitsBudget', () => {
+  it('vaut 50 par défaut si non fourni au constructeur', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
+    expect(campaign.budget).toBe(50);
+  });
+
+  it('retourne la valeur fournie au constructeur', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], [], 20);
+    expect(campaign.budget).toBe(20);
+  });
+
+  it('accepte une équipe dont le coût cumulé est exactement égal au budget', () => {
+    const { vehicle } = makeTestParticipant();  // vehicle (+ arme + amélioration) de coût 21
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], [], 21);
+    expect(() => campaign.assertTeamFitsBudget(makeTeamWithVehicles(3, [vehicle]))).not.toThrow();
+  });
+
+  it('refuse une équipe dont le coût cumulé dépasse le budget d\'une seule unité', () => {
+    const { vehicle } = makeTestParticipant();  // vehicle (+ arme + amélioration) de coût 21
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], [], 20);
+    expect(() => campaign.assertTeamFitsBudget(makeTeamWithVehicles(3, [vehicle]))).toThrow('au-delà du budget');
+  });
+});
+
+describe('Campaign - modification (rename/changeBudget)', () => {
+  it('rename() est refusé hors EN_CONSTRUCTION', () => {
+    const campaign = makeCampaign([], [], CampaignState.EN_COURS);
+    expect(() => campaign.rename('Nouveau nom')).toThrow('construction');
+  });
+
+  it('rename() modifie le nom en EN_CONSTRUCTION', () => {
+    const campaign = makeCampaign([], []);
+    campaign.rename('Nouveau nom');
+    expect(campaign.name).toBe('Nouveau nom');
+  });
+
+  it('changeBudget() est refusé hors EN_CONSTRUCTION', () => {
+    const campaign = makeCampaign([], [], CampaignState.EN_COURS);
+    expect(() => campaign.changeBudget(30)).toThrow('construction');
+  });
+
+  it('changeBudget() accepte un budget exactement égal au coût de l\'équipe déjà engagée la plus chère', () => {
+    const { participant } = makeTestParticipant();  // VALIDATED, équipe de coût 21
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [participant], [], 50);
+    expect(() => campaign.changeBudget(21)).not.toThrow();
+    expect(campaign.budget).toBe(21);
+  });
+
+  it('changeBudget() refuse un budget inférieur d\'une seule unité au coût de l\'équipe déjà engagée', () => {
+    const { participant } = makeTestParticipant();  // VALIDATED, équipe de coût 21
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [participant], [], 50);
+    expect(() => campaign.changeBudget(20)).toThrow('au-delà du budget');
+    expect(campaign.budget).toBe(50);  // inchangé : la mutation n'a lieu qu'après validation complète
+  });
+
+  it('changeBudget() ignore les participants PENDING et REJECTED, même hors budget', () => {
+    const { vehicle } = makeTestParticipant();  // véhicule de coût 21
+    const pending = new CampaignParticipant(2, 43, 2, false, ParticipantStatus.PENDING);
+    pending.attachTeam(makeTeamWithVehicles(2, [vehicle]));
+    const rejected = new CampaignParticipant(3, 44, 3, false, ParticipantStatus.REJECTED);
+    rejected.attachTeam(makeTeamWithVehicles(3, [vehicle]));
+
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [pending, rejected], [], 50);
+    expect(() => campaign.changeBudget(10)).not.toThrow();
+    expect(campaign.budget).toBe(10);
+  });
+});
+
 // ── Commandes CRUD (Phase 2 — basculement DDD) ─────────────────────────────────
 
 describe('Campaign — requestJoin', () => {
@@ -209,7 +277,7 @@ describe('Campaign — requestJoin', () => {
     const { participant } = makeTestParticipant();  // userId 42
     const campaign = makeCampaign([participant], []);
 
-    const p = campaign.requestJoin(7, 3);
+    const p = campaign.requestJoin(7, makeTeam(3));
 
     expect(p.status).toBe(ParticipantStatus.PENDING);
     expect(p.userId).toBe(7);
@@ -219,13 +287,21 @@ describe('Campaign — requestJoin', () => {
   it('refuse une seconde demande du même utilisateur', () => {
     const { participant } = makeTestParticipant();  // userId 42
     const campaign = makeCampaign([participant], []);
-    expect(() => campaign.requestJoin(42, 3)).toThrow('déjà');
+    expect(() => campaign.requestJoin(42, makeTeam(3))).toThrow('déjà');
   });
 
   it('refuse une inscription hors EN_CONSTRUCTION', () => {
     const { participant } = makeTestParticipant();
     const campaign = makeCampaign([participant], [], CampaignState.EN_COURS);
-    expect(() => campaign.requestJoin(7, 3)).toThrow();
+    expect(() => campaign.requestJoin(7, makeTeam(3))).toThrow();
+  });
+
+  it('refuse une équipe dont le coût dépasse le budget de la campagne', () => {
+    const { participant, vehicle } = makeTestParticipant();  // vehicle de coût 12
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [participant], [], 20);
+    const teamOverBudget = makeTeamWithVehicles(3, [vehicle, vehicle]);  // coût cumulé 24 > budget 20
+
+    expect(() => campaign.requestJoin(7, teamOverBudget)).toThrow('au-delà du budget');
   });
 });
 
@@ -244,6 +320,15 @@ describe('Campaign — validateParticipant', () => {
     const organizer = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
     const campaign = makeCampaign([organizer], []);
     expect(() => campaign.validateParticipant(1, false)).toThrow('dernier organisateur');
+  });
+
+  it('refuse de valider un participant dont l\'équipe dépasse le budget de la campagne', () => {
+    const { participant: organizer, vehicle } = makeTestParticipant();  // vehicle de coût 12
+    const pending = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.PENDING);
+    pending.attachTeam(makeTeamWithVehicles(3, [vehicle, vehicle]));  // coût cumulé 24
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [organizer, pending], [], 20);
+
+    expect(() => campaign.validateParticipant(2, true)).toThrow('au-delà du budget');
   });
 });
 
@@ -290,7 +375,7 @@ describe('Campaign — changeParticipantTeam', () => {
     const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
     const campaign = makeCampaign([member], []);
 
-    campaign.changeParticipantTeam(7, 9);
+    campaign.changeParticipantTeam(7, makeTeam(9));
 
     expect(member.teamId).toBe(9);
   });
@@ -306,7 +391,7 @@ describe('Campaign — changeParticipantTeam', () => {
     const game = makeGame(10, 1, [makeRankingEvent(2, 10, 10)]);
     const campaign = makeCampaign([member], [game]);
 
-    expect(() => campaign.changeParticipantTeam(7, 9)).toThrow('événements journalisés');
+    expect(() => campaign.changeParticipantTeam(7, makeTeam(9))).toThrow('événements journalisés');
     expect(member.teamId).toBe(3);
   });
 
@@ -315,7 +400,7 @@ describe('Campaign — changeParticipantTeam', () => {
     const game = makeGame(10, 1, [makeRankingEvent(2, 10, 10)]);
     const campaign = makeCampaign([member], [game]);
 
-    campaign.changeParticipantTeam(7, 3);
+    campaign.changeParticipantTeam(7, makeTeam(3));
 
     expect(member.teamId).toBe(3);
   });
@@ -326,9 +411,19 @@ describe('Campaign — changeParticipantTeam', () => {
     const game = makeGame(10, 1, [makeRankingEvent(5, 10, 10)]);
     const campaign = makeCampaign([member, other], [game]);
 
-    campaign.changeParticipantTeam(7, 9);
+    campaign.changeParticipantTeam(7, makeTeam(9));
 
     expect(member.teamId).toBe(9);
+  });
+
+  it('refuse une nouvelle équipe dont le coût dépasse le budget de la campagne', () => {
+    const { participant: organizer, vehicle } = makeTestParticipant();  // vehicle de coût 12
+    const member = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [organizer, member], [], 20);
+    const teamOverBudget = makeTeamWithVehicles(9, [vehicle, vehicle]);  // coût cumulé 24 > budget 20
+
+    expect(() => campaign.changeParticipantTeam(7, teamOverBudget)).toThrow('au-delà du budget');
+    expect(member.teamId).toBe(3);
   });
 });
 

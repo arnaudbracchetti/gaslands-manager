@@ -18,7 +18,7 @@
 import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
-import { Campaign, CampaignState, ChangeStateDto } from '../campaign.model';
+import { Campaign, CampaignState, ChangeStateDto, UpdateCampaignDto } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { ParticipantList } from '../participant-list/participant-list';
@@ -29,6 +29,7 @@ import { AuthService } from '../../auth/auth.service';
 import { TeamsService } from '../../teams/teams.service';
 import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
+import { EditCampaignModal } from '../edit-campaign-modal/edit-campaign-modal';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
@@ -49,6 +50,7 @@ const STATE_LABELS: Record<CampaignState, string> = {
     CampaignProgram,
     InviteLink,
     ChangeTeamModal,
+    EditCampaignModal,
     ConfirmModal,
     Breadcrumb,
     Icon,
@@ -72,6 +74,20 @@ export class CampaignDetail implements OnInit {
   standings: WritableSignal<StandingsEntry[]> = signal<StandingsEntry[]>([]);
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
+
+  /** Vrai pendant que la modale de modification (nom/budget) de la saison est ouverte. */
+  showEditCampaignModal: WritableSignal<boolean> = signal(false);
+
+  /** Vrai pendant un appel PUT /api/campaigns/:id (modification nom/budget). */
+  savingCampaign: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Erreur serveur de la modale de modification - distincte de `error` (bandeau
+   * générique de la page) : reste affichée DANS la modale, qui ne se ferme jamais
+   * automatiquement sur échec (contrairement à ChangeTeamModal), pour que
+   * l'organisateur corrige la valeur sans rouvrir la modale.
+   */
+  editCampaignError: WritableSignal<string> = signal('');
 
   /** Vrai si une partie de la saison est actuellement en statut ATELIER — reçu de CampaignProgram. */
   hasAtelierGame: WritableSignal<boolean> = signal(false);
@@ -111,6 +127,11 @@ export class CampaignDetail implements OnInit {
 
   /** Vrai quand le choix d'équipe est encore modifiable (saison EN_CONSTRUCTION). */
   canChangeTeam: Signal<boolean> = computed(() => this.campaign()?.state === 'EN_CONSTRUCTION');
+
+  /** Vrai quand l'organisateur peut modifier nom/budget (saison EN_CONSTRUCTION). */
+  canEditCampaign: Signal<boolean> = computed(
+    () => this.isOrganizer() && this.campaign()?.state === 'EN_CONSTRUCTION',
+  );
 
   breadcrumbs: Signal<BreadcrumbItem[]> = computed(() => [
     { label: 'Saisons', route: ['/campaigns'] },
@@ -349,6 +370,41 @@ export class CampaignDetail implements OnInit {
         );
       },
       error: () => this.error.set('Erreur lors du changement d\'équipe.'),
+    });
+  }
+
+  openEditCampaignModal(): void {
+    this.editCampaignError.set('');
+    this.showEditCampaignModal.set(true);
+  }
+
+  onCancelEditCampaign(): void {
+    this.showEditCampaignModal.set(false);
+    this.editCampaignError.set('');
+  }
+
+  /**
+   * Contrairement à onConfirmChangeTeam, ne ferme PAS la modale immédiatement :
+   * en cas d'échec (budget trop bas pour une équipe déjà engagée), la modale
+   * reste ouverte avec le message d'erreur affiché inline, pour correction sans
+   * réouverture.
+   */
+  onConfirmEditCampaign(dto: UpdateCampaignDto): void {
+    this.savingCampaign.set(true);
+    this.editCampaignError.set('');
+
+    this.campaignsService.update(this.campaignId(), dto).subscribe({
+      next: (updated: Campaign) => {
+        this.campaign.set(updated);
+        this.showEditCampaignModal.set(false);
+        this.savingCampaign.set(false);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.editCampaignError.set(
+          err.error?.message ?? 'Erreur lors de la modification de la saison.',
+        );
+        this.savingCampaign.set(false);
+      },
     });
   }
 

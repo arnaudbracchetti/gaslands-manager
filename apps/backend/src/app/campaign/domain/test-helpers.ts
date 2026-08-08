@@ -45,6 +45,20 @@ export function makeAdvantageType(): AdvantageType {
   });
 }
 
+/**
+ * Équipe minimale sans véhicule (vehiclesCost = 0) - pour les tests qui n'exercent
+ * que la navigation/appartenance d'équipe (requestJoin, changeParticipantTeam) sans
+ * se soucier du coût réel. `cans` par défaut 50, comme `Team.cans`.
+ */
+export function makeTeam(id: number, cans = 50): Team {
+  return new Team(id, 42, `Équipe ${id}`, 'Rutherford', cans, null, []);
+}
+
+/** Mirroir de `makeTeam`, avec des véhicules fournis - pour tester le budget de campagne (`Team.vehiclesCost`). */
+export function makeTeamWithVehicles(id: number, vehicles: Vehicle[], cans = 50): Team {
+  return new Team(id, 42, `Équipe ${id}`, 'Rutherford', cans, null, vehicles);
+}
+
 export interface TestContext {
   team: Team;
   vehicle: Vehicle;

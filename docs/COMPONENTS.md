@@ -221,6 +221,7 @@ graph TD
         ParticipantJournalModal
         InviteLink
         ChangeTeamModal
+        EditCampaignModal
         CampaignProgram["CampaignProgram (smart)"]
         GameList
         GameForm
@@ -272,6 +273,7 @@ graph TD
     CampaignDetail --> ParticipantJournalModal
     CampaignDetail --> InviteLink
     CampaignDetail --> ChangeTeamModal
+    CampaignDetail --> EditCampaignModal
     CampaignDetail --> ConfirmModal
     CampaignDetail --> Breadcrumb
     CampaignDetail --> CampaignProgram
@@ -311,6 +313,7 @@ graph TD
     GameJournalModal --> ModalShell
     ParticipantJournalModal --> ModalShell
     ChangeTeamModal --> ModalShell
+    EditCampaignModal --> ModalShell
     SequellaAdvantagePicker --> ModalShell
     CampaignForm --> ModalShell
     CampaignsPage --> ModalShell
@@ -954,7 +957,9 @@ Carte d'affichage d'une campagne : nom, état, badge de rôle (🏆 Organisateur
 
 ### `CampaignForm` — `campaigns/campaign-form/`
 
-Formulaire de création d'une campagne (nom + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) — le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
+Formulaire de création d'une campagne (nom + budget des équipes + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) - le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
+
+**Budget des équipes** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : champ numérique `formBudget`, pré-rempli à `DEFAULT_CANS` (50). Le computed `ineligibleTeamIds` grise en direct (`[disabled]`, mention "(hors budget)") toute option d'équipe dont `team.vehiclesCost` dépasse la valeur actuellement saisie - recalculé à chaque frappe, avant même la soumission. `saveForm()` revérifie côté client qu'une équipe sélectionnée reste éligible (défense en profondeur, la garde réelle est côté domaine).
 
 | | |
 |---|---|
@@ -967,14 +972,14 @@ Formulaire de création d'une campagne (nom + sélection optionnelle d'une équi
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
 | `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
-| `teams` | `Team[]` | `[]` | Équipes disponibles pour la sélection |
+| `teams` | `Team[]` | `[]` | Équipes disponibles pour la sélection (`vehiclesCost` pilote le grisage budget) |
 | `creatingTeam` | `boolean` | `false` | Affiche un indicateur pendant la création rapide |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `saved` | `CreateCampaignDto` | Données de création soumises `{ name, teamId? }` |
+| `saved` | `CreateCampaignDto` | Données de création soumises `{ name, budget, teamId? }` |
 | `formCancel` | `void` | Annulation |
 | `teamCreated` | `CreateTeamDto` | Relaie la demande de création rapide d'équipe vers le parent |
 
@@ -986,13 +991,17 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 
 **Export de la fiche d'équipe** (déplacé depuis `GameList`/`CampaignProgram`) : `onExportSheet(pid)` répond à l'output `exportSheet` de `ParticipantList` — détermine self vs tiers en comparant `pid` à `myParticipant()?.id` (deux routes backend distinctes, pas de paramètre optionnel unique) et appelle `CampaignsService.getTeamSheet()` ou `getParticipantTeamSheet()` en conséquence. Même pattern `window.open` synchrone + `openHtmlDocumentInNewTab` que l'ancien `CampaignProgram.onExportSheet()` (désormais retiré de ce composant).
 
+**Badge budget** : à côté du nom et du badge d'état, un badge neutre (mirroir du registre `TERMINEE` - bordure rust, texte atténué, pas de fond teinté, puisque purement informatif) affiche `campaign()!.budget` en jerricans - cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
+
+**Modification de la campagne (nom/budget)** : un bouton icône "✏️ Modifier" (`.campaign-detail-edit-btn`, mirroir de `.game-list__edit`), gated `canEditCampaign()` (`isOrganizer() && state === 'EN_CONSTRUCTION'`), ouvre `EditCampaignModal` (état possédé par ce composant : `showEditCampaignModal`/`savingCampaign`/`editCampaignError`). Contrairement à `onConfirmChangeTeam` (qui ferme la modale avant même l'appel HTTP), `onConfirmEditCampaign()` **ne ferme pas** `showEditCampaignModal` en cas d'échec serveur - seul `editCampaignError` est renseigné (message domaine tel quel, ex. équipe fautive + son coût), pour que l'organisateur corrige la valeur sans rouvrir la modale. `error` (bandeau générique de la page) n'est jamais utilisé pour ce flux.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-detail` |
 | **Type** | Smart |
 | **Route** | `/campaigns/:id` |
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
-| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `ConfirmModal`, `Breadcrumb` |
+| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `ConfirmModal`, `Breadcrumb` |
 
 **Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`, `journalParticipant`, `participantJournalEntries`, `loadingParticipantJournal`.
 
@@ -1002,6 +1011,8 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 
 Page de demande d'inscription à une campagne via son code d'invitation (`/campaigns/join/:code`). Charge le résumé de la campagne, propose la création rapide d'équipe.
 
+**Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise toute option d'équipe dont `team.vehiclesCost` dépasse `summary()!.budget`. Un `effect()` sélectionne automatiquement la première équipe éligible (ni déjà engagée, ni hors budget) dès que le résumé de la campagne et les équipes de l'utilisateur sont tous deux chargés - ces deux appels HTTP étant indépendants (`loadSummary`/`loadUserTeams`), leur ordre d'arrivée n'est pas garanti.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-join` |
@@ -1010,7 +1021,7 @@ Page de demande d'inscription à une campagne via son code d'invitation (`/campa
 | **Services** | `ActivatedRoute`, `CampaignsService`, `TeamsService` |
 | **Compose** | `QuickTeamCreate` |
 
-**Signals clés** : `loading`, `summary`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`.
+**Signals clés** : `loading`, `summary`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
 
 ---
 
@@ -1106,6 +1117,8 @@ Affiche le code d'invitation d'une campagne avec un bouton "Copier". Feedback vi
 
 Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. Le parent contrôle la visibilité. Chrome délégué à `ModalShell` (mode `action`, `variant="primary"` — reproduit l'ambre `--tb-danger` du bouton "Valider", une action réversible, pas destructive).
 
+**Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise (`[disabled]`, mention "(hors budget)") toute option d'équipe dont `team.vehiclesCost` dépasse `campaignBudget()` - sauf l'équipe déjà engagée (`currentTeamId`), jamais grisée par cette règle même si un arrondi ou un budget modifié entre-temps la mettrait tout juste hors budget, pour ne pas bloquer visuellement la sélection déjà valide en base.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-change-team-modal` |
@@ -1116,15 +1129,54 @@ Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. L
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `teams` | `Team[]` | — | Équipes de l'utilisateur |
+| `teams` | `Team[]` | - | Équipes de l'utilisateur (`vehiclesCost` pilote le grisage budget) |
 | `currentTeamId` | `number \| null` | — | Équipe actuellement engagée |
 | `isOrganizer` | `boolean` | `false` | Affiche l'option "Aucune équipe" (organisateur peut se désengager) |
+| `campaignBudget` | `number` | - | Budget en jerricans de la campagne, requis |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
 | `confirmed` | `number \| null` | `teamId` sélectionné, ou `null` pour se désengager |
+| `cancelled` | `void` | Annulation |
+
+---
+
+### `EditCampaignModal` - `campaigns/edit-campaign-modal/`
+
+Modification du nom et du budget d'une campagne `EN_CONSTRUCTION` (organisateur). Pré-remplit
+le formulaire depuis `campaign` (input) via un `effect()` constructeur - même idiome que
+`ChangeTeamModal`/`TeamForm`. Chrome délégué à `ModalShell` (mode `action`, `variant="primary"`).
+
+**Ne se ferme jamais automatiquement sur `confirmed`** - différence volontaire avec
+`ChangeTeamModal` : c'est le parent (`CampaignDetail`) qui décide de la fermeture,
+uniquement en cas de succès serveur. `error` (input, message domaine transmis par le
+parent, ex. "L'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne
+(30).") reste affiché sous les champs tant que la modale est ouverte, pour que
+l'organisateur corrige la valeur sans rouvrir la modale - cf.
+[spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
+`displayError` (computed) priorise l'erreur de validation locale (nom vide) sur `error`.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-edit-campaign-modal` |
+| **Type** | Dumb |
+| **Compose** | `ModalShell` |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `campaign` | `Campaign` | - | Campagne à modifier - sert de pré-remplissage |
+| `saving` | `boolean` | `false` | Désactive le bouton de confirmation pendant l'appel API |
+| `error` | `string` | `''` | Message d'erreur serveur (ex. budget trop bas pour une équipe déjà engagée) |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `confirmed` | `UpdateCampaignDto` | `{ name, budget }` validé localement (nom non vide, trimmé) |
 | `cancelled` | `void` | Annulation |
 
 ---

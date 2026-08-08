@@ -114,19 +114,22 @@ règles de dédup des renvois) : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-a
 | `id` | number | PK, auto-incrémenté |
 | `name` | string(100) | obligatoire |
 | `sponsor` | string(50) | défaut : `"Rutherford"` — immutable dès le 1er véhicule |
-| `cans` | number | budget en jerricans, défaut : 50 |
+| `cans` | number | budget en jerricans, défaut : 50 - valeur brute saisie par le joueur, ignorée pour tout calcul dès que l'équipe est engagée dans une campagne (cf. `budget`/`campaignBudget` ci-dessous et [spec/CAMPAIGN.md - Budget de campagne](CAMPAIGN.md#budget-de-campagne)) |
 | `description` | text | nullable |
 | `userId` | number | FK → User (`CASCADE` on delete) |
 | `createdAt` | Date | auto |
 | `updatedAt` | Date | auto |
 
-**Champ calculé dans la réponse API** (non stocké en base) :
+**Champs calculés dans la réponse API** (non stockés en base, exposés via `TeamSummaryDto` - cf. [ARCHITECTURE.md §3.6](../ARCHITECTURE.md)) :
 
 | Champ | Type | Description |
 |-------|------|-------------|
 | `vehicleCount` | number | Nombre de véhicules de l'équipe. Utilisé par le frontend pour verrouiller le choix du sponsor. |
+| `vehiclesCost` | number | Coût cumulé de tous les véhicules de l'équipe (`Team.vehiclesCost`) - critère d'éligibilité au budget d'une campagne, comparé côté frontend au `budget` de la campagne visée (formulaires de création/inscription/changement d'équipe). |
+| `budget` | number | Budget applicable (`Team.budget`) : celui de la campagne engageante si elle en a une, sinon `cans`. Jamais recalculé par un consommateur. |
+| `campaignBudget` | number \| null | Non-null ⇒ budget imposé par une campagne - le champ `cans` devient alors en lecture seule côté IHM (`TeamEditPage`), cf. [spec/CAMPAIGN.md - Budget de campagne](CAMPAIGN.md#budget-de-campagne). |
 
-Type enrichi côté backend : `TeamWithCount = Team & { vehicleCount: number }` — calculé via `COUNT` SQL, jamais stocké en colonne.
+`TeamSummaryDto` (`team.repository.interface.ts`) - calculé via l'agrégat domaine chargé, jamais stocké en colonne.
 
 ---
 

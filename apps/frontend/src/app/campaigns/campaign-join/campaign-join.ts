@@ -11,7 +11,7 @@
  * d'information — le backend renvoie déjà un message neutre (404), repris
  * tel quel.
  */
-import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import { Component, OnInit, Signal, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -67,6 +67,30 @@ export class CampaignJoin implements OnInit {
   /** Vrai pendant l'appel API de création rapide d'équipe */
   creatingTeam: WritableSignal<boolean> = signal(false);
 
+  /** teamId des équipes de l'utilisateur dont le coût cumulé dépasse le budget de la campagne. */
+  ineligibleTeamIds: Signal<ReadonlySet<number>> = computed(() => {
+    const budget = this.summary()?.budget;
+    if (budget === undefined) return new Set<number>();
+    return new Set(
+      this.userTeams()
+        .filter((t) => (t.vehiclesCost ?? 0) > budget)
+        .map((t) => t.id),
+    );
+  });
+
+  constructor() {
+    // Sélectionne la première équipe éligible (ni déjà engagée, ni hors budget) dès que
+    // les deux chargements indépendants (résumé, équipes) sont arrivés - leur ordre
+    // d'arrivée n'est pas garanti, d'où un effect() plutôt qu'un choix fait dans l'un
+    // des deux callbacks HTTP.
+    effect((): void => {
+      if (this.selectedTeamId() !== null || this.summary() === null) return;
+      const ineligible = this.ineligibleTeamIds();
+      const firstEligible = this.userTeams().find((t) => !(t.isEngaged ?? false) && !ineligible.has(t.id));
+      if (firstEligible) this.selectedTeamId.set(firstEligible.id);
+    });
+  }
+
   ngOnInit(): void {
     this.loadSummary();
     this.loadUserTeams();
@@ -90,12 +114,7 @@ export class CampaignJoin implements OnInit {
 
   private loadUserTeams(): void {
     this.teamsService.getAll().subscribe({
-      next: (teams: Team[]) => {
-        this.userTeams.set(teams);
-        if (teams.length > 0 && this.selectedTeamId() === null) {
-          this.selectedTeamId.set(teams[0].id);
-        }
-      },
+      next: (teams: Team[]) => this.userTeams.set(teams),
       error: () => this.userTeams.set([]),
     });
   }
@@ -126,7 +145,7 @@ export class CampaignJoin implements OnInit {
   submitJoinRequest(): void {
     const summary = this.summary();
     const teamId = this.selectedTeamId();
-    if (!summary || teamId === null) {
+    if (!summary || teamId === null || this.ineligibleTeamIds().has(teamId)) {
       return;
     }
 

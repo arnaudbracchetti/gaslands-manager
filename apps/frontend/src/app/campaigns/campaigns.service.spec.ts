@@ -24,6 +24,7 @@ const mockCampaign: Campaign = {
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 1,
+  budget: 50,
   myRole: 'organizer',
 };
 
@@ -138,6 +139,7 @@ describe('CampaignsService', () => {
         name: 'Coupe Verney',
         state: 'EN_CONSTRUCTION',
         organizerName: 'Jean Dupont',
+        budget: 50,
         participantCount: 3,
       };
       let result: CampaignSummary | undefined;
@@ -245,6 +247,26 @@ describe('CampaignsService', () => {
       req.flush(null);
 
       expect(done).toBe(true);
+    });
+  });
+
+  // ── update() ─────────────────────────────────────────────────────────────
+
+  describe('update()', () => {
+    it('effectue PUT /api/campaigns/:id avec le DTO et retourne la saison modifiée', () => {
+      const dto = { name: 'Coupe Rutherford', budget: 30 };
+      const updated: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
+      let result: Campaign | undefined;
+
+      service.update(1, dto).subscribe((campaign) => { result = campaign; });
+
+      const req = httpMock.expectOne('/api/campaigns/1');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(dto);
+
+      req.flush(updated);
+
+      expect(result).toEqual(updated);
     });
   });
 

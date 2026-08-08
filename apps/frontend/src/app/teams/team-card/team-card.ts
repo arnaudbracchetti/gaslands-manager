@@ -46,9 +46,12 @@ export class TeamCard {
     this.vehicles().reduce((sum, v) => sum + v.cout, 0),
   );
 
+  /** Budget effectif de l'équipe - celui de la campagne engageante s'il y en a une, sinon `cans`. */
+  budget: Signal<number> = computed(() => this.team().budget ?? this.team().cans);
+
   /** Budget restant (négatif si dépassé). */
   budgetRestant: Signal<number> = computed(() =>
-    this.team().cans - this.coutVehiclesTotal(),
+    this.budget() - this.coutVehiclesTotal(),
   );
 
   /** Vrai si le budget est dépassé. */
@@ -56,7 +59,7 @@ export class TeamCard {
 
   /** Pourcentage du budget consommé, plafonné à 100 pour la barre. */
   budgetPourcentage: Signal<number> = computed(() =>
-    Math.min(100, Math.round((this.coutVehiclesTotal() / this.team().cans) * 100)),
+    Math.min(100, Math.round((this.coutVehiclesTotal() / this.budget()) * 100)),
   );
 
   /**

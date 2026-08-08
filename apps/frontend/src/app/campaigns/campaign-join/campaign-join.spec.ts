@@ -19,6 +19,7 @@ const mockSummary: CampaignSummary = {
   state: 'EN_CONSTRUCTION',
   organizerName: 'Jean Dupont',
   participantCount: 3,
+  budget: 50,
 };
 
 const mockTeams: Team[] = [

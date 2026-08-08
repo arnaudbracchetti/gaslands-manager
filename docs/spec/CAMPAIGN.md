@@ -22,6 +22,50 @@ donc pas un cycle strictement séquentiel malgré l'ordre naturel ci-dessus.
 
 ---
 
+## Budget de campagne
+
+L'organisateur fixe, à la création de la campagne, un **budget en jerricans**
+(`Campaign.budget`, défaut 50 si non renseigné) qui remplace `Team.cans` pour tout
+calcul de budget effectué en contexte campagne - construction d'équipe une fois
+engagée, verdicts d'atelier, cagnotte. `Team.budget` (getter de l'agrégat) résout
+la valeur applicable : celui de la campagne engageante s'il y en a une, sinon
+`cans` - `cans` reste alors la valeur brute saisie par le joueur, jamais recalculée,
+simplement inerte tant que l'équipe est engagée (cf. [spec/VEHICLES.md](VEHICLES.md)
+et [spec/TEAMS.md](TEAMS.md) pour le détail de ce getter et son usage dans le
+configurateur).
+
+**Éligibilité à l'inscription** : une équipe ne peut être engagée (demande
+d'inscription, changement d'équipe, validation d'une demande) que si le coût
+cumulé de ses véhicules (`Team.vehiclesCost`) tient dans le budget de la
+campagne - `coût ≤ budget`, une équipe construite exactement au budget reste
+éligible. Portée par `Campaign.assertTeamFitsBudget(team)`, appelée par
+`requestJoin`, `changeParticipantTeam` et `validateParticipant` (cette dernière
+revérifie à l'acceptation d'une demande `PENDING`, le joueur ayant pu grossir son
+équipe entre-temps tant que la campagne reste `EN_CONSTRUCTION`) - violation
+traduite en HTTP 400 (`DomainException`).
+
+**Modification du nom et du budget** (`PUT /api/campaigns/:id`, organisateur,
+`EN_CONSTRUCTION` uniquement) : `Campaign.rename(name)` et `Campaign.changeBudget(budget)`
+portent chacune leur propre garde `EN_CONSTRUCTION`. `changeBudget` revérifie **chaque**
+équipe actuellement engagée (participant `VALIDATED` avec équipe attachée) contre le
+budget candidat via `assertTeamFitsBudget(team, budget)` - la règle d'éligibilité
+ci-dessus, conçue dès le départ pour cet usage (second paramètre `budget` optionnel,
+`this._budget` par défaut). La première équipe en infraction interrompt l'opération
+(`DomainException` → HTTP 400) **avant** toute mutation : le budget stocké ne change
+jamais si une seule équipe déjà engagée deviendrait illégale. Le budget n'est jamais
+recopié (ni sur le participant, ni sur l'équipe) : c'est une donnée unique sur `Campaign`,
+relue à chaque replay via `Team.campaignBudget`, hydraté par `TeamRepository` au
+chargement de l'agrégat (même mécanisme que le flag `isLocked`, cf.
+[spec/TEAMS.md](TEAMS.md#crud-équipes)).
+
+Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible uniquement en
+`EN_CONSTRUCTION`) ouvre `EditCampaignModal` (nom + budget). En cas de refus serveur, la
+modale reste ouverte et affiche le message d'erreur inline (nom de l'équipe fautive et
+son coût) plutôt que de se fermer et de reporter l'erreur sur un bandeau générique -
+l'organisateur corrige la valeur sans rouvrir la modale.
+
+---
+
 ## Inscription
 
 `ParticipantStatus` : `PENDING` | `VALIDATED` | `REJECTED`
@@ -1009,6 +1053,7 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
 | `name` | string(100) | obligatoire |
 | `state` | `'EN_CONSTRUCTION' \| 'EN_COURS' \| 'TERMINEE'` | défaut `EN_CONSTRUCTION` |
 | `inviteCode` | string | unique, indexé — token généré à la création |
+| `budget` | number | défaut 50 - cf. [§Budget de campagne](#budget-de-campagne). Non modifiable après création (aucun endpoint) |
 | `createdAt` / `updatedAt` | Date | auto |
 
 **Champs calculés dans la réponse API** (non stockés en base) :
@@ -1085,17 +1130,18 @@ tout type de partie).
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns` | JWT | Mes campagnes (participant `VALIDATED`) |
-| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur) |
+| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi |
 | GET | `/api/campaigns/pending` | JWT | Mes demandes d'inscription en attente |
 | GET | `/api/campaigns/organizing/pending-requests` | JWT | Inscriptions en attente dans mes campagnes (organisateur) |
-| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation |
+| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) |
 | GET | `/api/campaigns/:id` | JWT | Détail d'une campagne (participant `VALIDATED`) |
 | DELETE | `/api/campaigns/:id` | JWT | Supprimer la campagne (organisateur, cascade sur les participants) |
+| PUT | `/api/campaigns/:id` | JWT | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne)) |
 | PUT | `/api/campaigns/:id/state` | JWT | Transition d'état (organisateur) |
 | GET | `/api/campaigns/:id/participants` | JWT | Liste des participants |
-| POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) |
-| PUT | `/api/campaigns/:id/participants/me` | JWT | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) |
-| PUT | `/api/campaigns/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) — couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` |
+| POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne)) |
+| PUT | `/api/campaigns/:id/participants/me` | JWT | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) - HTTP 400 si la nouvelle équipe dépasse le budget de la campagne |
+| PUT | `/api/campaigns/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) - couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` - une validation (`accept: true`) est refusée (HTTP 400) si l'équipe du participant dépasse le budget de la campagne |
 | PUT | `/api/campaigns/:id/participants/:pid/promote` | JWT | Promouvoir co-organisateur (organisateur) |
 | DELETE | `/api/campaigns/:id/participants/:pid` | JWT | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement) |
 | GET | `/api/campaigns/:id/participants/:pid/journal` | JWT | Historique complet d'un participant, toutes parties confondues, groupé par partie (tout participant `VALIDATED`, y compris pour consulter l'historique d'un tiers) — cf. [§Historique complet d'un participant](#historique-complet-dun-participant) |

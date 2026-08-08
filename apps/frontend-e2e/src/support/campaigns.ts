@@ -14,13 +14,22 @@ import { createTeam } from './teams';
 /**
  * Crée une saison via "+ Créer une saison" (page `/campaigns`) et attend
  * l'arrivée sur `/campaigns/:id`. Renseigne `teamName` comme équipe engagée
- * si fourni. Retourne l'id de la campagne créée (extrait de l'URL).
+ * si fourni, et `budget` (jerricans, défaut 50 côté formulaire - cf.
+ * `CampaignForm.formBudget`) si fourni - une équipe dont le coût cumulé
+ * dépasse ce budget apparaît grisée dans le select (cf. `ineligibleTeamIds`),
+ * jamais sélectionnable. Retourne l'id de la campagne créée (extrait de l'URL).
  */
-export async function createCampaign(page: Page, options: { name: string; teamName?: string }): Promise<string> {
+export async function createCampaign(
+  page: Page,
+  options: { name: string; teamName?: string; budget?: number },
+): Promise<string> {
   await page.goto('/campaigns');
   await page.getByRole('button', { name: '+ Créer une saison' }).click();
 
   await page.getByLabel('Nom de la saison').fill(options.name);
+  if (options.budget !== undefined) {
+    await page.getByLabel('Budget des équipes (jerricans)').fill(String(options.budget));
+  }
   if (options.teamName) {
     await page.getByLabel('Mon équipe engagée').selectOption({ label: options.teamName });
   }

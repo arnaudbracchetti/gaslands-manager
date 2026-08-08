@@ -79,12 +79,15 @@
               class="tep-field__input tep-budget-input"
               type="number"
               min="0"
-              [ngModel]="formCans()"
+              [ngModel]="budgetEffectif()"
               (ngModelChange)="formCans.set(+$event)"
               (blur)="saveField('cans')"
-              [disabled]="isLocked()" />
+              [disabled]="isLocked() || isBudgetLockedByCampaign()" />
             <app-icon class="tep-budget-icon" concept="argent" size="md" />
           </div>
+          @if (isBudgetLockedByCampaign()) {
+            <p class="tep-field__hint">Budget imposé par la campagne - non modifiable ici.</p>
+          }
           <!-- Barre budget utilisé -->
           <div class="tep-budget-bar-row">
             <span class="tep-budget-bar-label">UTILISÉ</span>

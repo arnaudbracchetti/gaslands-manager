@@ -63,6 +63,7 @@ describe('CampaignController (câblage)', () => {
       query as never,
       scenarioCatalog as never,
       createCampaignUseCase as never,
+      uc() as never,            // update
       uc() as never,            // changeState
       uc() as never,            // delete
       uc(5) as never,           // requestJoin

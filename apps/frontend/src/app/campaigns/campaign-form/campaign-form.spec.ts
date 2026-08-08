@@ -22,6 +22,7 @@ const mockTeams: Team[] = [
     userId: 42,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
+    vehiclesCost: 30,
   },
   {
     id: 8,
@@ -31,6 +32,7 @@ const mockTeams: Team[] = [
     userId: 42,
     createdAt: '2025-01-02T00:00:00.000Z',
     updatedAt: '2025-01-02T00:00:00.000Z',
+    vehiclesCost: 70,
   },
 ];
 
@@ -74,7 +76,7 @@ describe('CampaignForm', () => {
 
   // ── Émission du DTO ──────────────────────────────────────────────────────
 
-  it('émet le DTO validé avec le nom et l\'équipe choisie', () => {
+  it('émet le DTO validé avec le nom, le budget et l\'équipe choisie', () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
@@ -82,10 +84,51 @@ describe('CampaignForm', () => {
     outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
 
     component.formName.set('Coupe Verney');
-    component.formTeamId.set(8);
+    component.formTeamId.set(7);  // vehiclesCost 30 ≤ budget par défaut 50
     component.saveForm();
 
-    expect(emitted).toEqual([{ name: 'Coupe Verney', teamId: 8 }]);
+    expect(emitted).toEqual([{ name: 'Coupe Verney', budget: 50, teamId: 7 }]);
+  });
+
+  // ── Budget des équipes (éligibilité) ─────────────────────────────────────
+
+  describe('ineligibleTeamIds', () => {
+    it('grise les équipes dont le coût cumulé dépasse le budget saisi', () => {
+      fixture.componentRef.setInput('teams', mockTeams);
+      fixture.detectChanges();
+
+      component.formBudget.set(50);
+
+      expect(component.ineligibleTeamIds().has(7)).toBe(false);  // 30 ≤ 50
+      expect(component.ineligibleTeamIds().has(8)).toBe(true);   // 70 > 50
+    });
+
+    it('recalcule dynamiquement quand le budget saisi change', () => {
+      fixture.componentRef.setInput('teams', mockTeams);
+      fixture.detectChanges();
+
+      component.formBudget.set(80);
+      expect(component.ineligibleTeamIds().has(8)).toBe(false);  // 70 ≤ 80
+
+      component.formBudget.set(20);
+      expect(component.ineligibleTeamIds().has(7)).toBe(true);   // 30 > 20
+    });
+
+    it('refuse la sauvegarde si l\'équipe choisie est hors budget', () => {
+      fixture.componentRef.setInput('teams', mockTeams);
+      fixture.detectChanges();
+
+      const emitted: CreateCampaignDto[] = [];
+      outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
+
+      component.formName.set('Coupe Verney');
+      component.formBudget.set(50);
+      component.formTeamId.set(8);  // 70 > 50
+      component.saveForm();
+
+      expect(emitted).toHaveLength(0);
+      expect(component.formError()).toContain('budget');
+    });
   });
 
   // ── Annulation ────────────────────────────────────────────────────────────

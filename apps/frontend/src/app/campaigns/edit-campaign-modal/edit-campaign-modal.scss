@@ -21,14 +21,12 @@ label {
 
 // Réserve la hauteur de 2 lignes sur les labels appariés (nom/budget) : le libellé
 // le plus long passe sur 2 lignes en majuscules + letter-spacing, ce qui décalait
-// le champ le plus court vers le haut. Exclut form-group--full (ligne pleine largeur,
-// pas de paire à aligner).
-.form-grid > .form-group:not(.form-group--full) label {
+// le champ le plus court vers le haut (même correctif que campaign-form.scss).
+.form-grid > .form-group label {
   min-height: 2 * 1.3em;
 }
 
-input,
-select {
+input {
   width: 100%;
   background: var(--tb-bitume);
   border: 1px solid var(--border-rust);
@@ -44,10 +42,6 @@ select {
     border-color: var(--tb-danger);
     box-shadow: var(--focus-ring-glow);
   }
-
-  &::placeholder {
-    color: var(--text-dim);
-  }
 }
 
 .form-error {
@@ -62,25 +56,6 @@ select {
   letter-spacing: 0.04em;
 }
 
-.form-info {
-  background: var(--tb-bitume);
-  border: 1px dashed var(--border-rust);
-  color: var(--text-dim);
-  padding: 14px 16px;
-  border-radius: var(--r-sm);
-  margin-bottom: 16px;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-}
-
-.form-hint {
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  margin-top: 6px;
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -90,8 +65,4 @@ select {
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
   }
-}
-
-.form-group--full {
-  grid-column: 1 / -1;
 }

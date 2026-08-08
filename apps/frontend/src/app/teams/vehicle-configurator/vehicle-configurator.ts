@@ -155,8 +155,9 @@ export class VehicleConfigurator implements OnInit {
   allTeamVehicles: WritableSignal<Vehicle[]> = signal<Vehicle[]>([]);
 
   /**
-   * Budget passé à `EquipmentManager` (cf. `BudgetView`) : total = jerricans de
-   * l'équipe ; usedByOthers = coût cumulé des autres véhicules (tous sauf celui en
+   * Budget passé à `EquipmentManager` (cf. `BudgetView`) : total = budget effectif de
+   * l'équipe (`Team.budget` - celui de la campagne engageante si elle en a une, sinon
+   * `cans`) ; usedByOthers = coût cumulé des autres véhicules (tous sauf celui en
    * cours). Le coût du véhicule courant est ajouté par `EquipmentManager` lui-même
    * (`coutTotal`) — on l'EXCLUT donc ici via `v.id !== currentId`. Calcul repris de
    * l'ancien `EquipmentManager.loadCoutAutresVehicules` (même `buildVehicleSummary`).
@@ -169,7 +170,7 @@ export class VehicleConfigurator implements OnInit {
           .filter((v: Vehicle): boolean => v.id !== currentId)
           .reduce((sum: number, v: Vehicle): number => sum + buildVehicleSummary(v, catalog).cout, 0)
       : 0;
-    return { total: this.team().cans, usedByOthers };
+    return { total: this.team().budget ?? this.team().cans, usedByOthers };
   });
 
   // ── Affichage du véhicule choisi/géré (computed, partagé par les deux modes) ─
