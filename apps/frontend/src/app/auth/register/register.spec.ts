@@ -47,7 +47,8 @@ describe('Register Component', () => {
     expect(compiled.querySelector('input[name="lastName"]')).toBeTruthy();
     expect(compiled.querySelector('input[name="pseudo"]')).toBeTruthy();
     expect(compiled.querySelector('input[type="email"]')).toBeTruthy();
-    expect(compiled.querySelector('input[type="password"]')).toBeTruthy();
+    expect(compiled.querySelector('input[name="password"]')).toBeTruthy();
+    expect(compiled.querySelector('input[name="confirmPassword"]')).toBeTruthy();
   });
 
   it('affiche un lien vers /login', () => {
@@ -67,6 +68,7 @@ describe('Register Component', () => {
     component.pseudo.set('JeanLeFou');
     component.email.set('jean@test.com');
     component.password.set('password123');
+    component.confirmPassword.set('password123');
     mockAuthService.register.mockReturnValue(of(undefined));
 
     component.onSubmit();
@@ -89,6 +91,7 @@ describe('Register Component', () => {
     component.pseudo.set('JeanLeFou');
     component.email.set('jean@test.com');
     component.password.set('password123');
+    component.confirmPassword.set('password123');
     mockAuthService.register.mockReturnValue(
       throwError(() => ({ error: { message: 'Cet email est déjà utilisé' } })),
     );
@@ -112,5 +115,36 @@ describe('Register Component', () => {
     component.onSubmit();
 
     expect(mockAuthService.register).not.toHaveBeenCalled();
+  });
+
+  it('n\'envoie pas la requête si les mots de passe ne correspondent pas', () => {
+    component.firstName.set('Jean');
+    component.lastName.set('Dupont');
+    component.pseudo.set('JeanLeFou');
+    component.email.set('jean@test.com');
+    component.password.set('password123');
+    component.confirmPassword.set('password124');
+
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(mockAuthService.register).not.toHaveBeenCalled();
+    expect(component.passwordMismatch()).toBe(true);
+    const errorEl = fixture.nativeElement.querySelector('.auth-error');
+    expect(errorEl?.textContent).toContain('Les mots de passe ne correspondent pas');
+  });
+
+  it('n\'envoie pas la requête si le mot de passe fait moins de 6 caractères', () => {
+    component.firstName.set('Jean');
+    component.lastName.set('Dupont');
+    component.pseudo.set('JeanLeFou');
+    component.email.set('jean@test.com');
+    component.password.set('abc');
+    component.confirmPassword.set('abc');
+
+    component.onSubmit();
+
+    expect(mockAuthService.register).not.toHaveBeenCalled();
+    expect(component.passwordTooShort()).toBe(true);
   });
 });

@@ -41,8 +41,19 @@ export class Register {
   readonly pseudo: WritableSignal<string> = signal('');
   readonly email: WritableSignal<string> = signal('');
   readonly password: WritableSignal<string> = signal('');
+  readonly confirmPassword: WritableSignal<string> = signal('');
   readonly errorMessage: WritableSignal<string> = signal('');
   readonly isLoading: WritableSignal<boolean> = signal(false);
+
+  /**
+   * Coche client uniquement, même pattern que ChangePasswordModal - ne se
+   * déclenche qu'une fois les deux champs renseignés pour ne pas flasher une
+   * erreur avant que l'utilisateur ait atteint le second champ.
+   */
+  readonly passwordMismatch = computed<boolean>(
+    () => this.confirmPassword() !== '' && this.password() !== this.confirmPassword(),
+  );
+  readonly passwordTooShort = computed<boolean>(() => this.password().length > 0 && this.password().length < 6);
 
   /**
    * Faux en dev/e2e (clé de site vide, cf. environments/environment.ts) : le
@@ -51,7 +62,9 @@ export class Register {
    */
   readonly captchaEnabled: WritableSignal<boolean> = signal(environment.turnstileSiteKey !== '');
   readonly captchaToken: WritableSignal<string> = signal('');
-  readonly canSubmit = computed<boolean>(() => !this.captchaEnabled() || this.captchaToken() !== '');
+  readonly canSubmit = computed<boolean>(
+    () => (!this.captchaEnabled() || this.captchaToken() !== '') && !this.passwordMismatch() && !this.passwordTooShort(),
+  );
 
   private readonly turnstileHost = viewChild<ElementRef<HTMLDivElement>>('turnstileHost');
   private widgetId: string | undefined;
@@ -92,6 +105,14 @@ export class Register {
   onSubmit(): void {
     if (!this.firstName() || !this.lastName() || !this.pseudo() || !this.email() || !this.password()) {
       this.errorMessage.set('Veuillez remplir tous les champs');
+      return;
+    }
+    if (this.passwordTooShort()) {
+      this.errorMessage.set('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    if (this.password() !== this.confirmPassword()) {
+      this.errorMessage.set('Les mots de passe ne correspondent pas');
       return;
     }
     if (!this.canSubmit()) {
