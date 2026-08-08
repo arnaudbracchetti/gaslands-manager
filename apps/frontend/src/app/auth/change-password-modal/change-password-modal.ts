@@ -31,9 +31,14 @@ export class ChangePasswordModal {
   newPassword: WritableSignal<string> = signal('');
   confirmNewPassword: WritableSignal<string> = signal('');
 
-  /** Coche client uniquement — indépendante de error() (erreur serveur). */
+  /**
+   * Coche client uniquement — indépendante de error() (erreur serveur).
+   * Ne se déclenche qu'une fois les DEUX champs renseignés : sinon l'erreur
+   * apparaîtrait dès la première frappe du premier champ, avant même que
+   * l'utilisateur ait pu atteindre le second.
+   */
   passwordMismatch: Signal<boolean> = computed(
-    () => this.newPassword() !== '' && this.newPassword() !== this.confirmNewPassword(),
+    () => this.confirmNewPassword() !== '' && this.newPassword() !== this.confirmNewPassword(),
   );
 
   passwordTooShort: Signal<boolean> = computed(() => this.newPassword().length > 0 && this.newPassword().length < 6);

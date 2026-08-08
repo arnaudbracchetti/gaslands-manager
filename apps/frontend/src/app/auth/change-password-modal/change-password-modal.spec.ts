@@ -31,6 +31,12 @@ describe('ChangePasswordModal', () => {
     expect(emitted).toEqual([{ currentPassword: 'ancienMdp', newPassword: 'nouveauMdp123' }]);
   });
 
+  it('n\'affiche pas d\'erreur de correspondance tant que la confirmation est vide', () => {
+    component.newPassword.set('nouveauMdp123');
+
+    expect(component.passwordMismatch()).toBe(false);
+  });
+
   it('n\'émet pas submitted si les mots de passe ne correspondent pas', () => {
     const emitted: unknown[] = [];
     outputToObservable(component.submitted).subscribe((dto) => emitted.push(dto));
