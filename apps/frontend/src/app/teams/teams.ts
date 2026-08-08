@@ -22,11 +22,12 @@ import { CatalogService } from '../catalog/catalog.service';
 import { Sponsor } from '../catalog/catalog.model';
 import { buildVehicleSummary, VehicleSummary } from './vehicle-summary';
 import { Vehicle } from './vehicle-configurator/vehicle-builder.model';
+import {Icon} from '../shared/icon/icon';
 
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [TeamCard],
+  imports: [TeamCard, Icon],
   templateUrl: './teams.html',
   styleUrl: './teams.scss',
 })

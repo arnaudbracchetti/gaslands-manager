@@ -4,7 +4,7 @@ Chaque véhicule a un **type** qui détermine ses statistiques de base et son co
 
 ## Types de véhicules
 
-### 🏎️ Buggy (4 jerricans)
+### Buggy (4 jerricans)
 Le véhicule le plus léger et le plus rapide. Idéal pour les pilotes qui préfèrent la vitesse à la résistance.
 
 - **Hull Points** : 4
@@ -12,7 +12,7 @@ Le véhicule le plus léger et le plus rapide. Idéal pour les pilotes qui préf
 - **Max Gear** : 6
 - **Crew** : 1
 
-### 🚗 Performance Car (5 jerricans)
+### Performance Car (5 jerricans)
 Parfait équilibre entre vitesse et robustesse. Le choix populaire pour les débutants.
 
 - **Hull Points** : 6
@@ -20,7 +20,7 @@ Parfait équilibre entre vitesse et robustesse. Le choix populaire pour les déb
 - **Max Gear** : 6
 - **Crew** : 1
 
-### 🚐 Van (7 jerricans)
+### Van (7 jerricans)
 Lent mais robuste. Peut embarquer plus d'équipement et de membres d'équipage.
 
 - **Hull Points** : 10
@@ -28,7 +28,7 @@ Lent mais robuste. Peut embarquer plus d'équipement et de membres d'équipage.
 - **Max Gear** : 4
 - **Crew** : 2
 
-### 🚛 Truck (10 jerricans)
+### Truck (10 jerricans)
 Le monstre de la route. Difficile à détruire, mais terriblement lent.
 
 - **Hull Points** : 14

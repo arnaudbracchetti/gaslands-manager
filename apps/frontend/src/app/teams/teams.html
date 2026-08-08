@@ -2,7 +2,8 @@
 <div class="teams-page">
 
   <div class="teams-header">
-    <h1>👥 Mes Équipes</h1>
+    <app-icon concept="carrosserie" size="xl"></app-icon>
+    <h1>Mes Équipes</h1>
     <button class="btn-primary btn-add" (click)="createAndEdit()" [disabled]="saving()">
       + Nouvelle équipe
     </button>
@@ -18,7 +19,7 @@
     </div>
   } @else if (teams().length === 0) {
     <div class="teams-empty">
-      <p class="teams-empty__icon">🏎️</p>
+      <app-icon concept="carrosserie" size="xxl"></app-icon>
       <p class="teams-empty__title">Aucune équipe pour l'instant</p>
       <p class="teams-empty__subtitle">Créez votre première équipe pour commencer !</p>
       <button class="btn-primary" (click)="createAndEdit()" [disabled]="saving()">

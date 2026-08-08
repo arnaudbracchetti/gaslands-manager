@@ -3,7 +3,7 @@
 <div class="grw-overlay" role="dialog" aria-modal="true"
      [attr.aria-label]="'Fin de partie - ' + scenarioName">
   <div class="grw-modal">
-    <h3 class="grw-modal__title">🎯 Fin de partie - {{ scenarioName }}</h3>
+    <h3 class="grw-modal__title">Fin de partie - {{ scenarioName }}</h3>
 
     <ol class="grw-modal__steps">
       @for (stepId of activeSteps(); track stepId; let i = $index) {
