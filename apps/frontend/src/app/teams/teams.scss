@@ -15,7 +15,7 @@
   h1 {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 2rem;
+    font-size: var(--fs-3xl);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -24,7 +24,7 @@
     &::after {
       content: '// ÉQUIPES';
       font-family: var(--font-mono);
-      font-size: 0.65rem;
+      font-size: var(--fs-2xs);
       font-weight: 400;
       color: var(--text-signal);
       letter-spacing: 0.18em;
@@ -37,7 +37,7 @@
 .btn-add {
   width: auto;
   padding: 10px 22px;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .teams-error {
@@ -48,7 +48,7 @@
   border-radius: var(--r-sm);
   margin-bottom: 24px;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 
@@ -57,7 +57,7 @@
   padding: 60px 20px;
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -67,7 +67,7 @@
   padding: 80px 20px;
 
   &__icon {
-    font-size: 3.5rem;
+    font-size: var(--fs-display-sm);
     margin-bottom: 16px;
     opacity: 0.6;
   }
@@ -75,7 +75,7 @@
   &__title {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1.4rem;
+    font-size: var(--fs-xl);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -85,7 +85,7 @@
   &__subtitle {
     font-family: var(--font-text);
     color: var(--text-dim);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     margin-bottom: 24px;
   }
 

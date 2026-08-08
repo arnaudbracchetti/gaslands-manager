@@ -1,3 +1,5 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 .tep-layout {
   height: 100vh;
   display: flex;
@@ -15,7 +17,7 @@
   text-align: center;
   padding: 60px 20px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 
@@ -26,7 +28,7 @@
 .tep-error {
   padding: 10px 32px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--tint-danger-text);
   background: var(--tint-danger-bg);
   border-bottom: 1px solid var(--border-rust);
@@ -37,7 +39,7 @@
 .tep-locked-banner {
   padding: 10px 32px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--tb-warn);
   background: var(--tint-accent-bg);
   border-bottom: 1px solid var(--tb-warn);
@@ -85,7 +87,7 @@
 
 .tep-section-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-3xs);
   color: var(--tb-sand);
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -99,7 +101,7 @@
   color: var(--tint-danger-text);
   padding: 8px 12px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 
@@ -111,7 +113,7 @@
 
 .tep-field__label {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-3xs);
   color: var(--text-dim);
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -127,7 +129,7 @@
   color: var(--tb-os);
   padding: 10px 12px;
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   transition: border-color 160ms;
   width: 100%;
   box-sizing: border-box;
@@ -141,7 +143,7 @@
 
   &--display {
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: var(--fs-sm);
     letter-spacing: 1px;
   }
 }
@@ -150,7 +152,7 @@
   resize: vertical;
   min-height: 70px;
   font-family: var(--font-text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 300;
   line-height: 1.55;
 }
@@ -164,7 +166,7 @@
 
 .tep-budget-input {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: var(--fs-md);
   font-weight: 700;
   letter-spacing: 1px;
   padding-right: 32px;
@@ -173,7 +175,7 @@
 .tep-budget-icon {
   position: absolute;
   right: 10px;
-  font-size: 16px;
+  font-size: var(--fs-base);
   pointer-events: none;
 }
 
@@ -186,7 +188,7 @@
 
 .tep-budget-bar-label {
   font-family: var(--font-mono);
-  font-size: 7px;
+  font-size: var(--fs-3xs);
   color: var(--text-dim);
   letter-spacing: 1px;
   white-space: nowrap;
@@ -194,7 +196,7 @@
 
 .tep-budget-rest {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-3xs);
   color: var(--tb-danger);
   font-weight: 700;
   white-space: nowrap;
@@ -248,7 +250,7 @@
   &__text {
     font-family: var(--font-mono);
     color: var(--text-dim);
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-left: 4px;
@@ -281,7 +283,7 @@
 .tep-vehicles-title {
   font-family: var(--font-display);
   color: var(--tb-os);
-  font-size: 1.8rem;
+  font-size: var(--fs-2xl);
   font-weight: 400;
   letter-spacing: 1px;
   line-height: 1;
@@ -294,7 +296,7 @@
   color: var(--tb-os);
   padding: 11px 20px;
   font-family: var(--font-text);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   letter-spacing: 2px;
   cursor: pointer;
@@ -317,7 +319,7 @@
   color: var(--tb-os);
   padding: 8px 16px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -341,7 +343,7 @@
 
 .tep-budget-context__label {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-3xs);
   color: var(--text-dim);
   white-space: nowrap;
   letter-spacing: 1px;
@@ -349,7 +351,7 @@
 
 .tep-budget-context__value {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--tb-danger);
   font-weight: 700;
   white-space: nowrap;
@@ -363,7 +365,7 @@
 .tep-vehicles-empty {
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   text-align: center;
   padding: 40px 20px;
@@ -391,7 +393,7 @@
   color: var(--tb-os);
   padding: 8px 16px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -413,7 +415,7 @@
 }
 
 
-@media (max-width: 768px) {
+@include bp.mobile {
   .tep-layout { height: auto; overflow: visible; }
   .tep-panels { flex-direction: column; overflow: visible; }
   .tep-panel {

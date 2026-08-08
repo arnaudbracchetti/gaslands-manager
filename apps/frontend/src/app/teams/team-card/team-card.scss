@@ -38,7 +38,7 @@
     top: -10px;
     right: 10px;
     font-family: var(--font-display);
-    font-size: 6.5rem;
+    font-size: var(--fs-display-lg);
     font-weight: 700;
     color: var(--tb-os);
     opacity: 0.06;
@@ -58,7 +58,7 @@
 
   &__prefix {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     color: var(--text-dim);
     letter-spacing: 0.08em;
   }
@@ -66,7 +66,7 @@
   &__name {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1.2rem;
+    font-size: var(--fs-lg);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -88,7 +88,7 @@
     padding: 2px 10px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -97,7 +97,7 @@
   &__cans {
     font-family: var(--font-mono);
     color: var(--text-dim);
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     letter-spacing: 0.06em;
     display: flex;
     align-items: center;
@@ -128,7 +128,7 @@
     align-items: center;
     justify-content: space-between;
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: var(--fs-xs);
     color: var(--text-dim);
     letter-spacing: 0.04em;
   }
@@ -136,7 +136,7 @@
   &__budget-label {
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: 0.7rem;
+    font-size: var(--fs-2xs);
     opacity: 0.7;
   }
 
@@ -148,7 +148,7 @@
 
   &__budget-alert {
     color: var(--tb-rouille-lt);
-    font-size: 0.7rem;
+    font-size: var(--fs-2xs);
   }
 
   &__progress-track {
@@ -167,7 +167,7 @@
 
   &__statut {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     letter-spacing: 0.06em;
 
     &--over {
@@ -194,7 +194,7 @@
     font-weight: 300;
     font-style: italic;
     color: var(--text-dim);
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     line-height: 1.5;
   }
 
@@ -210,7 +210,7 @@
 
   &__vehicles-title {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     color: var(--text-dim);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -230,7 +230,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    font-size: 0.82rem;
+    font-size: var(--fs-xs);
   }
 
   &__vehicle-name {
@@ -255,14 +255,14 @@
     gap: 3px;
     font-family: var(--font-mono);
     color: var(--text-dim);
-    font-size: 0.75rem;
+    font-size: var(--fs-xs);
     white-space: nowrap;
   }
 
   &__vehicle-arrow {
     font-family: var(--font-mono);
     color: var(--text-faint);
-    font-size: 0.75rem;
+    font-size: var(--fs-xs);
   }
 
 }

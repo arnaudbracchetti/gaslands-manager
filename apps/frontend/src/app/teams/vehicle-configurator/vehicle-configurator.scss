@@ -1,3 +1,5 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 .vc {
   display: flex;
   flex-direction: column;
@@ -8,7 +10,7 @@
 .vc-status {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   color: var(--text-dim);
 
@@ -20,7 +22,7 @@
   margin: 0;
   font-family: var(--font-text);
   font-weight: 300;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-body);
   position: sticky;
   top: 156px;
@@ -34,7 +36,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@include bp.mobile {
   .vc-intro {
     position: static;
     background: none;
@@ -62,7 +64,7 @@
   padding: 9px 22px;
   border-radius: var(--r-sm);
   font-family: var(--font-text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;

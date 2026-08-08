@@ -37,7 +37,7 @@
     font-family: var(--font-text);
     font-weight: 600;
     color: var(--tb-os);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     text-transform: uppercase;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -63,7 +63,7 @@
     padding: 2px 8px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     letter-spacing: 0.06em;
     white-space: nowrap;
   }
@@ -73,7 +73,7 @@
       font-family: var(--font-text);
       font-weight: 300;
       color: var(--text-dim);
-      font-size: 0.8rem;
+      font-size: var(--fs-xs);
       font-style: italic;
       line-height: 1.4;
       margin: 0;
@@ -87,7 +87,7 @@
   &__reason {
     font-family: var(--font-mono);
     color: var(--tb-rouille-lt);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     letter-spacing: 0.04em;
     margin: 0;
     margin-top: auto;
@@ -104,7 +104,7 @@
     background: var(--tb-toxic);
     color: var(--tb-bitume);
     font-family: var(--font-text);
-    font-size: 1.1rem;
+    font-size: var(--fs-md);
     font-weight: 700;
     line-height: 1;
     display: flex;
@@ -205,7 +205,7 @@
 .option__orientations-label {
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -217,7 +217,7 @@
   padding: 4px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
   text-transform: capitalize;
   cursor: pointer;
@@ -235,7 +235,7 @@
   padding: 4px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;

@@ -7,7 +7,7 @@
 
   &__hint {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
     color: var(--text-dim);
     margin: 0 0 0.5rem;
   }
@@ -66,7 +66,7 @@
   &__handle {
     cursor: grab;
     color: var(--tb-sand);
-    font-size: 1rem;
+    font-size: var(--fs-base);
     line-height: 1;
     user-select: none;
 
@@ -77,7 +77,7 @@
 
   &__rank {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: var(--fs-md);
     color: var(--tb-os);
     min-width: 1.5rem;
     text-align: center;
@@ -91,7 +91,7 @@
 
   &__badge {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--fs-2xs);
     padding: 0.2rem 0.5rem;
     border-radius: var(--r-sm);
     text-transform: uppercase;
@@ -109,7 +109,7 @@
 
   &__points {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--fs-2xs);
     padding: 0.2rem 0.5rem;
     border-radius: var(--r-sm);
     background: var(--tb-bitume-4);
@@ -137,7 +137,7 @@
     border: 1px solid var(--tb-sand);
     color: var(--tb-os);
     border-radius: var(--r-sm);
-    font-size: 0.65rem;
+    font-size: var(--fs-2xs);
     line-height: 1;
     padding: 2px 6px;
     cursor: pointer;
@@ -159,7 +159,7 @@
       flex: 1;
       min-height: 28px;
       min-width: 40px;
-      font-size: 0.8rem;
+      font-size: var(--fs-xs);
     }
   }
 

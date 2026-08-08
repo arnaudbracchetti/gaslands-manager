@@ -24,7 +24,7 @@
   top: -10px;
   right: 10px;
   font-family: var(--font-display);
-  font-size: 4.5rem;
+  font-size: var(--fs-display-md);
   font-weight: 700;
   color: var(--tb-os);
   opacity: 0.06;
@@ -49,7 +49,7 @@
 
 .tep-vehicle-card__name {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--fs-base);
   color: var(--tb-os);
   letter-spacing: 1px;
   line-height: 1;
@@ -59,7 +59,7 @@
 
 .tep-vehicle-card__type {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-3xs);
   color: var(--text-dim);
   letter-spacing: 2px;
 }
@@ -73,7 +73,7 @@
 
 .tep-vehicle-card__cost {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: var(--fs-md);
   color: var(--tb-danger);
   font-weight: 700;
   letter-spacing: 1px;
@@ -89,7 +89,7 @@
 
   &-label {
     font-family: var(--font-mono);
-    font-size: 7px;
+    font-size: var(--fs-3xs);
     color: var(--text-dim);
     letter-spacing: 1px;
   }
@@ -101,7 +101,7 @@
   border: 1px solid var(--tb-metal-2);
   padding: 3px 10px;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-3xs);
   color: var(--text-dim);
   letter-spacing: 1px;
   &--overflow { border-color: var(--tb-metal-1); color: var(--text-dim); }
@@ -123,7 +123,7 @@
   justify-content: center;
   cursor: pointer;
   font-family: var(--font-text);
-  font-size: 14px;
+  font-size: var(--fs-xs);
   flex-shrink: 0;
 
   &:hover { filter: brightness(1.25); }

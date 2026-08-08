@@ -41,7 +41,7 @@
     top: -10px;
     right: 10px;
     font-family: var(--font-display);
-    font-size: 4.5rem;
+    font-size: var(--fs-display-md);
     font-weight: 700;
     color: var(--tb-os);
     opacity: 0.06;
@@ -61,7 +61,7 @@
   &__name {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1rem;
+    font-size: var(--fs-base);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -75,7 +75,7 @@
   &__weight {
     font-family: var(--font-mono);
     color: var(--text-dim);
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     text-transform: uppercase;
     letter-spacing: 0.14em;
     flex-shrink: 0;
@@ -86,7 +86,7 @@
       font-family: var(--font-text);
       font-weight: 300;
       color: var(--text-dim);
-      font-size: 0.82rem;
+      font-size: var(--fs-xs);
       line-height: 1.4;
       margin: 0;
     }
@@ -108,7 +108,7 @@
       padding: 2px 6px;
       border-radius: var(--r-sm);
       font-family: var(--font-mono);
-      font-size: 0.68rem;
+      font-size: var(--fs-2xs);
       letter-spacing: 0.06em;
     }
   }
@@ -126,7 +126,7 @@
     font-family: var(--font-mono);
     color: var(--tb-os);
     font-weight: 700;
-    font-size: 0.88rem;
+    font-size: var(--fs-sm);
     letter-spacing: 0.06em;
   }
 
@@ -137,7 +137,7 @@
     padding: 6px 14px;
     border-radius: var(--r-sm);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -153,7 +153,7 @@
   &__reason {
     font-family: var(--font-mono);
     color: var(--tb-rouille-lt);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     letter-spacing: 0.04em;
     margin: 0;
     text-align: right;

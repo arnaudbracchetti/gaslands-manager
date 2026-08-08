@@ -177,6 +177,23 @@
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
   --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
 
+  // ── Typographie — échelle de tailles ──────────────────────────────────────
+  --fs-3xs: 0.5rem;  --fs-2xs: 0.7rem;  --fs-xs: 0.8rem;  --fs-sm: 0.9rem;
+  --fs-base: 1rem;   --fs-md: 1.1rem;   --fs-lg: 1.2rem;  --fs-xl: 1.4rem;
+  --fs-2xl: 1.8rem;  --fs-3xl: 2rem;
+  --fs-display-sm: 3.5rem; --fs-display-md: 4.5rem; --fs-display-lg: 6.5rem;
+
+  @include bp.mobile {
+    // Réduction de 20% de TOUS les tokens en mobile, --fs-3xs/--fs-2xs
+    // compris : les en exclure (comme avant) les laissait plus grands que
+    // --fs-xs/--fs-sm une fois ces derniers réduits, cassant la hiérarchie
+    // de tailles au lieu de la préserver.
+    --fs-3xs: 0.4rem;  --fs-2xs: 0.55rem; --fs-xs: 0.65rem;  --fs-sm: 0.65rem;
+    --fs-base: 0.8rem; --fs-md: 0.88rem;  --fs-lg: 0.96rem;  --fs-xl: 1.10rem;
+    --fs-2xl: 1.25rem; --fs-3xl: 1.40rem;
+    --fs-display-sm: 2.8rem; --fs-display-md: 3.6rem; --fs-display-lg: 5.2rem;
+  }
+
   // ── Rayons — carré par défaut ─────────────────────────────────────────────
   --r-0:   0;
   --r-sm:  2px;
@@ -339,7 +356,7 @@ body {
     font-family: var(--font-mono);
     color: var(--text-dim);
     text-decoration: none;
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -382,7 +399,7 @@ main {
 .user-name {
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -430,7 +447,7 @@ main {
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -450,7 +467,7 @@ main {
   padding: 6px 14px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -468,7 +485,7 @@ main {
   font-family: var(--font-mono);
   color: var(--tb-danger);
   text-decoration: none;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -521,7 +538,7 @@ main {
 .auth-title {
   font-family: var(--font-display);
   color: var(--tb-danger);
-  font-size: 2rem;
+  font-size: var(--fs-3xl);
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -537,7 +554,7 @@ main {
     display: block;
     font-family: var(--font-mono);
     color: var(--text-dim);
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.18em;
@@ -552,7 +569,7 @@ main {
     padding: 10px 14px;
     border-radius: var(--r-sm);
     font-family: var(--font-text);
-    font-size: 1rem;
+    font-size: var(--fs-base);
     transition: border-color 160ms;
 
     &:focus {
@@ -575,7 +592,7 @@ main {
   border-radius: var(--r-sm);
   margin-bottom: 1.25rem;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   line-height: 1.5;
   letter-spacing: 0.04em;
 }
@@ -590,7 +607,7 @@ main {
   padding: 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -618,7 +635,7 @@ main {
   padding: 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -643,7 +660,7 @@ main {
   margin-top: 1.5rem;
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
 
   a {
@@ -678,7 +695,7 @@ main {
 
   h1 {
     font-family: var(--font-display);
-    font-size: 2.2rem;
+    font-size: var(--fs-3xl);
     font-weight: 400;
     color: var(--tb-danger);
     margin-bottom: 1.5rem;
@@ -689,7 +706,7 @@ main {
 
   h2 {
     font-family: var(--font-text);
-    font-size: 1.3rem;
+    font-size: var(--fs-xl);
     font-weight: 600;
     color: var(--tb-os);
     margin: 2rem 0 1rem;
@@ -701,7 +718,7 @@ main {
 
   h3 {
     font-family: var(--font-mono);
-    font-size: 0.82rem;
+    font-size: var(--fs-xs);
     color: var(--text-dim);
     margin: 1.5rem 0 0.75rem;
     text-transform: uppercase;
@@ -729,7 +746,7 @@ main {
       padding: 10px 16px;
       text-align: left;
       font-family: var(--font-mono);
-      font-size: 0.75rem;
+      font-size: var(--fs-xs);
       font-weight: 400;
       text-transform: uppercase;
       letter-spacing: 0.12em;

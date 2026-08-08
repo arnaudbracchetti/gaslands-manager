@@ -5,7 +5,7 @@
 .me-status {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   letter-spacing: 0.06em;
 }
@@ -19,7 +19,7 @@
 .me-group-title {
   margin: 0;
   font-family: var(--font-text);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   font-weight: 600;
   text-transform: uppercase;
@@ -75,7 +75,7 @@
   left: 50%;
   transform: translate(-50%, -50%) rotate(-10deg);
   font-family: var(--font-display);
-  font-size: 3.4rem;
+  font-size: var(--fs-display-sm);
   font-weight: 700;
   color: var(--tb-rouille-lt);
   opacity: 0.65;
@@ -92,7 +92,7 @@
 .me-name {
   grid-area: name;
   font-family: var(--font-text);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
@@ -108,7 +108,7 @@
 .me-orientation {
   margin-left: 6px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   letter-spacing: 0.08em;
 }
@@ -134,7 +134,7 @@
   padding: 2px 6px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
@@ -148,7 +148,7 @@
   padding: 4px 10px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -167,7 +167,7 @@
   grid-area: action;
   justify-self: start;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -177,7 +177,7 @@
 .me-tourelle-badge {
   margin-left: 4px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   font-style: italic;
 }
@@ -185,7 +185,7 @@
 .me-locked {
   grid-area: action;
   justify-self: start;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   opacity: 0.6;
   cursor: help;
 }
@@ -206,7 +206,7 @@
   padding: 3px 8px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition: border-color 160ms, color 160ms;
   white-space: nowrap;

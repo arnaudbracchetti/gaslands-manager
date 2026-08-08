@@ -1,3 +1,5 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 // Même gabarit que VehicleConfiguratorPage (`vcp-page`/`vcp-header`) — pleine
 // largeur d'écran, en-tête collant sous le fil d'Ariane.
 .atp-page {
@@ -21,14 +23,14 @@
   h1 {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1.8rem;
+    font-size: var(--fs-2xl);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 }
 
-@media (max-width: 760px) {
+@include bp.mobile {
   .atp-header {
     position: static;
     background: none;
@@ -42,7 +44,7 @@
   text-align: center;
   padding: 60px 20px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 
@@ -71,13 +73,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
 }
 
 .atp-summary-value {
   font-family: var(--font-mono);
-  font-size: 1.25rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--tb-danger);
 
@@ -104,7 +106,7 @@
 .atp-vehicles-empty {
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   text-align: center;
   padding: 40px 20px;
@@ -128,7 +130,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   padding: 10px 20px;
   background: transparent;
   color: var(--tb-os);

@@ -46,7 +46,7 @@
     color: var(--tb-os);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    font-size: 1.05rem;
+    font-size: var(--fs-base);
     font-weight: 400;
     margin: 0;
   }
@@ -62,7 +62,7 @@
       flex: 1;
       text-align: center;
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: var(--fs-2xs);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-dim);

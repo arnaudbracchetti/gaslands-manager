@@ -43,7 +43,7 @@
 .svm-modal__message {
   margin: 0;
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   color: var(--text-strong);
   line-height: 1.5;
 }
@@ -59,7 +59,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-text);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   opacity: 0.6;
@@ -81,12 +81,12 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   color: var(--text-strong);
 }
 
 .svm-modal__item-category {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   opacity: 0.7;
   min-width: 90px;

@@ -8,7 +8,7 @@
 .edm-modal__name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: var(--fs-lg);
   font-weight: 400;
   color: var(--tb-os);
   text-transform: uppercase;
@@ -31,7 +31,7 @@
   padding: 3px 10px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
@@ -42,7 +42,7 @@
     font-family: var(--font-text);
     font-weight: 300;
     color: var(--text-dim);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
     font-style: italic;
     line-height: 1.5;
   }
@@ -61,7 +61,7 @@
 .edm-modal__regles-title {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -73,7 +73,7 @@
       font-family: var(--font-text);
       font-weight: 300;
       color: var(--tb-os);
-      font-size: 0.9rem;
+      font-size: var(--fs-sm);
       line-height: 1.6;
     }
 
@@ -90,7 +90,7 @@
       font-family: var(--font-text);
       font-weight: 300;
       color: var(--tb-os);
-      font-size: 0.9rem;
+      font-size: var(--fs-sm);
       line-height: 1.6;
       padding-left: 14px;
       position: relative;
@@ -115,7 +115,7 @@
   margin: 0;
   font-family: var(--font-mono);
   color: var(--tb-rouille-lt);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
   font-style: italic;
 }

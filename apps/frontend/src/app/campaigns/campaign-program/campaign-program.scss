@@ -10,7 +10,7 @@
     h2 {
       font-family: var(--font-display);
       color: var(--tb-os);
-      font-size: 1.2rem;
+      font-size: var(--fs-lg);
       font-weight: 400;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -26,6 +26,6 @@
   &__loading {
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
 }

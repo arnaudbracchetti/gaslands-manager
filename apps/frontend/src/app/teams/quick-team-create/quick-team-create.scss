@@ -10,7 +10,7 @@
   border: none;
   color: var(--clr-accent);
   font-family: var(--font-text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
@@ -34,7 +34,7 @@
     color: var(--clr-text);
     padding: 10px 12px;
     border-radius: 4px;
-    font-size: 0.95rem;
+    font-size: var(--fs-sm);
     font-family: inherit;
 
     &:focus {
@@ -57,5 +57,5 @@
   padding: 10px 14px;
   border-radius: 4px;
   margin-bottom: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }

@@ -1,7 +1,7 @@
 h3 {
   font-family: var(--font-display);
   color: var(--tb-danger);
-  font-size: 1.05rem;
+  font-size: var(--fs-base);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -12,7 +12,7 @@ label {
   display: block;
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.18em;
   margin-bottom: 6px;
@@ -26,7 +26,7 @@ select {
   padding: 10px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   transition: border-color 160ms;
 
   &:focus {
@@ -44,7 +44,7 @@ select {
   border-radius: var(--r-sm);
   margin-bottom: 16px;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 
@@ -55,5 +55,5 @@ select {
 .form-hint {
   color: var(--text-dim);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
 }

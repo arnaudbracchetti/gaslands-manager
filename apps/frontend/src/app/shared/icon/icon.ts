@@ -17,6 +17,11 @@
  * de toute une catégorie d'icônes (tous les badges, tous les titres...) se
  * fasse en un seul endroit (`ICON_SIZE_PX`).
  *
+ * Réduite de 20% sous 640px de large (`ViewportService.isMobile`, même seuil
+ * que `bp.mobile`/`--fs-*`, cf. styles.scss) — appliquée une seule fois sur
+ * `sizePx`, dont `glyph` dérive déjà entièrement, donc sans code spécifique
+ * supplémentaire.
+ *
  * Les rectangles de découpe n'ont pas tous exactement les mêmes proportions
  * (dessins peints à la main, largeur de colonne fixe mais hauteur de dessin
  * variable selon la ligne) — et les marges entre dessin et légende sont trop
@@ -28,9 +33,13 @@
  * bloquent nativement tout débordement du fond au-delà du rectangle voulu.
  * Le conteneur externe (`sizePx × sizePx`) centre ce glyphe par flexbox.
  */
-import { Component, InputSignal, Signal, computed, input } from '@angular/core';
+import { Component, InputSignal, Signal, computed, inject, input } from '@angular/core';
+import { ViewportService } from '../viewport.service';
 import { ICON_CROP_RECTS, ICON_SHEET_IMAGE_HEIGHT, ICON_SHEET_IMAGE_WIDTH, IconConcept } from './icon-sheet.map';
 import { ICON_SIZE_PX, IconSize } from './icon-sizes';
+
+/** Facteur appliqué à `ICON_SIZE_PX` sous 640px de large — même réduction que `--fs-*`. */
+const MOBILE_ICON_SCALE = 0.8;
 
 interface IconGlyphStyle {
   width: number;
@@ -55,8 +64,14 @@ export class Icon {
   /** Texte alternatif — vide par défaut (icône généralement accompagnée d'un libellé visible). */
   alt: InputSignal<string> = input<string>('');
 
-  /** Largeur = hauteur du conteneur, en pixels — résolue depuis `size()`. */
-  sizePx: Signal<number> = computed((): number => ICON_SIZE_PX[this.size()]);
+  private readonly viewport: ViewportService = inject(ViewportService);
+
+  /** Largeur = hauteur du conteneur, en pixels — résolue depuis `size()`,
+   *  réduite de 20% sous 640px de large (cf. commentaire d'en-tête). */
+  sizePx: Signal<number> = computed((): number => {
+    const base = ICON_SIZE_PX[this.size()];
+    return this.viewport.isMobile() ? Math.round(base * MOBILE_ICON_SCALE) : base;
+  });
 
   /** Dimensions et fond du glyphe interne — mis à l'échelle uniformément
    *  (jamais X/Y indépendants) puis centré par le conteneur (flexbox, cf.

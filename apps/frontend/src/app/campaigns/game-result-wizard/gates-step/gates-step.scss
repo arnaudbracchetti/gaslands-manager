@@ -7,7 +7,7 @@
 
   &__hint {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
     color: var(--text-dim);
     margin: 0 0 0.5rem;
   }
@@ -37,7 +37,7 @@
 
   &__rank {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: var(--fs-md);
     color: var(--tb-os);
     min-width: 1.5rem;
     text-align: center;
@@ -57,7 +57,7 @@
     padding: 8px 12px;
     border-radius: var(--r-sm);
     font-family: var(--font-text);
-    font-size: 0.9rem;
+    font-size: var(--fs-sm);
 
     @include bp.mobile {
       width: 100%;

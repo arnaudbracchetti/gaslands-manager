@@ -13,7 +13,7 @@
 .tb-title {
   margin: 0;
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
@@ -29,7 +29,7 @@
   justify-content: space-between;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   letter-spacing: 0.04em;
 
@@ -39,7 +39,7 @@
     border-top: 1px solid var(--border-rust);
     color: var(--tb-coolant);
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
 
   &--over {

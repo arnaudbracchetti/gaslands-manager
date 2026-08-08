@@ -1,3 +1,5 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 // Gabarit repris à l'identique de VehicleConfiguratorPage (`vcp-page`/`vcp-header`)
 // — même classes, même règles : pleine largeur d'écran, en-tête collant sous le
 // fil d'Ariane.
@@ -29,7 +31,7 @@
   h1 {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1.8rem;
+    font-size: var(--fs-2xl);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -50,7 +52,7 @@
   padding: 4px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -63,7 +65,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@include bp.mobile {
   .vcp-top {
     position: static;
     background: none;
@@ -81,7 +83,7 @@
   text-align: center;
   padding: 60px 20px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 

@@ -1,3 +1,5 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 // Même gabarit que AtelierPage/VehicleConfiguratorPage (`atp-page`/`atp-header`)
 // — pleine largeur d'écran, en-tête collant sous le fil d'Ariane.
 .pap-page {
@@ -21,7 +23,7 @@
   h1 {
     font-family: var(--font-display);
     color: var(--tb-os);
-    font-size: 1.8rem;
+    font-size: var(--fs-2xl);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -30,7 +32,7 @@
 
 .pap-readonly-badge {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -41,7 +43,7 @@
   color: var(--tint-info-text);
 }
 
-@media (max-width: 760px) {
+@include bp.mobile {
   .pap-header {
     position: static;
     background: none;
@@ -55,7 +57,7 @@
   text-align: center;
   padding: 60px 20px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 
@@ -66,7 +68,7 @@
 .pap-vehicles-empty {
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   text-align: center;
   padding: 40px 20px;
@@ -173,7 +175,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@include bp.mobile {
   .pap-detail-grid {
     grid-template-columns: 1fr;
   }

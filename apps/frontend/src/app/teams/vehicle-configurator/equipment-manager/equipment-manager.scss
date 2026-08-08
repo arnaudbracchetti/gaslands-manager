@@ -1,3 +1,5 @@
+@use '../../../shared/styles/breakpoints' as bp;
+
 .em {
   display: flex;
   flex-direction: column;
@@ -7,7 +9,7 @@
 .em-status {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   color: var(--text-dim);
 
@@ -52,7 +54,7 @@
 // à spécificité égale (une seule classe), CSS départage par ordre de
 // déclaration dans le fichier — un reset placé avant la règle de base
 // serait silencieusement écrasé par elle, quel que soit le viewport.
-@media (max-width: 760px) {
+@include bp.mobile {
   .em-layout {
     grid-template-columns: 1fr;
   }
@@ -98,7 +100,7 @@
   border-left: 2px solid var(--tb-danger);
   padding: 0 0 0 8px;
   font-family: var(--font-text);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
@@ -107,7 +109,7 @@
 }
 
 .em-equipment__chevron {
-  font-size: 1.3rem;
+  font-size: var(--fs-xl);
   line-height: 1;
   color: var(--text-dim);
   transition: transform 160ms;
@@ -135,7 +137,7 @@
 
 .em-equipment__toolbar-label {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   letter-spacing: 0.08em;
 }
@@ -175,7 +177,7 @@
   grid-area: name;
   align-self: center;
   font-family: var(--font-text);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--tb-os);
   text-transform: uppercase;
@@ -200,7 +202,7 @@
   padding: 2px 4px;
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
@@ -208,7 +210,7 @@
 .em-sequella-card__description {
   grid-area: desc;
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   line-height: 1.4;
 
@@ -222,7 +224,7 @@
   grid-area: extra;
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--tb-rouille-lt);
 }
 
@@ -237,7 +239,7 @@
   background: var(--tb-toxic);
   color: var(--tb-bitume);
   font-family: var(--font-text);
-  font-size: 1.1rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1;
   display: flex;

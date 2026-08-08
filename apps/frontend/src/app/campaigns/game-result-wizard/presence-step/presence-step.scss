@@ -7,7 +7,7 @@
 
   &__hint {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
     color: var(--text-dim);
     margin: 0 0 0.5rem;
 
@@ -39,7 +39,7 @@
   }
 
   &__user {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     color: var(--text-dim);
   }
 

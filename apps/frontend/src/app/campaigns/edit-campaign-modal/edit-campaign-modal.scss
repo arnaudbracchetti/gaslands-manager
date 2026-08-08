@@ -1,7 +1,9 @@
+@use '../../shared/styles/breakpoints' as bp;
+
 h2 {
   font-family: var(--font-display);
   color: var(--tb-danger);
-  font-size: 1.2rem;
+  font-size: var(--fs-lg);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -12,7 +14,7 @@ label {
   display: block;
   font-family: var(--font-mono);
   color: var(--text-dim);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   line-height: 1.3;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -34,7 +36,7 @@ input {
   padding: 10px 12px;
   border-radius: var(--r-sm);
   font-family: var(--font-text);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
   transition: border-color 160ms;
 
   &:focus {
@@ -52,7 +54,7 @@ input {
   border-radius: var(--r-sm);
   margin-bottom: 16px;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 
@@ -62,7 +64,7 @@ input {
   align-items: start;
   gap: 20px 16px;
 
-  @media (max-width: 600px) {
+  @include bp.mobile {
     grid-template-columns: 1fr;
   }
 }
