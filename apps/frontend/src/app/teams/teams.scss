@@ -7,7 +7,7 @@
 .teams-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 32px;
   padding-bottom: 16px;
   border-bottom: 2px solid var(--border-rust);
@@ -38,6 +38,7 @@
   width: auto;
   padding: 10px 22px;
   font-size: var(--fs-sm);
+  margin-left: auto;
 }
 
 .teams-error {
