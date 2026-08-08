@@ -22,27 +22,6 @@
   align-items: start;
 }
 
-@media (max-width: 760px) {
-  .em-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .em-current {
-    border-right: none;
-    border-bottom: 1px solid var(--border-rust);
-    padding: 0 0 16px;
-    position: static;
-    max-height: none;
-    overflow-y: visible;
-  }
-
-  .em-current__header {
-    position: static;
-    background: none;
-    padding-bottom: 8px;
-  }
-}
-
 // ─── Équipement actuel — sidebar sticky ───────────────────────────────────────
 
 .em-current {
@@ -67,6 +46,31 @@
   background: var(--tb-bitume);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-rust);
+}
+
+// Le reset mobile doit être déclaré APRÈS les règles de base ci-dessus :
+// à spécificité égale (une seule classe), CSS départage par ordre de
+// déclaration dans le fichier — un reset placé avant la règle de base
+// serait silencieusement écrasé par elle, quel que soit le viewport.
+@media (max-width: 760px) {
+  .em-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .em-current {
+    border-right: none;
+    border-bottom: 1px solid var(--border-rust);
+    padding: 0 0 16px;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .em-current__header {
+    position: static;
+    background: none;
+    padding-bottom: 8px;
+  }
 }
 
 // ─── Catalogue — sections droite ─────────────────────────────────────────────
