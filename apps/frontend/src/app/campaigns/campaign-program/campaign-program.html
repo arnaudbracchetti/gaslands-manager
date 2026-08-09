@@ -19,8 +19,12 @@
       [scenarios]="scenarios()"
       [game]="editingGame()"
       [saving]="saving()"
+      [drawingScenario]="drawingScenario()"
+      [pickedScenarioId]="pickedScenarioId()"
       (saved)="onSaved($event)"
-      (formCancel)="cancelForm()" />
+      (formCancel)="cancelForm()"
+      (randomEscarmoucheRequested)="onRandomScenarioRequested('ESCARMOUCHE')"
+      (randomEvenementTeleRequested)="onRandomScenarioRequested('EVENEMENT_TELE')" />
   }
 
   @if (recordingGame()) {

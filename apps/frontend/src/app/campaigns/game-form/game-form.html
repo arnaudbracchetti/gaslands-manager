@@ -33,6 +33,23 @@
           </option>
         }
       </select>
+
+      <div class="form-group__random-actions">
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="drawingScenario()"
+          (click)="randomEscarmoucheRequested.emit()">
+          🎲 Escarmouche aléatoire
+        </button>
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="drawingScenario()"
+          (click)="randomEvenementTeleRequested.emit()">
+          🎲 Événement Télévisé aléatoire
+        </button>
+      </div>
     } @else {
       <p class="form-hint">Aucun scénario disponible.</p>
     }

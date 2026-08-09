@@ -11,6 +11,7 @@ import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeSt
 import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
 import type {
   Game,
+  GameType,
   Scenario,
   CreateGameDto,
   UpdateGameDto,
@@ -187,6 +188,15 @@ export class CampaignsService {
    */
   getScenarios(): Observable<Scenario[]> {
     return this.http.get<Scenario[]>('/api/catalog/scenarios');
+  }
+
+  /**
+   * GET /api/catalog/scenarios/random?type=... → tirage D6 serveur (tableaux
+   * officiels Gaslands p.128-129) — le frontend ne connaît jamais la table de
+   * probabilités, seulement le résultat.
+   */
+  drawRandomScenario(type: GameType): Observable<Scenario> {
+    return this.http.get<Scenario>(`/api/catalog/scenarios/random?type=${type}`);
   }
 
   /**

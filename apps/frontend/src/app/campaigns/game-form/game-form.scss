@@ -57,3 +57,34 @@ select {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
 }
+
+.form-group__random-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  flex: 1 1 auto;
+  background: var(--tb-bitume);
+  border: 1px solid var(--border-rust);
+  color: var(--tb-os);
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 160ms, filter 160ms;
+
+  &:hover:not(:disabled) {
+    border-color: var(--tb-danger);
+    filter: brightness(1.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

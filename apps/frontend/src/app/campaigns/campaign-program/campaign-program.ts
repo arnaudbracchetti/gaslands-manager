@@ -27,7 +27,7 @@ import { Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
 import { CampaignState } from '../campaign.model';
 import type { CampaignParticipant } from '../campaign-participant.model';
-import { Game, Scenario, CreateGameDto } from '../game.model';
+import { Game, GameType, Scenario, CreateGameDto } from '../game.model';
 import type {
   ParticipantVehiclesDto,
   RecordResultDto,
@@ -95,6 +95,11 @@ export class CampaignProgram implements OnInit {
   /** Partie en cours d'édition (null = mode création). */
   editingGame: WritableSignal<Game | null> = signal<Game | null>(null);
   saving: WritableSignal<boolean> = signal(false);
+
+  /** Vrai pendant l'appel au tirage aléatoire de scénario (D6 serveur). */
+  drawingScenario: WritableSignal<boolean> = signal(false);
+  /** `nom_interne` du dernier scénario tiré aléatoirement, transmis à GameForm. */
+  pickedScenarioId: WritableSignal<string | null> = signal<string | null>(null);
 
   /** Partie en attente de confirmation de suppression (null = aucune). */
   pendingDeleteGame: WritableSignal<Game | null> = signal<Game | null>(null);
@@ -188,17 +193,43 @@ export class CampaignProgram implements OnInit {
 
   openCreate(): void {
     this.editingGame.set(null);
+    this.pickedScenarioId.set(null);
     this.showForm.set(true);
   }
 
   onEdit(game: Game): void {
     this.editingGame.set(game);
+    this.pickedScenarioId.set(null);
     this.showForm.set(true);
   }
 
   cancelForm(): void {
     this.showForm.set(false);
     this.editingGame.set(null);
+    this.pickedScenarioId.set(null);
+  }
+
+  /**
+   * Tirage aléatoire d'un scénario (Gaslands p.128-129, D6 serveur) — le tableau
+   * de probabilités officiel vit entièrement côté backend
+   * (`GET /api/catalog/scenarios/random`), ce composant ne fait que relayer le
+   * résultat à `GameForm` via `pickedScenarioId`.
+   */
+  onRandomScenarioRequested(type: GameType): void {
+    this.drawingScenario.set(true);
+    this.pickedScenarioId.set(null);
+    this.campaignsService.drawRandomScenario(type).subscribe({
+      next: (scenario: Scenario) => {
+        this.drawingScenario.set(false);
+        this.pickedScenarioId.set(scenario.nom_interne);
+      },
+      error: (err: HttpErrorResponse) => {
+        const msg = err.error?.message ?? err.message ?? 'Erreur lors du tirage aléatoire du scénario.';
+        console.error(msg);
+        this.error.set(msg);
+        this.drawingScenario.set(false);
+      },
+    });
   }
 
   /** Soumission du formulaire — crée ou met à jour selon editingGame. */

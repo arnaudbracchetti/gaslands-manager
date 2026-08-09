@@ -45,11 +45,27 @@ export class GameForm {
   /** Partie à éditer (null = mode création). */
   game: InputSignal<Game | null> = input<Game | null>(null);
 
+  /** Vrai pendant que le parent attend la réponse du tirage aléatoire serveur. */
+  drawingScenario: InputSignal<boolean> = input(false);
+
+  /**
+   * `nom_interne` tiré aléatoirement côté serveur (cf. `randomEscarmoucheRequested`/
+   * `randomEvenementTeleRequested`), non-null une fois la réponse reçue. Le
+   * tableau de probabilités officiel (Gaslands p.128-129) reste entièrement côté
+   * backend — ce composant ne fait qu'appliquer le résultat reçu.
+   */
+  pickedScenarioId: InputSignal<string | null> = input<string | null>(null);
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   /** Émis avec le DTO validé (création ou édition — même forme : { scenarioId }). */
   saved: OutputEmitterRef<CreateGameDto> = output<CreateGameDto>();
   formCancel: OutputEmitterRef<void> = output<void>();
+
+  /** Demande de tirage aléatoire d'un scénario Escarmouche (le parent appelle l'API). */
+  randomEscarmoucheRequested: OutputEmitterRef<void> = output<void>();
+  /** Demande de tirage aléatoire d'un scénario Événement Télévisé. */
+  randomEvenementTeleRequested: OutputEmitterRef<void> = output<void>();
 
   // ── État interne du formulaire ───────────────────────────────────────────────
 
@@ -61,6 +77,12 @@ export class GameForm {
     effect((): void => {
       const game = this.game();
       this.formScenarioId.set(game?.scenarioId ?? '');
+    });
+
+    // Applique le résultat d'un tirage aléatoire dès qu'il arrive du parent.
+    effect((): void => {
+      const picked = this.pickedScenarioId();
+      if (picked) this.formScenarioId.set(picked);
     });
   }
 

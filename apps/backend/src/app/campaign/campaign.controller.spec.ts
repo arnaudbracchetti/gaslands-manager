@@ -62,6 +62,7 @@ describe('CampaignController (câblage)', () => {
     controller = new CampaignController(
       query as never,
       scenarioCatalog as never,
+      uc() as never,            // drawRandomScenario
       createCampaignUseCase as never,
       uc() as never,            // update
       uc() as never,            // changeState

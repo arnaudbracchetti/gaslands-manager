@@ -27,6 +27,8 @@ import { CampaignRepository } from './infrastructure/campaign.repository';
 import { CampaignReplayService } from './infrastructure/campaign-replay.service';
 import { RandomProvider } from './infrastructure/random-provider';
 import { WreckTable } from './domain/wreck/wreck-table';
+import { ScenarioDrawTable } from './domain/scenario-draw-table';
+import { DrawRandomScenarioUseCase } from './application/draw-random-scenario.usecase';
 import { CAMPAIGN_REPOSITORY, RANDOMIZER } from './campaign.tokens';
 import type { ICampaignRepository } from './domain/campaign.repository.interface';
 import type { IRandomizer } from './domain/randomizer.interface';
@@ -103,6 +105,17 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
       provide: WreckTable,
       useFactory: (r: IRandomizer, catalog: CatalogService) => new WreckTable(r, catalog),
       inject: [RANDOMIZER, CatalogService],
+    },
+    {
+      provide: ScenarioDrawTable,
+      useFactory: (r: IRandomizer) => new ScenarioDrawTable(r),
+      inject: [RANDOMIZER],
+    },
+    {
+      provide: DrawRandomScenarioUseCase,
+      useFactory: (catalog: ScenarioCatalogService, table: ScenarioDrawTable) =>
+        new DrawRandomScenarioUseCase(catalog, table),
+      inject: [ScenarioCatalogService, ScenarioDrawTable],
     },
 
     // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────

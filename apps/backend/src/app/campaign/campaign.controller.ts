@@ -26,6 +26,7 @@ import {
   HttpCode,
   HttpStatus,
   Header,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { User } from '../auth/domain/user';
@@ -33,6 +34,8 @@ import type { User } from '../auth/domain/user';
 // Lecture (CQRS)
 import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { GameType } from './game.enums';
+import { DrawRandomScenarioUseCase } from './application/draw-random-scenario.usecase';
 
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
@@ -119,6 +122,7 @@ export class CampaignController {
   constructor(
     private readonly query: CampaignQueryService,
     private readonly scenarioCatalog: ScenarioCatalogService,
+    private readonly drawRandomScenarioUseCase: DrawRandomScenarioUseCase,
     // CRUD
     private readonly createCampaignUseCase: CreateCampaignUseCase,
     private readonly updateCampaignUseCase: UpdateCampaignUseCase,
@@ -162,6 +166,19 @@ export class CampaignController {
   @Get('catalog/scenarios')
   getScenarios(): Scenario[] {
     return this.scenarioCatalog.getAll();
+  }
+
+  /**
+   * GET /api/catalog/scenarios/random?type=... — tirage D6 (tableaux officiels
+   * Gaslands p.128-129), pas de JWT. Déclarée avant toute route paramétrée qui
+   * pourrait la capturer — aucune n'existe aujourd'hui sous `catalog/scenarios`.
+   */
+  @Get('catalog/scenarios/random')
+  drawRandomScenario(@Query('type') type: string): Scenario {
+    if (type !== GameType.EVENEMENT_TELE && type !== GameType.ESCARMOUCHE) {
+      throw new BadRequestException('Le paramètre type doit être EVENEMENT_TELE ou ESCARMOUCHE.');
+    }
+    return this.drawRandomScenarioUseCase.execute(type);
   }
 
   // ── Campagnes (CRUD + lectures) ─────────────────────────────────────────────
