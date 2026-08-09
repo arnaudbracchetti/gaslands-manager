@@ -595,10 +595,25 @@ et, pour la spécificité des avantages,
     équipement vendu avec lui), et le châssis contribue son propre prix résiduel
     `ceil(prix/2)` au coût du véhicule (`Vehicle.cost`), exactement comme
     `Weapon.price`/`Improvement.price` pour une arme/amélioration individuelle.
-    Seule différence avec une arme/amélioration vendue : un véhicule vendu est
-    **filtré** de la liste exposée par l'atelier (`GetWorkshopUseCase`) — il
-    disparaît entièrement, plutôt que de rester visible barré avec un badge
-    "Vendu".
+    Comme une arme/amélioration/avantage vendu(e), un véhicule vendu **reste
+    visible** dans la liste exposée par l'atelier (`GetWorkshopUseCase`) plutôt
+    que d'en disparaître — poussé en fin de liste côté frontend
+    (`AtelierPage.vehicleSummaries`/`ParticipantAtelierPage.vehicleSummaries`,
+    tri stable), badge "Vendu" et carte rendue inactive
+    (`VehicleSummaryCard.disabled` — ni clic, ni bouton de vente). Un véhicule
+    **détruit** (`isLost`, Table des Épaves) suit exactement le même traitement
+    d'affichage, badge "Perdu". `resaleRefund`/`chassisResaleRefund` valent
+    alors `0` dans le DTO exposé (`Vehicle.chassisResaleRefund` lève
+    `DomainException` sur un véhicule déjà vendu ou détruit — jamais un
+    remboursement fantôme).
+
+    **Vente/annulation d'un véhicule détruit — interdite.** Un véhicule
+    `isLost` n'a plus aucune valeur de revente : `Game.changeEquipment()`
+    rejette (`DomainException` → HTTP 400) toute opération `SELL`/annulation
+    ciblant un véhicule détruit, vérifié **avant** tout calcul de remboursement
+    — même principe que la garde séquelle `TABLE_EPAVES` ci-dessus. Sans cette
+    garde, revendre un véhicule détruit créditait à tort la cagnotte du
+    remboursement moitié-prix du châssis, comme s'il était intact.
 
     **Limitation connue** — `Game.changeEquipment()` ne vérifie le statut
     "acheté cette session" (→ annulation 100 %, cf. ci-dessus) qu'au niveau du
@@ -989,8 +1004,11 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
   enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
   n'est aujourd'hui gardé que par la cagnotte, y compris pour l'achat d'un véhicule :
-  aucune vérification d'autorisation sponsor à l'écriture, seulement au listing), limite
-  de 8 véhicules, et l'UI des véhicules perdus (Table des Épaves). Le montage sur
+  aucune vérification d'autorisation sponsor à l'écriture, seulement au listing), et
+  limite de 8 véhicules. **L'UI des véhicules perdus (Table des Épaves) est
+  désormais implémentée** — retiré du périmètre Temps 2 restant, cf.
+  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessus (badge,
+  fin de liste, inactif, vente/annulation rejetée côté domaine). Le montage sur
   Tourelle, lui, n'est pas une fonctionnalité à part entière à ajouter en atelier :
   c'est une valeur d'orientation de l'arme (`Weapon.orientation = 'tourelle'`, cf.
   [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)), acheter une

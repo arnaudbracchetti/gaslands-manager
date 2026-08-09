@@ -75,11 +75,20 @@ export class ParticipantAtelierPage implements OnInit {
     return (this.workshop()?.vehicles ?? []).map(mapWorkshopVehicleToVehicle);
   });
 
-  /** Résumés affichables (colonne de gauche) — même fonction pure que `AtelierPage`. */
+  /**
+   * Résumés affichables (colonne de gauche) — même fonction pure que `AtelierPage`,
+   * même tri (véhicules vendus/détruits poussés en fin de liste). La sélection pour
+   * consultation reste possible sur ces cartes (`showDelete=false` déjà partout,
+   * lecture seule sans risque de mutation) — seul le badge/tri change, pas
+   * `disabled` (contrairement à `AtelierPage`, où aucune action n'est possible).
+   */
   vehicleSummaries: Signal<VehicleSummary[]> = computed((): VehicleSummary[] => {
     const catalog = this.sponsorCatalog();
     if (!catalog) return [];
-    return this.vehicles().map((v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog));
+    const summaries = this.vehicles().map((v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog));
+    const active = summaries.filter((s: VehicleSummary): boolean => !s.isSold && !s.isLost);
+    const inactive = summaries.filter((s: VehicleSummary): boolean => s.isSold || s.isLost);
+    return [...active, ...inactive];
   });
 
   // ── Synthèse d'équipe (bandeau — budget total/consommé à l'instant t) ───────

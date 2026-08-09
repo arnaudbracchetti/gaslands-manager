@@ -94,6 +94,10 @@ export interface WorkshopVehicleDto {
   customName: string | null;
   price: number;
   isLost: boolean;
+  /** Vendu (revente pré-existante ou châssis vidé par une annulation d'un enfant, cf.
+   *  `Vehicle.markSold`) — reste visible dans l'atelier (fin de liste, badge, inactif
+   *  côté IHM), plutôt que d'en disparaître (ancien comportement). */
+  isSold: boolean;
   chocs: number;
   sequellas: WorkshopSequellaDto[];
   weapons: WorkshopWeaponDto[];

@@ -69,6 +69,7 @@ const mockWorkshop: WorkshopStateDto = {
       customName: null,
       price: 16,
       isLost: false,
+      isSold: false,
       chocs: 0,
       sequellas: [],
       weapons: [],

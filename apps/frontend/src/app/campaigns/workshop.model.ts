@@ -112,6 +112,9 @@ export interface WorkshopVehicleDto {
   customName: string | null;
   price: number;
   isLost: boolean;
+  /** Vendu — reste visible dans l'atelier (fin de liste, badge, inactif), plutôt que
+   *  d'en disparaître (ancien comportement). */
+  isSold: boolean;
   chocs: number;
   sequellas: WorkshopSequellaDto[];
   weapons: WorkshopWeaponDto[];
@@ -180,6 +183,8 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
     teamId: 0,
     createdAt: '',
     emplacementsTotal: w.emplacementsTotal,
+    sold: w.isSold,
+    lost: w.isLost,
     weapons: w.weapons.map(
       (x: WorkshopWeaponDto): Weapon => ({
         id: x.id,

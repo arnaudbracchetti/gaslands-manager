@@ -62,7 +62,7 @@ function buildAdvantage(overrides: Partial<WorkshopAdvantageDto> = {}): Workshop
 
 function buildVehicle(overrides: Partial<WorkshopVehicleDto> = {}): WorkshopVehicleDto {
   return {
-    id: 1, nomInterne: 'camion', nom: 'Camion', customName: null, price: 12, isLost: false, chocs: 0, sequellas: [],
+    id: 1, nomInterne: 'camion', nom: 'Camion', customName: null, price: 12, isLost: false, isSold: false, chocs: 0, sequellas: [],
     weapons: [], improvements: [], advantages: [], resaleRefund: 6, chassisResaleRefund: 6, purchasedThisSession: false,
     emplacementsTotal: 3,
     ...overrides,

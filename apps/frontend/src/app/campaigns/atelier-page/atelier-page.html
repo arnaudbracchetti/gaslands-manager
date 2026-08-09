@@ -27,7 +27,8 @@
           <app-vehicle-summary-card
             [vehicle]="summary"
             [index]="i + 1"
-            [showDelete]="true"
+            [disabled]="summary.isSold || summary.isLost"
+            [showDelete]="!(summary.isSold || summary.isLost)"
             [deleteTitle]="sellTitleFor(summary.id)"
             [deleteIconConcept]="sellIconConceptFor(summary.id)"
             [deleteIconFallback]="sellIconFallbackFor(summary.id)"

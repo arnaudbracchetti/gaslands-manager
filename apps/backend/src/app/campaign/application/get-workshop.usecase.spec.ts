@@ -149,14 +149,16 @@ describe('GetWorkshopUseCase', () => {
   });
 
   /**
-   * Régression : un véhicule vendu (isSold) doit disparaître entièrement de la liste
-   * exposée — contrairement à une arme/amélioration/avantage vendu(e), qui reste
-   * visible barré(e) — ET la cagnotte doit refléter le remboursement PARTIEL
-   * (règle par élément), pas la disparition totale du coût du véhicule (bug corrigé :
-   * Team.removeCampaignVehicle() était appelé à la revente, effaçant tout le coût du
-   * véhicule au lieu du seul montant remboursé).
+   * Un véhicule vendu (isSold) reste désormais visible dans la liste exposée — comme
+   * une arme/amélioration/avantage vendu(e) — plutôt que d'en disparaître entièrement
+   * (ancien comportement). `resaleRefund`/`chassisResaleRefund` sont à 0 (déjà vendu,
+   * `Vehicle.chassisResaleRefund` lèverait sinon `DomainException`). La cagnotte
+   * reflète toujours le remboursement PARTIEL (règle par élément), pas la disparition
+   * totale du coût du véhicule (bug corrigé : `Team.removeCampaignVehicle()` était
+   * appelé à la revente, effaçant tout le coût du véhicule au lieu du seul montant
+   * remboursé).
    */
-  it('un véhicule vendu est absent de la liste exposée, et la cagnotte reflète le remboursement partiel', async () => {
+  it('un véhicule vendu reste dans la liste exposée (badge, inactif), et la cagnotte reflète le remboursement partiel', async () => {
     const { participant, vehicle, weapon, improvement } = makeTestParticipant(); // 50 - (12+5+4) = 29
     vehicle.markSold(); // cascade : arme + amélioration marquées vendues aussi
 
@@ -168,12 +170,39 @@ describe('GetWorkshopUseCase', () => {
 
     const dto = await useCase.execute({ campaignId: 1, userId: 42 });
 
-    expect(dto.vehicles).toHaveLength(0);
+    expect(dto.vehicles).toHaveLength(1);
+    expect(dto.vehicles[0].isSold).toBe(true);
+    expect(dto.vehicles[0].resaleRefund).toBe(0);
+    expect(dto.vehicles[0].chassisResaleRefund).toBe(0);
     // 29 + floor(12/2) + floor(5/2) + floor(4/2) = 29 + 10 = 39 (jamais 50 : le bug
     // corrigé créditait la totalité du coût du véhicule, pas le remboursement partiel).
     expect(dto.wallet).toBe(39);
     expect(weapon.isSold).toBe(true);
     expect(improvement.isSold).toBe(true);
+  });
+
+  /**
+   * Mirroir du test précédent pour un véhicule DÉTRUIT (Table des Épaves, `isLost`) —
+   * même traitement : reste dans la liste exposée, `resaleRefund`/`chassisResaleRefund`
+   * à 0 (véhicule détruit, plus aucune valeur de revente).
+   */
+  it('un véhicule détruit reste dans la liste exposée (badge, inactif), resaleRefund/chassisResaleRefund à 0', async () => {
+    const { participant, vehicle } = makeTestParticipant();
+    vehicle.markLost();
+
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles).toHaveLength(1);
+    expect(dto.vehicles[0].isLost).toBe(true);
+    expect(dto.vehicles[0].isSold).toBe(false);
+    expect(dto.vehicles[0].resaleRefund).toBe(0);
+    expect(dto.vehicles[0].chassisResaleRefund).toBe(0);
   });
 
   /**

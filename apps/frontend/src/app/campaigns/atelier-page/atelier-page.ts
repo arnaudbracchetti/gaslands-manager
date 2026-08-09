@@ -89,11 +89,19 @@ export class AtelierPage implements OnInit {
     return (this.workshop()?.vehicles ?? []).map(mapWorkshopVehicleToVehicle);
   });
 
-  /** Résumés affichables — mêmes cartes que `TeamEditPage`, avec bouton vente/annulation. */
+  /**
+   * Résumés affichables — mêmes cartes que `TeamEditPage`, avec bouton vente/annulation.
+   * Les véhicules vendus/détruits (`isSold`/`isLost`) sont poussés en fin de liste
+   * (partition stable — ordre relatif conservé de part et d'autre) plutôt que masqués :
+   * ils restent visibles, badge, inactifs (cf. `VehicleSummaryCard.disabled`).
+   */
   vehicleSummaries: Signal<VehicleSummary[]> = computed((): VehicleSummary[] => {
     const catalog = this.sponsorCatalog();
     if (!catalog) return [];
-    return this.vehicles().map((v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog));
+    const summaries = this.vehicles().map((v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog));
+    const active = summaries.filter((s: VehicleSummary): boolean => !s.isSold && !s.isLost);
+    const inactive = summaries.filter((s: VehicleSummary): boolean => s.isSold || s.isLost);
+    return [...active, ...inactive];
   });
 
   breadcrumbs: Signal<BreadcrumbItem[]> = computed((): BreadcrumbItem[] => [

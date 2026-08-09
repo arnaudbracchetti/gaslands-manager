@@ -47,18 +47,24 @@ export class GetWorkshopUseCase {
       atelierGame = null;
     }
 
-    // Un véhicule vendu (isSold) disparaît entièrement de l'atelier — contrairement à
-    // une arme/amélioration/avantage vendu(e), qui reste visible barré(e). Cf. Vehicle.markSold.
-    const vehicles: WorkshopVehicleDto[] = target.team.vehicles.filter((v) => !v.isSold).map((v) => ({
+    // Un véhicule vendu (isSold) ou détruit (isLost) reste désormais visible dans
+    // l'atelier — comme une arme/amélioration/avantage vendu(e)/perdu(e) — plutôt que
+    // de disparaître entièrement (ancien comportement pour isSold). Le frontend l'affiche
+    // en fin de liste, badge, inactif (Vehicle.markSold/markLost).
+    const vehicles: WorkshopVehicleDto[] = target.team.vehicles.map((v) => ({
       id: v.id,
       nomInterne: v.type.nomInterne,
       nom: v.nom,
       customName: v.customName,
       price: v.type.price,
       isLost: v.isLost,
+      isSold: v.isSold,
       chocs: v.chocs,
-      resaleRefund: v.resaleRefund,
-      chassisResaleRefund: v.chassisResaleRefund,
+      // v.resaleRefund/v.chassisResaleRefund lèvent DomainException si isSold/isLost
+      // (déjà crédité, ou plus aucune valeur) — même garde que pour weapons/improvements/
+      // advantages ci-dessous, jamais 0 par défaut sans cette garde explicite.
+      resaleRefund: (v.isSold || v.isLost) ? 0 : v.resaleRefund,
+      chassisResaleRefund: (v.isSold || v.isLost) ? 0 : v.chassisResaleRefund,
       purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.VEHICLE, v.id) ?? false,
       emplacementsTotal: v.effectiveStats.emplacements,
       sequellas: v.sequellas.map((s) => ({

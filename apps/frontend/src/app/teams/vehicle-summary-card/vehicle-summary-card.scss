@@ -9,7 +9,7 @@
   cursor: pointer;
   transition: border-color 140ms, box-shadow 140ms;
 
-  &:hover {
+  &:not(.tep-vehicle-card--disabled):hover {
     border-color: var(--tb-danger);
     box-shadow: var(--glow-danger);
   }
@@ -17,6 +17,38 @@
   &--selected {
     border-color: var(--tb-os);
   }
+
+  // Véhicule vendu/détruit (atelier campagne) — inactif, aucune action possible.
+  // Même traitement visuel que `.me-item--sold` (MountedEquipment) : carte
+  // assombrie/désaturée, contenu toujours lisible.
+  &--disabled {
+    cursor: default;
+    filter: grayscale(0.4);
+    opacity: 0.75;
+  }
+}
+
+// Tampon "VENDU"/"PERDU" en filigrane, incliné — mirroir de `.me-item__watermark`
+// (MountedEquipment), même intention : grand format, rouge franc, assez transparent
+// pour laisser deviner le contenu de la carte en dessous.
+.tep-vehicle-card__status-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  font-family: var(--font-display);
+  font-size: var(--fs-display-sm);
+  font-weight: 700;
+  color: var(--tb-rouille-lt);
+  opacity: 0.65;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1px var(--tb-rouille-deep);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .tep-vehicle-card__watermark {

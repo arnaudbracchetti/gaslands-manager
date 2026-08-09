@@ -736,6 +736,12 @@ describe('Vehicle.resaleRefund — règle par élément (châssis + équipement 
     const v = new Vehicle(1, 10, makeVehicleType(4, 12), [canon], []);
     expect(v.resaleRefund).toBe(6); // floor(12/2) — le canon intégré n'ajoute rien
   });
+
+  it('lève DomainException si le véhicule est détruit (isLost) — délègue à chassisResaleRefund', () => {
+    const v = makeVehicle(4, 12);
+    v.markLost();
+    expect(() => v.resaleRefund).toThrow(DomainException);
+  });
 });
 
 describe('Vehicle.chassisResaleRefund — remboursement du châssis seul (isolé de resaleRefund)', () => {
@@ -748,6 +754,12 @@ describe('Vehicle.chassisResaleRefund — remboursement du châssis seul (isolé
   it('lève DomainException si le véhicule est déjà vendu', () => {
     const v = makeVehicle(4, 12);
     v.markSold();
+    expect(() => v.chassisResaleRefund).toThrow(DomainException);
+  });
+
+  it('lève DomainException si le véhicule est détruit (isLost) — plus aucune valeur de revente', () => {
+    const v = makeVehicle(4, 12);
+    v.markLost();
     expect(() => v.chassisResaleRefund).toThrow(DomainException);
   });
 });

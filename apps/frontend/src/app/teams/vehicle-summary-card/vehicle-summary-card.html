@@ -1,14 +1,21 @@
 <div
   class="tep-vehicle-card"
   [class.tep-vehicle-card--selected]="selected()"
+  [class.tep-vehicle-card--disabled]="disabled()"
   data-testid="vehicle-card-manage"
-  role="button"
-  tabindex="0"
-  (click)="cardClicked.emit(vehicle().id)"
-  (keydown.enter)="cardClicked.emit(vehicle().id)"
-  (keydown.space)="cardClicked.emit(vehicle().id)">
+  [attr.role]="disabled() ? null : 'button'"
+  [attr.tabindex]="disabled() ? null : 0"
+  (click)="!disabled() && cardClicked.emit(vehicle().id)"
+  (keydown.enter)="!disabled() && cardClicked.emit(vehicle().id)"
+  (keydown.space)="!disabled() && cardClicked.emit(vehicle().id)">
 
   <span class="tep-vehicle-card__watermark" aria-hidden="true">{{ indexFormate() }}</span>
+
+  @if (vehicle().isSold || vehicle().isLost) {
+    <span class="tep-vehicle-card__status-badge" aria-hidden="true">
+      {{ vehicle().isLost ? 'Perdu' : 'Vendu' }}
+    </span>
+  }
 
   <!-- En-tête : nom, type, coût, emplacements -->
   <div class="tep-vehicle-card__header">

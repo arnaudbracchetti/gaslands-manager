@@ -164,13 +164,18 @@ export class Vehicle {
    * puisse afficher ce montant séparément de celui de chaque arme/amélioration/
    * avantage (cf. `SellVehicleModal`, ligne "Châssis").
    *
-   * Précondition : ce véhicule ne doit pas être déjà vendu — ce montant est calculé
-   * sur `this.type.price` (prix catalogue brut), jamais réduit par `_isSold`
-   * contrairement à `Weapon`/`Improvement`. Un second appel après `markSold()`
-   * calculerait donc un remboursement fantôme non nul plutôt que 0 — la garde
-   * ci-dessous transforme ce bug silencieux en échec explicite.
+   * Précondition : ce véhicule ne doit être ni détruit (`_isLost`) ni déjà vendu — ce
+   * montant est calculé sur `this.type.price` (prix catalogue brut), jamais réduit par
+   * `_isSold` contrairement à `Weapon`/`Improvement`. Un appel sur un véhicule détruit
+   * ou déjà vendu calculerait donc un remboursement fantôme non nul plutôt que 0 — la
+   * garde ci-dessous transforme ce bug silencieux en échec explicite. `Game.changeEquipment`
+   * porte déjà une garde équivalente sur `isLost` avant d'appeler ce getter (message
+   * d'erreur vu par l'utilisateur) — celle-ci protège tout autre appelant futur.
    */
   get chassisResaleRefund(): number {
+    if (this._isLost) {
+      throw new DomainException('Ce véhicule est détruit — il n\'a plus aucune valeur de revente.');
+    }
     if (this._isSold) {
       throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
     }

@@ -1097,6 +1097,18 @@ describe('Game — changeEquipment', () => {
     expect(vehicle.isSold).toBe(true);
   });
 
+  it('SELL VEHICLE rejette un véhicule détruit (isLost) — plus aucune valeur de revente, aucun crédit indu', () => {
+    const { participant, vehicle } = makeTestParticipant();
+    vehicle.markLost();
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+
+    expect(() => game.changeEquipment(participant, {
+      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      targetEntityId: vehicle.id,
+      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+    })).toThrow('détruit');
+  });
+
   it('SELL VEHICLE sur un achat de CETTE session : annule intégralement le véhicule ET tout événement de la session qui le référence (cascade)', () => {
     // Simule un véhicule acheté (event id=50), équipé d'une arme (event id=51) et d'une
     // amélioration (event id=52) — le tout dans la MÊME session d'atelier en cours. Les

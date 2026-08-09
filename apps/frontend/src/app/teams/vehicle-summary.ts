@@ -59,6 +59,16 @@ export interface VehicleSummary {
    * Utilisé pour les tags d'équipement dans `TeamEditPage`.
    */
   equipements: string[];
+  /**
+   * Véhicule vendu (atelier campagne uniquement) — toujours `false` à la construction
+   * d'équipe, `vehicle.sold` n'y étant jamais posé. Un véhicule vendu ou détruit
+   * (`isLost` ci-dessous) reste affiché (fin de liste, badge, inactif côté
+   * `VehicleSummaryCard`) plutôt que d'être masqué.
+   */
+  isSold: boolean;
+  /** Véhicule détruit via la Table des Épaves (atelier campagne uniquement) — même
+   *  traitement d'affichage que `isSold`. */
+  isLost: boolean;
 }
 
 /**
@@ -168,5 +178,7 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
     emplacementsUtilises,
     emplacementsTotal: vehicle.emplacementsTotal,
     equipements,
+    isSold: vehicle.sold ?? false,
+    isLost: vehicle.lost ?? false,
   };
 }

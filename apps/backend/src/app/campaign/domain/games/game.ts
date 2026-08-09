@@ -330,6 +330,21 @@ export abstract class Game {
         }
       }
 
+      // Véhicule détruit (Table des Épaves) : plus aucune valeur ni existence gérable —
+      // ni vente ni annulation d'achat n'ont de sens. Vérifié EN PREMIER, avant le
+      // court-circuit d'annulation ci-dessous (même principe que la garde SEQUELLE
+      // ci-dessus) — même si l'achat et la destruction d'un même véhicule dans la même
+      // session sont impossibles avec les règles actuelles (un tirage Table des Épaves a
+      // toujours lieu avant l'ouverture de l'atelier concerné), cette garde protège aussi
+      // le chemin d'annulation même-session si une évolution future des règles rendait
+      // cette séquence possible.
+      if (cmd.entityType === EquipmentEntityType.VEHICLE) {
+        const targetVehicle = participant.team.findVehicle(cmd.targetEntityId!);
+        if (targetVehicle.isLost) {
+          throw new DomainException('Ce véhicule est détruit — vente/annulation impossible.');
+        }
+      }
+
       // Objet acheté PENDANT cette session d'atelier : annulation, vérifiée AVANT tout
       // calcul de remboursement (resolveSell lirait sinon un état sur le point de
       // disparaître intégralement). Même contrôle pour les 5 types d'entité — seule la

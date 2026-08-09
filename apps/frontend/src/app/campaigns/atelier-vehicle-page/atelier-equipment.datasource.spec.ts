@@ -29,6 +29,7 @@ const workshop: WorkshopStateDto = {
       customName: null,
       price: 12,
       isLost: false,
+      isSold: false,
       chocs: 0,
       sequellas: [],
       weapons: [

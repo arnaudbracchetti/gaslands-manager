@@ -20,6 +20,8 @@ const mockVehicle: VehicleSummary = {
   emplacementsUtilises: 2,
   emplacementsTotal: 3,
   equipements: ['Mitrailleuse'],
+  isSold: false,
+  isLost: false,
 };
 
 describe('VehicleSummaryCard', () => {
@@ -124,5 +126,58 @@ describe('VehicleSummaryCard', () => {
   it('n\'applique pas la classe --selected par défaut', () => {
     const card = fixture.nativeElement.querySelector('.tep-vehicle-card') as HTMLElement;
     expect(card.classList.contains('tep-vehicle-card--selected')).toBe(false);
+  });
+
+  // ── Carte inactive (véhicule vendu/détruit en atelier) ──────────────────────
+
+  it('n\'affiche aucun badge par défaut (véhicule ni vendu ni détruit)', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tep-vehicle-card__status-badge')).toBeNull();
+  });
+
+  it('affiche le badge "Vendu" quand isSold est vrai', () => {
+    fixture.componentRef.setInput('vehicle', { ...mockVehicle, isSold: true });
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector('.tep-vehicle-card__status-badge') as HTMLElement;
+    expect(badge.textContent?.trim()).toBe('Vendu');
+  });
+
+  it('affiche le badge "Perdu" quand isLost est vrai', () => {
+    fixture.componentRef.setInput('vehicle', { ...mockVehicle, isLost: true });
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector('.tep-vehicle-card__status-badge') as HTMLElement;
+    expect(badge.textContent?.trim()).toBe('Perdu');
+  });
+
+  it('quand disabled est vrai : retire role/tabindex, applique la classe --disabled, et n\'émet pas cardClicked au clic', () => {
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+
+    const card = fixture.nativeElement.querySelector('.tep-vehicle-card') as HTMLElement;
+    expect(card.getAttribute('role')).toBeNull();
+    expect(card.getAttribute('tabindex')).toBeNull();
+    expect(card.classList.contains('tep-vehicle-card--disabled')).toBe(true);
+
+    const carded: number[] = [];
+    outputToObservable(component.cardClicked).subscribe((id) => carded.push(id));
+    card.click();
+
+    expect(carded).toHaveLength(0);
+  });
+
+  it('quand disabled est vrai : n\'émet pas cardClicked au clavier (Entrée/Espace)', () => {
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+
+    const card = fixture.nativeElement.querySelector('.tep-vehicle-card') as HTMLElement;
+    const carded: number[] = [];
+    outputToObservable(component.cardClicked).subscribe((id) => carded.push(id));
+
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+    expect(carded).toHaveLength(0);
   });
 });

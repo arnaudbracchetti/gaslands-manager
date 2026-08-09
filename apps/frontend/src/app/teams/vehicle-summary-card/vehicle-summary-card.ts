@@ -34,6 +34,14 @@ export class VehicleSummaryCard {
    *  (`ParticipantAtelierPage`) pour indiquer le véhicule actuellement consulté. */
   selected: InputSignal<boolean> = input<boolean>(false);
 
+  /**
+   * Carte inactive — véhicule vendu ou détruit (atelier campagne). Retire le rôle
+   * bouton/focus clavier et ignore le clic/Entrée/Espace (aucune action possible),
+   * assombrit la carte et affiche un tampon "Vendu"/"Perdu" (même idiome visuel que
+   * `MountedEquipment` pour une arme/amélioration/avantage vendu(e)/perdu(e)).
+   */
+  disabled: InputSignal<boolean> = input<boolean>(false);
+
   /** Titre (tooltip) du bouton — "Supprimer ce véhicule" par défaut (construction d'équipe),
    *  adapté par l'atelier ("Vendre ce véhicule"/"Annuler l'achat"). */
   deleteTitle: InputSignal<string> = input<string>('Supprimer ce véhicule');

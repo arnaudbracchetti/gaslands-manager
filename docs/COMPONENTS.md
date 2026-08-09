@@ -660,6 +660,18 @@ Page de gestion d'une équipe (`/teams/:id/edit`). Layout deux panneaux : formul
 
 Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, coût total, emplacements. Toute la carte est cliquable (`cardClicked`, même pattern que `TeamCard`/`CampaignCard` — `role="button"`, `tabindex="0"`, `(keydown.enter)`/`(keydown.space)`) ; le bouton supprimer/vendre reste une action séparée dans un coin de la carte, protégée par `$event.stopPropagation()` (clic ET clavier, pour ne pas déclencher `cardClicked` en même temps).
 
+**Véhicule vendu/détruit (atelier campagne)** : `vehicle().isSold`/`.isLost` (cf.
+[spec/CAMPAIGN.md — Annulation d'achat vs revente](spec/CAMPAIGN.md#annulation-dachat-vs-revente))
+affichent un tampon "Vendu"/"Perdu" (`.tep-vehicle-card__status-badge`, même idiome
+visuel — inclinaison, tampon rouge en filigrane — que `.me-item__watermark` de
+`MountedEquipment`). L'input `disabled` (ci-dessous) rend en plus la carte inactive :
+retire `role`/`tabindex`, ignore clic/Entrée/Espace, grise la carte
+(`.tep-vehicle-card--disabled`, `filter: grayscale(0.4); opacity: 0.75`). `AtelierPage`
+pousse ces cartes en fin de liste (tri stable) et lie `disabled`/`showDelete` sur
+`isSold || isLost` ; `ParticipantAtelierPage` (lecture seule d'un tiers) applique le
+même tri et le même badge, mais laisse le clic actif (sélection pour consultation,
+aucun risque de mutation).
+
 | | |
 |---|---|
 | **Sélecteur** | `app-vehicle-summary-card` |
@@ -672,12 +684,13 @@ Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, co�
 |-----|------|--------|-------------|
 | `vehicle` | `VehicleSummary` | — | Résumé du véhicule |
 | `selected` | `boolean` | `false` | Surbrillance "sélectionné" — utilisée par `ParticipantAtelierPage` (vue maître-détail en lecture seule) pour indiquer le véhicule actuellement consulté |
+| `disabled` | `boolean` | `false` | Carte inactive (véhicule vendu/détruit) — retire rôle/focus clavier, ignore le clic, assombrit la carte. N'affecte pas l'affichage du badge "Vendu"/"Perdu" (piloté uniquement par `vehicle().isSold`/`.isLost`) |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `cardClicked` | `number` | ID du véhicule, émis au clic (ou Entrée/Espace) sur la carte — l'action déclenchée dépend de l'écran appelant : navigation vers le configurateur (`AtelierPage`/`TeamEditPage`) ou sélection pour consultation (`ParticipantAtelierPage`) |
+| `cardClicked` | `number` | ID du véhicule, émis au clic (ou Entrée/Espace) sur la carte, sauf si `disabled` — l'action déclenchée dépend de l'écran appelant : navigation vers le configurateur (`AtelierPage`/`TeamEditPage`) ou sélection pour consultation (`ParticipantAtelierPage`) |
 | `deleteClicked` | `VehicleSummary` | Demande de suppression/vente du véhicule (bouton dédié, n'émet jamais `cardClicked`) |
 
 ---
@@ -1632,6 +1645,15 @@ délégué à `ModalShell` (mode `consultation`, `size="xl"`).
 
 Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=true`, libellé/icône adaptés — "Vendre"/💰 ou "Annuler l'achat" selon `purchasedThisSession`), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Un bouton "+ Ajouter un véhicule" ouvre une grille de `VehicleChoiceCard` (réutilisé tel quel) alimentée par `sponsorCatalog().vehicules`, pour acheter un nouveau véhicule via la cagnotte. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
 
+**Véhicules vendus/détruits** : `vehicleSummaries` pousse en fin de liste (tri stable,
+ordre relatif conservé de part et d'autre) tout résumé avec `isSold || isLost` — ils
+restent affichés (badge, cf. `VehicleSummaryCard`) mais reçoivent `[disabled]="summary.isSold
+|| summary.isLost"` et `[showDelete]="!(summary.isSold || summary.isLost)"` : aucune
+action possible (ni navigation vers `AtelierVehiclePage`, ni vente), cohérent avec le
+fait qu'un véhicule détruit n'a plus aucune valeur de revente (`Vehicle.chassisResaleRefund`
+lève `DomainException`, cf. [spec/CAMPAIGN.md — Annulation d'achat vs
+revente](../docs/spec/CAMPAIGN.md#annulation-dachat-vs-revente)).
+
 **Points de sabotage** : partage le même cadre que la Cagnotte (`.atp-summary`, une ligne par valeur — `.atp-summary-row`, séparées par un filet `border-hair`) plutôt que deux bandeaux distincts. Affiche le compteur dérivé `WorkshopStateDto.sabotagePoints` — 1 point pour 3 Points de Résistance secrets, `Math.floor(resistancePoints / 3)`, cf. [spec/CAMPAIGN.md — Points de sabotage](../docs/spec/CAMPAIGN.md#points-de-sabotage). Exposé uniquement sur cet écran (l'atelier "personnel"), jamais sur `ParticipantAtelierPage` (lecture d'un tiers, où l'API renvoie `null`).
 
 | | |
@@ -1720,7 +1742,11 @@ Ne branche **jamais** `EquipmentManager` : celui-ci ferait des appels HTTP
 mutants scopés à "mon" équipe (`available-weapons/improvements/advantages/
 sequelles`, achats/reventes via `AtelierEquipmentDataSource`), inutilisables
 et non autorisés sur le véhicule d'un tiers — le backend les résout par
-`req.user.id`, jamais par un `vehicleId` de route. Le panneau de détail
+`req.user.id`, jamais par un `vehicleId` de route. Même tri que `AtelierPage` sur la
+colonne de véhicules (véhicules vendus/détruits poussés en fin de liste, badge
+"Vendu"/"Perdu" via `VehicleSummaryCard`) — mais sans `[disabled]` : la sélection pour
+consultation reste possible sur ces cartes, lecture seule sans risque de mutation. Le
+panneau de détail
 compose directement `VehicleCostSummary` (`[disabled]="true"`) et
 `MountedEquipment` (`[locked]="true"`) — les deux étaient déjà des composants
 "dumb" dotés d'un mode verrouillé natif ; seuls les 3 nouveaux gates

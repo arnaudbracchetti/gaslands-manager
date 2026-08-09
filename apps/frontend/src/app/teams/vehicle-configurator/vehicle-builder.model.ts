@@ -144,6 +144,15 @@ export interface Vehicle {
    * qui ignore ce bonus.
    */
   emplacementsTotal: number;
+  /**
+   * Champs propres à l'atelier campagne (mode campagne) — jamais posés à la
+   * construction d'équipe, toujours `undefined` dans ce contexte (`!undefined ===
+   * true`, aucune régression). `sold` : véhicule revendu (moitié prix du châssis,
+   * reste visible en fin de liste, badge, inactif). `lost` : véhicule détruit
+   * (Table des Épaves) — même traitement d'affichage que `sold`.
+   */
+  sold?: boolean;
+  lost?: boolean;
 }
 
 /** Corps de `POST /api/teams/:teamId/vehicles` — miroir de `CreateVehicleDto`. */
