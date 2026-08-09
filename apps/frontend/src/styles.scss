@@ -322,6 +322,7 @@ body {
 
 .navbar-brand {
   display: flex;
+  align-items: flex-end; // aligne le badge de version (VersionBadge) sur le bas du logo
   text-decoration: none;
   transition: opacity 160ms var(--ease-mech);
 

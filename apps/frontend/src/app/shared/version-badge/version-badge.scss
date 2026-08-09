@@ -1,0 +1,11 @@
+// Réutilise les tokens globaux définis dans :root (styles.scss) — les
+// variables CSS custom properties traversent l'encapsulation de vue Angular,
+// contrairement au reste des styles d'un composant.
+.badge {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

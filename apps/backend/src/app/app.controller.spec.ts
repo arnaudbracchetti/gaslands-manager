@@ -5,6 +5,7 @@
  * - GET / → délègue à AppService.getData()
  * - GET /health → exécute un SELECT 1 via DataSource et retourne { status: 'ok' }
  * - GET /health → laisse remonter l'exception si la base est indisponible
+ * - GET /version → délègue à AppService.getVersion()
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -15,15 +16,20 @@ import { AppService } from './app.service';
 
 describe('AppController', () => {
   let controller: AppController;
+  let appService: { getData: ReturnType<typeof vi.fn>; getVersion: ReturnType<typeof vi.fn> };
   let dataSource: { query: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     dataSource = { query: vi.fn() };
+    appService = {
+      getData: vi.fn().mockReturnValue({ message: 'Hello API' }),
+      getVersion: vi.fn().mockReturnValue({ version: null }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
       providers: [
-        { provide: AppService, useValue: { getData: vi.fn().mockReturnValue({ message: 'Hello API' }) } },
+        { provide: AppService, useValue: appService },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
@@ -51,6 +57,20 @@ describe('AppController', () => {
       dataSource.query.mockRejectedValue(new Error('connection refused'));
 
       await expect(controller.getHealth()).rejects.toThrow('connection refused');
+    });
+  });
+
+  describe('GET /version', () => {
+    it('délègue à AppService.getVersion() et retourne le tag tel quel', () => {
+      appService.getVersion.mockReturnValue({ version: 'v1.2.3' });
+
+      expect(controller.getVersion()).toEqual({ version: 'v1.2.3' });
+    });
+
+    it('relaie { version: null } sans y substituer de valeur', () => {
+      appService.getVersion.mockReturnValue({ version: null });
+
+      expect(controller.getVersion()).toEqual({ version: null });
     });
   });
 });

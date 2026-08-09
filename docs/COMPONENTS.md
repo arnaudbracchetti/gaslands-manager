@@ -167,6 +167,32 @@ Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`, `AtelierPage`, `Atel
 
 ---
 
+### `VersionBadge` — `shared/version-badge/`
+
+Petit badge affichant la version actuellement déployée. Charge lui-même
+`GET /api/version` à l'initialisation (`IMAGE_TAG` lu par le backend via
+`process.env`, cf. [ARCHITECTURE.md §6](../ARCHITECTURE.md)) — composant
+autonome plutôt qu'intégré à `App` (le composant racine, déjà volumineux :
+menu utilisateur, modales de compte, aide contextuelle), pour isoler le fetch
+et son échec silencieux d'un simple repère cosmétique.
+
+**Pas de valeur par défaut** : si `IMAGE_TAG` est absent/vide côté serveur
+(`{ version: null }`) ou si la requête échoue, le badge ne s'affiche
+simplement pas — jamais de texte de repli (ex. "latest") qui laisserait
+croire à un vrai numéro de version.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-version-badge` |
+| **Type** | Smart (fait son propre appel HTTP) |
+| **Services** | `HttpClient` |
+
+Aucun input, aucun output.
+
+Utilisé par : `App` (composant racine, dans `.navbar-brand`, à côté du logo).
+
+---
+
 ## Diagramme de dépendances
 
 ```mermaid
@@ -182,6 +208,7 @@ graph TD
         ModalShell
         ConfirmModal
         Breadcrumb
+        VersionBadge
     end
 
     subgraph Teams
@@ -306,6 +333,7 @@ graph TD
     AdminUsers --> AdminResetPasswordModal
     App --> UserDetailsModal
     App --> ChangePasswordModal
+    App --> VersionBadge
     ConfirmModal --> ModalShell
     SellVehicleModal --> ModalShell
     UserDetailsModal --> ModalShell

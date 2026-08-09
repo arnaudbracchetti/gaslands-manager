@@ -86,6 +86,11 @@ services:
       CORS_ORIGIN: https://${PUBLIC_DOMAIN}
       THROTTLE_TTL: ${THROTTLE_TTL:-60}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-300}
+      # Pas de repli ":-latest" ici (contrairement à l'image: ci-dessus, qui
+      # en a besoin pour choisir l'image à pull) : une valeur vide doit
+      # rester vide, pour que AppService.getVersion() affiche null plutôt
+      # qu'une fausse version.
+      IMAGE_TAG: ${IMAGE_TAG}
     depends_on:
       postgres:
         condition: service_healthy

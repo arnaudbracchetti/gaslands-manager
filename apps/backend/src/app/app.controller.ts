@@ -33,4 +33,11 @@ export class AppController {
     await this.dataSource.query('SELECT 1');
     return { status: 'ok' };
   }
+
+  // Route publique (comme /health) : affichée dans la navbar du frontend
+  // (VersionBadge), aucune donnée sensible.
+  @Get('version')
+  getVersion(): { version: string | null } {
+    return this.appService.getVersion();
+  }
 }

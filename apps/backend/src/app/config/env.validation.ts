@@ -168,6 +168,15 @@ export class EnvVars {
   @IsOptional()
   @Transform(({ value }: { value: string }): number => parseInt(value, 10))
   THROTTLE_LIMIT: number = 300;
+
+  // Tag de l'image Docker déployée (cf. docker-compose.prod.yml), exposé via
+  // GET /api/version pour affichage dans la navbar. Pas de défaut en dur
+  // (même raison que DB_SYNCHRONIZE ci-dessus) : AppService doit pouvoir
+  // distinguer "absent/vide" de "l'opérateur a fixé une valeur" pour ne
+  // jamais afficher une fausse version (ex. "latest").
+  @IsString()
+  @IsOptional()
+  IMAGE_TAG?: string;
 }
 
 /**
