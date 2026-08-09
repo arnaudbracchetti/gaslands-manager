@@ -121,7 +121,8 @@ cf. ARCHITECTURE.md §3.3) garantit l'existence d'un unique utilisateur `role: "
 Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masquage de lien) :
 
 - **Backend** : `UsersController` (`GET /api/users`, `DELETE /api/users/:id`,
-  `PATCH /api/users/:id/active`, `PATCH /api/users/:id/password`) porte
+  `PATCH /api/users/:id/active`, `PATCH /api/users/:id/password`,
+  `POST /api/users/:id/impersonate`) porte
   `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles(UserRole.ADMIN)` au niveau du
   controller. `RolesGuard` lit les rôles requis via `Reflector` et lève
   `ForbiddenException` (403) si `request.user.role` n'y figure pas — générique
@@ -136,6 +137,59 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
   `canActivate: [authGuard, adminGuard]` — `adminGuard` vérifie explicitement
   `authService.currentUser()?.role === 'admin'` et redirige vers `/home` sinon
   (`authGuard` ne vérifie que la connexion, pas le rôle).
+
+### Suppression d'un compte engagé comme organisateur de campagne
+
+`RemoveUserUseCase` refuse (400) la suppression d'un compte si elle laisserait
+une campagne sans aucun participant `isOrganizer: true`/`VALIDATED` restant —
+une campagne orpheline ne pourrait plus jamais exécuter la moindre route
+organisateur (`assertOrganizer`), pour personne. La vérification interroge
+`ICampaignRepository.findCampaignsWhereSoleValidatedOrganizer(userId)`
+(invariant cross-agrégat : `User` ne connaît pas les campagnes, la règle vit
+donc dans l'orchestration du use case plutôt que dans l'un ou l'autre agrégat,
+même raisonnement qu'`isTeamEngaged` côté campagne) — le message d'erreur
+liste les campagnes concernées par leur nom. Mirroir cross-campagne de
+`Campaign.assertNotLastOrganizer` (cf.
+[CAMPAIGN.md](CAMPAIGN.md#inscription)), qui ne protège qu'une seule campagne
+déjà chargée, jamais l'ensemble des campagnes d'un utilisateur donné.
+
+Pour résoudre le blocage, l'admin usurpe l'identité du compte concerné (ou
+d'un autre organisateur de la même campagne, cf. ci-dessous) afin de
+promouvoir lui-même un remplaçant via l'écran "Promouvoir" existant
+(`ParticipantList`), puis retente la suppression.
+
+### Usurpation d'identité ("se connecter en tant que")
+
+Depuis le menu "⋯" d'un compte `role: 'user'` sur `/admin/users`, un
+administrateur peut obtenir un JWT valide pour ce compte sans connaître son
+mot de passe (`POST /api/users/:id/impersonate`) — utile notamment pour
+résoudre le blocage de suppression ci-dessus, mais disponible comme capacité
+générale, pas seulement à cette occasion.
+
+- **Réservée aux comptes `USER`** — jamais un autre `ADMIN`, y compris l'admin
+  lui-même (son propre compte est toujours `role: 'admin'`, donc déjà exclu
+  par cette même garde). Portée par `User.assertImpersonatableBy` (403 sinon),
+  qui délègue à `assertCanHoldSession()` pour rejeter aussi un compte
+  désactivé.
+- **Aucune marque particulière dans le JWT émis** — le token est produit par
+  le même `ITokenIssuer.issue()` que `LoginUseCase`, sans claim
+  supplémentaire : l'admin agit ensuite avec une session strictement
+  indistinguable d'une connexion normale de ce compte (`assertOrganizer`,
+  `assertVisibleParticipant`… ne sont jamais modifiés par cette
+  fonctionnalité). L'état "usurpation en cours" est une notion **purement
+  frontend**.
+- **Pas de journal d'audit** pour l'instant (hors périmètre - un seul compte
+  admin existe dans ce projet).
+- **Frontend** (`AuthService.startImpersonation`/`stopImpersonation`) : le
+  token admin courant est sauvegardé sous une clé `localStorage` dédiée avant
+  bascule sur le token de la cible - ce qui permet de revenir sans
+  ré-authentification. Une bannière permanente (`ImpersonationBanner`, cf.
+  [COMPONENTS.md](../COMPONENTS.md)) reste affichée sur tout écran tant que
+  l'usurpation est active, avec un bouton "Revenir à mon compte" qui restaure
+  le token admin, rafraîchit `currentUser` (`GET /api/auth/me`) et navigue
+  vers `/admin/users`. `logout()` efface aussi cette clé de sauvegarde, même
+  hors usurpation active, pour ne jamais laisser un résidu fausser l'état au
+  prochain démarrage sur ce navigateur.
 
 ---
 
@@ -171,6 +225,7 @@ Réservée au rôle `admin`, via un contrôle de rôle réel (pas un simple masq
 | PATCH | `/api/auth/me` | JWT | Auto-édition du profil (prénom/nom/pseudo/email) — 409 si email déjà pris |
 | PATCH | `/api/auth/me/password` | JWT | Changement de mot de passe (mot de passe actuel requis) — déconnecte l'utilisateur au succès |
 | GET | `/api/users` | JWT + admin | Liste tous les comptes (`RolesGuard`) |
-| DELETE | `/api/users/:id` | JWT + admin | Supprime un compte — 403 si auto-suppression (`User.assertRemovableBy`) |
+| DELETE | `/api/users/:id` | JWT + admin | Supprime un compte — 403 si auto-suppression (`User.assertRemovableBy`), 400 si la suppression laisserait une campagne sans organisateur `VALIDATED` (cf. §Suppression d'un compte engagé comme organisateur de campagne) |
 | PATCH | `/api/users/:id/active` | JWT + admin | Active/désactive un compte — 403 si auto-désactivation (`User.setActive`) |
 | PATCH | `/api/users/:id/password` | JWT + admin | Réinitialise le mot de passe d'un compte, sans connaître l'ancien — 403 si l'admin cible son propre compte (`User.resetPasswordAsAdmin`) |
+| POST | `/api/users/:id/impersonate` | JWT + admin | Émet un JWT pour ce compte ("se connecter en tant que"), sans connaître son mot de passe — 403 si la cible est un autre admin ou un compte désactivé (`User.assertImpersonatableBy`). Cf. §Usurpation d'identité |

@@ -8,13 +8,23 @@ import { AuthService } from './auth/auth.service';
 import { ChangePasswordModal } from './auth/change-password-modal/change-password-modal';
 import { UserDetailsModal } from './auth/user-details-modal/user-details-modal';
 import { Icon } from './shared/icon/icon';
+import { ImpersonationBanner } from './shared/impersonation-banner/impersonation-banner';
 import { VersionBadge } from './shared/version-badge/version-badge';
 // AuthService importé pour annoter le membre de classe (règle memberVariableDeclaration).
 
 // App est le composant racine : il est chargé en premier et encadre toute l'application
 // RouterModule fournit les directives routerLink, routerLinkActive et router-outlet
 @Component({
-  imports: [RouterModule, Icon, VersionBadge, UserDetailsModal, ChangePasswordModal, CdkConnectedOverlay, CdkOverlayOrigin],
+  imports: [
+    RouterModule,
+    Icon,
+    VersionBadge,
+    UserDetailsModal,
+    ChangePasswordModal,
+    ImpersonationBanner,
+    CdkConnectedOverlay,
+    CdkOverlayOrigin,
+  ],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -152,5 +162,9 @@ export class App implements OnInit {
         this.passwordSaving.set(false);
       },
     });
+  }
+
+  onReturnToAdmin(): void {
+    this.authService.stopImpersonation();
   }
 }

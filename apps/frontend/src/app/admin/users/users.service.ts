@@ -11,7 +11,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { User } from '../../auth/auth.model';
+import { AuthResponse, User } from '../../auth/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
@@ -44,5 +44,15 @@ export class UsersService {
    */
   resetPassword(id: number, newPassword: string): Observable<void> {
     return this.http.patch<void>(`/api/users/${id}/password`, { newPassword });
+  }
+
+  /**
+   * POST /api/users/:id/impersonate → émet un token pour ce compte ("se
+   * connecter en tant que"), sans connaître son mot de passe. Même forme de
+   * réponse que /api/auth/login - AuthService.startImpersonation() la
+   * consomme directement.
+   */
+  impersonate(id: number): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`/api/users/${id}/impersonate`, {});
   }
 }

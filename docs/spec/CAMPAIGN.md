@@ -77,7 +77,11 @@ l'organisateur corrige la valeur sans rouvrir la modale.
 - **"Refuser" un participant validé** (`VALIDATED → REJECTED`) : action réversible,
   distincte du retrait définitif (`DELETE`). Réservée aux organisateurs,
   `EN_CONSTRUCTION` uniquement. Un organisateur ne peut pas se refuser lui-même s'il est
-  le dernier organisateur `VALIDATED` de la campagne (pas de campagne "orpheline").
+  le dernier organisateur `VALIDATED` de la campagne (pas de campagne "orpheline",
+  `Campaign.assertNotLastOrganizer`). Même invariant appliqué de façon transversale
+  (toutes les campagnes d'un utilisateur, pas une seule déjà chargée) à la
+  **suppression de compte** — cf. [AUTH.md — Suppression d'un compte engagé comme
+  organisateur de campagne](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne).
 - **"Valider" un participant refusé** (`REJECTED → VALIDATED`) : revalidation, sans
   contrainte d'état supplémentaire.
 - **Retirer un participant** (`DELETE`) : suppression définitive de la ligne

@@ -66,6 +66,11 @@
                       <button type="button" role="menuitem" (click)="onMenuResetPassword(user)">
                         Réinitialiser le mot de passe
                       </button>
+                      @if (user.role === 'user') {
+                        <button type="button" role="menuitem" (click)="onMenuImpersonate(user)">
+                          Se connecter en tant que
+                        </button>
+                      }
                       <button type="button" role="menuitem" class="admin-users-menu-danger" (click)="onMenuDelete(user)">
                         Supprimer
                       </button>

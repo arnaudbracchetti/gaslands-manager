@@ -95,4 +95,21 @@ describe('UsersService', () => {
       expect(result?.isActive).toBe(false);
     });
   });
+
+  // ── impersonate() ────────────────────────────────────────────────────────
+
+  describe('impersonate()', () => {
+    it('effectue POST /api/users/:id/impersonate et retourne { access_token, user }', () => {
+      let result: { access_token: string; user: User } | undefined;
+
+      service.impersonate(2).subscribe((res) => { result = res; });
+
+      const req = httpMock.expectOne('/api/users/2/impersonate');
+      expect(req.request.method).toBe('POST');
+
+      req.flush({ access_token: 'target.jwt.token', user: mockUser });
+
+      expect(result).toEqual({ access_token: 'target.jwt.token', user: mockUser });
+    });
+  });
 });

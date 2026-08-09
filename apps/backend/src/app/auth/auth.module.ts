@@ -17,10 +17,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CAMPAIGN_REPOSITORY } from '../campaign/campaign.tokens';
+import type { ICampaignRepository } from '../campaign/domain/campaign.repository.interface';
+import { CampaignModule } from '../campaign/campaign.module';
 import { AdminSeedService } from './admin-seed.service';
 import { CAPTCHA_VERIFIER, PASSWORD_HASHER, TOKEN_ISSUER, USER_REPOSITORY } from './auth.tokens';
 import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
 import { ChangePasswordUseCase } from './application/change-password.usecase';
+import { ImpersonateUserUseCase } from './application/impersonate-user.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { LoginUseCase } from './application/login.usecase';
 import { RegisterUseCase } from './application/register.usecase';
@@ -63,6 +67,12 @@ const authModuleLogger = new Logger('AuthModule');
         },
       }),
     }),
+
+    // Fournit CAMPAIGN_REPOSITORY (exporté par CampaignModule) - requis par
+    // RemoveUserUseCase pour refuser une suppression qui orphelinerait une
+    // campagne. Aucune dépendance inverse (CampaignModule n'importe jamais
+    // AuthModule) : pas de cycle.
+    CampaignModule,
   ],
   controllers: [AuthController, UsersController],
   providers: [
@@ -125,8 +135,9 @@ const authModuleLogger = new Logger('AuthModule');
     },
     {
       provide: RemoveUserUseCase,
-      useFactory: (r: IUserRepository): RemoveUserUseCase => new RemoveUserUseCase(r),
-      inject: [USER_REPOSITORY],
+      useFactory: (r: IUserRepository, c: ICampaignRepository): RemoveUserUseCase =>
+        new RemoveUserUseCase(r, c),
+      inject: [USER_REPOSITORY, CAMPAIGN_REPOSITORY],
     },
     {
       provide: SetActiveUseCase,
@@ -138,6 +149,12 @@ const authModuleLogger = new Logger('AuthModule');
       useFactory: (r: IUserRepository, h: IPasswordHasher): AdminResetPasswordUseCase =>
         new AdminResetPasswordUseCase(r, h),
       inject: [USER_REPOSITORY, PASSWORD_HASHER],
+    },
+    {
+      provide: ImpersonateUserUseCase,
+      useFactory: (r: IUserRepository, t: ITokenIssuer): ImpersonateUserUseCase =>
+        new ImpersonateUserUseCase(r, t),
+      inject: [USER_REPOSITORY, TOKEN_ISSUER],
     },
 
     JwtStrategy,      // stratégie Passport pour valider les JWT entrants

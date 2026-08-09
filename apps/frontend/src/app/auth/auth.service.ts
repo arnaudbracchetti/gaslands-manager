@@ -30,6 +30,11 @@ import { AuthResponse, ChangePasswordDto, RegisterDto, UpdateProfileDto, User } 
 // Clé de stockage du JWT dans localStorage
 const TOKEN_KEY = 'gaslands_token';
 
+// Clé de sauvegarde du token admin pendant une usurpation d'identité
+// ("se connecter en tant que") - sa seule PRÉSENCE indique qu'une usurpation
+// est en cours (cf. impersonationActive ci-dessous).
+const ADMIN_BACKUP_TOKEN_KEY = 'gaslands_admin_backup_token';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   // inject() : nouvelle syntaxe Angular (alternative au constructeur).
@@ -55,6 +60,18 @@ export class AuthService {
    */
   // Signal<boolean> : type retourné par computed() (lecture seule — pas WritableSignal).
   readonly isLoggedIn: Signal<boolean> = computed(() => this.currentUser() !== null);
+
+  /**
+   * Vrai pendant une usurpation d'identité admin ("se connecter en tant
+   * que") — piloté explicitement par startImpersonation()/stopImpersonation()
+   * ci-dessous, jamais recalculé depuis le contenu du token (aucune marque
+   * n'y est ajoutée côté serveur, cf. ImpersonateUserUseCase). Initialisé à
+   * la présence de la clé de sauvegarde, pour survivre à un rechargement de
+   * page pendant l'usurpation.
+   */
+  readonly impersonationActive: WritableSignal<boolean> = signal<boolean>(
+    localStorage.getItem(ADMIN_BACKUP_TOKEN_KEY) !== null,
+  );
 
   /**
    * Émet une fois (puis se complète) quand la restauration de session
@@ -177,9 +194,62 @@ export class AuthService {
    */
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
+    // Nettoyage défensif, même hors usurpation active : évite qu'une clé de
+    // sauvegarde orpheline (ex. mot de passe changé pendant une usurpation,
+    // qui force ce logout — cf. AUTH.md) fausse impersonationActive à la
+    // prochaine connexion sur ce navigateur.
+    localStorage.removeItem(ADMIN_BACKUP_TOKEN_KEY);
+    this.impersonationActive.set(false);
     // signal.set(null) déclenche la mise à jour réactive de tous les
     // composants qui lisent currentUser() ou isLoggedIn()
     this.currentUser.set(null);
     this.router.navigate(['/login']);
+  }
+
+  /**
+   * Bascule sur l'identité usurpée ("se connecter en tant que X") - réservé à
+   * un administrateur, `res` provient de `UsersService.impersonate()`. Le
+   * token admin courant est sauvegardé pour permettre stopImpersonation()
+   * sans ré-authentification.
+   */
+  startImpersonation(res: AuthResponse): void {
+    const currentToken = localStorage.getItem(TOKEN_KEY);
+    if (currentToken) {
+      localStorage.setItem(ADMIN_BACKUP_TOKEN_KEY, currentToken);
+    }
+    localStorage.setItem(TOKEN_KEY, res.access_token);
+    this.currentUser.set(res.user);
+    this.impersonationActive.set(true);
+    this.router.navigate(['/home']);
+  }
+
+  /**
+   * Revient à la session admin d'origine. Navigue vers /admin/users plutôt
+   * que de rester sur l'écran courant : celui-ci appartient très probablement
+   * aux données de l'utilisateur usurpé, inaccessibles à l'admin réel.
+   */
+  stopImpersonation(): void {
+    const adminToken = localStorage.getItem(ADMIN_BACKUP_TOKEN_KEY);
+    if (!adminToken) {
+      this.impersonationActive.set(false);
+      return;
+    }
+
+    localStorage.setItem(TOKEN_KEY, adminToken);
+    localStorage.removeItem(ADMIN_BACKUP_TOKEN_KEY);
+    this.impersonationActive.set(false);
+
+    this.http.get<User>('/api/auth/me').subscribe({
+      next: (user: User) => {
+        this.currentUser.set(user);
+        this.router.navigate(['/admin/users']);
+      },
+      error: () => {
+        // Le token admin sauvegardé n'est plus valide (ex. expiré) - repli
+        // sur une déconnexion complète plutôt que de laisser une session
+        // incohérente.
+        this.logout();
+      },
+    });
   }
 }

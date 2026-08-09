@@ -41,9 +41,11 @@ const currentUserSignal = signal<User | null>(null);
 const mockAuthService = {
   currentUser: currentUserSignal,
   isLoggedIn: computed(() => currentUserSignal() !== null),
+  impersonationActive: signal(false),
   logout: vi.fn(),
   updateProfile: vi.fn(),
   changePassword: vi.fn(),
+  stopImpersonation: vi.fn(),
 };
 
 describe('App (composant racine)', () => {
@@ -81,6 +83,38 @@ describe('App (composant racine)', () => {
     // le logo image") — plus de texte visible dans `.navbar-brand`, on vérifie
     // donc l'attribut `alt` de l'image à la place.
     expect(compiled.querySelector('.navbar-brand img')?.getAttribute('alt')).toContain('Gaslands');
+  });
+
+  // ── Bandeau d'usurpation d'identité ───────────────────────────────────────
+
+  describe('Bandeau d\'usurpation', () => {
+    afterEach(() => {
+      mockAuthService.impersonationActive.set(false);
+    });
+
+    it('n\'affiche pas le bandeau hors usurpation', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('app-impersonation-banner')).toBeFalsy();
+    });
+
+    it('affiche le bandeau pendant une usurpation et appelle stopImpersonation() au clic sur "Revenir"', async () => {
+      mockAuthService.currentUser.set(mockUser);
+      mockAuthService.impersonationActive.set(true);
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const banner = compiled.querySelector('app-impersonation-banner');
+      expect(banner).toBeTruthy();
+      expect(banner?.textContent).toContain(mockUser.callName);
+
+      (banner?.querySelector('.imp-banner__return') as HTMLButtonElement).click();
+
+      expect(mockAuthService.stopImpersonation).toHaveBeenCalled();
+    });
   });
 
   // ── Menu utilisateur + dialog "Détails du compte" ─────────────────────────

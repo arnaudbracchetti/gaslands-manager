@@ -214,4 +214,22 @@ describe('User (agrégat)', () => {
       await expect(buildUser({ id: 7 }).resetPasswordAsAdmin('abc', 42, hasher)).rejects.toThrow(DomainException);
     });
   });
+
+  describe('assertImpersonatableBy', () => {
+    it('autorise l\'usurpation d\'un compte USER actif', () => {
+      expect(() => buildUser({ role: UserRole.USER, isActive: true }).assertImpersonatableBy()).not.toThrow();
+    });
+
+    it('refuse l\'usurpation d\'un autre compte ADMIN', () => {
+      expect(() => buildUser({ role: UserRole.ADMIN }).assertImpersonatableBy()).toThrow(
+        'Impossible de se connecter en tant qu\'un autre administrateur',
+      );
+    });
+
+    it('refuse l\'usurpation d\'un compte USER désactivé', () => {
+      expect(() => buildUser({ role: UserRole.USER, isActive: false }).assertImpersonatableBy()).toThrow(
+        'Ce compte a été désactivé',
+      );
+    });
+  });
 });

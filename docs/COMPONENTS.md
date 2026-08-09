@@ -193,6 +193,37 @@ Utilisé par : `App` (composant racine, dans `.navbar-brand`, à côté du logo)
 
 ---
 
+### `ImpersonationBanner` — `shared/impersonation-banner/`
+
+Bandeau permanent affiché tant qu'un administrateur agit en usurpant
+l'identité d'un autre compte ("se connecter en tant que", cf.
+[AUTH.md — Usurpation d'identité](../docs/spec/AUTH.md#usurpation-didentité-se-connecter-en-tant-que)).
+Composant dumb : ne connaît ni `AuthService` ni la notion d'usurpation
+elle-même, seulement le nom à afficher et le clic sur "Revenir à mon compte".
+
+| | |
+|---|---|
+| **Sélecteur** | `app-impersonation-banner` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `impersonatedUserName` | `string` | — | Nom d'affichage (`callName`) du compte actuellement usurpé |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `returnClicked` | `void` | Clic sur "Revenir à mon compte" — le parent (`App`) appelle `AuthService.stopImpersonation()` |
+
+Utilisé par : `App` (composant racine, entre `<nav>` et `<main>` - seul
+emplacement garanti visible sur tout écran), gated
+`@if (authService.impersonationActive())`.
+
+---
+
 ## Diagramme de dépendances
 
 ```mermaid
@@ -209,6 +240,7 @@ graph TD
         ConfirmModal
         Breadcrumb
         VersionBadge
+        ImpersonationBanner
     end
 
     subgraph Teams
@@ -334,6 +366,7 @@ graph TD
     App --> UserDetailsModal
     App --> ChangePasswordModal
     App --> VersionBadge
+    App --> ImpersonationBanner
     ConfirmModal --> ModalShell
     SellVehicleModal --> ModalShell
     UserDetailsModal --> ModalShell
@@ -1829,7 +1862,14 @@ Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mir
 
 ### `AdminUsers` — `admin/users/` 🧠
 
-Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes, avec 3 actions par ligne — Activer/Désactiver, Réinitialiser le mot de passe, Supprimer — groupées derrière un menu "⋯" (`openMenuUserId`, un seul ouvert à la fois) plutôt que des boutons pleine largeur, mirroir simplifié du menu ⋯ de `ParticipantList` : même principe visuel (déclencheur + panneau ancré + fermeture au clic extérieur), mais posé à la main (`position: absolute` + backdrop cliquable) plutôt que via Angular CDK Overlay — cette page n'a aucun ancêtre `position: sticky` susceptible de piéger un panneau positionné ainsi, contrairement à `.campaign-detail-rail`. Masque entièrement le menu sur le compte connecté (l'admin garde son propre "Changer le mot de passe" dans son menu utilisateur, cf. [AUTH.md — Auto-édition du profil](spec/AUTH.md#auto-édition-du-profil)). Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
+Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes, avec 4 actions par ligne — Activer/Désactiver, Réinitialiser le mot de passe, Se connecter en tant que (comptes `role: 'user'` uniquement, cf. [AUTH.md — Usurpation d'identité](spec/AUTH.md#usurpation-didentité-se-connecter-en-tant-que)), Supprimer — groupées derrière un menu "⋯" (`openMenuUserId`, un seul ouvert à la fois) plutôt que des boutons pleine largeur, mirroir simplifié du menu ⋯ de `ParticipantList` : même principe visuel (déclencheur + panneau ancré + fermeture au clic extérieur), mais posé à la main (`position: absolute` + backdrop cliquable) plutôt que via Angular CDK Overlay — cette page n'a aucun ancêtre `position: sticky` susceptible de piéger un panneau positionné ainsi, contrairement à `.campaign-detail-rail`. Masque entièrement le menu sur le compte connecté (l'admin garde son propre "Changer le mot de passe" dans son menu utilisateur, cf. [AUTH.md — Auto-édition du profil](spec/AUTH.md#auto-édition-du-profil)). Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
+
+**Suppression bloquée par le backend** (400) si elle laisserait une campagne
+sans organisateur `VALIDATED` (cf. [AUTH.md](spec/AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne)) :
+`onConfirmDeleteUser()` affiche alors le message serveur tel quel (liste des
+campagnes concernées) plutôt qu'un texte générique — `loadUsers()` (qui
+resynchronise la liste après l'échec) est appelé **avant** de fixer ce
+message, pas après, sinon son `error.set('')` interne l'effacerait aussitôt.
 
 | | |
 |---|---|

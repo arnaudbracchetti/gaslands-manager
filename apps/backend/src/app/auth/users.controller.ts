@@ -6,18 +6,21 @@
  * doit peupler req.user AVANT que RolesGuard lise req.user.role.
  *
  * Routes :
- *   GET   /api/users              → liste tous les comptes
- *   DELETE /api/users/:id         → supprime un compte (cascade équipes/véhicules)
- *   PATCH /api/users/:id/active   → active/désactive un compte
- *   PATCH /api/users/:id/password → réinitialise le mot de passe d'un compte
+ *   GET   /api/users               → liste tous les comptes
+ *   DELETE /api/users/:id          → supprime un compte (cascade équipes/véhicules)
+ *   PATCH /api/users/:id/active    → active/désactive un compte
+ *   PATCH /api/users/:id/password  → réinitialise le mot de passe d'un compte
+ *   POST  /api/users/:id/impersonate → émet un token pour agir en tant que ce compte
  */
-import { Body, Controller, Delete, Get, Param, Patch, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
+import { ImpersonateUserUseCase } from './application/impersonate-user.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { RemoveUserUseCase } from './application/remove-user.usecase';
 import { SetActiveUseCase } from './application/set-active.usecase';
 import { UserRole } from './domain/user-role';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
+import type { AuthResponseDto } from './dto/auth-response.dto';
 import { SetActiveDto } from './dto/set-active.dto';
 import type { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -37,6 +40,7 @@ export class UsersController {
     private readonly removeUserUseCase: RemoveUserUseCase,
     private readonly setActiveUseCase: SetActiveUseCase,
     private readonly adminResetPasswordUseCase: AdminResetPasswordUseCase,
+    private readonly impersonateUserUseCase: ImpersonateUserUseCase,
   ) {}
 
   /**
@@ -87,5 +91,16 @@ export class UsersController {
       requesterId: req.user.id,
       newPassword: dto.newPassword,
     });
+  }
+
+  /**
+   * POST /api/users/:id/impersonate
+   * Émet un JWT valide pour ce compte ("se connecter en tant que"), sans
+   * connaître son mot de passe. Réservé aux comptes `role: 'user'` - jamais
+   * un autre admin - garde portée par `User.assertImpersonatableBy` (403 sinon).
+   */
+  @Post(':id/impersonate')
+  impersonate(@Param('id', ParseIntPipe) id: number): Promise<AuthResponseDto> {
+    return this.impersonateUserUseCase.execute({ targetUserId: id });
   }
 }

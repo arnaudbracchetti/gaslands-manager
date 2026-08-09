@@ -242,6 +242,21 @@ export class User {
     }
   }
 
+  /**
+   * Usurpation d'identité par un administrateur ("se connecter en tant que").
+   * Réservée aux comptes `USER` - jamais un autre admin, y compris l'admin
+   * lui-même (son propre compte est toujours `ADMIN`, donc déjà exclu par cette
+   * garde sans vérification de `requesterId` dédiée). Délègue à
+   * `assertCanHoldSession` pour échouer immédiatement sur un compte désactivé,
+   * plutôt que d'émettre un token qui échouerait à la première requête suivante.
+   */
+  assertImpersonatableBy(): void {
+    if (this._role !== UserRole.USER) {
+      throw new DomainException('Impossible de se connecter en tant qu\'un autre administrateur');
+    }
+    this.assertCanHoldSession();
+  }
+
   // ── Validations privées ───────────────────────────────────────────────────
 
   private static assertRequiredIdentity(cmd: UpdateProfileCommand): void {

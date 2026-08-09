@@ -1,0 +1,32 @@
+.imp-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 1rem;
+  background: var(--tint-info-bg);
+  border-bottom: 1px solid var(--tint-info-border);
+  color: var(--tint-info-text);
+  font-size: var(--fs-sm);
+}
+
+.imp-banner__text {
+  strong {
+    font-weight: 700;
+  }
+}
+
+.imp-banner__return {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--tint-info-border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--tint-info-text);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tint-info-border);
+  }
+}

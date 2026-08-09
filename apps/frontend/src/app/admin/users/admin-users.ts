@@ -99,9 +99,13 @@ export class AdminUsers implements OnInit {
     this.users.update((list: User[]) => list.filter((u: User) => u.id !== user.id));
 
     this.usersService.remove(user.id).subscribe({
-      error: () => {
-        this.error.set('Erreur lors de la suppression. La liste a été actualisée.');
+      error: (err: { error?: { message?: string } }) => {
+        // loadUsers() efface error() en tête (avant même que sa requête ne
+        // réponde) — l'appeler AVANT de fixer le message ici, pas après,
+        // sinon le message serveur (liste des campagnes concernées) serait
+        // effacé aussitôt défini.
         this.loadUsers();
+        this.error.set(err?.error?.message ?? 'Erreur lors de la suppression. La liste a été actualisée.');
       },
     });
   }
@@ -178,5 +182,19 @@ export class AdminUsers implements OnInit {
   onMenuDelete(user: User): void {
     this.closeMenu();
     this.deleteUser(user);
+  }
+
+  /**
+   * Usurpe l'identité de ce compte ("se connecter en tant que") — réservé
+   * (côté template) aux comptes `role: 'user'`, revérifié côté serveur
+   * (`User.assertImpersonatableBy`, 403 sinon). `startImpersonation()`
+   * bascule la session et navigue vers /home.
+   */
+  onMenuImpersonate(user: User): void {
+    this.closeMenu();
+    this.usersService.impersonate(user.id).subscribe({
+      next: (res) => this.authService.startImpersonation(res),
+      error: () => this.error.set('Erreur lors de la connexion en tant que cet utilisateur.'),
+    });
   }
 }

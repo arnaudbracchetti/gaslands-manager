@@ -251,6 +251,31 @@ export class CampaignRepository implements ICampaignRepository {
     return existing !== null;
   }
 
+  async findCampaignsWhereSoleValidatedOrganizer(
+    userId: number,
+  ): Promise<{ id: number; name: string }[]> {
+    const asOrganizer = await this.participantRepo.find({
+      where: { userId, isOrganizer: true, status: ParticipantStatus.VALIDATED },
+    });
+    if (asOrganizer.length === 0) return [];
+
+    const candidateCampaignIds = asOrganizer.map((p) => p.campaignId);
+    const otherOrganizers = await this.participantRepo.find({
+      where: {
+        campaignId: In(candidateCampaignIds),
+        isOrganizer: true,
+        status: ParticipantStatus.VALIDATED,
+        userId: Not(userId),
+      },
+    });
+    const campaignIdsWithBackup = new Set(otherOrganizers.map((p) => p.campaignId));
+    const orphanedIds = candidateCampaignIds.filter((id) => !campaignIdsWithBackup.has(id));
+    if (orphanedIds.length === 0) return [];
+
+    const campaigns = await this.campaignOrmRepo.find({ where: { id: In(orphanedIds) } });
+    return campaigns.map((c) => ({ id: c.id, name: c.name }));
+  }
+
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
   private async nextEventOrder(gameId: number): Promise<number> {

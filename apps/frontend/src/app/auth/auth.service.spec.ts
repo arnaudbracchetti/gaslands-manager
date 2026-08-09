@@ -162,6 +162,101 @@ describe('AuthService', () => {
       expect(service.currentUser()).toBeNull();
       expect(service.isLoggedIn()).toBe(false);
     });
+
+    it('efface aussi la clé de sauvegarde admin et impersonationActive (nettoyage défensif)', () => {
+      mockLocalStorage.setItem('gaslands_admin_backup_token', 'admin.jwt.token');
+      service.impersonationActive.set(true);
+      service.currentUser.set(mockUser);
+
+      service.logout();
+
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('gaslands_admin_backup_token');
+      expect(service.impersonationActive()).toBe(false);
+    });
+  });
+
+  // ── Usurpation d'identité ────────────────────────────────────────────────
+
+  describe('impersonationActive — état initial', () => {
+    it('démarre à true si une clé de sauvegarde admin existe déjà (survie à un rechargement)', () => {
+      const lsWithBackup = createLocalStorageMock();
+      lsWithBackup.store['gaslands_admin_backup_token'] = 'admin.jwt.token';
+      vi.stubGlobal('localStorage', lsWithBackup);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AuthService,
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: Router, useValue: { navigate: vi.fn() } },
+        ],
+      });
+
+      const freshService = TestBed.inject(AuthService);
+      const freshHttpMock = TestBed.inject(HttpTestingController);
+      freshHttpMock.match('/api/auth/me').forEach((req) =>
+        req.flush(null, { status: 401, statusText: 'Unauthorized' }),
+      );
+
+      expect(freshService.impersonationActive()).toBe(true);
+      freshHttpMock.verify();
+    });
+  });
+
+  describe('startImpersonation()', () => {
+    it('sauvegarde le token courant, bascule sur celui de la cible et navigue vers /home', () => {
+      mockLocalStorage.setItem('gaslands_token', 'admin.jwt.token');
+      const router = TestBed.inject(Router);
+
+      service.startImpersonation(mockAuthResponse);
+
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('gaslands_admin_backup_token', 'admin.jwt.token');
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('gaslands_token', 'mocked.jwt.token');
+      expect(service.currentUser()).toEqual(mockUser);
+      expect(service.impersonationActive()).toBe(true);
+      expect(router.navigate).toHaveBeenCalledWith(['/home']);
+    });
+  });
+
+  describe('stopImpersonation()', () => {
+    it('restaure le token admin, rafraîchit currentUser et navigue vers /admin/users', () => {
+      mockLocalStorage.setItem('gaslands_admin_backup_token', 'admin.jwt.token');
+      service.impersonationActive.set(true);
+      const router = TestBed.inject(Router);
+      const adminUser = { ...mockUser, id: 99, role: 'admin' as const, callName: 'Admin' };
+
+      service.stopImpersonation();
+
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('gaslands_token', 'admin.jwt.token');
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('gaslands_admin_backup_token');
+      expect(service.impersonationActive()).toBe(false);
+
+      const req = httpMock.expectOne('/api/auth/me');
+      req.flush(adminUser);
+
+      expect(service.currentUser()).toEqual(adminUser);
+      expect(router.navigate).toHaveBeenCalledWith(['/admin/users']);
+    });
+
+    it('se contente de désactiver le signal si aucun token admin n\'est sauvegardé', () => {
+      service.stopImpersonation();
+
+      expect(service.impersonationActive()).toBe(false);
+    });
+
+    it('se déconnecte complètement si le token admin sauvegardé n\'est plus valide', () => {
+      mockLocalStorage.setItem('gaslands_admin_backup_token', 'expired.admin.jwt.token');
+      const router = TestBed.inject(Router);
+
+      service.stopImpersonation();
+
+      const req = httpMock.expectOne('/api/auth/me');
+      req.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(service.currentUser()).toBeNull();
+      expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    });
   });
 
   // ── updateProfile() ──────────────────────────────────────────────────────

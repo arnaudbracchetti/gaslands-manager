@@ -74,6 +74,16 @@
   </div>
 </nav>
 
+<!--
+  Bandeau d'usurpation d'identité — entre <nav> et <main> : seul emplacement
+  garanti visible sur tout écran (le router-outlet change, ce niveau non).
+-->
+@if (authService.impersonationActive()) {
+  <app-impersonation-banner
+    [impersonatedUserName]="authService.currentUser()?.callName ?? ''"
+    (returnClicked)="onReturnToAdmin()" />
+}
+
 <!-- router-outlet est le "trou" dans lequel Angular injecte le composant de la route active -->
 <main>
   <router-outlet></router-outlet>

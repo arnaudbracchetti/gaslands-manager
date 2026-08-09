@@ -64,4 +64,15 @@ export interface ICampaignRepository {
    * d'équipe au sein d'une même campagne).
    */
   isTeamEngaged(teamId: number, excludeCampaignId?: number): Promise<boolean>;
+
+  /**
+   * Campagnes où `userId` est actuellement l'unique organisateur `VALIDATED` -
+   * invariant transversal (au-delà d'une seule campagne chargée), donc porté
+   * par le repository, même raisonnement qu'`isTeamEngaged` ci-dessus. Utilisé
+   * par `RemoveUserUseCase` pour refuser une suppression qui laisserait une
+   * campagne sans organisateur (mirroir cross-campagne de
+   * `Campaign.assertNotLastOrganizer`, qui ne s'applique qu'à une campagne déjà
+   * chargée).
+   */
+  findCampaignsWhereSoleValidatedOrganizer(userId: number): Promise<{ id: number; name: string }[]>;
 }

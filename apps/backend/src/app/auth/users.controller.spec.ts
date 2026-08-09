@@ -12,6 +12,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { UsersController } from './users.controller';
 import { AdminResetPasswordUseCase } from './application/admin-reset-password.usecase';
+import { ImpersonateUserUseCase } from './application/impersonate-user.usecase';
 import { ListUsersUseCase } from './application/list-users.usecase';
 import { RemoveUserUseCase } from './application/remove-user.usecase';
 import { SetActiveUseCase } from './application/set-active.usecase';
@@ -50,6 +51,7 @@ describe('UsersController', () => {
   const mockRemoveUser = { execute: vi.fn() };
   const mockSetActive = { execute: vi.fn() };
   const mockAdminResetPassword = { execute: vi.fn() };
+  const mockImpersonateUser = { execute: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -59,6 +61,7 @@ describe('UsersController', () => {
         { provide: RemoveUserUseCase, useValue: mockRemoveUser },
         { provide: SetActiveUseCase, useValue: mockSetActive },
         { provide: AdminResetPasswordUseCase, useValue: mockAdminResetPassword },
+        { provide: ImpersonateUserUseCase, useValue: mockImpersonateUser },
       ],
     }).compile();
 
@@ -118,6 +121,20 @@ describe('UsersController', () => {
         requesterId: 1,
         newPassword: 'nouveaumdp',
       });
+    });
+  });
+
+  // ── POST /users/:id/impersonate ─────────────────────────────────────────────
+
+  describe('impersonate()', () => {
+    it('appelle ImpersonateUserUseCase avec la cible et retourne le token émis', async () => {
+      const response = { access_token: 'signed.jwt.token', user: mockUserList[1] };
+      mockImpersonateUser.execute.mockResolvedValue(response);
+
+      const result = await controller.impersonate(2);
+
+      expect(mockImpersonateUser.execute).toHaveBeenCalledWith({ targetUserId: 2 });
+      expect(result).toEqual(response);
     });
   });
 });

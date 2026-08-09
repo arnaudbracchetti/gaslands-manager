@@ -36,6 +36,18 @@ const mockUsers: User[] = [
     createdAt: '2025-01-02T00:00:00.000Z',
     updatedAt: '2025-01-02T00:00:00.000Z',
   },
+  {
+    id: 3,
+    firstName: 'Autre',
+    lastName: 'Admin',
+    pseudo: 'AutreAdmin',
+    callName: 'AutreAdmin',
+    email: 'autre-admin@test.com',
+    role: 'admin',
+    isActive: true,
+    createdAt: '2025-01-03T00:00:00.000Z',
+    updatedAt: '2025-01-03T00:00:00.000Z',
+  },
 ];
 
 describe('AdminUsers Component', () => {
@@ -46,11 +58,13 @@ describe('AdminUsers Component', () => {
     remove: ReturnType<typeof vi.fn>;
     setActive: ReturnType<typeof vi.fn>;
     resetPassword: ReturnType<typeof vi.fn>;
+    impersonate: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal<User | null>>;
     isLoggedIn: ReturnType<typeof computed<boolean>>;
     logout: ReturnType<typeof vi.fn>;
+    startImpersonation: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -59,6 +73,7 @@ describe('AdminUsers Component', () => {
       remove: vi.fn(),
       setActive: vi.fn(),
       resetPassword: vi.fn(),
+      impersonate: vi.fn(),
     };
 
     // Connecté en tant qu'admin (id: 1) — ligne 0 de mockUsers.
@@ -67,6 +82,7 @@ describe('AdminUsers Component', () => {
       currentUser,
       isLoggedIn: computed(() => currentUser() !== null),
       logout: vi.fn(),
+      startImpersonation: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -93,7 +109,7 @@ describe('AdminUsers Component', () => {
   it('affiche les utilisateurs après chargement', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const rows = compiled.querySelectorAll('tbody tr');
-    expect(rows.length).toBe(2);
+    expect(rows.length).toBe(3);
     expect(compiled.textContent).toContain('jean@test.com');
   });
 
@@ -130,6 +146,30 @@ describe('AdminUsers Component', () => {
     expect(mockUsersService.remove).toHaveBeenCalledWith(2);
     expect(component.users().find((u) => u.id === 2)).toBeUndefined();
     expect(component.pendingDeleteUser()).toBeNull();
+  });
+
+  it('affiche le message serveur (ex. campagne orpheline) si la suppression échoue', () => {
+    mockUsersService.remove.mockReturnValue(
+      throwError(() => ({
+        error: { message: 'La suppression laisserait les campagnes suivantes sans organisateur : Course à la Mort.' },
+      })),
+    );
+
+    component.deleteUser(mockUsers[1]);
+    component.onConfirmDeleteUser();
+
+    expect(component.error()).toBe(
+      'La suppression laisserait les campagnes suivantes sans organisateur : Course à la Mort.',
+    );
+  });
+
+  it('retombe sur un message générique si la suppression échoue sans message serveur', () => {
+    mockUsersService.remove.mockReturnValue(throwError(() => new Error('Network error')));
+
+    component.deleteUser(mockUsers[1]);
+    component.onConfirmDeleteUser();
+
+    expect(component.error()).toContain('Erreur lors de la suppression');
   });
 
   it('n\'appelle pas remove() si l\'utilisateur annule la confirmation', () => {
@@ -228,6 +268,42 @@ describe('AdminUsers Component', () => {
 
     expect(component.openMenuUserId()).toBeNull();
     expect(component.pendingDeleteUser()).toEqual(mockUsers[1]);
+  });
+
+  // ── Usurpation d'identité ("Se connecter en tant que") ──────────────────────
+
+  it('affiche l\'entrée "Se connecter en tant que" pour un compte USER, jamais pour un autre ADMIN', () => {
+    component.toggleMenu(2); // Jean, role: 'user'
+    fixture.detectChanges();
+    let menu = fixture.nativeElement.querySelector('.admin-users-menu') as HTMLElement;
+    expect(menu.textContent).toContain('Se connecter en tant que');
+
+    component.closeMenu();
+    component.toggleMenu(3); // Autre Admin, role: 'admin'
+    fixture.detectChanges();
+    menu = fixture.nativeElement.querySelector('.admin-users-menu') as HTMLElement;
+    expect(menu.textContent).not.toContain('Se connecter en tant que');
+  });
+
+  it('onMenuImpersonate() referme le menu et bascule la session via AuthService', () => {
+    const authResponse = { access_token: 'target.jwt.token', user: mockUsers[1] };
+    mockUsersService.impersonate.mockReturnValue(of(authResponse));
+    component.toggleMenu(2);
+
+    component.onMenuImpersonate(mockUsers[1]);
+
+    expect(component.openMenuUserId()).toBeNull();
+    expect(mockUsersService.impersonate).toHaveBeenCalledWith(2);
+    expect(mockAuthService.startImpersonation).toHaveBeenCalledWith(authResponse);
+  });
+
+  it('affiche une erreur si l\'usurpation échoue', () => {
+    mockUsersService.impersonate.mockReturnValue(throwError(() => new Error('API error')));
+
+    component.onMenuImpersonate(mockUsers[1]);
+
+    expect(component.error()).toContain('connexion en tant que');
+    expect(mockAuthService.startImpersonation).not.toHaveBeenCalled();
   });
 
   // ── Réinitialisation du mot de passe ────────────────────────────────────────
