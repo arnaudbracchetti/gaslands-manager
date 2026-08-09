@@ -79,4 +79,14 @@ export interface ITeamRepository {
    * lors du replay de l'agrégat Campaign (Partie 3).
    */
   findManyByIds(ids: number[]): Promise<Team[]>;
+
+  /**
+   * Campagnes qui perdraient leur dernier organisateur validé si cette équipe
+   * était supprimée — cascade SQL `campaign_participants.teamId` (ON DELETE
+   * CASCADE), qui ne passe jamais par `Campaign.assertNotLastOrganizer()`.
+   * Utilisé par RemoveTeamUseCase pour refuser la suppression le cas échéant,
+   * mirroir de `ICampaignRepository.findCampaignsWhereSoleValidatedOrganizer`
+   * (même invariant, clé `teamId` au lieu de `userId`).
+   */
+  findCampaignsOrphanedIfTeamRemoved(teamId: number): Promise<{ id: number; name: string }[]>;
 }

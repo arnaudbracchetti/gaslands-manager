@@ -139,6 +139,31 @@ export class TeamRepository implements ITeamRepository {
     await this.teamOrmRepo.remove(orm);
   }
 
+  /**
+   * Mirroir de CampaignRepository.findCampaignsWhereSoleValidatedOrganizer,
+   * mais indexé par teamId plutôt que userId — cf. RemoveTeamUseCase. Requêté
+   * directement ici (CampaignParticipantOrm est déjà enregistré dans
+   * TeamModule) plutôt que via ICampaignRepository, pour ne pas créer de
+   * dépendance circulaire TeamModule ↔ CampaignModule (CampaignModule importe
+   * déjà TeamModule pour TEAM_REPOSITORY).
+   */
+  async findCampaignsOrphanedIfTeamRemoved(teamId: number): Promise<{ id: number; name: string }[]> {
+    const asOrganizer = await this.participantRepo.find({
+      where: { teamId, isOrganizer: true, status: ParticipantStatus.VALIDATED },
+      relations: { campaign: true },
+    });
+    if (asOrganizer.length === 0) return [];
+
+    const orphaned: { id: number; name: string }[] = [];
+    for (const participant of asOrganizer) {
+      const organizerCount = await this.participantRepo.count({
+        where: { campaignId: participant.campaignId, isOrganizer: true, status: ParticipantStatus.VALIDATED },
+      });
+      if (organizerCount <= 1) orphaned.push({ id: participant.campaignId, name: participant.campaign.name });
+    }
+    return orphaned;
+  }
+
   async findManyByIds(ids: number[]): Promise<Team[]> {
     if (ids.length === 0) return [];
     const orms = await this.teamOrmRepo.find({

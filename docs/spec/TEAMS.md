@@ -22,6 +22,28 @@ Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre 
 
 **Verrouillage par une campagne en cours** : dès qu'une équipe est engagée (participant `VALIDATED`) dans une campagne dont l'état n'est plus `EN_CONSTRUCTION` (`EN_COURS` ou `TERMINEE`), l'équipe est intégralement verrouillée — `Team.assertNotLocked()` refuse (`DomainException` → HTTP 400) toute mutation directe : modification/suppression de l'équipe, ajout/suppression de véhicule, arme (montée sur Tourelle ou non), amélioration. Le flag est calculé par `TeamRepository` (jointure `CampaignParticipant` → `Campaign.state`) au chargement de l'agrégat, pas stocké en colonne. **Le flux atelier campagne n'est pas concerné** — pendant qu'une partie est en statut `ATELIER`, l'équipement continue de transiter par l'event-sourcing (`POST /api/campaigns/:id/events/equipment`, cf. [CAMPAIGN.md](CAMPAIGN.md)), qui utilise des méthodes dédiées de l'agrégat (`addCampaignVehicle`, `addCampaignWeapon`…) non soumises à ce verrou.
 
+**Suppression d'une équipe engagée comme organisateur de campagne** :
+`campaign_participants.teamId` porte une cascade SQL (`ON DELETE CASCADE`) —
+supprimer une équipe supprime silencieusement toute ligne `CampaignParticipant`
+qui la référence, sans jamais passer par l'agrégat `Campaign` ni sa garde
+`assertNotLastOrganizer`. `RemoveTeamUseCase` refuse donc (400) la suppression
+d'une équipe qui est l'équipe engagée du **dernier organisateur validé**
+d'une campagne (cette garde s'applique en pratique aux campagnes encore
+`EN_CONSTRUCTION` : au-delà, l'équipe est déjà bloquée par le verrouillage
+ci-dessus) — la vérification interroge
+`ITeamRepository.findCampaignsOrphanedIfTeamRemoved(teamId)`, mirroir de
+`ICampaignRepository.findCampaignsWhereSoleValidatedOrganizer(userId)` déjà
+utilisé côté suppression de compte (cf. [AUTH.md — Suppression d'un compte
+engagé comme organisateur de
+campagne](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne),
+même invariant, appliqué ici côté équipe plutôt que côté compte — implémenté
+directement dans `TeamRepository` via `CampaignParticipantOrm`, déjà accessible
+dans `TeamModule`, plutôt que via `ICampaignRepository`, pour ne pas créer de
+dépendance circulaire entre `TeamModule` et `CampaignModule`). Le message
+d'erreur liste les campagnes concernées par leur nom ; pour résoudre le
+blocage, engager une autre équipe ou promouvoir un autre organisateur avant
+de retenter la suppression.
+
 ---
 
 ## Résumé des véhicules sur la carte d'équipe
@@ -140,5 +162,5 @@ règles de dédup des renvois) : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-a
 | GET | `/api/teams` | JWT | Liste des équipes de l'utilisateur connecté |
 | POST | `/api/teams` | JWT | Créer une équipe |
 | PUT | `/api/teams/:id` | JWT | Modifier une équipe |
-| DELETE | `/api/teams/:id` | JWT | Supprimer une équipe |
+| DELETE | `/api/teams/:id` | JWT | Supprimer une équipe — HTTP 400 si verrouillée par une campagne en cours, ou si elle est l'équipe engagée du dernier organisateur validé d'une campagne (cf. §Suppression d'une équipe engagée comme organisateur de campagne) |
 | GET | `/api/teams/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) — HTTP 400 si l'équipe est verrouillée par une campagne en cours |

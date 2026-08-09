@@ -23,6 +23,15 @@ export class RemoveTeamUseCase {
       throw e;
     }
 
+    const orphaned = await this.teamRepo.findCampaignsOrphanedIfTeamRemoved(cmd.teamId);
+    if (orphaned.length > 0) {
+      const names = orphaned.map((c) => c.name).join(', ');
+      throw new BadRequestException(
+        `La suppression de cette équipe laisserait les campagnes suivantes sans organisateur : ${names}. ` +
+          'Engagez une autre équipe ou promouvez un autre organisateur avant de supprimer celle-ci.',
+      );
+    }
+
     await this.teamRepo.remove(cmd.teamId, cmd.userId);
   }
 }
