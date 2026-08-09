@@ -23,74 +23,74 @@
 # Source : livre de règles Gaslands Refuelled, mode Saison Télévisée (p.162-170).
 
 scenarios:
-  # ── Événements Télévisés ────────────────────────────────────────────────────
-  - nom: "La Course de la Mort"
-    nom_interne: "course_de_la_mort"
+  # ── Événements Télévisés (Tableau des scénarios d'Événements Télévisés, p.128) ─
+  - nom: "Course à la Mort"
+    nom_interne: "course_a_la_mort"
     type: "EVENEMENT_TELE"
-    description: "Une course classique à travers les Terres Dévastées : franchissez les portes dans l'ordre pour marquer, le premier à boucler le circuit l'emporte."
+    description: "Franchissez les Portes dans le bon ordre et dans le bon sens, plus rapidement que vos adversaires, ou soyez le dernier encore en état de rouler."
     franchissement_portes: true
     gain_jerricans: false
 
-  - nom: "Le Convoi"
-    nom_interne: "le_convoi"
+  - nom: "Arène de la Mort"
+    nom_interne: "arene_de_la_mort"
     type: "EVENEMENT_TELE"
-    description: "Un véhicule de transport lourdement chargé doit traverser la zone. Une équipe l'escorte, les autres tentent de le détruire ou de le piller."
+    description: "Un combat à mort dans une arène truffée de Tourelles Automatiques. Le dernier joueur avec des véhicules en jeu est déclaré vainqueur."
     franchissement_portes: false
     gain_jerricans: false
 
-  - nom: "Capture de Territoire"
-    nom_interne: "capture_de_territoire"
+  - nom: "Capture du Drapeau"
+    nom_interne: "capture_du_drapeau"
     type: "EVENEMENT_TELE"
-    description: "Plusieurs zones de contrôle sont disputées sur le champ de bataille. Tenez-les le plus longtemps possible pour accumuler des points."
+    description: "Chaque véhicule porte un drapeau à défendre. La partie prend fin dès qu'un véhicule transporte deux drapeaux."
     franchissement_portes: false
     gain_jerricans: false
 
-  - nom: "L'Arène"
-    nom_interne: "l_arene"
+  - nom: "Destruction de Drapeaux"
+    nom_interne: "destruction_de_drapeaux"
     type: "EVENEMENT_TELE"
-    description: "Combat à mort en espace clos. Pas de portes, pas d'objectif : seule la destruction des adversaires compte."
+    description: "Percutez le drapeau d'un adversaire pour marquer un point. Le premier joueur à 3 Points de Victoire remporte la partie."
     franchissement_portes: false
     gain_jerricans: false
 
-  - nom: "Le Carnage Sponsorisé"
-    nom_interne: "carnage_sponsorise"
+  - nom: "Samedi Soir en Direct"
+    nom_interne: "samedi_soir_en_direct"
     type: "EVENEMENT_TELE"
-    description: "L'événement vedette de la saison. Objectifs multiples, public déchaîné et récompenses majorées pour les exploits les plus spectaculaires."
+    description: "Le public décide du vainqueur : restez sous le feu des projecteurs pour marquer des Points de Victoire et remporter des prix spéciaux."
     franchissement_portes: false
     gain_jerricans: false
 
-  # ── Escarmouches (Terres Dévastées) ─────────────────────────────────────────
-  - nom: "Embuscade"
-    nom_interne: "embuscade"
+  # ── Escarmouches (Tableau des scénarios d'Escarmouches sur les Terres Dévastées, p.129) ─
+  - nom: "Opération Ferraille"
+    nom_interne: "operation_ferraille"
     type: "ESCARMOUCHE"
-    description: "Une équipe tend un piège à une autre sur une route isolée des Terres Dévastées. Rencontre rapide et brutale."
-    franchissement_portes: false
-    gain_jerricans: false
-
-  - nom: "Pillage de Convoi"
-    nom_interne: "pillage_de_convoi"
-    type: "ESCARMOUCHE"
-    description: "Un dépôt de carburant abandonné attire les charognards. Récupérez le maximum de jerricans avant que les autres ne s'en emparent."
+    description: "On récupère tout ce qui n'est pas rivé. Collectez un maximum de Points de Récup' avant la fin de la troisième manche."
     franchissement_portes: false
     gain_jerricans: true
 
-  - nom: "Poursuite sur l'Autoroute"
-    nom_interne: "poursuite_autoroute"
+  - nom: "Livraison Express"
+    nom_interne: "livraison_express"
     type: "ESCARMOUCHE"
-    description: "Une course-poursuite effrénée sur les ruines d'une autoroute. Distancez vos poursuivants ou rattrapez votre proie."
+    description: "Une livraison urgente à faire sortir de la zone de jeu. Le premier véhicule d'un joueur à franchir le bord de sortie lui rapporte un Point de Victoire."
+    franchissement_portes: false
+    gain_jerricans: true
+
+  - nom: "Chasse au Matos"
+    nom_interne: "chasse_au_matos"
+    type: "ESCARMOUCHE"
+    description: "Une tempête a révélé un dépôt de carburant abandonné. Récupérez le plus de caisses possible avant que les autres équipes ne s'en emparent."
+    franchissement_portes: false
+    gain_jerricans: true
+
+  - nom: "La Révolution Sera Télévisée"
+    nom_interne: "la_revolution_sera_televisee"
+    type: "ESCARMOUCHE"
+    description: "Un émetteur radio clandestin circule sur le terrain. Repérez-le et percutez-le pour diffuser le message de la résistance pro-terrienne."
     franchissement_portes: false
     gain_jerricans: false
 
-  - nom: "Point d'Eau"
-    nom_interne: "point_d_eau"
+  - nom: "Massacre de Zombies"
+    nom_interne: "massacre_de_zombies"
     type: "ESCARMOUCHE"
-    description: "Une source rare au milieu du désert. Les équipes s'affrontent pour le contrôle de ce point vital."
+    description: "Les Terres Dévastées grouillent de zombies irradiés. Récupérez-en le plus possible sur votre passage pour l'emporter."
     franchissement_portes: false
-    gain_jerricans: false
-
-  - nom: "Razzia Nocturne"
-    nom_interne: "razzia_nocturne"
-    type: "ESCARMOUCHE"
-    description: "Un raid mené à la nuit tombée sur un campement ennemi. Visibilité réduite, tension maximale."
-    franchissement_portes: false
-    gain_jerricans: false
+    gain_jerricans: true

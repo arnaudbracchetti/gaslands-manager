@@ -9,10 +9,10 @@ import { createCampaign, addGame, addBystanderParticipant } from './support/camp
  * Couverture jusqu'ici manquante (cf. session de refonte du wizard à étapes
  * variables, `docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`) :
  * tous les autres specs Campaigns exercent uniquement le scénario par défaut
- * (`course_de_la_mort`, Événement Télévisé) via `addGame()`/`runResultWizard()`.
+ * (`course_a_la_mort`, Événement Télévisé) via `addGame()`/`runResultWizard()`.
  * Une Escarmouche n'a NI classement NI portes — l'écran Présence enchaîne
  * directement sur l'écran Jerricans (si le scénario porte `gain_jerricans`,
- * ex. "Pillage de Convoi", 7ᵉ scénario du catalogue) puis Désignation, et
+ * ex. "Livraison Express", 7ᵉ scénario du catalogue) puis Désignation, et
  * l'écran Résolution y ajoute un tirage de revenu D6 par participant présent
  * (`POST .../events/income`) avant les éventuels tirages d'épave.
  *
@@ -41,8 +41,8 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
     await createTeam(page, teamName);
     await createCampaign(page, { name: 'Saison E2E Escarmouche', teamName });
     const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'escarmouche-happy');
-    // Scénario n°7 du catalogue (database_init/data/scenarios.yml) : "Pillage
-    // de Convoi", ESCARMOUCHE avec gain_jerricans: true.
+    // Scénario n°7 du catalogue (database_init/data/scenarios.yml) : "Livraison
+    // Express", ESCARMOUCHE avec gain_jerricans: true.
     await addGame(page, { scenarioIndex: 7 });
 
     await page.getByRole('button', { name: 'Fin de partie' }).click();
@@ -106,7 +106,7 @@ test.describe('Campagnes — Wizard de fin de partie (Escarmouche)', () => {
     await createTeam(page, teamName);
     await createCampaign(page, { name: 'Saison E2E Escarmouche Annulation', teamName });
     const { teamName: joineeTeamName, context: joineeContext } = await addBystanderParticipant(page, browser, 'escarmouche-cancel');
-    await addGame(page, { scenarioIndex: 7 }); // Pillage de Convoi (gain_jerricans)
+    await addGame(page, { scenarioIndex: 7 }); // Livraison Express (gain_jerricans)
 
     const gameItem = page.locator('.game-list__item').first();
 
