@@ -106,8 +106,9 @@ n'appliquent pas toujours cette règle de façon fiable à un conteneur flex/tab
 démarre en plus systématiquement sur une nouvelle page (`break-before: page`), jamais à la
 suite de la dernière ligne de véhicules sur la page courante.
 
-**Logo dans l'en-tête** : le logo (`assets/logo-watermark.png`, copie backend de
-`apps/frontend/public/logo gaslands manager.png`) est affiché en pleine opacité dans le
+**Logo dans l'en-tête** : le logo (`assets/logo-watermark.webp`, copie backend de
+`apps/frontend/public/logo-gaslands-manager.webp` - format WebP, bien plus léger que le
+PNG d'origine à qualité visuelle équivalente) est affiché en pleine opacité dans le
 bandeau d'en-tête, à gauche du nom d'équipe. Encodé en data URI directement dans le HTML
 (document autonome, cf. ci-dessus) plutôt que chargé via une URL - une fenêtre `about:blank`
 (où ce HTML est écrit côté frontend) ne résout aucune URL relative.

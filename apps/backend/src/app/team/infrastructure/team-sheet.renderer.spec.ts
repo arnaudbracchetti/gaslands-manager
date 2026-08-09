@@ -62,7 +62,7 @@ describe('renderTeamSheetHtml', () => {
 
   it('inclut le logo dans l\'en-tête, encodé en data URI (document autonome, sans URL relative)', () => {
     const html = renderTeamSheetHtml(makeSheet());
-    expect(html).toContain('<img class="header-logo" src="data:image/png;base64,');
+    expect(html).toContain('<img class="header-logo" src="data:image/webp;base64,');
     expect(html).not.toContain('class="watermark"');
   });
 

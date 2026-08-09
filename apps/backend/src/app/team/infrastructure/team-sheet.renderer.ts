@@ -24,9 +24,9 @@ import type { EquipmentCategory, EquipmentRowDto, TeamSheetDto, VehicleSheetDto 
  * pures sans classe à sous-classer.
  */
 function resolveLogoPath(): string {
-  const fromWorkspaceRoot = join(process.cwd(), 'assets', 'logo-watermark.png');
+  const fromWorkspaceRoot = join(process.cwd(), 'assets', 'logo-watermark.webp');
   if (existsSync(fromWorkspaceRoot)) return fromWorkspaceRoot;
-  return resolve(__dirname, '../../../../../../assets/logo-watermark.png');
+  return resolve(__dirname, '../../../../../../assets/logo-watermark.webp');
 }
 
 /**
@@ -37,7 +37,7 @@ function resolveLogoPath(): string {
  * aucune URL relative n'y résout quoi que ce soit, le document doit rester
  * intégralement autonome.
  */
-const LOGO_DATA_URI = `data:image/png;base64,${readFileSync(resolveLogoPath()).toString('base64')}`;
+const LOGO_DATA_URI = `data:image/webp;base64,${readFileSync(resolveLogoPath()).toString('base64')}`;
 
 const SHEET_CSS = `
   @page { size: A4; margin: 10mm; }
