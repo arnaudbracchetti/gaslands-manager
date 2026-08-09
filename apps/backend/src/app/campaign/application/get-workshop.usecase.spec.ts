@@ -52,6 +52,30 @@ describe('GetWorkshopUseCase', () => {
     expect(weaponDto.emplacement).toBe(0); // Weapon.slots ⇒ 0 quand vendue (emplacement libéré)
   });
 
+  it('expose le prix catalogue plein du véhicule (châssis) tant qu\'il n\'est pas vendu', async () => {
+    const { useCase } = makeFixture(); // véhicule 12 + arme 5 + amélioration 4
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].price).toBe(12);
+    expect(dto.vehicles[0].isSold).toBe(false);
+  });
+
+  it('expose le prix résiduel du châssis (ceil(prix/2)) une fois le véhicule vendu — pas le prix catalogue brut', async () => {
+    const { participant, vehicle } = makeTestParticipant(); // véhicule 12
+    vehicle.markSold();
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService: CampaignReplayService = {
+      loadAndReplay: vi.fn().mockResolvedValue(campaign),
+    } as unknown as CampaignReplayService;
+    const useCase = new GetWorkshopUseCase(replayService);
+
+    const dto = await useCase.execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.vehicles[0].isSold).toBe(true);
+    expect(dto.vehicles[0].price).toBe(6); // ceil(12/2), pas 12 (prix catalogue brut)
+  });
+
   it('expose l\'orientation \'tourelle\' sur les armes (coût ×3 déjà appliqué par price)', async () => {
     const bfgType = WeaponType.from({
       nom: 'BFG', nom_interne: 'bfg', type: 'avancée', prix: 20, emplacement: 2,
@@ -179,6 +203,16 @@ describe('GetWorkshopUseCase', () => {
     expect(dto.wallet).toBe(39);
     expect(weapon.isSold).toBe(true);
     expect(improvement.isSold).toBe(true);
+    // Régression : `price` (châssis + équipement cascadé) doit refléter le résiduel
+    // ceil(prix/2), pas le prix catalogue brut — sinon le "budget total" recalculé côté
+    // frontend (wallet + coût des véhicules) se retrouve gonflé du montant de la vente.
+    expect(dto.vehicles[0].price).toBe(6); // ceil(12/2)
+    expect(dto.vehicles[0].weapons[0].price).toBe(3); // ceil(5/2)
+    expect(dto.vehicles[0].improvements[0].price).toBe(2); // ceil(4/2)
+    // Invariant : cagnotte + coût résiduel du véhicule reste égal au budget de départ (50).
+    const vehicleResidualCost =
+      dto.vehicles[0].price + dto.vehicles[0].weapons[0].price + dto.vehicles[0].improvements[0].price;
+    expect(dto.wallet + vehicleResidualCost).toBe(50);
   });
 
   /**

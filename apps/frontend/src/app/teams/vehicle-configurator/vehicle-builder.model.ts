@@ -149,10 +149,13 @@ export interface Vehicle {
    * construction d'équipe, toujours `undefined` dans ce contexte (`!undefined ===
    * true`, aucune régression). `sold` : véhicule revendu (moitié prix du châssis,
    * reste visible en fin de liste, badge, inactif). `lost` : véhicule détruit
-   * (Table des Épaves) — même traitement d'affichage que `sold`.
+   * (Table des Épaves) — même traitement d'affichage que `sold`. `prix` : prix
+   * résiduel du châssis résolu côté backend (`Vehicle.price`, cf. `sold`) —
+   * utilisé par `buildVehicleSummary` à la place du catalogue statique quand présent.
    */
   sold?: boolean;
   lost?: boolean;
+  prix?: number;
 }
 
 /** Corps de `POST /api/teams/:teamId/vehicles` — miroir de `CreateVehicleDto`. */

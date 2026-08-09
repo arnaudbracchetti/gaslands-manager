@@ -126,6 +126,11 @@ function buildVehicle(
   // défaut "jamais renommé" (nom = type par défaut, customName null).
   nom = 'Camion',
   customName: string | null = null,
+  // `sold`/`prix` : atelier uniquement, toujours `undefined` en construction d'équipe
+  // (cf. leur doc sur l'interface `Vehicle`) — `prix` porte le résiduel backend
+  // (`Vehicle.price`), consulté par `buildVehicleSummary` à la place du catalogue.
+  sold?: boolean,
+  prix?: number,
 ): Vehicle {
   return {
     id: 1,
@@ -138,6 +143,8 @@ function buildVehicle(
     advantages,
     createdAt: '2025-01-01T00:00:00.000Z',
     emplacementsTotal,
+    sold,
+    prix,
   };
 }
 
@@ -387,5 +394,52 @@ describe('buildVehicleSummary', () => {
 
     expect(summary.cout).toBe(18); // 15 + 3 — jamais réduit, contrairement à une arme/amélioration vendue
     expect(summary.equipements).not.toContain('Expertise');
+  });
+
+  // ── Véhicule vendu (atelier) — prix résiduel du châssis ─────────────────────
+  // Régression : le châssis doit utiliser `vehicle.prix` (résiduel, résolu backend)
+  // quand il est fourni, PAS toujours le prix catalogue plein — sinon un véhicule
+  // vendu en atelier reste compté à son prix plein dans le "budget total" recalculé
+  // côté frontend (`AtelierVehiclePage`/`ParticipantAtelierPage`), qui se retrouve
+  // gonflé du montant de la vente à chaque fois.
+
+  it('sans `prix` fourni (construction d\'équipe), le châssis reste résolu depuis le catalogue', () => {
+    const summary: VehicleSummary = buildVehicleSummary(buildVehicle([], []), mockCatalog);
+
+    expect(summary.cout).toBe(15); // Vehicule.prix (catalogue) — vehicle.prix est undefined
+  });
+
+  it('avec `prix` fourni ET véhicule non vendu (atelier), le châssis utilise quand même ce prix', () => {
+    const vehicle = buildVehicle([], [], [], 3, 'Camion', null, /* sold */ false, /* prix */ 15);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.cout).toBe(15);
+  });
+
+  it('un véhicule vendu (prix résiduel fourni par le backend) utilise ce résiduel, pas le prix catalogue plein', () => {
+    // ceil(15/2) = 8 — résiduel déjà calculé côté backend (`Vehicle.price`), jamais
+    // recalculé ici : `buildVehicleSummary` ne doit faire QUE consommer `vehicle.prix`.
+    const vehicle = buildVehicle([], [], [], 3, 'Camion', null, /* sold */ true, /* prix */ 8);
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    expect(summary.cout).toBe(8); // pas 15 (prix catalogue brut)
+    expect(summary.isSold).toBe(true);
+  });
+
+  it('un véhicule vendu combine le châssis résiduel avec ses armes/améliorations toujours actives', () => {
+    const vehicle = buildVehicle(
+      [buildWeapon('mitrailleuse', 3)],
+      [buildImprovement('blindage', 4)],
+      [],
+      3,
+      'Camion',
+      null,
+      /* sold */ true,
+      /* prix */ 8,
+    );
+    const summary: VehicleSummary = buildVehicleSummary(vehicle, mockCatalog);
+
+    // 8 (châssis résiduel, PAS 15) + 3 (mitrailleuse) + 4 (blindage)
+    expect(summary.cout).toBe(15);
   });
 });

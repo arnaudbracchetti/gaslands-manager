@@ -56,7 +56,11 @@ export class GetWorkshopUseCase {
       nomInterne: v.type.nomInterne,
       nom: v.nom,
       customName: v.customName,
-      price: v.type.price,
+      // v.price (getter d'entité), PAS v.type.price (prix catalogue brut) : le premier
+      // applique le prix résiduel (ceil(price/2)) une fois le véhicule vendu (isSold),
+      // le second reste toujours le prix plein — même bug, et même fix, que pour
+      // weapon/improvement ci-dessous.
+      price: v.price,
       isLost: v.isLost,
       isSold: v.isSold,
       chocs: v.chocs,

@@ -144,18 +144,28 @@ export class Vehicle {
   // ── Calculs ──────────────────────────────────────────────────────────────────
 
   /**
+   * Prix résiduel du seul châssis — prix catalogue plein tant que non vendu,
+   * `Math.ceil(prix/2)` une fois `_isSold` — même principe que `Weapon.price`/
+   * `Improvement.price`. Exposé séparément de `cost` (qui agrège tout le véhicule)
+   * pour que le DTO atelier (`WorkshopVehicleDto.price`) puisse refléter cette
+   * réduction sans jamais exposer le prix catalogue brut d'un véhicule vendu.
+   */
+  get price(): number {
+    return this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
+  }
+
+  /**
    * Coût total : prix du châssis + armes + améliorations achetées.
    *
-   * Dans le cas d'un vehicule vendu, le cout calculé ici 
+   * Dans le cas d'un vehicule vendu, le cout calculé ici
    * est prix résiduel une fois la vente réalisée `_isSold` —
-   * même principe que `Weapon.price`/`Improvement.price` 
+   * même principe que `Weapon.price`/`Improvement.price`
    */
   get cost(): number {
-    const chassisCost = this._isSold ? Math.ceil(this.type.price / 2) : this.type.price;
     const weaponsCost = this._weapons.reduce((sum, w) => sum + w.price, 0);
     const improvementsCost = this._improvements.reduce((sum, i) => sum + i.price, 0);
     const advantagesCost = this._advantages.reduce((sum, a) => sum + a.price, 0);
-    return chassisCost + weaponsCost + improvementsCost + advantagesCost;
+    return this.price + weaponsCost + improvementsCost + advantagesCost;
   }
 
   /**

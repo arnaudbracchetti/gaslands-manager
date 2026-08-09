@@ -98,10 +98,12 @@ export interface TeamVehiclePair {
  * Recoupement par `nom_interne` — même technique que `VehicleBuilder.chosenVehicule`
  * (cf. son en-tête) : c'est la clé stable qui distingue les variantes sponsor
  * (ex. "voiture" vs "voiture_prison") et relie une instance d'équipe à sa fiche
- * catalogue. Le catalogue est encore utilisé pour le nom et le prix de base du
- * véhicule ; les prix des armes et améliorations sont fournis directement par le
- * backend dans `weapon.prix` et `improvement.prix` (cf. `VehicleService.toVehicleDto` —
- * règle de gestion résolue côté serveur, 0 pour les défauts).
+ * catalogue. Le catalogue est utilisé pour le nom du véhicule, et pour son prix de base
+ * en construction d'équipe (`vehicle.prix` y est toujours `undefined`) ; en atelier,
+ * `vehicle.prix` (résiduel, résolu backend) prime — même principe que les prix des armes
+ * et améliorations, fournis directement par le backend dans `weapon.prix` et
+ * `improvement.prix` (cf. `VehicleService.toVehicleDto` — règle de gestion résolue côté
+ * serveur, 0 pour les défauts).
  *
  * Le calcul est TOUJOURS exact :
  * - Armes : `weapon.prix` = prix catalogue direct (×3 si montée sur Tourelle), jamais 0
@@ -113,8 +115,12 @@ export function buildVehicleSummary(vehicle: Vehicle, catalog: Sponsor): Vehicle
     (v: Vehicule): boolean => v.nom_interne === vehicle.nomInterne,
   );
 
-  // Prix de base du véhicule — toujours depuis le catalogue (non fourni par le DTO).
-  let cout: number = vehiculeCatalogue?.prix ?? 0;
+  // Prix de base du véhicule — `vehicle.prix` (résiduel, résolu backend, atelier
+  // uniquement) prioritaire s'il est renseigné, sinon le catalogue statique (construction
+  // d'équipe, où `vehicle.prix` reste toujours `undefined` — comportement inchangé).
+  // Sans cette priorité, un véhicule vendu en atelier resterait compté à son prix
+  // catalogue plein (jamais réduit par `isSold`), gonflant le budget total affiché.
+  let cout: number = vehicle.prix ?? vehiculeCatalogue?.prix ?? 0;
   let emplacementsUtilises: number = 0;
   const equipements: string[] = [];
 

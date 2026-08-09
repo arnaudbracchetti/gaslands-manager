@@ -110,6 +110,8 @@ export interface WorkshopVehicleDto {
   nom: string;
   /** Valeur brute du nom personnalisé, `null` si jamais renommé — pour pré-remplir un champ d'édition. */
   customName: string | null;
+  /** Prix résiduel du châssis (`Vehicle.price` backend) — moitié prix arrondi supérieur
+   *  une fois `isSold`, prix catalogue plein sinon. Jamais le prix catalogue brut. */
   price: number;
   isLost: boolean;
   /** Vendu — reste visible dans l'atelier (fin de liste, badge, inactif), plutôt que
@@ -185,6 +187,7 @@ export function mapWorkshopVehicleToVehicle(w: WorkshopVehicleDto): Vehicle {
     emplacementsTotal: w.emplacementsTotal,
     sold: w.isSold,
     lost: w.isLost,
+    prix: w.price,
     weapons: w.weapons.map(
       (x: WorkshopWeaponDto): Weapon => ({
         id: x.id,

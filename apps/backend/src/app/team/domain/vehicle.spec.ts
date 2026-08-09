@@ -700,6 +700,30 @@ describe('Vehicle.cost — inclut les avantages', () => {
   });
 });
 
+describe('Vehicle.price — prix résiduel du seul châssis (mirroir Weapon.price/Improvement.price)', () => {
+  it('vaut le prix catalogue plein tant que le véhicule n\'est pas vendu', () => {
+    const v = makeVehicle(4, 12);
+    expect(v.price).toBe(12);
+  });
+
+  it('vaut la moitié du prix catalogue arrondie au SUPÉRIEUR une fois vendu', () => {
+    const v = makeVehicle(4, 13);
+    v.markSold();
+    expect(v.price).toBe(7); // ceil(13/2)
+  });
+
+  it('est ce que `cost` utilise pour le châssis — un véhicule vendu voit son cost baisser en conséquence', () => {
+    const v = makeVehicle(4, 13);
+    v.addWeapon(makeWeaponType(5), 'avant', 100);
+    const costAvantVente = v.cost; // 13 + 5 = 18
+    v.markSold();
+    // Le châssis passe de 13 à ceil(13/2)=7 ; l'arme est cascadée vendue par markSold()
+    // (résiduel ceil(5/2)=3 — même formule que Weapon.price) — cost = 7 + 3 = 10.
+    expect(costAvantVente).toBe(18);
+    expect(v.cost).toBe(10);
+  });
+});
+
 describe('Vehicle.resaleRefund — règle par élément (châssis + équipement actif à moitié prix, avantages à 0)', () => {
   it('vaut la moitié du prix châssis (arrondi inférieur) sur un véhicule nu', () => {
     const v = makeVehicle(4, 12);
