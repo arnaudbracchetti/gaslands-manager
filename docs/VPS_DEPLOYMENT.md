@@ -104,8 +104,14 @@ sudo chown deploy:deploy /opt/edge      # /opt appartient à root par défaut
 Depuis votre machine locale, à la racine du dépôt :
 
 ```bash
-scp docker/edge/docker-compose.yml docker/edge/Caddyfile deploy@<ip-vps>:/opt/edge/
+scp docker/edge/docker-compose.yml docker/edge/Caddyfile docker/edge/README.md deploy@<ip-vps>:/opt/edge/
 ```
+
+> `docker/edge/README.md` est le pendant **générique et autonome** de la §3
+> ci-dessous (aucune mention de Gaslands, exemples entièrement inline) —
+> déployé une fois pour toutes aux côtés du stack `edge`, il reste
+> disponible directement sur le VPS (`/opt/edge/README.md`) pour quiconque
+> déploie une future application sans avoir besoin de ce dépôt.
 
 Sur le VPS, créer `/opt/edge/.env` :
 
@@ -135,6 +141,11 @@ vide) — c'est le rôle de chaque application déployée ensuite.
 Cette section décrit le **patron réutilisable**, illustré avec Gaslands
 Manager comme exemple concret. Une nouvelle application suit exactement les
 mêmes étapes, en remplaçant `gaslands` par son propre nom partout.
+
+> Version générique et autonome de cette même procédure (sans aucune mention
+> de Gaslands, exemples entièrement inline) : [`docker/edge/README.md`](../docker/edge/README.md) —
+> déployée sur le VPS lui-même (`/opt/edge/README.md`, cf. §2.2 ci-dessus),
+> c'est le document à consulter en priorité une fois sur le serveur.
 
 ### 3.1 Ce que l'application doit fournir
 
