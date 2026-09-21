@@ -1,0 +1,24 @@
+# ── Catalogue des règles maison Gaslands (mode campagne) ───────────────────────
+#
+# Ce fichier est chargé une seule fois au démarrage par HouseRuleCatalogService
+# (même mécanisme que CatalogService/ScenarioCatalogService).
+#
+# Une règle maison est une variante optionnelle du règlement officiel, activable
+# ou non par campagne par l'organisateur. Chaque entrée ne porte que deux textes
+# courts, jamais de règle détaillée (donnée morte tant qu'aucun écran n'affiche
+# ce niveau de détail) :
+#   - description_decochee : rappel du comportement PAR DÉFAUT (case décochée)
+#   - description_cochee   : comportement ALTERNATIF appliqué si la règle est activée
+#
+# Structure de chaque entrée :
+#   nom                     - Nom affiché dans l'UI
+#   nom_interne              - Identifiant technique stable (snake_case, sans accents),
+#                              clé du catalogue
+#   description_decochee    - Texte affiché sous la case à cocher, case décochée
+#   description_cochee      - Texte affiché sous la case à cocher, case cochée
+
+regles_maison:
+  - nom: "Points de Résistance aux équipes sans point de championnat"
+    nom_interne: "resistance_sans_points_championnat"
+    description_decochee: "Les participants classés dans la seconde moitié du classement gagnent 3 Points de Résistance."
+    description_cochee: "Les participants qui n'ont gagné aucun point de championnat sur la partie gagnent 3 Points de Résistance."

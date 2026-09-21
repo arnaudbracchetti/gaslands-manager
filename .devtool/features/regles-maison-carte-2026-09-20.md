@@ -5,7 +5,7 @@ priority: "high"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-21T17:49:48.000Z"
+modified: "2026-09-21T20:25:00.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
 order: "aX"
@@ -43,8 +43,8 @@ Strategy, sans refonte du mécanisme.
 | Carte | Dépend de |
 |---|---|
 | [RM-1 — Conception détaillée du mécanisme (DDD)](./done/rm-1-conception-ddd-regles-maison-2026-09-20.md) | — (résolu) |
-| [RM-2 — Catalogue YAML des règles maison](./rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | RM-1 ✅ — prenable |
-| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 |
+| [RM-2 — Catalogue YAML des règles maison](./done/rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | - (résolu) |
+| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ - prenable |
 | [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — prenable |
 | [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3, RM-4 |
 | [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2, RM-3 |
@@ -68,6 +68,17 @@ séparation stricte entre la transition de statut (`Campaign.enterAtelier`,
 inchangée) et la distribution (`Game.distributeResistance`), orchestrées par
 `EnterAtelierUseCase` avec le journal persisté avant le statut et une garde
 d'idempotence. RM-2 et RM-4 débloquées.
+
+### RM-2 - Catalogue YAML des règles maison (résolu 2026-09-21)
+
+`HouseRuleCatalogService` (`apps/backend/src/app/campaign/`), miroir fichier pour
+fichier de `ScenarioCatalogService` - singleton mémoire chargé au démarrage,
+indexé par `nom_interne`, Template Method `readFileContent()`, conversion
+Markdown → HTML des deux textes courts (décoché/coché). Catalogue
+`database_init/data/regles-maison.yml` avec sa première entrée,
+`resistance_sans_points_championnat`. Route publique
+`GET /api/catalog/regles-maison`, sans garde JWT, aux côtés de
+`catalog/scenarios`. RM-3 débloquée.
 
 ### Session de cadrage, 2026-09-20
 

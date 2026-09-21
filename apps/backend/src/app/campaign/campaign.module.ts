@@ -13,6 +13,7 @@ import { CampaignController } from './campaign.controller';
 // Lecture (CQRS) + catalogue
 import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { HouseRuleCatalogService } from './house-rule-catalog.service';
 
 // Modules externes
 import { CatalogModule } from '../catalog/catalog.module';
@@ -95,6 +96,7 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
     // Lecture + catalogue
     CampaignQueryService,
     ScenarioCatalogService,
+    HouseRuleCatalogService,
 
     // Infrastructure campagne
     CampaignMapper,
@@ -317,6 +319,12 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
       inject: [CampaignReplayService, CatalogService],
     },
   ],
-  exports: [TypeOrmModule, ScenarioCatalogService, CampaignReplayService, CAMPAIGN_REPOSITORY],
+  exports: [
+    TypeOrmModule,
+    ScenarioCatalogService,
+    HouseRuleCatalogService,
+    CampaignReplayService,
+    CAMPAIGN_REPOSITORY,
+  ],
 })
 export class CampaignModule {}

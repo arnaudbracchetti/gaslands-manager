@@ -22,6 +22,7 @@ function uc(returnValue?: unknown): { execute: ReturnType<typeof vi.fn> } {
 describe('CampaignController (câblage)', () => {
   let query: Record<string, ReturnType<typeof vi.fn>>;
   let scenarioCatalog: { getAll: ReturnType<typeof vi.fn> };
+  let houseRuleCatalog: { getAll: ReturnType<typeof vi.fn> };
   let createCampaignUseCase: ReturnType<typeof uc>;
   let addGameUseCase: ReturnType<typeof uc>;
   let recordResultUseCase: ReturnType<typeof uc>;
@@ -49,6 +50,7 @@ describe('CampaignController (câblage)', () => {
       getParticipantJournal: vi.fn().mockResolvedValue(['pjournal']),
     };
     scenarioCatalog = { getAll: vi.fn().mockReturnValue(['scen']) };
+    houseRuleCatalog = { getAll: vi.fn().mockReturnValue(['regle']) };
     createCampaignUseCase = uc(1);
     addGameUseCase = uc(7);
     recordResultUseCase = uc(undefined);
@@ -62,6 +64,7 @@ describe('CampaignController (câblage)', () => {
     controller = new CampaignController(
       query as never,
       scenarioCatalog as never,
+      houseRuleCatalog as never,
       uc() as never,            // drawRandomScenario
       createCampaignUseCase as never,
       uc() as never,            // update
@@ -102,6 +105,11 @@ describe('CampaignController (câblage)', () => {
   it('getScenarios délègue au catalogue de scénarios (public)', () => {
     expect(controller.getScenarios()).toEqual(['scen']);
     expect(scenarioCatalog.getAll).toHaveBeenCalled();
+  });
+
+  it('getHouseRules délègue au catalogue de règles maison (public)', () => {
+    expect(controller.getHouseRules()).toEqual(['regle']);
+    expect(houseRuleCatalog.getAll).toHaveBeenCalled();
   });
 
   it('getAll délègue à query.findAll(userId)', async () => {

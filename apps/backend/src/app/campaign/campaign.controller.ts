@@ -34,6 +34,7 @@ import type { User } from '../auth/domain/user';
 // Lecture (CQRS)
 import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { HouseRuleCatalogService } from './house-rule-catalog.service';
 import { GameType } from './game.enums';
 import { DrawRandomScenarioUseCase } from './application/draw-random-scenario.usecase';
 
@@ -108,6 +109,7 @@ import type { AvailableSequellaDto } from '../team/dto/available-sequella.dto';
 import type { AvailableVehicleDto } from '../team/dto/available-vehicle.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
+import type { HouseRuleDefinition } from './house-rule.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
 import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
@@ -122,6 +124,7 @@ export class CampaignController {
   constructor(
     private readonly query: CampaignQueryService,
     private readonly scenarioCatalog: ScenarioCatalogService,
+    private readonly houseRuleCatalog: HouseRuleCatalogService,
     private readonly drawRandomScenarioUseCase: DrawRandomScenarioUseCase,
     // CRUD
     private readonly createCampaignUseCase: CreateCampaignUseCase,
@@ -166,6 +169,12 @@ export class CampaignController {
   @Get('catalog/scenarios')
   getScenarios(): Scenario[] {
     return this.scenarioCatalog.getAll();
+  }
+
+  /** GET /api/catalog/regles-maison - liste publique des règles maison (pas de JWT). */
+  @Get('catalog/regles-maison')
+  getHouseRules(): HouseRuleDefinition[] {
+    return this.houseRuleCatalog.getAll();
   }
 
   /**
