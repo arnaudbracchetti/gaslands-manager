@@ -263,3 +263,31 @@ dans une frontière de cohérence ; une transaction = un agrégat). Les deux aut
 - Modèle riche vs anémique —
   [Ensono](https://www.ensono.com/insights-and-news/expert-opinions/anaemic-domain-model-vs-rich-domain-model/) ·
   [DZone — Importance of Ubiquitous Language](https://dzone.com/articles/importance-of-ubiquitous-language-in-domain-driven)
+
+---
+
+## 6. Journal des défauts constatés en usage réel
+
+Contrairement aux sections 1–5 (revue à froid contre les sources), cette section journalise un
+défaut de conception **observé en usage réel** du skill sur ce projet, et la correction apportée.
+
+### 2026-09-23 — Strategy sélectionnée par l'appelant (mode campagne, règles maison)
+
+**Constat** : la conception initiale du mécanisme de règles maison (RM-1, cf.
+[docs/plans/2026-09-21-regles-maison-mecanisme-design.md](../../../docs/plans/2026-09-21-regles-maison-mecanisme-design.md))
+faisait choisir la Strategy (`ResistanceDistributionStrategy`) par le use case
+(`Campaign.resolveResistanceStrategy()` appelée par `EnterAtelierUseCase`, résultat passé en
+paramètre à `Game.distributeResistance(strategy)`) — une décision métier fuyait hors du domaine.
+
+**Cause identifiée** : la règle « un enfant reçoit en paramètre ce dont il a besoin de la racine,
+jamais en référence permanente » (alors dupliquée en 4 endroits du skill) ne distinguait pas une
+*donnée qui varie à chaque appel* d'une *configuration stable de l'agrégat* — et le seul précédent
+cité pour un paramètre de méthode (`IPasswordHasher`, un port d'infrastructure) a été transposé à
+tort à une politique métier pure.
+
+**Correction** : nouvelle distinction à 3 cas (donnée / configuration attachée via interface
+étroite / port d'infra) + règle explicite « qui sélectionne une Strategy » dans
+[theory/aggregate-design.md](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port),
+seule source du principe — `SKILL.md` n'y renvoie plus qu'en une ligne, pour éviter de recréer la
+duplication à l'origine du défaut. Convention projet correspondante :
+[ARCHITECTURE.md §3.4](../../../docs/ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
