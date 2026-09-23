@@ -31,4 +31,14 @@ describe('ResistanceContactedEvent — execute / undo', () => {
     const event = new ResistanceContactedEvent(1, 10, 1, 1);
     expect(event.describe()).toBe('Contact avec la Résistance (+3 PR)');
   });
+
+  it('strategyKey vaut null par défaut (contact manuel)', () => {
+    const event = new ResistanceContactedEvent(1, 10, 1, 1);
+    expect(event.strategyKey).toBeNull();
+  });
+
+  it('strategyKey porte la clé de la stratégie automatique quand elle est fournie', () => {
+    const event = new ResistanceContactedEvent(1, 10, 1, 1, 'defaut');
+    expect(event.strategyKey).toBe('defaut');
+  });
 });

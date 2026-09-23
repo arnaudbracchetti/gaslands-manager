@@ -27,12 +27,25 @@ import type { WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
 import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
+import type { GameRulesContext } from './game-context';
+import { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
+import { HouseRules } from '../house-rules/house-rules';
 
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
 const POINTS_TABLE = [10, 5, 2, 1];
 
 /** +5 PC — Table des Épaves, ligne 9 (Favori du public), effet différé confirmé ligne 10+. */
 const FAVORI_DU_PUBLIC_BONUS_POINTS = 5;
+
+/**
+ * Contexte par défaut, utilisé tant qu'aucune `Campaign` n'a attaché le sien
+ * (`attachContext`) — toute règle maison désactivée (`HouseRules.none()`). Permet
+ * de construire et tester un `Game` isolément (`new EvenementTeleGame(...)`, sans
+ * `Campaign`), cf. skill `ddd`, règle transversale 8 (domaine testable sans mock).
+ */
+const DEFAULT_GAME_RULES_CONTEXT: GameRulesContext = {
+  strategyFactory: new HouseRuleStrategyFactory(HouseRules.none()),
+};
 
 /**
  * Partie de campagne — GoF Invoker.
@@ -53,6 +66,14 @@ export abstract class Game {
   private _status: GameStatus;
   private _playedAt: Date | null;
   private _order: number;
+  /**
+   * Configuration attachée par `Campaign` (interface étroite `GameRulesContext`,
+   * jamais l'agrégat `Campaign` complet) — `null` tant qu'aucune `Campaign` ne l'a
+   * attachée (`attachContext`), auquel cas `context` retombe sur
+   * `DEFAULT_GAME_RULES_CONTEXT`. Cf. sa doc pour la distinction avec les données
+   * reçues en paramètre (siblings, participants…).
+   */
+  private _context: GameRulesContext | null = null;
 
   constructor(
     readonly id: number,
@@ -72,6 +93,21 @@ export abstract class Game {
   get status(): GameStatus { return this._status; }
   get playedAt(): Date | null { return this._playedAt; }
   get order(): number { return this._order; }
+
+  /**
+   * Configuration attachée par la `Campaign` propriétaire — lue à la demande
+   * (jamais copiée), pour qu'un changement ultérieur de règles maison soit vu sans
+   * réattacher. Protégé : seuls `Game` et ses sous-types y accèdent, jamais un
+   * appelant extérieur au domaine.
+   */
+  protected get context(): GameRulesContext { return this._context ?? DEFAULT_GAME_RULES_CONTEXT; }
+
+  /**
+   * Attache la configuration de la `Campaign` propriétaire — appelée par
+   * `Campaign` (constructeur + `createGame`), jamais par un use case. Même idiome
+   * que `CampaignParticipant.attachTeam(team)`.
+   */
+  attachContext(context: GameRulesContext): void { this._context = context; }
 
   /** Sous-type de partie. Utilisé par le mapper ORM pour l'hydratation STI. */
   abstract get type(): string;
@@ -151,9 +187,14 @@ export abstract class Game {
 
   /**
    * Enregistre le résultat de cette partie : calcule les PC, journalise un
-   * `RankingAssignedEvent` par participant (+ exploits/résistance). Ne fait PAS
-   * entrer la partie en atelier — cf. `Campaign.enterAtelier()`, action séparée.
-   * Les événements créés portent id=0 ; le use case les persiste via `appendEvents`.
+   * `RankingAssignedEvent` par participant (+ exploits). Ne fait PAS entrer la
+   * partie en atelier — cf. `Campaign.enterAtelier()`, action séparée. Les
+   * événements créés portent id=0 ; le use case les persiste via `appendEvents`.
+   *
+   * Ne distribue PAS les Points de Résistance automatiques (US-F1) — ce calcul a
+   * été déplacé vers `distributeResistance()`, appelé à l'entrée en Atelier (RM-4) :
+   * seul cet instant garantit que le total de PC de la partie est complet (le bonus
+   * Favori du Public, crédité après l'enregistrement du résultat, doit déjà compter).
    */
   recordResult(rankings: RankingInput[], participants: readonly CampaignParticipant[]): GameEvent[] {
     if (this._status !== GameStatus.PLANIFIE) {
@@ -193,15 +234,6 @@ export abstract class Game {
       this.addEvent(rankingEvent);
       events.push(rankingEvent);
 
-      // Points de Résistance automatiques (US-F1) : tout participant non classé (hors du
-      // top `classified`) reçoit +3 PR secrets, même s'il a marqué des PC d'exploit —
-      // aucune saisie manuelle, l'organisateur n'a pas d'écran dédié pour cette étape.
-      if (r.rank > classified) {
-        const resistanceEvent = new ResistanceContactedEvent(0, this.id, r.participantId, 0);
-        this.addEvent(resistanceEvent);
-        events.push(resistanceEvent);
-      }
-
       // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
       // PC figés à l'écriture (D-S8), comme pour le classement.
       if (r.gatesCrossed && r.gatesCrossed > 0) {
@@ -225,6 +257,28 @@ export abstract class Game {
     }
 
     return events;
+  }
+
+  /**
+   * Distribue les Points de Résistance automatiques (US-F1) pour cette partie —
+   * hook polymorphe (Événement Télévisé uniquement) : liste vide par défaut ici,
+   * surchargée par `EvenementTeleGame`. `EscarmoucheGame` hérite du no-op — une
+   * Escarmouche ne distribue jamais de PR.
+   *
+   * **Sans paramètre** : la Strategy à appliquer (règle par défaut ou règle maison)
+   * n'est jamais choisie par l'appelant (use case) — `EvenementTeleGame` la résout
+   * elle-même via `this.context.strategyFactory`, cf. `attachContext`/`context` et
+   * skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une Strategy ? ».
+   *
+   * Appelée à l'entrée en Atelier (`EnterAtelierUseCase`), PAS à l'enregistrement du
+   * résultat (`recordResult`) : seul cet instant garantit que le total de PC de la
+   * partie est complet (le bonus Favori du Public, émis après `recordResult`, doit
+   * déjà être pris en compte). Les événements créés portent id=0 ; l'appelant les
+   * persiste via `appendEvents`, **avant** de persister la transition de statut
+   * (`Campaign.enterAtelier` + `saveCampaign`) — jamais l'inverse.
+   */
+  distributeResistance(): GameEvent[] {
+    return [];
   }
 
   /**

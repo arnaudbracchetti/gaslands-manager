@@ -1,14 +1,14 @@
 ---
 id: "rm-3-persistance-houserules-campagne-2026-09-20"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-20T10:02:28.000Z"
+modified: "2026-09-23T18:44:01.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:task"]
-order: "aZ"
+order: "a1"
 ---
 # RM-3 — Persistance du réglage des règles maison sur la campagne
 

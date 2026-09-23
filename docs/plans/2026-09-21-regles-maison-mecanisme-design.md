@@ -204,14 +204,31 @@ Sur la classe de base `GameEvent`, ex. `championshipPointsAwarded: number`, vala
 
 ### Résolution
 
-Portée par **`Campaign`** (il détient `HouseRules`), via un **registre pur du
+> **⚠️ Amendement du 2026-09-23** — ce paragraphe est dépassé, cf. la décision de
+> conception « Refonte Strategy PR : sélection interne à `Game` via une Factory »
+> (`/home/arnaud/.claude/plans/je-souhaiterai-revoir-l-impl-mentation-cheerful-bubble.md`).
+> `Campaign.resolveResistanceStrategy()` **appelée par le use case** fait fuir une
+> décision métier dans `application/` (le use case choisit toujours la Strategy, même
+> si c'est `Campaign` qui la calcule). Remplacé par : `Campaign` attache à chaque
+> `Game` une interface étroite exposant une `HouseRuleStrategyFactory` (Abstract
+> Factory unique pour toutes les règles maison, une méthode `create…Strategy()` par
+> point de calcul) ; `Game.distributeResistance()` **sans paramètre** résout sa
+> propre stratégie via `this.context.strategyFactory.createResistanceDistributionStrategy()`.
+> Principe générique et justification : skill `ddd`,
+> [theory/aggregate-design.md, « Qui sélectionne une Strategy ?
+> »](../../.claude/skills/ddd/theory/aggregate-design.md#qui-sélectionne-une-strategy-).
+> Convention projet : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+> Le paragraphe ci-dessous est conservé tel quel pour l'historique de la décision
+> initiale — ne pas l'implémenter tel quel.
+
+~~Portée par **`Campaign`** (il détient `HouseRules`), via un **registre pur du
 domaine** — même idiome que `IMPROVEMENT_BEHAVIORS`/`resolveImprovementBehavior`
 (module équipe, cf. [VEHICLE_SYSTEM.md §4](../VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior)) :
 `Campaign.resolveResistanceStrategy(): ResistanceDistributionStrategy`, repli sur la
 stratégie par défaut si aucune clé activée de la campagne n'a d'entrée dans le
 registre. Le use case appelle cette méthode puis passe le résultat à
 `game.distributeResistance(...)` (§6) — aucune résolution de règle métier hors du
-domaine.
+domaine.~~
 
 ---
 
@@ -244,6 +261,11 @@ inchangée. La distribution des PR n'y est **pas** ajoutée — elle vit entièr
 C'est **`EnterAtelierUseCase`** qui orchestre les deux appels, dans l'ordre de
 persistance requis :
 
+> **⚠️ Amendement du 2026-09-23** — le code ci-dessous récupère encore `strategy` dans
+> le use case et la passe en paramètre. Cf. l'amendement du §4 ci-dessus : le use
+> case appelle `game.distributeResistance()` **sans argument**, `Game` résolvant sa
+> Strategy via le contexte attaché par `Campaign`. Conservé pour l'historique.
+
 ```ts
 async execute(cmd: EnterAtelierCommand): Promise<EnterAtelierResult> {
   const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
@@ -251,8 +273,8 @@ async execute(cmd: EnterAtelierCommand): Promise<EnterAtelierResult> {
 
   // Concept 1 — distribution des PR (no-op hors Événement Télévisé, cf. §5).
   const game = campaign.findGame(cmd.gameId);
-  const strategy = campaign.resolveResistanceStrategy();
-  const distributionEvents = game.distributeResistance(strategy);
+  const strategy = campaign.resolveResistanceStrategy(); // ⚠️ obsolète, voir amendement ci-dessus
+  const distributionEvents = game.distributeResistance(strategy); // ⚠️ obsolète, sans argument désormais
   if (distributionEvents.length > 0) {
     await this.campaignRepo.appendEvents(cmd.gameId, distributionEvents);
   }

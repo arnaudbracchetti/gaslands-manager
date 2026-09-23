@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { DomainException } from '../../shared/domain/domain-exception';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
+import type { GameEvent } from '../domain/events/game-event';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { assertOrganizer } from './authorization.helpers';
 
@@ -20,9 +21,23 @@ export interface EnterAtelierResult {
  * d'être enregistré (wizard de fin de partie), la phase garage post-partie s'ouvre
  * sur cette même partie — plus de AtelierGame séparé.
  *
- * Séquence :
- * 1. `campaign.enterAtelier(gameId)` — transitions d'état en mémoire
- * 2. `campaignRepo.saveCampaign(campaign)` — persiste les changements de statut
+ * Deux concepts distincts, orchestrés ici (RM-4) :
+ * 1. Distribution des Points de Résistance automatiques (US-F1) — `Game.distributeResistance()`,
+ *    no-op hors Événement Télévisé. Appelée SANS argument : la Strategy (règle par
+ *    défaut ou règle maison) n'est jamais choisie ici — `Game` la résout elle-même
+ *    via le contexte que `Campaign` lui a attaché (cf. `GameRulesContext`,
+ *    `HouseRuleStrategyFactory`, et skill `ddd`, theory/aggregate-design.md, « Qui
+ *    sélectionne une Strategy ? »). Reste un concept séparé de la transition de
+ *    statut ci-dessous : `Campaign.enterAtelier` n'y touche pas.
+ * 2. Transition de statut (`Campaign.enterAtelier(gameId)`, inchangée).
+ *
+ * Les deux mutations en mémoire (§1 et §2) sont validées AVANT toute écriture — si
+ * l'une lève une `DomainException`, rien n'est persisté. Une fois validées, le
+ * journal de distribution est persisté (`appendEvents`) **avant** le statut
+ * (`saveCampaign`) — jamais l'inverse : aucune transaction n'existe dans le projet,
+ * et la garde d'idempotence de `distributeResistance` (§1) rattrape un rejeu après un
+ * échec sur la seconde écriture (statut resté PLANIFIE, distribution déjà journalisée
+ * ne serait pas recréée).
  */
 export class EnterAtelierUseCase {
   constructor(
@@ -32,17 +47,22 @@ export class EnterAtelierUseCase {
 
   async execute(cmd: EnterAtelierCommand): Promise<EnterAtelierResult> {
     const campaign = await this.replayService.loadAndReplay(cmd.campaignId);
-    // Pas de replay complet — enterAtelier opère sur les statuts, pas sur l'état transient.
     assertOrganizer(campaign, cmd.userId);
 
     let result: { autoClosedGameId: number | null };
+    let distributionEvents: GameEvent[];
     try {
+      const game = campaign.findGame(cmd.gameId);
+      distributionEvents = game.distributeResistance();
       result = campaign.enterAtelier(cmd.gameId);
     } catch (e: unknown) {
       if (e instanceof DomainException) throw new BadRequestException(e.message);
       throw e;
     }
 
+    if (distributionEvents.length > 0) {
+      await this.campaignRepo.appendEvents(cmd.gameId, distributionEvents);
+    }
     await this.campaignRepo.saveCampaign(campaign);
 
     return result;

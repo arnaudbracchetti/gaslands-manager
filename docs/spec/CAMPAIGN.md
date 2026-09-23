@@ -1054,10 +1054,20 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   qu'aucun atelier ne reste ouvert pendant qu'une partie est en cours de jeu,
   du lancement jusqu'à l'enregistrement de son résultat.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
-  **automatique** : `Game.recordResult()` crédite tout participant hors du
-  top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
-  dédié — cohérent avec le secret de cette mécanique. Le **total brut** reste
-  caché, y compris à son propriétaire — aucun endpoint ne l'expose tel quel.
+  **automatique** : `Game.distributeResistance()` crédite tout participant hors
+  du top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni
+  écran dédié — cohérent avec le secret de cette mécanique. Le calcul a lieu à
+  l'entrée en Atelier (`EnterAtelierUseCase`, fin du wizard), **pas** à
+  l'enregistrement du résultat (`Game.recordResult`, qui ne s'en occupe plus
+  depuis RM-4) — seul cet instant garantit que le total de Points de
+  Championnat de la partie est complet (le bonus Favori du Public, cf.
+  [§Faveur du Public](#faveur-du-public), est crédité après l'enregistrement du
+  résultat). Conséquence observable : les lignes de contact Résistance
+  apparaissent désormais en fin de journal de partie, après les tirages
+  d'épave, plutôt qu'intercalées avec le classement ; annuler le wizard avant
+  "Terminer" (écran Résolution) ne crédite donc plus rien du tout côté
+  Résistance. Le **total brut** reste caché, y compris à son propriétaire —
+  aucun endpoint ne l'expose tel quel.
   Un dérivé (`sabotagePoints`, cf. [§Points de sabotage](#points-de-sabotage))
   est désormais exposé au propriétaire dans l'Atelier, mais le secret vis-à-vis
   des **autres joueurs** reste total : ce dérivé n'apparaît jamais dans la

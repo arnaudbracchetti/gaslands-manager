@@ -721,6 +721,7 @@ erDiagram
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"
         number sabotagePointsSpent "nullable — SabotagePointsSpentEvent, DÉJÀ clampé au solde disponible à la déclaration"
+        string resistanceStrategyKey "nullable — ResistanceContactedEvent, clé de la stratégie automatique (ex. 'defaut', RM-4/RM-5) ; NULL pour un contact manuel"
         date createdAt
     }
 ```
@@ -810,6 +811,7 @@ classDiagram
         +revert(participants) void
         +reorder(newOrder) void
         +recordResult(rankings, participants) GameEvent[]
+        +distributeResistance(strategy) GameEvent[]
         +resolveWreck(participant, vehicleId, wreckTable) WreckTableResult
         +creditFavoriDuPublicBonus(participantId, vehicleId, wasDestroyed) GameEvent?
         +changeEquipment(participant, cmd) GameEvent[]
@@ -858,7 +860,9 @@ classDiagram
 un seul atelier actif à la fois sur l'ensemble des parties de la campagne) et
 orchestration multi-parties (`replay`, cycle de vie, CRUD programme/participants).
 **La construction des événements d'une partie donnée vit sur `Game`, pas sur
-`Campaign`** : `recordResult`, `resolveWreck`, `creditFavoriDuPublicBonus`,
+`Campaign`** : `recordResult`, `distributeResistance` (Points de Résistance
+automatiques, US-F1 — hook polymorphe, no-op hors Événement Télévisé, appelé à
+l'entrée en Atelier plutôt qu'à `recordResult`, cf. RM-4), `resolveWreck`, `creditFavoriDuPublicBonus`,
 `changeEquipment` (achat/revente d'équipement **et** de séquelles, un seul
 point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles)),
 `contactResistance`, `recordWalletMovement`,
@@ -866,7 +870,10 @@ point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](s
 `Game` — chacune reçoit en paramètre les `CampaignParticipant` dont elle a
 besoin (même convention que `GameEvent.execute(participants)`/
 `Game.apply(participants)`, qui ne détiennent pas non plus de référence
-permanente aux participants). Les use cases naviguent explicitement via
+permanente aux participants — donnée qui varie à chaque appel, pas une
+configuration stable ; cf. [ARCHITECTURE.md §3.4, « Convention projet — qui
+sélectionne une Strategy »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)
+pour le cas distinct d'une configuration attachée par la racine). Les use cases naviguent explicitement via
 l'agrégat racine (`campaign.findGame(gameId)` ou `campaign.findAtelierGame()`)
 puis appellent la méthode sur l'objet `Game` obtenu — `Campaign` n'expose plus
 de méthode de pur passage (`applyNewEvent`, ancien point d'entrée générique,
@@ -922,7 +929,7 @@ d'événements confondus.
 | `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) ; `vehicle.markFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` | `vehicle.addChocs(-n)` ; `vehicle.clearFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` |
 | `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`) | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity` | Inverse de execute |
 | `EquipmentChangedEvent` (`entityType = SEQUELLE`) | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`) | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte |
-| `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
+| `ResistanceContactedEvent` (automatique via `Game.distributeResistance`, RM-4 — ou manuel, route dédiée organisateur) | `participant.addResistance(+3)` | `addResistance(-3)` |
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
 | `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`) | `addPoints(-5)` + `vehicle.markFavoriDuPublic()` |

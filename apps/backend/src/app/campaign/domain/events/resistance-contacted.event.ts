@@ -16,6 +16,14 @@ export class ResistanceContactedEvent extends GameEvent {
     gameId: number,
     participantId: number,
     eventOrder: number,
+    /**
+     * Clé de la stratégie de distribution automatique qui a créé cet événement
+     * (ex. `"defaut"`, cf. `DefaultResistanceStrategy`) — `null` pour un contact
+     * manuel (route dédiée organisateur, jamais touchée par les règles maison).
+     * Distingue automatique/manuel au journal et sert de marqueur d'idempotence à
+     * `Game.distributeResistance`.
+     */
+    readonly strategyKey: string | null = null,
   ) {
     super(id, gameId, participantId, eventOrder);
   }

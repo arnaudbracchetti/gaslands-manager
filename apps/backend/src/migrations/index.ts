@@ -10,8 +10,10 @@
 import type { MigrationInterface } from 'typeorm';
 import { InitSchema1785808811325 } from './1785808811325-InitSchema';
 import { AddCampaignBudget1786182754067 } from './1786182754067-AddCampaignBudget';
+import { AddResistanceStrategyKey1790016140741 } from './1790016140741-AddResistanceStrategyKey';
 
 export const ALL_MIGRATIONS: (new () => MigrationInterface)[] = [
   InitSchema1785808811325,
   AddCampaignBudget1786182754067,
+  AddResistanceStrategyKey1790016140741,
 ];

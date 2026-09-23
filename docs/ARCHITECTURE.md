@@ -190,6 +190,18 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 
 **Pattern Strategy pour les stats effectives** — `Vehicle.effectiveStats` (`domain/vehicle.ts`) calcule les stats **effectives** du véhicule (après bonus des séquelles/améliorations/avantages déjà montés) en un seul `reduce()` par famille, dans l'ordre séquelles → améliorations → avantages. Chaque comportement de jeu (Chenilles, Bélier, Cascadeur, Remorque Moyenne…) est une petite classe Strategy stateless (`EquipmentBehavior`, `domain/behaviors/*.ts`), invoquée directement sur l'état fourni — remplace un ancien Pattern Decorator (chaîne d'objets qui s'enveloppent) courant juillet 2026, pour permettre à la capacité en emplacements de devenir extensible (Remorque Moyenne +1, Remorque Lourde +3, cf. [spec/VEHICLES.md](spec/VEHICLES.md#améliorations-de-véhicule-19-au-total)) et éliminer une re-validation redondante des couches déjà montées. `canPlace(ctx, candidate)` est porté par `ImprovementType`/`AdvantageType` (le Value Object — un candidat n'a pas encore d'instance) ; `applyStats(current)` par `Improvement`/`Advantage`/`Sequella` (l'entité — un équipement déjà monté a toujours une instance), chacun délégant à la Strategy résolue depuis son propre `comportement` (`resolveImprovementBehavior`/`resolveAdvantageBehavior`/`resolveSequellaBehavior`) — `Vehicle` ne connaît jamais ces fonctions de résolution directement. `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (Record `comportement` → instance singleton) couvrent respectivement 8 et 3 comportements ; `SEQUELLA_BEHAVIORS` (Map, clé `nom_interne` — les séquelles n'ont pas de champ `comportement`) couvre les 4 séquelles à effet chiffré. Une méthode générique `PlacementContext.hasComportementAmong(comportements)` porte les règles d'unicité transversales à plusieurs `comportement` (ex. Remorque Moyenne/Lourde mutuellement exclusives). Détail complet (diagramme de classes, flux, tables comportement→Strategy) : [VEHICLE_SYSTEM.md §4](VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior).
 
+**Convention projet — qui sélectionne une Strategy** : jamais l'appelant (use case, controller).
+La sélection est interne au domaine, via une Factory pure, dès que la variante dépend d'un état ou
+d'une configuration du domaine — principe générique et justification :
+[skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une Strategy ?
+»](../.claude/skills/ddd/theory/aggregate-design.md#qui-sélectionne-une-strategy-).
+`EquipmentBehavior` ci-dessus en est le premier exemple (`resolveImprovementBehavior` etc.,
+invisibles depuis un use case) ; le mécanisme de règles maison (mode campagne, cf.
+[spec/CAMPAIGN.md](spec/CAMPAIGN.md)) en est le second, une Factory unique par famille de variantes
+(`HouseRuleStrategyFactory`, une méthode `create…Strategy()` par point de calcul concerné) attachée
+à `Game` par `Campaign` via une interface étroite — jamais un use case qui instancie une Strategy et
+la passe en paramètre à une méthode de domaine.
+
 **Dependency Inversion** — le domaine définit `ITeamRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`TeamRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
 
 **Pattern Use Case** — chaque commande métier a son propre use case. Flux systématique pour les mutations :
@@ -309,7 +321,7 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (39 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
 | `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
-| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
+| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `distributeResistance` — Points de Résistance automatiques, hook polymorphe appelé à l'entrée en Atelier, cf. RM-4 —, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -372,6 +384,9 @@ d'orchestration des use cases (absent de DOMAIN_MODEL.md) :
 
 ```
 EnterAtelierUseCase (partie PLANIFIE → ATELIER)
+  ├─ game.distributeResistance(strategy) — PR automatiques (US-F1, RM-4), no-op
+  │    hors Événement Télévisé ; garde d'idempotence si déjà distribué
+  │    └─ persisté via appendEvents(gameId, events), AVANT la ligne suivante
   └─ campaign.enterAtelier(gameId)
        ├─ clôt automatiquement une autre partie encore en ATELIER, s'il y en a une
        │   (ATELIER → JOUE, id retourné via autoClosedGameId pour avertissement)

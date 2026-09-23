@@ -19,6 +19,20 @@ Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 Introduire la variation de calcul proprement dite, une fois le point d'exécution
 déplacé (RM-4) et le réglage disponible (RM-3).
 
+> **⚠️ Amendement du 2026-09-23** — la conception RM-1 (§« Résolution ») prévoyait
+> `Campaign.resolveResistanceStrategy()` appelée par `EnterAtelierUseCase`, qui
+> passait ensuite la Strategy en paramètre à `game.distributeResistance(strategy)`.
+> **Remplacé** : la sélection est interne au domaine, via une `HouseRuleStrategyFactory`
+> (Abstract Factory unique pour toutes les règles maison, une méthode `create…Strategy()`
+> par point de calcul) attachée à chaque `Game` par `Campaign`.
+> `Game.distributeResistance()` s'appelle désormais **sans argument**. Détail :
+> amendement du design
+> ([docs/plans/2026-09-21-regles-maison-mecanisme-design.md §4](../../docs/plans/2026-09-21-regles-maison-mecanisme-design.md))
+> et convention projet
+> ([ARCHITECTURE.md §3.4](../../docs/ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)).
+> RM-5 implémente `NoChampionshipPointsStrategy` comme une entrée de plus dans le
+> registre de `HouseRuleStrategyFactory`, pas dans un registre séparé.
+
 ## Critères d'acceptation
 
 - [ ] Le calcul actuel est extrait dans une première implémentation de la

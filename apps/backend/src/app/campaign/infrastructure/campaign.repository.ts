@@ -28,6 +28,7 @@ import type { EquipmentChangedEvent } from '../domain/events/equipment-changed.e
 import type { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import type { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
 import type { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
+import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import type { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 import type { SabotagePointsSpentEvent } from '../domain/events/sabotage-points-spent.event';
 import { GameEventType } from '../domain/enums/game-event-type.enum';
@@ -350,8 +351,10 @@ export class CampaignRepository implements ICampaignRepository {
           freeAdvantageNomInterne: e.freeAdvantageNomInterne,
         };
       }
-      case GameEventType.RESISTANCE_CONTACTED:
-        return { ...base, eventType: GameEventType.RESISTANCE_CONTACTED };
+      case GameEventType.RESISTANCE_CONTACTED: {
+        const e = event as ResistanceContactedEvent;
+        return { ...base, eventType: GameEventType.RESISTANCE_CONTACTED, resistanceStrategyKey: e.strategyKey };
+      }
       case GameEventType.GATES_CROSSED: {
         const e = event as GatesCrossedEvent;
         return { ...base, eventType: GameEventType.GATES_CROSSED, gatesCrossed: e.gatesCrossed, championshipPoints: e.championshipPoints };

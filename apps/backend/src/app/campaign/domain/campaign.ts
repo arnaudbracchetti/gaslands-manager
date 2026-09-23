@@ -3,10 +3,13 @@ import { CampaignParticipant } from './campaign-participant';
 import type { Team } from '../../team/domain/team';
 import type { Game } from './games/game';
 import type { GameEvent } from './events/game-event';
+import type { GameRulesContext } from './games/game-context';
 import { GameStatus } from './enums/game-status.enum';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
+import { HouseRules } from './house-rules/house-rules';
+import { HouseRuleStrategyFactory } from './house-rules/house-rule-strategy.factory';
 
 export interface StandingsEntry {
   participantId: number;
@@ -30,8 +33,14 @@ export interface StandingsEntry {
  * vérifications qui nécessitent des données externes (appartenance d'une équipe à
  * un utilisateur, unicité d'engagement, existence d'un scénario) restent dans les
  * use cases.
+ *
+ * Implémente `GameRulesContext` : c'est elle qui détient la configuration stable
+ * (règles maison) qu'elle attache à chacune de ses parties (`attachContext`, cf.
+ * `createGame` et le constructeur) — jamais l'inverse, une `Game` ne reçoit ni ne
+ * choisit sa Strategy depuis un appelant extérieur au domaine (cf. skill `ddd`,
+ * theory/aggregate-design.md, « Qui sélectionne une Strategy ? »).
  */
-export class Campaign {
+export class Campaign implements GameRulesContext {
   private _name: string;
   private _state: CampaignState;
   private readonly _inviteCode: string;
@@ -42,6 +51,15 @@ export class Campaign {
   private readonly _removedParticipantIds: number[] = [];
   /** Ids de parties retirées (removeGame) — pour la persistance structurelle. */
   private readonly _removedGameIds: number[] = [];
+  /**
+   * Réglage des règles maison — toujours `HouseRules.none()` pour l'instant : la
+   * persistance (colonne `houseRules`, mutation `setHouseRules`) est portée par
+   * RM-3, pas encore câblée. Le mécanisme de sélection de Strategy (cette classe,
+   * `HouseRuleStrategyFactory`, `Game.distributeResistance`) est volontairement
+   * posé dès maintenant pour ne plus jamais faire choisir une Strategy par un use
+   * case, cf. la classe ci-dessus.
+   */
+  private readonly _houseRules: HouseRules = HouseRules.none();
 
   constructor(
     readonly id: number,
@@ -58,6 +76,7 @@ export class Campaign {
     this._budget = budget;
     this._participants = participants;
     this._games = games;
+    for (const game of this._games) game.attachContext(this);
   }
 
   get name(): string { return this._name; }
@@ -68,6 +87,12 @@ export class Campaign {
   get games(): readonly Game[] { return this._games; }
   get removedParticipantIds(): readonly number[] { return this._removedParticipantIds; }
   get removedGameIds(): readonly number[] { return this._removedGameIds; }
+  get houseRules(): HouseRules { return this._houseRules; }
+
+  /** `GameRulesContext.strategyFactory` — reconstruite à la demande depuis
+   *  `_houseRules` plutôt que mémoïsée, pour qu'un futur `setHouseRules` (RM-3)
+   *  soit reflété sans devoir réattacher le contexte à chaque partie. */
+  get strategyFactory(): HouseRuleStrategyFactory { return new HouseRuleStrategyFactory(this._houseRules); }
 
   /**
    * Une équipe ne peut être engagée que si le coût cumulé de ses véhicules tient
@@ -429,6 +454,12 @@ export class Campaign {
     return this._games.reduce((max, g) => Math.max(max, g.order), 0) + 1;
   }
 
+  /**
+   * Construit une partie du bon sous-type et lui attache immédiatement CE contexte
+   * (`GameRulesContext`) — nécessaire ici en plus de la boucle du constructeur :
+   * `addGame`/`updateGame` appellent `createGame` APRÈS la construction de
+   * `Campaign`, sur une partie qui n'a donc jamais traversé cette boucle.
+   */
   private createGame(
     id: number,
     type: string,
@@ -438,13 +469,18 @@ export class Campaign {
     playedAt: Date | null,
     events: GameEvent[],
   ): Game {
+    let game: Game;
     switch (type) {
       case 'EVENEMENT_TELE':
-        return new EvenementTeleGame(id, this.id, status, order, scenarioId, playedAt, events);
+        game = new EvenementTeleGame(id, this.id, status, order, scenarioId, playedAt, events);
+        break;
       case 'ESCARMOUCHE':
-        return new EscarmoucheGame(id, this.id, status, order, scenarioId, playedAt, events);
+        game = new EscarmoucheGame(id, this.id, status, order, scenarioId, playedAt, events);
+        break;
       default:
         throw new DomainException(`Type de partie invalide : "${type}"`);
     }
+    game.attachContext(this);
+    return game;
   }
 }

@@ -1,6 +1,7 @@
 import { Game } from './game';
 import { GameStatus } from '../enums/game-status.enum';
 import type { GameEvent } from '../events/game-event';
+import type { ResistanceEntry } from '../house-rules/resistance-distribution-strategy';
 import { RankingAssignedEvent } from '../events/ranking-assigned.event';
 import { WalletMovementEvent } from '../events/wallet-movement.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
@@ -68,5 +69,55 @@ export class EvenementTeleGame extends Game {
       return event instanceof EquipmentChangedEvent || event instanceof VehicleRenamedEvent;
     }
     return false;
+  }
+
+  /**
+   * Événement Télévisé uniquement — cf. `Game.distributeResistance` pour le contrat
+   * complet (moment d'appel, ordre de persistance, pourquoi sans paramètre).
+   *
+   * 1. Résout sa propre Strategy via `this.context.strategyFactory` — jamais reçue
+   *    en paramètre (cf. `Game.distributeResistance`).
+   * 2. Garde d'idempotence : si le journal porte déjà un `ResistanceContactedEvent`
+   *    marqué (`strategyKey` non nul), la distribution a déjà eu lieu pour cette
+   *    partie — rattrape un rejeu de `EnterAtelierUseCase` après un échec de la
+   *    persistance du statut (aucune transaction n'existe dans le projet).
+   * 3. Relève ses propres `RankingAssignedEvent` — un par participant classé dans
+   *    CETTE partie — pour calculer `classified` (la moitié classée) et le rang de
+   *    chacun, sans jamais recevoir ce total en paramètre.
+   * 4. Pour chaque participant classé, somme `championshipPointsAwarded` sur tout le
+   *    journal filtré par son id (classement + exploits + Favori du Public, déjà
+   *    journalisé à ce stade) et interroge la Strategy, un participant à la fois.
+   */
+  override distributeResistance(): GameEvent[] {
+    const strategy = this.context.strategyFactory.createResistanceDistributionStrategy();
+
+    const alreadyDistributed = this.events.some(
+      (e) => e instanceof ResistanceContactedEvent && e.strategyKey !== null,
+    );
+    if (alreadyDistributed) return [];
+
+    const rankingEvents = this.events.filter(
+      (e): e is RankingAssignedEvent => e instanceof RankingAssignedEvent,
+    );
+    const classified = Math.ceil(rankingEvents.length / 2);
+
+    const events: GameEvent[] = [];
+    for (const ranking of rankingEvents) {
+      const championshipPointsThisGame = this.events
+        .filter((e) => e.participantId === ranking.participantId)
+        .reduce((sum, e) => sum + e.championshipPointsAwarded, 0);
+
+      const entry: ResistanceEntry = {
+        participantId: ranking.participantId,
+        rank: ranking.rank,
+        championshipPointsThisGame,
+      };
+      if (strategy.isEligible(entry, { classified })) {
+        const event = new ResistanceContactedEvent(0, this.id, ranking.participantId, 0, strategy.key);
+        this.addEvent(event);
+        events.push(event);
+      }
+    }
+    return events;
   }
 }

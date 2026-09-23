@@ -32,6 +32,10 @@ export class GatesCrossedEvent extends GameEvent {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
 
+  override get championshipPointsAwarded(): number {
+    return this.championshipPoints;
+  }
+
   describe(): string {
     return `Porte(s) franchie(s) : ${this.gatesCrossed} porte(s) (+${this.championshipPoints} PC)`;
   }
