@@ -68,6 +68,7 @@ describe('CampaignController (câblage)', () => {
       uc() as never,            // drawRandomScenario
       createCampaignUseCase as never,
       uc() as never,            // update
+      uc() as never,            // setHouseRules
       uc() as never,            // changeState
       uc() as never,            // delete
       uc(5) as never,           // requestJoin

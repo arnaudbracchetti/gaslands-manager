@@ -57,4 +57,8 @@ describe('HouseRuleCatalogService', () => {
   it('retourne undefined pour un nom_interne inconnu', () => {
     expect(service.getByNomInterne('inexistant')).toBeUndefined();
   });
+
+  it('validKeys() retourne les nom_interne de toutes les règles du catalogue', () => {
+    expect(service.validKeys()).toEqual(['resistance_sans_points_championnat', 'autre_regle']);
+  });
 });

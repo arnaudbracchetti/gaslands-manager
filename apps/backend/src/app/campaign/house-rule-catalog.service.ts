@@ -88,4 +88,11 @@ export class HouseRuleCatalogService implements OnModuleInit {
   getByNomInterne(nomInterne: string): HouseRuleDefinition | undefined {
     return this.houseRuleMap.get(nomInterne);
   }
+
+  /** Clés (nom_interne) valides du catalogue courant - instantané passé à
+   *  `HouseRules.fromUserInput` par tout appelant qui règle les règles maison
+   *  d'une campagne (création, modification). */
+  validKeys(): string[] {
+    return this.getAll().map((r) => r.nom_interne);
+  }
 }

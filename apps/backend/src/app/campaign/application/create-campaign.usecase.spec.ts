@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CreateCampaignUseCase } from './create-campaign.usecase';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
+import type { HouseRuleCatalogService } from '../house-rule-catalog.service';
 import { makeTeamWithVehicles, makeVehicleType } from '../domain/test-helpers';
 import { Vehicle } from '../../team/domain/vehicle';
 
@@ -21,8 +22,12 @@ function makeFixture(vehiclesCost: number, isTeamEngaged = false) {
     createCampaign: vi.fn().mockResolvedValue(1),
   } as unknown as ICampaignRepository;
 
-  const useCase = new CreateCampaignUseCase(campaignRepo, teamRepo);
-  return { useCase, teamRepo, campaignRepo, team };
+  const houseRuleCatalog: HouseRuleCatalogService = {
+    validKeys: vi.fn().mockReturnValue(['resistance_sans_points_championnat']),
+  } as unknown as HouseRuleCatalogService;
+
+  const useCase = new CreateCampaignUseCase(campaignRepo, teamRepo, houseRuleCatalog);
+  return { useCase, teamRepo, campaignRepo, houseRuleCatalog, team };
 }
 
 describe('CreateCampaignUseCase', () => {
@@ -31,7 +36,7 @@ describe('CreateCampaignUseCase', () => {
 
     await useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 30 });
 
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 30);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 30, []);
   });
 
   it('applique le défaut 50 si aucun budget fourni', async () => {
@@ -39,7 +44,7 @@ describe('CreateCampaignUseCase', () => {
 
     await useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3 });
 
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 50);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 50, []);
   });
 
   it('crée sans équipe (organisateur sans équipe engagée)', async () => {
@@ -48,7 +53,7 @@ describe('CreateCampaignUseCase', () => {
     await useCase.execute({ userId: 42, name: 'Coupe Verney' });
 
     expect(teamRepo.findByIdForUser).not.toHaveBeenCalled();
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, null, 50);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, null, 50, []);
   });
 
   it('refuse si l\'équipe du créateur dépasse le budget choisi', async () => {
@@ -65,5 +70,30 @@ describe('CreateCampaignUseCase', () => {
     await expect(
       useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 50 }),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('transmet les règles maison fournies au repository', async () => {
+    const { useCase, campaignRepo } = makeFixture(12);
+
+    await useCase.execute({
+      userId: 42,
+      name: 'Coupe Verney',
+      teamId: 3,
+      budget: 30,
+      houseRules: ['resistance_sans_points_championnat'],
+    });
+
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
+      'Coupe Verney', expect.any(String), 42, 3, 30, ['resistance_sans_points_championnat'],
+    );
+  });
+
+  it('refuse une clé de règle maison absente du catalogue', async () => {
+    const { useCase, campaignRepo } = makeFixture(12);
+
+    await expect(
+      useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 30, houseRules: ['clef_inconnue'] }),
+    ).rejects.toThrow(BadRequestException);
+    expect(campaignRepo.createCampaign).not.toHaveBeenCalled();
   });
 });

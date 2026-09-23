@@ -37,6 +37,7 @@ import type { IRandomizer } from './domain/randomizer.interface';
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
 import { UpdateCampaignUseCase } from './application/update-campaign.usecase';
+import { SetHouseRulesUseCase } from './application/set-house-rules.usecase';
 import { ChangeStateUseCase } from './application/change-state.usecase';
 import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
 import { RequestJoinUseCase } from './application/request-join.usecase';
@@ -123,15 +124,21 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
     // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────
     {
       provide: CreateCampaignUseCase,
-      useFactory: (repo: ICampaignRepository, team: ITeamRepository) =>
-        new CreateCampaignUseCase(repo, team),
-      inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY],
+      useFactory: (repo: ICampaignRepository, team: ITeamRepository, catalog: HouseRuleCatalogService) =>
+        new CreateCampaignUseCase(repo, team, catalog),
+      inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY, HouseRuleCatalogService],
     },
     {
       provide: UpdateCampaignUseCase,
       useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
         new UpdateCampaignUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: SetHouseRulesUseCase,
+      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, catalog: HouseRuleCatalogService) =>
+        new SetHouseRulesUseCase(repo, replay, catalog),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, HouseRuleCatalogService],
     },
     {
       provide: ChangeStateUseCase,

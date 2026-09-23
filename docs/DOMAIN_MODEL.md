@@ -662,6 +662,7 @@ erDiagram
         enum state "EN_CONSTRUCTION|EN_COURS|TERMINEE"
         string inviteCode UK
         number budget "défaut 50 - remplace Team.cans pour toute équipe engagée"
+        json houseRules "tableau de clés (nom_interne) activées - défaut [] (RM-3)"
         date createdAt
         date updatedAt
     }
@@ -764,11 +765,13 @@ classDiagram
         <<Aggregate Root>>
         +id : number
         +budget : number
+        +houseRules : HouseRules
         +participants : readonly CampaignParticipant[]
         +games : readonly Game[]
         +replay() void
         +rename(name) void
         +changeBudget(budget) void
+        +setHouseRules(keys, validKeys) void
         +enterAtelier(gameId) autoClosedGameId
         +closeAtelier(gameId) void
         +closeCampaign() void

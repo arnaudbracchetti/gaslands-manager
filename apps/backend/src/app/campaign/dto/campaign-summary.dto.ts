@@ -17,4 +17,6 @@ export class CampaignSummaryDto {
   participantCount: number;
   /** Budget en jerricans imposé aux équipes - permet au frontend de griser les équipes hors budget avant inscription. */
   budget: number;
+  /** Clés des règles maison actives - l'écran d'inscription en a besoin (cf. RM-7). */
+  houseRules: string[];
 }

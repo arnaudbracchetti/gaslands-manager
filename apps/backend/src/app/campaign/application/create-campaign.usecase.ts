@@ -1,13 +1,17 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { DomainException } from '../../shared/domain/domain-exception';
+import { HouseRules } from '../domain/house-rules/house-rules';
 import type { ICampaignRepository } from '../domain/campaign.repository.interface';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
+import { HouseRuleCatalogService } from '../house-rule-catalog.service';
 
 export interface CreateCampaignCommand {
   userId: number;
   name: string;
   teamId?: number | null;
   budget?: number;
+  houseRules?: string[];
 }
 
 const DEFAULT_BUDGET = 50;
@@ -17,17 +21,28 @@ const DEFAULT_BUDGET = 50;
  *
  * Cas particulier : aucun agrégat n'existe encore — on délègue directement à
  * `repo.createCampaign`. Les vérifications à données externes (appartenance de
- * l'équipe, unicité d'engagement, budget) sont faites ici, avant la persistance.
+ * l'équipe, unicité d'engagement, budget, règles maison) sont faites ici, avant
+ * la persistance.
  */
 export class CreateCampaignUseCase {
   constructor(
     private readonly campaignRepo: ICampaignRepository,
     private readonly teamRepo: ITeamRepository,
+    private readonly houseRuleCatalog: HouseRuleCatalogService,
   ) {}
 
   async execute(cmd: CreateCampaignCommand): Promise<number> {
     const teamId = cmd.teamId ?? null;
     const budget = cmd.budget ?? DEFAULT_BUDGET;
+
+    let houseRules: HouseRules;
+    try {
+      houseRules = HouseRules.fromUserInput(cmd.houseRules ?? [], this.houseRuleCatalog.validKeys());
+    } catch (e: unknown) {
+      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      throw e;
+    }
+
     if (teamId !== null) {
       // Lève NotFoundException si l'équipe n'appartient pas à l'utilisateur.
       const team = await this.teamRepo.findByIdForUser(teamId, cmd.userId);
@@ -44,6 +59,6 @@ export class CreateCampaignUseCase {
     }
 
     const inviteCode = randomBytes(6).toString('hex');
-    return this.campaignRepo.createCampaign(cmd.name, inviteCode, cmd.userId, teamId, budget);
+    return this.campaignRepo.createCampaign(cmd.name, inviteCode, cmd.userId, teamId, budget, houseRules.toArray());
   }
 }

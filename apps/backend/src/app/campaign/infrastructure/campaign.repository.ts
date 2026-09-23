@@ -154,12 +154,14 @@ export class CampaignRepository implements ICampaignRepository {
     organizerUserId: number,
     teamId: number | null,
     budget: number,
+    houseRules: string[],
   ): Promise<number> {
     const campaign = this.campaignOrmRepo.create({
       name,
       state: CampaignState.EN_CONSTRUCTION,
       inviteCode,
       budget,
+      houseRules,
     });
     const saved = await this.campaignOrmRepo.save(campaign);
 
@@ -175,11 +177,12 @@ export class CampaignRepository implements ICampaignRepository {
   }
 
   async saveStructural(campaign: Campaign): Promise<void> {
-    // 1. Campagne : name/state/budget (inviteCode immuable, non mis à jour).
+    // 1. Campagne : name/state/budget/houseRules (inviteCode immuable, non mis à jour).
     await this.campaignOrmRepo.update(campaign.id, {
       name: campaign.name,
       state: campaign.state as unknown as CampaignState,
       budget: campaign.budget,
+      houseRules: campaign.houseRules.toArray(),
     });
 
     // 2. Participants retirés.

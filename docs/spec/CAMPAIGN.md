@@ -66,6 +66,44 @@ l'organisateur corrige la valeur sans rouvrir la modale.
 
 ---
 
+## Règles maison
+
+Une **règle maison** est une variante optionnelle du règlement, activable individuellement
+par l'organisateur d'une campagne — catalogue en mémoire (`GET /api/catalog/regles-maison`,
+public, chargé par `HouseRuleCatalogService` depuis `database_init/data/regles-maison.yml`,
+même mécanisme que le catalogue de scénarios). `Campaign.houseRules` (Value Object
+`HouseRules`) ne stocke que l'**ensemble des clés (`nom_interne`) activées** — une règle
+absente équivaut à son comportement par défaut, donc une règle ajoutée après coup au
+catalogue est automatiquement "décochée" partout, sans reprise de données.
+
+**Aucune contrainte d'état** — contrairement au budget (dont la restriction
+`EN_CONSTRUCTION` tient à l'éligibilité des équipes engagées, sans objet ici), le réglage
+des règles maison est modifiable à tout moment de la vie de la campagne : construction, en
+cours, et jusqu'à la fin. C'est pour cette raison qu'il est exposé par une **route dédiée**,
+`PUT /api/campaigns/:id/house-rules`, distincte de `PUT /api/campaigns/:id` (nom/budget,
+réservée à `EN_CONSTRUCTION`) — réutiliser cette dernière aurait bloqué le réglage des
+règles maison chaque fois que le nom/budget sont eux-mêmes verrouillés.
+
+**Validation stricte à l'écriture, tolérante à la lecture** : une clé absente du catalogue
+courant est rejetée en HTTP 400 (jamais ignorée silencieusement) lors d'un réglage explicite
+(`HouseRules.fromUserInput`, appelé par `SetHouseRulesUseCase`/`CreateCampaignUseCase` avec
+la liste des `nom_interne` du catalogue). À l'inverse, l'hydratation depuis la base
+(`HouseRules.fromPersisted`, appelée par `CampaignMapper`) ne valide jamais : une clé
+orpheline (retirée depuis du catalogue après avoir été activée) reste présente en base mais
+inerte, jusqu'au prochain réglage explicite qui la fait disparaître.
+
+**Réglable à la création** (`POST /api/campaigns`, `houseRules?: string[]`, défaut aucune
+règle active) **et à la modification** (`PUT /api/campaigns/:id/house-rules`,
+`houseRules: string[]` requis — un tableau vide désactive toutes les règles).
+
+**Exposition** : la valeur activée apparaît dans toutes les réponses de campagne
+(`CampaignResponseDto`, dérivé par spread de l'entité ORM — même mécanisme que `budget`) et
+sur la route de consultation par code d'invitation (`GET /api/campaigns/by-code/:code`,
+`CampaignSummaryDto.houseRules`) — l'écran d'inscription en a besoin pour afficher les
+règles actives avant que le joueur ne rejoigne.
+
+---
+
 ## Inscription
 
 `ParticipantStatus` : `PENDING` | `VALIDATED` | `REJECTED`
@@ -1162,13 +1200,15 @@ tout type de partie).
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns` | JWT | Mes campagnes (participant `VALIDATED`) |
-| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi |
+| GET | `/api/catalog/regles-maison` | Non | Catalogue public des règles maison (cf. [§Règles maison](#règles-maison)) |
+| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne) ; `houseRules?: string[]` - défaut aucune règle active, cf. [§Règles maison](#règles-maison)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi, ou si une clé de `houseRules` est absente du catalogue |
 | GET | `/api/campaigns/pending` | JWT | Mes demandes d'inscription en attente |
 | GET | `/api/campaigns/organizing/pending-requests` | JWT | Inscriptions en attente dans mes campagnes (organisateur) |
-| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) |
+| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) et `houseRules` (cf. [§Règles maison](#règles-maison)) |
 | GET | `/api/campaigns/:id` | JWT | Détail d'une campagne (participant `VALIDATED`) |
 | DELETE | `/api/campaigns/:id` | JWT | Supprimer la campagne (organisateur, cascade sur les participants) |
 | PUT | `/api/campaigns/:id` | JWT | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne)) |
+| PUT | `/api/campaigns/:id/house-rules` | JWT | Règles maison actives (organisateur, **aucune contrainte d'état** - `{ houseRules: string[] }`, tableau vide = aucune règle active) - HTTP 400 si une clé est absente du catalogue courant (cf. [§Règles maison](#règles-maison)) |
 | PUT | `/api/campaigns/:id/state` | JWT | Transition d'état (organisateur) |
 | GET | `/api/campaigns/:id/participants` | JWT | Liste des participants |
 | POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne)) |

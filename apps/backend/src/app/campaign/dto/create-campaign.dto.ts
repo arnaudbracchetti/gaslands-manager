@@ -6,7 +6,7 @@
  * (décision de design, cf. docs/plans/design/README.md §divergences).
  * Si fourni, le use case vérifie qu'elle lui appartient (ITeamRepository.findByIdForUser).
  */
-import { IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateCampaignDto {
   @IsString()
@@ -28,4 +28,13 @@ export class CreateCampaignDto {
   @Min(1)
   @Max(999)
   budget?: number;
+
+  /**
+   * Règles maison activées à la création (clés de regles-maison.yml) - optionnel,
+   * défaut aucune règle active.
+   */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  houseRules?: string[];
 }

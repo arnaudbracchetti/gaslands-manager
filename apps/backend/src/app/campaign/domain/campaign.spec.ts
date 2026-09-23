@@ -270,6 +270,36 @@ describe('Campaign - modification (rename/changeBudget)', () => {
   });
 });
 
+describe('Campaign - setHouseRules', () => {
+  const validKeys = ['resistance_sans_points_championnat'];
+
+  it.each([CampaignState.EN_CONSTRUCTION, CampaignState.EN_COURS, CampaignState.TERMINEE])(
+    'accepte des clés valides quel que soit l\'état (%s) — aucune contrainte d\'état',
+    (state) => {
+      const campaign = new Campaign(1, 'Campagne Test', state, 'invite-code', [], []);
+
+      expect(() => campaign.setHouseRules(['resistance_sans_points_championnat'], validKeys)).not.toThrow();
+      expect(campaign.houseRules.isEnabled('resistance_sans_points_championnat')).toBe(true);
+    },
+  );
+
+  it('rejette une clé absente du catalogue courant, sans muter le réglage', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
+
+    expect(() => campaign.setHouseRules(['clef_inconnue'], validKeys)).toThrow('Règle maison inconnue');
+    expect(campaign.houseRules.toArray()).toEqual([]);
+  });
+
+  it('remplace intégralement le réglage précédent (pas un merge)', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
+    campaign.setHouseRules(['resistance_sans_points_championnat'], validKeys);
+
+    campaign.setHouseRules([], validKeys);
+
+    expect(campaign.houseRules.toArray()).toEqual([]);
+  });
+});
+
 // ── Commandes CRUD (Phase 2 — basculement DDD) ─────────────────────────────────
 
 describe('Campaign — requestJoin', () => {

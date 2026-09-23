@@ -52,14 +52,13 @@ export class Campaign implements GameRulesContext {
   /** Ids de parties retirées (removeGame) — pour la persistance structurelle. */
   private readonly _removedGameIds: number[] = [];
   /**
-   * Réglage des règles maison — toujours `HouseRules.none()` pour l'instant : la
-   * persistance (colonne `houseRules`, mutation `setHouseRules`) est portée par
-   * RM-3, pas encore câblée. Le mécanisme de sélection de Strategy (cette classe,
-   * `HouseRuleStrategyFactory`, `Game.distributeResistance`) est volontairement
-   * posé dès maintenant pour ne plus jamais faire choisir une Strategy par un use
-   * case, cf. la classe ci-dessus.
+   * Réglage des règles maison — hydraté par le mapper (`HouseRules.fromPersisted`)
+   * ou fixé à la création (`HouseRules.none()` par défaut). Muté uniquement via
+   * `setHouseRules` (RM-3). Le mécanisme de sélection de Strategy (cette classe,
+   * `HouseRuleStrategyFactory`, `Game.distributeResistance`) lit toujours ce champ
+   * via `strategyFactory` ci-dessous — jamais une Strategy choisie par un use case.
    */
-  private readonly _houseRules: HouseRules = HouseRules.none();
+  private _houseRules: HouseRules;
 
   constructor(
     readonly id: number,
@@ -69,6 +68,7 @@ export class Campaign implements GameRulesContext {
     participants: CampaignParticipant[],
     games: Game[],
     budget = 50,
+    houseRules: HouseRules = HouseRules.none(),
   ) {
     this._name = name;
     this._state = state;
@@ -76,6 +76,7 @@ export class Campaign implements GameRulesContext {
     this._budget = budget;
     this._participants = participants;
     this._games = games;
+    this._houseRules = houseRules;
     for (const game of this._games) game.attachContext(this);
   }
 
@@ -194,6 +195,17 @@ export class Campaign implements GameRulesContext {
       }
     }
     this._budget = budget;
+  }
+
+  /**
+   * Active/désactive l'ensemble des règles maison. Aucune contrainte d'état :
+   * contrairement au budget (éligibilité des équipes), rien ne justifie de limiter
+   * ce réglage à EN_CONSTRUCTION. `validKeys` est un instantané des clés du
+   * catalogue courant, fourni par l'appelant (use case) — le domaine ne connaît
+   * jamais le catalogue (cf. HouseRules.fromUserInput).
+   */
+  setHouseRules(keys: string[], validKeys: readonly string[]): void {
+    this._houseRules = HouseRules.fromUserInput(keys, validKeys);
   }
 
   /**
