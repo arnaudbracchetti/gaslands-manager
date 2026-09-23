@@ -5,7 +5,7 @@ priority: "high"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-21T18:56:19.301Z"
+modified: "2026-09-23T20:57:32.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
 order: "aX"
@@ -44,11 +44,11 @@ Strategy, sans refonte du mécanisme.
 |---|---|
 | [RM-1 — Conception détaillée du mécanisme (DDD)](./done/rm-1-conception-ddd-regles-maison-2026-09-20.md) | — (résolu) |
 | [RM-2 — Catalogue YAML des règles maison](./done/rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | - (résolu) |
-| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ - prenable |
+| [RM-3 — Persistance du réglage sur la campagne](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ — résolu |
 | [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./done/rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
-| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3, RM-4 ✅ — encore bloquée par RM-3 |
-| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2, RM-3 |
-| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3, RM-6 |
+| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — prenable |
+| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — prenable |
+| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 — encore bloquée par RM-6 |
 | [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5, RM-6, RM-7 |
 
 ## Décisions acquises
@@ -96,8 +96,24 @@ rejeu après échec de la seconde écriture. Accesseur polymorphe
 `GameEvent.championshipPointsAwarded` ajouté au passage (RM-5 en aura besoin
 pour le critère R1). Comportement observable inchangé, hors le moment
 d'apparition du contact Résistance dans le journal (déplacé en fin de partie) et
-l'abandon d'un wizard avant "Terminer" (ne crédite plus rien). RM-5 reste
-bloquée par RM-3 (pas encore résolue).
+l'abandon d'un wizard avant "Terminer" (ne crédite plus rien). RM-5 restait
+bloquée par RM-3 (résolue ci-dessous).
+
+### RM-3 — Persistance du réglage sur la campagne (résolu 2026-09-23)
+
+`HouseRules.fromUserInput(keys, validKeys)` (seconde fabrique du Value Object posé
+par anticipation en RM-4), `Campaign.setHouseRules(keys, validKeys)` — **sans
+garde d'état**, contrairement à `changeBudget` — colonne `houseRules jsonb NOT
+NULL DEFAULT '[]'` sur `campaigns` (première colonne jsonb du projet), migration
+`1790196361073-AddCampaignHouseRules`. Exposée à la création (`POST
+/api/campaigns`) et via une **route dédiée** `PUT /api/campaigns/:id/house-rules`
+(`SetHouseRulesUseCase`) plutôt que la réutilisation de `PUT /api/campaigns/:id`
+(nom/budget, réservée à `EN_CONSTRUCTION`) — décision prise pour que « aucune
+contrainte d'état » soit vraie de bout en bout, pas seulement au niveau de
+l'agrégat. Exposée dans `CampaignResponseDto` (spread, comme `budget`) et
+`CampaignSummaryDto` (route par code d'invitation). Clé inconnue → HTTP 400 sur
+les deux chemins d'écriture (création et route dédiée) ; hydratation depuis la
+base tolérante (`fromPersisted`, clé orpheline inerte). RM-5 et RM-6 débloquées.
 
 ### Session de cadrage, 2026-09-20
 

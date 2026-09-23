@@ -1,11 +1,11 @@
 ---
 id: "rm-6-ihm-reglage-regles-maison-2026-09-20"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-20T10:02:28.000Z"
+modified: "2026-09-23T20:57:32.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "frontend", "wayfinder:task"]
 order: "ac"
@@ -37,7 +37,7 @@ création de la campagne et après coup.
 
 ## Dépendances
 
-Bloqué par [RM-2](./rm-2-catalogue-yaml-regles-maison-2026-09-20.md) — le
+Bloqué par [RM-2](./done/rm-2-catalogue-yaml-regles-maison-2026-09-20.md) — le
 catalogue alimente la liste — et
-[RM-3](./rm-3-persistance-houserules-campagne-2026-09-20.md) — le réglage doit
-être persistable.
+[RM-3](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) — le réglage doit
+être persistable. **Les deux sont résolues — prenable.**

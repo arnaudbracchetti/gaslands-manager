@@ -33,5 +33,5 @@ Un joueur doit savoir sous quelles règles il joue, sans pouvoir les modifier.
 
 Bloqué par [RM-6](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) — le rendu
 partagé y est construit — et
-[RM-3](./rm-3-persistance-houserules-campagne-2026-09-20.md) — la route de
-consultation par code doit exposer le réglage.
+[RM-3](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) — la route de
+consultation par code doit exposer le réglage (**résolue**).

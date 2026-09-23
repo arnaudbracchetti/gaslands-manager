@@ -1,11 +1,11 @@
 ---
 id: "rm-5-strategie-pr-sans-point-championnat-2026-09-20"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-20T10:02:28.000Z"
+modified: "2026-09-23T20:57:32.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:task"]
 order: "ab"
@@ -56,7 +56,7 @@ déplacé (RM-4) et le réglage disponible (RM-3).
 
 ## Dépendances
 
-Bloqué par [RM-3](./rm-3-persistance-houserules-campagne-2026-09-20.md) — le
+Bloqué par [RM-3](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) — le
 réglage doit exister — et
-[RM-4](./rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) — le point
-d'exécution doit avoir été déplacé.
+[RM-4](./done/rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) — le point
+d'exécution doit avoir été déplacé. **Les deux sont résolues — prenable.**
