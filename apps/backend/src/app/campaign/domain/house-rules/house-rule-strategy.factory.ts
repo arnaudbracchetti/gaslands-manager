@@ -1,6 +1,10 @@
 import { DomainException } from '../../../shared/domain/domain-exception';
 import type { HouseRules } from './house-rules';
-import { DefaultResistanceStrategy, type ResistanceDistributionStrategy } from './resistance-distribution-strategy';
+import {
+  DefaultResistanceStrategy,
+  NoChampionshipPointsStrategy,
+  type ResistanceDistributionStrategy,
+} from './resistance-distribution-strategy';
 
 /**
  * Un endroit du code où une règle maison peut changer le calcul par défaut.
@@ -20,14 +24,16 @@ interface HouseRuleOverride {
 
 /**
  * Registre pur du domaine — une entrée par règle maison de catalogue qui remplace
- * un calcul par défaut. Vide tant que RM-5 n'a pas encore ajouté sa première entrée
- * (`resistance_sans_points_championnat`, cf. docs/plans/2026-09-21-regles-maison-mecanisme-design.md).
- * Même idiome que `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (module équipe, cf.
- * ARCHITECTURE.md §3.4) : un Record/Map figé, aucune dépendance de framework.
+ * un calcul par défaut. Même idiome que `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS`
+ * (module équipe, cf. ARCHITECTURE.md §3.4) : un Record/Map figé, aucune dépendance
+ * de framework. Première (et pour l'instant unique) entrée : R1 (RM-5), cf.
+ * docs/plans/2026-09-21-regles-maison-mecanisme-design.md.
  */
 const HOUSE_RULE_REGISTRY: ReadonlyMap<string, HouseRuleOverride> = new Map<string, HouseRuleOverride>([
-  // RM-5 : ['resistance_sans_points_championnat',
-  //         { point: CalculationPoint.RESISTANCE_DISTRIBUTION, strategy: new NoChampionshipPointsStrategy() }],
+  [
+    'resistance_sans_points_championnat',
+    { point: CalculationPoint.RESISTANCE_DISTRIBUTION, strategy: new NoChampionshipPointsStrategy() },
+  ],
 ]);
 
 const DEFAULT_RESISTANCE_STRATEGY = new DefaultResistanceStrategy();

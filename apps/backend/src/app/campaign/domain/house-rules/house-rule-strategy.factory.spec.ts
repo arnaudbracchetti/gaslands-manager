@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { HouseRuleStrategyFactory } from './house-rule-strategy.factory';
 import { HouseRules } from './house-rules';
-import { DefaultResistanceStrategy } from './resistance-distribution-strategy';
+import { DefaultResistanceStrategy, NoChampionshipPointsStrategy } from './resistance-distribution-strategy';
 
 describe('HouseRuleStrategyFactory', () => {
   it('résout la Strategy par défaut quand aucune règle maison n\'est active', () => {
@@ -21,8 +21,26 @@ describe('HouseRuleStrategyFactory', () => {
     expect(strategy).toBeInstanceOf(DefaultResistanceStrategy);
   });
 
-  // Le registre est vide tant que RM-5 n'a pas ajouté sa première règle maison
-  // (resistance_sans_points_championnat) — les cas "une règle active remplace le
-  // défaut" et "deux règles actives sur le même point lèvent une DomainException"
-  // seront couverts par le spec de RM-5, contre une entrée réelle du registre.
+  it('résout NoChampionshipPointsStrategy (R1) quand resistance_sans_points_championnat est active', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['resistance_sans_points_championnat']));
+
+    const strategy = factory.createResistanceDistributionStrategy();
+
+    expect(strategy).toBeInstanceOf(NoChampionshipPointsStrategy);
+    expect(strategy.key).toBe('resistance_sans_points_championnat');
+  });
+
+  it('résout la Strategy par défaut quand resistance_sans_points_championnat existe mais est désactivée', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted([]));
+
+    const strategy = factory.createResistanceDistributionStrategy();
+
+    expect(strategy).toBeInstanceOf(DefaultResistanceStrategy);
+  });
+
+  // "Deux règles actives sur le même point → DomainException" : non testable
+  // aujourd'hui sans donnée artificielle — le registre réel n'a qu'une seule
+  // entrée pour RESISTANCE_DISTRIBUTION tant qu'une seconde règle maison ne
+  // vient pas le concurrencer. La garde existe et sera exercée par le spec de
+  // cette future règle.
 });

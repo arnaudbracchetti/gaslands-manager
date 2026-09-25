@@ -19,7 +19,7 @@ import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import type { GameEvent } from '../events/game-event';
 import type { GameRulesContext } from './game-context';
 import type { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
-import type { ResistanceDistributionStrategy } from '../house-rules/resistance-distribution-strategy';
+import { NoChampionshipPointsStrategy, type ResistanceDistributionStrategy } from '../house-rules/resistance-distribution-strategy';
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
@@ -520,16 +520,112 @@ describe('Game — distributeResistance (RM-4)', () => {
   });
 });
 
+/**
+ * Construit un `GameRulesContext` dont la Factory résout toujours la Strategy
+ * donnée — utilisé par les blocs `distributeResistance avec R1` et
+ * `attachContext` ci-dessous pour attacher une Strategy de test sans passer
+ * par un vrai `HouseRules`/`HouseRuleStrategyFactory`.
+ */
+function makeContextReturning(strategy: ResistanceDistributionStrategy): GameRulesContext {
+  return { strategyFactory: { createResistanceDistributionStrategy: () => strategy } as HouseRuleStrategyFactory };
+}
+
+describe('Game — distributeResistance avec R1 (NoChampionshipPointsStrategy, RM-5)', () => {
+  function attachR1(game: EvenementTeleGame): void {
+    game.attachContext(makeContextReturning(new NoChampionshipPointsStrategy()));
+  }
+
+  it("un participant classé dernier mais ayant franchi des portes n'est PAS éligible sous R1", () => {
+    const participants = [1, 2, 3, 4, 5].map(
+      (id) => new CampaignParticipant(id, 40 + id, id, false, ParticipantStatus.VALIDATED),
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachR1(game);
+    // classified = ceil(5/2) = 3 → sous la règle PAR DÉFAUT, le rang 5 serait éligible
+    // (5 > 3). Sous R1, ses 3 PC d'exploit (portes franchies) l'en empêchent : son
+    // total de PC de la partie n'est pas zéro.
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4 },
+        { participantId: 5, rank: 5, gatesCrossed: 3 },
+      ],
+      participants,
+    );
+
+    const events = game.distributeResistance();
+
+    expect(events.some((e) => e.participantId === 5)).toBe(false);
+  });
+
+  it("un participant dont les seuls points viennent du bonus Favori du Public n'est PAS éligible sous R1", () => {
+    const { participant: p5, vehicle } = makeTestParticipant(5);
+    vehicle.markFavoriDuPublic();
+    const fillers = [1, 2, 3, 4].map(
+      (id) => new CampaignParticipant(id, 40 + id, id, false, ParticipantStatus.VALIDATED),
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachR1(game);
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4 },
+        { participantId: 5, rank: 5 },
+      ],
+      [...fillers, p5],
+    );
+    // Crédité après l'enregistrement du résultat (comme le fait réellement le wizard
+    // à l'écran Résolution) mais avant l'entrée en Atelier, donc pris en compte par
+    // distributeResistance() ci-dessous.
+    game.creditFavoriDuPublicBonus(p5, vehicle.id, true);
+
+    const events = game.distributeResistance();
+
+    expect(events.some((e) => e.participantId === 5)).toBe(false);
+  });
+
+  it('reste éligible sous R1 un participant sans aucun point de championnat — et lui seul', () => {
+    const participants = [1, 2, 3, 4, 5].map(
+      (id) => new CampaignParticipant(id, 40 + id, id, false, ParticipantStatus.VALIDATED),
+    );
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachR1(game);
+    // `Game.computePoints` renvoie 0 dès que `rank > classified` (3 ici), sans repli
+    // sur POINTS_TABLE — rangs 4 ET 5 partent donc tous deux à 0 PC de base. On les
+    // distingue ici en donnant des portes franchies au rang 4 (2 PC d'exploit) : seul
+    // le rang 5, resté à 0 PC au total, est éligible sous R1.
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4, gatesCrossed: 2 },
+        { participantId: 5, rank: 5 },
+      ],
+      participants,
+    );
+
+    const events = game.distributeResistance();
+
+    const resistanceEvents = events.filter(
+      (e): e is ResistanceContactedEvent => e instanceof ResistanceContactedEvent,
+    );
+    expect(resistanceEvents).toHaveLength(1);
+    expect(resistanceEvents[0].participantId).toBe(5);
+    expect(resistanceEvents[0].strategyKey).toBe('resistance_sans_points_championnat');
+  });
+});
+
 describe('Game — attachContext (sélection de Strategy interne au domaine)', () => {
   /** Strategy de test : personne n'est jamais éligible, quel que soit le rang. */
   const neverEligibleStrategy: ResistanceDistributionStrategy = {
     key: 'jamais_eligible',
     isEligible: () => false,
   };
-
-  function makeContextReturning(strategy: ResistanceDistributionStrategy): GameRulesContext {
-    return { strategyFactory: { createResistanceDistributionStrategy: () => strategy } as HouseRuleStrategyFactory };
-  }
 
   it('sans attachContext, résout la Strategy par défaut (contexte de secours)', () => {
     const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);

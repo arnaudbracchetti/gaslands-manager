@@ -37,6 +37,23 @@ export class ResistanceContactedEvent extends GameEvent {
   }
 
   describe(): string {
-    return `Contact avec la Résistance (+${ResistanceContactedEvent.PR_BONUS} PR)`;
+    const base = `Contact avec la Résistance (+${ResistanceContactedEvent.PR_BONUS} PR)`;
+    if (this.strategyKey === null) return base;
+    return `${base} — ${STRATEGY_KEY_LABELS[this.strategyKey] ?? this.strategyKey}`;
   }
 }
+
+/**
+ * Libellé affiché au journal pour chaque clé de stratégie de distribution
+ * automatique (`ResistanceDistributionStrategy.key`) — permet à un joueur qui
+ * compare deux parties de voir quelle règle s'est appliquée à chacune, la
+ * règle étant modifiable en cours de campagne (cf. RM-5). Même idiome que
+ * `WALLET_REASON_LABELS` (`wallet-movement.event.ts`) : mapping local clé →
+ * texte français, plutôt qu'une dépendance au catalogue de règles maison
+ * (le domaine ne le connaît jamais, cf. RM-1). Une clé absente de cette map
+ * (nouvelle règle maison pas encore reflétée ici) retombe sur la clé brute.
+ */
+const STRATEGY_KEY_LABELS: Record<string, string> = {
+  defaut: 'règle par défaut',
+  resistance_sans_points_championnat: 'règle maison : aucun point de championnat',
+};

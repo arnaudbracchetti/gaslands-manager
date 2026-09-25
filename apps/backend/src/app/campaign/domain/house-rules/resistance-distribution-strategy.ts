@@ -45,3 +45,20 @@ export class DefaultResistanceStrategy implements ResistanceDistributionStrategy
     return entry.rank > context.classified;
   }
 }
+
+/**
+ * R1 — « Points de Résistance aux équipes sans point de championnat » (règle
+ * maison, nom_interne `resistance_sans_points_championnat` au catalogue,
+ * cf. `database_init/data/regles-maison.yml`) : reçoit les PR tout
+ * participant dont le total de Points de Championnat de CETTE partie
+ * (classement + exploits + bonus Favori du Public, déjà sommés dans
+ * `entry.championshipPointsThisGame` par `Game.distributeResistance`) vaut
+ * zéro — le rang n'entre plus en jeu, contrairement à la règle par défaut.
+ */
+export class NoChampionshipPointsStrategy implements ResistanceDistributionStrategy {
+  readonly key: string = 'resistance_sans_points_championnat';
+
+  isEligible(entry: ResistanceEntry, _context: { classified: number }): boolean {
+    return entry.championshipPointsThisGame === 0;
+  }
+}
