@@ -5,7 +5,7 @@ priority: "high"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T00:00:00.000Z"
+modified: "2026-09-25T01:00:00.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
 order: "aX"
@@ -48,8 +48,8 @@ Strategy, sans refonte du mécanisme.
 | [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./done/rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
 | [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./done/rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — résolu |
 | [RM-6 — IHM : régler les règles maison d'une campagne](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — résolu |
-| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — prenable |
-| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 — encore bloquée par RM-7 |
+| [RM-7 — IHM : affichage en lecture seule](./done/rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — résolu |
+| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 ✅ — prenable |
 
 ## Décisions acquises
 
@@ -142,6 +142,20 @@ contrainte d'état" jusqu'à l'IHM, pas seulement l'API (cf. RM-3 ci-dessus). Pi
 rencontré : `[disabled]` posé sur un champ `[ngModel]` est écrasé par `FormsModule` à
 chaque détection de changements — corrigé via `[readonly]`, jamais géré par
 `ControlValueAccessor`. RM-7 débloquée.
+
+### RM-7 — IHM : affichage en lecture seule (résolu 2026-09-25)
+
+Tâche purement frontend — le backend exposait déjà `houseRules: string[]` sur les
+deux réponses concernées depuis RM-3 (`GET /api/campaigns/:id` et `GET
+/api/campaigns/by-code/:code`), et `HouseRulesSelector` (RM-6) portait déjà
+l'input `locked` prévu pour cet usage, sans aucune modification nécessaire.
+`CampaignDetail` affiche désormais le sélecteur verrouillé (`[locked]="true"`)
+dans une nouvelle section du rail, sans gate organisateur — visible par tout
+participant validé, contrairement au bouton "✏️ Modifier" qui reste réservé à
+l'organisateur. `CampaignJoin` ne chargeait pas encore le catalogue des règles
+maison ; ajouté sur le même modèle que `CampaignDetail` (chargement indépendant
+et non bloquant), sélecteur inséré juste après la ligne budget — même
+emplacement relatif que sur la page de détail. RM-8 débloquée.
 
 ### Session de cadrage, 2026-09-20
 

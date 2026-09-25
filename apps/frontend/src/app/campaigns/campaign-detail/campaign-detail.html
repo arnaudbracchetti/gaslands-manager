@@ -114,6 +114,15 @@
             (exportSheet)="onExportSheet($event)" />
         </section>
 
+        <!-- Règles maison actives — lecture seule, visible par tout participant
+             validé (RM-7). Réutilise le rendu construit en RM-6, verrouillé. -->
+        <section class="campaign-detail-section">
+          <app-house-rules-selector
+            [definitions]="houseRuleCatalog()"
+            [enabledKeys]="campaign()!.houseRules"
+            [locked]="true" />
+        </section>
+
       </aside>
 
       <!-- Programme Télé — affiché dans tous les états, visible par tous les

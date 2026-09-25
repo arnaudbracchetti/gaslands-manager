@@ -1078,13 +1078,15 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 
 **Modification de la campagne (nom/budget + règles maison)** : un bouton icône "✏️ Modifier" (`.campaign-detail-edit-btn`, mirroir de `.game-list__edit`), gated `canEditCampaign()` (`isOrganizer()` seul — RM-6 a retiré la condition `state === 'EN_CONSTRUCTION'`, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)), ouvre `EditCampaignModal` (état possédé par ce composant : `showEditCampaignModal`/`savingCampaign`/`editCampaignError`, plus `houseRuleCatalog`/`savingHouseRules`/`houseRulesError` pour les règles maison). Contrairement à `onConfirmChangeTeam` (qui ferme la modale avant même l'appel HTTP), `onConfirmEditCampaign()` **ne ferme pas** `showEditCampaignModal` en cas d'échec serveur - seul `editCampaignError` est renseigné (message domaine tel quel, ex. équipe fautive + son coût), pour que l'organisateur corrige la valeur sans rouvrir la modale. `error` (bandeau générique de la page) n'est jamais utilisé pour ce flux. `onHouseRuleToggled()` répond à l'output `houseRuleToggled` de la modale en appelant immédiatement `CampaignsService.setHouseRules()` (aucune contrainte d'état, contrairement à `onConfirmEditCampaign`).
 
+**Règles maison — affichage lecture seule (RM-7)** : dans le rail (`aside.campaign-detail-rail`), sous la section Participants, une section dédiée affiche `app-house-rules-selector` avec `[locked]="true"`, `[definitions]="houseRuleCatalog()"` (déjà chargé pour `EditCampaignModal`, réutilisé tel quel) et `[enabledKeys]="campaign()!.houseRules"` — sans gate `isOrganizer()`/`canEditCampaign()`, visible par tout participant validé, contrairement au bouton "✏️ Modifier".
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-detail` |
 | **Type** | Smart |
 | **Route** | `/campaigns/:id` |
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
-| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `ConfirmModal`, `Breadcrumb` |
+| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `HouseRulesSelector`, `ConfirmModal`, `Breadcrumb` |
 
 **Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`, `journalParticipant`, `participantJournalEntries`, `loadingParticipantJournal`.
 
@@ -1096,15 +1098,17 @@ Page de demande d'inscription à une campagne via son code d'invitation (`/campa
 
 **Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise toute option d'équipe dont `team.vehiclesCost` dépasse `summary()!.budget`. Un `effect()` sélectionne automatiquement la première équipe éligible (ni déjà engagée, ni hors budget) dès que le résumé de la campagne et les équipes de l'utilisateur sont tous deux chargés - ces deux appels HTTP étant indépendants (`loadSummary`/`loadUserTeams`), leur ordre d'arrivée n'est pas garanti.
 
+**Règles maison — affichage lecture seule (RM-7)** : juste après la ligne budget, `app-house-rules-selector` (`[locked]="true"`, `[enabledKeys]="summary()!.houseRules"`) — même principe que le budget, visible avant même de rejoindre la campagne. Le catalogue (`houseRuleCatalog`) est chargé indépendamment dans `ngOnInit()` (`CampaignsService.getHouseRules()`, non bloquant), sur le même modèle que `CampaignDetail`.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-join` |
 | **Type** | Smart |
 | **Route** | `/campaigns/join/:code` |
 | **Services** | `ActivatedRoute`, `CampaignsService`, `TeamsService` |
-| **Compose** | `QuickTeamCreate` |
+| **Compose** | `QuickTeamCreate`, `HouseRulesSelector` |
 
-**Signals clés** : `loading`, `summary`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
+**Signals clés** : `loading`, `summary`, `houseRuleCatalog`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
 
 ---
 
@@ -1295,8 +1299,9 @@ rappel du comportement par défaut) - cf. [spec/CAMPAIGN.md — Règles
 maison](../docs/spec/CAMPAIGN.md#règles-maison). Composant **dumb**, entièrement
 contrôlé par le parent (aucun état local mutable, aucun appel HTTP) - même pattern
 que `SponsorCarousel`. Porte le pattern `locked` du projet (cf. §Conventions en
-tête de ce document) pour être réutilisé tel quel en mode non modifiable (RM-7 —
-affichage lecture seule), sans dupliquer le rendu - `EquipmentManager`/
+tête de ce document), réutilisé tel quel en mode non modifiable par
+`CampaignDetail`/`CampaignJoin` (RM-7 — affichage lecture seule, `[locked]="true"`
+constant, sans `(toggled)` branché), sans dupliquer le rendu - `EquipmentManager`/
 `MountedEquipment` en sont d'autres exemples.
 
 | | |
@@ -1318,7 +1323,9 @@ affichage lecture seule), sans dupliquer le rendu - `EquipmentManager`/
 |-----|------|-------------|
 | `toggled` | `HouseRuleToggledEvent` | `{ nomInterne, enabled }` - émis à chaque bascule ; le parent décide comment persister (inclusion dans un DTO de création, ou sauvegarde immédiate en modale d'édition) |
 
-Utilisé par : `CampaignForm`, `EditCampaignModal`.
+Utilisé par : `CampaignForm`, `EditCampaignModal` (mode modifiable) ; `CampaignDetail`
+(rail, tout participant validé) et `CampaignJoin` (avant de rejoindre, comme le
+budget) en mode lecture seule (`[locked]="true"`).
 
 ---
 

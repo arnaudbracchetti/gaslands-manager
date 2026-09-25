@@ -10,7 +10,7 @@ import { of, throwError } from 'rxjs';
 import { CampaignJoin } from './campaign-join';
 import { CampaignsService } from '../campaigns.service';
 import { TeamsService } from '../../teams/teams.service';
-import { CampaignSummary } from '../campaign.model';
+import { CampaignSummary, HouseRuleDefinition } from '../campaign.model';
 import { Team, CreateTeamDto } from '../../teams/team.model';
 
 const mockSummary: CampaignSummary = {
@@ -22,6 +22,15 @@ const mockSummary: CampaignSummary = {
   budget: 50,
   houseRules: [],
 };
+
+const mockHouseRuleCatalog: HouseRuleDefinition[] = [
+  {
+    nom: 'Aucun point de championnat',
+    nom_interne: 'resistance_sans_points_championnat',
+    description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
+    description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
+  },
+];
 
 const mockTeams: Team[] = [
   {
@@ -41,6 +50,7 @@ describe('CampaignJoin Component', () => {
   let mockCampaignsService: {
     getByCode: ReturnType<typeof vi.fn>;
     requestJoin: ReturnType<typeof vi.fn>;
+    getHouseRules: ReturnType<typeof vi.fn>;
   };
   let mockTeamsService: {
     getAll: ReturnType<typeof vi.fn>;
@@ -51,6 +61,7 @@ describe('CampaignJoin Component', () => {
     mockCampaignsService = {
       getByCode: vi.fn().mockReturnValue(of(mockSummary)),
       requestJoin: vi.fn(),
+      getHouseRules: vi.fn().mockReturnValue(of([])),
     };
 
     mockTeamsService = {
@@ -177,6 +188,39 @@ describe('CampaignJoin Component', () => {
 
       expect(component.submitError()).toContain('création de l\'équipe');
       expect(component.creatingTeam()).toBe(false);
+    });
+  });
+
+  // ── Règles maison — lecture seule (RM-7) ─────────────────────────────────
+
+  describe('règles maison en lecture seule', () => {
+    it('affiche les règles maison actives de la saison, verrouillées, avant de rejoindre', async () => {
+      mockCampaignsService.getByCode.mockReturnValue(
+        of({ ...mockSummary, houseRules: ['resistance_sans_points_championnat'] }),
+      );
+      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [CampaignJoin],
+        providers: [
+          { provide: CampaignsService, useValue: mockCampaignsService },
+          { provide: TeamsService, useValue: mockTeamsService },
+          { provide: ActivatedRoute, useValue: { snapshot: { params: { code: 'abcdef123456' } } } },
+        ],
+      }).compileComponents();
+
+      const ruleFixture = TestBed.createComponent(CampaignJoin);
+      ruleFixture.detectChanges();
+
+      const el = ruleFixture.nativeElement as HTMLElement;
+      const selector = el.querySelector('app-house-rules-selector');
+      expect(selector).not.toBeNull();
+
+      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox.checked).toBe(true);
+      expect(checkbox.disabled).toBe(true);
+      expect(selector!.textContent).toContain('Comportement alternatif');
     });
   });
 });

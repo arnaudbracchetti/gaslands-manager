@@ -11,7 +11,7 @@ import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { CampaignDetail } from './campaign-detail';
 import { CampaignsService } from '../campaigns.service';
-import { Campaign } from '../campaign.model';
+import { Campaign, HouseRuleDefinition } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { AuthService } from '../../auth/auth.service';
@@ -43,6 +43,15 @@ const mockCurrentUser: User = {
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
+
+const mockHouseRuleCatalog: HouseRuleDefinition[] = [
+  {
+    nom: 'Aucun point de championnat',
+    nom_interne: 'resistance_sans_points_championnat',
+    description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
+    description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
+  },
+];
 
 const mockParticipants: CampaignParticipant[] = [
   { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
@@ -864,6 +873,50 @@ describe('CampaignDetail', () => {
 
       const el = fixture.nativeElement as HTMLElement;
       expect(el.querySelector('.campaign-state-card')).toBeNull();
+    });
+  });
+
+  // ── Règles maison — lecture seule (RM-7) ─────────────────────────────────
+
+  describe('règles maison en lecture seule', () => {
+    it('affiche les règles maison actives, verrouillées, pour l\'organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
+      );
+      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const selector = el.querySelector('app-house-rules-selector');
+      expect(selector).not.toBeNull();
+
+      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox.checked).toBe(true);
+      expect(checkbox.disabled).toBe(true);
+      expect(selector!.textContent).toContain('Comportement alternatif');
+    });
+
+    it('reste visible pour un non-organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant', houseRules: [] }));
+      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const selector = el.querySelector('app-house-rules-selector');
+      expect(selector).not.toBeNull();
+
+      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox.checked).toBe(false);
+      expect(checkbox.disabled).toBe(true);
+      expect(selector!.textContent).toContain('Comportement par défaut');
     });
   });
 });

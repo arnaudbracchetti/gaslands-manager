@@ -30,7 +30,7 @@ import { TeamsService } from '../../teams/teams.service';
 import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 import { EditCampaignModal } from '../edit-campaign-modal/edit-campaign-modal';
-import { HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
+import { HouseRulesSelector, HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
@@ -52,6 +52,7 @@ const STATE_LABELS: Record<CampaignState, string> = {
     InviteLink,
     ChangeTeamModal,
     EditCampaignModal,
+    HouseRulesSelector,
     ConfirmModal,
     Breadcrumb,
     Icon,

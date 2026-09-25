@@ -1,11 +1,11 @@
 ---
 id: "rm-8-documentation-regles-maison-2026-09-20"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-20T10:02:28.000Z"
+modified: "2026-09-25T00:00:00.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "documentation", "wayfinder:task"]
 order: "ae"
@@ -40,5 +40,6 @@ Mettre la documentation au niveau de ce qui a été livré.
 
 Bloqué par [RM-5](./done/rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) (**résolue**),
 [RM-6](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) (**résolue**) et
-[RM-7](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) — la documentation décrit
-ce qui a effectivement été livré. Encore bloquée par RM-7.
+[RM-7](./done/rm-7-ihm-affichage-lecture-seule-2026-09-20.md) (**résolue**) — la
+documentation décrit ce qui a effectivement été livré. **Les trois sont
+résolues — prenable.**
