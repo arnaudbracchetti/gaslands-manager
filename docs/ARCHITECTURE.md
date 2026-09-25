@@ -103,9 +103,11 @@ apps/backend/src/app/
     ├── campaign.controller.ts       ← Controller HTTP unique (39 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
     ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
+    ├── house-rule-catalog.service.ts ← Catalogue de règles maison (singleton en mémoire, §3.3)
     ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome, WreckTable, IRandomizer
     │   ├── events/      ← 8 événements concrets (GoF Command)
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
+    │   ├── house-rules/ ← HouseRules (Value Object), HouseRuleStrategyFactory (Abstract Factory), ResistanceDistributionStrategy + 2 implémentations (GoF Strategy)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckTable (domain service, 9 lignes + événements), WreckOutcome (Value Object), IRandomizer (port hexagonal)
     ├── application/     ← 29 Use Cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing)
@@ -126,6 +128,18 @@ apps/backend/src/app/
 > `assertOrganizer` / `assertParticipant` (`application/authorization.helpers.ts`) — helpers
 > qui opèrent sur `campaign.participants` après replay, sans accès à la base. Les endpoints
 > en **lecture** délèguent à `CampaignQueryService` (accès ORM direct, CQRS).
+
+> **`HouseRuleCatalogService`** (`campaign/`) est un **quatrième exemple** du même
+> pattern, miroir fichier pour fichier de `ScenarioCatalogService` ci-dessus :
+> charge `database_init/data/regles-maison.yml` au démarrage, l'indexe par
+> `nom_interne`, expose `getAll()`/`getByNomInterne()`/`validKeys()`. Service dédié
+> plutôt qu'extension de `CatalogService` (module équipe) ou de
+> `ScenarioCatalogService` : une règle maison n'a de lien ni avec les sponsors, ni
+> avec l'équipement, ni avec les scénarios (cf.
+> [DOMAIN_MODEL.md §2](DOMAIN_MODEL.md#2-catalogue-en-mémoire)). `validKeys()` est
+> l'instantané passé à `HouseRules.fromUserInput()` par tout use case qui règle les
+> règles maison d'une campagne (création, modification) — cf. §3.8 ci-dessous pour
+> le mécanisme de Strategy qui consomme ensuite ce réglage.
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`. Les modules domaine complexes suivent l'architecture DDD décrite en §3.4.
 
@@ -320,8 +334,13 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (39 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
-| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
-| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `distributeResistance` — Points de Résistance automatiques, hook polymorphe appelé à l'entrée en Atelier, cf. RM-4 —, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
+| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`), `setHouseRules`, implémente `GameRulesContext` (`strategyFactory`, attaché à chaque `Game` via `attachContext`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
+| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `distributeResistance` — Points de Résistance automatiques, hook polymorphe appelé à l'entrée en Atelier, cf. RM-4, critère résolu via `this.context.strategyFactory` cf. RM-5 —, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
+| `apps/backend/src/app/campaign/domain/games/game-context.ts` | `GameRulesContext` — interface étroite exposée par `Campaign` à chaque `Game` (`attachContext`), pour que `Game` résolve sa propre politique de jeu (Strategy de règle maison) sans jamais recevoir cette décision en paramètre depuis un use case, cf. §3.8 |
+| `apps/backend/src/app/campaign/house-rule-catalog.service.ts` | Catalogue de règles maison — singleton en mémoire (§3.3), miroir de `scenario-catalog.service.ts` |
+| `apps/backend/src/app/campaign/domain/house-rules/house-rules.ts` | `HouseRules` — Value Object immuable, ensemble des clés (`nom_interne`) activées sur une campagne. Deux fabriques : `fromPersisted` (hydratation, tolérante) / `fromUserInput` (saisie, stricte — rejette une clé absente du catalogue) |
+| `apps/backend/src/app/campaign/domain/house-rules/house-rule-strategy.factory.ts` | `HouseRuleStrategyFactory` — Abstract Factory unique pour toutes les règles maison, une méthode `create…Strategy()` par point de calcul concerné (`createResistanceDistributionStrategy()` aujourd'hui). Registre pur `HOUSE_RULE_REGISTRY`, cf. §3.8 |
+| `apps/backend/src/app/campaign/domain/house-rules/resistance-distribution-strategy.ts` | `ResistanceDistributionStrategy` (interface) + `DefaultResistanceStrategy` (règle par défaut US-F1) + `NoChampionshipPointsStrategy` (règle maison R1) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -384,8 +403,12 @@ d'orchestration des use cases (absent de DOMAIN_MODEL.md) :
 
 ```
 EnterAtelierUseCase (partie PLANIFIE → ATELIER)
-  ├─ game.distributeResistance(strategy) — PR automatiques (US-F1, RM-4), no-op
-  │    hors Événement Télévisé ; garde d'idempotence si déjà distribué
+  ├─ game.distributeResistance() — PR automatiques (US-F1, RM-4), no-op
+  │    hors Événement Télévisé ; garde d'idempotence si déjà distribué.
+  │    Sans paramètre : résout elle-même sa Strategy via this.context.
+  │    strategyFactory.createResistanceDistributionStrategy() — règle par
+  │    défaut ou règle maison active sur ce point, cf. §Règles maison ci-dessous
+  │    et jamais choisie par ce use case (RM-5)
   │    └─ persisté via appendEvents(gameId, events), AVANT la ligne suivante
   └─ campaign.enterAtelier(gameId)
        ├─ clôt automatiquement une autre partie encore en ATELIER, s'il y en a une
@@ -397,6 +420,16 @@ CloseAtelierUseCase (partie ATELIER → JOUE, organisateur, manuel)
   └─ campaign.closeAtelier(gameId)
        └─ persisté via saveCampaign(campaign)
 ```
+
+#### Règles maison (RM-1 à RM-7)
+
+Mécanisme complet (Strategy, Abstract Factory, `GameRulesContext`, gel du calcul,
+règle R1) : [DOMAIN_MODEL.md §4 — Règles maison](DOMAIN_MODEL.md#règles-maison--strategy-de-distribution-des-points-de-résistance)
+et [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison). Catalogue :
+`HouseRuleCatalogService` (note ci-dessus, §3.1). Réglage : `Campaign.houseRules`
+(Value Object `HouseRules`), exposé par `PUT /api/campaigns/:id/house-rules`
+(sans contrainte d'état, contrairement à nom/budget) et à la création
+(`POST /api/campaigns`).
 
 Pourquoi le replay reconstitue les événements d'atelier dans le bon ordre
 sans mécanisme supplémentaire (`order` fractionnaire) : voir

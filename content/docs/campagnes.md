@@ -61,11 +61,32 @@ points d'exploit — portes franchies, véhicules ennemis détruits). Il se met
 à jour après chaque partie enregistrée via le
 [Programme Télé](/documentation/programme-tele).
 
+## Règles maison
+
+L'organisateur peut activer, une par une, des variantes optionnelles du
+règlement officiel — les **règles maison**. Chaque règle se présente comme
+une case à cocher, avec une courte explication qui change selon qu'elle est
+cochée (comportement alternatif) ou non (rappel du comportement par défaut) ;
+le détail de chaque règle disponible s'affiche directement à l'écran de la
+campagne, pas ici.
+
+L'organisateur peut les régler à tout moment de la vie de la campagne — en
+construction, en cours, ou même une fois terminée, sans les contraintes qui
+s'appliquent au nom et au budget. Tous les participants voient les règles
+actives, y compris avant même de rejoindre (sur l'écran d'inscription par
+code d'invitation).
+
+Une partie déjà jouée n'est en revanche **jamais recalculée** : le réglage
+actif au moment où elle se termine reste celui qui s'applique à elle, pour
+toujours — même si l'organisateur change d'avis juste après. Changer une
+règle n'affecte donc que les parties qui n'ont pas encore été jouées.
+
 ## Points de Résistance
 
 Une mécanique discrète : tout participant qui termine hors du haut du
-classement d'une partie reçoit automatiquement des Points de Résistance.
-Le total exact reste volontairement **secret** — personne, pas même vous, ne
-peut le consulter directement. Il alimente toutefois un compteur dérivé
-visible dans votre [Atelier](/documentation/atelier#points-de-sabotage), les
-Points de sabotage.
+classement d'une partie reçoit automatiquement des Points de Résistance —
+sauf si une [règle maison](#regles-maison) active sur la campagne change ce
+critère. Le total exact reste volontairement **secret** — personne, pas même
+vous, ne peut le consulter directement. Il alimente toutefois un compteur
+dérivé visible dans votre [Atelier](/documentation/atelier#points-de-sabotage),
+les Points de sabotage.

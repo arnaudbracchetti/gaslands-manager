@@ -12,7 +12,7 @@ order: "ab"
 ---
 # RM-5 — Règle R1 : stratégie « aucun point de championnat »
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

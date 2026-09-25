@@ -12,7 +12,7 @@ order: "ad"
 ---
 # RM-7 — IHM : afficher les règles maison actives en lecture seule
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

@@ -12,7 +12,7 @@ order: "a1"
 ---
 # RM-3 — Persistance du réglage des règles maison sur la campagne
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

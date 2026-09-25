@@ -1,14 +1,14 @@
 ---
 id: "regles-maison-carte-2026-09-20"
-status: "backlog"
+status: "done"
 priority: "high"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T01:00:00.000Z"
-completedAt: null
+modified: "2026-09-25T02:00:00.000Z"
+completedAt: "2026-09-25T02:00:00.000Z"
 labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
-order: "aX"
+order: "af"
 ---
 # Carte — Règles maison : mécanisme par campagne et première règle
 
@@ -42,21 +42,21 @@ Strategy, sans refonte du mécanisme.
 
 | Carte | Dépend de |
 |---|---|
-| [RM-1 — Conception détaillée du mécanisme (DDD)](./done/rm-1-conception-ddd-regles-maison-2026-09-20.md) | — (résolu) |
-| [RM-2 — Catalogue YAML des règles maison](./done/rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | - (résolu) |
-| [RM-3 — Persistance du réglage sur la campagne](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ — résolu |
-| [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./done/rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
-| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./done/rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — résolu |
-| [RM-6 — IHM : régler les règles maison d'une campagne](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — résolu |
-| [RM-7 — IHM : affichage en lecture seule](./done/rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — résolu |
-| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 ✅ — prenable |
+| [RM-1 — Conception détaillée du mécanisme (DDD)](./rm-1-conception-ddd-regles-maison-2026-09-20.md) | — (résolu) |
+| [RM-2 — Catalogue YAML des règles maison](./rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | - (résolu) |
+| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ — résolu |
+| [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
+| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — résolu |
+| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — résolu |
+| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — résolu |
+| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 ✅ — résolu |
 
 ## Décisions acquises
 
 ### RM-1 — Conception détaillée du mécanisme (résolu 2026-09-21)
 
 Document de conception :
-[docs/plans/2026-09-21-regles-maison-mecanisme-design.md](../../docs/plans/2026-09-21-regles-maison-mecanisme-design.md).
+[docs/plans/2026-09-21-regles-maison-mecanisme-design.md](../../../docs/plans/2026-09-21-regles-maison-mecanisme-design.md).
 Treize questions tranchées via les skills `ddd`/`grilling` — réglage porté par un
 Value Object `HouseRules` (ensemble de clés activées, deux fabriques
 lecture/écriture, colonne `jsonb` sur `campaigns`), catalogue en service singleton
@@ -156,6 +156,29 @@ l'organisateur. `CampaignJoin` ne chargeait pas encore le catalogue des règles
 maison ; ajouté sur le même modèle que `CampaignDetail` (chargement indépendant
 et non bloquant), sélecteur inséré juste après la ligne budget — même
 emplacement relatif que sur la page de détail. RM-8 débloquée.
+
+### RM-8 — Documentation des règles maison (résolu 2026-09-25)
+
+Les six documents ciblés par la carte ont été mis au niveau de ce qui a
+effectivement été livré (RM-1 à RM-7) — `docs/COMPONENTS.md` était déjà à jour
+depuis RM-6/RM-7, aucune modification n'y a été nécessaire. Points ajoutés
+ailleurs : le mécanisme Strategy par point de calcul (`HouseRuleStrategyFactory`,
+un seul point à ce jour) et la règle R1 elle-même dans
+[spec/CAMPAIGN.md](../../../docs/spec/CAMPAIGN.md#règles-maison) ; une nouvelle
+sous-section dédiée avec son propre diagramme de classes (quatrième pattern GoF,
+aux côtés de Command/Invoker/Receiver) dans
+[DOMAIN_MODEL.md](../../../docs/DOMAIN_MODEL.md#règles-maison--strategy-de-distribution-des-points-de-résistance),
+plus le catalogue `HouseRuleDefinition` ajouté au diagramme des catalogues en
+mémoire ; `HouseRuleCatalogService` documenté comme quatrième exemple du pattern
+singleton-en-mémoire dans [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md), dont le
+diagramme de flux `EnterAtelierUseCase` corrigé (la signature de
+`distributeResistance()` documentée à l'origine par RM-4 ne correspondait plus à
+l'implémentation réelle depuis RM-5) ; une section « Règles maison » côté
+documentation **utilisateur** ([content/docs/campagnes.md](../../../content/docs/campagnes.md))
+expliquant le mécanisme sans recopier la liste des règles (portée par le
+catalogue, affichée à l'écran) ; une ligne de suivi dans
+[SPECIFICATION.md](../../../docs/SPECIFICATION.md). Toutes les cartes filles
+(RM-1 à RM-8) sont désormais résolues — carte parente terminée.
 
 ### Session de cadrage, 2026-09-20
 

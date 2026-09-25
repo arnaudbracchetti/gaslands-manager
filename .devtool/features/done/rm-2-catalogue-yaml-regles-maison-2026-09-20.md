@@ -12,7 +12,7 @@ order: "aY"
 ---
 # RM-2 - Catalogue YAML des règles maison
 
-Carte parente : [Carte - Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte - Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

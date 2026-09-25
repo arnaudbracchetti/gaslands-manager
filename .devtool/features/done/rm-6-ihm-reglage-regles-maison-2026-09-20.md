@@ -12,7 +12,7 @@ order: "ac"
 ---
 # RM-6 — IHM : régler les règles maison d'une campagne
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

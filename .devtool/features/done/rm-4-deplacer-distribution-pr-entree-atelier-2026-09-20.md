@@ -12,7 +12,7 @@ order: "aa"
 ---
 # RM-4 — Déplacer la distribution des Points de Résistance vers l'entrée en Atelier
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 

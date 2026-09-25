@@ -129,6 +129,49 @@ rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différent
   nom/budget). Cohérent avec la route backend dédiée et son absence de contrainte
   d'état : les règles maison ne rejoignent jamais `UpdateCampaignDto`.
 
+**Mécanisme de calcul — Strategy par point** : activer une case ne fait rien par
+elle-même — une règle maison ne prend effet que si un point de calcul du domaine la
+consulte explicitement. Un seul point existe à ce jour : la distribution automatique
+des Points de Résistance (cf. [Limitations connues — Points de
+Résistance](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) ci-dessous).
+`HouseRuleStrategyFactory` (`domain/house-rules/house-rule-strategy.factory.ts`,
+construite depuis `Campaign.houseRules`, exposée via le getter `Campaign.
+strategyFactory` — jamais choisie par un use case, cf. [ARCHITECTURE.md §3.4,
+« Convention projet — qui sélectionne une Strategy
+»](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)) résout, pour ce
+point, soit la règle par défaut soit la règle maison qui la remplace si elle est
+active (au plus une à la fois par point — deux règles maison actives sur le même
+point lèvent une `DomainException`). Ajouter une seconde règle maison sur ce MÊME
+point demande une nouvelle classe Strategy et une entrée dans le registre pur du
+domaine (`HOUSE_RULE_REGISTRY`) ; ajouter une règle maison sur un NOUVEAU point de
+calcul demande en plus une nouvelle méthode sur la Factory — jamais de refonte du
+mécanisme lui-même.
+
+**R1 — « Points de Résistance aux équipes sans point de championnat »**
+(`nom_interne resistance_sans_points_championnat`, seule règle maison du catalogue
+à ce jour) : remplace, pour la distribution automatique des Points de Résistance,
+le critère par défaut (participant classé dans la seconde moitié du classement) par
+« participant dont le total de Points de Championnat de CETTE partie — classement +
+exploits + bonus Favori du Public — vaut zéro » : le rang n'entre plus en jeu.
+Montant inchangé (+3 PR), Événement Télévisé uniquement (comme la règle par
+défaut). Portée par `NoChampionshipPointsStrategy`
+(`domain/house-rules/resistance-distribution-strategy.ts`).
+
+**Gel au moment du calcul, jamais recalculé après coup** : la règle maison
+consultée est celle active **au moment où `Game.distributeResistance()`
+s'exécute** (entrée en Atelier — cf. [§Cycle de vie d'une partie et phase
+Atelier](#cycle-de-vie-dune-partie-et-phase-atelier)) ; le résultat (crédit ou non
+de PR, tracé par `ResistanceContactedEvent.strategyKey`) devient ensuite un fait
+journalisé comme un autre — le replay le réapplique tel quel, il ne le recalcule
+jamais. Changer le réglage après cette partie n'affecte donc que les parties
+suivantes, jamais celle déjà résolue, même si la campagne revient en
+`EN_CONSTRUCTION` entre-temps (transitions bidirectionnelles, cf. §Vue
+d'ensemble). `strategyKey` vaut `"defaut"` pour la règle par défaut (jamais
+`null` pour une distribution automatique — `null` reste réservé au contact
+Résistance manuel, route dédiée organisateur) ; `describe()` de l'événement
+mentionne la règle appliquée, pour qu'un joueur puisse comparer deux parties
+d'une même campagne malgré un réglage modifiable en cours de route.
+
 ---
 
 ## Inscription
@@ -1120,7 +1163,9 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   du lancement jusqu'à l'enregistrement de son résultat.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
   **automatique** : `Game.distributeResistance()` crédite tout participant hors
-  du top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni
+  du top `classified` (rang > `ceil(n/2)`) — critère **par défaut**, remplaçable
+  pour une campagne donnée par la règle maison R1 (cf. [§Règles
+  maison](#règles-maison) ci-dessus) —, sans action de l'organisateur ni
   écran dédié — cohérent avec le secret de cette mécanique. Le calcul a lieu à
   l'entrée en Atelier (`EnterAtelierUseCase`, fin du wizard), **pas** à
   l'enregistrement du résultat (`Game.recordResult`, qui ne s'en occupe plus

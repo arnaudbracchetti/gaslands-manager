@@ -12,7 +12,7 @@ order: "a1"
 ---
 # RM-1 — Conception détaillée du mécanisme de règles maison (DDD)
 
-Carte parente : [Carte — Règles maison](../regles-maison-carte-2026-09-20.md)
+Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
 
 ## Question
 
