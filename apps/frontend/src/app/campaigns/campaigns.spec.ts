@@ -30,6 +30,7 @@ const mockCampaigns: Campaign[] = [
     updatedAt: '2025-01-01T00:00:00.000Z',
     participantCount: 1,
     budget: 50,
+    houseRules: [],
     myRole: 'organizer',
   },
 ];
@@ -54,6 +55,7 @@ describe('Campaigns Component', () => {
     create: ReturnType<typeof vi.fn>;
     getPending: ReturnType<typeof vi.fn>;
     getOrganizingPendingRequests: ReturnType<typeof vi.fn>;
+    getHouseRules: ReturnType<typeof vi.fn>;
   };
   let mockTeamsService: {
     getAll: ReturnType<typeof vi.fn>;
@@ -66,6 +68,7 @@ describe('Campaigns Component', () => {
       create: vi.fn(),
       getPending: vi.fn().mockReturnValue(of([])),
       getOrganizingPendingRequests: vi.fn().mockReturnValue(of([])),
+      getHouseRules: vi.fn().mockReturnValue(of([])),
     };
 
     mockTeamsService = {

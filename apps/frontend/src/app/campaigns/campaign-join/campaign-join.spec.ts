@@ -20,6 +20,7 @@ const mockSummary: CampaignSummary = {
   organizerName: 'Jean Dupont',
   participantCount: 3,
   budget: 50,
+  houseRules: [],
 };
 
 const mockTeams: Team[] = [

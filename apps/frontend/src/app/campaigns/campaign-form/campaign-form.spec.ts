@@ -11,7 +11,16 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { CampaignForm } from './campaign-form';
 import { Team, CreateTeamDto } from '../../teams/team.model';
-import { CreateCampaignDto } from '../campaign.model';
+import { CreateCampaignDto, HouseRuleDefinition } from '../campaign.model';
+
+const mockHouseRules: HouseRuleDefinition[] = [
+  {
+    nom: 'Aucun point de championnat',
+    nom_interne: 'resistance_sans_points_championnat',
+    description_decochee: '<p>Décoché.</p>',
+    description_cochee: '<p>Coché.</p>',
+  },
+];
 
 const mockTeams: Team[] = [
   {
@@ -87,7 +96,42 @@ describe('CampaignForm', () => {
     component.formTeamId.set(7);  // vehiclesCost 30 ≤ budget par défaut 50
     component.saveForm();
 
-    expect(emitted).toEqual([{ name: 'Coupe Verney', budget: 50, teamId: 7 }]);
+    expect(emitted).toEqual([{ name: 'Coupe Verney', budget: 50, houseRules: [], teamId: 7 }]);
+  });
+
+  // ── Règles maison ─────────────────────────────────────────────────────────
+
+  it('inclut les règles maison cochées dans le DTO émis', () => {
+    fixture.componentRef.setInput('teams', mockTeams);
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.detectChanges();
+
+    const emitted: CreateCampaignDto[] = [];
+    outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
+
+    fixture.nativeElement.querySelector('input[type="checkbox"]').click();
+    fixture.detectChanges();
+
+    component.formName.set('Coupe Verney');
+    component.saveForm();
+
+    expect(emitted).toEqual([
+      { name: 'Coupe Verney', budget: 50, houseRules: ['resistance_sans_points_championnat'] },
+    ]);
+  });
+
+  it('retire une règle maison décochée avant soumission', () => {
+    fixture.componentRef.setInput('teams', mockTeams);
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    checkbox.click();
+    fixture.detectChanges();
+    checkbox.click();
+    fixture.detectChanges();
+
+    expect(component.formHouseRules()).toEqual([]);
   });
 
   // ── Budget des équipes (éligibilité) ─────────────────────────────────────

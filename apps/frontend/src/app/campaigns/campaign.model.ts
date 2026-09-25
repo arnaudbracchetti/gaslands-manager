@@ -30,6 +30,8 @@ export interface Campaign {
   myTeamName?: string;
   /** Budget en jerricans imposé à toutes les équipes de la campagne - remplace Team.cans pour tout calcul en contexte campagne. */
   budget: number;
+  /** Clés (nom_interne) des règles maison actuellement activées sur cette campagne. */
+  houseRules: string[];
 }
 
 /** Corps de la requête POST /api/campaigns */
@@ -39,6 +41,8 @@ export interface CreateCampaignDto {
   teamId?: number;
   /** Budget en jerricans imposé aux équipes - défaut backend 50 si absent. */
   budget?: number;
+  /** Clés (nom_interne) des règles maison à activer dès la création - défaut backend aucune. */
+  houseRules?: string[];
 }
 
 /** Informations minimales retournées par GET /api/campaigns/by-code/:code */
@@ -50,6 +54,29 @@ export interface CampaignSummary {
   participantCount: number;
   /** Budget en jerricans imposé aux équipes - permet de griser les équipes hors budget avant inscription. */
   budget: number;
+  /** Clés (nom_interne) des règles maison actives - affichées avant même de rejoindre (cf. RM-7). */
+  houseRules: string[];
+}
+
+/**
+ * Règle maison du catalogue - miroir de HouseRuleDefinition (backend
+ * `apps/backend/src/app/campaign/house-rule.interfaces.ts`). Les deux champs
+ * `description_*` sont déjà convertis Markdown → HTML au chargement du
+ * catalogue backend (cf. HouseRuleCatalogService) - se lient donc via
+ * [innerHTML], jamais en texte brut.
+ */
+export interface HouseRuleDefinition {
+  nom: string;
+  nom_interne: string;
+  /** Ligne affichée case décochée - rappel du comportement par défaut. */
+  description_decochee: string;
+  /** Ligne affichée case cochée - comportement alternatif appliqué par la règle. */
+  description_cochee: string;
+}
+
+/** Corps de la requête PUT /api/campaigns/:id/house-rules - aucune contrainte d'état. */
+export interface SetHouseRulesDto {
+  houseRules: string[];
 }
 
 /** Corps de la requête POST /api/campaigns/:id/participants */

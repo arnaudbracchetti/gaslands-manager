@@ -3,13 +3,16 @@
  *
  * Vérifie le pré-remplissage depuis `campaign`, la validation locale (nom
  * obligatoire), l'émission du DTO au clic Enregistrer, l'émission de
- * `cancelled` au clic Annuler, et l'affichage de l'erreur (locale prioritaire
- * sur l'erreur serveur transmise par le parent).
+ * `cancelled` au clic Annuler, l'affichage de l'erreur (locale prioritaire
+ * sur l'erreur serveur transmise par le parent), la désactivation de nom/
+ * budget hors EN_CONSTRUCTION, et la bascule des règles maison (auto-save,
+ * aucune contrainte d'état).
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { EditCampaignModal } from './edit-campaign-modal';
-import type { Campaign, UpdateCampaignDto } from '../campaign.model';
+import type { Campaign, UpdateCampaignDto, HouseRuleDefinition } from '../campaign.model';
+import type { HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
 
 const mockCampaign: Campaign = {
   id: 1,
@@ -21,7 +24,17 @@ const mockCampaign: Campaign = {
   participantCount: 2,
   myRole: 'organizer',
   budget: 50,
+  houseRules: [],
 };
+
+const mockHouseRules: HouseRuleDefinition[] = [
+  {
+    nom: 'Aucun point de championnat',
+    nom_interne: 'resistance_sans_points_championnat',
+    description_decochee: '<p>Décoché.</p>',
+    description_cochee: '<p>Coché.</p>',
+  },
+];
 
 describe('EditCampaignModal', () => {
   let component: EditCampaignModal;
@@ -111,5 +124,96 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     expect(component.displayError()).toContain('obligatoire');
+  });
+
+  // ── Nom/budget réservés à EN_CONSTRUCTION ────────────────────────────────
+
+  it('active les champs nom/budget quand la campagne est EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('campaign', mockCampaign);
+    fixture.detectChanges();
+
+    expect(component.canEditNameBudget()).toBe(true);
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-name');
+    expect(nameInput.readOnly).toBe(false);
+  });
+
+  it('rend nom/budget en lecture seule et affiche une note hors EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'EN_COURS' });
+    fixture.detectChanges();
+
+    expect(component.canEditNameBudget()).toBe(false);
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-name');
+    const budgetInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-budget');
+    expect(nameInput.readOnly).toBe(true);
+    expect(budgetInput.readOnly).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('ne sont modifiables qu\'en construction');
+  });
+
+  it('désactive le bouton Enregistrer hors EN_CONSTRUCTION, pour ne jamais soumettre un nom/budget inchangés', () => {
+    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'EN_COURS' });
+    fixture.detectChanges();
+
+    const confirmBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.ms-modal__confirm');
+    expect(confirmBtn.disabled).toBe(true);
+  });
+
+  it('garde le bouton Enregistrer actif quand la campagne est EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('campaign', mockCampaign);
+    fixture.detectChanges();
+
+    const confirmBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.ms-modal__confirm');
+    expect(confirmBtn.disabled).toBe(false);
+  });
+
+  // ── Règles maison (auto-save, aucune contrainte d'état) ──────────────────
+
+  it('passe les règles maison actives de la campagne à HouseRulesSelector', () => {
+    fixture.componentRef.setInput('campaign', { ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] });
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('émet houseRuleToggled au clic sur une règle maison', () => {
+    fixture.componentRef.setInput('campaign', mockCampaign);
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.detectChanges();
+
+    const emitted: HouseRuleToggledEvent[] = [];
+    outputToObservable(component.houseRuleToggled).subscribe((e) => emitted.push(e));
+
+    fixture.nativeElement.querySelector('input[type="checkbox"]').click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([{ nomInterne: 'resistance_sans_points_championnat', enabled: true }]);
+  });
+
+  it('reste modifiable pour les règles maison même hors EN_CONSTRUCTION', () => {
+    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'TERMINEE' });
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    expect(checkbox.disabled).toBe(false);
+  });
+
+  it('désactive les règles maison quand savingHouseRules est vrai', () => {
+    fixture.componentRef.setInput('campaign', mockCampaign);
+    fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
+    fixture.componentRef.setInput('savingHouseRules', true);
+    fixture.detectChanges();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    expect(checkbox.disabled).toBe(true);
+  });
+
+  it('affiche l\'erreur serveur dédiée aux règles maison', () => {
+    fixture.componentRef.setInput('campaign', mockCampaign);
+    fixture.componentRef.setInput('houseRulesError', 'Erreur lors de la sauvegarde des règles maison.');
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Erreur lors de la sauvegarde des règles maison.');
   });
 });

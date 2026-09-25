@@ -38,7 +38,7 @@ Mettre la documentation au niveau de ce qui a été livré.
 
 ## Dépendances
 
-Bloqué par [RM-5](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md),
-[RM-6](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) et
+Bloqué par [RM-5](./done/rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) (**résolue**),
+[RM-6](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) (**résolue**) et
 [RM-7](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) — la documentation décrit
-ce qui a effectivement été livré.
+ce qui a effectivement été livré. Encore bloquée par RM-7.

@@ -44,6 +44,18 @@ input {
     border-color: var(--tb-danger);
     box-shadow: var(--focus-ring-glow);
   }
+
+  &.is-readonly {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.form-hint {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  margin-top: 6px;
 }
 
 .form-error {
@@ -67,4 +79,8 @@ input {
   @include bp.mobile {
     grid-template-columns: 1fr;
   }
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
 }

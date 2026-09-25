@@ -29,15 +29,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Team, CreateTeamDto, DEFAULT_CANS } from '../../teams/team.model';
-import { CreateCampaignDto } from '../campaign.model';
+import { CreateCampaignDto, HouseRuleDefinition } from '../campaign.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 import { Icon } from '../../shared/icon/icon';
 import { ModalShell } from '../../shared/modal-shell/modal-shell';
+import { HouseRulesSelector, HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
 
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [FormsModule, QuickTeamCreate, Icon, ModalShell],
+  imports: [FormsModule, QuickTeamCreate, Icon, ModalShell, HouseRulesSelector],
   templateUrl: './campaign-form.html',
   styleUrl: './campaign-form.scss',
 })
@@ -53,6 +54,9 @@ export class CampaignForm {
   /** Vrai pendant que le parent attend la réponse de l'API de création d'équipe. */
   creatingTeam: InputSignal<boolean> = input(false);
 
+  /** Catalogue des règles maison (GET /api/catalog/regles-maison). */
+  houseRuleCatalog: InputSignal<HouseRuleDefinition[]> = input<HouseRuleDefinition[]>([]);
+
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   saved: OutputEmitterRef<CreateCampaignDto> = output<CreateCampaignDto>();
@@ -67,6 +71,8 @@ export class CampaignForm {
   formTeamId: WritableSignal<number | null> = signal<number | null>(null);
   /** Budget en jerricans imposé à toutes les équipes de la campagne - pré-rempli au défaut équipe (50). */
   formBudget: WritableSignal<number> = signal(DEFAULT_CANS);
+  /** Clés (nom_interne) des règles maison cochées dans le formulaire. */
+  formHouseRules: WritableSignal<string[]> = signal<string[]>([]);
 
   /** Message d'erreur de validation locale */
   formError: WritableSignal<string> = signal('');
@@ -115,7 +121,19 @@ export class CampaignForm {
 
     this.formError.set('');
     // teamId undefined si aucune équipe sélectionnée (organisateur sans équipe)
-    this.saved.emit({ name, budget, ...(teamId !== null ? { teamId } : {}) });
+    this.saved.emit({
+      name,
+      budget,
+      houseRules: this.formHouseRules(),
+      ...(teamId !== null ? { teamId } : {}),
+    });
+  }
+
+  /** Bascule une règle maison dans l'état local du formulaire. */
+  onHouseRuleToggled({ nomInterne, enabled }: HouseRuleToggledEvent): void {
+    this.formHouseRules.update((keys) =>
+      enabled ? [...keys, nomInterne] : keys.filter((k) => k !== nomInterne),
+    );
   }
 
   /** Ferme le formulaire sans sauvegarder. */

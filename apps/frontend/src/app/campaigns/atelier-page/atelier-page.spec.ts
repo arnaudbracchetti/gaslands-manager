@@ -26,6 +26,7 @@ const mockCampaign: Campaign = {
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 2,
   budget: 50,
+  houseRules: [],
   myRole: 'participant',
 };
 

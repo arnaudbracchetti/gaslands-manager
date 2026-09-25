@@ -1,11 +1,11 @@
 ---
 id: "rm-7-ihm-affichage-lecture-seule-2026-09-20"
-status: "backlog"
+status: "todo"
 priority: "medium"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-20T10:02:28.000Z"
+modified: "2026-09-25T00:00:00.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "frontend", "wayfinder:task"]
 order: "ad"
@@ -31,7 +31,8 @@ Un joueur doit savoir sous quelles règles il joue, sans pouvoir les modifier.
 
 ## Dépendances
 
-Bloqué par [RM-6](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) — le rendu
-partagé y est construit — et
+Bloqué par [RM-6](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) — le rendu
+partagé y est construit (**résolue**) — et
 [RM-3](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) — la route de
-consultation par code doit exposer le réglage (**résolue**).
+consultation par code doit exposer le réglage (**résolue**). **Les deux sont
+résolues — prenable.**

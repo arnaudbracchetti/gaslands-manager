@@ -27,6 +27,7 @@ const mockCampaign: Campaign = {
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 2,
   budget: 50,
+  houseRules: [],
   myRole: 'organizer',
 };
 
@@ -62,6 +63,8 @@ describe('CampaignDetail', () => {
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    getHouseRules: ReturnType<typeof vi.fn>;
+    setHouseRules: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
     getParticipantJournal: ReturnType<typeof vi.fn>;
     getTeamSheet: ReturnType<typeof vi.fn>;
@@ -98,6 +101,8 @@ describe('CampaignDetail', () => {
       remove: vi.fn(),
       changeState: vi.fn(),
       update: vi.fn(),
+      getHouseRules: vi.fn().mockReturnValue(of([])),
+      setHouseRules: vi.fn(),
       promote: vi.fn(),
       getParticipantJournal: vi.fn().mockReturnValue(of([])),
       getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
@@ -488,7 +493,7 @@ describe('CampaignDetail', () => {
   // ── canEditCampaign / modification nom-budget ───────────────────────────
 
   describe('canEditCampaign', () => {
-    it('vrai pour l\'organisateur tant que la saison est EN_CONSTRUCTION', () => {
+    it('vrai pour l\'organisateur quand la saison est EN_CONSTRUCTION', () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -508,7 +513,7 @@ describe('CampaignDetail', () => {
       expect(component.canEditCampaign()).toBe(false);
     });
 
-    it('faux hors EN_CONSTRUCTION, même pour l\'organisateur', () => {
+    it('reste vrai pour l\'organisateur hors EN_CONSTRUCTION — les règles maison sont réglables à tout moment', () => {
       mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
 
       configure();
@@ -516,7 +521,61 @@ describe('CampaignDetail', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      expect(component.canEditCampaign()).toBe(false);
+      expect(component.canEditCampaign()).toBe(true);
+    });
+  });
+
+  describe('onHouseRuleToggled()', () => {
+    it('ajoute la clé aux règles maison actives et persiste via setHouseRules', () => {
+      mockCampaignsService.setHouseRules.mockReturnValue(
+        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
+
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
+        houseRules: ['resistance_sans_points_championnat'],
+      });
+      expect(component.campaign()?.houseRules).toEqual(['resistance_sans_points_championnat']);
+      expect(component.savingHouseRules()).toBe(false);
+    });
+
+    it('retire la clé des règles maison actives quand enabled est faux', () => {
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
+      );
+      mockCampaignsService.setHouseRules.mockReturnValue(of({ ...mockCampaign, houseRules: [] }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: false });
+
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, { houseRules: [] });
+    });
+
+    it('affiche l\'erreur serveur sans modifier la campagne en cas d\'échec', () => {
+      mockCampaignsService.setHouseRules.mockReturnValue(
+        throwError(() => ({ error: { message: 'Erreur serveur.' } })),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
+
+      expect(component.houseRulesError()).toBe('Erreur serveur.');
+      expect(component.savingHouseRules()).toBe(false);
+      expect(component.campaign()?.houseRules).toEqual([]);
     });
   });
 
@@ -761,8 +820,20 @@ describe('CampaignDetail', () => {
       expect(el.querySelector('.campaign-detail-edit-btn')).not.toBeNull();
     });
 
-    it('masque le bouton Modifier hors EN_CONSTRUCTION', () => {
+    it('affiche le bouton Modifier hors EN_CONSTRUCTION — les règles maison restent réglables', () => {
       mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.campaign-detail-edit-btn')).not.toBeNull();
+    });
+
+    it('masque le bouton Modifier pour un non-organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);

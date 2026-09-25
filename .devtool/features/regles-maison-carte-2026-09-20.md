@@ -5,7 +5,7 @@ priority: "high"
 assignee: null
 dueDate: null
 created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-24T11:54:32.000Z"
+modified: "2026-09-25T00:00:00.000Z"
 completedAt: null
 labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
 order: "aX"
@@ -47,9 +47,9 @@ Strategy, sans refonte du mécanisme.
 | [RM-3 — Persistance du réglage sur la campagne](./done/rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ — résolu |
 | [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./done/rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
 | [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./done/rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — résolu |
-| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — prenable |
-| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 — encore bloquée par RM-6 |
-| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6, RM-7 — encore bloquée par RM-6/RM-7 |
+| [RM-6 — IHM : régler les règles maison d'une campagne](./done/rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — résolu |
+| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — prenable |
+| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 — encore bloquée par RM-7 |
 
 ## Décisions acquises
 
@@ -126,6 +126,22 @@ commentaire placeholder, toute la plomberie de sélection (`GameRulesContext`,
 par défaut), pour qu'un joueur puisse comparer deux parties d'une même campagne malgré
 un réglage modifiable en cours de route. Documentation volontairement non touchée —
 attribuée à RM-8, cf. sa carte. RM-8 reste bloquée par RM-6/RM-7.
+
+### RM-6 — IHM : régler les règles maison d'une campagne (résolu 2026-09-25)
+
+`HouseRulesSelector` (`campaigns/house-rules-selector/`) — composant dumb catalogue-driven
+(`definitions`/`enabledKeys`/`toggled`, pattern `locked`), intégré à `CampaignForm`
+(clés accumulées localement, incluses au `CreateCampaignDto` de création) et à
+`EditCampaignModal` (auto-sauvegarde immédiate par bascule, `PUT .../house-rules`, sans
+passer par `UpdateCampaignDto`). Décision prise pendant l'implémentation, validée avec
+l'utilisateur : le bouton "✏️ Modifier"/la modale d'édition sont désormais accessibles à
+l'organisateur dans tout état de campagne (`CampaignDetail.canEditCampaign()` réduit à
+`isOrganizer()`) — seuls nom/budget, à l'intérieur de la modale, restent réservés à
+`EN_CONSTRUCTION` (lecture seule + note hors cet état) — fidèle à la règle "sans
+contrainte d'état" jusqu'à l'IHM, pas seulement l'API (cf. RM-3 ci-dessus). Piège
+rencontré : `[disabled]` posé sur un champ `[ngModel]` est écrasé par `FormsModule` à
+chaque détection de changements — corrigé via `[readonly]`, jamais géré par
+`ControlValueAccessor`. RM-7 débloquée.
 
 ### Session de cadrage, 2026-09-20
 

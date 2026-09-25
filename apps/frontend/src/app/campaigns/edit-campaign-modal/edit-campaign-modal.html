@@ -3,7 +3,7 @@
   ariaLabel="Modifier la saison"
   variant="primary"
   [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
-  [confirmDisabled]="saving()"
+  [confirmDisabled]="saving() || !canEditNameBudget()"
   (confirmed)="onConfirm()"
   (cancelled)="cancelled.emit()">
 
@@ -13,6 +13,11 @@
     <div class="form-error">{{ displayError() }}</div>
   }
 
+  <!-- [readonly], pas [disabled] : FormsModule pilote lui-même la propriété DOM
+       `disabled` d'un champ lié par [ngModel] (setDisabledState, état du
+       FormControl sous-jacent, toujours "enabled" ici) et écrase silencieusement
+       toute tentative de la fixer via une liaison séparée — [readonly] n'est
+       géré par aucun ControlValueAccessor, donc jamais réécrit. -->
   <div class="form-grid">
 
     <div class="form-group">
@@ -20,6 +25,8 @@
       <input
         id="edit-campaign-name"
         type="text"
+        [class.is-readonly]="!canEditNameBudget()"
+        [readonly]="!canEditNameBudget()"
         [ngModel]="formName()"
         (ngModelChange)="formName.set($event)" />
     </div>
@@ -31,8 +38,28 @@
         type="number"
         min="1"
         max="999"
+        [class.is-readonly]="!canEditNameBudget()"
+        [readonly]="!canEditNameBudget()"
         [ngModel]="formBudget()"
         (ngModelChange)="formBudget.set(+$event)" />
+    </div>
+
+    @if (!canEditNameBudget()) {
+      <div class="form-group form-group--full">
+        <p class="form-hint">Le nom et le budget ne sont modifiables qu'en construction.</p>
+      </div>
+    }
+
+    <!-- Règles maison — aucune contrainte d'état, contrairement à nom/budget ci-dessus. -->
+    <div class="form-group form-group--full">
+      @if (houseRulesError()) {
+        <div class="form-error">{{ houseRulesError() }}</div>
+      }
+      <app-house-rules-selector
+        [definitions]="houseRuleCatalog()"
+        [enabledKeys]="campaign().houseRules"
+        [locked]="savingHouseRules()"
+        (toggled)="houseRuleToggled.emit($event)" />
     </div>
 
   </div>

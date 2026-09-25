@@ -25,6 +25,7 @@ const mockCampaign: Campaign = {
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 1,
   budget: 50,
+  houseRules: [],
   myRole: 'organizer',
 };
 
@@ -140,6 +141,7 @@ describe('CampaignsService', () => {
         state: 'EN_CONSTRUCTION',
         organizerName: 'Jean Dupont',
         budget: 50,
+        houseRules: [],
         participantCount: 3,
       };
       let result: CampaignSummary | undefined;
@@ -261,6 +263,47 @@ describe('CampaignsService', () => {
       service.update(1, dto).subscribe((campaign) => { result = campaign; });
 
       const req = httpMock.expectOne('/api/campaigns/1');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(dto);
+
+      req.flush(updated);
+
+      expect(result).toEqual(updated);
+    });
+  });
+
+  describe('getHouseRules()', () => {
+    it('effectue GET /api/catalog/regles-maison et retourne le catalogue', () => {
+      const catalog = [
+        {
+          nom: 'Aucun point de championnat',
+          nom_interne: 'resistance_sans_points_championnat',
+          description_decochee: '<p>Les participants classés en seconde moitié reçoivent des PR.</p>',
+          description_cochee: '<p>Les participants sans point de championnat reçoivent des PR.</p>',
+        },
+      ];
+      let result: unknown;
+
+      service.getHouseRules().subscribe((rules) => { result = rules; });
+
+      const req = httpMock.expectOne('/api/catalog/regles-maison');
+      expect(req.request.method).toBe('GET');
+
+      req.flush(catalog);
+
+      expect(result).toEqual(catalog);
+    });
+  });
+
+  describe('setHouseRules()', () => {
+    it('effectue PUT /api/campaigns/:id/house-rules avec le DTO et retourne la saison modifiée', () => {
+      const dto = { houseRules: ['resistance_sans_points_championnat'] };
+      const updated: Campaign = { ...mockCampaign, houseRules: dto.houseRules };
+      let result: Campaign | undefined;
+
+      service.setHouseRules(1, dto).subscribe((campaign) => { result = campaign; });
+
+      const req = httpMock.expectOne('/api/campaigns/1/house-rules');
       expect(req.request.method).toBe('PUT');
       expect(req.request.body).toEqual(dto);
 

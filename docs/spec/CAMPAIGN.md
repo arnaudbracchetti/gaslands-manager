@@ -58,11 +58,18 @@ relue à chaque replay via `Team.campaignBudget`, hydraté par `TeamRepository` 
 chargement de l'agrégat (même mécanisme que le flag `isLocked`, cf.
 [spec/TEAMS.md](TEAMS.md#crud-équipes)).
 
-Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible uniquement en
-`EN_CONSTRUCTION`) ouvre `EditCampaignModal` (nom + budget). En cas de refus serveur, la
-modale reste ouverte et affiche le message d'erreur inline (nom de l'équipe fautive et
-son coût) plutôt que de se fermer et de reporter l'erreur sur un bandeau générique -
-l'organisateur corrige la valeur sans rouvrir la modale.
+Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible dans **tout
+état** de la campagne — cf. §Règles maison ci-dessous, qui n'a pas la même contrainte
+d'état que nom/budget) ouvre `EditCampaignModal` (nom + budget + règles maison). Les
+champs nom/budget y sont en lecture seule hors `EN_CONSTRUCTION`, avec une note
+explicative, et le bouton "Enregistrer" est lui-même désactivé dans cet état (rien à
+soumettre - `[confirmDisabled]` inclut `!canEditNameBudget()`, pour ne jamais tenter un
+`PUT /api/campaigns/:id` avec un nom/budget inchangés, que le backend rejetterait de toute
+façon hors `EN_CONSTRUCTION`) — seule la section règles maison y reste toujours active. En
+cas de refus serveur sur nom/budget, la modale reste ouverte et affiche le message
+d'erreur inline (nom de l'équipe fautive et son coût) plutôt que de se fermer et de
+reporter l'erreur sur un bandeau générique - l'organisateur corrige la valeur sans rouvrir
+la modale.
 
 ---
 
@@ -101,6 +108,26 @@ règle active) **et à la modification** (`PUT /api/campaigns/:id/house-rules`,
 sur la route de consultation par code d'invitation (`GET /api/campaigns/by-code/:code`,
 `CampaignSummaryDto.houseRules`) — l'écran d'inscription en a besoin pour afficher les
 règles actives avant que le joueur ne rejoigne.
+
+**IHM (RM-6)** : `HouseRulesSelector` (`campaigns/house-rules-selector/`) affiche le
+catalogue sous forme d'une case à cocher par règle — sous chaque case, une seule ligne dont
+le texte bascule selon l'état (cochée : `description_cochee`, comportement alternatif ;
+décochée : `description_decochee`, rappel du comportement par défaut). Composant **dumb**,
+entièrement contrôlé par le parent (`enabledKeys`/`toggled`, même pattern que
+`SponsorCarousel`) — porte l'input `locked` (pattern déjà en place dans le projet, cf.
+COMPONENTS.md) pour une réutilisation future en lecture seule (RM-7), sans dupliquer le
+rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différentes :
+
+- **`CampaignForm`** (création) : la campagne n'existe pas encore — les clés cochées sont
+  accumulées dans un signal local (`formHouseRules`) et incluses dans le
+  `CreateCampaignDto` émis à la soumission du formulaire, avec le reste (nom, budget,
+  équipe).
+- **`EditCampaignModal`** (édition) : chaque bascule est **auto-sauvegardée
+  immédiatement** — `EditCampaignModal` émet `houseRuleToggled`, que `CampaignDetail`
+  traduit aussitôt en `PUT /api/campaigns/:id/house-rules` (`CampaignDetail.
+  onHouseRuleToggled`), sans attendre le bouton "Enregistrer" du formulaire (réservé à
+  nom/budget). Cohérent avec la route backend dédiée et son absence de contrainte
+  d'état : les règles maison ne rejoignent jamais `UpdateCampaignDto`.
 
 ---
 
