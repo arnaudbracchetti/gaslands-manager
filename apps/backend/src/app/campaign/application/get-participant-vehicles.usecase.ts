@@ -14,13 +14,19 @@ export interface GetParticipantVehiclesCommand {
 }
 
 /**
- * Véhicules courants (hors perdus) des participants indiqués — alimente le
- * picker "véhicules ennemis détruits" de la saisie d'exploits (US-B2).
+ * Véhicules courants (hors perdus et hors vendus) des participants indiqués —
+ * alimente à la fois le picker "véhicules ennemis détruits" de la saisie
+ * d'exploits (US-B2) et l'écran Désignation des épaves (roster des présents,
+ * y compris leurs propres véhicules).
  *
  * Réservé à l'organisateur. Scope volontairement restreint aux participants
- * transmis par l'appelant (pas l'ensemble de la campagne) : "hors perdus"
- * (`isLost`) n'est connu qu'après replay complet, d'où l'usage de
- * `loadAndReplay` comme pour `GetWorkshopUseCase`/`GetStandingsUseCase`.
+ * transmis par l'appelant (pas l'ensemble de la campagne) : "hors perdus/
+ * vendus" (`isLost`/`isSold`) n'est connu qu'après replay complet, d'où
+ * l'usage de `loadAndReplay` comme pour `GetWorkshopUseCase`/
+ * `GetStandingsUseCase`. Un véhicule vendu en atelier n'appartient plus à
+ * l'équipe au moment de la partie suivante — il n'a pas pu y participer,
+ * donc ne doit jamais être proposé comme candidat à la destruction/mise en
+ * épave, au même titre qu'un véhicule déjà détruit.
  */
 export class GetParticipantVehiclesUseCase {
   constructor(private readonly replayService: CampaignReplayService) {}
@@ -38,7 +44,7 @@ export class GetParticipantVehiclesUseCase {
           return { participantId, vehicles: [] };
         }
         const vehicles = participant.team.vehicles
-          .filter((v) => !v.isLost)
+          .filter((v) => !v.isLost && !v.isSold)
           .map((v) => ({
             vehicleId: v.id,
             nom: v.nom,
