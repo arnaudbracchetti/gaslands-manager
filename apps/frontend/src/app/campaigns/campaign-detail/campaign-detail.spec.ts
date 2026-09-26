@@ -534,64 +534,12 @@ describe('CampaignDetail', () => {
     });
   });
 
-  describe('onHouseRuleToggled()', () => {
-    it('ajoute la clé aux règles maison actives et persiste via setHouseRules', () => {
-      mockCampaignsService.setHouseRules.mockReturnValue(
-        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
-      );
-
-      configure();
-      fixture = TestBed.createComponent(CampaignDetail);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-
-      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
-
-      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
-        houseRules: ['resistance_sans_points_championnat'],
-      });
-      expect(component.campaign()?.houseRules).toEqual(['resistance_sans_points_championnat']);
-      expect(component.savingHouseRules()).toBe(false);
-    });
-
-    it('retire la clé des règles maison actives quand enabled est faux', () => {
-      mockCampaignsService.getOne.mockReturnValue(
-        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
-      );
-      mockCampaignsService.setHouseRules.mockReturnValue(of({ ...mockCampaign, houseRules: [] }));
-
-      configure();
-      fixture = TestBed.createComponent(CampaignDetail);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-
-      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: false });
-
-      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, { houseRules: [] });
-    });
-
-    it('affiche l\'erreur serveur sans modifier la campagne en cas d\'échec', () => {
-      mockCampaignsService.setHouseRules.mockReturnValue(
-        throwError(() => ({ error: { message: 'Erreur serveur.' } })),
-      );
-
-      configure();
-      fixture = TestBed.createComponent(CampaignDetail);
-      component = fixture.componentInstance;
-      fixture.detectChanges();
-
-      component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
-
-      expect(component.houseRulesError()).toBe('Erreur serveur.');
-      expect(component.savingHouseRules()).toBe(false);
-      expect(component.campaign()?.houseRules).toEqual([]);
-    });
-  });
-
   describe('onConfirmEditCampaign()', () => {
-    it('met à jour la campagne et ferme la modale en cas de succès', () => {
-      const updated: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
-      mockCampaignsService.update.mockReturnValue(of(updated));
+    it('met à jour nom/budget puis les règles maison, et ferme la modale en cas de succès (EN_CONSTRUCTION)', () => {
+      const updatedNameBudget: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
+      const updatedHouseRules: Campaign = { ...updatedNameBudget, houseRules: ['resistance_sans_points_championnat'] };
+      mockCampaignsService.update.mockReturnValue(of(updatedNameBudget));
+      mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -601,15 +549,42 @@ describe('CampaignDetail', () => {
       component.openEditCampaignModal();
       expect(component.showEditCampaignModal()).toBe(true);
 
-      component.onConfirmEditCampaign({ name: 'Coupe Rutherford', budget: 30 });
+      component.onConfirmEditCampaign({
+        nameBudget: { name: 'Coupe Rutherford', budget: 30 },
+        houseRules: ['resistance_sans_points_championnat'],
+      });
 
       expect(mockCampaignsService.update).toHaveBeenCalledWith(1, { name: 'Coupe Rutherford', budget: 30 });
-      expect(component.campaign()).toEqual(updated);
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
+        houseRules: ['resistance_sans_points_championnat'],
+      });
+      expect(component.campaign()).toEqual(updatedHouseRules);
       expect(component.showEditCampaignModal()).toBe(false);
       expect(component.savingCampaign()).toBe(false);
     });
 
-    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec (budget trop bas)', () => {
+    it('ne soumet que les règles maison quand nameBudget est null (hors EN_CONSTRUCTION)', () => {
+      const updatedHouseRules: Campaign = { ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] };
+      mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['resistance_sans_points_championnat'] });
+
+      expect(mockCampaignsService.update).not.toHaveBeenCalled();
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
+        houseRules: ['resistance_sans_points_championnat'],
+      });
+      expect(component.campaign()).toEqual(updatedHouseRules);
+      expect(component.showEditCampaignModal()).toBe(false);
+      expect(component.savingCampaign()).toBe(false);
+    });
+
+    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec de nom/budget, sans soumettre les règles maison', () => {
       mockCampaignsService.update.mockReturnValue(
         throwError(() => ({ error: { message: 'L\'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).' } })),
       );
@@ -620,10 +595,30 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
 
       expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
       expect(component.editCampaignError()).toContain('Escouade');
+      expect(component.savingCampaign()).toBe(false);
+      expect(component.campaign()).toEqual(mockCampaign); // inchangé
+      expect(mockCampaignsService.setHouseRules).not.toHaveBeenCalled();
+    });
+
+    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec des règles maison', () => {
+      mockCampaignsService.setHouseRules.mockReturnValue(
+        throwError(() => ({ error: { message: 'Erreur serveur.' } })),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['resistance_sans_points_championnat'] });
+
+      expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
+      expect(component.editCampaignError()).toBe('Erreur serveur.');
       expect(component.savingCampaign()).toBe(false);
       expect(component.campaign()).toEqual(mockCampaign); // inchangé
     });
@@ -636,7 +631,7 @@ describe('CampaignDetail', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
 
       expect(component.editCampaignError()).toBe('Erreur lors de la modification de la saison.');
     });

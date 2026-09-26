@@ -62,14 +62,13 @@ chargement de l'agrégat (même mécanisme que le flag `isLocked`, cf.
 état** de la campagne — cf. §Règles maison ci-dessous, qui n'a pas la même contrainte
 d'état que nom/budget) ouvre `EditCampaignModal` (nom + budget + règles maison). Les
 champs nom/budget y sont en lecture seule hors `EN_CONSTRUCTION`, avec une note
-explicative, et le bouton "Enregistrer" est lui-même désactivé dans cet état (rien à
-soumettre - `[confirmDisabled]` inclut `!canEditNameBudget()`, pour ne jamais tenter un
-`PUT /api/campaigns/:id` avec un nom/budget inchangés, que le backend rejetterait de toute
-façon hors `EN_CONSTRUCTION`) — seule la section règles maison y reste toujours active. En
-cas de refus serveur sur nom/budget, la modale reste ouverte et affiche le message
-d'erreur inline (nom de l'équipe fautive et son coût) plutôt que de se fermer et de
-reporter l'erreur sur un bandeau générique - l'organisateur corrige la valeur sans rouvrir
-la modale.
+explicative — mais le bouton "Enregistrer" reste **toujours actif** : il soumet toujours
+les règles maison basculées dans la modale, et en plus nom/budget si `canEditNameBudget()`
+(cf. §Règles maison ci-dessous pour le détail de cette soumission unique). "Annuler" ferme
+la modale sans rien persister, y compris les règles maison basculées pendant la session. En
+cas de refus serveur sur nom/budget ou sur les règles maison, la modale reste ouverte et
+affiche le message d'erreur inline plutôt que de se fermer et de reporter l'erreur sur un
+bandeau générique - l'organisateur corrige la valeur sans rouvrir la modale.
 
 ---
 
@@ -122,12 +121,20 @@ rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différent
   accumulées dans un signal local (`formHouseRules`) et incluses dans le
   `CreateCampaignDto` émis à la soumission du formulaire, avec le reste (nom, budget,
   équipe).
-- **`EditCampaignModal`** (édition) : chaque bascule est **auto-sauvegardée
-  immédiatement** — `EditCampaignModal` émet `houseRuleToggled`, que `CampaignDetail`
-  traduit aussitôt en `PUT /api/campaigns/:id/house-rules` (`CampaignDetail.
-  onHouseRuleToggled`), sans attendre le bouton "Enregistrer" du formulaire (réservé à
-  nom/budget). Cohérent avec la route backend dédiée et son absence de contrainte
-  d'état : les règles maison ne rejoignent jamais `UpdateCampaignDto`.
+- **`EditCampaignModal`** (édition) : chaque bascule ne modifie qu'un état **local**
+  (`formHouseRules`, même pattern que `CampaignForm` ci-dessus) — aucun appel réseau tant
+  que la modale reste ouverte. Le clic sur "Enregistrer" émet un unique
+  `EditCampaignSubmission` (`{ nameBudget, houseRules }`, `campaign.model.ts`) que
+  `CampaignDetail.onConfirmEditCampaign` traduit en un ou deux appels enchaînés : toujours
+  `PUT /api/campaigns/:id/house-rules`, précédé de `PUT /api/campaigns/:id` si
+  `nameBudget` est non-null (`canEditNameBudget()`, EN_CONSTRUCTION uniquement). Si
+  nom/budget échoue, les règles maison ne sont **pas** soumises non plus - la modale reste
+  ouverte, `formHouseRules` n'étant pas perdu (composant non détruit), l'organisateur
+  corrige et retente sans reperdre sa bascule. "Annuler" ne déclenche aucun appel : les
+  règles maison basculées mais jamais confirmées sont perdues à la fermeture (le composant
+  est recréé par le `@if` du parent à la prochaine ouverture, reparti de l'état serveur
+  actuel). Les règles maison ne rejoignent jamais `UpdateCampaignDto` (route backend
+  dédiée, cf. ci-dessus) - `EditCampaignSubmission` les porte à côté, jamais dedans.
 
 **Mécanisme de calcul — Strategy par point** : activer une case ne fait rien par
 elle-même — une règle maison ne prend effet que si un point de calcul du domaine la

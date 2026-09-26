@@ -18,7 +18,7 @@
 import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
-import { Campaign, CampaignState, ChangeStateDto, UpdateCampaignDto, HouseRuleDefinition } from '../campaign.model';
+import { Campaign, CampaignState, ChangeStateDto, EditCampaignSubmission, HouseRuleDefinition } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { ParticipantList } from '../participant-list/participant-list';
@@ -30,7 +30,7 @@ import { TeamsService } from '../../teams/teams.service';
 import { Team } from '../../teams/team.model';
 import { ChangeTeamModal } from '../change-team-modal/change-team-modal';
 import { EditCampaignModal } from '../edit-campaign-modal/edit-campaign-modal';
-import { HouseRulesSelector, HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
+import { HouseRulesSelector } from '../house-rules-selector/house-rules-selector';
 import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
@@ -77,10 +77,10 @@ export class CampaignDetail implements OnInit {
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
 
-  /** Vrai pendant que la modale de modification (nom/budget) de la saison est ouverte. */
+  /** Vrai pendant que la modale de modification (nom/budget + règles maison) de la saison est ouverte. */
   showEditCampaignModal: WritableSignal<boolean> = signal(false);
 
-  /** Vrai pendant un appel PUT /api/campaigns/:id (modification nom/budget). */
+  /** Vrai pendant les appels PUT /api/campaigns/:id et/ou PUT .../house-rules déclenchés par "Enregistrer". */
   savingCampaign: WritableSignal<boolean> = signal(false);
 
   /**
@@ -93,12 +93,6 @@ export class CampaignDetail implements OnInit {
 
   /** Catalogue des règles maison, pour EditCampaignModal (chargement indépendant, non bloquant). */
   houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
-
-  /** Vrai pendant un appel PUT /api/campaigns/:id/house-rules (bascule d'une règle maison). */
-  savingHouseRules: WritableSignal<boolean> = signal(false);
-
-  /** Erreur serveur de la dernière bascule de règle maison — distincte de `editCampaignError` (nom/budget). */
-  houseRulesError: WritableSignal<string> = signal('');
 
   /** Vrai si une partie de la saison est actuellement en statut ATELIER — reçu de CampaignProgram. */
   hasAtelierGame: WritableSignal<boolean> = signal(false);
@@ -404,60 +398,55 @@ export class CampaignDetail implements OnInit {
   }
 
   /**
-   * Contrairement à onConfirmChangeTeam, ne ferme PAS la modale immédiatement :
-   * en cas d'échec (budget trop bas pour une équipe déjà engagée), la modale
-   * reste ouverte avec le message d'erreur affiché inline, pour correction sans
-   * réouverture.
+   * Un seul clic sur "Enregistrer" soumet toujours les règles maison, et en
+   * plus nom/budget si `nameBudget` est fourni (EditCampaignModal ne le fournit
+   * que si la campagne est EN_CONSTRUCTION). Les deux appels sont enchaînés
+   * plutôt que parallélisés : si nom/budget échoue (ex. budget trop bas pour
+   * une équipe déjà engagée), les règles maison ne sont PAS soumises non plus
+   * — la modale reste ouverte, l'état local des règles maison de la modale
+   * (non perdu, le composant n'est pas recréé) permet de corriger et
+   * réessayer sans rouvrir la modale ni reperdre la bascule.
+   *
+   * Contrairement à onConfirmChangeTeam, ne ferme PAS la modale immédiatement
+   * en cas d'échec : le message d'erreur reste affiché inline, pour correction
+   * sans réouverture.
    */
-  onConfirmEditCampaign(dto: UpdateCampaignDto): void {
+  onConfirmEditCampaign({ nameBudget, houseRules }: EditCampaignSubmission): void {
     this.savingCampaign.set(true);
     this.editCampaignError.set('');
 
-    this.campaignsService.update(this.campaignId(), dto).subscribe({
-      next: (updated: Campaign) => {
-        this.campaign.set(updated);
-        this.showEditCampaignModal.set(false);
-        this.savingCampaign.set(false);
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.editCampaignError.set(
-          err.error?.message ?? 'Erreur lors de la modification de la saison.',
-        );
-        this.savingCampaign.set(false);
-      },
-    });
-  }
+    const saveHouseRules = (): void => {
+      this.campaignsService.setHouseRules(this.campaignId(), { houseRules }).subscribe({
+        next: (updated: Campaign) => {
+          this.campaign.set(updated);
+          this.showEditCampaignModal.set(false);
+          this.savingCampaign.set(false);
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.editCampaignError.set(
+            err.error?.message ?? 'Erreur lors de la sauvegarde des règles maison.',
+          );
+          this.savingCampaign.set(false);
+        },
+      });
+    };
 
-  /**
-   * Bascule une règle maison — auto-sauvegardée immédiatement (aucune
-   * contrainte d'état, cf. `canEditCampaign` ci-dessus), sur la route dédiée
-   * `PUT .../house-rules` plutôt que via `onConfirmEditCampaign` (nom/budget).
-   * Ne ferme jamais la modale, comme `onConfirmEditCampaign` : rien à fermer
-   * suite à une simple bascule.
-   */
-  onHouseRuleToggled({ nomInterne, enabled }: HouseRuleToggledEvent): void {
-    const campaign = this.campaign();
-    if (!campaign) return;
-
-    const nextKeys = enabled
-      ? [...campaign.houseRules, nomInterne]
-      : campaign.houseRules.filter((k) => k !== nomInterne);
-
-    this.savingHouseRules.set(true);
-    this.houseRulesError.set('');
-
-    this.campaignsService.setHouseRules(this.campaignId(), { houseRules: nextKeys }).subscribe({
-      next: (updated: Campaign) => {
-        this.campaign.set(updated);
-        this.savingHouseRules.set(false);
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.houseRulesError.set(
-          err.error?.message ?? 'Erreur lors de la sauvegarde des règles maison.',
-        );
-        this.savingHouseRules.set(false);
-      },
-    });
+    if (nameBudget) {
+      this.campaignsService.update(this.campaignId(), nameBudget).subscribe({
+        next: (updated: Campaign) => {
+          this.campaign.set(updated);
+          saveHouseRules();
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.editCampaignError.set(
+            err.error?.message ?? 'Erreur lors de la modification de la saison.',
+          );
+          this.savingCampaign.set(false);
+        },
+      });
+    } else {
+      saveHouseRules();
+    }
   }
 
   deleteCampaign(): void {

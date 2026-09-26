@@ -94,3 +94,14 @@ export interface UpdateCampaignDto {
   name: string;
   budget: number;
 }
+
+/**
+ * Charge utile émise par EditCampaignModal au clic "Enregistrer" — un seul
+ * bouton pour nom/budget ET règles maison (cf. EditCampaignModal). `nameBudget`
+ * vaut `null` hors EN_CONSTRUCTION (champs non éditables, rien à soumettre) ;
+ * `houseRules` est toujours présent, éditable dans tout état de la campagne.
+ */
+export interface EditCampaignSubmission {
+  nameBudget: UpdateCampaignDto | null;
+  houseRules: string[];
+}

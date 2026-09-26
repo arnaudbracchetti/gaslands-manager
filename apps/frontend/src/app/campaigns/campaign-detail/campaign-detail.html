@@ -207,11 +207,8 @@
       [saving]="savingCampaign()"
       [error]="editCampaignError()"
       [houseRuleCatalog]="houseRuleCatalog()"
-      [savingHouseRules]="savingHouseRules()"
-      [houseRulesError]="houseRulesError()"
       (confirmed)="onConfirmEditCampaign($event)"
-      (cancelled)="onCancelEditCampaign()"
-      (houseRuleToggled)="onHouseRuleToggled($event)" />
+      (cancelled)="onCancelEditCampaign()" />
   }
 
   @if (journalParticipant(); as participant) {

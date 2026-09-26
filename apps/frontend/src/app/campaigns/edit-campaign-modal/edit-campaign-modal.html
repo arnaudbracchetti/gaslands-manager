@@ -1,9 +1,11 @@
-<!-- Formulaire de modification d'une saison EN_CONSTRUCTION. Chrome délégué à ModalShell (mode "action"). -->
+<!-- Formulaire de modification d'une saison. Chrome délégué à ModalShell (mode "action").
+     "Enregistrer" reste toujours actif : il soumet toujours les règles maison, et en
+     plus nom/budget quand canEditNameBudget() (cf. edit-campaign-modal.ts). -->
 <app-modal-shell
   ariaLabel="Modifier la saison"
   variant="primary"
   [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
-  [confirmDisabled]="saving() || !canEditNameBudget()"
+  [confirmDisabled]="saving()"
   (confirmed)="onConfirm()"
   (cancelled)="cancelled.emit()">
 
@@ -50,16 +52,14 @@
       </div>
     }
 
-    <!-- Règles maison — aucune contrainte d'état, contrairement à nom/budget ci-dessus. -->
+    <!-- Règles maison — aucune contrainte d'état, contrairement à nom/budget ci-dessus.
+         Bascule purement locale (formHouseRules) : persistée seulement au clic "Enregistrer". -->
     <div class="form-group form-group--full">
-      @if (houseRulesError()) {
-        <div class="form-error">{{ houseRulesError() }}</div>
-      }
       <app-house-rules-selector
         [definitions]="houseRuleCatalog()"
-        [enabledKeys]="campaign().houseRules"
-        [locked]="savingHouseRules()"
-        (toggled)="houseRuleToggled.emit($event)" />
+        [enabledKeys]="formHouseRules()"
+        [locked]="saving()"
+        (toggled)="onHouseRuleToggled($event)" />
     </div>
 
   </div>
