@@ -138,9 +138,10 @@ rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différent
 
 **Mécanisme de calcul — Strategy par point** : activer une case ne fait rien par
 elle-même — une règle maison ne prend effet que si un point de calcul du domaine la
-consulte explicitement. Un seul point existe à ce jour : la distribution automatique
+consulte explicitement. Deux points existent à ce jour : la distribution automatique
 des Points de Résistance (cf. [Limitations connues — Points de
-Résistance](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) ci-dessous).
+Résistance](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) ci-dessous) et
+la cagnotte collective de fin d'Événement Télévisé (R2, cf. ci-dessous).
 `HouseRuleStrategyFactory` (`domain/house-rules/house-rule-strategy.factory.ts`,
 construite depuis `Campaign.houseRules`, exposée via le getter `Campaign.
 strategyFactory` — jamais choisie par un use case, cf. [ARCHITECTURE.md §3.4,
@@ -154,9 +155,8 @@ domaine (`HOUSE_RULE_REGISTRY`) ; ajouter une règle maison sur un NOUVEAU point
 calcul demande en plus une nouvelle méthode sur la Factory — jamais de refonte du
 mécanisme lui-même.
 
-**R1 — « Points de Résistance aux équipes sans point de championnat »**
-(`nom_interne resistance_sans_points_championnat`, seule règle maison du catalogue
-à ce jour) : remplace, pour la distribution automatique des Points de Résistance,
+**R1 — « Distribution des points de Résistance aux équipes »**
+(`nom_interne distribution_points_resistance`) : remplace, pour la distribution automatique des Points de Résistance,
 le critère par défaut (participant classé dans la seconde moitié du classement) par
 « participant dont le total de Points de Championnat de CETTE partie — classement +
 exploits + bonus Favori du Public — vaut zéro » : le rang n'entre plus en jeu.
@@ -178,6 +178,31 @@ d'ensemble). `strategyKey` vaut `"defaut"` pour la règle par défaut (jamais
 Résistance manuel, route dédiée organisateur) ; `describe()` de l'événement
 mentionne la règle appliquée, pour qu'un joueur puisse comparer deux parties
 d'une même campagne malgré un réglage modifiable en cours de route.
+
+**R2 — « Cagnotte collective de fin d'Événement Télévisé »**
+(`nom_interne cagnotte_collective_evenement_tele`) : à la désactivation (comportement
+par défaut, `NoTvBonusStrategy`), aucun événement n'est créé — cette règle n'existe
+que pour AJOUTER un effet, contrairement à R1 qui remplace un critère déjà actif par
+défaut. Activée (`CollectiveTvBonusStrategy`), crédite +5 jerricans
+(`WalletMovementEvent`, `WalletReason.CAGNOTTE_TELE`) à **tout participant
+`VALIDATED` de la campagne**, y compris ceux absents de cette partie précise — la
+seule des deux règles maison dont l'éligibilité ne dépend d'aucune donnée propre à
+un participant (rang, PC, présence). Portée par `CollectiveTvBonusStrategy`/
+`NoTvBonusStrategy` (`domain/house-rules/tv-bonus-distribution-strategy.ts`).
+
+**Calculée à l'enregistrement du résultat, pas à l'entrée en Atelier** —
+contrairement à R1/la distribution des PR : `Game.recordResult()` construit les
+`WalletMovementEvent` de cette règle dans le même appel que les
+`RankingAssignedEvent`/exploits, en itérant sur son propre paramètre `participants`
+(déjà la liste complète de la campagne, pas seulement les classés de cette partie).
+Contrairement au critère de R1 (qui dépend du total de PC de la partie, pas encore
+complet avant le bonus Favori du Public de l'écran Résolution — cf. RM-4 ci-dessus),
+l'éligibilité de R2 ("tout participant validé") ne dépend d'aucune donnée produite
+plus tard dans le wizard : rien n'impose d'attendre l'entrée en Atelier. Comme pour
+R1, le résultat devient un fait journalisé, jamais recalculé après coup — annuler le
+wizard en cours (`DELETE .../results`, partie encore `PLANIFIE`) supprime ces
+événements comme les autres (`Game.resultEventIdsForReset()` n'en distingue pas le
+type).
 
 ---
 

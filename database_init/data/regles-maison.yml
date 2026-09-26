@@ -18,7 +18,12 @@
 #   description_cochee      - Texte affiché sous la case à cocher, case cochée
 
 regles_maison:
-  - nom: "Points de Résistance aux équipes sans point de championnat"
-    nom_interne: "resistance_sans_points_championnat"
-    description_decochee: "Les participants classés dans la seconde moitié du classement gagnent 3 Points de Résistance."
+  - nom: "Distribution des points de Résistance aux équipes"
+    nom_interne: "distribution_points_resistance"
+    description_decochee: "Les participants classés dans la seconde moitié du classement de la partie gagnent tous 3 Points de Résistance."
     description_cochee: "Les participants qui n'ont gagné aucun point de championnat sur la partie gagnent 3 Points de Résistance."
+
+  - nom: "Cagnotte collective de fin d'Événement Télévisé"
+    nom_interne: "cagnotte_collective_evenement_tele"
+    description_decochee: "Les participants ayant participé à l'événement télévisé perçoivent leurs récompenses habituelles."
+    description_cochee: "En plus des récompenses habituelles, tous les participants de la campagne reçoivent 5 jerricans de salaire, y compris ceux absents de cette partie."

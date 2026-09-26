@@ -922,7 +922,7 @@ Un seul `Game` en statut `ATELIER` à la fois par campagne : `enterAtelier`
 clôture automatiquement (`ATELIER → JOUE`) toute autre partie encore en
 atelier.
 
-### Règles maison — Strategy de distribution des Points de Résistance
+### Règles maison — Strategy par point de calcul
 
 Résumé du mécanisme détaillé en [spec/CAMPAIGN.md — Règles
 maison](spec/CAMPAIGN.md#règles-maison) et
@@ -931,8 +931,10 @@ un **quatrième** pattern GoF (Strategy + Abstract Factory), aux côtés des tro
 imbriqués Command/Invoker/Receiver ci-dessus (cf. [ARCHITECTURE.md §3.8, « Trois
 patterns GoF imbriqués
 »](ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)) : une règle
-maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace la
-Strategy résolue pour UN point de calcul précis.
+maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace (R1) ou
+ajoute (R2) la Strategy résolue pour UN point de calcul précis. Deux points
+existent à ce jour : la distribution des Points de Résistance (R1) et la
+cagnotte collective de fin d'Événement Télévisé (R2).
 
 ```mermaid
 classDiagram
@@ -955,12 +957,14 @@ classDiagram
         +attachContext(context) void
         #context : GameRulesContext
         +distributeResistance() GameEvent[]
+        +recordResult(rankings, participants) GameEvent[]
     }
 
     class HouseRuleStrategyFactory {
         <<Abstract Factory — unique, une méthode par point de calcul>>
         -rules : HouseRules
         +createResistanceDistributionStrategy() ResistanceDistributionStrategy
+        +createTvBonusDistributionStrategy() TvBonusDistributionStrategy
     }
 
     class ResistanceDistributionStrategy {
@@ -975,17 +979,36 @@ classDiagram
     }
 
     class NoChampionshipPointsStrategy {
-        +key : "resistance_sans_points_championnat"
+        +key : "distribution_points_resistance"
         +isEligible(entry, context) boolean
+    }
+
+    class TvBonusDistributionStrategy {
+        <<Interface>>
+        +key : string
+        +isEligible(entry) boolean
+    }
+
+    class NoTvBonusStrategy {
+        +key : "defaut"
+        +isEligible(entry) boolean
+    }
+
+    class CollectiveTvBonusStrategy {
+        +key : "cagnotte_collective_evenement_tele"
+        +isEligible(entry) boolean
     }
 
     Campaign ..|> GameRulesContext
     Campaign "1" *-- "0..*" Game : attachContext() à la construction/hydratation
     Game --> GameRulesContext : context (jamais Campaign entière)
     GameRulesContext --> HouseRuleStrategyFactory : strategyFactory
-    HouseRuleStrategyFactory --> ResistanceDistributionStrategy : résout
+    HouseRuleStrategyFactory --> ResistanceDistributionStrategy : résout (distributeResistance)
+    HouseRuleStrategyFactory --> TvBonusDistributionStrategy : résout (recordResult)
     DefaultResistanceStrategy ..|> ResistanceDistributionStrategy
     NoChampionshipPointsStrategy ..|> ResistanceDistributionStrategy
+    NoTvBonusStrategy ..|> TvBonusDistributionStrategy
+    CollectiveTvBonusStrategy ..|> TvBonusDistributionStrategy
 ```
 
 - **`GameRulesContext`** (`domain/games/game-context.ts`) — interface étroite que
@@ -996,12 +1019,14 @@ classDiagram
 - **`HouseRuleStrategyFactory`** (`domain/house-rules/house-rule-strategy.factory.ts`)
   — Abstract Factory **unique** pour toutes les règles maison présentes et
   futures, une méthode `create…Strategy()` par point de calcul concerné
-  (`createResistanceDistributionStrategy()` aujourd'hui, le seul point
-  existant). Construite depuis `Campaign.houseRules`, reconstruite à la
+  (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`
+  aujourd'hui). Construite depuis `Campaign.houseRules`, reconstruite à la
   demande par le getter `Campaign.strategyFactory` plutôt que mémoïsée — pour
   qu'un `setHouseRules` ultérieur soit immédiatement pris en compte, sans
   invalidation à gérer. Registre pur (`HOUSE_RULE_REGISTRY`, une entrée par
-  règle maison qui remplace un calcul par défaut) — même idiome que
+  règle maison qui remplace ou complète un calcul par défaut — union
+  discriminée par `point : CalculationPoint` pour que chaque méthode récupère
+  une Strategy correctement typée sans `any`) — même idiome que
   `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (module équipe, cf.
   [ARCHITECTURE.md §3.4](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)).
   Lève une `DomainException` si plusieurs règles maison actives couvrent le
@@ -1013,13 +1038,26 @@ classDiagram
   interroge la Strategy résolue un participant à la fois. Deux
   implémentations : `DefaultResistanceStrategy` (`key = "defaut"`, comportement
   historique US-F1 — rang hors du top classé) et `NoChampionshipPointsStrategy`
-  (`key = "resistance_sans_points_championnat"`, règle maison R1 — aucun point
+  (`key = "distribution_points_resistance"`, règle maison R1 — aucun point
   de championnat gagné sur la partie). `key` est stampée sur l'événement créé
   (`ResistanceContactedEvent.strategyKey`), jamais recalculée a posteriori —
   c'est ce qui gèle le résultat au moment du calcul (cf.
   [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison)).
+- **`TvBonusDistributionStrategy`** (`domain/house-rules/tv-bonus-distribution-strategy.ts`)
+  — mirroir de `ResistanceDistributionStrategy` en plus simple : `isEligible(entry)`
+  sans second paramètre `context`, l'éligibilité ne dépendant d'aucune donnée de
+  la partie. Deux implémentations : `NoTvBonusStrategy` (`key = "defaut"`,
+  jamais éligible — cette règle maison AJOUTE un effet plutôt que de remplacer
+  un critère déjà actif par défaut, contrairement à R1) et
+  `CollectiveTvBonusStrategy` (`key = "cagnotte_collective_evenement_tele"`,
+  règle maison R2 — toujours éligible). Résolue et consommée directement par
+  `Game.recordResult()` (pas par un hook polymorphe séparé comme
+  `distributeResistance()`) : son éligibilité ne dépendant d'aucune donnée
+  produite plus tard dans le wizard, rien n'impose d'attendre l'entrée en
+  Atelier.
 - **Qui sélectionne la Strategy** : jamais un use case — `EvenementTeleGame`
-  la résout elle-même via `this.context.strategyFactory`, cf.
+  (`distributeResistance`) et `Game.recordResult()` la résolvent elles-mêmes
+  via `this.context.strategyFactory`, cf.
   [ARCHITECTURE.md §3.4, « Convention projet — qui sélectionne une Strategy
   »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
 

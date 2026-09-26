@@ -5,38 +5,48 @@ import {
   NoChampionshipPointsStrategy,
   type ResistanceDistributionStrategy,
 } from './resistance-distribution-strategy';
+import { CollectiveTvBonusStrategy, NoTvBonusStrategy, type TvBonusDistributionStrategy } from './tv-bonus-distribution-strategy';
 
 /**
  * Un endroit du code où une règle maison peut changer le calcul par défaut.
- * Aujourd'hui il n'y en a qu'un : la distribution des Points de Résistance.
  * Chaque point a sa méthode dans la Factory ci-dessous (ex.
  * `createResistanceDistributionStrategy()`). Un nouveau point = une nouvelle
  * valeur ici + une nouvelle méthode, jamais une nouvelle classe Factory.
  */
 enum CalculationPoint {
   RESISTANCE_DISTRIBUTION = 'RESISTANCE_DISTRIBUTION',
+  TV_BONUS_DISTRIBUTION = 'TV_BONUS_DISTRIBUTION',
 }
 
-interface HouseRuleOverride {
-  readonly point: CalculationPoint;
-  readonly strategy: ResistanceDistributionStrategy;
-}
+/**
+ * Union discriminée par `point` — chaque point de calcul porte le type de Strategy
+ * qui lui est propre. `findActiveOverrides<P>` narrow sur ce discriminant pour que
+ * chaque méthode `createXxxStrategy()` récupère une Strategy correctement typée,
+ * sans jamais recourir à `any`/un cast.
+ */
+type HouseRuleOverride =
+  | { readonly point: CalculationPoint.RESISTANCE_DISTRIBUTION; readonly strategy: ResistanceDistributionStrategy }
+  | { readonly point: CalculationPoint.TV_BONUS_DISTRIBUTION; readonly strategy: TvBonusDistributionStrategy };
 
 /**
  * Registre pur du domaine — une entrée par règle maison de catalogue qui remplace
  * un calcul par défaut. Même idiome que `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS`
  * (module équipe, cf. ARCHITECTURE.md §3.4) : un Record/Map figé, aucune dépendance
- * de framework. Première (et pour l'instant unique) entrée : R1 (RM-5), cf.
- * docs/plans/2026-09-21-regles-maison-mecanisme-design.md.
+ * de framework.
  */
 const HOUSE_RULE_REGISTRY: ReadonlyMap<string, HouseRuleOverride> = new Map<string, HouseRuleOverride>([
   [
-    'resistance_sans_points_championnat',
+    'distribution_points_resistance',
     { point: CalculationPoint.RESISTANCE_DISTRIBUTION, strategy: new NoChampionshipPointsStrategy() },
+  ],
+  [
+    'cagnotte_collective_evenement_tele',
+    { point: CalculationPoint.TV_BONUS_DISTRIBUTION, strategy: new CollectiveTvBonusStrategy() },
   ],
 ]);
 
 const DEFAULT_RESISTANCE_STRATEGY = new DefaultResistanceStrategy();
+const DEFAULT_TV_BONUS_STRATEGY = new NoTvBonusStrategy();
 
 /**
  * Abstract Factory **unique** pour toutes les règles maison — une méthode de
@@ -64,9 +74,26 @@ export class HouseRuleStrategyFactory {
     return active[0]?.strategy ?? DEFAULT_RESISTANCE_STRATEGY;
   }
 
-  private findActiveOverrides(point: CalculationPoint): HouseRuleOverride[] {
+  /** Résout la Strategy de la cagnotte collective de fin d'Événement Télévisé —
+   *  `NoTvBonusStrategy` (personne n'est crédité) si aucune règle maison active. */
+  createTvBonusDistributionStrategy(): TvBonusDistributionStrategy {
+    const active = this.findActiveOverrides(CalculationPoint.TV_BONUS_DISTRIBUTION);
+    if (active.length > 1) {
+      throw new DomainException(
+        'Plusieurs règles maison actives distribuent la cagnotte télé — une seule à la fois.',
+      );
+    }
+    return active[0]?.strategy ?? DEFAULT_TV_BONUS_STRATEGY;
+  }
+
+  private findActiveOverrides<P extends CalculationPoint>(
+    point: P,
+  ): Extract<HouseRuleOverride, { point: P }>[] {
     return [...HOUSE_RULE_REGISTRY.entries()]
-      .filter(([key, override]) => override.point === point && this.rules.isEnabled(key))
+      .filter(
+        (entry): entry is [string, Extract<HouseRuleOverride, { point: P }>] =>
+          entry[1].point === point && this.rules.isEnabled(entry[0]),
+      )
       .map(([, override]) => override);
   }
 }

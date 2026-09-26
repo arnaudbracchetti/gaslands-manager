@@ -31,7 +31,7 @@ const mockCampaign: Campaign = {
 const mockHouseRules: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
-    nom_interne: 'resistance_sans_points_championnat',
+    nom_interne: 'distribution_points_resistance',
     description_decochee: '<p>Décoché.</p>',
     description_cochee: '<p>Coché.</p>',
   },
@@ -64,13 +64,13 @@ describe('EditCampaignModal', () => {
       ...mockCampaign,
       name: 'Coupe Rutherford',
       budget: 80,
-      houseRules: ['resistance_sans_points_championnat'],
+      houseRules: ['distribution_points_resistance'],
     });
     fixture.detectChanges();
 
     expect(component.formName()).toBe('Coupe Rutherford');
     expect(component.formBudget()).toBe(80);
-    expect(component.formHouseRules()).toEqual(['resistance_sans_points_championnat']);
+    expect(component.formHouseRules()).toEqual(['distribution_points_resistance']);
   });
 
   it('refuse la confirmation si le nom est vide', () => {
@@ -97,12 +97,12 @@ describe('EditCampaignModal', () => {
 
     component.formName.set('  Coupe Rutherford  ');
     component.formBudget.set(30);
-    component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
+    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
     component.onConfirm();
 
     expect(emitted).toEqual([{
       nameBudget: { name: 'Coupe Rutherford', budget: 30 },
-      houseRules: ['resistance_sans_points_championnat'],
+      houseRules: ['distribution_points_resistance'],
     }]);
   });
 
@@ -114,12 +114,12 @@ describe('EditCampaignModal', () => {
     const emitted: EditCampaignSubmission[] = [];
     outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
 
-    component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
+    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
     component.onConfirm();
 
     expect(emitted).toEqual([{
       nameBudget: null,
-      houseRules: ['resistance_sans_points_championnat'],
+      houseRules: ['distribution_points_resistance'],
     }]);
   });
 
@@ -133,7 +133,7 @@ describe('EditCampaignModal', () => {
     const emitted: EditCampaignSubmission[] = [];
     outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
 
-    component.onHouseRuleToggled({ nomInterne: 'resistance_sans_points_championnat', enabled: true });
+    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
     (fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLElement).click();
 
     expect(cancelled).toBe(true);
@@ -212,7 +212,7 @@ describe('EditCampaignModal', () => {
   // ── Règles maison (état local, persistées seulement au clic Enregistrer) ─
 
   it('passe les règles maison actives de la campagne à HouseRulesSelector', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] });
+    fixture.componentRef.setInput('campaign', { ...mockCampaign, houseRules: ['distribution_points_resistance'] });
     fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
     fixture.detectChanges();
 
@@ -231,7 +231,7 @@ describe('EditCampaignModal', () => {
     fixture.nativeElement.querySelector('input[type="checkbox"]').click();
     fixture.detectChanges();
 
-    expect(component.formHouseRules()).toEqual(['resistance_sans_points_championnat']);
+    expect(component.formHouseRules()).toEqual(['distribution_points_resistance']);
     expect(emitted).toHaveLength(0);
   });
 

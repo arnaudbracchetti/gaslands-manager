@@ -277,7 +277,7 @@ describe('CampaignsService', () => {
       const catalog = [
         {
           nom: 'Aucun point de championnat',
-          nom_interne: 'resistance_sans_points_championnat',
+          nom_interne: 'distribution_points_resistance',
           description_decochee: '<p>Les participants classés en seconde moitié reçoivent des PR.</p>',
           description_cochee: '<p>Les participants sans point de championnat reçoivent des PR.</p>',
         },
@@ -297,7 +297,7 @@ describe('CampaignsService', () => {
 
   describe('setHouseRules()', () => {
     it('effectue PUT /api/campaigns/:id/house-rules avec le DTO et retourne la saison modifiée', () => {
-      const dto = { houseRules: ['resistance_sans_points_championnat'] };
+      const dto = { houseRules: ['distribution_points_resistance'] };
       const updated: Campaign = { ...mockCampaign, houseRules: dto.houseRules };
       let result: Campaign | undefined;
 

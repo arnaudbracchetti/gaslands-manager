@@ -39,4 +39,5 @@ const WALLET_REASON_LABELS: Record<WalletReason, string> = {
   [WalletReason.RECOMPENSE]: 'Récompense',
   [WalletReason.ACHAT]: 'Achat atelier',
   [WalletReason.REVENTE]: 'Revente atelier',
+  [WalletReason.CAGNOTTE_TELE]: 'Cagnotte Télé',
 };

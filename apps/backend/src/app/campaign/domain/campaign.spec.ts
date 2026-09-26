@@ -271,15 +271,15 @@ describe('Campaign - modification (rename/changeBudget)', () => {
 });
 
 describe('Campaign - setHouseRules', () => {
-  const validKeys = ['resistance_sans_points_championnat'];
+  const validKeys = ['distribution_points_resistance'];
 
   it.each([CampaignState.EN_CONSTRUCTION, CampaignState.EN_COURS, CampaignState.TERMINEE])(
     'accepte des clés valides quel que soit l\'état (%s) — aucune contrainte d\'état',
     (state) => {
       const campaign = new Campaign(1, 'Campagne Test', state, 'invite-code', [], []);
 
-      expect(() => campaign.setHouseRules(['resistance_sans_points_championnat'], validKeys)).not.toThrow();
-      expect(campaign.houseRules.isEnabled('resistance_sans_points_championnat')).toBe(true);
+      expect(() => campaign.setHouseRules(['distribution_points_resistance'], validKeys)).not.toThrow();
+      expect(campaign.houseRules.isEnabled('distribution_points_resistance')).toBe(true);
     },
   );
 
@@ -292,7 +292,7 @@ describe('Campaign - setHouseRules', () => {
 
   it('remplace intégralement le réglage précédent (pas un merge)', () => {
     const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
-    campaign.setHouseRules(['resistance_sans_points_championnat'], validKeys);
+    campaign.setHouseRules(['distribution_points_resistance'], validKeys);
 
     campaign.setHouseRules([], validKeys);
 

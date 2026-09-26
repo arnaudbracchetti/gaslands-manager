@@ -47,7 +47,7 @@ const mockCurrentUser: User = {
 const mockHouseRuleCatalog: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
-    nom_interne: 'resistance_sans_points_championnat',
+    nom_interne: 'distribution_points_resistance',
     description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
     description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
   },
@@ -537,7 +537,7 @@ describe('CampaignDetail', () => {
   describe('onConfirmEditCampaign()', () => {
     it('met à jour nom/budget puis les règles maison, et ferme la modale en cas de succès (EN_CONSTRUCTION)', () => {
       const updatedNameBudget: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
-      const updatedHouseRules: Campaign = { ...updatedNameBudget, houseRules: ['resistance_sans_points_championnat'] };
+      const updatedHouseRules: Campaign = { ...updatedNameBudget, houseRules: ['distribution_points_resistance'] };
       mockCampaignsService.update.mockReturnValue(of(updatedNameBudget));
       mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
@@ -551,12 +551,12 @@ describe('CampaignDetail', () => {
 
       component.onConfirmEditCampaign({
         nameBudget: { name: 'Coupe Rutherford', budget: 30 },
-        houseRules: ['resistance_sans_points_championnat'],
+        houseRules: ['distribution_points_resistance'],
       });
 
       expect(mockCampaignsService.update).toHaveBeenCalledWith(1, { name: 'Coupe Rutherford', budget: 30 });
       expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
-        houseRules: ['resistance_sans_points_championnat'],
+        houseRules: ['distribution_points_resistance'],
       });
       expect(component.campaign()).toEqual(updatedHouseRules);
       expect(component.showEditCampaignModal()).toBe(false);
@@ -564,7 +564,7 @@ describe('CampaignDetail', () => {
     });
 
     it('ne soumet que les règles maison quand nameBudget est null (hors EN_CONSTRUCTION)', () => {
-      const updatedHouseRules: Campaign = { ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] };
+      const updatedHouseRules: Campaign = { ...mockCampaign, houseRules: ['distribution_points_resistance'] };
       mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
       configure();
@@ -573,11 +573,11 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['resistance_sans_points_championnat'] });
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
 
       expect(mockCampaignsService.update).not.toHaveBeenCalled();
       expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
-        houseRules: ['resistance_sans_points_championnat'],
+        houseRules: ['distribution_points_resistance'],
       });
       expect(component.campaign()).toEqual(updatedHouseRules);
       expect(component.showEditCampaignModal()).toBe(false);
@@ -615,7 +615,7 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['resistance_sans_points_championnat'] });
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
 
       expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
       expect(component.editCampaignError()).toBe('Erreur serveur.');
@@ -876,7 +876,7 @@ describe('CampaignDetail', () => {
   describe('règles maison en lecture seule', () => {
     it('affiche les règles maison actives, verrouillées, pour l\'organisateur', () => {
       mockCampaignsService.getOne.mockReturnValue(
-        of({ ...mockCampaign, houseRules: ['resistance_sans_points_championnat'] }),
+        of({ ...mockCampaign, houseRules: ['distribution_points_resistance'] }),
       );
       mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
 

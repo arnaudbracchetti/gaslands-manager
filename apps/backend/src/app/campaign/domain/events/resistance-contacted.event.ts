@@ -55,5 +55,5 @@ export class ResistanceContactedEvent extends GameEvent {
  */
 const STRATEGY_KEY_LABELS: Record<string, string> = {
   defaut: 'règle par défaut',
-  resistance_sans_points_championnat: 'règle maison : aucun point de championnat',
+  distribution_points_resistance: 'règle maison : aucun point de championnat',
 };

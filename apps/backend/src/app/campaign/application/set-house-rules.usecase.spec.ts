@@ -21,7 +21,7 @@ function makeFixture(state: CampaignState) {
   } as unknown as CampaignReplayService;
 
   const houseRuleCatalog: HouseRuleCatalogService = {
-    validKeys: vi.fn().mockReturnValue(['resistance_sans_points_championnat']),
+    validKeys: vi.fn().mockReturnValue(['distribution_points_resistance']),
   } as unknown as HouseRuleCatalogService;
 
   const useCase = new SetHouseRulesUseCase(campaignRepo, replayService, houseRuleCatalog);
@@ -32,9 +32,9 @@ describe('SetHouseRulesUseCase', () => {
   it('active une règle valide et persiste, même en EN_COURS (aucune contrainte d\'état)', async () => {
     const { useCase, campaignRepo, campaign } = makeFixture(CampaignState.EN_COURS);
 
-    await useCase.execute({ campaignId: 1, userId: 42, houseRules: ['resistance_sans_points_championnat'] });
+    await useCase.execute({ campaignId: 1, userId: 42, houseRules: ['distribution_points_resistance'] });
 
-    expect(campaign.houseRules.isEnabled('resistance_sans_points_championnat')).toBe(true);
+    expect(campaign.houseRules.isEnabled('distribution_points_resistance')).toBe(true);
     expect(campaignRepo.saveStructural).toHaveBeenCalledWith(campaign);
   });
 

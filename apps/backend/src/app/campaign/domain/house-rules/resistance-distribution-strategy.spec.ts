@@ -34,8 +34,8 @@ describe('DefaultResistanceStrategy', () => {
 describe('NoChampionshipPointsStrategy (R1)', () => {
   const strategy = new NoChampionshipPointsStrategy();
 
-  it("porte la clé 'resistance_sans_points_championnat'", () => {
-    expect(strategy.key).toBe('resistance_sans_points_championnat');
+  it("porte la clé 'distribution_points_resistance'", () => {
+    expect(strategy.key).toBe('distribution_points_resistance');
   });
 
   it('éligible si le total de PC de la partie vaut zéro, peu importe le rang', () => {

@@ -26,7 +26,7 @@ const mockSummary: CampaignSummary = {
 const mockHouseRuleCatalog: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
-    nom_interne: 'resistance_sans_points_championnat',
+    nom_interne: 'distribution_points_resistance',
     description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
     description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
   },
@@ -196,7 +196,7 @@ describe('CampaignJoin Component', () => {
   describe('règles maison en lecture seule', () => {
     it('affiche les règles maison actives de la saison, verrouillées, avant de rejoindre', async () => {
       mockCampaignsService.getByCode.mockReturnValue(
-        of({ ...mockSummary, houseRules: ['resistance_sans_points_championnat'] }),
+        of({ ...mockSummary, houseRules: ['distribution_points_resistance'] }),
       );
       mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
 

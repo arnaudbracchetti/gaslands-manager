@@ -6,7 +6,7 @@ import type { HouseRuleDefinition } from '../campaign.model';
 const mockDefinitions: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
-    nom_interne: 'resistance_sans_points_championnat',
+    nom_interne: 'distribution_points_resistance',
     description_decochee: '<p>Comportement par défaut : seconde moitié du classement.</p>',
     description_cochee: '<p>Comportement alternatif : aucun point de championnat.</p>',
   },
@@ -52,7 +52,7 @@ describe('HouseRulesSelector', () => {
   });
 
   it('affiche la ligne "cochée" dès que la règle est activée', () => {
-    fixture.componentRef.setInput('enabledKeys', ['resistance_sans_points_championnat']);
+    fixture.componentRef.setInput('enabledKeys', ['distribution_points_resistance']);
     fixture.detectChanges();
 
     const description = fixture.nativeElement.querySelector('.hrs__rule-description');
@@ -67,11 +67,11 @@ describe('HouseRulesSelector', () => {
     checkboxes[0].click();
     fixture.detectChanges();
 
-    expect(emitted).toEqual([{ nomInterne: 'resistance_sans_points_championnat', enabled: true }]);
+    expect(emitted).toEqual([{ nomInterne: 'distribution_points_resistance', enabled: true }]);
   });
 
   it('émet toggled avec enabled: false quand la règle était déjà cochée', () => {
-    fixture.componentRef.setInput('enabledKeys', ['resistance_sans_points_championnat']);
+    fixture.componentRef.setInput('enabledKeys', ['distribution_points_resistance']);
     fixture.detectChanges();
 
     const emitted: HouseRuleToggledEvent[] = [];
@@ -81,7 +81,7 @@ describe('HouseRulesSelector', () => {
     checkboxes[0].click();
     fixture.detectChanges();
 
-    expect(emitted).toEqual([{ nomInterne: 'resistance_sans_points_championnat', enabled: false }]);
+    expect(emitted).toEqual([{ nomInterne: 'distribution_points_resistance', enabled: false }]);
   });
 
   it('désactive les cases et n\'émet rien quand locked est vrai', () => {

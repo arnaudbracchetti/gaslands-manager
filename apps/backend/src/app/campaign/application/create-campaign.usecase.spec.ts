@@ -23,7 +23,7 @@ function makeFixture(vehiclesCost: number, isTeamEngaged = false) {
   } as unknown as ICampaignRepository;
 
   const houseRuleCatalog: HouseRuleCatalogService = {
-    validKeys: vi.fn().mockReturnValue(['resistance_sans_points_championnat']),
+    validKeys: vi.fn().mockReturnValue(['distribution_points_resistance']),
   } as unknown as HouseRuleCatalogService;
 
   const useCase = new CreateCampaignUseCase(campaignRepo, teamRepo, houseRuleCatalog);
@@ -80,11 +80,11 @@ describe('CreateCampaignUseCase', () => {
       name: 'Coupe Verney',
       teamId: 3,
       budget: 30,
-      houseRules: ['resistance_sans_points_championnat'],
+      houseRules: ['distribution_points_resistance'],
     });
 
     expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
-      'Coupe Verney', expect.any(String), 42, 3, 30, ['resistance_sans_points_championnat'],
+      'Coupe Verney', expect.any(String), 42, 3, 30, ['distribution_points_resistance'],
     );
   });
 

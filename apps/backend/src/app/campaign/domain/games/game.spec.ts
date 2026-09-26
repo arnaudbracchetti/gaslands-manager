@@ -20,6 +20,7 @@ import type { GameEvent } from '../events/game-event';
 import type { GameRulesContext } from './game-context';
 import type { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
 import { NoChampionshipPointsStrategy, type ResistanceDistributionStrategy } from '../house-rules/resistance-distribution-strategy';
+import { CollectiveTvBonusStrategy, NoTvBonusStrategy } from '../house-rules/tv-bonus-distribution-strategy';
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
@@ -431,6 +432,60 @@ describe('Game — recordResult', () => {
   });
 });
 
+describe('Game — recordResult avec la cagnotte télé (règle maison)', () => {
+  it('sans règle maison active (contexte de secours), aucun WalletMovementEvent créé', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+
+    const events = game.recordResult([{ participantId: 1, rank: 1 }], [p1, p2]);
+
+    expect(events.some((e) => e instanceof WalletMovementEvent)).toBe(false);
+  });
+
+  it('règle active — crédite +5 jerricans à CHAQUE participant VALIDATED, y compris un absent du classement', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const absent = new CampaignParticipant(3, 9, 5, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    game.attachContext({
+      strategyFactory: {
+        createTvBonusDistributionStrategy: () => new CollectiveTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    // Seuls p1/p2 sont classés dans cette partie — `absent` n'apparaît dans aucun
+    // rang, mais reste VALIDATED dans la campagne (3ᵉ élément de `participants`).
+    const events = game.recordResult(
+      [{ participantId: 1, rank: 1 }, { participantId: 2, rank: 2 }],
+      [p1, p2, absent],
+    );
+
+    const walletEvents = events.filter((e): e is WalletMovementEvent => e instanceof WalletMovementEvent);
+    expect(walletEvents).toHaveLength(3);
+    expect(walletEvents.every((e) => e.amount === 5 && e.reason === WalletReason.CAGNOTTE_TELE)).toBe(true);
+    expect(walletEvents.map((e) => e.participantId).sort()).toEqual([1, 2, 3]);
+  });
+
+  it('règle active — ne crédite jamais un participant PENDING ou REJECTED', () => {
+    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
+    const pending = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.PENDING);
+    const rejected = new CampaignParticipant(3, 9, 5, false, ParticipantStatus.REJECTED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    game.attachContext({
+      strategyFactory: {
+        createTvBonusDistributionStrategy: () => new CollectiveTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    const events = game.recordResult([{ participantId: 1, rank: 1 }], [p1, pending, rejected]);
+
+    const walletEvents = events.filter((e): e is WalletMovementEvent => e instanceof WalletMovementEvent);
+    expect(walletEvents).toHaveLength(1);
+    expect(walletEvents[0].participantId).toBe(1);
+  });
+});
+
 describe('Game — distributeResistance (RM-4)', () => {
   it('crédite automatiquement +3 PR au participant non classé, même sans exploit', () => {
     const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
@@ -522,12 +577,19 @@ describe('Game — distributeResistance (RM-4)', () => {
 
 /**
  * Construit un `GameRulesContext` dont la Factory résout toujours la Strategy
- * donnée — utilisé par les blocs `distributeResistance avec R1` et
- * `attachContext` ci-dessous pour attacher une Strategy de test sans passer
- * par un vrai `HouseRules`/`HouseRuleStrategyFactory`.
+ * donnée pour la Résistance — utilisé par les blocs `distributeResistance avec R1`
+ * et `attachContext` ci-dessous pour attacher une Strategy de test sans passer par
+ * un vrai `HouseRules`/`HouseRuleStrategyFactory`. `createTvBonusDistributionStrategy`
+ * retombe sur `NoTvBonusStrategy` (repli neutre) : `recordResult()` l'appelle
+ * systématiquement, y compris dans des tests qui ne portent que sur la Résistance.
  */
 function makeContextReturning(strategy: ResistanceDistributionStrategy): GameRulesContext {
-  return { strategyFactory: { createResistanceDistributionStrategy: () => strategy } as HouseRuleStrategyFactory };
+  return {
+    strategyFactory: {
+      createResistanceDistributionStrategy: () => strategy,
+      createTvBonusDistributionStrategy: () => new NoTvBonusStrategy(),
+    } as HouseRuleStrategyFactory,
+  };
 }
 
 describe('Game — distributeResistance avec R1 (NoChampionshipPointsStrategy, RM-5)', () => {
@@ -616,7 +678,7 @@ describe('Game — distributeResistance avec R1 (NoChampionshipPointsStrategy, R
     );
     expect(resistanceEvents).toHaveLength(1);
     expect(resistanceEvents[0].participantId).toBe(5);
-    expect(resistanceEvents[0].strategyKey).toBe('resistance_sans_points_championnat');
+    expect(resistanceEvents[0].strategyKey).toBe('distribution_points_resistance');
   });
 });
 
@@ -659,7 +721,12 @@ describe('Game — attachContext (sélection de Strategy interne au domaine)', (
     game.recordResult([{ participantId: 1, rank: 1 }], [p1]);
 
     const createStrategy = vi.fn().mockReturnValue(neverEligibleStrategy);
-    game.attachContext({ strategyFactory: { createResistanceDistributionStrategy: createStrategy } as HouseRuleStrategyFactory });
+    game.attachContext({
+      strategyFactory: {
+        createResistanceDistributionStrategy: createStrategy,
+        createTvBonusDistributionStrategy: () => new NoTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
 
     // La résolution de Strategy précède la garde d'idempotence (cf. EvenementTeleGame) :
     // un second appel la relit bien, même s'il ne journalise plus rien de nouveau —

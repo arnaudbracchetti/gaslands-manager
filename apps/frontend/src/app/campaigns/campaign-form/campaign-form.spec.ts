@@ -16,7 +16,7 @@ import { CreateCampaignDto, HouseRuleDefinition } from '../campaign.model';
 const mockHouseRules: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
-    nom_interne: 'resistance_sans_points_championnat',
+    nom_interne: 'distribution_points_resistance',
     description_decochee: '<p>Décoché.</p>',
     description_cochee: '<p>Coché.</p>',
   },
@@ -116,7 +116,7 @@ describe('CampaignForm', () => {
     component.saveForm();
 
     expect(emitted).toEqual([
-      { name: 'Coupe Verney', budget: 50, houseRules: ['resistance_sans_points_championnat'] },
+      { name: 'Coupe Verney', budget: 50, houseRules: ['distribution_points_resistance'] },
     ]);
   });
 

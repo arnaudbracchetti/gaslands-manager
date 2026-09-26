@@ -30,6 +30,7 @@ import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipm
 import type { GameRulesContext } from './game-context';
 import { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
 import { HouseRules } from '../house-rules/house-rules';
+import { TV_BONUS_AMOUNT_JERRICANS } from '../house-rules/tv-bonus-distribution-strategy';
 
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
 const POINTS_TABLE = [10, 5, 2, 1];
@@ -195,6 +196,14 @@ export abstract class Game {
    * été déplacé vers `distributeResistance()`, appelé à l'entrée en Atelier (RM-4) :
    * seul cet instant garantit que le total de PC de la partie est complet (le bonus
    * Favori du Public, crédité après l'enregistrement du résultat, doit déjà compter).
+   *
+   * Distribue en revanche la cagnotte télé collective (règle maison) : contrairement
+   * aux PR, son éligibilité ("tout participant `VALIDATED` de la campagne") ne dépend
+   * d'aucune donnée produite plus tard dans le wizard — rien n'impose d'attendre
+   * l'entrée en Atelier. Cette règle cible délibérément TOUS les participants
+   * `VALIDATED` de la campagne (`validatedIds`, cf. ci-dessous), pas seulement ceux
+   * classés dans `rankings` : c'est ce qui permet de créditer un participant absent
+   * de cette partie précise.
    */
   recordResult(rankings: RankingInput[], participants: readonly CampaignParticipant[]): GameEvent[] {
     if (this._status !== GameStatus.PLANIFIE) {
@@ -254,6 +263,15 @@ export abstract class Game {
         this.addEvent(destroyedEvent);
         events.push(destroyedEvent);
       }
+    }
+
+    // Cagnotte télé collective (règle maison) — un WalletMovementEvent par
+    // participant VALIDATED de la campagne, y compris ceux absents de cette partie.
+    // No-op par défaut (NoTvBonusStrategy) tant que la règle n'est pas activée.
+    const tvBonusStrategy = this.context.strategyFactory.createTvBonusDistributionStrategy();
+    for (const participantId of validatedIds) {
+      if (!tvBonusStrategy.isEligible({ participantId })) continue;
+      events.push(...this.recordWalletMovement(participantId, TV_BONUS_AMOUNT_JERRICANS, WalletReason.CAGNOTTE_TELE));
     }
 
     return events;
