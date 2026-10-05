@@ -21,6 +21,8 @@ import type { GameRulesContext } from './game-context';
 import type { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
 import { NoChampionshipPointsStrategy, type ResistanceDistributionStrategy } from '../house-rules/resistance-distribution-strategy';
 import { CollectiveTvBonusStrategy, NoTvBonusStrategy } from '../house-rules/tv-bonus-distribution-strategy';
+import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy } from '../house-rules/base-income-strategy';
+import { CappedJerricanGainsStrategy } from '../house-rules/jerrican-gains-cap-strategy';
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
@@ -752,6 +754,20 @@ describe('Game — rollBaseIncome (Escarmouche)', () => {
     expect(event.reason).toBe(WalletReason.RECOMPENSE);
     expect(event.participantId).toBe(1);
   });
+
+  it('règle maison escarmouche_bonus_jerricans active — ne journalise aucun événement', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const randomizer = { roll: (): number => 4, pick: <T>(pool: T[]): T => pool[0] };
+    game.attachContext({
+      strategyFactory: {
+        createBaseIncomeStrategy: () => new NoBaseIncomeStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    const events = game.rollBaseIncome(1, randomizer);
+
+    expect(events).toHaveLength(0);
+  });
 });
 
 describe('Game — recordJerricanGains (Escarmouche)', () => {
@@ -767,6 +783,84 @@ describe('Game — recordJerricanGains (Escarmouche)', () => {
     expect(events.find((e) => e.participantId === 1)?.amount).toBe(5);
     expect(events.find((e) => e.participantId === 2)?.amount).toBe(2);
     expect(events.every((e) => e.reason === WalletReason.RECOMPENSE)).toBe(true);
+  });
+});
+
+describe('Game — plafond de jerricans (R4, plafond_jerricans_escarmouche)', () => {
+  function attachCap(game: EscarmoucheGame | EvenementTeleGame): void {
+    game.attachContext({
+      strategyFactory: {
+        createBaseIncomeStrategy: () => new DefaultBaseIncomeStrategy(),
+        createJerricanGainsCapStrategy: () => new CappedJerricanGainsStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+  }
+
+  it('rollBaseIncome — réduit le D6 tiré au reliquat quand un butin manuel a déjà été journalisé', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+    const randomizer = { roll: (): number => 6, pick: <T>(pool: T[]): T => pool[0] };
+    game.recordJerricanGains([{ participantId: 1, amount: 10 }]);
+
+    const events = game.rollBaseIncome(1, randomizer) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(5); // 15 - 10 déjà gagnés
+  });
+
+  it('rollBaseIncome — ne journalise rien si le plafond est déjà atteint', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+    const randomizer = { roll: (): number => 6, pick: <T>(pool: T[]): T => pool[0] };
+    game.recordJerricanGains([{ participantId: 1, amount: 15 }]);
+
+    const events = game.rollBaseIncome(1, randomizer);
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('recordJerricanGains — réduit un butin manuel qui dépasse le plafond à lui seul', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+
+    const events = game.recordJerricanGains([{ participantId: 1, amount: 20 }]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(15);
+  });
+
+  it('cumule les deux sources de gains (butin puis revenu de base) pour un même participant', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+    const randomizer = { roll: (): number => 6, pick: <T>(pool: T[]): T => pool[0] };
+
+    const gainEvents = game.recordJerricanGains([{ participantId: 1, amount: 12 }]) as WalletMovementEvent[];
+    const incomeEvents = game.rollBaseIncome(1, randomizer) as WalletMovementEvent[];
+
+    expect(gainEvents[0].amount).toBe(12);
+    expect(incomeEvents).toHaveLength(1);
+    expect(incomeEvents[0].amount).toBe(3); // 15 - 12
+  });
+
+  it('ne plafonne pas un autre participant que celui déjà à son plafond', () => {
+    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+    game.recordJerricanGains([{ participantId: 1, amount: 15 }]);
+
+    const events = game.recordJerricanGains([{ participantId: 2, amount: 15 }]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(15);
+  });
+
+  it("n'affecte jamais un Événement Télévisé, même si la règle maison est active", () => {
+    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    attachCap(game);
+
+    const events = game.recordJerricanGains([{ participantId: 1, amount: 30 }]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(30);
   });
 });
 

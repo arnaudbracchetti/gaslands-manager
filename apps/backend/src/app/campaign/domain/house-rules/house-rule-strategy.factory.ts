@@ -6,6 +6,12 @@ import {
   type ResistanceDistributionStrategy,
 } from './resistance-distribution-strategy';
 import { CollectiveTvBonusStrategy, NoTvBonusStrategy, type TvBonusDistributionStrategy } from './tv-bonus-distribution-strategy';
+import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy, type BaseIncomeStrategy } from './base-income-strategy';
+import {
+  UnlimitedJerricanGainsStrategy,
+  CappedJerricanGainsStrategy,
+  type JerricanGainsCapStrategy,
+} from './jerrican-gains-cap-strategy';
 
 /**
  * Un endroit du code où une règle maison peut changer le calcul par défaut.
@@ -16,6 +22,8 @@ import { CollectiveTvBonusStrategy, NoTvBonusStrategy, type TvBonusDistributionS
 enum CalculationPoint {
   RESISTANCE_DISTRIBUTION = 'RESISTANCE_DISTRIBUTION',
   TV_BONUS_DISTRIBUTION = 'TV_BONUS_DISTRIBUTION',
+  BASE_INCOME_DISTRIBUTION = 'BASE_INCOME_DISTRIBUTION',
+  JERRICAN_GAINS_CAP = 'JERRICAN_GAINS_CAP',
 }
 
 /**
@@ -26,7 +34,9 @@ enum CalculationPoint {
  */
 type HouseRuleOverride =
   | { readonly point: CalculationPoint.RESISTANCE_DISTRIBUTION; readonly strategy: ResistanceDistributionStrategy }
-  | { readonly point: CalculationPoint.TV_BONUS_DISTRIBUTION; readonly strategy: TvBonusDistributionStrategy };
+  | { readonly point: CalculationPoint.TV_BONUS_DISTRIBUTION; readonly strategy: TvBonusDistributionStrategy }
+  | { readonly point: CalculationPoint.BASE_INCOME_DISTRIBUTION; readonly strategy: BaseIncomeStrategy }
+  | { readonly point: CalculationPoint.JERRICAN_GAINS_CAP; readonly strategy: JerricanGainsCapStrategy };
 
 /**
  * Registre pur du domaine — une entrée par règle maison de catalogue qui remplace
@@ -43,10 +53,20 @@ const HOUSE_RULE_REGISTRY: ReadonlyMap<string, HouseRuleOverride> = new Map<stri
     'cagnotte_collective_evenement_tele',
     { point: CalculationPoint.TV_BONUS_DISTRIBUTION, strategy: new CollectiveTvBonusStrategy() },
   ],
+  [
+    'escarmouche_bonus_jerricans',
+    { point: CalculationPoint.BASE_INCOME_DISTRIBUTION, strategy: new NoBaseIncomeStrategy() },
+  ],
+  [
+    'plafond_jerricans_escarmouche',
+    { point: CalculationPoint.JERRICAN_GAINS_CAP, strategy: new CappedJerricanGainsStrategy() },
+  ],
 ]);
 
 const DEFAULT_RESISTANCE_STRATEGY = new DefaultResistanceStrategy();
 const DEFAULT_TV_BONUS_STRATEGY = new NoTvBonusStrategy();
+const DEFAULT_BASE_INCOME_STRATEGY = new DefaultBaseIncomeStrategy();
+const DEFAULT_JERRICAN_GAINS_CAP_STRATEGY = new UnlimitedJerricanGainsStrategy();
 
 /**
  * Abstract Factory **unique** pour toutes les règles maison — une méthode de
@@ -84,6 +104,30 @@ export class HouseRuleStrategyFactory {
       );
     }
     return active[0]?.strategy ?? DEFAULT_TV_BONUS_STRATEGY;
+  }
+
+  /** Résout la Strategy du revenu de base d'une Escarmouche —
+   *  `DefaultBaseIncomeStrategy` (1D6) si aucune règle maison active. */
+  createBaseIncomeStrategy(): BaseIncomeStrategy {
+    const active = this.findActiveOverrides(CalculationPoint.BASE_INCOME_DISTRIBUTION);
+    if (active.length > 1) {
+      throw new DomainException(
+        'Plusieurs règles maison actives résolvent le revenu de base — une seule à la fois.',
+      );
+    }
+    return active[0]?.strategy ?? DEFAULT_BASE_INCOME_STRATEGY;
+  }
+
+  /** Résout la Strategy de plafond des gains de jerricans en Escarmouche —
+   *  `UnlimitedJerricanGainsStrategy` (aucun plafond) si aucune règle maison active. */
+  createJerricanGainsCapStrategy(): JerricanGainsCapStrategy {
+    const active = this.findActiveOverrides(CalculationPoint.JERRICAN_GAINS_CAP);
+    if (active.length > 1) {
+      throw new DomainException(
+        'Plusieurs règles maison actives plafonnent les gains de jerricans — une seule à la fois.',
+      );
+    }
+    return active[0]?.strategy ?? DEFAULT_JERRICAN_GAINS_CAP_STRATEGY;
   }
 
   private findActiveOverrides<P extends CalculationPoint>(

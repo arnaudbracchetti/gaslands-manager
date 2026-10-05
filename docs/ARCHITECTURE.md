@@ -342,6 +342,8 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/campaign/domain/house-rules/house-rule-strategy.factory.ts` | `HouseRuleStrategyFactory` — Abstract Factory unique pour toutes les règles maison, une méthode `create…Strategy()` par point de calcul concerné (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`). Registre pur `HOUSE_RULE_REGISTRY` (union discriminée par `point`), cf. §3.8 |
 | `apps/backend/src/app/campaign/domain/house-rules/resistance-distribution-strategy.ts` | `ResistanceDistributionStrategy` (interface) + `DefaultResistanceStrategy` (règle par défaut US-F1) + `NoChampionshipPointsStrategy` (règle maison R1) |
 | `apps/backend/src/app/campaign/domain/house-rules/tv-bonus-distribution-strategy.ts` | `TvBonusDistributionStrategy` (interface) + `NoTvBonusStrategy` (défaut, aucun bonus) + `CollectiveTvBonusStrategy` (règle maison R2 — cagnotte collective de fin d'Événement Télévisé) |
+| `apps/backend/src/app/campaign/domain/house-rules/base-income-strategy.ts` | `BaseIncomeStrategy` (interface) + `DefaultBaseIncomeStrategy` (défaut, 1D6) + `NoBaseIncomeStrategy` (règle maison R3 — aucun revenu de base d'Escarmouche) |
+| `apps/backend/src/app/campaign/domain/house-rules/jerrican-gains-cap-strategy.ts` | `JerricanGainsCapStrategy` (interface) + `UnlimitedJerricanGainsStrategy` (défaut, aucun plafond) + `CappedJerricanGainsStrategy` (règle maison R4 — plafonne à 15 jerricans/partie le cumul revenu de base + butin manuel d'une Escarmouche) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -430,11 +432,18 @@ et [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison). Catal
 `HouseRuleCatalogService` (note ci-dessus, §3.1). Réglage : `Campaign.houseRules`
 (Value Object `HouseRules`), exposé par `PUT /api/campaigns/:id/house-rules`
 (sans contrainte d'état, contrairement à nom/budget) et à la création
-(`POST /api/campaigns`). Deux points de calcul consomment ce réglage à ce jour :
+(`POST /api/campaigns`). Quatre points de calcul consomment ce réglage à ce jour :
 la distribution des PR (R1, `distributeResistance()`, à l'entrée en Atelier — cf.
-diagramme ci-dessus) et la cagnotte télé collective (R2, `recordResult()`,
+diagramme ci-dessus), la cagnotte télé collective (R2, `recordResult()`,
 directement à l'enregistrement du résultat — son éligibilité, contrairement à
-R1, ne dépend d'aucune donnée produite plus tard dans le wizard).
+R1, ne dépend d'aucune donnée produite plus tard dans le wizard), le revenu
+de base d'une Escarmouche (R3, `rollBaseIncome()` — premier point porté par
+`EscarmoucheGame` plutôt que par `EvenementTeleGame`/`Game.recordResult`,
+résolu indépendamment à chaque tirage plutôt qu'une fois pour toute la partie)
+et le plafond de gains de jerricans d'une Escarmouche (R4, appliqué à
+l'intérieur de `rollBaseIncome()` **et** `recordJerricanGains()` — seul point à
+ce jour partagé par deux méthodes de commande, car son cumul porte sur les
+deux sources de gains "récompense" d'une même partie).
 
 Pourquoi le replay reconstitue les événements d'atelier dans le bon ordre
 sans mécanisme supplémentaire (`order` fractionnaire) : voir

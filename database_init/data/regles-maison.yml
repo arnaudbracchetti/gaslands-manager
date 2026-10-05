@@ -27,3 +27,13 @@ regles_maison:
     nom_interne: "cagnotte_collective_evenement_tele"
     description_decochee: "Les participants ayant participé à l'événement télévisé perçoivent leurs récompenses habituelles."
     description_cochee: "En plus des récompenses habituelles, tous les participants de la campagne reçoivent 5 jerricans de salaire, y compris ceux absents de cette partie."
+
+  - nom: "Bonus de jerricans pour la participation à une escarmouche"
+    nom_interne: "escarmouche_bonus_jerricans"
+    description_decochee: "Chaque participant présent à une Escarmouche reçoit un revenu de base de 1D6 jerricans, en plus des récompenses du scénario."
+    description_cochee: "Aucun revenu de base n'est distribué : seules les récompenses du scénario sont prises en compte."
+
+  - nom: "Plafond de jerricans par Escarmouche"
+    nom_interne: "plafond_jerricans_escarmouche"
+    description_decochee: "Un participant peut gagner autant de jerricans que le revenu de base et le butin de scénario le permettent lors d'une Escarmouche."
+    description_cochee: "Un participant ne peut jamais gagner plus de 15 jerricans au total (revenu de base + butin de scénario) sur une même Escarmouche."

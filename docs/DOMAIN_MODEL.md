@@ -931,10 +931,11 @@ un **quatrième** pattern GoF (Strategy + Abstract Factory), aux côtés des tro
 imbriqués Command/Invoker/Receiver ci-dessus (cf. [ARCHITECTURE.md §3.8, « Trois
 patterns GoF imbriqués
 »](ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)) : une règle
-maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace (R1) ou
-ajoute (R2) la Strategy résolue pour UN point de calcul précis. Deux points
-existent à ce jour : la distribution des Points de Résistance (R1) et la
-cagnotte collective de fin d'Événement Télévisé (R2).
+maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace (R1),
+ajoute (R2) ou supprime (R3) la Strategy résolue pour UN point de calcul précis.
+Trois points existent à ce jour : la distribution des Points de Résistance (R1),
+la cagnotte collective de fin d'Événement Télévisé (R2) et le revenu de base
+d'une Escarmouche (R3).
 
 ```mermaid
 classDiagram
@@ -958,6 +959,7 @@ classDiagram
         #context : GameRulesContext
         +distributeResistance() GameEvent[]
         +recordResult(rankings, participants) GameEvent[]
+        +rollBaseIncome(participantId, randomizer) GameEvent[]
     }
 
     class HouseRuleStrategyFactory {
@@ -965,6 +967,8 @@ classDiagram
         -rules : HouseRules
         +createResistanceDistributionStrategy() ResistanceDistributionStrategy
         +createTvBonusDistributionStrategy() TvBonusDistributionStrategy
+        +createBaseIncomeStrategy() BaseIncomeStrategy
+        +createJerricanGainsCapStrategy() JerricanGainsCapStrategy
     }
 
     class ResistanceDistributionStrategy {
@@ -999,16 +1003,54 @@ classDiagram
         +isEligible(entry) boolean
     }
 
+    class BaseIncomeStrategy {
+        <<Interface>>
+        +key : string
+        +roll(randomizer) number | null
+    }
+
+    class DefaultBaseIncomeStrategy {
+        +key : "defaut"
+        +roll(randomizer) number
+    }
+
+    class NoBaseIncomeStrategy {
+        +key : "escarmouche_bonus_jerricans"
+        +roll(randomizer) null
+    }
+
+    class JerricanGainsCapStrategy {
+        <<Interface>>
+        +key : string
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
+    class UnlimitedJerricanGainsStrategy {
+        +key : "defaut"
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
+    class CappedJerricanGainsStrategy {
+        +key : "plafond_jerricans_escarmouche"
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
     Campaign ..|> GameRulesContext
     Campaign "1" *-- "0..*" Game : attachContext() à la construction/hydratation
     Game --> GameRulesContext : context (jamais Campaign entière)
     GameRulesContext --> HouseRuleStrategyFactory : strategyFactory
     HouseRuleStrategyFactory --> ResistanceDistributionStrategy : résout (distributeResistance)
     HouseRuleStrategyFactory --> TvBonusDistributionStrategy : résout (recordResult)
+    HouseRuleStrategyFactory --> BaseIncomeStrategy : résout (rollBaseIncome)
+    HouseRuleStrategyFactory --> JerricanGainsCapStrategy : résout (rollBaseIncome, recordJerricanGains)
     DefaultResistanceStrategy ..|> ResistanceDistributionStrategy
     NoChampionshipPointsStrategy ..|> ResistanceDistributionStrategy
     NoTvBonusStrategy ..|> TvBonusDistributionStrategy
     CollectiveTvBonusStrategy ..|> TvBonusDistributionStrategy
+    DefaultBaseIncomeStrategy ..|> BaseIncomeStrategy
+    NoBaseIncomeStrategy ..|> BaseIncomeStrategy
+    UnlimitedJerricanGainsStrategy ..|> JerricanGainsCapStrategy
+    CappedJerricanGainsStrategy ..|> JerricanGainsCapStrategy
 ```
 
 - **`GameRulesContext`** (`domain/games/game-context.ts`) — interface étroite que
@@ -1019,8 +1061,8 @@ classDiagram
 - **`HouseRuleStrategyFactory`** (`domain/house-rules/house-rule-strategy.factory.ts`)
   — Abstract Factory **unique** pour toutes les règles maison présentes et
   futures, une méthode `create…Strategy()` par point de calcul concerné
-  (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`
-  aujourd'hui). Construite depuis `Campaign.houseRules`, reconstruite à la
+  (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`,
+  `createBaseIncomeStrategy()` aujourd'hui). Construite depuis `Campaign.houseRules`, reconstruite à la
   demande par le getter `Campaign.strategyFactory` plutôt que mémoïsée — pour
   qu'un `setHouseRules` ultérieur soit immédiatement pris en compte, sans
   invalidation à gérer. Registre pur (`HOUSE_RULE_REGISTRY`, une entrée par
@@ -1055,9 +1097,36 @@ classDiagram
   `distributeResistance()`) : son éligibilité ne dépendant d'aucune donnée
   produite plus tard dans le wizard, rien n'impose d'attendre l'entrée en
   Atelier.
+- **`BaseIncomeStrategy`** (`domain/house-rules/base-income-strategy.ts`) —
+  contrairement aux deux Strategy ci-dessus (un `isEligible` par participant),
+  encapsule directement le tirage (`roll(randomizer): number | null`) : il n'y a
+  aucune liste à filtrer, une seule décision par appel. Deux implémentations :
+  `DefaultBaseIncomeStrategy` (`key = "defaut"`, tire 1D6 — comportement
+  historique) et `NoBaseIncomeStrategy` (`key = "escarmouche_bonus_jerricans"`,
+  règle maison R3 — retourne toujours `null`, aucun événement journalisé).
+  Résolue et consommée directement par `Game.rollBaseIncome()`, indépendamment
+  à chaque tirage (un par participant présent, à l'écran Résolution du wizard) —
+  ni à l'entrée en Atelier (R1) ni à l'enregistrement du résultat (R2).
+- **`JerricanGainsCapStrategy`** (`domain/house-rules/jerrican-gains-cap-strategy.ts`)
+  — seule Strategy de règle maison à ce jour consommée par **deux** méthodes de
+  `Game` (`rollBaseIncome()` et `recordJerricanGains()`), puisque son plafond
+  porte sur le cumul des deux sources de gains "récompense" d'une même
+  Escarmouche plutôt que sur un seul point de calcul isolé. `clamp(requestedAmount,
+  alreadyEarned)` réduit, si nécessaire, le montant à créditer — jamais
+  d'exception, un dépassement est simplement réduit au reliquat disponible
+  (jusqu'à `0`). Deux implémentations : `UnlimitedJerricanGainsStrategy`
+  (`key = "defaut"`, ne réduit jamais) et `CappedJerricanGainsStrategy`
+  (`key = "plafond_jerricans_escarmouche"`, règle maison R4 — plafond fixé à 15
+  jerricans). `alreadyEarned` est calculé par `Game` à chaque appel, en sommant
+  le getter générique `GameEvent.recompenseJerricansAwarded` (`0` par défaut,
+  surchargé par `WalletMovementEvent` quand `reason === WalletReason.
+  RECOMPENSE`) sur `this.events` — même idiome que `championshipPointsAwarded`
+  (cf. [§Hiérarchie GameEvent](#hiérarchie-gameevent-command) ci-dessous),
+  jamais un compteur mémorisé séparément.
 - **Qui sélectionne la Strategy** : jamais un use case — `EvenementTeleGame`
-  (`distributeResistance`) et `Game.recordResult()` la résolvent elles-mêmes
-  via `this.context.strategyFactory`, cf.
+  (`distributeResistance`), `Game.recordResult()`, `Game.rollBaseIncome()` et
+  `Game.recordJerricanGains()` la résolvent elles-mêmes via
+  `this.context.strategyFactory`, cf.
   [ARCHITECTURE.md §3.4, « Convention projet — qui sélectionne une Strategy
   »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
 

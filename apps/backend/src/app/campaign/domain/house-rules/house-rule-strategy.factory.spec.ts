@@ -3,6 +3,8 @@ import { HouseRuleStrategyFactory } from './house-rule-strategy.factory';
 import { HouseRules } from './house-rules';
 import { DefaultResistanceStrategy, NoChampionshipPointsStrategy } from './resistance-distribution-strategy';
 import { CollectiveTvBonusStrategy, NoTvBonusStrategy } from './tv-bonus-distribution-strategy';
+import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy } from './base-income-strategy';
+import { UnlimitedJerricanGainsStrategy, CappedJerricanGainsStrategy } from './jerrican-gains-cap-strategy';
 
 describe('HouseRuleStrategyFactory', () => {
   it('résout la Strategy par défaut quand aucune règle maison n\'est active', () => {
@@ -78,5 +80,72 @@ describe('HouseRuleStrategyFactory', () => {
     const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['distribution_points_resistance']));
 
     expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
+  });
+
+  it('résout la Strategy par défaut (revenu de base) quand aucune règle maison n\'est active', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.none());
+
+    const strategy = factory.createBaseIncomeStrategy();
+
+    expect(strategy).toBeInstanceOf(DefaultBaseIncomeStrategy);
+    expect(strategy.key).toBe('defaut');
+  });
+
+  it('résout NoBaseIncomeStrategy quand escarmouche_bonus_jerricans est active', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['escarmouche_bonus_jerricans']));
+
+    const strategy = factory.createBaseIncomeStrategy();
+
+    expect(strategy).toBeInstanceOf(NoBaseIncomeStrategy);
+    expect(strategy.key).toBe('escarmouche_bonus_jerricans');
+  });
+
+  it('résout la Strategy par défaut (revenu de base) quand escarmouche_bonus_jerricans existe mais est désactivée', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted([]));
+
+    const strategy = factory.createBaseIncomeStrategy();
+
+    expect(strategy).toBeInstanceOf(DefaultBaseIncomeStrategy);
+  });
+
+  it('active escarmouche_bonus_jerricans sans effet sur les Strategy de Résistance/cagnotte télé', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['escarmouche_bonus_jerricans']));
+
+    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(DefaultResistanceStrategy);
+    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
+  });
+
+  it('résout la Strategy par défaut (plafond de jerricans) quand aucune règle maison n\'est active', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.none());
+
+    const strategy = factory.createJerricanGainsCapStrategy();
+
+    expect(strategy).toBeInstanceOf(UnlimitedJerricanGainsStrategy);
+    expect(strategy.key).toBe('defaut');
+  });
+
+  it('résout CappedJerricanGainsStrategy quand plafond_jerricans_escarmouche est active', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['plafond_jerricans_escarmouche']));
+
+    const strategy = factory.createJerricanGainsCapStrategy();
+
+    expect(strategy).toBeInstanceOf(CappedJerricanGainsStrategy);
+    expect(strategy.key).toBe('plafond_jerricans_escarmouche');
+  });
+
+  it('résout la Strategy par défaut (plafond de jerricans) quand plafond_jerricans_escarmouche existe mais est désactivée', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted([]));
+
+    const strategy = factory.createJerricanGainsCapStrategy();
+
+    expect(strategy).toBeInstanceOf(UnlimitedJerricanGainsStrategy);
+  });
+
+  it('active plafond_jerricans_escarmouche sans effet sur les autres Strategy', () => {
+    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['plafond_jerricans_escarmouche']));
+
+    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(DefaultResistanceStrategy);
+    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
+    expect(factory.createBaseIncomeStrategy()).toBeInstanceOf(DefaultBaseIncomeStrategy);
   });
 });

@@ -46,6 +46,16 @@ export abstract class GameEvent {
   }
 
   /**
+   * Jerricans de type "récompense" effectivement crédités par CET événement — `0` par
+   * défaut, surchargé par `WalletMovementEvent` quand `reason === WalletReason.RECOMPENSE`.
+   * Permet à `Game` de sommer le total déjà gagné par un participant sur la partie sans
+   * jamais tester de type — même idiome que `championshipPointsAwarded` ci-dessus.
+   */
+  get recompenseJerricansAwarded(): number {
+    return 0;
+  }
+
+  /**
    * Ligne de texte (français) décrivant cet événement — utilisée par la synthèse de fin
    * de partie et le journal complet d'une partie. `participants` (état rejoué, équipes
    * attachées) permet de résoudre les noms lisibles de véhicules/équipes à partir des

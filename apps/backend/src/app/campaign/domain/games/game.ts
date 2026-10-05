@@ -550,26 +550,51 @@ export abstract class Game {
 
   /**
    * Escarmouche uniquement — revenu de base : un jet de D6 crédité en jerricans à un
-   * participant présent. Différé en fin de wizard (phase de résolution), tiré une fois
-   * par participant, en même temps que les tirages de la Table des Épaves — même aléa
-   * serveur autoritaire (cf. spec/CAMPAIGN.md — Wizard de fin de partie). Délègue
-   * entièrement à `recordWalletMovement` une fois le dé tiré : aucune règle propre à
-   * porter au-delà de "revenu = 1D6".
+   * participant présent, sauf si la règle maison « Bonus de jerricans pour la
+   * participation à une escarmouche » (nom_interne `escarmouche_bonus_jerricans`)
+   * est active, auquel cas aucun revenu de base n'est distribué (`NoBaseIncomeStrategy`,
+   * aucun événement créé — même principe que `NoTvBonusStrategy`, cf. `recordResult`).
+   * Différé en fin de wizard (phase de résolution), tiré une fois par participant, en
+   * même temps que les tirages de la Table des Épaves — même aléa serveur autoritaire
+   * (cf. spec/CAMPAIGN.md — Wizard de fin de partie).
+   *
+   * Résout sa propre Strategy via `this.context.strategyFactory` — jamais reçue en
+   * paramètre (cf. skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une
+   * Strategy ? »), même principe que `recordResult`/`distributeResistance`.
+   *
+   * Réservé à une Escarmouche, le montant tiré est en plus soumis au plafond de
+   * gains (règle maison « Plafond de jerricans par Escarmouche », nom_interne
+   * `plafond_jerricans_escarmouche`) — cf. `recordJerricanGains` ci-dessous pour le
+   * détail du cumul partagé entre les deux sources de gains d'une Escarmouche.
    */
   rollBaseIncome(participantId: number, randomizer: IRandomizer): GameEvent[] {
-    const amount = randomizer.roll(6);
-    return this.recordWalletMovement(participantId, amount, WalletReason.RECOMPENSE);
+    const amount = this.context.strategyFactory.createBaseIncomeStrategy().roll(randomizer);
+    if (amount === null) {
+      return [];
+    }
+    const credited = this.applyJerricanGainsCap(participantId, amount);
+    if (credited <= 0) {
+      return [];
+    }
+    return this.recordWalletMovement(participantId, credited, WalletReason.RECOMPENSE);
   }
 
   /**
    * Escarmouche uniquement — butin manuel de jerricans (scénario `gain_jerricans`),
    * saisi par l'organisateur et cumulable avec le revenu de base (`rollBaseIncome`).
    * Boucle sur `recordWalletMovement`, comme `recordResult` boucle sur les rangs.
+   *
+   * Chaque montant est soumis au plafond de gains (règle maison « Plafond de
+   * jerricans par Escarmouche ») — cf. `applyJerricanGainsCap`, qui recalcule le
+   * cumul déjà journalisé pour CE participant après chaque événement ajouté, afin
+   * qu'un même appel avec plusieurs entrées pour un même participant reste correct.
    */
   recordJerricanGains(gains: { participantId: number; amount: number }[]): GameEvent[] {
     const events: GameEvent[] = [];
     for (const gain of gains) {
-      events.push(...this.recordWalletMovement(gain.participantId, gain.amount, WalletReason.RECOMPENSE));
+      const credited = this.applyJerricanGainsCap(gain.participantId, gain.amount);
+      if (credited <= 0) continue;
+      events.push(...this.recordWalletMovement(gain.participantId, credited, WalletReason.RECOMPENSE));
     }
     return events;
   }
@@ -682,6 +707,39 @@ export abstract class Game {
   private computePoints(rank: number, classified: number): number {
     if (rank > classified) return 0;
     return POINTS_TABLE[rank - 1] ?? 0;
+  }
+
+  /**
+   * Réduit, si nécessaire, un montant de jerricans "récompense" à créditer à
+   * `participantId`, pour respecter le plafond de la règle maison « Plafond de
+   * jerricans par Escarmouche » — no-op (montant inchangé) hors Escarmouche ou si la
+   * règle maison est désactivée (`UnlimitedJerricanGainsStrategy`). Le cumul déjà
+   * gagné est recalculé depuis `this.events` à chaque appel plutôt que mémorisé : les
+   * deux sources de gains (`recordJerricanGains`, persisté à l'écran Jerricans du
+   * wizard, puis `rollBaseIncome`, tiré à l'écran Résolution) sont journalisées par
+   * des appels de use case séparés qui rechargent systématiquement le journal complet
+   * (`CampaignReplayService.loadAndReplay`) avant d'agir.
+   */
+  private applyJerricanGainsCap(participantId: number, requestedAmount: number): number {
+    if (this.type !== 'ESCARMOUCHE') {
+      return requestedAmount;
+    }
+    const capStrategy = this.context.strategyFactory.createJerricanGainsCapStrategy();
+    const alreadyEarned = this.recompenseEarnedBy(participantId);
+    return capStrategy.clamp(requestedAmount, alreadyEarned);
+  }
+
+  /**
+   * Somme des jerricans "récompense" (`WalletReason.RECOMPENSE`) déjà journalisés
+   * pour ce participant sur CETTE partie — via le getter générique
+   * `GameEvent.recompenseJerricansAwarded` (0 par défaut, surchargé par
+   * `WalletMovementEvent`), même idiome que le calcul de PC de
+   * `EvenementTeleGame.distributeResistance`.
+   */
+  private recompenseEarnedBy(participantId: number): number {
+    return this.events
+      .filter((e) => e.participantId === participantId)
+      .reduce((sum, e) => sum + e.recompenseJerricansAwarded, 0);
   }
 
   /**

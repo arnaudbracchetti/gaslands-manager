@@ -82,6 +82,10 @@ même mécanisme que le catalogue de scénarios). `Campaign.houseRules` (Value O
 absente équivaut à son comportement par défaut, donc une règle ajoutée après coup au
 catalogue est automatiquement "décochée" partout, sans reprise de données.
 
+**4 règles au catalogue** à ce jour (R1 Points de Résistance, R2 Cagnotte collective de
+fin d'Événement Télévisé, R3 Bonus de jerricans pour la participation à une escarmouche,
+R4 Plafond de jerricans par Escarmouche — cf. ci-dessous).
+
 **Aucune contrainte d'état** — contrairement au budget (dont la restriction
 `EN_CONSTRUCTION` tient à l'éligibilité des équipes engagées, sans objet ici), le réglage
 des règles maison est modifiable à tout moment de la vie de la campagne : construction, en
@@ -185,10 +189,11 @@ par défaut, `NoTvBonusStrategy`), aucun événement n'est créé — cette règ
 que pour AJOUTER un effet, contrairement à R1 qui remplace un critère déjà actif par
 défaut. Activée (`CollectiveTvBonusStrategy`), crédite +5 jerricans
 (`WalletMovementEvent`, `WalletReason.CAGNOTTE_TELE`) à **tout participant
-`VALIDATED` de la campagne**, y compris ceux absents de cette partie précise — la
-seule des deux règles maison dont l'éligibilité ne dépend d'aucune donnée propre à
-un participant (rang, PC, présence). Portée par `CollectiveTvBonusStrategy`/
-`NoTvBonusStrategy` (`domain/house-rules/tv-bonus-distribution-strategy.ts`).
+`VALIDATED` de la campagne**, y compris ceux absents de cette partie précise —
+contrairement à R1, son éligibilité ne dépend d'aucune donnée propre à un
+participant (rang, PC, présence) ; R3 ci-dessous partage ce trait. Portée par
+`CollectiveTvBonusStrategy`/`NoTvBonusStrategy`
+(`domain/house-rules/tv-bonus-distribution-strategy.ts`).
 
 **Calculée à l'enregistrement du résultat, pas à l'entrée en Atelier** —
 contrairement à R1/la distribution des PR : `Game.recordResult()` construit les
@@ -203,6 +208,58 @@ R1, le résultat devient un fait journalisé, jamais recalculé après coup — 
 wizard en cours (`DELETE .../results`, partie encore `PLANIFIE`) supprime ces
 événements comme les autres (`Game.resultEventIdsForReset()` n'en distingue pas le
 type).
+
+**R3 — « Bonus de jerricans pour la participation à une escarmouche »**
+(`nom_interne escarmouche_bonus_jerricans`) : contrairement à R1 (qui remplace un
+critère déjà actif par défaut) et R2 (qui ajoute un effet), R3 **supprime** un
+effet par défaut — Escarmouche uniquement. À la désactivation (comportement par
+défaut, `DefaultBaseIncomeStrategy`), chaque participant présent reçoit un revenu
+de base tiré au D6 (`WalletMovementEvent`, `WalletReason.RECOMPENSE`), comme avant
+l'introduction de cette règle. Activée (`NoBaseIncomeStrategy`), ce tirage ne
+journalise plus aucun événement — seules les récompenses du scénario
+(`Game.recordJerricanGains`, écran Jerricans du wizard, non concerné par cette
+règle) restent créditées. Portée par `DefaultBaseIncomeStrategy`/
+`NoBaseIncomeStrategy` (`domain/house-rules/base-income-strategy.ts`).
+
+**Résolue à chaque tirage, pas en bloc pour toute la partie** — contrairement à
+R1 (à l'entrée en Atelier, une seule fois) et R2 (à l'enregistrement du résultat,
+une seule fois pour tous les participants) : `Game.rollBaseIncome()` résout sa
+Strategy indépendamment à chaque appel, un participant présent à la fois, à
+l'écran Résolution du wizard (`POST .../events/income`) — cf. [§Wizard de fin de
+partie](#wizard-de-fin-de-partie). Sans effet sur un Événement Télévisé, qui
+n'appelle jamais `rollBaseIncome`.
+
+**R4 — « Plafond de jerricans par Escarmouche »**
+(`nom_interne plafond_jerricans_escarmouche`) : contrairement à R1/R2/R3
+(chacune ne consulte qu'un seul point de calcul), R4 **plafonne le cumul** de
+deux sources de gains distinctes d'une même Escarmouche — le revenu de base D6
+(`Game.rollBaseIncome`) et le butin manuel de scénario
+(`Game.recordJerricanGains`, écran Jerricans du wizard) — jamais un Événement
+Télévisé, même si son scénario porte `gain_jerricans`. À la désactivation
+(comportement par défaut, `UnlimitedJerricanGainsStrategy`), un participant peut
+gagner autant de jerricans que ces deux sources le permettent, sans limite.
+Activée (`CappedJerricanGainsStrategy`), aucun participant ne peut dépasser
+**15 jerricans de type récompense au total sur une même partie** — un montant
+qui ferait dépasser ce plafond est réduit **silencieusement** au reliquat
+disponible (jamais rejeté), y compris jusqu'à 0 si le plafond est déjà atteint,
+auquel cas aucun événement n'est journalisé. Portée par
+`UnlimitedJerricanGainsStrategy`/`CappedJerricanGainsStrategy`
+(`domain/house-rules/jerrican-gains-cap-strategy.ts`).
+
+**Cumul recalculé depuis le journal de la partie, jamais mémorisé** — `Game`
+ne garde aucun compteur "déjà gagné" : à chaque appel de `rollBaseIncome`/
+`recordJerricanGains`, le cumul déjà crédité à ce participant sur CETTE partie
+est recalculé en sommant `GameEvent.recompenseJerricansAwarded` (getter
+générique valant `0` par défaut, surchargé par `WalletMovementEvent` quand
+`reason === WalletReason.RECOMPENSE` — même idiome que
+`championshipPointsAwarded`, cf. [DOMAIN_MODEL.md
+§4](../DOMAIN_MODEL.md#hiérarchie-gameevent-command)) sur `this.events`. Comme
+le butin manuel (persisté à l'écran Jerricans, avant l'écran Résolution) est
+toujours journalisé avant le revenu de base (tiré à l'écran Résolution), et que
+chaque use case recharge le journal complet via `CampaignReplayService.
+loadAndReplay` avant d'agir, le plafond s'applique correctement au total
+combiné des deux sources, quel que soit l'ordre dans lequel un participant les
+reçoit.
 
 ---
 
@@ -1347,7 +1404,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | DELETE | `/api/campaigns/:id/games/:gameId/results` | JWT | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus **et hors vendus**) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) et le roster de l'écran Désignation des épaves (y compris les véhicules du participant lui-même) ; un véhicule vendu en atelier n'appartient plus à l'équipe au moment de la partie suivante, il ne peut donc jamais y avoir participé |
-| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) |
+| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) — `amount: 0`/`descriptions: []` sans aucun événement journalisé si la règle maison R3 (`escarmouche_bonus_jerricans`, cf. §Règles maison) est active |
 | POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
 | POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/journal` | JWT | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie) |
