@@ -5,6 +5,7 @@ import { DefaultResistanceStrategy, NoChampionshipPointsStrategy } from './resis
 import { CollectiveTvBonusStrategy, NoTvBonusStrategy } from './tv-bonus-distribution-strategy';
 import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy } from './base-income-strategy';
 import { UnlimitedJerricanGainsStrategy, CappedJerricanGainsStrategy } from './jerrican-gains-cap-strategy';
+import { NoSabotageConversionStrategy, SabotageToJerricansStrategy } from './sabotage-conversion-strategy';
 
 describe('HouseRuleStrategyFactory', () => {
   it('résout la Strategy par défaut quand aucune règle maison n\'est active', () => {
@@ -147,5 +148,22 @@ describe('HouseRuleStrategyFactory', () => {
     expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(DefaultResistanceStrategy);
     expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
     expect(factory.createBaseIncomeStrategy()).toBeInstanceOf(DefaultBaseIncomeStrategy);
+  });
+
+  it('résout NoSabotageConversionStrategy (conversion refusée) par défaut', () => {
+    const strategy = new HouseRuleStrategyFactory(HouseRules.none()).createSabotageConversionStrategy();
+
+    expect(strategy).toBeInstanceOf(NoSabotageConversionStrategy);
+    expect(strategy.isAllowed()).toBe(false);
+  });
+
+  it('résout SabotageToJerricansStrategy (1 jeton = 3 jerricans) quand conversion_sabotage_jerricans est active', () => {
+    const strategy = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['conversion_sabotage_jerricans']),
+    ).createSabotageConversionStrategy();
+
+    expect(strategy).toBeInstanceOf(SabotageToJerricansStrategy);
+    expect(strategy.isAllowed()).toBe(true);
+    expect(strategy.jerricansPerToken).toBe(3);
   });
 });

@@ -15,6 +15,7 @@ import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
+import { SabotageConvertedEvent } from '../events/sabotage-converted.event';
 import { EquipmentEntityType } from '../enums/equipment-change.enums';
 
 /**
@@ -62,7 +63,12 @@ export class EscarmoucheGame extends Game {
       // accepté ici ne référence un weaponId/improvementId.
       // VehicleRenamedEvent référence un vehicleId sans surcharger targetsVehicle() —
       // limitation connue assumée, cf. sa doc et docs/plans/2026-07-17-vehicle-instance-name-design.md.
-      return event instanceof EquipmentChangedEvent || event instanceof VehicleRenamedEvent;
+      // SabotageConvertedEvent ne référence aucun id d'entité transiente (cf. ⚠️ ci-dessus).
+      return (
+        event instanceof EquipmentChangedEvent ||
+        event instanceof VehicleRenamedEvent ||
+        event instanceof SabotageConvertedEvent
+      );
     }
     return false;
   }

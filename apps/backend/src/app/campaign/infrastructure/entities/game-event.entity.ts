@@ -47,7 +47,7 @@ export class GameEventOrm {
    *  'RANKING_ASSIGNED' | 'WALLET_MOVEMENT' | 'VEHICLE_LOST' | 'WEAPON_LOST' |
    *  'IMPROVEMENT_LOST' | 'ADVANTAGE_LOST' | 'WRECK_RESOLVED' | 'EQUIPMENT_CHANGED' |
    *  'RESISTANCE_CONTACTED' | 'GATES_CROSSED' | 'VEHICLE_DESTROYED' |
-   *  'FAVORI_DU_PUBLIC_BONUS' | 'VEHICLE_RENAMED' | 'SABOTAGE_POINTS_SPENT' */
+   *  'FAVORI_DU_PUBLIC_BONUS' | 'VEHICLE_RENAMED' | 'SABOTAGE_POINTS_SPENT' | 'SABOTAGE_CONVERTED' */
   @Column()
   eventType!: string;
 
@@ -141,6 +141,14 @@ export class GameEventOrm {
    */
   @Column({ type: 'int', nullable: true })
   sabotagePointsSpent!: number | null;
+
+  /** Payload : SabotageConvertedEvent — jetons de sabotage convertis. */
+  @Column({ type: 'int', nullable: true })
+  sabotageTokensConverted!: number | null;
+
+  /** Payload : SabotageConvertedEvent — jerricans gagnés, FIGÉS à l'écriture (taux de la Strategy). */
+  @Column({ type: 'int', nullable: true })
+  sabotageJerricansGained!: number | null;
 
   /**
    * Payload : ResistanceContactedEvent — clé de la stratégie de distribution

@@ -473,4 +473,22 @@ export class CampaignsService {
   renameVehicle(campaignId: number, vehicleId: number, nom: string): Observable<void> {
     return this.http.post<void>(`/api/campaigns/${campaignId}/events/vehicle-rename`, { vehicleId, nom });
   }
+
+  /**
+   * POST /api/campaigns/:id/events/sabotage-conversion → règle maison : convertit 1 jeton
+   * de sabotage en jerricans (204 No Content). Pas de corps ni de `:gameId` : le backend
+   * retrouve l'atelier ouvert et applique le taux de la règle activée.
+   */
+  convertSabotage(campaignId: number): Observable<void> {
+    return this.http.post<void>(`/api/campaigns/${campaignId}/events/sabotage-conversion`, {});
+  }
+
+  /**
+   * POST /api/campaigns/:id/events/sabotage-conversion/cancel → annule la dernière
+   * conversion de sabotage du participant (204). Refusée (400) si les jerricans convertis
+   * ont déjà été dépensés (cagnotte négative) ou hors atelier.
+   */
+  cancelSabotageConversion(campaignId: number): Observable<void> {
+    return this.http.post<void>(`/api/campaigns/${campaignId}/events/sabotage-conversion/cancel`, {});
+  }
 }

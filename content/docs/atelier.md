@@ -44,6 +44,16 @@ L'usage réel des Jetons de Sabotage pendant une partie physique reste
 déclaratif, comme les Votes du Public : l'application se contente de compter
 le solde accumulé entre deux parties, pas son emploi en cours de jeu.
 
+Si l'organisateur a activé la [règle maison](/documentation/campagnes#regles-maison)
+« Conversion des jetons de sabotage en jerricans », un bouton **Convertir
+sabotage en jerricans** apparaît à côté du compteur : chaque clic (après confirmation) échange
+un jeton de sabotage contre 3 jerricans ajoutés à votre cagnotte. Le bouton est grisé
+quand il ne vous reste aucun jeton, et la conversion n'est possible que pendant
+l'atelier. Tant que l'atelier reste ouvert, un bouton **Annuler une conversion** permet de
+revenir en arrière : le jeton vous est rendu et les 3 jerricans sont retirés de la cagnotte.
+L'annulation est refusée si ces jerricans ont déjà été dépensés (la cagnotte ne peut jamais
+devenir négative) : annulez ou revendez d'abord l'achat concerné.
+
 ## Acheter et vendre de l'équipement
 
 Depuis la liste des véhicules de l'équipe, cliquez sur un véhicule pour

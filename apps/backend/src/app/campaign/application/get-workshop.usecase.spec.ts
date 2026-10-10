@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import { GetWorkshopUseCase } from './get-workshop.usecase';
+import { SabotageConvertedEvent } from '../domain/events/sabotage-converted.event';
+import { GameStatus } from '../domain/enums/game-status.enum';
+import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import type { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { Campaign } from '../domain/campaign';
 import { CampaignParticipant } from '../domain/campaign-participant';
@@ -341,5 +344,47 @@ describe('GetWorkshopUseCase — consultation de l\'atelier d\'un tiers (partici
     const useCase = new GetWorkshopUseCase(replayService);
 
     await expect(useCase.execute({ campaignId: 1, userId: 42, participantId: 999 })).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('GetWorkshopUseCase — lastSabotageConversionJerricans (annulation de conversion)', () => {
+  function makeUseCaseWithConversion(): GetWorkshopUseCase {
+    const { participant } = makeTestParticipant(1);
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [
+      new SabotageConvertedEvent(500, 10, 1, 1, 1, 3),
+    ]);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], [game]);
+    const replayService = { loadAndReplay: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
+    return new GetWorkshopUseCase(replayService);
+  }
+
+  it('expose les jerricans de la dernière conversion au propriétaire', async () => {
+    const dto = await makeUseCaseWithConversion().execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.lastSabotageConversionJerricans).toBe(3);
+  });
+
+  it('vaut null sans conversion dans l\'atelier ouvert', async () => {
+    const { participant } = makeTestParticipant(1);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], []);
+    const replayService = { loadAndReplay: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
+
+    const dto = await new GetWorkshopUseCase(replayService).execute({ campaignId: 1, userId: 42 });
+
+    expect(dto.lastSabotageConversionJerricans).toBeNull();
+  });
+
+  it('reste null pour la consultation d\'un tiers (secret)', async () => {
+    const { participant: target } = makeTestParticipant(1);
+    const caller = new CampaignParticipant(2, 99, null, false, ParticipantStatus.VALIDATED);
+    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [
+      new SabotageConvertedEvent(500, 10, 1, 1, 1, 3),
+    ]);
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [target, caller], [game]);
+    const replayService = { loadAndReplay: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
+
+    const dto = await new GetWorkshopUseCase(replayService).execute({ campaignId: 1, userId: 99, participantId: 1 });
+
+    expect(dto.lastSabotageConversionJerricans).toBeNull();
   });
 });

@@ -142,6 +142,10 @@ export class GetWorkshopUseCase {
       // Secret vis-à-vis des autres joueurs (D-S4) : seul le propriétaire consultant son
       // propre atelier (participantId absent de la commande) voit ce compteur dérivé.
       sabotagePoints: cmd.participantId === undefined ? target.sabotagePoints : null,
+      lastSabotageConversionJerricans:
+        cmd.participantId === undefined
+          ? (atelierGame?.findLastSabotageConversion(target.id)?.jerricansGained ?? null)
+          : null,
       vehicles,
     };
   }

@@ -37,3 +37,8 @@ regles_maison:
     nom_interne: "plafond_jerricans_escarmouche"
     description_decochee: "Un participant peut gagner autant de jerricans que le revenu de base et le butin de scénario le permettent lors d'une Escarmouche."
     description_cochee: "Un participant ne peut jamais gagner plus de 15 jerricans au total (revenu de base + butin de scénario) sur une même Escarmouche."
+
+  - nom: "Conversion des jetons de sabotage en jerricans"
+    nom_interne: "conversion_sabotage_jerricans"
+    description_decochee: "Les jetons de sabotage ne peuvent pas être convertis en jerricans."
+    description_cochee: "Pendant l'atelier, un participant peut convertir 1 jeton de sabotage en 3 jerricans."

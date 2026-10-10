@@ -82,9 +82,10 @@ même mécanisme que le catalogue de scénarios). `Campaign.houseRules` (Value O
 absente équivaut à son comportement par défaut, donc une règle ajoutée après coup au
 catalogue est automatiquement "décochée" partout, sans reprise de données.
 
-**4 règles au catalogue** à ce jour (R1 Points de Résistance, R2 Cagnotte collective de
+**5 règles au catalogue** à ce jour (R1 Points de Résistance, R2 Cagnotte collective de
 fin d'Événement Télévisé, R3 Bonus de jerricans pour la participation à une escarmouche,
-R4 Plafond de jerricans par Escarmouche — cf. ci-dessous).
+R4 Plafond de jerricans par Escarmouche, R5 Conversion des jetons de sabotage en jerricans
+— cf. ci-dessous).
 
 **Aucune contrainte d'état** — contrairement au budget (dont la restriction
 `EN_CONSTRUCTION` tient à l'éligibilité des équipes engagées, sans objet ici), le réglage
@@ -260,6 +261,52 @@ chaque use case recharge le journal complet via `CampaignReplayService.
 loadAndReplay` avant d'agir, le plafond s'applique correctement au total
 combiné des deux sources, quel que soit l'ordre dans lequel un participant les
 reçoit.
+
+**R5 — « Conversion des jetons de sabotage en jerricans »**
+(`nom_interne conversion_sabotage_jerricans`) : contrairement à R1–R4 (qui modifient un
+calcul automatique), R5 **ouvre une action manuelle** déclenchée par le joueur. À la
+désactivation (`NoSabotageConversionStrategy`, défaut), la conversion est refusée ; activée
+(`SabotageToJerricansStrategy`), **1 jeton de sabotage = 3 jerricans**. Portée par
+`domain/house-rules/sabotage-conversion-strategy.ts` ; le taux (`jerricansPerToken`) est
+porté par la Strategy, pas par `Game`.
+
+**Atelier uniquement, un jeton par action.** `Game.convertSabotage(participant)` résout sa
+propre Strategy via `this.context.strategyFactory` (jamais choisie par le use case) puis
+contrôle, dans cet ordre, chacun levant une `DomainException` (→ HTTP 400) : (1) la règle
+maison est activée, (2) la partie est en `ATELIER`, (3) le participant a au moins 1 jeton
+(`sabotagePoints >= 1`). Le 3ᵉ contrôle est un **rejet explicite, jamais un clamp
+silencieux** (contrairement à la dépense déclarée au wizard) : il garantit que le solde de
+jetons, donc les Points de Résistance, ne devient jamais négatif.
+
+**Traçabilité** : `SabotageConvertedEvent` (`tokensConverted`, `jerricansGained` **figé** à
+l'écriture — un changement ultérieur du taux ne fausse pas le replay). `execute()` débite
+3 PR par jeton et crédite la cagnotte (`creditWallet`) ; ce crédit n'est **pas** une
+récompense plafonnée (`recompenseJerricansAwarded` reste à 0), donc sans interaction avec R4.
+Accepté uniquement en `ATELIER` par `canAccept()` des deux sous-classes de `Game`.
+
+**Annulation (même session d'atelier)** : `Game.cancelSabotageConversion(participant)` retourne
+l'id de l'événement `SabotageConvertedEvent` **le plus récent** du participant, que
+`CancelSabotageConversionUseCase` supprime physiquement du journal
+(`ICampaignRepository.deleteEvents`) — même modèle que l'annulation d'un achat de la session
+(cf. [§Annulation d'achat vs revente](#annulation-dachat-vs-revente)), aucun événement
+d'annulation ; le replay suivant restitue le jeton et retire les jerricans. Contrôles, dans
+l'ordre (`DomainException` → HTTP 400) : (1) partie en `ATELIER`, (2) une conversion existe,
+(3) **la cagnotte ne devient jamais négative** — `wallet − jerricansGained >= 0`, sinon rejet
+« les jerricans convertis ont déjà été dépensés » (ex. solde 1 → conversion = 4 → achat à 3 =
+1 → annulation = −2, refusée ; le joueur doit d'abord annuler/revendre l'achat). Le `wallet`
+vient du replay et inclut déjà tous les achats de la session. L'annulation ne consulte pas la
+règle maison : elle reste possible si la règle a été décochée entre-temps. Une fois la partie
+`JOUE`, plus aucune conversion n'est annulable.
+
+**IHM** : `AtelierPage` affiche, dans la bande Cagnotte/Sabotage, un bouton
+« ⇄ Convertir sabotage en jerricans » **uniquement si la règle est active** sur la campagne
+(`Campaign.houseRules`), grisé si le solde de jetons est nul ; un clic ouvre un
+`ConfirmModal` avec l'aperçu avant/après (Sabotage n → n-1, Cagnotte w → w+3). Le serveur
+reste seul juge : le bouton grisé n'est qu'un confort. Un second bouton « ↩ Annuler une conversion »
+apparaît dès qu'une conversion existe dans l'atelier ouvert (`WorkshopStateDto.
+lastSabotageConversionJerricans`, `null` sinon et pour un tiers), grisé si `wallet <` ce montant ;
+confirmation avec aperçu (Sabotage n → n+1, Cagnotte w → w−3). Jamais proposé sur
+`ParticipantAtelierPage` (sabotage secret vis-à-vis des tiers).
 
 ---
 
@@ -874,6 +921,8 @@ directement sur le wallet — seule la mutation de l'entité (créée, ou flagu�
 
 ## Points de sabotage
 
+> Conversion en jerricans : règle maison R5, cf. [§Règles maison](#règles-maison).
+
 Compteur affiché dans l'Atelier (`AtelierPage`), juste sous la Cagnotte : un
 entier **dérivé** des Points de Résistance secrets (cf. [Limitations
 connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) —
@@ -1449,5 +1498,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles` | JWT | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture) |
 | POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
+| POST | `/api/campaigns/:id/events/sabotage-conversion` | JWT | Règle maison R5 : convertit 1 jeton de sabotage en jerricans (participant sur sa propre équipe) — 204, sans corps. `SabotageConvertedEvent`, accepté uniquement en `ATELIER`. HTTP 400 si la règle `conversion_sabotage_jerricans` n'est pas activée, si aucune partie n'est en atelier, ou si le solde de jetons est nul (cf. [§Règles maison](#règles-maison)). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment` |
+| POST | `/api/campaigns/:id/events/sabotage-conversion/cancel` | JWT | Annule la dernière conversion de sabotage du participant (règle maison R5) — 204, sans corps. Supprime l'événement du journal. HTTP 400 hors atelier, sans conversion à annuler, ou si la cagnotte deviendrait négative (cf. [§Règles maison](#règles-maison)) |
 | POST | `/api/campaigns/:id/events/vehicle-rename` | JWT | Renomme un véhicule en atelier `{ vehicleId, nom }` (participant sur sa propre équipe) — 204. Journalisé via `VehicleRenamedEvent`, accepté uniquement en `ATELIER` (cf. [§Renommage d'un véhicule en atelier](#renommage-dun-véhicule-en-atelier) ci-dessus). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment` |
 | POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |

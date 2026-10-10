@@ -98,6 +98,30 @@
   padding: 8px 18px;
 }
 
+.atp-convert-btn {
+  align-self: center;
+  margin-left: 0.6rem;
+  font-family: var(--font-text);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--fs-xs);
+  padding: 4px 12px;
+  background: transparent;
+  color: var(--tb-os);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.12);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
 .atp-summary-sep {
   color: var(--text-faint);
   font-family: var(--font-mono);

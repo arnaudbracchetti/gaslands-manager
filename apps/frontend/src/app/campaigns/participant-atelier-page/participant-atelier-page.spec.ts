@@ -69,6 +69,7 @@ const mockWorkshop: WorkshopStateDto = {
   wallet: 10,
   championshipPoints: 0,
   sabotagePoints: null,
+  lastSabotageConversionJerricans: null,
   vehicles: [
     {
       id: 5,

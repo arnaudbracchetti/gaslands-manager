@@ -148,6 +148,9 @@ export interface WorkshopStateDto {
    *  est consulté en lecture seule pour un autre participant (secret vis-à-vis des autres
    *  joueurs, cf. `ParticipantAtelierPage`). */
   sabotagePoints: number | null;
+  /** Jerricans de la dernière conversion de sabotage (règle maison R5) dans l'atelier ouvert —
+   *  `null` s'il n'y en a pas ou pour un autre participant. Pilote le bouton d'annulation. */
+  lastSabotageConversionJerricans: number | null;
   vehicles: WorkshopVehicleDto[];
 }
 

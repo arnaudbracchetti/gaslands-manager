@@ -708,7 +708,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED | SABOTAGE_POINTS_SPENT"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED | SABOTAGE_POINTS_SPENT | SABOTAGE_CONVERTED"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -734,6 +734,8 @@ erDiagram
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"
         number sabotagePointsSpent "nullable — SabotagePointsSpentEvent, DÉJÀ clampé au solde disponible à la déclaration"
+        number sabotageTokensConverted "nullable — SabotageConvertedEvent (règle maison R5)"
+        number sabotageJerricansGained "nullable — SabotageConvertedEvent, FIGÉ à l'écriture (taux de la Strategy × jetons)"
         string resistanceStrategyKey "nullable — ResistanceContactedEvent, clé de la stratégie automatique (ex. 'defaut', RM-4/RM-5) ; NULL pour un contact manuel"
         date createdAt
     }
@@ -1160,6 +1162,7 @@ d'événements confondus.
 | `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`) | `addPoints(-5)` + `vehicle.markFavoriDuPublic()` |
 | `VehicleRenamedEvent` | `vehicle.renameCampaignVehicle(newName)` (via `Team`, pas `assertNotLocked()` — cf. §1) | `vehicle.renameCampaignVehicle(previousName)` |
 | `SabotagePointsSpentEvent` (déclaration rétroactive, wizard de fin de partie) | `participant.addResistance(-3 × pointsSpent)` — `pointsSpent` est DÉJÀ le montant clampé au solde disponible, calculé par `Game.recordSabotageSpent` AVANT construction (jamais recalculé dans `execute()`/`describe()`, cf. sa doc) | `addResistance(+3 × pointsSpent)` |
+| `SabotageConvertedEvent` (règle maison R5, action manuelle en Atelier) | `participant.addResistance(-3 × tokensConverted)` + `creditWallet(+jerricansGained)` — `jerricansGained` figé à la construction par `Game.convertSabotage` (taux de `SabotageConversionStrategy`), jamais recalculé ; `recompenseJerricansAwarded` reste à 0 (hors plafond R4). **Annulable en atelier** : `Game.cancelSabotageConversion` désigne l'événement, supprimé physiquement du journal (comme un `BUY` de la session) après contrôle `wallet − jerricansGained >= 0` | `addResistance(+3 × tokensConverted)` + `creditWallet(-jerricansGained)` |
 
 ### Entités transientes (D-S11)
 
