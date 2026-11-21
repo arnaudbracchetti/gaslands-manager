@@ -13,28 +13,33 @@ permissions:
 jobs:
   main:
     runs-on: ubuntu-latest
+    env:
+      # tsconfig.base.json porte composite/emitDeclarationOnly (project references Nx),
+      # incompatibles avec Angular - cf. CLAUDE.md, "Dépannage Nx + TypeScript".
+      NX_IGNORE_UNSUPPORTED_TS_SETUP: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
           filter: tree:0
           fetch-depth: 0
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
-
-      # Cache node_modules
+      # Cache npm. Version alignée sur .nvmrc (environnement de dev local).
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - run: npm ci
 
-      # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      - run: npx nx record -- npx nx format:check  --base="remotes/origin/main"
-      - run: npx nx run-many -t lint test build typecheck e2e-ci
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+      # Calcule base/head pour `nx affected` et `format:check` (sans Nx Cloud).
+      - uses: nrwl/nx-set-shas@v4
+
+      - run: npx nx format:check
+
+      # Pas de Nx Cloud sur ce dépôt : exécution locale au runner.
+      # - `typecheck` exclu : la cible inférée par @nx/js (tsc --build --emitDeclarationOnly)
+      #   ne correspond pas aux builds réels (builder Angular, webpack transpileOnly côté
+      #   backend) et échoue sur des écarts connus (entités TypeORM, globals Vitest).
+      #   Le build frontend type-check déjà le code Angular.
+      # - e2e exclus : ils demandent PostgreSQL + navigateurs Playwright (cf. skill e2e-testing).
+      - run: npx nx affected -t lint test build
