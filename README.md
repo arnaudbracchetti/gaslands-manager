@@ -12,15 +12,15 @@ via TypeORM · JWT + bcrypt · Nx 22.7 (monorepo)
 
 ## Fonctionnalités
 
-| Domaine | État |
-|---------|------|
-| Authentification (inscription, connexion, rôles, compte admin) | ✅ |
-| Catalogue de jeu (13 sponsors, 22 véhicules, 38 armes, 19 améliorations, 72 avantages) | ✅ |
-| Équipes — CRUD, verrouillage du sponsor, construction de véhicule | ✅ |
-| Mode Campagne — ligue, inscriptions, Programme Télé (parties planifiées) | ✅ |
-| Mode Campagne — Atelier (achat/revente d'équipement via une cagnotte) | ✅ |
-| Mode Campagne — Table des Épaves, Séquelles, classement | ✅ |
-| Fiche d'équipe exportable (HTML imprimable, A4) | ✅ |
+| Domaine                                                                                | État |
+| -------------------------------------------------------------------------------------- | ---- |
+| Authentification (inscription, connexion, rôles, compte admin)                         | ✅   |
+| Catalogue de jeu (13 sponsors, 22 véhicules, 38 armes, 19 améliorations, 72 avantages) | ✅   |
+| Équipes — CRUD, verrouillage du sponsor, construction de véhicule                      | ✅   |
+| Mode Campagne — ligue, inscriptions, Programme Télé (parties planifiées)               | ✅   |
+| Mode Campagne — Atelier (achat/revente d'équipement via une cagnotte)                  | ✅   |
+| Mode Campagne — Table des Épaves, Séquelles, classement                                | ✅   |
+| Fiche d'équipe exportable (HTML imprimable, A4)                                        | ✅   |
 
 Détail complet, endpoints et modèles de données : [docs/SPECIFICATION.md](docs/SPECIFICATION.md).
 
@@ -64,6 +64,7 @@ cp apps/backend/.env.example apps/backend/.env
 ```
 
 Deux fichiers `.env` distincts et non substituables l'un à l'autre :
+
 - `.env` (racine) alimente Docker Compose (postgres/pgadmin, et le backend
   quand il tourne en conteneur) ;
 - `apps/backend/.env` alimente `npx nx serve backend` en développement local
@@ -98,11 +99,11 @@ npx nx serve backend             # → http://localhost:3000/api
 npx nx serve frontend            # → http://localhost:4200
 ```
 
-| Service  | URL |
-|----------|-----|
-| Frontend | http://localhost:4200 |
+| Service  | URL                       |
+| -------- | ------------------------- |
+| Frontend | http://localhost:4200     |
 | API      | http://localhost:3000/api |
-| pgAdmin  | http://localhost:5050 |
+| pgAdmin  | http://localhost:5050     |
 
 > En cas d'erreur de configuration TypeScript au démarrage de Nx
 > (`composite`/`emitDeclarationOnly` incompatibles avec Angular), exporter
@@ -216,13 +217,13 @@ des pièges déjà rencontrés (Caddyfile, CSP, migrations...) : voir
 
 ## Documentation complémentaire
 
-| Document | Contenu |
-|----------|---------|
-| [docs/SPECIFICATION.md](docs/SPECIFICATION.md) | Spécifications fonctionnelles complètes, endpoints, modèles de données |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Choix techniques, structure du code, patterns DDD, sécurité, infra Docker |
-| [docs/DOMAIN_MODEL.md](docs/DOMAIN_MODEL.md) | Diagrammes UML du modèle de domaine (agrégats, ERD) |
-| [docs/COMPONENTS.md](docs/COMPONENTS.md) | Catalogue des composants Angular |
-| [docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md) | Guide opérationnel de déploiement/mise à jour en production |
+| Document                                         | Contenu                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------- |
+| [docs/SPECIFICATION.md](docs/SPECIFICATION.md)   | Spécifications fonctionnelles complètes, endpoints, modèles de données    |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)     | Choix techniques, structure du code, patterns DDD, sécurité, infra Docker |
+| [docs/DOMAIN_MODEL.md](docs/DOMAIN_MODEL.md)     | Diagrammes UML du modèle de domaine (agrégats, ERD)                       |
+| [docs/COMPONENTS.md](docs/COMPONENTS.md)         | Catalogue des composants Angular                                          |
+| [docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md) | Guide opérationnel de déploiement/mise à jour en production               |
 
 La documentation destinée aux joueurs (fonctionnement de l'application,
 comportement observable) est accessible directement dans l'application via

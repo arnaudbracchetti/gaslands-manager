@@ -188,7 +188,7 @@ mêmes étapes, en remplaçant `gaslands` par son propre nom partout.
   > particulière. Non définie, elle se résout en chaîne vide → le bloc de
   > site perd sa clé → Caddy le prend pour un second bloc de configuration
   > globale et refuse de démarrer (`server block without any key ... must be
-  > first`). D'où un vrai placeholder textuel, substitué **avant** que Caddy
+first`). D'où un vrai placeholder textuel, substitué **avant** que Caddy
   > ne lise le fichier (§3.3).
 
 ### 3.2 Construire et publier les images (CI)
@@ -231,14 +231,15 @@ jobs:
 ```
 
 Pourquoi ce choix précis :
+
 - **Déclenché sur un tag de version** (`v*.*.*`), pas à chaque push — chaque
   publication d'image correspond à une release explicite.
 - **Runner `ubuntu-latest` = amd64 natif**, comme la quasi-totalité des VPS —
   aucune cross-compilation nécessaire, contrairement à un build local sur un
   Mac Apple Silicon (arm64).
 - **`GITHUB_TOKEN` intégré** : aucun secret à créer/gérer pour publier.
-- **Packages rendus publics** (GitHub → Packages → *Change visibility* →
-  *Public*, une fois après leur première publication) : aucun secret n'est
+- **Packages rendus publics** (GitHub → Packages → _Change visibility_ →
+  _Public_, une fois après leur première publication) : aucun secret n'est
   jamais intégré à une image (les `.env` sont injectés au démarrage du
   conteneur, jamais au moment du build) — le VPS n'a donc besoin d'aucun
   `docker login` pour `pull`.
@@ -291,7 +292,7 @@ redémarrer le conteneur.
 
 - `docker compose exec backend id` → utilisateur non-root
 - Depuis une machine **externe** au VPS : `nmap -p <ports internes de l'app>
-  <ip-vps>` → tout `closed`/`filtered` (seul Caddy doit être joignable)
+<ip-vps>` → tout `closed`/`filtered` (seul Caddy doit être joignable)
 - `curl -I http://<domaine>` → `308` (redirection HTTPS)
 - `curl -I https://<domaine>` → en-têtes de sécurité présents, vrai certificat
   Let's Encrypt (pas d'avertissement navigateur)
@@ -335,21 +336,22 @@ dans `/opt/edge/` lui-même : ni son `docker-compose.yml`, ni son `Caddyfile`
 sans jamais redémarrer Caddy ni interrompre les applications déjà en ligne.
 
 Rappel des deux règles qui rendent ça sûr :
+
 - Alias **uniques** sur `edge_net` (`<app>-backend`, jamais `backend` nu).
 - Réseau de base de données **propre à chaque application** (`internal:
-  true`), jamais partagé.
+true`), jamais partagé.
 
 ---
 
 ## 6. Pièges connus (rencontrés en conditions réelles)
 
-| Symptôme | Cause | Correctif |
-|---|---|---|
-| `Error: adapting config using caddyfile: server block without any key is global configuration, and if used, it must be first` au `caddy reload` | `{$PUBLIC_DOMAIN}` (variable Caddy) non définie dans l'environnement du conteneur `caddy` du stack `edge` → résolue en chaîne vide | Utiliser un placeholder **textuel** (`__PUBLIC_DOMAIN__`), substitué par `sed` avant dépôt du fichier (§3.1/§3.3), jamais une variable Caddy |
-| `Error: ... subject does not qualify for certificate: '{domaine}'` | Domaine entouré d'accolades littérales laissées par une substitution manuelle incomplète (confusion avec la syntaxe `{$VAR}` d'origine) | Le domaine doit être **nu**, sans aucune accolade autour de lui — seule l'accolade qui ouvre le bloc de site doit rester |
-| Page en ligne sans aucun style, console : `Executing inline event handler violates ... 'script-src'` | Angular (`@angular/build:application`, config `production`) inline le CSS critique et active le reste via `<link media="print" onload="this.media='all'">` — un attribut `onload` inline, bloqué par une CSP stricte (`script-src` sans `unsafe-inline`) | `optimization.styles.inlineCritical: false` dans la configuration `production` du projet Angular concerné (`project.json`) |
-| `docker compose pull` "réussit" mais rien ne change en production après une mise à jour | `IMAGE_TAG` pas mis à jour dans `.env` avant le `pull` | Voir §4 — toujours vérifier la valeur avant de conclure |
-| `docker compose up` échoue avec *"dependency failed to start"* sur le backend | Le plus souvent une variable de `.env` manquante/invalide — le backend valide strictement son environnement au démarrage et s'arrête volontairement sinon | `docker compose logs backend` pour le message exact ; vérifier qu'aucun placeholder du type `<...>` n'est resté tel quel dans `.env` (`grep '<' .env`) |
+| Symptôme                                                                                                                                        | Cause                                                                                                                                                                                                                                                    | Correctif                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Error: adapting config using caddyfile: server block without any key is global configuration, and if used, it must be first` au `caddy reload` | `{$PUBLIC_DOMAIN}` (variable Caddy) non définie dans l'environnement du conteneur `caddy` du stack `edge` → résolue en chaîne vide                                                                                                                       | Utiliser un placeholder **textuel** (`__PUBLIC_DOMAIN__`), substitué par `sed` avant dépôt du fichier (§3.1/§3.3), jamais une variable Caddy           |
+| `Error: ... subject does not qualify for certificate: '{domaine}'`                                                                              | Domaine entouré d'accolades littérales laissées par une substitution manuelle incomplète (confusion avec la syntaxe `{$VAR}` d'origine)                                                                                                                  | Le domaine doit être **nu**, sans aucune accolade autour de lui — seule l'accolade qui ouvre le bloc de site doit rester                               |
+| Page en ligne sans aucun style, console : `Executing inline event handler violates ... 'script-src'`                                            | Angular (`@angular/build:application`, config `production`) inline le CSS critique et active le reste via `<link media="print" onload="this.media='all'">` — un attribut `onload` inline, bloqué par une CSP stricte (`script-src` sans `unsafe-inline`) | `optimization.styles.inlineCritical: false` dans la configuration `production` du projet Angular concerné (`project.json`)                             |
+| `docker compose pull` "réussit" mais rien ne change en production après une mise à jour                                                         | `IMAGE_TAG` pas mis à jour dans `.env` avant le `pull`                                                                                                                                                                                                   | Voir §4 — toujours vérifier la valeur avant de conclure                                                                                                |
+| `docker compose up` échoue avec _"dependency failed to start"_ sur le backend                                                                   | Le plus souvent une variable de `.env` manquante/invalide — le backend valide strictement son environnement au démarrage et s'arrête volontairement sinon                                                                                                | `docker compose logs backend` pour le message exact ; vérifier qu'aucun placeholder du type `<...>` n'est resté tel quel dans `.env` (`grep '<' .env`) |
 
 ---
 
@@ -366,7 +368,7 @@ cette dernière étape ont été identifiées, non retenues pour l'instant :
   VPS depuis l'extérieur (jusqu'ici, le VPS n'accepte jamais rien
   d'entrant hors SSH administratif) — un secret CI qui fuiterait donnerait un
   accès quasi-root au VPS.
-- **"Pull"** — un outil comme *Watchtower*, sur le VPS lui-même, qui surveille
+- **"Pull"** — un outil comme _Watchtower_, sur le VPS lui-même, qui surveille
   périodiquement si l'image `:latest` a changé sur le registre et se
   redéploie seul. Cohérent avec le principe "rien n'entre depuis
   l'extérieur", mais impose de suivre le tag mutable `:latest` plutôt qu'un
