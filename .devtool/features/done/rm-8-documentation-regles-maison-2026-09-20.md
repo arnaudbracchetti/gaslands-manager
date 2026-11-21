@@ -1,15 +1,16 @@
 ---
-id: "rm-8-documentation-regles-maison-2026-09-20"
-status: "done"
-priority: "medium"
+id: 'rm-8-documentation-regles-maison-2026-09-20'
+status: 'done'
+priority: 'medium'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T00:00:00.000Z"
-completedAt: "2026-09-25T00:00:00.000Z"
-labels: ["regles-maison", "mode-campagne", "documentation", "wayfinder:task"]
-order: "ae"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-25T00:00:00.000Z'
+completedAt: '2026-09-25T00:00:00.000Z'
+labels: ['regles-maison', 'mode-campagne', 'documentation', 'wayfinder:task']
+order: 'ae'
 ---
+
 # RM-8 — Documentation des règles maison
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -64,7 +65,7 @@ résolution. Les cinq autres documents ont été complétés :
   `ResistanceDistributionStrategy` + ses deux implémentations — présentée comme
   un quatrième pattern GoF aux côtés de Command/Invoker/Receiver. `Campaign`
   gagne `+strategyFactory` sur son diagramme existant ; `Game.
-  distributeResistance(strategy)` corrigé en `distributeResistance()` (le
+distributeResistance(strategy)` corrigé en `distributeResistance()` (le
   paramètre documenté ne correspondait plus à la signature réelle depuis RM-5).
   Catalogue `HouseRuleDefinition` ajouté au diagramme des catalogues en mémoire
   (§2), sans relation avec `Sponsor` (comme `Sequelle`).

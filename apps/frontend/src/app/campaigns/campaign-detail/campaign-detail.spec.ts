@@ -12,7 +12,10 @@ import { of, throwError } from 'rxjs';
 import { CampaignDetail } from './campaign-detail';
 import { CampaignsService } from '../campaigns.service';
 import { Campaign, HouseRuleDefinition } from '../campaign.model';
-import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
+import {
+  CampaignParticipant,
+  StandingsEntry,
+} from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { AuthService } from '../../auth/auth.service';
 import { User } from '../../auth/auth.model';
@@ -48,16 +51,50 @@ const mockHouseRuleCatalog: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
     nom_interne: 'distribution_points_resistance',
-    description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
-    description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
+    description_decochee:
+      'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
+    description_cochee:
+      'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
   },
 ];
 
 const mockParticipants: CampaignParticipant[] = [
-  { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
-  { id: 2, userId: 43, teamId: 8, status: 'PENDING', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
-  { id: 3, userId: 44, teamId: 10, status: 'VALIDATED', isOrganizer: false, userName: 'Bob Martin', teamName: 'Bandits' },
-  { id: 4, userId: 45, teamId: 11, status: 'REJECTED', isOrganizer: false, userName: 'Dan Fury', teamName: 'Outlaws' },
+  {
+    id: 1,
+    userId: 42,
+    teamId: 7,
+    status: 'VALIDATED',
+    isOrganizer: true,
+    userName: 'Jean Dupont',
+    teamName: 'Furies',
+  },
+  {
+    id: 2,
+    userId: 43,
+    teamId: 8,
+    status: 'PENDING',
+    isOrganizer: false,
+    userName: 'Alice Martin',
+    teamName: 'Scrap Kings',
+  },
+  {
+    id: 3,
+    userId: 44,
+    teamId: 10,
+    status: 'VALIDATED',
+    isOrganizer: false,
+    userName: 'Bob Martin',
+    teamName: 'Bandits',
+  },
+  {
+    id: 4,
+    userId: 45,
+    teamId: 11,
+    status: 'REJECTED',
+    isOrganizer: false,
+    userName: 'Dan Fury',
+    teamName: 'Outlaws',
+  },
 ];
 
 describe('CampaignDetail', () => {
@@ -95,7 +132,10 @@ describe('CampaignDetail', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: Router, useValue: mockRouter },
         { provide: TeamsService, useValue: mockTeamsService },
-        { provide: ActivatedRoute, useValue: { snapshot: { params: { id: campaignId } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { params: { id: campaignId } } },
+        },
       ],
     });
   }
@@ -115,7 +155,9 @@ describe('CampaignDetail', () => {
       promote: vi.fn(),
       getParticipantJournal: vi.fn().mockReturnValue(of([])),
       getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
-      getParticipantTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
+      getParticipantTeamSheet: vi
+        .fn()
+        .mockReturnValue(of('<!doctype html><html></html>')),
       getGames: vi.fn().mockReturnValue(of([])),
       getScenarios: vi.fn().mockReturnValue(of([])),
     };
@@ -141,7 +183,7 @@ describe('CampaignDetail', () => {
     expect(component.participants()).toEqual(mockParticipants);
   });
 
-  it('myParticipant correspond au participant de l\'utilisateur connecté', () => {
+  it("myParticipant correspond au participant de l'utilisateur connecté", () => {
     configure();
     fixture = TestBed.createComponent(CampaignDetail);
     component = fixture.componentInstance;
@@ -157,11 +199,13 @@ describe('CampaignDetail', () => {
     fixture.detectChanges();
 
     expect(component.validatedCount()).toBe(2); // Jean + Bob
-    expect(component.pendingCount()).toBe(1);   // Alice
+    expect(component.pendingCount()).toBe(1); // Alice
   });
 
-  it('affiche un message d\'erreur générique si la saison est introuvable (CA3)', () => {
-    mockCampaignsService.getOne.mockReturnValue(throwError(() => new Error('404')));
+  it("affiche un message d'erreur générique si la saison est introuvable (CA3)", () => {
+    mockCampaignsService.getOne.mockReturnValue(
+      throwError(() => new Error('404')),
+    );
 
     configure();
     fixture = TestBed.createComponent(CampaignDetail);
@@ -178,8 +222,22 @@ describe('CampaignDetail', () => {
   describe('championshipPoints', () => {
     it('charge les standings au démarrage et construit la map par participantId', () => {
       const standings: StandingsEntry[] = [
-        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
-        { participantId: 3, userId: 44, teamId: 10, teamName: 'Bandits', championshipPoints: 5, wallet: 2 },
+        {
+          participantId: 1,
+          userId: 42,
+          teamId: 7,
+          teamName: 'Furies',
+          championshipPoints: 10,
+          wallet: 5,
+        },
+        {
+          participantId: 3,
+          userId: 44,
+          teamId: 10,
+          teamName: 'Bandits',
+          championshipPoints: 5,
+          wallet: 2,
+        },
       ];
       mockCampaignsService.getStandings.mockReturnValue(of(standings));
 
@@ -195,7 +253,7 @@ describe('CampaignDetail', () => {
       expect(component.championshipPoints().has(2)).toBe(false);
     });
 
-    it('la map de PC reste vide si aucune partie n\'a été jouée', () => {
+    it("la map de PC reste vide si aucune partie n'a été jouée", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -204,8 +262,10 @@ describe('CampaignDetail', () => {
       expect(component.championshipPoints().size).toBe(0);
     });
 
-    it('n\'empêche pas l\'affichage des participants si /standings échoue', () => {
-      mockCampaignsService.getStandings.mockReturnValue(throwError(() => new Error('500')));
+    it("n'empêche pas l'affichage des participants si /standings échoue", () => {
+      mockCampaignsService.getStandings.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -225,7 +285,14 @@ describe('CampaignDetail', () => {
       expect(mockCampaignsService.getStandings).toHaveBeenCalledTimes(1);
 
       const updated: StandingsEntry[] = [
-        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
+        {
+          participantId: 1,
+          userId: 42,
+          teamId: 7,
+          teamName: 'Furies',
+          championshipPoints: 10,
+          wallet: 5,
+        },
       ];
       mockCampaignsService.getStandings.mockReturnValue(of(updated));
 
@@ -248,7 +315,9 @@ describe('CampaignDetail', () => {
   });
 
   it('isOrganizer est faux quand myRole === "participant"', () => {
-    mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+    mockCampaignsService.getOne.mockReturnValue(
+      of({ ...mockCampaign, myRole: 'participant' }),
+    );
 
     configure();
     fixture = TestBed.createComponent(CampaignDetail);
@@ -262,7 +331,10 @@ describe('CampaignDetail', () => {
 
   describe('onValidate()', () => {
     it('met à jour le participant localement sans recharger la liste', () => {
-      const updated: CampaignParticipant = { ...mockParticipants[1], status: 'VALIDATED' };
+      const updated: CampaignParticipant = {
+        ...mockParticipants[1],
+        status: 'VALIDATED',
+      };
       mockCampaignsService.validateParticipant.mockReturnValue(of(updated));
 
       configure();
@@ -272,14 +344,21 @@ describe('CampaignDetail', () => {
 
       component.onValidate({ pid: 2, accept: true });
 
-      expect(mockCampaignsService.validateParticipant).toHaveBeenCalledWith(1, 2, { accept: true });
+      expect(mockCampaignsService.validateParticipant).toHaveBeenCalledWith(
+        1,
+        2,
+        { accept: true },
+      );
       // CampaignDetail + CampaignProgram (enfant) appellent tous deux getParticipants au démarrage.
       expect(mockCampaignsService.getParticipants).toHaveBeenCalledTimes(2);
       expect(component.participants()).toContainEqual(updated);
     });
 
     it('refuse une demande — son statut passe à REJECTED dans la liste', () => {
-      const updated: CampaignParticipant = { ...mockParticipants[1], status: 'REJECTED' };
+      const updated: CampaignParticipant = {
+        ...mockParticipants[1],
+        status: 'REJECTED',
+      };
       mockCampaignsService.validateParticipant.mockReturnValue(of(updated));
 
       configure();
@@ -298,7 +377,10 @@ describe('CampaignDetail', () => {
 
   describe('onPromote()', () => {
     it('promeut un participant et met à jour la liste localement', () => {
-      const updated: CampaignParticipant = { ...mockParticipants[2], isOrganizer: true };
+      const updated: CampaignParticipant = {
+        ...mockParticipants[2],
+        isOrganizer: true,
+      };
       mockCampaignsService.promote.mockReturnValue(of(updated));
 
       configure();
@@ -316,7 +398,7 @@ describe('CampaignDetail', () => {
       expect(component.participants()).toContainEqual(updated);
     });
 
-    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+    it("n'appelle pas l'API si la confirmation est refusée", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -332,9 +414,16 @@ describe('CampaignDetail', () => {
   // ── onViewJournal() / onParticipantJournalClosed() ──────────────────────
 
   describe('onViewJournal()', () => {
-    it('ouvre la modale et charge l\'historique du participant ciblé', () => {
+    it("ouvre la modale et charge l'historique du participant ciblé", () => {
       const entries: ParticipantJournalEntryDto[] = [
-        { eventId: 100, gameId: 7, gameOrder: 1, scenarioName: 'La Porte', description: 'Classé 1 (+10 PC)', createdAt: '2026-07-01T00:00:00.000Z' },
+        {
+          eventId: 100,
+          gameId: 7,
+          gameOrder: 1,
+          scenarioName: 'La Porte',
+          description: 'Classé 1 (+10 PC)',
+          createdAt: '2026-07-01T00:00:00.000Z',
+        },
       ];
       mockCampaignsService.getParticipantJournal.mockReturnValue(of(entries));
 
@@ -345,14 +434,19 @@ describe('CampaignDetail', () => {
 
       component.onViewJournal(3);
 
-      expect(mockCampaignsService.getParticipantJournal).toHaveBeenCalledWith(1, 3);
+      expect(mockCampaignsService.getParticipantJournal).toHaveBeenCalledWith(
+        1,
+        3,
+      );
       expect(component.journalParticipant()).toEqual(mockParticipants[2]);
       expect(component.participantJournalEntries()).toEqual(entries);
       expect(component.loadingParticipantJournal()).toBe(false);
     });
 
     it('affiche une erreur si le chargement échoue', () => {
-      mockCampaignsService.getParticipantJournal.mockReturnValue(throwError(() => new Error('500')));
+      mockCampaignsService.getParticipantJournal.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -369,7 +463,16 @@ describe('CampaignDetail', () => {
   describe('onParticipantJournalClosed()', () => {
     it('réinitialise les signaux de la modale', () => {
       mockCampaignsService.getParticipantJournal.mockReturnValue(
-        of([{ eventId: 100, gameId: 7, gameOrder: 1, scenarioName: 'La Porte', description: 'x', createdAt: '2026-07-01T00:00:00.000Z' }]),
+        of([
+          {
+            eventId: 100,
+            gameId: 7,
+            gameOrder: 1,
+            scenarioName: 'La Porte',
+            description: 'x',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        ]),
       );
 
       configure();
@@ -392,7 +495,9 @@ describe('CampaignDetail', () => {
 
   describe('onExportSheet()', () => {
     it('appelle getTeamSheet (pas getParticipantTeamSheet) quand pid est le sien', () => {
-      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } } as unknown as Window;
+      const fakeWin = {
+        document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
+      } as unknown as Window;
       const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
 
       configure();
@@ -404,14 +509,20 @@ describe('CampaignDetail', () => {
 
       expect(openSpy).toHaveBeenCalledWith('', '_blank');
       expect(mockCampaignsService.getTeamSheet).toHaveBeenCalledWith(1);
-      expect(mockCampaignsService.getParticipantTeamSheet).not.toHaveBeenCalled();
-      expect(fakeWin.document.write).toHaveBeenCalledWith('<!doctype html><html></html>');
+      expect(
+        mockCampaignsService.getParticipantTeamSheet,
+      ).not.toHaveBeenCalled();
+      expect(fakeWin.document.write).toHaveBeenCalledWith(
+        '<!doctype html><html></html>',
+      );
 
       openSpy.mockRestore();
     });
 
     it('appelle getParticipantTeamSheet (pas getTeamSheet) pour un autre participant', () => {
-      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } } as unknown as Window;
+      const fakeWin = {
+        document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
+      } as unknown as Window;
       const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWin);
 
       configure();
@@ -422,17 +533,27 @@ describe('CampaignDetail', () => {
       component.onExportSheet(3); // mockParticipants[2], userId 44 ≠ mockCurrentUser.id
 
       expect(openSpy).toHaveBeenCalledWith('', '_blank');
-      expect(mockCampaignsService.getParticipantTeamSheet).toHaveBeenCalledWith(1, 3);
+      expect(mockCampaignsService.getParticipantTeamSheet).toHaveBeenCalledWith(
+        1,
+        3,
+      );
       expect(mockCampaignsService.getTeamSheet).not.toHaveBeenCalled();
-      expect(fakeWin.document.write).toHaveBeenCalledWith('<!doctype html><html></html>');
+      expect(fakeWin.document.write).toHaveBeenCalledWith(
+        '<!doctype html><html></html>',
+      );
 
       openSpy.mockRestore();
     });
 
-    it('ferme la fenêtre et affiche une erreur si l\'appel échoue', () => {
-      const fakeWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() }, close: vi.fn() } as unknown as Window;
+    it("ferme la fenêtre et affiche une erreur si l'appel échoue", () => {
+      const fakeWin = {
+        document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
+        close: vi.fn(),
+      } as unknown as Window;
       vi.spyOn(window, 'open').mockReturnValue(fakeWin);
-      mockCampaignsService.getTeamSheet.mockReturnValue(throwError(() => new Error('boom')));
+      mockCampaignsService.getTeamSheet.mockReturnValue(
+        throwError(() => new Error('boom')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -451,7 +572,7 @@ describe('CampaignDetail', () => {
   // ── onChangeState() ──────────────────────────────────────────────────────
 
   describe('onChangeState()', () => {
-    it('change l\'état de la saison après confirmation', () => {
+    it("change l'état de la saison après confirmation", () => {
       const updated: Campaign = { ...mockCampaign, state: 'EN_COURS' };
       mockCampaignsService.changeState.mockReturnValue(of(updated));
 
@@ -466,12 +587,14 @@ describe('CampaignDetail', () => {
 
       component.onConfirmChangeState();
 
-      expect(mockCampaignsService.changeState).toHaveBeenCalledWith(1, { state: 'EN_COURS' });
+      expect(mockCampaignsService.changeState).toHaveBeenCalledWith(1, {
+        state: 'EN_COURS',
+      });
       expect(component.campaign()?.state).toBe('EN_COURS');
       expect(component.stateTransitioning()).toBe(false);
     });
 
-    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+    it("n'appelle pas l'API si la confirmation est refusée", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -483,8 +606,10 @@ describe('CampaignDetail', () => {
       expect(mockCampaignsService.changeState).not.toHaveBeenCalled();
     });
 
-    it('affiche une erreur si le changement d\'état échoue', () => {
-      mockCampaignsService.changeState.mockReturnValue(throwError(() => new Error('500')));
+    it("affiche une erreur si le changement d'état échoue", () => {
+      mockCampaignsService.changeState.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -502,7 +627,7 @@ describe('CampaignDetail', () => {
   // ── canEditCampaign / modification nom-budget ───────────────────────────
 
   describe('canEditCampaign', () => {
-    it('vrai pour l\'organisateur quand la saison est EN_CONSTRUCTION', () => {
+    it("vrai pour l'organisateur quand la saison est EN_CONSTRUCTION", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -512,7 +637,9 @@ describe('CampaignDetail', () => {
     });
 
     it('faux pour un non-organisateur', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, myRole: 'participant' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -522,8 +649,10 @@ describe('CampaignDetail', () => {
       expect(component.canEditCampaign()).toBe(false);
     });
 
-    it('reste vrai pour l\'organisateur hors EN_CONSTRUCTION — les règles maison sont réglables à tout moment', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+    it("reste vrai pour l'organisateur hors EN_CONSTRUCTION — les règles maison sont réglables à tout moment", () => {
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, state: 'EN_COURS' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -536,8 +665,15 @@ describe('CampaignDetail', () => {
 
   describe('onConfirmEditCampaign()', () => {
     it('met à jour nom/budget puis les règles maison, et ferme la modale en cas de succès (EN_CONSTRUCTION)', () => {
-      const updatedNameBudget: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
-      const updatedHouseRules: Campaign = { ...updatedNameBudget, houseRules: ['distribution_points_resistance'] };
+      const updatedNameBudget: Campaign = {
+        ...mockCampaign,
+        name: 'Coupe Rutherford',
+        budget: 30,
+      };
+      const updatedHouseRules: Campaign = {
+        ...updatedNameBudget,
+        houseRules: ['distribution_points_resistance'],
+      };
       mockCampaignsService.update.mockReturnValue(of(updatedNameBudget));
       mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
@@ -554,7 +690,10 @@ describe('CampaignDetail', () => {
         houseRules: ['distribution_points_resistance'],
       });
 
-      expect(mockCampaignsService.update).toHaveBeenCalledWith(1, { name: 'Coupe Rutherford', budget: 30 });
+      expect(mockCampaignsService.update).toHaveBeenCalledWith(1, {
+        name: 'Coupe Rutherford',
+        budget: 30,
+      });
       expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
         houseRules: ['distribution_points_resistance'],
       });
@@ -564,7 +703,10 @@ describe('CampaignDetail', () => {
     });
 
     it('ne soumet que les règles maison quand nameBudget est null (hors EN_CONSTRUCTION)', () => {
-      const updatedHouseRules: Campaign = { ...mockCampaign, houseRules: ['distribution_points_resistance'] };
+      const updatedHouseRules: Campaign = {
+        ...mockCampaign,
+        houseRules: ['distribution_points_resistance'],
+      };
       mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
       configure();
@@ -573,7 +715,10 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
+      component.onConfirmEditCampaign({
+        nameBudget: null,
+        houseRules: ['distribution_points_resistance'],
+      });
 
       expect(mockCampaignsService.update).not.toHaveBeenCalled();
       expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
@@ -584,9 +729,14 @@ describe('CampaignDetail', () => {
       expect(component.savingCampaign()).toBe(false);
     });
 
-    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec de nom/budget, sans soumettre les règles maison', () => {
+    it("garde la modale ouverte et affiche l'erreur serveur en cas d'échec de nom/budget, sans soumettre les règles maison", () => {
       mockCampaignsService.update.mockReturnValue(
-        throwError(() => ({ error: { message: 'L\'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).' } })),
+        throwError(() => ({
+          error: {
+            message:
+              "L'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).",
+          },
+        })),
       );
 
       configure();
@@ -595,7 +745,10 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
+      component.onConfirmEditCampaign({
+        nameBudget: { name: 'Coupe Verney', budget: 30 },
+        houseRules: [],
+      });
 
       expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
       expect(component.editCampaignError()).toContain('Escouade');
@@ -604,7 +757,7 @@ describe('CampaignDetail', () => {
       expect(mockCampaignsService.setHouseRules).not.toHaveBeenCalled();
     });
 
-    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec des règles maison', () => {
+    it("garde la modale ouverte et affiche l'erreur serveur en cas d'échec des règles maison", () => {
       mockCampaignsService.setHouseRules.mockReturnValue(
         throwError(() => ({ error: { message: 'Erreur serveur.' } })),
       );
@@ -615,7 +768,10 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
+      component.onConfirmEditCampaign({
+        nameBudget: null,
+        houseRules: ['distribution_points_resistance'],
+      });
 
       expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
       expect(component.editCampaignError()).toBe('Erreur serveur.');
@@ -624,21 +780,28 @@ describe('CampaignDetail', () => {
     });
 
     it('affiche un message générique si le serveur ne fournit aucun message', () => {
-      mockCampaignsService.update.mockReturnValue(throwError(() => ({ error: {} })));
+      mockCampaignsService.update.mockReturnValue(
+        throwError(() => ({ error: {} })),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
+      component.onConfirmEditCampaign({
+        nameBudget: { name: 'Coupe Verney', budget: 30 },
+        houseRules: [],
+      });
 
-      expect(component.editCampaignError()).toBe('Erreur lors de la modification de la saison.');
+      expect(component.editCampaignError()).toBe(
+        'Erreur lors de la modification de la saison.',
+      );
     });
   });
 
   describe('openEditCampaignModal() / onCancelEditCampaign()', () => {
-    it('ouvre la modale sans appeler l\'API', () => {
+    it("ouvre la modale sans appeler l'API", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -650,7 +813,7 @@ describe('CampaignDetail', () => {
       expect(mockCampaignsService.update).not.toHaveBeenCalled();
     });
 
-    it('ferme la modale et efface l\'erreur au clic sur Annuler', () => {
+    it("ferme la modale et efface l'erreur au clic sur Annuler", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -684,10 +847,14 @@ describe('CampaignDetail', () => {
       component.onConfirmRemoveParticipant();
 
       expect(mockCampaignsService.removeParticipant).toHaveBeenCalledWith(1, 2);
-      expect(component.participants()).toEqual([mockParticipants[0], mockParticipants[2], mockParticipants[3]]);
+      expect(component.participants()).toEqual([
+        mockParticipants[0],
+        mockParticipants[2],
+        mockParticipants[3],
+      ]);
     });
 
-    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+    it("n'appelle pas l'API si la confirmation est refusée", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -701,7 +868,9 @@ describe('CampaignDetail', () => {
     });
 
     it('affiche une erreur et recharge la liste si le retrait échoue', () => {
-      mockCampaignsService.removeParticipant.mockReturnValue(throwError(() => new Error('400')));
+      mockCampaignsService.removeParticipant.mockReturnValue(
+        throwError(() => new Error('400')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -738,7 +907,7 @@ describe('CampaignDetail', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/campaigns']);
     });
 
-    it('n\'appelle pas l\'API si la confirmation est refusée', () => {
+    it("n'appelle pas l'API si la confirmation est refusée", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -750,8 +919,10 @@ describe('CampaignDetail', () => {
       expect(mockCampaignsService.remove).not.toHaveBeenCalled();
     });
 
-    it('affiche un message d\'erreur si la suppression échoue', () => {
-      mockCampaignsService.remove.mockReturnValue(throwError(() => new Error('500')));
+    it("affiche un message d'erreur si la suppression échoue", () => {
+      mockCampaignsService.remove.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -769,7 +940,7 @@ describe('CampaignDetail', () => {
   // ── Affichage divers ─────────────────────────────────────────────────────
 
   describe('affichage', () => {
-    it('affiche un libellé humain pour l\'état de la saison', () => {
+    it("affiche un libellé humain pour l'état de la saison", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -780,7 +951,7 @@ describe('CampaignDetail', () => {
       expect(el.textContent).toContain('En construction');
     });
 
-    it('affiche un fil d\'ariane avec un lien vers /campaigns', () => {
+    it("affiche un fil d'ariane avec un lien vers /campaigns", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -791,7 +962,7 @@ describe('CampaignDetail', () => {
       expect(breadcrumb).not.toBeNull();
     });
 
-    it('affiche la zone dangereuse pour l\'organisateur', () => {
+    it("affiche la zone dangereuse pour l'organisateur", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -803,7 +974,9 @@ describe('CampaignDetail', () => {
     });
 
     it('masque la zone dangereuse pour un non-organisateur', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, myRole: 'participant' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -814,7 +987,7 @@ describe('CampaignDetail', () => {
       expect(el.querySelector('.campaign-detail-danger-zone')).toBeNull();
     });
 
-    it('affiche le bouton Modifier pour l\'organisateur en EN_CONSTRUCTION', () => {
+    it("affiche le bouton Modifier pour l'organisateur en EN_CONSTRUCTION", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -825,7 +998,9 @@ describe('CampaignDetail', () => {
     });
 
     it('affiche le bouton Modifier hors EN_CONSTRUCTION — les règles maison restent réglables', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, state: 'EN_COURS' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -837,7 +1012,9 @@ describe('CampaignDetail', () => {
     });
 
     it('masque le bouton Modifier pour un non-organisateur', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, myRole: 'participant' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -848,7 +1025,7 @@ describe('CampaignDetail', () => {
       expect(el.querySelector('.campaign-detail-edit-btn')).toBeNull();
     });
 
-    it('affiche la carte d\'état pour l\'organisateur', () => {
+    it("affiche la carte d'état pour l'organisateur", () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -858,8 +1035,10 @@ describe('CampaignDetail', () => {
       expect(el.querySelector('.campaign-state-card')).not.toBeNull();
     });
 
-    it('masque la carte d\'état pour un non-organisateur', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
+    it("masque la carte d'état pour un non-organisateur", () => {
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, myRole: 'participant' }),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -874,11 +1053,13 @@ describe('CampaignDetail', () => {
   // ── Règles maison — lecture seule (RM-7) ─────────────────────────────────
 
   describe('règles maison en lecture seule', () => {
-    it('affiche les règles maison actives, verrouillées, pour l\'organisateur', () => {
+    it("affiche les règles maison actives, verrouillées, pour l'organisateur", () => {
       mockCampaignsService.getOne.mockReturnValue(
         of({ ...mockCampaign, houseRules: ['distribution_points_resistance'] }),
       );
-      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+      mockCampaignsService.getHouseRules.mockReturnValue(
+        of(mockHouseRuleCatalog),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -889,15 +1070,21 @@ describe('CampaignDetail', () => {
       const selector = el.querySelector('app-house-rules-selector');
       expect(selector).not.toBeNull();
 
-      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const checkbox = selector!.querySelector(
+        'input[type="checkbox"]',
+      ) as HTMLInputElement;
       expect(checkbox.checked).toBe(true);
       expect(checkbox.disabled).toBe(true);
       expect(selector!.textContent).toContain('Comportement alternatif');
     });
 
     it('reste visible pour un non-organisateur', () => {
-      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant', houseRules: [] }));
-      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, myRole: 'participant', houseRules: [] }),
+      );
+      mockCampaignsService.getHouseRules.mockReturnValue(
+        of(mockHouseRuleCatalog),
+      );
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -908,7 +1095,9 @@ describe('CampaignDetail', () => {
       const selector = el.querySelector('app-house-rules-selector');
       expect(selector).not.toBeNull();
 
-      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const checkbox = selector!.querySelector(
+        'input[type="checkbox"]',
+      ) as HTMLInputElement;
       expect(checkbox.checked).toBe(false);
       expect(checkbox.disabled).toBe(true);
       expect(selector!.textContent).toContain('Comportement par défaut');

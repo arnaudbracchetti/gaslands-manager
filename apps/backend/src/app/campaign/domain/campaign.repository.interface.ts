@@ -75,5 +75,7 @@ export interface ICampaignRepository {
    * `Campaign.assertNotLastOrganizer`, qui ne s'applique qu'à une campagne déjà
    * chargée).
    */
-  findCampaignsWhereSoleValidatedOrganizer(userId: number): Promise<{ id: number; name: string }[]>;
+  findCampaignsWhereSoleValidatedOrganizer(
+    userId: number,
+  ): Promise<{ id: number; name: string }[]>;
 }

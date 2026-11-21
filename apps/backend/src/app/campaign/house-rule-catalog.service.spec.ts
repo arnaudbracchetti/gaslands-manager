@@ -41,7 +41,9 @@ describe('HouseRuleCatalogService', () => {
 
   it('indexe les règles maison par nom_interne', () => {
     const rule = service.getByNomInterne('distribution_points_resistance');
-    expect(rule?.nom).toBe('Points de Résistance aux équipes sans point de championnat');
+    expect(rule?.nom).toBe(
+      'Points de Résistance aux équipes sans point de championnat',
+    );
   });
 
   it('convertit la description décochée Markdown en HTML', () => {
@@ -51,7 +53,9 @@ describe('HouseRuleCatalogService', () => {
 
   it('convertit la description cochée Markdown en HTML', () => {
     const rule = service.getByNomInterne('distribution_points_resistance');
-    expect(rule?.description_cochee).toContain('Comportement alternatif coché.');
+    expect(rule?.description_cochee).toContain(
+      'Comportement alternatif coché.',
+    );
   });
 
   it('retourne undefined pour un nom_interne inconnu', () => {
@@ -59,6 +63,9 @@ describe('HouseRuleCatalogService', () => {
   });
 
   it('validKeys() retourne les nom_interne de toutes les règles du catalogue', () => {
-    expect(service.validKeys()).toEqual(['distribution_points_resistance', 'autre_regle']);
+    expect(service.validKeys()).toEqual([
+      'distribution_points_resistance',
+      'autre_regle',
+    ]);
   });
 });

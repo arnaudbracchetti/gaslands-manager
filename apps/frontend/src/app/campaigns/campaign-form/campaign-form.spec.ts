@@ -35,7 +35,7 @@ const mockTeams: Team[] = [
   },
   {
     id: 8,
-    name: 'Brigade de l\'Asphalte',
+    name: "Brigade de l'Asphalte",
     sponsor: 'Miyazaki',
     cans: 60,
     userId: 42,
@@ -60,7 +60,7 @@ describe('CampaignForm', () => {
 
   // ── Pré-sélection ─────────────────────────────────────────────────────────
 
-  it('ne pré-sélectionne pas d\'équipe par défaut (teamId optionnel)', () => {
+  it("ne pré-sélectionne pas d'équipe par défaut (teamId optionnel)", () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
@@ -85,7 +85,7 @@ describe('CampaignForm', () => {
 
   // ── Émission du DTO ──────────────────────────────────────────────────────
 
-  it('émet le DTO validé avec le nom, le budget et l\'équipe choisie', () => {
+  it("émet le DTO validé avec le nom, le budget et l'équipe choisie", () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
@@ -93,10 +93,12 @@ describe('CampaignForm', () => {
     outputToObservable(component.saved).subscribe((dto) => emitted.push(dto));
 
     component.formName.set('Coupe Verney');
-    component.formTeamId.set(7);  // vehiclesCost 30 ≤ budget par défaut 50
+    component.formTeamId.set(7); // vehiclesCost 30 ≤ budget par défaut 50
     component.saveForm();
 
-    expect(emitted).toEqual([{ name: 'Coupe Verney', budget: 50, houseRules: [], teamId: 7 }]);
+    expect(emitted).toEqual([
+      { name: 'Coupe Verney', budget: 50, houseRules: [], teamId: 7 },
+    ]);
   });
 
   // ── Règles maison ─────────────────────────────────────────────────────────
@@ -116,7 +118,11 @@ describe('CampaignForm', () => {
     component.saveForm();
 
     expect(emitted).toEqual([
-      { name: 'Coupe Verney', budget: 50, houseRules: ['distribution_points_resistance'] },
+      {
+        name: 'Coupe Verney',
+        budget: 50,
+        houseRules: ['distribution_points_resistance'],
+      },
     ]);
   });
 
@@ -125,7 +131,9 @@ describe('CampaignForm', () => {
     fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[type="checkbox"]',
+    );
     checkbox.click();
     fixture.detectChanges();
     checkbox.click();
@@ -143,8 +151,8 @@ describe('CampaignForm', () => {
 
       component.formBudget.set(50);
 
-      expect(component.ineligibleTeamIds().has(7)).toBe(false);  // 30 ≤ 50
-      expect(component.ineligibleTeamIds().has(8)).toBe(true);   // 70 > 50
+      expect(component.ineligibleTeamIds().has(7)).toBe(false); // 30 ≤ 50
+      expect(component.ineligibleTeamIds().has(8)).toBe(true); // 70 > 50
     });
 
     it('recalcule dynamiquement quand le budget saisi change', () => {
@@ -152,13 +160,13 @@ describe('CampaignForm', () => {
       fixture.detectChanges();
 
       component.formBudget.set(80);
-      expect(component.ineligibleTeamIds().has(8)).toBe(false);  // 70 ≤ 80
+      expect(component.ineligibleTeamIds().has(8)).toBe(false); // 70 ≤ 80
 
       component.formBudget.set(20);
-      expect(component.ineligibleTeamIds().has(7)).toBe(true);   // 30 > 20
+      expect(component.ineligibleTeamIds().has(7)).toBe(true); // 30 > 20
     });
 
-    it('refuse la sauvegarde si l\'équipe choisie est hors budget', () => {
+    it("refuse la sauvegarde si l'équipe choisie est hors budget", () => {
       fixture.componentRef.setInput('teams', mockTeams);
       fixture.detectChanges();
 
@@ -167,7 +175,7 @@ describe('CampaignForm', () => {
 
       component.formName.set('Coupe Verney');
       component.formBudget.set(50);
-      component.formTeamId.set(8);  // 70 > 50
+      component.formTeamId.set(8); // 70 > 50
       component.saveForm();
 
       expect(emitted).toHaveLength(0);
@@ -182,7 +190,9 @@ describe('CampaignForm', () => {
     fixture.detectChanges();
 
     let cancelled = false;
-    outputToObservable(component.formCancel).subscribe(() => { cancelled = true; });
+    outputToObservable(component.formCancel).subscribe(() => {
+      cancelled = true;
+    });
 
     component.cancelForm();
 
@@ -191,14 +201,20 @@ describe('CampaignForm', () => {
 
   // ── Création rapide d'équipe (QuickTeamCreate) ───────────────────────────
 
-  it('relaie la création rapide d\'équipe au parent via teamCreated', () => {
+  it("relaie la création rapide d'équipe au parent via teamCreated", () => {
     fixture.componentRef.setInput('teams', mockTeams);
     fixture.detectChanges();
 
     const emitted: CreateTeamDto[] = [];
-    outputToObservable(component.teamCreated).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.teamCreated).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
-    const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+    const dto: CreateTeamDto = {
+      name: 'Équipe du Vendredi',
+      sponsor: 'Rutherford',
+      cans: 50,
+    };
     component.teamCreated.emit(dto);
 
     expect(emitted).toEqual([dto]);
@@ -225,7 +241,7 @@ describe('CampaignForm', () => {
     expect(component.formTeamId()).toBe(9);
   });
 
-  it('affiche le bouton de création rapide même quand l\'utilisateur n\'a aucune équipe', () => {
+  it("affiche le bouton de création rapide même quand l'utilisateur n'a aucune équipe", () => {
     fixture.componentRef.setInput('teams', []);
     fixture.detectChanges();
 

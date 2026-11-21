@@ -13,7 +13,13 @@
  * tel quel en mode non modifiable (RM-7 — affichage lecture seule), sans
  * dupliquer le rendu.
  */
-import { Component, InputSignal, OutputEmitterRef, input, output } from '@angular/core';
+import {
+  Component,
+  InputSignal,
+  OutputEmitterRef,
+  input,
+  output,
+} from '@angular/core';
 import type { HouseRuleDefinition } from '../campaign.model';
 
 /** Événement émis à chaque bascule d'une règle maison. */
@@ -30,7 +36,9 @@ export interface HouseRuleToggledEvent {
 })
 export class HouseRulesSelector {
   /** Catalogue des règles maison (GET /api/catalog/regles-maison). */
-  definitions: InputSignal<HouseRuleDefinition[]> = input<HouseRuleDefinition[]>([]);
+  definitions: InputSignal<HouseRuleDefinition[]> = input<
+    HouseRuleDefinition[]
+  >([]);
 
   /** Clés (nom_interne) actuellement activées. */
   enabledKeys: InputSignal<string[]> = input<string[]>([]);
@@ -39,7 +47,8 @@ export class HouseRulesSelector {
   locked: InputSignal<boolean> = input(false);
 
   /** Émis avec la clé basculée et son nouvel état. */
-  toggled: OutputEmitterRef<HouseRuleToggledEvent> = output<HouseRuleToggledEvent>();
+  toggled: OutputEmitterRef<HouseRuleToggledEvent> =
+    output<HouseRuleToggledEvent>();
 
   isEnabled(def: HouseRuleDefinition): boolean {
     return this.enabledKeys().includes(def.nom_interne);

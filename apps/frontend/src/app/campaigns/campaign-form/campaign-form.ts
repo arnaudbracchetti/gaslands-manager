@@ -33,7 +33,10 @@ import { CreateCampaignDto, HouseRuleDefinition } from '../campaign.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
 import { Icon } from '../../shared/icon/icon';
 import { ModalShell } from '../../shared/modal-shell/modal-shell';
-import { HouseRulesSelector, HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
+import {
+  HouseRulesSelector,
+  HouseRuleToggledEvent,
+} from '../house-rules-selector/house-rules-selector';
 
 @Component({
   selector: 'app-campaign-form',
@@ -55,7 +58,9 @@ export class CampaignForm {
   creatingTeam: InputSignal<boolean> = input(false);
 
   /** Catalogue des règles maison (GET /api/catalog/regles-maison). */
-  houseRuleCatalog: InputSignal<HouseRuleDefinition[]> = input<HouseRuleDefinition[]>([]);
+  houseRuleCatalog: InputSignal<HouseRuleDefinition[]> = input<
+    HouseRuleDefinition[]
+  >([]);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
@@ -96,7 +101,10 @@ export class CampaignForm {
     effect((): void => {
       const teams = this.teams();
 
-      if (teams.length > this.previousTeamsLength && this.previousTeamsLength > 0) {
+      if (
+        teams.length > this.previousTeamsLength &&
+        this.previousTeamsLength > 0
+      ) {
         this.formTeamId.set(teams[teams.length - 1].id);
       }
 
@@ -115,7 +123,9 @@ export class CampaignForm {
       return;
     }
     if (teamId !== null && this.ineligibleTeamIds().has(teamId)) {
-      this.formError.set('L\'équipe sélectionnée dépasse le budget choisi pour la campagne.');
+      this.formError.set(
+        "L'équipe sélectionnée dépasse le budget choisi pour la campagne.",
+      );
       return;
     }
 

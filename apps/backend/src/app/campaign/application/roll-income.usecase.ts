@@ -49,7 +49,8 @@ export class RollIncomeUseCase {
     try {
       events = game.rollBaseIncome(cmd.participantId, this.randomizer);
     } catch (e: unknown) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
 
@@ -59,10 +60,13 @@ export class RollIncomeUseCase {
     // active (cf. `Game.rollBaseIncome`) — un tableau non vide, en revanche, doit
     // toujours contenir exactement un WalletMovementEvent.
     if (incomeEvent && !(incomeEvent instanceof WalletMovementEvent)) {
-      throw new Error('Game.rollBaseIncome doit toujours produire un WalletMovementEvent.');
+      throw new Error(
+        'Game.rollBaseIncome doit toujours produire un WalletMovementEvent.',
+      );
     }
     return {
-      amount: incomeEvent instanceof WalletMovementEvent ? incomeEvent.amount : 0,
+      amount:
+        incomeEvent instanceof WalletMovementEvent ? incomeEvent.amount : 0,
       descriptions: events.map((e) => e.describe(campaign.participants)),
     };
   }

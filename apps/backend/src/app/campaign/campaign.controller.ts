@@ -188,7 +188,9 @@ export class CampaignController {
   @Get('catalog/scenarios/random')
   drawRandomScenario(@Query('type') type: string): Scenario {
     if (type !== GameType.EVENEMENT_TELE && type !== GameType.ESCARMOUCHE) {
-      throw new BadRequestException('Le paramètre type doit être EVENEMENT_TELE ou ESCARMOUCHE.');
+      throw new BadRequestException(
+        'Le paramètre type doit être EVENEMENT_TELE ou ESCARMOUCHE.',
+      );
     }
     return this.drawRandomScenarioUseCase.execute(type);
   }
@@ -229,14 +231,18 @@ export class CampaignController {
   /** GET /api/campaigns/pending — mes demandes d'inscription en attente. */
   @UseGuards(JwtAuthGuard)
   @Get('campaigns/pending')
-  getPending(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
+  getPending(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<CampaignResponseDto[]> {
     return this.query.findPendingForUser(req.user.id);
   }
 
   /** GET /api/campaigns/organizing/pending-requests — mes campagnes avec demandes à traiter. */
   @UseGuards(JwtAuthGuard)
   @Get('campaigns/organizing/pending-requests')
-  getOrganizingPendingRequests(@Request() req: AuthenticatedRequest): Promise<CampaignResponseDto[]> {
+  getOrganizingPendingRequests(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<CampaignResponseDto[]> {
     return this.query.findOrganizedWithPendingRequests(req.user.id);
   }
 
@@ -274,7 +280,10 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<StandingsResponseDto[]> {
-    return this.getStandingsUseCase.execute({ campaignId, userId: req.user.id });
+    return this.getStandingsUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+    });
   }
 
   /** GET /api/campaigns/:id/workshop — état atelier du participant connecté. */
@@ -340,7 +349,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableWeaponDto[]> {
-    return this.getWorkshopAvailableWeaponsUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+    return this.getWorkshopAvailableWeaponsUseCase.execute({
+      campaignId,
+      vehicleId,
+      userId: req.user.id,
+    });
   }
 
   /**
@@ -354,7 +367,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableImprovementDto[]> {
-    return this.getWorkshopAvailableImprovementsUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+    return this.getWorkshopAvailableImprovementsUseCase.execute({
+      campaignId,
+      vehicleId,
+      userId: req.user.id,
+    });
   }
 
   /**
@@ -368,7 +385,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableAdvantageDto[]> {
-    return this.getWorkshopAvailableAdvantagesUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+    return this.getWorkshopAvailableAdvantagesUseCase.execute({
+      campaignId,
+      vehicleId,
+      userId: req.user.id,
+    });
   }
 
   /**
@@ -383,7 +404,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('vehicleId', ParseIntPipe) vehicleId: number,
   ): Promise<AvailableSequellaDto[]> {
-    return this.getWorkshopAvailableSequellesUseCase.execute({ campaignId, vehicleId, userId: req.user.id });
+    return this.getWorkshopAvailableSequellesUseCase.execute({
+      campaignId,
+      vehicleId,
+      userId: req.user.id,
+    });
   }
 
   /**
@@ -398,7 +423,10 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<AvailableVehicleDto[]> {
-    return this.getWorkshopAvailableVehiclesUseCase.execute({ campaignId, userId: req.user.id });
+    return this.getWorkshopAvailableVehiclesUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+    });
   }
 
   /** GET /api/campaigns/:id/games/:gameId/results — résultats triés (dérivés du journal). */
@@ -457,7 +485,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<void> {
-    return this.resetResultUseCase.execute({ campaignId: id, gameId, userId: req.user.id });
+    return this.resetResultUseCase.execute({
+      campaignId: id,
+      gameId,
+      userId: req.user.id,
+    });
   }
 
   /** GET /api/campaigns/:id/games — programme trié (participant VALIDATED). */
@@ -536,7 +568,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<void> {
-    return this.removeGameUseCase.execute({ campaignId: id, gameId, userId: req.user.id });
+    return this.removeGameUseCase.execute({
+      campaignId: id,
+      gameId,
+      userId: req.user.id,
+    });
   }
 
   /** POST /api/campaigns/:id/games/:gameId/enter-atelier — PLANIFIE → ATELIER (résultat enregistré). */
@@ -547,7 +583,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<EnterAtelierResult> {
-    return this.enterAtelierUseCase.execute({ campaignId, gameId, userId: req.user.id });
+    return this.enterAtelierUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+    });
   }
 
   /** POST /api/campaigns/:id/games/:gameId/close-atelier — clôture manuelle (ATELIER → JOUE). */
@@ -559,7 +599,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) campaignId: number,
     @Param('gameId', ParseIntPipe) gameId: number,
   ): Promise<void> {
-    return this.closeAtelierUseCase.execute({ campaignId, gameId, userId: req.user.id });
+    return this.closeAtelierUseCase.execute({
+      campaignId,
+      gameId,
+      userId: req.user.id,
+    });
   }
 
   // ── Événements de partie (event sourcing) ───────────────────────────────────
@@ -740,7 +784,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ChangeStateDto,
   ): Promise<CampaignResponseDto> {
-    await this.changeStateUseCase.execute({ campaignId: id, userId: req.user.id, state: dto.state });
+    await this.changeStateUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      state: dto.state,
+    });
     return this.query.findOne(id, req.user.id);
   }
 
@@ -771,7 +819,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<CampaignParticipantResponseDto> {
-    await this.promoteParticipantUseCase.execute({ campaignId: id, pid, userId: req.user.id });
+    await this.promoteParticipantUseCase.execute({
+      campaignId: id,
+      pid,
+      userId: req.user.id,
+    });
     return this.query.getParticipant(id, pid);
   }
 
@@ -802,7 +854,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<void> {
-    return this.removeParticipantUseCase.execute({ campaignId: id, pid, userId: req.user.id });
+    return this.removeParticipantUseCase.execute({
+      campaignId: id,
+      pid,
+      userId: req.user.id,
+    });
   }
 
   /** GET /api/campaigns/:id/participants/:pid/journal — historique complet, tout participant VALIDATED. */
@@ -824,7 +880,11 @@ export class CampaignController {
     @Param('id', ParseIntPipe) id: number,
     @Param('pid', ParseIntPipe) pid: number,
   ): Promise<WorkshopStateDto> {
-    return this.getWorkshopUseCase.execute({ campaignId: id, userId: req.user.id, participantId: pid });
+    return this.getWorkshopUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      participantId: pid,
+    });
   }
 
   // ── Détail / suppression / modification campagne (routes :id génériques en dernier) ─
@@ -880,6 +940,9 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<void> {
-    return this.deleteCampaignUseCase.execute({ campaignId: id, userId: req.user.id });
+    return this.deleteCampaignUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+    });
   }
 }

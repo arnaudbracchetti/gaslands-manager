@@ -11,7 +11,10 @@ import type { Campaign } from '../domain/campaign';
 import type { GameEvent } from '../domain/events/game-event';
 import type { ITeamRepository } from '../../team/domain/team.repository.interface';
 import { TEAM_REPOSITORY } from '../../team/team.tokens';
-import { CampaignState, ParticipantStatus } from '../domain/enums/campaign.enums';
+import {
+  CampaignState,
+  ParticipantStatus,
+} from '../domain/enums/campaign.enums';
 import { GameType } from '../game.enums';
 import { GameStatus as OrmGameStatus } from '../game.enums';
 import { GameStatus as DomainGameStatus } from '../domain/enums/game-status.enum';
@@ -67,7 +70,9 @@ export class CampaignRepository implements ICampaignRepository {
    * 5. Assembly via le mapper
    */
   async findCampaign(campaignId: number): Promise<Campaign> {
-    const campaignOrm = await this.campaignOrmRepo.findOne({ where: { id: campaignId } });
+    const campaignOrm = await this.campaignOrmRepo.findOne({
+      where: { id: campaignId },
+    });
     if (!campaignOrm) throw new NotFoundException('Campagne introuvable.');
 
     // Tous les participants (pas seulement VALIDATED) : l'agrégat unifié porte l'état
@@ -81,7 +86,8 @@ export class CampaignRepository implements ICampaignRepository {
     const teamIds = participantOrms
       .map((p) => p.teamId)
       .filter((id): id is number => id !== null);
-    const teams = teamIds.length > 0 ? await this.teamRepo.findManyByIds(teamIds) : [];
+    const teams =
+      teamIds.length > 0 ? await this.teamRepo.findManyByIds(teamIds) : [];
 
     const gameOrms = await this.gameOrmRepo.find({
       where: { campaignId },
@@ -89,12 +95,13 @@ export class CampaignRepository implements ICampaignRepository {
     });
 
     const gameIds = gameOrms.map((g) => g.id);
-    const allEvents = gameIds.length > 0
-      ? await this.gameEventRepo.find({
-          where: { gameId: In(gameIds) },
-          order: { eventOrder: 'ASC' },
-        })
-      : [];
+    const allEvents =
+      gameIds.length > 0
+        ? await this.gameEventRepo.find({
+            where: { gameId: In(gameIds) },
+            order: { eventOrder: 'ASC' },
+          })
+        : [];
 
     const eventsByGameId = new Map<number, GameEventOrm[]>();
     for (const event of allEvents) {
@@ -103,7 +110,13 @@ export class CampaignRepository implements ICampaignRepository {
       eventsByGameId.set(event.gameId, list);
     }
 
-    return this.mapper.toCampaign(campaignOrm, participantOrms, teams, gameOrms, eventsByGameId);
+    return this.mapper.toCampaign(
+      campaignOrm,
+      participantOrms,
+      teams,
+      gameOrms,
+      eventsByGameId,
+    );
   }
 
   /**
@@ -218,7 +231,8 @@ export class CampaignRepository implements ICampaignRepository {
 
     // 5. Parties : upsert.
     for (const game of campaign.games) {
-      const scenarioId = (game as unknown as { scenarioId?: string }).scenarioId ?? null;
+      const scenarioId =
+        (game as unknown as { scenarioId?: string }).scenarioId ?? null;
       const status = game.status as unknown as OrmGameStatus;
       if (game.id > 0) {
         await this.gameOrmRepo.update(game.id, {
@@ -247,7 +261,10 @@ export class CampaignRepository implements ICampaignRepository {
     await this.campaignOrmRepo.delete(campaignId);
   }
 
-  async isTeamEngaged(teamId: number, excludeCampaignId?: number): Promise<boolean> {
+  async isTeamEngaged(
+    teamId: number,
+    excludeCampaignId?: number,
+  ): Promise<boolean> {
     const where = excludeCampaignId
       ? { teamId, campaignId: Not(excludeCampaignId) }
       : { teamId };
@@ -272,11 +289,17 @@ export class CampaignRepository implements ICampaignRepository {
         userId: Not(userId),
       },
     });
-    const campaignIdsWithBackup = new Set(otherOrganizers.map((p) => p.campaignId));
-    const orphanedIds = candidateCampaignIds.filter((id) => !campaignIdsWithBackup.has(id));
+    const campaignIdsWithBackup = new Set(
+      otherOrganizers.map((p) => p.campaignId),
+    );
+    const orphanedIds = candidateCampaignIds.filter(
+      (id) => !campaignIdsWithBackup.has(id),
+    );
     if (orphanedIds.length === 0) return [];
 
-    const campaigns = await this.campaignOrmRepo.find({ where: { id: In(orphanedIds) } });
+    const campaigns = await this.campaignOrmRepo.find({
+      where: { id: In(orphanedIds) },
+    });
     return campaigns.map((c) => ({ id: c.id, name: c.name }));
   }
 
@@ -291,7 +314,10 @@ export class CampaignRepository implements ICampaignRepository {
     return (result?.max ?? 0) + 1;
   }
 
-  private eventToOrm(event: GameEvent, eventOrder: number): Partial<GameEventOrm> {
+  private eventToOrm(
+    event: GameEvent,
+    eventOrder: number,
+  ): Partial<GameEventOrm> {
     const base: Partial<GameEventOrm> = {
       gameId: event.gameId,
       participantId: event.participantId,
@@ -307,32 +333,59 @@ export class CampaignRepository implements ICampaignRepository {
     switch (event.eventType) {
       case GameEventType.RANKING_ASSIGNED: {
         const e = event as RankingAssignedEvent;
-        return { ...base, eventType: GameEventType.RANKING_ASSIGNED, rank: e.rank, championshipPoints: e.championshipPoints };
+        return {
+          ...base,
+          eventType: GameEventType.RANKING_ASSIGNED,
+          rank: e.rank,
+          championshipPoints: e.championshipPoints,
+        };
       }
       case GameEventType.WALLET_MOVEMENT: {
         const e = event as WalletMovementEvent;
-        return { ...base, eventType: GameEventType.WALLET_MOVEMENT, amount: e.amount, walletReason: e.reason };
+        return {
+          ...base,
+          eventType: GameEventType.WALLET_MOVEMENT,
+          amount: e.amount,
+          walletReason: e.reason,
+        };
       }
       case GameEventType.VEHICLE_LOST: {
         const e = event as VehicleLostEvent;
-        return { ...base, eventType: GameEventType.VEHICLE_LOST, vehicleId: e.vehicleId };
+        return {
+          ...base,
+          eventType: GameEventType.VEHICLE_LOST,
+          vehicleId: e.vehicleId,
+        };
       }
       case GameEventType.WEAPON_LOST: {
         const e = event as WeaponLostEvent;
-        return { ...base, eventType: GameEventType.WEAPON_LOST, weaponId: e.weaponId };
+        return {
+          ...base,
+          eventType: GameEventType.WEAPON_LOST,
+          weaponId: e.weaponId,
+        };
       }
       case GameEventType.IMPROVEMENT_LOST: {
         const e = event as ImprovementLostEvent;
-        return { ...base, eventType: GameEventType.IMPROVEMENT_LOST, improvementId: e.improvementId };
+        return {
+          ...base,
+          eventType: GameEventType.IMPROVEMENT_LOST,
+          improvementId: e.improvementId,
+        };
       }
       case GameEventType.ADVANTAGE_LOST: {
         const e = event as AdvantageLostEvent;
-        return { ...base, eventType: GameEventType.ADVANTAGE_LOST, advantageId: e.advantageId };
+        return {
+          ...base,
+          eventType: GameEventType.ADVANTAGE_LOST,
+          advantageId: e.advantageId,
+        };
       }
       case GameEventType.WRECK_RESOLVED: {
         const e = event as WreckResolvedEvent;
         return {
-          ...base, eventType: GameEventType.WRECK_RESOLVED,
+          ...base,
+          eventType: GameEventType.WRECK_RESOLVED,
           vehicleId: e.vehicleId,
           diceRoll: e.diceRoll,
           chocsBefore: e.chocsBefore,
@@ -343,7 +396,8 @@ export class CampaignRepository implements ICampaignRepository {
       case GameEventType.EQUIPMENT_CHANGED: {
         const e = event as EquipmentChangedEvent;
         return {
-          ...base, eventType: GameEventType.EQUIPMENT_CHANGED,
+          ...base,
+          eventType: GameEventType.EQUIPMENT_CHANGED,
           operation: e.operation,
           entityType: e.entityType,
           nomInterne: e.nomInterne,
@@ -356,24 +410,45 @@ export class CampaignRepository implements ICampaignRepository {
       }
       case GameEventType.RESISTANCE_CONTACTED: {
         const e = event as ResistanceContactedEvent;
-        return { ...base, eventType: GameEventType.RESISTANCE_CONTACTED, resistanceStrategyKey: e.strategyKey };
+        return {
+          ...base,
+          eventType: GameEventType.RESISTANCE_CONTACTED,
+          resistanceStrategyKey: e.strategyKey,
+        };
       }
       case GameEventType.GATES_CROSSED: {
         const e = event as GatesCrossedEvent;
-        return { ...base, eventType: GameEventType.GATES_CROSSED, gatesCrossed: e.gatesCrossed, championshipPoints: e.championshipPoints };
+        return {
+          ...base,
+          eventType: GameEventType.GATES_CROSSED,
+          gatesCrossed: e.gatesCrossed,
+          championshipPoints: e.championshipPoints,
+        };
       }
       case GameEventType.VEHICLE_DESTROYED: {
         const e = event as VehicleDestroyedEvent;
-        return { ...base, eventType: GameEventType.VEHICLE_DESTROYED, vehicleId: e.vehicleId, weightClass: e.weightClass, championshipPoints: e.championshipPoints };
+        return {
+          ...base,
+          eventType: GameEventType.VEHICLE_DESTROYED,
+          vehicleId: e.vehicleId,
+          weightClass: e.weightClass,
+          championshipPoints: e.championshipPoints,
+        };
       }
       case GameEventType.FAVORI_DU_PUBLIC_BONUS: {
         const e = event as FavoriDuPublicBonusEvent;
-        return { ...base, eventType: GameEventType.FAVORI_DU_PUBLIC_BONUS, vehicleId: e.vehicleId, championshipPoints: e.championshipPoints };
+        return {
+          ...base,
+          eventType: GameEventType.FAVORI_DU_PUBLIC_BONUS,
+          vehicleId: e.vehicleId,
+          championshipPoints: e.championshipPoints,
+        };
       }
       case GameEventType.VEHICLE_RENAMED: {
         const e = event as VehicleRenamedEvent;
         return {
-          ...base, eventType: GameEventType.VEHICLE_RENAMED,
+          ...base,
+          eventType: GameEventType.VEHICLE_RENAMED,
           vehicleId: e.vehicleId,
           previousVehicleName: e.previousName,
           newVehicleName: e.newName,
@@ -381,7 +456,11 @@ export class CampaignRepository implements ICampaignRepository {
       }
       case GameEventType.SABOTAGE_POINTS_SPENT: {
         const e = event as SabotagePointsSpentEvent;
-        return { ...base, eventType: GameEventType.SABOTAGE_POINTS_SPENT, sabotagePointsSpent: e.pointsSpent };
+        return {
+          ...base,
+          eventType: GameEventType.SABOTAGE_POINTS_SPENT,
+          sabotagePointsSpent: e.pointsSpent,
+        };
       }
     }
   }

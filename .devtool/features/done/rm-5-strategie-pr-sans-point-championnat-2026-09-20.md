@@ -1,15 +1,16 @@
 ---
-id: "rm-5-strategie-pr-sans-point-championnat-2026-09-20"
-status: "done"
-priority: "medium"
+id: 'rm-5-strategie-pr-sans-point-championnat-2026-09-20'
+status: 'done'
+priority: 'medium'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-24T11:54:32.000Z"
-completedAt: "2026-09-24T11:54:32.000Z"
-labels: ["regles-maison", "mode-campagne", "wayfinder:task"]
-order: "ab"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-24T11:54:32.000Z'
+completedAt: '2026-09-24T11:54:32.000Z'
+labels: ['regles-maison', 'mode-campagne', 'wayfinder:task']
+order: 'ab'
 ---
+
 # RM-5 — Règle R1 : stratégie « aucun point de championnat »
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -79,7 +80,7 @@ initiale — RM-5 n'a eu qu'à brancher la première vraie règle maison dedans 
   garde "deux règles actives sur le même point → `DomainException`" existaient déjà
   (RM-4) et sont désormais exercées par une vraie entrée plutôt qu'à vide.
 - **`ResistanceContactedEvent.describe()`** mentionne désormais la règle appliquée —
-  y compris pour la règle *par défaut* (pas seulement R1), sans quoi un joueur ne
+  y compris pour la règle _par défaut_ (pas seulement R1), sans quoi un joueur ne
   pourrait pas distinguer deux parties ayant utilisé des règles différentes. Mapping
   local clé → libellé français (`STRATEGY_KEY_LABELS`), même idiome que
   `WALLET_REASON_LABELS` (`wallet-movement.event.ts`) — le contact manuel

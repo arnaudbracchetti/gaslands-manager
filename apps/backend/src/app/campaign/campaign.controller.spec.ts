@@ -11,7 +11,18 @@ import { UserRole } from '../auth/domain/user-role';
 // Vraie instance d'agrégat, comme ce que JwtStrategy dépose dans req.user :
 // c'est son getter `callName` que le controller lit pour `playerName`.
 const req = {
-  user: new User(42, 'Jean', 'Dupont', 'JeanLeFou', 'u@x', 'hashed:x', UserRole.USER, true, new Date(), new Date()),
+  user: new User(
+    42,
+    'Jean',
+    'Dupont',
+    'JeanLeFou',
+    'u@x',
+    'hashed:x',
+    UserRole.USER,
+    true,
+    new Date(),
+    new Date(),
+  ),
 };
 
 // Fabrique un mock de use case (objet avec execute()).
@@ -65,40 +76,40 @@ describe('CampaignController (câblage)', () => {
       query as never,
       scenarioCatalog as never,
       houseRuleCatalog as never,
-      uc() as never,            // drawRandomScenario
+      uc() as never, // drawRandomScenario
       createCampaignUseCase as never,
-      uc() as never,            // update
-      uc() as never,            // setHouseRules
-      uc() as never,            // changeState
-      uc() as never,            // delete
-      uc(5) as never,           // requestJoin
+      uc() as never, // update
+      uc() as never, // setHouseRules
+      uc() as never, // changeState
+      uc() as never, // delete
+      uc(5) as never, // requestJoin
       validateParticipantUseCase as never,
-      uc() as never,            // promote
-      uc() as never,            // removeParticipant
-      uc(5) as never,           // changeMyTeam
+      uc() as never, // promote
+      uc() as never, // removeParticipant
+      uc(5) as never, // changeMyTeam
       addGameUseCase as never,
-      uc(7) as never,           // updateGame
-      uc() as never,            // removeGame
+      uc(7) as never, // updateGame
+      uc() as never, // removeGame
       reorderGamesUseCase as never,
       recordResultUseCase as never,
-      uc() as never,            // resetResult
-      uc() as never,            // rollIncome
-      uc() as never,            // getParticipantVehicles
-      uc() as never,            // recordWallet
-      uc() as never,            // recordVehicleLost
-      uc() as never,            // contactResistance
-      uc() as never,            // enterAtelier
-      uc() as never,            // closeAtelier
-      uc() as never,            // standings
-      uc() as never,            // changeEquipment
-      uc() as never,            // wreck
-      uc() as never,            // workshop
+      uc() as never, // resetResult
+      uc() as never, // rollIncome
+      uc() as never, // getParticipantVehicles
+      uc() as never, // recordWallet
+      uc() as never, // recordVehicleLost
+      uc() as never, // contactResistance
+      uc() as never, // enterAtelier
+      uc() as never, // closeAtelier
+      uc() as never, // standings
+      uc() as never, // changeEquipment
+      uc() as never, // wreck
+      uc() as never, // workshop
       getCampaignTeamSheetUseCase as never,
-      uc() as never,            // getWorkshopAvailableWeapons
-      uc() as never,            // getWorkshopAvailableImprovements
+      uc() as never, // getWorkshopAvailableWeapons
+      uc() as never, // getWorkshopAvailableImprovements
       getWorkshopAvailableAdvantagesUseCase as never,
       getWorkshopAvailableSequellesUseCase as never,
-      uc() as never,            // getWorkshopAvailableVehicles
+      uc() as never, // getWorkshopAvailableVehicles
       renameCampaignVehicleUseCase as never,
     );
   });
@@ -119,8 +130,15 @@ describe('CampaignController (câblage)', () => {
   });
 
   it('create exécute le use case puis recompose via query.findOne', async () => {
-    const result = await controller.create(req as never, { name: 'C', teamId: 3 });
-    expect(createCampaignUseCase.execute).toHaveBeenCalledWith({ userId: 42, name: 'C', teamId: 3 });
+    const result = await controller.create(req as never, {
+      name: 'C',
+      teamId: 3,
+    });
+    expect(createCampaignUseCase.execute).toHaveBeenCalledWith({
+      userId: 42,
+      name: 'C',
+      teamId: 3,
+    });
     expect(query.findOne).toHaveBeenCalledWith(1, 42);
     expect(result).toEqual({ id: 1 });
   });
@@ -138,9 +156,14 @@ describe('CampaignController (câblage)', () => {
   });
 
   it('createGame exécute le use case puis recompose via query.getGame', async () => {
-    const result = await controller.createGame(req as never, 1, { scenarioId: 's' });
+    const result = await controller.createGame(req as never, 1, {
+      scenarioId: 's',
+    });
     expect(addGameUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, userId: 42, scenarioId: 's', type: undefined,
+      campaignId: 1,
+      userId: 42,
+      scenarioId: 's',
+      type: undefined,
     });
     expect(query.getGame).toHaveBeenCalledWith(1, 7);
     expect(result).toEqual({ id: 7, status: 'JOUE' });
@@ -149,14 +172,21 @@ describe('CampaignController (câblage)', () => {
   it('reorderGames délègue au use case avec campaignId/userId/gameIds', async () => {
     await controller.reorderGames(req as never, 1, { gameIds: [30, 10] });
     expect(reorderGamesUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, userId: 42, gameIds: [30, 10],
+      campaignId: 1,
+      userId: 42,
+      gameIds: [30, 10],
     });
   });
 
   it('recordResult exécute le use case puis recompose via query.getGame (ne finalise plus la partie elle-même)', async () => {
-    const result = await controller.recordResult(req as never, 1, 7, { results: [{ participantId: 1, rank: 1 }] });
+    const result = await controller.recordResult(req as never, 1, 7, {
+      results: [{ participantId: 1, rank: 1 }],
+    });
     expect(recordResultUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, gameId: 7, userId: 42, results: [{ participantId: 1, rank: 1 }],
+      campaignId: 1,
+      gameId: 7,
+      userId: 42,
+      results: [{ participantId: 1, rank: 1 }],
     });
     expect(query.getGame).toHaveBeenCalledWith(1, 7);
     expect(result).toEqual({ id: 7, status: 'JOUE' });
@@ -165,31 +195,52 @@ describe('CampaignController (câblage)', () => {
   it('validateParticipant exécute le use case puis recompose via query.getParticipant', async () => {
     await controller.validateParticipant(req as never, 1, 5, { accept: true });
     expect(validateParticipantUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, pid: 5, userId: 42, accept: true,
+      campaignId: 1,
+      pid: 5,
+      userId: 42,
+      accept: true,
     });
     expect(query.getParticipant).toHaveBeenCalledWith(1, 5);
   });
 
   it('getWorkshopAvailableAdvantages délègue au use case avec campaignId/vehicleId/userId', async () => {
-    const result = await controller.getWorkshopAvailableAdvantages(req as never, 1, 5);
+    const result = await controller.getWorkshopAvailableAdvantages(
+      req as never,
+      1,
+      5,
+    );
     expect(getWorkshopAvailableAdvantagesUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, vehicleId: 5, userId: 42,
+      campaignId: 1,
+      vehicleId: 5,
+      userId: 42,
     });
     expect(result).toEqual(['avantage']);
   });
 
   it('getWorkshopAvailableSequelles délègue au use case avec campaignId/vehicleId/userId', async () => {
-    const result = await controller.getWorkshopAvailableSequelles(req as never, 1, 5);
+    const result = await controller.getWorkshopAvailableSequelles(
+      req as never,
+      1,
+      5,
+    );
     expect(getWorkshopAvailableSequellesUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, vehicleId: 5, userId: 42,
+      campaignId: 1,
+      vehicleId: 5,
+      userId: 42,
     });
     expect(result).toEqual(['sequelle']);
   });
 
   it('renameCampaignVehicle délègue au use case avec campaignId/vehicleId/nom/userId', async () => {
-    await controller.renameCampaignVehicle(req as never, 1, { vehicleId: 5, nom: 'La Teigne' });
+    await controller.renameCampaignVehicle(req as never, 1, {
+      vehicleId: 5,
+      nom: 'La Teigne',
+    });
     expect(renameCampaignVehicleUseCase.execute).toHaveBeenCalledWith({
-      campaignId: 1, userId: 42, vehicleId: 5, nom: 'La Teigne',
+      campaignId: 1,
+      userId: 42,
+      vehicleId: 5,
+      nom: 'La Teigne',
     });
   });
 
@@ -204,7 +255,10 @@ describe('CampaignController (câblage)', () => {
   });
 
   it('getParticipantSheet résout le nom de la cible via query.getParticipant puis délègue au use case avec participantId', async () => {
-    query.getParticipant.mockResolvedValueOnce({ id: 5, userName: 'Autre Joueur' });
+    query.getParticipant.mockResolvedValueOnce({
+      id: 5,
+      userName: 'Autre Joueur',
+    });
 
     const result = await controller.getParticipantSheet(req as never, 1, 5);
 

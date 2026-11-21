@@ -324,7 +324,7 @@ tentative d'accès retourne HTTP 404 (pas de fuite d'information).
 
 Une section **Programme Télé** est affichée sur `/campaigns/:id` **dans tous les
 états** de la campagne. L'organisateur y planifie des **parties** (`Game`) — chacune
-rattachée à un *scénario* du catalogue (`EVENEMENT_TELE` ou `ESCARMOUCHE`). La
+rattachée à un _scénario_ du catalogue (`EVENEMENT_TELE` ou `ESCARMOUCHE`). La
 gestion est possible en `EN_CONSTRUCTION` et `EN_COURS` ; en `TERMINEE`, le
 programme reste **visible en lecture seule**.
 
@@ -338,9 +338,9 @@ programme reste **visible en lecture seule**.
   est repris du scénario par défaut.
 - **Édition / suppression** (`PUT`/`DELETE .../games/:gameId`) : organisateur,
   `EN_CONSTRUCTION` ou `EN_COURS` (refusé en `TERMINEE`, HTTP 400). Une partie
-  `JOUE` est **figée** (HTTP 400 si on tente de la modifier ou supprimer). *Le
+  `JOUE` est **figée** (HTTP 400 si on tente de la modifier ou supprimer). _Le
   statut `JOUE` n'est pas encore atteignable — l'enregistrement de résultat est
-  une story ultérieure ; la garde est posée dès maintenant.*
+  une story ultérieure ; la garde est posée dès maintenant._
 - **Consultation** (`GET /api/campaigns/:id/games`) : tout participant `VALIDATED`
   voit le programme trié, en lecture seule, **quel que soit l'état** de la campagne.
   Les actions de gestion ne s'affichent que pour l'organisateur et hors `TERMINEE`.
@@ -433,15 +433,15 @@ possibles, jamais tous affichés en même temps. Documents de conception :
 [`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md)
 (ajout de l'écran Sabotage).
 
-| # | Écran | Composant | Visible si |
-|---|-------|-----------|-----------|
-| 1 | Présence | `PresenceStep` | toujours |
-| 2 | Sabotage (points dépensés) | `SabotageStep` | toujours |
-| 3 | Classement | `RankingStep` | `EVENEMENT_TELE` uniquement |
-| 4 | Portes franchies | `GatesStep` | `EVENEMENT_TELE` **et** `franchissement_portes` |
-| 5 | Jerricans (butin manuel) | `JerricansStep` | `gain_jerricans` |
-| 6 | Désignation des épaves | `WreckDesignationStep` | toujours |
-| 7 | Résolution (revenu + épaves) | `WreckResolutionStep` | toujours |
+| #   | Écran                        | Composant              | Visible si                                      |
+| --- | ---------------------------- | ---------------------- | ----------------------------------------------- |
+| 1   | Présence                     | `PresenceStep`         | toujours                                        |
+| 2   | Sabotage (points dépensés)   | `SabotageStep`         | toujours                                        |
+| 3   | Classement                   | `RankingStep`          | `EVENEMENT_TELE` uniquement                     |
+| 4   | Portes franchies             | `GatesStep`            | `EVENEMENT_TELE` **et** `franchissement_portes` |
+| 5   | Jerricans (butin manuel)     | `JerricansStep`        | `gain_jerricans`                                |
+| 6   | Désignation des épaves       | `WreckDesignationStep` | toujours                                        |
+| 7   | Résolution (revenu + épaves) | `WreckResolutionStep`  | toujours                                        |
 
 1. **Présence** (`PresenceStep`) — cases à cocher des participants
    `VALIDATED`, toujours le premier écran. Émet la liste des présents (ordre
@@ -472,8 +472,8 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    de scénario (ex. pillage de convoi), indépendant du revenu de base D6 de
    l'écran 7 (Escarmouche) — les deux se cumulent.
 6. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
-   des équipes présentes : *Intact* / *Mis en épave par [participant]* / *Mis en
-   épave seul*. Le picker destructeur reste actif pour les deux types de
+   des équipes présentes : _Intact_ / _Mis en épave par [participant]_ / _Mis en
+   épave seul_. Le picker destructeur reste actif pour les deux types de
    partie ; une case "Favori du public" apparaît uniquement pour un véhicule
    qui porte réellement ce statut ET pour un Événement Télévisé
    (`showFavoriDuPublic` input, toujours masquée en Escarmouche) — cf.
@@ -486,7 +486,7 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    aucun bouton ni sélecteur : dès l'arrivée sur cet écran, un `effect()`
    déclenche les tirages serveur un par un — d'abord le **revenu de base**
    (Escarmouche uniquement, 1D6 par participant présent, `POST
-   .../events/income`), puis la **Table des Épaves** (tout type de partie,
+.../events/income`), puis la **Table des Épaves** (tout type de partie,
    `POST .../events/wreck`, un par véhicule désigné à l'écran précédent).
    Chaque résultat s'affiche dès qu'il est reçu, plus la ligne "Détruit par
    [participant]" si applicable (donnée capturée à l'écran 5). Le bonus
@@ -494,8 +494,8 @@ possibles, jamais tous affichés en même temps. Documents de conception :
    si applicable. Le bouton "Terminer"
    (actif une fois tous les tirages reçus) appelle `POST .../enter-atelier` —
    **c'est à ce moment, et seulement à ce moment, que la partie passe
-   `PLANIFIE → ATELIER`**, ouvrant la phase garage post-partie *sur cette
-   même partie* (pas d'entité séparée, cf. §Cycle de vie ci-dessous).
+   `PLANIFIE → ATELIER`**, ouvrant la phase garage post-partie _sur cette
+   même partie_ (pas d'entité séparée, cf. §Cycle de vie ci-dessous).
 
 **Pourquoi l'entrée en atelier est déplacée en fin de wizard** : faire entrer
 la partie en atelier avant l'écran de résolution rendrait ce dernier
@@ -628,7 +628,7 @@ seule — aucune action d'achat/vente/retrait n'est jamais possible sur cet
   (`participant.teamId`) **et** que la campagne n'est plus `EN_CONSTRUCTION`
   (une équipe en construction libre n'a pas encore de contenu d'atelier
   stabilisé à montrer). Contrairement au lien "Gérer mon équipe" (qui ne
-  bascule vers l'Atelier que si une partie y est *actuellement* ouverte), la
+  bascule vers l'Atelier que si une partie y est _actuellement_ ouverte), la
   consultation en lecture seule ne dépend d'aucun atelier ouvert précis — les
   données restent consultables à tout moment dès que la campagne a démarré.
 - **Écran** (`ParticipantAtelierPage`, `/campaigns/:id/participants/:pid/atelier`) :
@@ -690,7 +690,7 @@ vraies parties.
 `evenement-tele-game.ts`/`escarmouche-game.ts` `canAccept()`) et en `ATELIER` (échange volontaire de
 Chocs contre une séquelle `ATELIER`, coût variable selon le type) — seule
 sous-catégorie d'`EquipmentChangedEvent` acceptée hors `ATELIER`, puisqu'elle
-est générée par le tirage (écran 3 du wizard) *avant* l'entrée en atelier.
+est générée par le tirage (écran 3 du wizard) _avant_ l'entrée en atelier.
 
 L'endpoint `POST .../events/equipment` ne prend plus de `:gameId` en paramètre
 de route : le use case retrouve lui-même l'unique partie actuellement en
@@ -847,7 +847,7 @@ uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
 même endpoint `POST .../events/equipment`, sans savoir laquelle des deux
 opérations aura lieu. `WorkshopWeaponDto`/`WorkshopImprovementDto`/
 `WorkshopAdvantageDto` exposent `isSold` et `purchasedThisSession` (ce dernier
-uniquement pour adapter le texte de confirmation *avant* le clic — "Annuler
+uniquement pour adapter le texte de confirmation _avant_ le clic — "Annuler
 l'achat" vs "Revendre pour N jerricans (50%)" pour une arme/amélioration,
 "Revendre ? Le prix total est perdu, aucun remboursement" pour un avantage —
 jamais pour décider côté client).
@@ -896,7 +896,7 @@ table" hors périmètre de l'application (cf. décision D2,
 au même titre que les Votes du Public — l'application ne suit jamais l'usage
 en cours de partie. Elle permet en revanche, depuis l'écran Sabotage du
 wizard de fin de partie (cf. [§Wizard de fin de
-partie](#wizard-de-fin-de-partie)), d'enregistrer *après coup* combien de
+partie](#wizard-de-fin-de-partie)), d'enregistrer _après coup_ combien de
 points de sabotage chaque équipe a dépensés durant la partie qui vient de se
 jouer — l'organisateur saisit un nombre par équipe présente, sur déclaration
 orale à table, comme pour les autres écrans du wizard (Portes, Jerricans).
@@ -1007,6 +1007,7 @@ contraint le choix affiché.
 des Épaves.** Les deux séquelles modifient le protocole de tirage
 (`WreckTable`) tant qu'elles restent actives sur le véhicule, sans aucune
 consommation :
+
 - **Légende Vivante** force la valeur du D6 à 1 à **chaque** tirage (le
   randomizer n'est même pas appelé).
 - **Maintenu par la Rouille** déclenche un second tirage après le premier
@@ -1031,8 +1032,8 @@ campagne.
 
 **Déclenchement** : à l'écran Désignation des épaves (`WreckDesignationStep`)
 d'une partie ultérieure, une case "Favori du public" apparaît **uniquement**
-pour un véhicule qui (a) est désigné *Mis en épave par [participant]* ou
-*Mis en épave seul* à cet écran (jamais *Intact*) ET (b) porte réellement ce
+pour un véhicule qui (a) est désigné _Mis en épave par [participant]_ ou
+_Mis en épave seul_ à cet écran (jamais _Intact_) ET (b) porte réellement ce
 statut — jamais pour les autres véhicules, contrairement au comportement
 précédent (case libre sur tout véhicule non-intact). Cocher cette case
 déclare que le joueur choisit de dépenser **3 votes du public** pour
@@ -1078,6 +1079,7 @@ Programme Télé (`GameList`), qui ne le porte plus. Deux points d'accès :
   l'historique"/"Voir l'atelier" (ouverts à tout participant `VALIDATED`).
 
 **Deux endpoints distincts**, pas un paramètre optionnel sur une route unique :
+
 - `GET /api/campaigns/:id/sheet` — sa propre fiche (inchangé), `playerName`
   résolu depuis `req.user.callName` (le pseudo, cf.
   [AUTH.md — Nom d'affichage](AUTH.md#nom-daffichage-callname)) sans requête DB
@@ -1278,21 +1280,21 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
 
 ### `Campaign`
 
-| Champ | Type | Contraintes |
-|-------|------|-------------|
-| `id` | number | PK, auto-incrémenté |
-| `name` | string(100) | obligatoire |
-| `state` | `'EN_CONSTRUCTION' \| 'EN_COURS' \| 'TERMINEE'` | défaut `EN_CONSTRUCTION` |
-| `inviteCode` | string | unique, indexé — token généré à la création |
-| `budget` | number | défaut 50 - cf. [§Budget de campagne](#budget-de-campagne). Non modifiable après création (aucun endpoint) |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                                            | Contraintes                                                                                                |
+| ------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`                      | number                                          | PK, auto-incrémenté                                                                                        |
+| `name`                    | string(100)                                     | obligatoire                                                                                                |
+| `state`                   | `'EN_CONSTRUCTION' \| 'EN_COURS' \| 'TERMINEE'` | défaut `EN_CONSTRUCTION`                                                                                   |
+| `inviteCode`              | string                                          | unique, indexé — token généré à la création                                                                |
+| `budget`                  | number                                          | défaut 50 - cf. [§Budget de campagne](#budget-de-campagne). Non modifiable après création (aucun endpoint) |
+| `createdAt` / `updatedAt` | Date                                            | auto                                                                                                       |
 
 **Champs calculés dans la réponse API** (non stockés en base) :
 
-| Champ (DTO) | Type | Description |
-|-------------|------|-------------|
-| `participantCount` | number | Nombre de participants `VALIDATED`. |
-| `myRole` | `'organizer' \| 'participant'` | Rôle de l'utilisateur connecté dans cette campagne. |
+| Champ (DTO)        | Type                           | Description                                         |
+| ------------------ | ------------------------------ | --------------------------------------------------- |
+| `participantCount` | number                         | Nombre de participants `VALIDATED`.                 |
+| `myRole`           | `'organizer' \| 'participant'` | Rôle de l'utilisateur connecté dans cette campagne. |
 
 ### `CampaignParticipant`
 
@@ -1300,23 +1302,23 @@ Une ligne par (utilisateur, équipe choisie) inscrit à une campagne. Contrainte
 `(campaignId, userId)` : un utilisateur ne peut engager qu'une seule de ses équipes par
 campagne — modifiable (`teamId`) tant que la campagne est `EN_CONSTRUCTION`.
 
-| Champ | Type | Contraintes |
-|-------|------|-------------|
-| `id` | number | PK, auto-incrémenté |
-| `campaignId` | number | FK → Campaign (`CASCADE`) |
-| `userId` | number | FK → User (`CASCADE`) |
-| `teamId` | number \| null | FK → Team (`CASCADE`), nullable - un organisateur peut créer une campagne sans engager d'équipe immédiatement |
-| `status` | `'PENDING' \| 'VALIDATED' \| 'REJECTED'` | défaut `PENDING` |
-| `isOrganizer` | boolean | défaut `false` |
-| `isLocked` | boolean | défaut `false` — posé pour `EN_COURS`, aucune logique d'application pour l'instant |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                                     | Contraintes                                                                                                   |
+| ------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `id`                      | number                                   | PK, auto-incrémenté                                                                                           |
+| `campaignId`              | number                                   | FK → Campaign (`CASCADE`)                                                                                     |
+| `userId`                  | number                                   | FK → User (`CASCADE`)                                                                                         |
+| `teamId`                  | number \| null                           | FK → Team (`CASCADE`), nullable - un organisateur peut créer une campagne sans engager d'équipe immédiatement |
+| `status`                  | `'PENDING' \| 'VALIDATED' \| 'REJECTED'` | défaut `PENDING`                                                                                              |
+| `isOrganizer`             | boolean                                  | défaut `false`                                                                                                |
+| `isLocked`                | boolean                                  | défaut `false` — posé pour `EN_COURS`, aucune logique d'application pour l'instant                            |
+| `createdAt` / `updatedAt` | Date                                     | auto                                                                                                          |
 
 **Champs calculés dans la réponse API** (non stockés en base) :
 
-| Champ (DTO) | Type | Description |
-|-------------|------|-------------|
-| `userName` | string | Prénom + nom de l'utilisateur. |
-| `teamName` | string | Nom de l'équipe engagée. |
+| Champ (DTO) | Type   | Description                    |
+| ----------- | ------ | ------------------------------ |
+| `userName`  | string | Prénom + nom de l'utilisateur. |
+| `teamName`  | string | Nom de l'équipe engagée.       |
 
 ### `Game` _(mode campagne — Programme Télé)_
 
@@ -1325,24 +1327,24 @@ Une partie du Programme d'une campagne. Le scénario est référencé par
 Le statut porte aussi la phase garage post-partie (`ATELIER`) — cf.
 [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier).
 
-| Champ | Type | Contraintes |
-|-------|------|-------------|
-| `id` | number | PK, auto-incrémenté |
-| `campaignId` | number | FK → Campaign (`CASCADE`) |
-| `scenarioId` | string \| null | référence `Scenario.nom_interne` |
-| `type` | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` | |
-| `status` | `'PLANIFIE' \| 'ATELIER' \| 'JOUE'` | `PLANIFIE → ATELIER` (`enter-atelier`) `→ JOUE` (`close-atelier`, manuel ou auto) |
-| `order` | number | `double precision` — auto-append MAX+1. Colonne SQL sous-jacente nommée `displayOrder` (`@Column({ name: 'displayOrder' })`) - c'est ce nom que reflète l'ERD de [DOMAIN_MODEL.md](../DOMAIN_MODEL.md), alors que la propriété TypeScript exposée par l'entité est `order` |
-| `playedAt` | Date \| null | horodatage du passage à `ATELIER` — null tant que `PLANIFIE` |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                                | Contraintes                                                                                                                                                                                                                                                                |
+| ------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                      | number                              | PK, auto-incrémenté                                                                                                                                                                                                                                                        |
+| `campaignId`              | number                              | FK → Campaign (`CASCADE`)                                                                                                                                                                                                                                                  |
+| `scenarioId`              | string \| null                      | référence `Scenario.nom_interne`                                                                                                                                                                                                                                           |
+| `type`                    | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` |                                                                                                                                                                                                                                                                            |
+| `status`                  | `'PLANIFIE' \| 'ATELIER' \| 'JOUE'` | `PLANIFIE → ATELIER` (`enter-atelier`) `→ JOUE` (`close-atelier`, manuel ou auto)                                                                                                                                                                                          |
+| `order`                   | number                              | `double precision` — auto-append MAX+1. Colonne SQL sous-jacente nommée `displayOrder` (`@Column({ name: 'displayOrder' })`) - c'est ce nom que reflète l'ERD de [DOMAIN_MODEL.md](../DOMAIN_MODEL.md), alors que la propriété TypeScript exposée par l'entité est `order` |
+| `playedAt`                | Date \| null                        | horodatage du passage à `ATELIER` — null tant que `PLANIFIE`                                                                                                                                                                                                               |
+| `createdAt` / `updatedAt` | Date                                | auto                                                                                                                                                                                                                                                                       |
 
 **Champ calculé dans la réponse API** (non stocké en base) :
 
-| Champ (DTO) | Type | Description |
-|-------------|------|-------------|
-| `scenarioName` | string | Libellé du scénario résolu depuis `ScenarioCatalogService`. |
+| Champ (DTO)            | Type    | Description                                                                                                                                                                      |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scenarioName`         | string  | Libellé du scénario résolu depuis `ScenarioCatalogService`.                                                                                                                      |
 | `franchissementPortes` | boolean | Flag du scénario résolu (mirroir de `scenarioName`) — pilote l'affichage de l'écran Portes du wizard de fin de partie, cf. [§Wizard de fin de partie](#wizard-de-fin-de-partie). |
-| `gainJerricans` | boolean | Flag du scénario résolu — pilote l'affichage de l'écran Jerricans du wizard. |
+| `gainJerricans`        | boolean | Flag du scénario résolu — pilote l'affichage de l'écran Jerricans du wizard.                                                                                                     |
 
 ### `Scenario` _(catalogue en mémoire, pas en base)_
 
@@ -1358,26 +1360,26 @@ tout type de partie).
 
 ## API Endpoints — Campagnes
 
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| GET | `/api/campaigns` | JWT | Mes campagnes (participant `VALIDATED`) |
-| GET | `/api/catalog/regles-maison` | Non | Catalogue public des règles maison (cf. [§Règles maison](#règles-maison)) |
-| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne) ; `houseRules?: string[]` - défaut aucune règle active, cf. [§Règles maison](#règles-maison)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi, ou si une clé de `houseRules` est absente du catalogue |
-| GET | `/api/campaigns/pending` | JWT | Mes demandes d'inscription en attente |
-| GET | `/api/campaigns/organizing/pending-requests` | JWT | Inscriptions en attente dans mes campagnes (organisateur) |
-| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) et `houseRules` (cf. [§Règles maison](#règles-maison)) |
-| GET | `/api/campaigns/:id` | JWT | Détail d'une campagne (participant `VALIDATED`) |
-| DELETE | `/api/campaigns/:id` | JWT | Supprimer la campagne (organisateur, cascade sur les participants) |
-| PUT | `/api/campaigns/:id` | JWT | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne)) |
-| PUT | `/api/campaigns/:id/house-rules` | JWT | Règles maison actives (organisateur, **aucune contrainte d'état** - `{ houseRules: string[] }`, tableau vide = aucune règle active) - HTTP 400 si une clé est absente du catalogue courant (cf. [§Règles maison](#règles-maison)) |
-| PUT | `/api/campaigns/:id/state` | JWT | Transition d'état (organisateur) |
-| GET | `/api/campaigns/:id/participants` | JWT | Liste des participants |
-| POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne)) |
-| PUT | `/api/campaigns/:id/participants/me` | JWT | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) - HTTP 400 si la nouvelle équipe dépasse le budget de la campagne |
-| PUT | `/api/campaigns/:id/participants/:pid/validate` | JWT | Valider/refuser (`{ accept }`, organisateur) - couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` - une validation (`accept: true`) est refusée (HTTP 400) si l'équipe du participant dépasse le budget de la campagne |
-| PUT | `/api/campaigns/:id/participants/:pid/promote` | JWT | Promouvoir co-organisateur (organisateur) |
-| DELETE | `/api/campaigns/:id/participants/:pid` | JWT | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement) |
-| GET | `/api/campaigns/:id/participants/:pid/journal` | JWT | Historique complet d'un participant, toutes parties confondues, groupé par partie (tout participant `VALIDATED`, y compris pour consulter l'historique d'un tiers) — cf. [§Historique complet d'un participant](#historique-complet-dun-participant) |
+| Méthode | Route                                           | Auth | Description                                                                                                                                                                                                                                                                                                                                                                   |
+| ------- | ----------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/campaigns`                                | JWT  | Mes campagnes (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                                       |
+| GET     | `/api/catalog/regles-maison`                    | Non  | Catalogue public des règles maison (cf. [§Règles maison](#règles-maison))                                                                                                                                                                                                                                                                                                     |
+| POST    | `/api/campaigns`                                | JWT  | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne) ; `houseRules?: string[]` - défaut aucune règle active, cf. [§Règles maison](#règles-maison)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi, ou si une clé de `houseRules` est absente du catalogue |
+| GET     | `/api/campaigns/pending`                        | JWT  | Mes demandes d'inscription en attente                                                                                                                                                                                                                                                                                                                                         |
+| GET     | `/api/campaigns/organizing/pending-requests`    | JWT  | Inscriptions en attente dans mes campagnes (organisateur)                                                                                                                                                                                                                                                                                                                     |
+| GET     | `/api/campaigns/by-code/:code`                  | JWT  | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) et `houseRules` (cf. [§Règles maison](#règles-maison))                                                                                                                                                                                        |
+| GET     | `/api/campaigns/:id`                            | JWT  | Détail d'une campagne (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                               |
+| DELETE  | `/api/campaigns/:id`                            | JWT  | Supprimer la campagne (organisateur, cascade sur les participants)                                                                                                                                                                                                                                                                                                            |
+| PUT     | `/api/campaigns/:id`                            | JWT  | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne))                                                                                                                                                                                            |
+| PUT     | `/api/campaigns/:id/house-rules`                | JWT  | Règles maison actives (organisateur, **aucune contrainte d'état** - `{ houseRules: string[] }`, tableau vide = aucune règle active) - HTTP 400 si une clé est absente du catalogue courant (cf. [§Règles maison](#règles-maison))                                                                                                                                             |
+| PUT     | `/api/campaigns/:id/state`                      | JWT  | Transition d'état (organisateur)                                                                                                                                                                                                                                                                                                                                              |
+| GET     | `/api/campaigns/:id/participants`               | JWT  | Liste des participants                                                                                                                                                                                                                                                                                                                                                        |
+| POST    | `/api/campaigns/:id/participants`               | JWT  | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne))                                                                                                                                                                                                                                 |
+| PUT     | `/api/campaigns/:id/participants/me`            | JWT  | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) - HTTP 400 si la nouvelle équipe dépasse le budget de la campagne                                                                                                                                                                                                            |
+| PUT     | `/api/campaigns/:id/participants/:pid/validate` | JWT  | Valider/refuser (`{ accept }`, organisateur) - couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` - une validation (`accept: true`) est refusée (HTTP 400) si l'équipe du participant dépasse le budget de la campagne                                                                                                                           |
+| PUT     | `/api/campaigns/:id/participants/:pid/promote`  | JWT  | Promouvoir co-organisateur (organisateur)                                                                                                                                                                                                                                                                                                                                     |
+| DELETE  | `/api/campaigns/:id/participants/:pid`          | JWT  | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement)                                                                                                                                                                                                                                                                                                           |
+| GET     | `/api/campaigns/:id/participants/:pid/journal`  | JWT  | Historique complet d'un participant, toutes parties confondues, groupé par partie (tout participant `VALIDATED`, y compris pour consulter l'historique d'un tiers) — cf. [§Historique complet d'un participant](#historique-complet-dun-participant)                                                                                                                          |
 
 > Routes participants déclarées dans cet ordre dans `campaign.controller.ts` : la route
 > `PUT :id/participants/me` est définie **avant** `PUT :id/participants/:pid/validate`,
@@ -1392,22 +1394,22 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 
 ### Gestion du Programme (CRUD parties)
 
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| GET | `/api/catalog/scenarios` | Non | Liste publique des scénarios du catalogue |
-| GET | `/api/campaigns/:id/games` | JWT | Programme trié (participant `VALIDATED`) |
-| POST | `/api/campaigns/:id/games` | JWT | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| PUT | `/api/campaigns/:id/games/reorder` | JWT | Réordonne les parties encore `PLANIFIE` (US-A4, `{ gameIds: number[] }` — exactement l'ensemble des parties `PLANIFIE` actuelles, dans le nouvel ordre voulu — organisateur, `EN_CONSTRUCTION`/`EN_COURS`) — 204. Déclarée **avant** `PUT .../games/:gameId` ci-dessous (même précaution que `PUT .../participants/me`) |
-| PUT | `/api/campaigns/:id/games/:gameId` | JWT | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| DELETE | `/api/campaigns/:id/games/:gameId` | JWT | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`) |
-| POST | `/api/campaigns/:id/games/:gameId/results` | JWT | Enregistre le lot accumulé par le wizard (organisateur). `results` (classement + exploits, `{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }[]`) est optionnel — Événement Télévisé uniquement, `Game.recordResult` rejette (400) tout appel avec `results` sur une Escarmouche. `jerricanGains` (`{ participantId, amount }[]`) et `destroyedVehicles` (à plat, `{ destroyerId, vehicleId }[]`) sont optionnels — Escarmouche uniquement (`Game.recordJerricanGains`/`recordDestroyedVehicleTraces`, ce dernier à **0 PC**, trace journal uniquement). `weightClass` n'est jamais transmis, toujours dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). Ne finalise pas la partie (reste `PLANIFIE`, cf. §Wizard de fin de partie) |
-| DELETE | `/api/campaigns/:id/games/:gameId/results` | JWT | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204 |
-| GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
-| GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus **et hors vendus**) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) et le roster de l'écran Désignation des épaves (y compris les véhicules du participant lui-même) ; un véhicule vendu en atelier n'appartient plus à l'équipe au moment de la partie suivante, il ne peut donc jamais y avoir participé |
-| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) — `amount: 0`/`descriptions: []` sans aucun événement journalisé si la règle maison R3 (`escarmouche_bonus_jerricans`, cf. §Règles maison) est active |
-| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
-| POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
-| GET | `/api/campaigns/:id/games/:gameId/journal` | JWT | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie) |
+| Méthode | Route                                                   | Auth | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------- | ------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/catalog/scenarios`                                | Non  | Liste publique des scénarios du catalogue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| GET     | `/api/campaigns/:id/games`                              | JWT  | Programme trié (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| POST    | `/api/campaigns/:id/games`                              | JWT  | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| PUT     | `/api/campaigns/:id/games/reorder`                      | JWT  | Réordonne les parties encore `PLANIFIE` (US-A4, `{ gameIds: number[] }` — exactement l'ensemble des parties `PLANIFIE` actuelles, dans le nouvel ordre voulu — organisateur, `EN_CONSTRUCTION`/`EN_COURS`) — 204. Déclarée **avant** `PUT .../games/:gameId` ci-dessous (même précaution que `PUT .../participants/me`)                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| PUT     | `/api/campaigns/:id/games/:gameId`                      | JWT  | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| DELETE  | `/api/campaigns/:id/games/:gameId`                      | JWT  | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| POST    | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Enregistre le lot accumulé par le wizard (organisateur). `results` (classement + exploits, `{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }[]`) est optionnel — Événement Télévisé uniquement, `Game.recordResult` rejette (400) tout appel avec `results` sur une Escarmouche. `jerricanGains` (`{ participantId, amount }[]`) et `destroyedVehicles` (à plat, `{ destroyerId, vehicleId }[]`) sont optionnels — Escarmouche uniquement (`Game.recordJerricanGains`/`recordDestroyedVehicleTraces`, ce dernier à **0 PC**, trace journal uniquement). `weightClass` n'est jamais transmis, toujours dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). Ne finalise pas la partie (reste `PLANIFIE`, cf. §Wizard de fin de partie) |
+| DELETE  | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| GET     | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| GET     | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT  | Véhicules courants (hors perdus **et hors vendus**) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) et le roster de l'écran Désignation des épaves (y compris les véhicules du participant lui-même) ; un véhicule vendu en atelier n'appartient plus à l'équipe au moment de la partie suivante, il ne peut donc jamais y avoir participé                                                                                                                                                                                                                                                                                                                                                             |
+| POST    | `/api/campaigns/:id/games/:gameId/events/income`        | JWT  | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) — `amount: 0`/`descriptions: []` sans aucun événement journalisé si la règle maison R3 (`escarmouche_bonus_jerricans`, cf. §Règles maison) est active                                                                                                                                                                                                                                                                                                                                                   |
+| POST    | `/api/campaigns/:id/games/:gameId/enter-atelier`        | JWT  | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| POST    | `/api/campaigns/:id/games/:gameId/close-atelier`        | JWT  | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| GET     | `/api/campaigns/:id/games/:gameId/journal`              | JWT  | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 > Ce sont ces routes (`/results` POST/DELETE, `/participant-vehicles`, `/events/income`,
 > `/enter-atelier`) — plus `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) —
@@ -1429,25 +1431,25 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 > (`Game.recordResult`, qui calcule les PC correctement) permet désormais
 > d'enregistrer un classement.
 
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| POST | `/api/campaigns/:id/games/:gameId/events/wallet` | JWT | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204 |
-| POST | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | JWT | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
-| POST | `/api/campaigns/:id/games/:gameId/events/resistance` | JWT | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204 |
-| GET | `/api/campaigns/:id/standings` | JWT | Classement après replay complet (tout participant `VALIDATED`) |
+| Méthode | Route                                                  | Auth | Description                                                                         |
+| ------- | ------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------- |
+| POST    | `/api/campaigns/:id/games/:gameId/events/wallet`       | JWT  | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204      |
+| POST    | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | JWT  | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
+| POST    | `/api/campaigns/:id/games/:gameId/events/resistance`   | JWT  | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204          |
+| GET     | `/api/campaigns/:id/standings`                         | JWT  | Classement après replay complet (tout participant `VALIDATED`)                      |
 
 ### Atelier et épaves (Partie 5)
 
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| GET | `/api/campaigns/:id/workshop` | JWT | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration) |
-| GET | `/api/campaigns/:id/participants/:pid/workshop` | JWT | Atelier d'**un autre participant**, en lecture seule — même forme de réponse que `GET .../workshop` (`WorkshopStateDto`), mais `participantId` de la commande désigne la cible plutôt que l'appelant. Réservé aux appelants `VALIDATED` (même règle de visibilité que `GET .../participants/:pid/journal`, `NotFoundException` dans les deux cas de refus) ; le participant cible n'a lui-même aucune contrainte de statut. Consommé par `ParticipantAtelierPage` (vue maître-détail) |
-| GET | `/api/campaigns/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
-| GET | `/api/campaigns/:id/participants/:pid/sheet` | JWT | Fiche d'équipe exportable d'**un autre participant** — réservé à l'organisateur (`NotFoundException` sinon, `GetCampaignTeamSheetUseCase.resolveTarget`), contrairement à `.../participants/:pid/workshop`/`.../journal` (ouverts à tout participant `VALIDATED`). `sabotagePoints` toujours affiché (jamais nullifié), le secret D-S4 ne s'appliquant pas à ce niveau d'accès déjà organisateur-only. Cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons` | JWT | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages` | JWT | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles` | JWT | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture) |
-| POST | `/api/campaigns/:id/events/equipment` | JWT | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
-| POST | `/api/campaigns/:id/events/vehicle-rename` | JWT | Renomme un véhicule en atelier `{ vehicleId, nom }` (participant sur sa propre équipe) — 204. Journalisé via `VehicleRenamedEvent`, accepté uniquement en `ATELIER` (cf. [§Renommage d'un véhicule en atelier](#renommage-dun-véhicule-en-atelier) ci-dessus). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment` |
-| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | JWT | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`) |
+| Méthode | Route                                                                    | Auth | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET     | `/api/campaigns/:id/workshop`                                            | JWT  | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| GET     | `/api/campaigns/:id/participants/:pid/workshop`                          | JWT  | Atelier d'**un autre participant**, en lecture seule — même forme de réponse que `GET .../workshop` (`WorkshopStateDto`), mais `participantId` de la commande désigne la cible plutôt que l'appelant. Réservé aux appelants `VALIDATED` (même règle de visibilité que `GET .../participants/:pid/journal`, `NotFoundException` dans les deux cas de refus) ; le participant cible n'a lui-même aucune contrainte de statut. Consommé par `ParticipantAtelierPage` (vue maître-détail)                                                                                                                                                                                                                                                                  |
+| GET     | `/api/campaigns/:id/sheet`                                               | JWT  | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| GET     | `/api/campaigns/:id/participants/:pid/sheet`                             | JWT  | Fiche d'équipe exportable d'**un autre participant** — réservé à l'organisateur (`NotFoundException` sinon, `GetCampaignTeamSheetUseCase.resolveTarget`), contrairement à `.../participants/:pid/workshop`/`.../journal` (ouverts à tout participant `VALIDATED`). `sabotagePoints` toujours affiché (jamais nullifié), le secret D-S4 ne s'appliquant pas à ce niveau d'accès déjà organisateur-only. Cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne)                                                                                                                                                                                                                                                       |
+| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons`      | JWT  | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT  | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages`   | JWT  | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles`    | JWT  | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| POST    | `/api/campaigns/:id/events/equipment`                                    | JWT  | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
+| POST    | `/api/campaigns/:id/events/vehicle-rename`                               | JWT  | Renomme un véhicule en atelier `{ vehicleId, nom }` (participant sur sa propre équipe) — 204. Journalisé via `VehicleRenamedEvent`, accepté uniquement en `ATELIER` (cf. [§Renommage d'un véhicule en atelier](#renommage-dun-véhicule-en-atelier) ci-dessus). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| POST    | `/api/campaigns/:id/games/:gameId/events/wreck`                          | JWT  | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`)                                                                                                                                                                                                                                                                                                                                                      |

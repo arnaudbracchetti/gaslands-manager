@@ -11,7 +11,16 @@
  * d'information — le backend renvoie déjà un message neutre (404), repris
  * tel quel.
  */
-import { Component, OnInit, Signal, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -45,10 +54,13 @@ export class CampaignJoin implements OnInit {
   error: WritableSignal<string> = signal('');
 
   /** Résumé minimal de la saison (nom, état, organisateur) — null si non chargé */
-  summary: WritableSignal<CampaignSummary | null> = signal<CampaignSummary | null>(null);
+  summary: WritableSignal<CampaignSummary | null> =
+    signal<CampaignSummary | null>(null);
 
   /** Catalogue des règles maison, pour l'affichage en lecture seule (RM-7) — chargement indépendant, non bloquant. */
-  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
+  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<
+    HouseRuleDefinition[]
+  >([]);
 
   /** Équipes de l'utilisateur connecté, pour le select */
   userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
@@ -90,7 +102,9 @@ export class CampaignJoin implements OnInit {
     effect((): void => {
       if (this.selectedTeamId() !== null || this.summary() === null) return;
       const ineligible = this.ineligibleTeamIds();
-      const firstEligible = this.userTeams().find((t) => !(t.isEngaged ?? false) && !ineligible.has(t.id));
+      const firstEligible = this.userTeams().find(
+        (t) => !(t.isEngaged ?? false) && !ineligible.has(t.id),
+      );
       if (firstEligible) this.selectedTeamId.set(firstEligible.id);
     });
   }
@@ -115,7 +129,7 @@ export class CampaignJoin implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Code d\'invitation invalide ou inexistant.');
+        this.error.set("Code d'invitation invalide ou inexistant.");
         this.loading.set(false);
       },
     });
@@ -144,7 +158,9 @@ export class CampaignJoin implements OnInit {
         this.creatingTeam.set(false);
       },
       error: () => {
-        this.submitError.set('Erreur lors de la création de l\'équipe. Veuillez réessayer.');
+        this.submitError.set(
+          "Erreur lors de la création de l'équipe. Veuillez réessayer.",
+        );
         this.creatingTeam.set(false);
       },
     });
@@ -171,7 +187,9 @@ export class CampaignJoin implements OnInit {
         this.submitted.set(true);
       },
       error: (err: HttpErrorResponse) => {
-        this.submitError.set(err.error?.message ?? 'Une erreur est survenue. Veuillez réessayer.');
+        this.submitError.set(
+          err.error?.message ?? 'Une erreur est survenue. Veuillez réessayer.',
+        );
         this.submitting.set(false);
       },
     });

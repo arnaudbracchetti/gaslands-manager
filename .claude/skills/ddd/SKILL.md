@@ -145,9 +145,9 @@ Options :
 
 Une fois le domaine identifié, lister ensemble les opérations. Proposer un tableau à compléter collaborativement :
 
-| Opération | Commande ou requête ? | Charge l'agrégat complet ? | Use case ou requête directe ? | Vit sur la racine ou une entité enfant ? |
-|-----------|----------------------|---------------------------|-------------------------------|-------------------------------------------|
-| *(exemples à remplir avec l'utilisateur)* | | | | |
+| Opération                                 | Commande ou requête ? | Charge l'agrégat complet ? | Use case ou requête directe ? | Vit sur la racine ou une entité enfant ? |
+| ----------------------------------------- | --------------------- | -------------------------- | ----------------------------- | ---------------------------------------- |
+| _(exemples à remplir avec l'utilisateur)_ |                       |                            |                               |                                          |
 
 Poser pour chaque opération ambiguë :
 
@@ -181,7 +181,7 @@ Options :
     quand la variante dépend d'un état/d'une configuration du domaine.
 ```
 
-Une racine où *toutes* les méthodes vivent à sa surface — y compris celles qui ne touchent
+Une racine où _toutes_ les méthodes vivent à sa surface — y compris celles qui ne touchent
 qu'un seul enfant — est un agrégat-dieu (voir
 [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Symétrique, à
 l'intérieur du domaine, de l'anti-pattern 1 (logique métier dans le service plutôt que dans le
@@ -197,6 +197,7 @@ Demander :
 > "Pour chaque commande identifiée, de quoi le use case a-t-il besoin du repository ?"
 
 Guider vers les méthodes nécessaires :
+
 - `findById(id)` → charge l'agrégat complet (pour toute commande sur l'agrégat)
 - `findByChildId(childId)` → localise l'agrégat via un de ses enfants (voir ci-dessous)
 - `findSummaries(...)` → liste légère (requête directe, pas d'agrégat)
@@ -222,6 +223,7 @@ Présenter le design en **petites sections** (200–300 mots), en demandant apr�
 > "Est-ce que ça correspond à ce que tu as en tête, ou il y a quelque chose à ajuster ?"
 
 Sections à couvrir :
+
 1. Structure de l'agrégat (racine + entités enfants + value objects)
 2. Liste des invariantes et où elles vivent
 3. Tableau commandes / requêtes
@@ -248,15 +250,15 @@ Demander :
 
 Au-delà de la délimitation de l'agrégat, appliquer ces règles pendant la conception et la revue. Chaque règle = un principe + le piège qu'il évite.
 
-1. **Traduire l'erreur domaine à la frontière avec un `catch` discriminé.** Le domaine lève une exception de domaine ; la couche appelante la traduit en erreur de transport (ex. 400). Jamais un `catch` aveugle (qui avale aussi « introuvable » / « conflit » / un bug en une erreur générique), jamais un `catch` absent (qui laisse fuir l'erreur domaine en 500). Discriminer explicitement : *si c'est une erreur domaine → traduire, sinon → propager*.
+1. **Traduire l'erreur domaine à la frontière avec un `catch` discriminé.** Le domaine lève une exception de domaine ; la couche appelante la traduit en erreur de transport (ex. 400). Jamais un `catch` aveugle (qui avale aussi « introuvable » / « conflit » / un bug en une erreur générique), jamais un `catch` absent (qui laisse fuir l'erreur domaine en 500). Discriminer explicitement : _si c'est une erreur domaine → traduire, sinon → propager_.
 2. **Une garde vit sur l'objet qui possède l'état**, pas dupliquée chez chaque appelant. Si deux use cases répètent le même « si l'état n'est pas X, refuser », cette garde appartient à l'agrégat/entité concerné(e).
-3. **Déplacer une règle dans le domaine sans perdre de précondition.** En remontant une règle depuis un service/use case vers l'agrégat, vérifier que le nouvel emplacement dispose de *toutes* les données de l'ancien contrôle — un validateur partiel qui remplace un validateur complet est une régression silencieuse.
+3. **Déplacer une règle dans le domaine sans perdre de précondition.** En remontant une règle depuis un service/use case vers l'agrégat, vérifier que le nouvel emplacement dispose de _toutes_ les données de l'ancien contrôle — un validateur partiel qui remplace un validateur complet est une régression silencieuse.
 4. **Le domaine ne dépend d'aucun framework.** Tout helper, fabrique ou registre réutilisé par l'agrégat doit être pur (aucun décorateur ni annotation de framework). Si une fabrique n'a pas de dépendance, en faire une fonction/méthode statique pure — pas un service géré par le conteneur.
 5. **Supprimer le code mort qui peut contourner l'agrégat.** Un service qui écrit la persistance hors de la racine (ex. un `update` par affectation directe des champs) court-circuite les invariants — c'est un danger latent, même s'il n'est plus appelé aujourd'hui.
-6. **Un Value Object possède ses conversions de données brutes.** Les casts / accès aux données brutes du catalogue vivent *dans* le VO qui possède le type. N'exposer un accès brut (`toRaw()`) qu'au collaborateur qui en a légitimement besoin, jamais par commodité.
+6. **Un Value Object possède ses conversions de données brutes.** Les casts / accès aux données brutes du catalogue vivent _dans_ le VO qui possède le type. N'exposer un accès brut (`toRaw()`) qu'au collaborateur qui en a légitimement besoin, jamais par commodité.
 7. **Au mapping domaine ↔ persistance, préserver l'identité** des entités enfants. Sans l'`id` d'origine, le store ne distingue plus création et mise à jour → doublons ou écrasements silencieux.
 8. **Un domaine sans framework se teste trivialement.** `new Aggregate(...)`, appeler la méthode, asserter l'invariant — sans mock ni base de données. C'est le retour sur investissement direct de la règle 4 (aucune dépendance à un framework) et de l'inversion de dépendance (Phase 5, point 5) : si un test de domaine a besoin d'un mock, une dépendance s'est glissée là où elle ne devrait pas être.
-9. **La racine n'est pas le seul endroit légitime pour une méthode métier.** Une fois l'agrégat délimité, réappliquer le test des invariantes (Phase 2b) *opération par opération* : si une commande ne consulte que les données d'UNE entité enfant, elle vit sur cette entité — la racine se limite à trouver l'enfant puis déléguer. Sinon la racine devient un agrégat-dieu qui micro-gère ses enfants au lieu de leur déléguer (voir [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Ce qu'un enfant reçoit de ses siblings ou de la racine (donnée, configuration, port) et qui sélectionne une Strategy le cas échéant : voir [theory/aggregate-design.md](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port).
+9. **La racine n'est pas le seul endroit légitime pour une méthode métier.** Une fois l'agrégat délimité, réappliquer le test des invariantes (Phase 2b) _opération par opération_ : si une commande ne consulte que les données d'UNE entité enfant, elle vit sur cette entité — la racine se limite à trouver l'enfant puis déléguer. Sinon la racine devient un agrégat-dieu qui micro-gère ses enfants au lieu de leur déléguer (voir [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Ce qu'un enfant reçoit de ses siblings ou de la racine (donnée, configuration, port) et qui sélectionne une Strategy le cas échéant : voir [theory/aggregate-design.md](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port).
 
 ---
 
@@ -273,8 +275,8 @@ Au-delà de la délimitation de l'agrégat, appliquer ces règles pendant la con
 
 ## Références
 
-| Sujet | Fichier |
-|-------|---------|
-| Concepts DDD (agrégat, entité, VO, use case, repository, domain event) | [theory/concepts.md](theory/concepts.md) |
-| Comment identifier et délimiter un agrégat + anti-patterns | [theory/aggregate-design.md](theory/aggregate-design.md) |
-| CQRS léger — commandes vs requêtes, read models | [theory/cqrs.md](theory/cqrs.md) |
+| Sujet                                                                  | Fichier                                                  |
+| ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| Concepts DDD (agrégat, entité, VO, use case, repository, domain event) | [theory/concepts.md](theory/concepts.md)                 |
+| Comment identifier et délimiter un agrégat + anti-patterns             | [theory/aggregate-design.md](theory/aggregate-design.md) |
+| CQRS léger — commandes vs requêtes, read models                        | [theory/cqrs.md](theory/cqrs.md)                         |

@@ -56,7 +56,8 @@ export class EnterAtelierUseCase {
       distributionEvents = game.distributeResistance();
       result = campaign.enterAtelier(cmd.gameId);
     } catch (e: unknown) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
 

@@ -37,9 +37,13 @@ export class CreateCampaignUseCase {
 
     let houseRules: HouseRules;
     try {
-      houseRules = HouseRules.fromUserInput(cmd.houseRules ?? [], this.houseRuleCatalog.validKeys());
+      houseRules = HouseRules.fromUserInput(
+        cmd.houseRules ?? [],
+        this.houseRuleCatalog.validKeys(),
+      );
     } catch (e: unknown) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
 
@@ -47,7 +51,9 @@ export class CreateCampaignUseCase {
       // Lève NotFoundException si l'équipe n'appartient pas à l'utilisateur.
       const team = await this.teamRepo.findByIdForUser(teamId, cmd.userId);
       if (await this.campaignRepo.isTeamEngaged(teamId)) {
-        throw new ConflictException('Cette équipe est déjà engagée dans une autre campagne.');
+        throw new ConflictException(
+          'Cette équipe est déjà engagée dans une autre campagne.',
+        );
       }
       // L'organisateur ne peut pas engager d'emblée une équipe qui dépasse le
       // budget qu'il vient lui-même de fixer.
@@ -59,6 +65,13 @@ export class CreateCampaignUseCase {
     }
 
     const inviteCode = randomBytes(6).toString('hex');
-    return this.campaignRepo.createCampaign(cmd.name, inviteCode, cmd.userId, teamId, budget, houseRules.toArray());
+    return this.campaignRepo.createCampaign(
+      cmd.name,
+      inviteCode,
+      cmd.userId,
+      teamId,
+      budget,
+      houseRules.toArray(),
+    );
   }
 }

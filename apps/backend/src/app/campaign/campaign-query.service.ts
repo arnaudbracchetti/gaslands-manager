@@ -58,12 +58,16 @@ export class CampaignQueryService {
     });
 
     return Promise.all(
-      participations.map(async (p): Promise<CampaignResponseDto> => ({
-        ...p.campaign,
-        participantCount: await this.participantRepo.count({ where: { campaignId: p.campaignId } }),
-        myRole: p.isOrganizer ? 'organizer' : 'participant',
-        myTeamName: p.team?.name,
-      })),
+      participations.map(
+        async (p): Promise<CampaignResponseDto> => ({
+          ...p.campaign,
+          participantCount: await this.participantRepo.count({
+            where: { campaignId: p.campaignId },
+          }),
+          myRole: p.isOrganizer ? 'organizer' : 'participant',
+          myTeamName: p.team?.name,
+        }),
+      ),
     );
   }
 
@@ -75,16 +79,22 @@ export class CampaignQueryService {
     });
 
     return Promise.all(
-      participations.map(async (p): Promise<CampaignResponseDto> => ({
-        ...p.campaign,
-        participantCount: await this.participantRepo.count({ where: { campaignId: p.campaignId } }),
-        myRole: 'participant',
-      })),
+      participations.map(
+        async (p): Promise<CampaignResponseDto> => ({
+          ...p.campaign,
+          participantCount: await this.participantRepo.count({
+            where: { campaignId: p.campaignId },
+          }),
+          myRole: 'participant',
+        }),
+      ),
     );
   }
 
   /** Campagnes organisées par l'utilisateur ayant au moins une demande PENDING à traiter. */
-  async findOrganizedWithPendingRequests(userId: number): Promise<CampaignResponseDto[]> {
+  async findOrganizedWithPendingRequests(
+    userId: number,
+  ): Promise<CampaignResponseDto[]> {
     const organized = await this.participantRepo.find({
       where: { userId, isOrganizer: true, status: ParticipantStatus.VALIDATED },
       relations: { campaign: true },
@@ -95,7 +105,10 @@ export class CampaignQueryService {
         const [participantCount, pendingRequestsCount] = await Promise.all([
           this.participantRepo.count({ where: { campaignId: p.campaignId } }),
           this.participantRepo.count({
-            where: { campaignId: p.campaignId, status: ParticipantStatus.PENDING },
+            where: {
+              campaignId: p.campaignId,
+              status: ParticipantStatus.PENDING,
+            },
           }),
         ]);
         return {
@@ -112,9 +125,11 @@ export class CampaignQueryService {
 
   /** Informations minimales d'une campagne par son code d'invitation (pas de fuite). */
   async findByInviteCode(code: string): Promise<CampaignSummaryDto> {
-    const campaign = await this.campaignRepo.findOne({ where: { inviteCode: code } });
+    const campaign = await this.campaignRepo.findOne({
+      where: { inviteCode: code },
+    });
     if (!campaign) {
-      throw new NotFoundException('Code d\'invitation invalide.');
+      throw new NotFoundException("Code d'invitation invalide.");
     }
 
     const [organizer, participantCount] = await Promise.all([
@@ -131,7 +146,9 @@ export class CampaignQueryService {
       id: campaign.id,
       name: campaign.name,
       state: campaign.state,
-      organizerName: organizer ? UserMapper.toDomain(organizer.user).callName : '',
+      organizerName: organizer
+        ? UserMapper.toDomain(organizer.user).callName
+        : '',
       participantCount,
       budget: campaign.budget,
       houseRules: campaign.houseRules,
@@ -150,7 +167,9 @@ export class CampaignQueryService {
 
     return {
       ...participation.campaign,
-      participantCount: await this.participantRepo.count({ where: { campaignId: id } }),
+      participantCount: await this.participantRepo.count({
+        where: { campaignId: id },
+      }),
       myRole: participation.isOrganizer ? 'organizer' : 'participant',
     };
   }
@@ -158,7 +177,10 @@ export class CampaignQueryService {
   // ── Participants ────────────────────────────────────────────────────────────────
 
   /** Tous les participants (tous statuts) — participant VALIDATED uniquement. */
-  async findParticipants(campaignId: number, userId: number): Promise<CampaignParticipantResponseDto[]> {
+  async findParticipants(
+    campaignId: number,
+    userId: number,
+  ): Promise<CampaignParticipantResponseDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
     const participants = await this.participantRepo.find({
@@ -173,7 +195,10 @@ export class CampaignQueryService {
    * Un participant par son id — réponse des commandes participant (validation,
    * promotion, changement d'équipe). L'autorisation a déjà été faite par la commande.
    */
-  async getParticipant(campaignId: number, pid: number): Promise<CampaignParticipantResponseDto> {
+  async getParticipant(
+    campaignId: number,
+    pid: number,
+  ): Promise<CampaignParticipantResponseDto> {
     const participant = await this.participantRepo.findOne({
       where: { id: pid, campaignId },
       relations: { user: true, team: true },
@@ -187,7 +212,10 @@ export class CampaignQueryService {
   // ── Parties (Programme Télé) ─────────────────────────────────────────────────────
 
   /** Programme trié d'une campagne — participant VALIDATED uniquement. */
-  async findGames(campaignId: number, userId: number): Promise<GameResponseDto[]> {
+  async findGames(
+    campaignId: number,
+    userId: number,
+  ): Promise<GameResponseDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
     const games = await this.gameRepo.find({
@@ -199,7 +227,9 @@ export class CampaignQueryService {
 
   /** Une partie par son id — réponse des commandes partie (création/édition/résultat). */
   async getGame(campaignId: number, gameId: number): Promise<GameResponseDto> {
-    const game = await this.gameRepo.findOne({ where: { id: gameId, campaignId } });
+    const game = await this.gameRepo.findOne({
+      where: { id: gameId, campaignId },
+    });
     if (!game) {
       throw new NotFoundException('Partie introuvable.');
     }
@@ -211,10 +241,16 @@ export class CampaignQueryService {
    * Chaque `RankingAssignedEvent` porte le rang et les PC figés au moment de
    * l'enregistrement — même forme de réponse que l'ancienne table `game_results`.
    */
-  async getResults(campaignId: number, gameId: number, userId: number): Promise<GameResultResponseDto[]> {
+  async getResults(
+    campaignId: number,
+    gameId: number,
+    userId: number,
+  ): Promise<GameResultResponseDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
-    const game = await this.gameRepo.findOne({ where: { id: gameId, campaignId } });
+    const game = await this.gameRepo.findOne({
+      where: { id: gameId, campaignId },
+    });
     if (!game) {
       throw new NotFoundException('Partie introuvable.');
     }
@@ -241,24 +277,35 @@ export class CampaignQueryService {
    * (`Game.journal()`, `GameEvent.describe()`) ; userName/teamName/createdAt sont
    * résolus ici, hors du domaine (préoccupation de lecture).
    */
-  async getJournal(campaignId: number, gameId: number, userId: number): Promise<GameJournalEntryDto[]> {
+  async getJournal(
+    campaignId: number,
+    gameId: number,
+    userId: number,
+  ): Promise<GameJournalEntryDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
     const campaign = await this.replayService.loadAndReplay(campaignId);
     const entries = campaign.findGame(gameId).journal(campaign.participants);
 
     const [participants, eventRows] = await Promise.all([
-      this.participantRepo.find({ where: { campaignId }, relations: { user: true, team: true } }),
+      this.participantRepo.find({
+        where: { campaignId },
+        relations: { user: true, team: true },
+      }),
       this.gameEventRepo.find({ where: { gameId } }),
     ]);
     const participantById = new Map(participants.map((p) => [p.id, p]));
-    const createdAtByEventId = new Map(eventRows.map((e) => [e.id, e.createdAt]));
+    const createdAtByEventId = new Map(
+      eventRows.map((e) => [e.id, e.createdAt]),
+    );
 
     return entries.map((entry) => {
       const participant = participantById.get(entry.participantId);
       return {
         ...entry,
-        userName: participant ? UserMapper.toDomain(participant.user).callName : '',
+        userName: participant
+          ? UserMapper.toDomain(participant.user).callName
+          : '',
         teamName: participant?.team?.name ?? '',
         createdAt: createdAtByEventId.get(entry.eventId) as Date,
       };
@@ -281,7 +328,9 @@ export class CampaignQueryService {
   ): Promise<ParticipantJournalEntryDto[]> {
     await this.assertVisibleParticipant(campaignId, userId);
 
-    const participant = await this.participantRepo.findOne({ where: { id: participantId, campaignId } });
+    const participant = await this.participantRepo.findOne({
+      where: { id: participantId, campaignId },
+    });
     if (!participant) {
       throw new NotFoundException('Participant introuvable.');
     }
@@ -291,7 +340,9 @@ export class CampaignQueryService {
     const byGame = campaign.games
       .map((game) => ({
         game,
-        entries: game.journal(campaign.participants).filter((e) => e.participantId === participantId),
+        entries: game
+          .journal(campaign.participants)
+          .filter((e) => e.participantId === participantId),
       }))
       .filter(({ entries }) => entries.length > 0);
 
@@ -303,11 +354,15 @@ export class CampaignQueryService {
       this.gameEventRepo.find({ where: { gameId: In(gameIds) } }),
     ]);
     const gameOrmById = new Map(gameOrms.map((g) => [g.id, g]));
-    const createdAtByEventId = new Map(eventRows.map((e) => [e.id, e.createdAt]));
+    const createdAtByEventId = new Map(
+      eventRows.map((e) => [e.id, e.createdAt]),
+    );
 
     return byGame.flatMap(({ game, entries }) => {
       const gameOrm = gameOrmById.get(game.id);
-      const scenario = gameOrm?.scenarioId ? this.scenarioCatalog.getByNomInterne(gameOrm.scenarioId) : undefined;
+      const scenario = gameOrm?.scenarioId
+        ? this.scenarioCatalog.getByNomInterne(gameOrm.scenarioId)
+        : undefined;
       const scenarioName = scenario?.nom ?? gameOrm?.scenarioId ?? '';
       return entries.map((entry) => ({
         eventId: entry.eventId,
@@ -323,7 +378,10 @@ export class CampaignQueryService {
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
   /** Vérifie que `userId` est un participant VALIDATED de la campagne. NotFound sinon. */
-  private async assertVisibleParticipant(campaignId: number, userId: number): Promise<void> {
+  private async assertVisibleParticipant(
+    campaignId: number,
+    userId: number,
+  ): Promise<void> {
     const participation = await this.participantRepo.findOne({
       where: { campaignId, userId, status: ParticipantStatus.VALIDATED },
     });
@@ -332,7 +390,9 @@ export class CampaignQueryService {
     }
   }
 
-  private toParticipantDto(p: CampaignParticipantOrm): CampaignParticipantResponseDto {
+  private toParticipantDto(
+    p: CampaignParticipantOrm,
+  ): CampaignParticipantResponseDto {
     return {
       id: p.id,
       userId: p.userId,
@@ -345,7 +405,9 @@ export class CampaignQueryService {
   }
 
   private toGameDto(game: GameOrm): GameResponseDto {
-    const scenario = game.scenarioId ? this.scenarioCatalog.getByNomInterne(game.scenarioId) : undefined;
+    const scenario = game.scenarioId
+      ? this.scenarioCatalog.getByNomInterne(game.scenarioId)
+      : undefined;
     return {
       ...game,
       scenarioName: scenario?.nom ?? game.scenarioId ?? '',

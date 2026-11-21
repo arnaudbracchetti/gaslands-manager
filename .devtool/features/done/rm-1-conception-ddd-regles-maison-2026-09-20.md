@@ -1,15 +1,16 @@
 ---
-id: "rm-1-conception-ddd-regles-maison-2026-09-20"
-status: "done"
-priority: "high"
+id: 'rm-1-conception-ddd-regles-maison-2026-09-20'
+status: 'done'
+priority: 'high'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-21T17:49:48.000Z"
-completedAt: "2026-09-21T17:49:48.000Z"
-labels: ["regles-maison", "mode-campagne", "wayfinder:grilling"]
-order: "a1"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-21T17:49:48.000Z'
+completedAt: '2026-09-21T17:49:48.000Z'
+labels: ['regles-maison', 'mode-campagne', 'wayfinder:grilling']
+order: 'a1'
 ---
+
 # RM-1 — Conception détaillée du mécanisme de règles maison (DDD)
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -76,7 +77,7 @@ Décisions clés :
   complète), deux fabriques (`fromPersisted` sans validation / `fromUserInput`
   validée contre une liste de clés passée en paramètre par le use case — le domaine
   ne connaît jamais le catalogue). Colonne `houseRules` (`jsonb NOT NULL DEFAULT
-  '[]'` sur `campaigns`) — première colonne JSON du projet. Clé orpheline : lecture
+'[]'` sur `campaigns`) — première colonne JSON du projet. Clé orpheline : lecture
   tolérante, écriture stricte (400).
 - **Catalogue** : nouveau service singleton dans `campaign/`, calqué sur
   `ScenarioCatalogService` — pas une extension du `CatalogService` du module équipe.

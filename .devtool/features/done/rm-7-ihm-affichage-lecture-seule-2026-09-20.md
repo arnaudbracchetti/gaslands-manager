@@ -1,15 +1,16 @@
 ---
-id: "rm-7-ihm-affichage-lecture-seule-2026-09-20"
-status: "done"
-priority: "medium"
+id: 'rm-7-ihm-affichage-lecture-seule-2026-09-20'
+status: 'done'
+priority: 'medium'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T00:00:00.000Z"
-completedAt: "2026-09-25T00:00:00.000Z"
-labels: ["regles-maison", "mode-campagne", "frontend", "wayfinder:task"]
-order: "ad"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-25T00:00:00.000Z'
+completedAt: '2026-09-25T00:00:00.000Z'
+labels: ['regles-maison', 'mode-campagne', 'frontend', 'wayfinder:task']
+order: 'ad'
 ---
+
 # RM-7 — IHM : afficher les règles maison actives en lecture seule
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -47,7 +48,7 @@ Tâche purement frontend : le backend exposait déjà `houseRules: string[]` sur
 
 - `CampaignDetail` : nouvelle section dans le rail (`aside.campaign-detail-rail`,
   sous "Participants"), `<app-house-rules-selector [locked]="true"
-  [definitions]="houseRuleCatalog()" [enabledKeys]="campaign()!.houseRules" />`.
+[definitions]="houseRuleCatalog()" [enabledKeys]="campaign()!.houseRules" />`.
   Le catalogue était déjà chargé pour `EditCampaignModal` — réutilisé tel quel.
   Aucun gate `isOrganizer()`/`canEditCampaign()` : visible par tout participant
   validé, contrairement au bouton "✏️ Modifier".

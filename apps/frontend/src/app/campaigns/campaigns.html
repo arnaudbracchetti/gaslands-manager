@@ -1,57 +1,66 @@
 <!-- Écran de gestion des saisons Gaslands -->
 <div class="campaigns-page">
-
   <!-- En-tête avec titre et boutons d'action -->
   <div class="campaigns-header">
     <h1><app-icon concept="points_championnat" size="xl" /> Mes Saisons</h1>
     <div class="campaigns-header__actions">
-      <button class="btn-secondary" type="button" (click)="openJoin()">⌗ Rejoindre via code</button>
-      <button class="btn-primary btn-add" type="button" (click)="openCreate()">+ Créer une saison</button>
+      <button class="btn-secondary" type="button" (click)="openJoin()">
+        ⌗ Rejoindre via code
+      </button>
+      <button class="btn-primary btn-add" type="button" (click)="openCreate()">
+        + Créer une saison
+      </button>
     </div>
   </div>
 
   <!-- Message d'erreur API -->
   @if (error()) {
-    <div class="campaigns-error">{{ error() }}</div>
+  <div class="campaigns-error">{{ error() }}</div>
   }
 
   <!-- Liste des saisons -->
   @if (loading()) {
-    <div class="campaigns-loading">
-      <p>Chargement de vos saisons...</p>
-    </div>
+  <div class="campaigns-loading">
+    <p>Chargement de vos saisons...</p>
+  </div>
   } @else if (campaigns().length === 0) {
-    <!-- État vide -->
-    <div class="campaigns-empty">
-      <p class="campaigns-empty__icon"><app-icon concept="drapeau" size="xxl" /></p>
-      <p class="campaigns-empty__title">Aucune saison pour l'instant</p>
-      <p class="campaigns-empty__subtitle">Créez votre première saison ou rejoignez-en une !</p>
-      <button class="btn-primary" type="button" (click)="openCreate()">
-        + Créer ma saison
-      </button>
-    </div>
+  <!-- État vide -->
+  <div class="campaigns-empty">
+    <p class="campaigns-empty__icon">
+      <app-icon concept="drapeau" size="xxl" />
+    </p>
+    <p class="campaigns-empty__title">Aucune saison pour l'instant</p>
+    <p class="campaigns-empty__subtitle">
+      Créez votre première saison ou rejoignez-en une !
+    </p>
+    <button class="btn-primary" type="button" (click)="openCreate()">
+      + Créer ma saison
+    </button>
+  </div>
   } @else {
-    <div class="campaigns-grid">
-      @for (campaign of campaigns(); track campaign.id; let i = $index) {
-        <app-campaign-card
-          [campaign]="campaign"
-          [index]="i + 1"
-          [isPending]="pendingCampaignIds().has(campaign.id)"
-          [pendingRequestsCount]="organizedPendingCounts().get(campaign.id) ?? 0" />
-      }
-    </div>
+  <div class="campaigns-grid">
+    @for (campaign of campaigns(); track campaign.id; let i = $index) {
+    <app-campaign-card
+      [campaign]="campaign"
+      [index]="i + 1"
+      [isPending]="pendingCampaignIds().has(campaign.id)"
+      [pendingRequestsCount]="organizedPendingCounts().get(campaign.id) ?? 0"
+    />
+    }
+  </div>
   }
 
   <!-- Modale : Créer une saison — chrome délégué à ModalShell, porté par CampaignForm elle-même. -->
   @if (showForm()) {
-    <app-campaign-form
-      [saving]="saving()"
-      [teams]="userTeams()"
-      [creatingTeam]="creatingTeam()"
-      [houseRuleCatalog]="houseRuleCatalog()"
-      (saved)="onSaved($event)"
-      (formCancel)="cancelForm()"
-      (teamCreated)="onTeamCreated($event)" />
+  <app-campaign-form
+    [saving]="saving()"
+    [teams]="userTeams()"
+    [creatingTeam]="creatingTeam()"
+    [houseRuleCatalog]="houseRuleCatalog()"
+    (saved)="onSaved($event)"
+    (formCancel)="cancelForm()"
+    (teamCreated)="onTeamCreated($event)"
+  />
   }
 
   <!--
@@ -61,30 +70,38 @@
     convention que UserDetailsModal/ChangePasswordModal.
   -->
   @if (showJoinModal()) {
-    <app-modal-shell
-      ariaLabel="Rejoindre via code"
-      variant="primary"
-      confirmLabel="Valider le code →"
-      [confirmDisabled]="!joinCode().trim()"
-      (confirmed)="goToJoin()"
-      (cancelled)="closeJoinModal()">
-      <h2 class="campaigns-join-modal__title">⌗ Rejoindre via code</h2>
-      <p class="campaigns-join-modal__hint">Saisissez le code d'invitation fourni par l'organisateur.</p>
-      <form (ngSubmit)="goToJoin()">
-        <div class="form-group">
-          <label for="join-code">Code d'invitation</label>
-          <input
-            id="join-code"
-            type="text"
-            placeholder="Ex : abc123def456"
-            [ngModel]="joinCode()"
-            (ngModelChange)="joinCode.set($event)"
-            name="joinCode"
-            autocomplete="off" />
-        </div>
-        <button type="submit" class="campaigns-join-modal__hidden-submit" tabindex="-1" aria-hidden="true"></button>
-      </form>
-    </app-modal-shell>
+  <app-modal-shell
+    ariaLabel="Rejoindre via code"
+    variant="primary"
+    confirmLabel="Valider le code →"
+    [confirmDisabled]="!joinCode().trim()"
+    (confirmed)="goToJoin()"
+    (cancelled)="closeJoinModal()"
+  >
+    <h2 class="campaigns-join-modal__title">⌗ Rejoindre via code</h2>
+    <p class="campaigns-join-modal__hint">
+      Saisissez le code d'invitation fourni par l'organisateur.
+    </p>
+    <form (ngSubmit)="goToJoin()">
+      <div class="form-group">
+        <label for="join-code">Code d'invitation</label>
+        <input
+          id="join-code"
+          type="text"
+          placeholder="Ex : abc123def456"
+          [ngModel]="joinCode()"
+          (ngModelChange)="joinCode.set($event)"
+          name="joinCode"
+          autocomplete="off"
+        />
+      </div>
+      <button
+        type="submit"
+        class="campaigns-join-modal__hidden-submit"
+        tabindex="-1"
+        aria-hidden="true"
+      ></button>
+    </form>
+  </app-modal-shell>
   }
-
 </div>

@@ -32,7 +32,8 @@ export class SetHouseRulesUseCase {
     try {
       campaign.setHouseRules(cmd.houseRules, this.houseRuleCatalog.validKeys());
     } catch (e: unknown) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
 

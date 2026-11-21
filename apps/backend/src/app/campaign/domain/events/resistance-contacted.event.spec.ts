@@ -44,11 +44,19 @@ describe('ResistanceContactedEvent — execute / undo', () => {
 
   it('describe() mentionne la règle par défaut quand strategyKey vaut "defaut"', () => {
     const event = new ResistanceContactedEvent(1, 10, 1, 1, 'defaut');
-    expect(event.describe()).toBe('Contact avec la Résistance (+3 PR) — règle par défaut');
+    expect(event.describe()).toBe(
+      'Contact avec la Résistance (+3 PR) — règle par défaut',
+    );
   });
 
   it('describe() mentionne la règle maison R1 quand strategyKey vaut distribution_points_resistance', () => {
-    const event = new ResistanceContactedEvent(1, 10, 1, 1, 'distribution_points_resistance');
+    const event = new ResistanceContactedEvent(
+      1,
+      10,
+      1,
+      1,
+      'distribution_points_resistance',
+    );
     expect(event.describe()).toBe(
       'Contact avec la Résistance (+3 PR) — règle maison : aucun point de championnat',
     );

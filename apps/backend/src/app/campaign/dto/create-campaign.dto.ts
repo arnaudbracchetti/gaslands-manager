@@ -6,7 +6,16 @@
  * (décision de design, cf. docs/plans/design/README.md §divergences).
  * Si fourni, le use case vérifie qu'elle lui appartient (ITeamRepository.findByIdForUser).
  */
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateCampaignDto {
   @IsString()

@@ -26,12 +26,30 @@
  * serveur actuel. "Enregistrer" est donc toujours actif : il soumet toujours
  * les règles maison, et en plus nom/budget si `canEditNameBudget()`.
  */
-import { Component, InputSignal, OutputEmitterRef, Signal, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
+import {
+  Component,
+  InputSignal,
+  OutputEmitterRef,
+  Signal,
+  WritableSignal,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { Campaign, EditCampaignSubmission, HouseRuleDefinition } from '../campaign.model';
+import type {
+  Campaign,
+  EditCampaignSubmission,
+  HouseRuleDefinition,
+} from '../campaign.model';
 import { Icon } from '../../shared/icon/icon';
 import { ModalShell } from '../../shared/modal-shell/modal-shell';
-import { HouseRulesSelector, HouseRuleToggledEvent } from '../house-rules-selector/house-rules-selector';
+import {
+  HouseRulesSelector,
+  HouseRuleToggledEvent,
+} from '../house-rules-selector/house-rules-selector';
 
 @Component({
   selector: 'app-edit-campaign-modal',
@@ -51,10 +69,13 @@ export class EditCampaignModal {
   error: InputSignal<string> = input('');
 
   /** Catalogue des règles maison (GET /api/catalog/regles-maison). */
-  houseRuleCatalog: InputSignal<HouseRuleDefinition[]> = input<HouseRuleDefinition[]>([]);
+  houseRuleCatalog: InputSignal<HouseRuleDefinition[]> = input<
+    HouseRuleDefinition[]
+  >([]);
 
   /** Émis avec le DTO validé localement au clic "Enregistrer". */
-  confirmed: OutputEmitterRef<EditCampaignSubmission> = output<EditCampaignSubmission>();
+  confirmed: OutputEmitterRef<EditCampaignSubmission> =
+    output<EditCampaignSubmission>();
 
   /** Émis quand l'utilisateur annule — aucune bascule de règle maison n'est persistée. */
   cancelled: OutputEmitterRef<void> = output<void>();
@@ -69,10 +90,14 @@ export class EditCampaignModal {
   formError: WritableSignal<string> = signal('');
 
   /** Erreur affichée : locale en priorité, sinon celle transmise par le parent. */
-  displayError: Signal<string> = computed(() => this.formError() || this.error());
+  displayError: Signal<string> = computed(
+    () => this.formError() || this.error(),
+  );
 
   /** Nom/budget ne sont modifiables qu'en construction — les règles maison, elles, le restent toujours. */
-  canEditNameBudget: Signal<boolean> = computed(() => this.campaign().state === 'EN_CONSTRUCTION');
+  canEditNameBudget: Signal<boolean> = computed(
+    () => this.campaign().state === 'EN_CONSTRUCTION',
+  );
 
   constructor() {
     // Pré-remplit le formulaire depuis la campagne courante à chaque ouverture
@@ -108,6 +133,9 @@ export class EditCampaignModal {
       return;
     }
     this.formError.set('');
-    this.confirmed.emit({ nameBudget: { name, budget: this.formBudget() }, houseRules });
+    this.confirmed.emit({
+      nameBudget: { name, budget: this.formBudget() },
+      houseRules,
+    });
   }
 }

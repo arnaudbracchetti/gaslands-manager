@@ -111,15 +111,19 @@ describe('Campaigns Component', () => {
   });
 
   it('expose les ids des saisons retournées par getPending()', async () => {
-    mockCampaignsService.getPending.mockReturnValue(of([{ ...mockCampaigns[0], id: 5 }]));
+    mockCampaignsService.getPending.mockReturnValue(
+      of([{ ...mockCampaigns[0], id: 5 }]),
+    );
 
     component['loadPendingRequests']();
 
     expect(component.pendingCampaignIds()).toEqual(new Set([5]));
   });
 
-  it('ignore l\'erreur de getPending() (badge secondaire)', () => {
-    mockCampaignsService.getPending.mockReturnValue(throwError(() => new Error('fail')));
+  it("ignore l'erreur de getPending() (badge secondaire)", () => {
+    mockCampaignsService.getPending.mockReturnValue(
+      throwError(() => new Error('fail')),
+    );
 
     component['loadPendingRequests']();
 
@@ -136,16 +140,20 @@ describe('Campaigns Component', () => {
     expect(component.organizedPendingCounts().get(1)).toBe(2);
   });
 
-  it('ignore l\'erreur de getOrganizingPendingRequests() (badge secondaire)', () => {
-    mockCampaignsService.getOrganizingPendingRequests.mockReturnValue(throwError(() => new Error('fail')));
+  it("ignore l'erreur de getOrganizingPendingRequests() (badge secondaire)", () => {
+    mockCampaignsService.getOrganizingPendingRequests.mockReturnValue(
+      throwError(() => new Error('fail')),
+    );
 
     component['loadOrganizedPendingCounts']();
 
     expect(component.organizedPendingCounts()).toEqual(new Map());
   });
 
-  it('affiche un message d\'erreur si le chargement des saisons échoue', () => {
-    mockCampaignsService.getAll.mockReturnValue(throwError(() => new Error('fail')));
+  it("affiche un message d'erreur si le chargement des saisons échoue", () => {
+    mockCampaignsService.getAll.mockReturnValue(
+      throwError(() => new Error('fail')),
+    );
 
     component.loadCampaigns();
 
@@ -168,7 +176,11 @@ describe('Campaigns Component', () => {
   // ── Création d'une saison ────────────────────────────────────────────────
 
   it('crée une saison puis navigue vers le détail et ferme le formulaire', () => {
-    const newCampaign: Campaign = { ...mockCampaigns[0], id: 2, name: 'Coupe Slime' };
+    const newCampaign: Campaign = {
+      ...mockCampaigns[0],
+      id: 2,
+      name: 'Coupe Slime',
+    };
     mockCampaignsService.create.mockReturnValue(of(newCampaign));
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate');
@@ -185,8 +197,10 @@ describe('Campaigns Component', () => {
     expect(mockCampaignsService.getAll).toHaveBeenCalledTimes(1);
   });
 
-  it('affiche un message d\'erreur si la création échoue', () => {
-    mockCampaignsService.create.mockReturnValue(throwError(() => new Error('fail')));
+  it("affiche un message d'erreur si la création échoue", () => {
+    mockCampaignsService.create.mockReturnValue(
+      throwError(() => new Error('fail')),
+    );
     component.openCreate();
 
     component.onSaved({ name: 'Coupe Slime', teamId: 7 });
@@ -211,7 +225,11 @@ describe('Campaigns Component', () => {
       };
       mockTeamsService.create.mockReturnValue(of(newTeam));
 
-      const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+      const dto: CreateTeamDto = {
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+      };
       component.onTeamCreated(dto);
 
       expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
@@ -219,12 +237,18 @@ describe('Campaigns Component', () => {
       expect(component.creatingTeam()).toBe(false);
     });
 
-    it('affiche un message d\'erreur en cas d\'échec de la création', () => {
-      mockTeamsService.create.mockReturnValue(throwError(() => new Error('500')));
+    it("affiche un message d'erreur en cas d'échec de la création", () => {
+      mockTeamsService.create.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
-      component.onTeamCreated({ name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 });
+      component.onTeamCreated({
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+      });
 
-      expect(component.error()).toContain('création de l\'équipe');
+      expect(component.error()).toContain("création de l'équipe");
       expect(component.creatingTeam()).toBe(false);
     });
   });
@@ -239,7 +263,10 @@ describe('Campaigns Component', () => {
       component.joinCode.set('abcdef123456');
       component.goToJoin();
 
-      expect(navigateSpy).toHaveBeenCalledWith(['/campaigns/join', 'abcdef123456']);
+      expect(navigateSpy).toHaveBeenCalledWith([
+        '/campaigns/join',
+        'abcdef123456',
+      ]);
     });
 
     it('ne navigue pas si le code est vide', () => {

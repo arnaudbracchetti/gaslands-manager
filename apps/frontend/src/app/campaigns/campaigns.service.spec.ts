@@ -13,7 +13,10 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { CampaignsService } from './campaigns.service';
 import { Campaign, CampaignSummary } from './campaign.model';
-import { CampaignParticipant, StandingsEntry } from './campaign-participant.model';
+import {
+  CampaignParticipant,
+  StandingsEntry,
+} from './campaign-participant.model';
 import type { AvailableSequellaDto } from './workshop.model';
 
 const mockCampaign: Campaign = {
@@ -54,7 +57,9 @@ describe('CampaignsService', () => {
     it('effectue GET /api/campaigns et retourne un tableau de saisons', () => {
       let result: Campaign[] | undefined;
 
-      service.getAll().subscribe((campaigns) => { result = campaigns; });
+      service.getAll().subscribe((campaigns) => {
+        result = campaigns;
+      });
 
       const req = httpMock.expectOne('/api/campaigns');
       expect(req.request.method).toBe('GET');
@@ -64,10 +69,12 @@ describe('CampaignsService', () => {
       expect(result).toEqual([mockCampaign]);
     });
 
-    it('retourne un tableau vide si l\'API retourne []', () => {
+    it("retourne un tableau vide si l'API retourne []", () => {
       let result: Campaign[] | undefined;
 
-      service.getAll().subscribe((campaigns) => { result = campaigns; });
+      service.getAll().subscribe((campaigns) => {
+        result = campaigns;
+      });
 
       const req = httpMock.expectOne('/api/campaigns');
       req.flush([]);
@@ -83,7 +90,9 @@ describe('CampaignsService', () => {
       const pending: Campaign[] = [{ ...mockCampaign, myRole: 'participant' }];
       let result: Campaign[] | undefined;
 
-      service.getPending().subscribe((campaigns) => { result = campaigns; });
+      service.getPending().subscribe((campaigns) => {
+        result = campaigns;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/pending');
       expect(req.request.method).toBe('GET');
@@ -98,12 +107,18 @@ describe('CampaignsService', () => {
 
   describe('getOrganizingPendingRequests()', () => {
     it('effectue GET /api/campaigns/organizing/pending-requests et retourne un tableau de saisons', () => {
-      const organized: Campaign[] = [{ ...mockCampaign, pendingRequestsCount: 2 }];
+      const organized: Campaign[] = [
+        { ...mockCampaign, pendingRequestsCount: 2 },
+      ];
       let result: Campaign[] | undefined;
 
-      service.getOrganizingPendingRequests().subscribe((campaigns) => { result = campaigns; });
+      service.getOrganizingPendingRequests().subscribe((campaigns) => {
+        result = campaigns;
+      });
 
-      const req = httpMock.expectOne('/api/campaigns/organizing/pending-requests');
+      const req = httpMock.expectOne(
+        '/api/campaigns/organizing/pending-requests',
+      );
       expect(req.request.method).toBe('GET');
 
       req.flush(organized);
@@ -119,7 +134,9 @@ describe('CampaignsService', () => {
       const dto = { name: 'Coupe Verney', teamId: 7 };
       let result: Campaign | undefined;
 
-      service.create(dto).subscribe((campaign) => { result = campaign; });
+      service.create(dto).subscribe((campaign) => {
+        result = campaign;
+      });
 
       const req = httpMock.expectOne('/api/campaigns');
       expect(req.request.method).toBe('POST');
@@ -146,7 +163,9 @@ describe('CampaignsService', () => {
       };
       let result: CampaignSummary | undefined;
 
-      service.getByCode('abcdef123456').subscribe((s) => { result = s; });
+      service.getByCode('abcdef123456').subscribe((s) => {
+        result = s;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/by-code/abcdef123456');
       expect(req.request.method).toBe('GET');
@@ -164,7 +183,9 @@ describe('CampaignsService', () => {
       const dto = { teamId: 7 };
       let done = false;
 
-      service.requestJoin(1, dto).subscribe(() => { done = true; });
+      service.requestJoin(1, dto).subscribe(() => {
+        done = true;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/participants');
       expect(req.request.method).toBe('POST');
@@ -182,7 +203,9 @@ describe('CampaignsService', () => {
     it('effectue GET /api/campaigns/:id et retourne la saison', () => {
       let result: Campaign | undefined;
 
-      service.getOne(1).subscribe((campaign) => { result = campaign; });
+      service.getOne(1).subscribe((campaign) => {
+        result = campaign;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1');
       expect(req.request.method).toBe('GET');
@@ -198,11 +221,21 @@ describe('CampaignsService', () => {
   describe('getParticipants()', () => {
     it('effectue GET /api/campaigns/:id/participants et retourne la liste', () => {
       const participants: CampaignParticipant[] = [
-        { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
+        {
+          id: 1,
+          userId: 42,
+          teamId: 7,
+          status: 'VALIDATED',
+          isOrganizer: true,
+          userName: 'Jean Dupont',
+          teamName: 'Furies',
+        },
       ];
       let result: CampaignParticipant[] | undefined;
 
-      service.getParticipants(1).subscribe((p) => { result = p; });
+      service.getParticipants(1).subscribe((p) => {
+        result = p;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/participants');
       expect(req.request.method).toBe('GET');
@@ -219,13 +252,23 @@ describe('CampaignsService', () => {
     it('effectue PUT /api/campaigns/:id/participants/:pid/validate avec le DTO', () => {
       const dto = { accept: true };
       const updated: CampaignParticipant = {
-        id: 2, userId: 43, teamId: 8, status: 'VALIDATED', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings',
+        id: 2,
+        userId: 43,
+        teamId: 8,
+        status: 'VALIDATED',
+        isOrganizer: false,
+        userName: 'Alice Martin',
+        teamName: 'Scrap Kings',
       };
       let result: CampaignParticipant | undefined;
 
-      service.validateParticipant(1, 2, dto).subscribe((p) => { result = p; });
+      service.validateParticipant(1, 2, dto).subscribe((p) => {
+        result = p;
+      });
 
-      const req = httpMock.expectOne('/api/campaigns/1/participants/2/validate');
+      const req = httpMock.expectOne(
+        '/api/campaigns/1/participants/2/validate',
+      );
       expect(req.request.method).toBe('PUT');
       expect(req.request.body).toEqual(dto);
 
@@ -241,7 +284,9 @@ describe('CampaignsService', () => {
     it('effectue DELETE /api/campaigns/:id', () => {
       let done = false;
 
-      service.remove(1).subscribe(() => { done = true; });
+      service.remove(1).subscribe(() => {
+        done = true;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1');
       expect(req.request.method).toBe('DELETE');
@@ -257,10 +302,16 @@ describe('CampaignsService', () => {
   describe('update()', () => {
     it('effectue PUT /api/campaigns/:id avec le DTO et retourne la saison modifiée', () => {
       const dto = { name: 'Coupe Rutherford', budget: 30 };
-      const updated: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
+      const updated: Campaign = {
+        ...mockCampaign,
+        name: 'Coupe Rutherford',
+        budget: 30,
+      };
       let result: Campaign | undefined;
 
-      service.update(1, dto).subscribe((campaign) => { result = campaign; });
+      service.update(1, dto).subscribe((campaign) => {
+        result = campaign;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1');
       expect(req.request.method).toBe('PUT');
@@ -278,13 +329,17 @@ describe('CampaignsService', () => {
         {
           nom: 'Aucun point de championnat',
           nom_interne: 'distribution_points_resistance',
-          description_decochee: '<p>Les participants classés en seconde moitié reçoivent des PR.</p>',
-          description_cochee: '<p>Les participants sans point de championnat reçoivent des PR.</p>',
+          description_decochee:
+            '<p>Les participants classés en seconde moitié reçoivent des PR.</p>',
+          description_cochee:
+            '<p>Les participants sans point de championnat reçoivent des PR.</p>',
         },
       ];
       let result: unknown;
 
-      service.getHouseRules().subscribe((rules) => { result = rules; });
+      service.getHouseRules().subscribe((rules) => {
+        result = rules;
+      });
 
       const req = httpMock.expectOne('/api/catalog/regles-maison');
       expect(req.request.method).toBe('GET');
@@ -301,7 +356,9 @@ describe('CampaignsService', () => {
       const updated: Campaign = { ...mockCampaign, houseRules: dto.houseRules };
       let result: Campaign | undefined;
 
-      service.setHouseRules(1, dto).subscribe((campaign) => { result = campaign; });
+      service.setHouseRules(1, dto).subscribe((campaign) => {
+        result = campaign;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/house-rules');
       expect(req.request.method).toBe('PUT');
@@ -365,7 +422,9 @@ describe('CampaignsService', () => {
     it('effectue DELETE /api/campaigns/:id/games/:gameId', () => {
       let done = false;
 
-      service.deleteGame(1, 10).subscribe(() => { done = true; });
+      service.deleteGame(1, 10).subscribe(() => {
+        done = true;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/games/10');
       expect(req.request.method).toBe('DELETE');
@@ -380,11 +439,20 @@ describe('CampaignsService', () => {
   describe('getStandings()', () => {
     it('effectue GET /api/campaigns/:id/standings et retourne le classement', () => {
       const standings: StandingsEntry[] = [
-        { participantId: 1, userId: 42, teamId: 7, teamName: 'Furies', championshipPoints: 10, wallet: 5 },
+        {
+          participantId: 1,
+          userId: 42,
+          teamId: 7,
+          teamName: 'Furies',
+          championshipPoints: 10,
+          wallet: 5,
+        },
       ];
       let result: StandingsEntry[] | undefined;
 
-      service.getStandings(1).subscribe((s) => { result = s; });
+      service.getStandings(1).subscribe((s) => {
+        result = s;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/standings');
       expect(req.request.method).toBe('GET');
@@ -400,13 +468,24 @@ describe('CampaignsService', () => {
   describe('getWorkshopAvailableSequelles()', () => {
     it('effectue GET /api/campaigns/:id/workshop/vehicles/:vId/available-sequelles', () => {
       const sequelles: AvailableSequellaDto[] = [
-        { nom: 'Suicidaire', nomInterne: 'suicidaire', chocsCost: 1, description: '', regles: '', disponible: true },
+        {
+          nom: 'Suicidaire',
+          nomInterne: 'suicidaire',
+          chocsCost: 1,
+          description: '',
+          regles: '',
+          disponible: true,
+        },
       ];
       let result: AvailableSequellaDto[] | undefined;
 
-      service.getWorkshopAvailableSequelles(1, 5).subscribe((s) => { result = s; });
+      service.getWorkshopAvailableSequelles(1, 5).subscribe((s) => {
+        result = s;
+      });
 
-      const req = httpMock.expectOne('/api/campaigns/1/workshop/vehicles/5/available-sequelles');
+      const req = httpMock.expectOne(
+        '/api/campaigns/1/workshop/vehicles/5/available-sequelles',
+      );
       expect(req.request.method).toBe('GET');
 
       req.flush(sequelles);
@@ -421,7 +500,9 @@ describe('CampaignsService', () => {
     it('effectue GET /api/campaigns/:id/sheet en responseType text et retourne le HTML brut', () => {
       let result: string | undefined;
 
-      service.getTeamSheet(1).subscribe((html) => { result = html; });
+      service.getTeamSheet(1).subscribe((html) => {
+        result = html;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/sheet');
       expect(req.request.method).toBe('GET');
@@ -439,7 +520,9 @@ describe('CampaignsService', () => {
     it('effectue GET /api/campaigns/:id/participants/:pid/sheet en responseType text et retourne le HTML brut', () => {
       let result: string | undefined;
 
-      service.getParticipantTeamSheet(1, 5).subscribe((html) => { result = html; });
+      service.getParticipantTeamSheet(1, 5).subscribe((html) => {
+        result = html;
+      });
 
       const req = httpMock.expectOne('/api/campaigns/1/participants/5/sheet');
       expect(req.request.method).toBe('GET');

@@ -5,16 +5,15 @@
   [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
   [confirmDisabled]="saving()"
   (confirmed)="saveForm()"
-  (cancelled)="cancelForm()">
-
+  (cancelled)="cancelForm()"
+>
   <h2><app-icon concept="ajouter" size="lg" /> Nouvelle saison</h2>
 
   @if (formError()) {
-    <div class="form-error">{{ formError() }}</div>
+  <div class="form-error">{{ formError() }}</div>
   }
 
   <div class="form-grid">
-
     <!-- Nom de la saison (obligatoire) -->
     <div class="form-group">
       <label for="campaign-name">Nom de la saison *</label>
@@ -23,7 +22,8 @@
         type="text"
         placeholder="Ex : Coupe Verney"
         [ngModel]="formName()"
-        (ngModelChange)="formName.set($event)" />
+        (ngModelChange)="formName.set($event)"
+      />
     </div>
 
     <!-- Budget des équipes (jerricans) -->
@@ -35,8 +35,12 @@
         min="1"
         max="999"
         [ngModel]="formBudget()"
-        (ngModelChange)="formBudget.set(+$event)" />
-      <p class="form-hint">Seules les équipes dont le coût total tient dans ce budget pourront rejoindre la campagne.</p>
+        (ngModelChange)="formBudget.set(+$event)"
+      />
+      <p class="form-hint">
+        Seules les équipes dont le coût total tient dans ce budget pourront
+        rejoindre la campagne.
+      </p>
     </div>
 
     <!-- Règles maison -->
@@ -44,31 +48,41 @@
       <app-house-rules-selector
         [definitions]="houseRuleCatalog()"
         [enabledKeys]="formHouseRules()"
-        (toggled)="onHouseRuleToggled($event)" />
+        (toggled)="onHouseRuleToggled($event)"
+      />
     </div>
 
     <!-- Équipe engagée (optionnelle) -->
     <div class="form-group form-group--full">
       <label for="campaign-team">Mon équipe engagée</label>
       @if (teams().length > 0) {
-        <select
-          id="campaign-team"
-          [ngModel]="formTeamId()"
-          (ngModelChange)="formTeamId.set($event ? +$event : null)">
-          <option [ngValue]="null">— Sans équipe —</option>
-          @for (team of teams(); track team.id) {
-            <option [value]="team.id" [disabled]="(team.isEngaged ?? false) || ineligibleTeamIds().has(team.id)">
-              {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' : ineligibleTeamIds().has(team.id) ? ' (hors budget)' : '' }}
-            </option>
-          }
-        </select>
+      <select
+        id="campaign-team"
+        [ngModel]="formTeamId()"
+        (ngModelChange)="formTeamId.set($event ? +$event : null)"
+      >
+        <option [ngValue]="null">— Sans équipe —</option>
+        @for (team of teams(); track team.id) {
+        <option
+          [value]="team.id"
+          [disabled]="(team.isEngaged ?? false) || ineligibleTeamIds().has(team.id)"
+        >
+          {{ team.name }}{{ team.isEngaged ? ' (déjà engagée)' :
+          ineligibleTeamIds().has(team.id) ? ' (hors budget)' : '' }}
+        </option>
+        }
+      </select>
       } @else {
-        <p class="form-hint">Vous n'avez pas encore d'équipe. Vous pouvez en créer une ci-dessous ou rejoindre la saison sans équipe.</p>
+      <p class="form-hint">
+        Vous n'avez pas encore d'équipe. Vous pouvez en créer une ci-dessous ou
+        rejoindre la saison sans équipe.
+      </p>
       }
 
-      <app-quick-team-create [saving]="creatingTeam()" (created)="teamCreated.emit($event)" />
+      <app-quick-team-create
+        [saving]="creatingTeam()"
+        (created)="teamCreated.emit($event)"
+      />
     </div>
-
   </div>
-
 </app-modal-shell>

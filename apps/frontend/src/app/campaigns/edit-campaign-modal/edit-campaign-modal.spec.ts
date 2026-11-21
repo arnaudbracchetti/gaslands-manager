@@ -13,7 +13,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { outputToObservable } from '@angular/core/rxjs-interop';
 import { EditCampaignModal } from './edit-campaign-modal';
-import type { Campaign, EditCampaignSubmission, HouseRuleDefinition } from '../campaign.model';
+import type {
+  Campaign,
+  EditCampaignSubmission,
+  HouseRuleDefinition,
+} from '../campaign.model';
 
 const mockCampaign: Campaign = {
   id: 1,
@@ -42,7 +46,9 @@ describe('EditCampaignModal', () => {
   let fixture: ComponentFixture<EditCampaignModal>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [EditCampaignModal] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [EditCampaignModal],
+    }).compileComponents();
     fixture = TestBed.createComponent(EditCampaignModal);
     component = fixture.componentInstance;
   });
@@ -70,7 +76,9 @@ describe('EditCampaignModal', () => {
 
     expect(component.formName()).toBe('Coupe Rutherford');
     expect(component.formBudget()).toBe(80);
-    expect(component.formHouseRules()).toEqual(['distribution_points_resistance']);
+    expect(component.formHouseRules()).toEqual([
+      'distribution_points_resistance',
+    ]);
   });
 
   it('refuse la confirmation si le nom est vide', () => {
@@ -78,7 +86,9 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     const emitted: EditCampaignSubmission[] = [];
-    outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.confirmed).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
     component.formName.set('   ');
     component.onConfirm();
@@ -93,34 +103,51 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     const emitted: EditCampaignSubmission[] = [];
-    outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.confirmed).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
     component.formName.set('  Coupe Rutherford  ');
     component.formBudget.set(30);
-    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
+    component.onHouseRuleToggled({
+      nomInterne: 'distribution_points_resistance',
+      enabled: true,
+    });
     component.onConfirm();
 
-    expect(emitted).toEqual([{
-      nameBudget: { name: 'Coupe Rutherford', budget: 30 },
-      houseRules: ['distribution_points_resistance'],
-    }]);
+    expect(emitted).toEqual([
+      {
+        nameBudget: { name: 'Coupe Rutherford', budget: 30 },
+        houseRules: ['distribution_points_resistance'],
+      },
+    ]);
   });
 
   it('émet confirmed avec nameBudget à null hors EN_CONSTRUCTION', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'EN_COURS' });
+    fixture.componentRef.setInput('campaign', {
+      ...mockCampaign,
+      state: 'EN_COURS',
+    });
     fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
     fixture.detectChanges();
 
     const emitted: EditCampaignSubmission[] = [];
-    outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.confirmed).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
-    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
+    component.onHouseRuleToggled({
+      nomInterne: 'distribution_points_resistance',
+      enabled: true,
+    });
     component.onConfirm();
 
-    expect(emitted).toEqual([{
-      nameBudget: null,
-      houseRules: ['distribution_points_resistance'],
-    }]);
+    expect(emitted).toEqual([
+      {
+        nameBudget: null,
+        houseRules: ['distribution_points_resistance'],
+      },
+    ]);
   });
 
   it('émet cancelled au clic sur Annuler sans émettre confirmed', () => {
@@ -129,27 +156,41 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     let cancelled = false;
-    outputToObservable(component.cancelled).subscribe(() => { cancelled = true; });
+    outputToObservable(component.cancelled).subscribe(() => {
+      cancelled = true;
+    });
     const emitted: EditCampaignSubmission[] = [];
-    outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.confirmed).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
-    component.onHouseRuleToggled({ nomInterne: 'distribution_points_resistance', enabled: true });
-    (fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLElement).click();
+    component.onHouseRuleToggled({
+      nomInterne: 'distribution_points_resistance',
+      enabled: true,
+    });
+    (
+      fixture.nativeElement.querySelector('.ms-modal__cancel') as HTMLElement
+    ).click();
 
     expect(cancelled).toBe(true);
     expect(emitted).toHaveLength(0);
   });
 
-  it('affiche l\'erreur serveur transmise par le parent', () => {
+  it("affiche l'erreur serveur transmise par le parent", () => {
     fixture.componentRef.setInput('campaign', mockCampaign);
-    fixture.componentRef.setInput('error', 'L\'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).');
+    fixture.componentRef.setInput(
+      'error',
+      "L'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).",
+    );
     fixture.detectChanges();
 
     expect(component.displayError()).toContain('Escouade');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Escouade');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Escouade',
+    );
   });
 
-  it('priorise l\'erreur de validation locale sur l\'erreur serveur', () => {
+  it("priorise l'erreur de validation locale sur l'erreur serveur", () => {
     fixture.componentRef.setInput('campaign', mockCampaign);
     fixture.componentRef.setInput('error', 'Erreur serveur.');
     fixture.detectChanges();
@@ -168,27 +209,42 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     expect(component.canEditNameBudget()).toBe(true);
-    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-name');
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '#edit-campaign-name',
+    );
     expect(nameInput.readOnly).toBe(false);
   });
 
   it('rend nom/budget en lecture seule et affiche une note hors EN_CONSTRUCTION', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'EN_COURS' });
+    fixture.componentRef.setInput('campaign', {
+      ...mockCampaign,
+      state: 'EN_COURS',
+    });
     fixture.detectChanges();
 
     expect(component.canEditNameBudget()).toBe(false);
-    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-name');
-    const budgetInput: HTMLInputElement = fixture.nativeElement.querySelector('#edit-campaign-budget');
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '#edit-campaign-name',
+    );
+    const budgetInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '#edit-campaign-budget',
+    );
     expect(nameInput.readOnly).toBe(true);
     expect(budgetInput.readOnly).toBe(true);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('ne sont modifiables qu\'en construction');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      "ne sont modifiables qu'en construction",
+    );
   });
 
   it('garde le bouton Enregistrer actif hors EN_CONSTRUCTION — il ne soumet alors que les règles maison', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'EN_COURS' });
+    fixture.componentRef.setInput('campaign', {
+      ...mockCampaign,
+      state: 'EN_COURS',
+    });
     fixture.detectChanges();
 
-    const confirmBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.ms-modal__confirm');
+    const confirmBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.ms-modal__confirm');
     expect(confirmBtn.disabled).toBe(false);
   });
 
@@ -196,7 +252,8 @@ describe('EditCampaignModal', () => {
     fixture.componentRef.setInput('campaign', mockCampaign);
     fixture.detectChanges();
 
-    const confirmBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.ms-modal__confirm');
+    const confirmBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.ms-modal__confirm');
     expect(confirmBtn.disabled).toBe(false);
   });
 
@@ -205,18 +262,24 @@ describe('EditCampaignModal', () => {
     fixture.componentRef.setInput('saving', true);
     fixture.detectChanges();
 
-    const confirmBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.ms-modal__confirm');
+    const confirmBtn: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.ms-modal__confirm');
     expect(confirmBtn.disabled).toBe(true);
   });
 
   // ── Règles maison (état local, persistées seulement au clic Enregistrer) ─
 
   it('passe les règles maison actives de la campagne à HouseRulesSelector', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, houseRules: ['distribution_points_resistance'] });
+    fixture.componentRef.setInput('campaign', {
+      ...mockCampaign,
+      houseRules: ['distribution_points_resistance'],
+    });
     fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[type="checkbox"]',
+    );
     expect(checkbox.checked).toBe(true);
   });
 
@@ -226,21 +289,30 @@ describe('EditCampaignModal', () => {
     fixture.detectChanges();
 
     const emitted: EditCampaignSubmission[] = [];
-    outputToObservable(component.confirmed).subscribe((dto) => emitted.push(dto));
+    outputToObservable(component.confirmed).subscribe((dto) =>
+      emitted.push(dto),
+    );
 
     fixture.nativeElement.querySelector('input[type="checkbox"]').click();
     fixture.detectChanges();
 
-    expect(component.formHouseRules()).toEqual(['distribution_points_resistance']);
+    expect(component.formHouseRules()).toEqual([
+      'distribution_points_resistance',
+    ]);
     expect(emitted).toHaveLength(0);
   });
 
   it('reste modifiable pour les règles maison même hors EN_CONSTRUCTION', () => {
-    fixture.componentRef.setInput('campaign', { ...mockCampaign, state: 'TERMINEE' });
+    fixture.componentRef.setInput('campaign', {
+      ...mockCampaign,
+      state: 'TERMINEE',
+    });
     fixture.componentRef.setInput('houseRuleCatalog', mockHouseRules);
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[type="checkbox"]',
+    );
     expect(checkbox.disabled).toBe(false);
   });
 
@@ -250,7 +322,9 @@ describe('EditCampaignModal', () => {
     fixture.componentRef.setInput('saving', true);
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type="checkbox"]');
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector(
+      'input[type="checkbox"]',
+    );
     expect(checkbox.disabled).toBe(true);
   });
 });

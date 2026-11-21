@@ -1,15 +1,16 @@
 ---
-id: "rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20"
-status: "done"
-priority: "high"
+id: 'rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20'
+status: 'done'
+priority: 'high'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-21T18:54:25.989Z"
-completedAt: "2026-09-21T18:54:25.989Z"
-labels: ["regles-maison", "mode-campagne", "wayfinder:task"]
-order: "aa"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-21T18:54:25.989Z'
+completedAt: '2026-09-21T18:54:25.989Z'
+labels: ['regles-maison', 'mode-campagne', 'wayfinder:task']
+order: 'aa'
 ---
+
 # RM-4 — Déplacer la distribution des Points de Résistance vers l'entrée en Atelier
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -119,9 +120,9 @@ Implémenté à l'identique de la conception retenue lors de RM-1 (§4 à §7) :
   contact manuel préexistant sans effet sur la garde, no-op Escarmouche),
   `resistance-contacted.event.spec.ts` (valeur par défaut/fournie de
   `strategyKey`), et nouveau fichier `enter-atelier.usecase.spec.ts` (distribution
-  + ordre de persistance, idempotence + statut quand même basculé, no-op
-  Escarmouche, échec AVANT toute persistance si la partie n'est pas `PLANIFIE`,
-  rejet d'un appelant non organisateur).
+  - ordre de persistance, idempotence + statut quand même basculé, no-op
+    Escarmouche, échec AVANT toute persistance si la partie n'est pas `PLANIFIE`,
+    rejet d'un appelant non organisateur).
 
 Suite complète backend verte (954 tests, aucune régression), build webpack
 réussi, lint propre sur tout le code nouveau (les erreurs `typedef` restantes sur

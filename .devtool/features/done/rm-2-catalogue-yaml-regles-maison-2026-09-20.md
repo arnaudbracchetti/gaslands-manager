@@ -1,15 +1,16 @@
 ---
-id: "rm-2-catalogue-yaml-regles-maison-2026-09-20"
-status: "done"
-priority: "medium"
+id: 'rm-2-catalogue-yaml-regles-maison-2026-09-20'
+status: 'done'
+priority: 'medium'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-21T20:25:00.000Z"
-completedAt: "2026-09-21T20:25:00.000Z"
-labels: ["regles-maison", "mode-campagne", "wayfinder:task"]
-order: "aY"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-21T20:25:00.000Z'
+completedAt: '2026-09-21T20:25:00.000Z'
+labels: ['regles-maison', 'mode-campagne', 'wayfinder:task']
+order: 'aY'
 ---
+
 # RM-2 - Catalogue YAML des règles maison
 
 Carte parente : [Carte - Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -42,7 +43,7 @@ améliorations, avantages, séquelles, scénarios).
 
 ## Notes
 
-Pas de champ de règles détaillées : écarté au cadrage (cf. *Out of scope* de la
+Pas de champ de règles détaillées : écarté au cadrage (cf. _Out of scope_ de la
 carte parente), il serait de la donnée morte tant qu'aucun écran ne l'affiche.
 
 ## Dépendances
@@ -60,9 +61,9 @@ Implémenté à l'identique de la conception retenue lors de RM-1 :
 
 - **`HouseRuleCatalogService`** (`apps/backend/src/app/campaign/house-rule-catalog.service.ts`)
   - miroir fichier pour fichier de `ScenarioCatalogService` : `OnModuleInit`, `Map`
-  indexée par `nom_interne`, Template Method `protected readFileContent()`,
-  conversion Markdown → HTML des deux champs description (seule différence avec
-  le scénario, qui n'en convertit qu'un).
+    indexée par `nom_interne`, Template Method `protected readFileContent()`,
+    conversion Markdown → HTML des deux champs description (seule différence avec
+    le scénario, qui n'en convertit qu'un).
 - **`database_init/data/regles-maison.yml`** - une entrée,
   `resistance_sans_points_championnat`, textes courts conformes à ceux demandés
   ci-dessus.

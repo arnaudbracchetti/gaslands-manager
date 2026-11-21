@@ -14,7 +14,10 @@ import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
-import { EXPLOIT_POINTS_BY_WEIGHT, weightClassFromPoids } from '../enums/weight-class.enum';
+import {
+  EXPLOIT_POINTS_BY_WEIGHT,
+  weightClassFromPoids,
+} from '../enums/weight-class.enum';
 import type { WreckTable, WreckTableResult } from '../wreck/wreck-table';
 import type { IRandomizer } from '../randomizer.interface';
 import { Vehicle } from '../../../team/domain/vehicle';
@@ -24,9 +27,17 @@ import type { ImprovementType } from '../../../team/domain/value-objects/improve
 import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import type { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import type { WeaponOrientation } from '../../../team/domain/team';
-import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
-import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
+import type {
+  RankingInput,
+  ChangeEquipmentInput,
+  GameJournalEntry,
+  ChangeEquipmentResult,
+} from './game-commands';
 import type { GameRulesContext } from './game-context';
 import { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
 import { HouseRules } from '../house-rules/house-rules';
@@ -90,10 +101,18 @@ export abstract class Game {
     this._events = [...events].sort((a, b) => a.eventOrder - b.eventOrder);
   }
 
-  get events(): readonly GameEvent[] { return this._events; }
-  get status(): GameStatus { return this._status; }
-  get playedAt(): Date | null { return this._playedAt; }
-  get order(): number { return this._order; }
+  get events(): readonly GameEvent[] {
+    return this._events;
+  }
+  get status(): GameStatus {
+    return this._status;
+  }
+  get playedAt(): Date | null {
+    return this._playedAt;
+  }
+  get order(): number {
+    return this._order;
+  }
 
   /**
    * Configuration attachée par la `Campaign` propriétaire — lue à la demande
@@ -101,14 +120,18 @@ export abstract class Game {
    * réattacher. Protégé : seuls `Game` et ses sous-types y accèdent, jamais un
    * appelant extérieur au domaine.
    */
-  protected get context(): GameRulesContext { return this._context ?? DEFAULT_GAME_RULES_CONTEXT; }
+  protected get context(): GameRulesContext {
+    return this._context ?? DEFAULT_GAME_RULES_CONTEXT;
+  }
 
   /**
    * Attache la configuration de la `Campaign` propriétaire — appelée par
    * `Campaign` (constructeur + `createGame`), jamais par un use case. Même idiome
    * que `CampaignParticipant.attachTeam(team)`.
    */
-  attachContext(context: GameRulesContext): void { this._context = context; }
+  attachContext(context: GameRulesContext): void {
+    this._context = context;
+  }
 
   /** Sous-type de partie. Utilisé par le mapper ORM pour l'hydratation STI. */
   abstract get type(): string;
@@ -141,7 +164,9 @@ export abstract class Game {
   /** Transition PLANIFIE → ATELIER : résultat enregistré, phase garage ouverte. */
   enterAtelier(): void {
     if (this._status !== GameStatus.PLANIFIE) {
-      throw new DomainException('Seule une partie PLANIFIE peut entrer en atelier.');
+      throw new DomainException(
+        'Seule une partie PLANIFIE peut entrer en atelier.',
+      );
     }
     this._status = GameStatus.ATELIER;
     this._playedAt = new Date();
@@ -205,7 +230,10 @@ export abstract class Game {
    * classés dans `rankings` : c'est ce qui permet de créditer un participant absent
    * de cette partie précise.
    */
-  recordResult(rankings: RankingInput[], participants: readonly CampaignParticipant[]): GameEvent[] {
+  recordResult(
+    rankings: RankingInput[],
+    participants: readonly CampaignParticipant[],
+  ): GameEvent[] {
     if (this._status !== GameStatus.PLANIFIE) {
       throw new DomainException('Cette partie a déjà été jouée.');
     }
@@ -213,7 +241,9 @@ export abstract class Game {
     // une Escarmouche utilise `recordJerricanGains`/`recordDestroyedVehicleTraces` à la
     // place (revenu D6 + trace de destruction sans PC, cf. spec/CAMPAIGN.md).
     if (this.type !== 'EVENEMENT_TELE') {
-      throw new DomainException('Le classement ne s\'enregistre que pour un Événement Télévisé.');
+      throw new DomainException(
+        "Le classement ne s'enregistre que pour un Événement Télévisé.",
+      );
     }
 
     // Rangs uniques et consécutifs à partir de 1.
@@ -221,16 +251,22 @@ export abstract class Game {
     const duplicates = new Set(ranks).size !== ranks.length;
     const consecutive = ranks.every((r, i) => r === i + 1);
     if (duplicates || !consecutive) {
-      throw new DomainException('Les rangs doivent être uniques et consécutifs à partir de 1.');
+      throw new DomainException(
+        'Les rangs doivent être uniques et consécutifs à partir de 1.',
+      );
     }
 
     // Participants VALIDATED uniquement.
     const validatedIds = new Set(
-      participants.filter((p) => p.status === ParticipantStatus.VALIDATED).map((p) => p.id),
+      participants
+        .filter((p) => p.status === ParticipantStatus.VALIDATED)
+        .map((p) => p.id),
     );
     for (const r of rankings) {
       if (!validatedIds.has(r.participantId)) {
-        throw new DomainException(`Participant ${r.participantId} inconnu ou non validé dans cette campagne.`);
+        throw new DomainException(
+          `Participant ${r.participantId} inconnu ou non validé dans cette campagne.`,
+        );
       }
     }
 
@@ -239,14 +275,28 @@ export abstract class Game {
     const events: GameEvent[] = [];
     for (const r of rankings) {
       const points = this.computePoints(r.rank, classified);
-      const rankingEvent = new RankingAssignedEvent(0, this.id, r.participantId, 0, r.rank, points);
+      const rankingEvent = new RankingAssignedEvent(
+        0,
+        this.id,
+        r.participantId,
+        0,
+        r.rank,
+        points,
+      );
       this.addEvent(rankingEvent);
       events.push(rankingEvent);
 
       // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
       // PC figés à l'écriture (D-S8), comme pour le classement.
       if (r.gatesCrossed && r.gatesCrossed > 0) {
-        const gatesEvent = new GatesCrossedEvent(0, this.id, r.participantId, 0, r.gatesCrossed, r.gatesCrossed);
+        const gatesEvent = new GatesCrossedEvent(
+          0,
+          this.id,
+          r.participantId,
+          0,
+          r.gatesCrossed,
+          r.gatesCrossed,
+        );
         this.addEvent(gatesEvent);
         events.push(gatesEvent);
       }
@@ -254,11 +304,20 @@ export abstract class Game {
         // weightClass dérivé du véhicule réel (jamais transmis par l'appelant) — cf.
         // DestroyedVehicleInput.
         const weightClass = weightClassFromPoids(
-          this.findVehicleTypeAcrossParticipants(participants, destroyed.vehicleId).poids,
+          this.findVehicleTypeAcrossParticipants(
+            participants,
+            destroyed.vehicleId,
+          ).poids,
         );
         const exploitPoints = EXPLOIT_POINTS_BY_WEIGHT[weightClass];
         const destroyedEvent = new VehicleDestroyedEvent(
-          0, this.id, r.participantId, 0, destroyed.vehicleId, weightClass, exploitPoints,
+          0,
+          this.id,
+          r.participantId,
+          0,
+          destroyed.vehicleId,
+          weightClass,
+          exploitPoints,
         );
         this.addEvent(destroyedEvent);
         events.push(destroyedEvent);
@@ -268,10 +327,17 @@ export abstract class Game {
     // Cagnotte télé collective (règle maison) — un WalletMovementEvent par
     // participant VALIDATED de la campagne, y compris ceux absents de cette partie.
     // No-op par défaut (NoTvBonusStrategy) tant que la règle n'est pas activée.
-    const tvBonusStrategy = this.context.strategyFactory.createTvBonusDistributionStrategy();
+    const tvBonusStrategy =
+      this.context.strategyFactory.createTvBonusDistributionStrategy();
     for (const participantId of validatedIds) {
       if (!tvBonusStrategy.isEligible({ participantId })) continue;
-      events.push(...this.recordWalletMovement(participantId, TV_BONUS_AMOUNT_JERRICANS, WalletReason.CAGNOTTE_TELE));
+      events.push(
+        ...this.recordWalletMovement(
+          participantId,
+          TV_BONUS_AMOUNT_JERRICANS,
+          WalletReason.CAGNOTTE_TELE,
+        ),
+      );
     }
 
     return events;
@@ -306,7 +372,11 @@ export abstract class Game {
    * indépendante, cf. `creditFavoriDuPublicBonus()`. Les événements créés portent
    * id=0 ; le use case les persiste via `appendEvents`.
    */
-  resolveWreck(participant: CampaignParticipant, vehicleId: number, wreckTable: WreckTable): WreckTableResult {
+  resolveWreck(
+    participant: CampaignParticipant,
+    vehicleId: number,
+    wreckTable: WreckTable,
+  ): WreckTableResult {
     const vehicle = participant.team.findVehicle(vehicleId);
     const result = wreckTable.resolve(vehicle, this.id, participant.id);
     for (const event of result.events) this.addEvent(event);
@@ -336,7 +406,14 @@ export abstract class Game {
     if (!pendingFavoriDuPublic) return null;
     if (!participant.team.findVehicle(vehicleId).hasFavoriDuPublic) return null;
 
-    const bonusEvent = new FavoriDuPublicBonusEvent(0, this.id, participant.id, 0, vehicleId, FAVORI_DU_PUBLIC_BONUS_POINTS);
+    const bonusEvent = new FavoriDuPublicBonusEvent(
+      0,
+      this.id,
+      participant.id,
+      0,
+      vehicleId,
+      FAVORI_DU_PUBLIC_BONUS_POINTS,
+    );
     this.addEvent(bonusEvent);
     return bonusEvent;
   }
@@ -361,7 +438,10 @@ export abstract class Game {
    * un achat est `-event.id`, or l'id n'est assigné qu'après persistance — l'appelant
    * persiste l'événement puis recharge via replay, qui l'applique avec son vrai id.
    */
-  changeEquipment(participant: CampaignParticipant, cmd: ChangeEquipmentInput): ChangeEquipmentResult {
+  changeEquipment(
+    participant: CampaignParticipant,
+    cmd: ChangeEquipmentInput,
+  ): ChangeEquipmentResult {
     // Pour un BUY, `nomInterne` et les types résolus viennent du catalogue (fournis par le
     // use case). Pour un SELL, on les DÉRIVE de l'entité ciblée dans l'équipe replayée : le
     // client n'a pas à (re)transmettre le `nomInterne` de ce qu'il vend. L'événement reste
@@ -372,13 +452,15 @@ export abstract class Game {
     let orientation: WeaponOrientation | null = cmd.orientation ?? null;
     let resolvedVehicleType: VehicleType | null = cmd.resolvedVehicleType;
     let resolvedWeaponType: WeaponType | null = cmd.resolvedWeaponType;
-    let resolvedImprovementType: ImprovementType | null = cmd.resolvedImprovementType;
+    let resolvedImprovementType: ImprovementType | null =
+      cmd.resolvedImprovementType;
     let resolvedAdvantageType: AdvantageType | null = cmd.resolvedAdvantageType;
     let resolvedSequellaType: SequellaType | null = cmd.resolvedSequellaType;
     // Uniquement pertinent pour BUY(SEQUELLE, 'dur_a_cuire') — ignoré silencieusement
     // pour toute autre combinaison plutôt que de rejeter un champ superflu.
     const resolvedFreeAdvantageType: AdvantageType | null =
-      cmd.entityType === EquipmentEntityType.SEQUELLE && cmd.nomInterne === 'dur_a_cuire'
+      cmd.entityType === EquipmentEntityType.SEQUELLE &&
+      cmd.nomInterne === 'dur_a_cuire'
         ? cmd.resolvedFreeAdvantageType
         : null;
 
@@ -393,8 +475,15 @@ export abstract class Game {
         const targetSequella = participant.team
           .findVehicle(cmd.targetVehicleId!)
           .sequellas.find((s) => s.id === cmd.targetEntityId);
-        if (!targetSequella) throw new DomainException(`Séquelle ${cmd.targetEntityId} introuvable.`);
-        if (!participant.team.findVehicle(cmd.targetVehicleId!).isSequellaRemovable(targetSequella.type)) {
+        if (!targetSequella)
+          throw new DomainException(
+            `Séquelle ${cmd.targetEntityId} introuvable.`,
+          );
+        if (
+          !participant.team
+            .findVehicle(cmd.targetVehicleId!)
+            .isSequellaRemovable(targetSequella.type)
+        ) {
           throw new DomainException(
             'Cette séquelle est un dommage permanent imposé par la Table des Épaves — ' +
               'elle ne peut jamais être retirée.',
@@ -413,7 +502,9 @@ export abstract class Game {
       if (cmd.entityType === EquipmentEntityType.VEHICLE) {
         const targetVehicle = participant.team.findVehicle(cmd.targetEntityId!);
         if (targetVehicle.isLost) {
-          throw new DomainException('Ce véhicule est détruit — vente/annulation impossible.');
+          throw new DomainException(
+            'Ce véhicule est détruit — vente/annulation impossible.',
+          );
         }
       }
 
@@ -421,11 +512,18 @@ export abstract class Game {
       // calcul de remboursement (resolveSell lirait sinon un état sur le point de
       // disparaître intégralement). Même contrôle pour les 5 types d'entité — seule la
       // liste d'ids à supprimer diffère (cascade pour VEHICLE, cf. collectSessionEventsForVehicle).
-      const buyEvent = this.findSameSessionPurchase(cmd.entityType, cmd.targetEntityId!);
+      const buyEvent = this.findSameSessionPurchase(
+        cmd.entityType,
+        cmd.targetEntityId!,
+      );
       if (buyEvent) {
-        const deleteEventIds = cmd.entityType === EquipmentEntityType.VEHICLE
-          ? this.collectSessionEventsForVehicle(cmd.targetEntityId!, buyEvent.id)
-          : [buyEvent.id];
+        const deleteEventIds =
+          cmd.entityType === EquipmentEntityType.VEHICLE
+            ? this.collectSessionEventsForVehicle(
+                cmd.targetEntityId!,
+                buyEvent.id,
+              )
+            : [buyEvent.id];
         return { events: [], deleteEventIds };
       }
 
@@ -444,16 +542,31 @@ export abstract class Game {
       resolvedAdvantageType = sold.resolvedAdvantageType;
       resolvedSequellaType = sold.resolvedSequellaType;
     } else {
-      throw new DomainException(`Opération d'équipement inconnue : "${cmd.operation}".`);
+      throw new DomainException(
+        `Opération d'équipement inconnue : "${cmd.operation}".`,
+      );
     }
 
     const event = new EquipmentChangedEvent(
-      0, this.id, participant.id, 0,
-      cmd.operation, cmd.entityType, nomInterne, cost,
-      cmd.targetVehicleId ?? null, cmd.targetEntityId ?? null, orientation,
-      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
-      resolvedSequellaType, resolvedFreeAdvantageType,
-      cmd.resolvedDefaultImprovementTypes ?? [], cmd.resolvedDefaultWeaponType ?? null,
+      0,
+      this.id,
+      participant.id,
+      0,
+      cmd.operation,
+      cmd.entityType,
+      nomInterne,
+      cost,
+      cmd.targetVehicleId ?? null,
+      cmd.targetEntityId ?? null,
+      orientation,
+      resolvedVehicleType,
+      resolvedWeaponType,
+      resolvedImprovementType,
+      resolvedAdvantageType,
+      resolvedSequellaType,
+      resolvedFreeAdvantageType,
+      cmd.resolvedDefaultImprovementTypes ?? [],
+      cmd.resolvedDefaultWeaponType ?? null,
     );
 
     // SEQUELLE est réglée en Chocs (monnaie du véhicule) — pas la cagnotte — et porte
@@ -464,7 +577,10 @@ export abstract class Game {
       if (cmd.entityType === EquipmentEntityType.SEQUELLE) {
         participant.team
           .findVehicle(cmd.targetVehicleId!)
-          .assertCanAddSequella(resolvedSequellaType!, resolvedFreeAdvantageType);
+          .assertCanAddSequella(
+            resolvedSequellaType!,
+            resolvedFreeAdvantageType,
+          );
       } else {
         participant.assertCanAfford(cost);
       }
@@ -484,8 +600,13 @@ export abstract class Game {
    * atomique (`ICampaignRepository.deleteEvents`, `DELETE ... WHERE id IN (...)`) — pas de
    * fenêtre où certains événements de ce véhicule seraient supprimés et d'autres non.
    */
-  private collectSessionEventsForVehicle(vehicleId: number, buyEventId: number): number[] {
-    const related = this._events.filter((e) => e.targetsVehicle(vehicleId)).map((e) => e.id);
+  private collectSessionEventsForVehicle(
+    vehicleId: number,
+    buyEventId: number,
+  ): number[] {
+    const related = this._events
+      .filter((e) => e.targetsVehicle(vehicleId))
+      .map((e) => e.id);
     return [buyEventId, ...related];
   }
 
@@ -495,18 +616,26 @@ export abstract class Game {
    * courante, donc à la session en cours (un `Game` ne peut entrer en ATELIER qu'une seule
    * fois dans sa vie). L'id transient d'une entité achetée est `-event.id` (D-S11).
    */
-  private findSameSessionPurchase(entityType: EquipmentEntityType, entityId: number): EquipmentChangedEvent | null {
-    return this._events.find(
-      (e): e is EquipmentChangedEvent =>
-        e instanceof EquipmentChangedEvent &&
-        e.operation === EquipmentOperation.BUY &&
-        e.entityType === entityType &&
-        -e.id === entityId,
-    ) ?? null;
+  private findSameSessionPurchase(
+    entityType: EquipmentEntityType,
+    entityId: number,
+  ): EquipmentChangedEvent | null {
+    return (
+      this._events.find(
+        (e): e is EquipmentChangedEvent =>
+          e instanceof EquipmentChangedEvent &&
+          e.operation === EquipmentOperation.BUY &&
+          e.entityType === entityType &&
+          -e.id === entityId,
+      ) ?? null
+    );
   }
 
   /** Point d'entrée public en lecture (GetWorkshopUseCase) — cf. `findSameSessionPurchase`. */
-  wasPurchasedThisSession(entityType: EquipmentEntityType, entityId: number): boolean {
+  wasPurchasedThisSession(
+    entityType: EquipmentEntityType,
+    entityId: number,
+  ): boolean {
     return this.findSameSessionPurchase(entityType, entityId) !== null;
   }
 
@@ -518,8 +647,19 @@ export abstract class Game {
   }
 
   /** B3 — Enregistre un mouvement de cagnotte (gain de récompense ou dépense d'atelier). */
-  recordWalletMovement(participantId: number, amount: number, reason: WalletReason): GameEvent[] {
-    const event = new WalletMovementEvent(0, this.id, participantId, 0, amount, reason);
+  recordWalletMovement(
+    participantId: number,
+    amount: number,
+    reason: WalletReason,
+  ): GameEvent[] {
+    const event = new WalletMovementEvent(
+      0,
+      this.id,
+      participantId,
+      0,
+      amount,
+      reason,
+    );
     this.addEvent(event);
     return [event];
   }
@@ -539,11 +679,23 @@ export abstract class Game {
    * persistance), donc un nom invalide non filtré ici ne serait rejeté qu'au
    * PROCHAIN replay complet — trop tard, et l'événement resterait dans le journal.
    */
-  renameVehicle(participant: CampaignParticipant, vehicleId: number, newName: string): GameEvent[] {
+  renameVehicle(
+    participant: CampaignParticipant,
+    vehicleId: number,
+    newName: string,
+  ): GameEvent[] {
     const validatedName = Vehicle.assertValidName(newName);
     const vehicle = participant.team.findVehicle(vehicleId);
     const previousName = vehicle.customName ?? vehicle.type.nom;
-    const event = new VehicleRenamedEvent(0, this.id, participant.id, 0, vehicleId, previousName, validatedName);
+    const event = new VehicleRenamedEvent(
+      0,
+      this.id,
+      participant.id,
+      0,
+      vehicleId,
+      previousName,
+      validatedName,
+    );
     this.addEvent(event);
     return [event];
   }
@@ -568,7 +720,9 @@ export abstract class Game {
    * détail du cumul partagé entre les deux sources de gains d'une Escarmouche.
    */
   rollBaseIncome(participantId: number, randomizer: IRandomizer): GameEvent[] {
-    const amount = this.context.strategyFactory.createBaseIncomeStrategy().roll(randomizer);
+    const amount = this.context.strategyFactory
+      .createBaseIncomeStrategy()
+      .roll(randomizer);
     if (amount === null) {
       return [];
     }
@@ -576,7 +730,11 @@ export abstract class Game {
     if (credited <= 0) {
       return [];
     }
-    return this.recordWalletMovement(participantId, credited, WalletReason.RECOMPENSE);
+    return this.recordWalletMovement(
+      participantId,
+      credited,
+      WalletReason.RECOMPENSE,
+    );
   }
 
   /**
@@ -589,12 +747,23 @@ export abstract class Game {
    * cumul déjà journalisé pour CE participant après chaque événement ajouté, afin
    * qu'un même appel avec plusieurs entrées pour un même participant reste correct.
    */
-  recordJerricanGains(gains: { participantId: number; amount: number }[]): GameEvent[] {
+  recordJerricanGains(
+    gains: { participantId: number; amount: number }[],
+  ): GameEvent[] {
     const events: GameEvent[] = [];
     for (const gain of gains) {
-      const credited = this.applyJerricanGainsCap(gain.participantId, gain.amount);
+      const credited = this.applyJerricanGainsCap(
+        gain.participantId,
+        gain.amount,
+      );
       if (credited <= 0) continue;
-      events.push(...this.recordWalletMovement(gain.participantId, credited, WalletReason.RECOMPENSE));
+      events.push(
+        ...this.recordWalletMovement(
+          gain.participantId,
+          credited,
+          WalletReason.RECOMPENSE,
+        ),
+      );
     }
     return events;
   }
@@ -621,13 +790,26 @@ export abstract class Game {
   ): GameEvent[] {
     const events: GameEvent[] = [];
     for (const entry of entries) {
-      const participant = participants.find((p) => p.id === entry.participantId);
+      const participant = participants.find(
+        (p) => p.id === entry.participantId,
+      );
       if (!participant) {
-        throw new DomainException(`Participant #${entry.participantId} introuvable dans la campagne.`);
+        throw new DomainException(
+          `Participant #${entry.participantId} introuvable dans la campagne.`,
+        );
       }
-      const actualSpent = Math.min(entry.pointsSpent, participant.sabotagePoints);
+      const actualSpent = Math.min(
+        entry.pointsSpent,
+        participant.sabotagePoints,
+      );
       if (actualSpent > 0) {
-        const event = new SabotagePointsSpentEvent(0, this.id, participant.id, 0, actualSpent);
+        const event = new SabotagePointsSpentEvent(
+          0,
+          this.id,
+          participant.id,
+          0,
+          actualSpent,
+        );
         this.addEvent(event);
         events.push(event);
       }
@@ -639,14 +821,30 @@ export abstract class Game {
    * Enregistre la perte d'un véhicule (et optionnellement de ses armes) pendant
    * cette partie.
    */
-  recordVehicleLost(participantId: number, vehicleId: number, weaponIds?: number[]): GameEvent[] {
+  recordVehicleLost(
+    participantId: number,
+    vehicleId: number,
+    weaponIds?: number[],
+  ): GameEvent[] {
     const events: GameEvent[] = [];
-    const vehicleEvent = new VehicleLostEvent(0, this.id, participantId, 0, vehicleId);
+    const vehicleEvent = new VehicleLostEvent(
+      0,
+      this.id,
+      participantId,
+      0,
+      vehicleId,
+    );
     this.addEvent(vehicleEvent);
     events.push(vehicleEvent);
 
     for (const weaponId of weaponIds ?? []) {
-      const weaponEvent = new WeaponLostEvent(0, this.id, participantId, 0, weaponId);
+      const weaponEvent = new WeaponLostEvent(
+        0,
+        this.id,
+        participantId,
+        0,
+        weaponId,
+      );
       this.addEvent(weaponEvent);
       events.push(weaponEvent);
     }
@@ -670,7 +868,15 @@ export abstract class Game {
       const weightClass = weightClassFromPoids(
         this.findVehicleTypeAcrossParticipants(participants, d.vehicleId).poids,
       );
-      const event = new VehicleDestroyedEvent(0, this.id, d.destroyerId, 0, d.vehicleId, weightClass, 0);
+      const event = new VehicleDestroyedEvent(
+        0,
+        this.id,
+        d.destroyerId,
+        0,
+        d.vehicleId,
+        weightClass,
+        0,
+      );
       this.addEvent(event);
       events.push(event);
     }
@@ -695,7 +901,9 @@ export abstract class Game {
    */
   resultEventIdsForReset(): number[] {
     if (this._status !== GameStatus.PLANIFIE) {
-      throw new DomainException('Seule une partie PLANIFIE peut être réinitialisée.');
+      throw new DomainException(
+        'Seule une partie PLANIFIE peut être réinitialisée.',
+      );
     }
     return this._events.map((e) => e.id);
   }
@@ -720,11 +928,15 @@ export abstract class Game {
    * des appels de use case séparés qui rechargent systématiquement le journal complet
    * (`CampaignReplayService.loadAndReplay`) avant d'agir.
    */
-  private applyJerricanGainsCap(participantId: number, requestedAmount: number): number {
+  private applyJerricanGainsCap(
+    participantId: number,
+    requestedAmount: number,
+  ): number {
     if (this.type !== 'ESCARMOUCHE') {
       return requestedAmount;
     }
-    const capStrategy = this.context.strategyFactory.createJerricanGainsCapStrategy();
+    const capStrategy =
+      this.context.strategyFactory.createJerricanGainsCapStrategy();
     const alreadyEarned = this.recompenseEarnedBy(participantId);
     return capStrategy.clamp(requestedAmount, alreadyEarned);
   }
@@ -748,7 +960,10 @@ export abstract class Game {
    * `DomainException` si aucune équipe ne le possède — empêche de créditer des PC
    * pour un `vehicleId` inventé.
    */
-  private findVehicleTypeAcrossParticipants(participants: readonly CampaignParticipant[], vehicleId: number): VehicleType {
+  private findVehicleTypeAcrossParticipants(
+    participants: readonly CampaignParticipant[],
+    vehicleId: number,
+  ): VehicleType {
     for (const p of participants) {
       if (!p.hasTeam) continue;
       try {
@@ -757,7 +972,9 @@ export abstract class Game {
         // Absent de cette équipe — on continue la recherche dans les autres.
       }
     }
-    throw new DomainException(`Véhicule #${vehicleId} introuvable dans la campagne.`);
+    throw new DomainException(
+      `Véhicule #${vehicleId} introuvable dans la campagne.`,
+    );
   }
 
   /** Coût d'un achat (BUY) selon le type d'entité — depuis le catalogue résolu. */
@@ -765,32 +982,44 @@ export abstract class Game {
     switch (cmd.entityType) {
       case EquipmentEntityType.VEHICLE:
         if (!cmd.resolvedVehicleType) {
-          throw new DomainException(`Véhicule inconnu du catalogue : "${cmd.nomInterne}".`);
+          throw new DomainException(
+            `Véhicule inconnu du catalogue : "${cmd.nomInterne}".`,
+          );
         }
         return cmd.resolvedVehicleType.price;
       case EquipmentEntityType.WEAPON: {
         if (!cmd.resolvedWeaponType) {
-          throw new DomainException(`Arme inconnue du catalogue : "${cmd.nomInterne}".`);
+          throw new DomainException(
+            `Arme inconnue du catalogue : "${cmd.nomInterne}".`,
+          );
         }
         const montageTourelle = cmd.orientation === 'tourelle';
         if (montageTourelle && !cmd.resolvedWeaponType.montableSurTourelle) {
-          throw new DomainException('Cette arme ne peut pas être montée sur Tourelle.');
+          throw new DomainException(
+            'Cette arme ne peut pas être montée sur Tourelle.',
+          );
         }
         return cmd.resolvedWeaponType.price * (montageTourelle ? 3 : 1);
       }
       case EquipmentEntityType.IMPROVEMENT:
         if (!cmd.resolvedImprovementType) {
-          throw new DomainException(`Amélioration inconnue du catalogue : "${cmd.nomInterne}".`);
+          throw new DomainException(
+            `Amélioration inconnue du catalogue : "${cmd.nomInterne}".`,
+          );
         }
         return cmd.resolvedImprovementType.price;
       case EquipmentEntityType.ADVANTAGE:
         if (!cmd.resolvedAdvantageType) {
-          throw new DomainException(`Avantage inconnu du catalogue : "${cmd.nomInterne}".`);
+          throw new DomainException(
+            `Avantage inconnu du catalogue : "${cmd.nomInterne}".`,
+          );
         }
         return cmd.resolvedAdvantageType.price;
       case EquipmentEntityType.SEQUELLE:
         if (!cmd.resolvedSequellaType) {
-          throw new DomainException(`Séquelle inconnue du catalogue : "${cmd.nomInterne}".`);
+          throw new DomainException(
+            `Séquelle inconnue du catalogue : "${cmd.nomInterne}".`,
+          );
         }
         return cmd.resolvedSequellaType.chocsCost;
     }
@@ -832,7 +1061,9 @@ export abstract class Game {
       }
       case EquipmentEntityType.WEAPON: {
         const weapon = this.assertSellable(
-          participant.team.findVehicle(cmd.targetVehicleId!).weapons.find((w) => w.id === cmd.targetEntityId),
+          participant.team
+            .findVehicle(cmd.targetVehicleId!)
+            .weapons.find((w) => w.id === cmd.targetEntityId),
           cmd.targetEntityId!,
           'Arme',
           'Les armes intégrées au profil de base ne peuvent pas être revendues.',
@@ -855,7 +1086,9 @@ export abstract class Game {
       }
       case EquipmentEntityType.IMPROVEMENT: {
         const improvement = this.assertSellable(
-          participant.team.findVehicle(cmd.targetVehicleId!).improvements.find((i) => i.id === cmd.targetEntityId),
+          participant.team
+            .findVehicle(cmd.targetVehicleId!)
+            .improvements.find((i) => i.id === cmd.targetEntityId),
           cmd.targetEntityId!,
           'Amélioration',
           'Les améliorations intégrées au profil de base ne peuvent pas être revendues.',
@@ -875,7 +1108,10 @@ export abstract class Game {
         const advantage = participant.team
           .findVehicle(cmd.targetVehicleId!)
           .advantages.find((a) => a.id === cmd.targetEntityId);
-        if (!advantage) throw new DomainException(`Avantage ${cmd.targetEntityId} introuvable.`);
+        if (!advantage)
+          throw new DomainException(
+            `Avantage ${cmd.targetEntityId} introuvable.`,
+          );
         return {
           refund: advantage.resaleRefund,
           nomInterne: advantage.type.nomInterne,
@@ -889,8 +1125,13 @@ export abstract class Game {
       }
       case EquipmentEntityType.SEQUELLE: {
         const vehicle = participant.team.findVehicle(cmd.targetVehicleId!);
-        const sequella = vehicle.sequellas.find((s) => s.id === cmd.targetEntityId);
-        if (!sequella) throw new DomainException(`Séquelle ${cmd.targetEntityId} introuvable.`);
+        const sequella = vehicle.sequellas.find(
+          (s) => s.id === cmd.targetEntityId,
+        );
+        if (!sequella)
+          throw new DomainException(
+            `Séquelle ${cmd.targetEntityId} introuvable.`,
+          );
         // Revente fermée par défaut (contrairement aux 4 autres types) — cf. Vehicle.canRemoveSequella.
         // L'origine TABLE_EPAVES a déjà été interceptée plus haut (avant le court-circuit
         // d'annulation) ; cet appel ne fait donc plus qu'appliquer la garde Légende Vivante

@@ -23,7 +23,10 @@ import { ImprovementLostEvent } from '../domain/events/improvement-lost.event';
 import { AdvantageLostEvent } from '../domain/events/advantage-lost.event';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
-import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../domain/enums/equipment-change.enums';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
@@ -71,7 +74,13 @@ export class CampaignMapper {
     const teamById = new Map(teams.map((t) => [t.id, t]));
 
     const participants = participantOrms.map((p) => {
-      const domParticipant = new CampaignParticipant(p.id, p.userId, p.teamId, p.isOrganizer, p.status);
+      const domParticipant = new CampaignParticipant(
+        p.id,
+        p.userId,
+        p.teamId,
+        p.isOrganizer,
+        p.status,
+      );
       if (p.teamId !== null) {
         const team = teamById.get(p.teamId);
         if (team) domParticipant.attachTeam(team);
@@ -105,9 +114,25 @@ export class CampaignMapper {
 
     switch (orm.type) {
       case 'EVENEMENT_TELE':
-        return new EvenementTeleGame(orm.id, orm.campaignId, status, orm.order, orm.scenarioId ?? '', playedAt, events);
+        return new EvenementTeleGame(
+          orm.id,
+          orm.campaignId,
+          status,
+          orm.order,
+          orm.scenarioId ?? '',
+          playedAt,
+          events,
+        );
       case 'ESCARMOUCHE':
-        return new EscarmoucheGame(orm.id, orm.campaignId, status, orm.order, orm.scenarioId ?? '', playedAt, events);
+        return new EscarmoucheGame(
+          orm.id,
+          orm.campaignId,
+          status,
+          orm.order,
+          orm.scenarioId ?? '',
+          playedAt,
+          events,
+        );
       default:
         throw new DomainException(`Type de partie inconnu : "${orm.type}"`);
     }
@@ -120,59 +145,141 @@ export class CampaignMapper {
 
     switch (orm.eventType as GameEventType) {
       case GameEventType.RANKING_ASSIGNED:
-        return new RankingAssignedEvent(id, gameId, participantId, eventOrder, orm.rank!, orm.championshipPoints!);
+        return new RankingAssignedEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.rank!,
+          orm.championshipPoints!,
+        );
 
       case GameEventType.WALLET_MOVEMENT:
-        return new WalletMovementEvent(id, gameId, participantId, eventOrder, orm.amount!, orm.walletReason as WalletReason);
+        return new WalletMovementEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.amount!,
+          orm.walletReason as WalletReason,
+        );
 
       case GameEventType.VEHICLE_LOST:
-        return new VehicleLostEvent(id, gameId, participantId, eventOrder, orm.vehicleId!);
+        return new VehicleLostEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.vehicleId!,
+        );
 
       case GameEventType.WEAPON_LOST:
-        return new WeaponLostEvent(id, gameId, participantId, eventOrder, orm.weaponId!);
+        return new WeaponLostEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.weaponId!,
+        );
 
       case GameEventType.IMPROVEMENT_LOST:
-        return new ImprovementLostEvent(id, gameId, participantId, eventOrder, orm.improvementId!);
+        return new ImprovementLostEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.improvementId!,
+        );
 
       case GameEventType.ADVANTAGE_LOST:
-        return new AdvantageLostEvent(id, gameId, participantId, eventOrder, orm.advantageId!);
+        return new AdvantageLostEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.advantageId!,
+        );
 
       case GameEventType.WRECK_RESOLVED:
         return new WreckResolvedEvent(
-          id, gameId, participantId, eventOrder,
-          orm.vehicleId!, orm.diceRoll!, orm.chocsBefore!,
-          orm.wreckResult as WreckResult, orm.chocsGained!,
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.vehicleId!,
+          orm.diceRoll!,
+          orm.chocsBefore!,
+          orm.wreckResult as WreckResult,
+          orm.chocsGained!,
         );
 
       case GameEventType.EQUIPMENT_CHANGED:
         return this.toEquipmentChangedEvent(orm);
 
       case GameEventType.RESISTANCE_CONTACTED:
-        return new ResistanceContactedEvent(id, gameId, participantId, eventOrder, orm.resistanceStrategyKey);
+        return new ResistanceContactedEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.resistanceStrategyKey,
+        );
 
       case GameEventType.GATES_CROSSED:
-        return new GatesCrossedEvent(id, gameId, participantId, eventOrder, orm.gatesCrossed!, orm.championshipPoints!);
+        return new GatesCrossedEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.gatesCrossed!,
+          orm.championshipPoints!,
+        );
 
       case GameEventType.VEHICLE_DESTROYED:
         return new VehicleDestroyedEvent(
-          id, gameId, participantId, eventOrder,
-          orm.vehicleId!, orm.weightClass as WeightClass, orm.championshipPoints!,
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.vehicleId!,
+          orm.weightClass as WeightClass,
+          orm.championshipPoints!,
         );
 
       case GameEventType.FAVORI_DU_PUBLIC_BONUS:
-        return new FavoriDuPublicBonusEvent(id, gameId, participantId, eventOrder, orm.vehicleId!, orm.championshipPoints!);
+        return new FavoriDuPublicBonusEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.vehicleId!,
+          orm.championshipPoints!,
+        );
 
       case GameEventType.VEHICLE_RENAMED:
         return new VehicleRenamedEvent(
-          id, gameId, participantId, eventOrder,
-          orm.vehicleId!, orm.previousVehicleName!, orm.newVehicleName!,
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.vehicleId!,
+          orm.previousVehicleName!,
+          orm.newVehicleName!,
         );
 
       case GameEventType.SABOTAGE_POINTS_SPENT:
-        return new SabotagePointsSpentEvent(id, gameId, participantId, eventOrder, orm.sabotagePointsSpent!);
+        return new SabotagePointsSpentEvent(
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.sabotagePointsSpent!,
+        );
 
       default:
-        throw new DomainException(`Type d'événement inconnu : "${orm.eventType}"`);
+        throw new DomainException(
+          `Type d'événement inconnu : "${orm.eventType}"`,
+        );
     }
   }
 
@@ -199,32 +306,57 @@ export class CampaignMapper {
 
     switch (entityType) {
       case EquipmentEntityType.VEHICLE: {
-        const raw = nomInterne ? this.catalog.getVehiculeByNomInterne(nomInterne) : undefined;
-        if (!raw && requireResolution) throw new DomainException(`Véhicule catalogue introuvable : "${nomInterne}"`);
+        const raw = nomInterne
+          ? this.catalog.getVehiculeByNomInterne(nomInterne)
+          : undefined;
+        if (!raw && requireResolution)
+          throw new DomainException(
+            `Véhicule catalogue introuvable : "${nomInterne}"`,
+          );
         resolvedVehicleType = raw ? VehicleType.from(raw) : null;
         break;
       }
       case EquipmentEntityType.WEAPON: {
-        const raw = nomInterne ? this.catalog.getArmeByNomInterne(nomInterne) : undefined;
-        if (!raw && requireResolution) throw new DomainException(`Arme catalogue introuvable : "${nomInterne}"`);
+        const raw = nomInterne
+          ? this.catalog.getArmeByNomInterne(nomInterne)
+          : undefined;
+        if (!raw && requireResolution)
+          throw new DomainException(
+            `Arme catalogue introuvable : "${nomInterne}"`,
+          );
         resolvedWeaponType = raw ? WeaponType.from(raw) : null;
         break;
       }
       case EquipmentEntityType.ADVANTAGE: {
-        const raw = nomInterne ? this.catalog.getAvantageByNomInterne(nomInterne) : undefined;
-        if (!raw && requireResolution) throw new DomainException(`Avantage catalogue introuvable : "${nomInterne}"`);
+        const raw = nomInterne
+          ? this.catalog.getAvantageByNomInterne(nomInterne)
+          : undefined;
+        if (!raw && requireResolution)
+          throw new DomainException(
+            `Avantage catalogue introuvable : "${nomInterne}"`,
+          );
         resolvedAdvantageType = raw ? AdvantageType.from(raw) : null;
         break;
       }
       case EquipmentEntityType.IMPROVEMENT: {
-        const raw = nomInterne ? this.catalog.getAmeliorationByNomInterne(nomInterne) : undefined;
-        if (!raw && requireResolution) throw new DomainException(`Amélioration catalogue introuvable : "${nomInterne}"`);
+        const raw = nomInterne
+          ? this.catalog.getAmeliorationByNomInterne(nomInterne)
+          : undefined;
+        if (!raw && requireResolution)
+          throw new DomainException(
+            `Amélioration catalogue introuvable : "${nomInterne}"`,
+          );
         resolvedImprovementType = raw ? ImprovementType.from(raw) : null;
         break;
       }
       case EquipmentEntityType.SEQUELLE: {
-        const raw = nomInterne ? this.catalog.getSequelleByNomInterne(nomInterne) : undefined;
-        if (!raw && requireResolution) throw new DomainException(`Séquelle catalogue introuvable : "${nomInterne}"`);
+        const raw = nomInterne
+          ? this.catalog.getSequelleByNomInterne(nomInterne)
+          : undefined;
+        if (!raw && requireResolution)
+          throw new DomainException(
+            `Séquelle catalogue introuvable : "${nomInterne}"`,
+          );
         resolvedSequellaType = raw ? SequellaType.from(raw) : null;
         break;
       }
@@ -235,7 +367,9 @@ export class CampaignMapper {
     const freeAdvantageRaw = orm.freeAdvantageNomInterne
       ? this.catalog.getAvantageByNomInterne(orm.freeAdvantageNomInterne)
       : undefined;
-    const resolvedFreeAdvantageType = freeAdvantageRaw ? AdvantageType.from(freeAdvantageRaw) : null;
+    const resolvedFreeAdvantageType = freeAdvantageRaw
+      ? AdvantageType.from(freeAdvantageRaw)
+      : null;
 
     // Équipement intégré du véhicule (estDefaut: true), best-effort comme le reste de ce
     // mapper — absent pour toute combinaison autre que BUY_VEHICLE (cf. EquipmentChangedEvent).
@@ -246,17 +380,34 @@ export class CampaignMapper {
           .map((raw) => ImprovementType.from(raw))
       : [];
     const defaultWeaponRaw = resolvedVehicleType?.defaultWeaponNomInterne
-      ? this.catalog.getArmeByNomInterne(resolvedVehicleType.defaultWeaponNomInterne)
+      ? this.catalog.getArmeByNomInterne(
+          resolvedVehicleType.defaultWeaponNomInterne,
+        )
       : undefined;
-    const resolvedDefaultWeaponType = defaultWeaponRaw ? WeaponType.from(defaultWeaponRaw) : null;
+    const resolvedDefaultWeaponType = defaultWeaponRaw
+      ? WeaponType.from(defaultWeaponRaw)
+      : null;
 
     return new EquipmentChangedEvent(
-      orm.id, orm.gameId, orm.participantId, orm.eventOrder,
-      operation, entityType, nomInterne, orm.cost!,
-      orm.targetVehicleId, orm.targetEntityId, orientation,
-      resolvedVehicleType, resolvedWeaponType, resolvedImprovementType, resolvedAdvantageType,
-      resolvedSequellaType, resolvedFreeAdvantageType,
-      resolvedDefaultImprovementTypes, resolvedDefaultWeaponType,
+      orm.id,
+      orm.gameId,
+      orm.participantId,
+      orm.eventOrder,
+      operation,
+      entityType,
+      nomInterne,
+      orm.cost!,
+      orm.targetVehicleId,
+      orm.targetEntityId,
+      orientation,
+      resolvedVehicleType,
+      resolvedWeaponType,
+      resolvedImprovementType,
+      resolvedAdvantageType,
+      resolvedSequellaType,
+      resolvedFreeAdvantageType,
+      resolvedDefaultImprovementTypes,
+      resolvedDefaultWeaponType,
     );
   }
 }

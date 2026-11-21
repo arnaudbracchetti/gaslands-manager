@@ -1,13 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { HouseRuleStrategyFactory } from './house-rule-strategy.factory';
 import { HouseRules } from './house-rules';
-import { DefaultResistanceStrategy, NoChampionshipPointsStrategy } from './resistance-distribution-strategy';
-import { CollectiveTvBonusStrategy, NoTvBonusStrategy } from './tv-bonus-distribution-strategy';
-import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy } from './base-income-strategy';
-import { UnlimitedJerricanGainsStrategy, CappedJerricanGainsStrategy } from './jerrican-gains-cap-strategy';
+import {
+  DefaultResistanceStrategy,
+  NoChampionshipPointsStrategy,
+} from './resistance-distribution-strategy';
+import {
+  CollectiveTvBonusStrategy,
+  NoTvBonusStrategy,
+} from './tv-bonus-distribution-strategy';
+import {
+  DefaultBaseIncomeStrategy,
+  NoBaseIncomeStrategy,
+} from './base-income-strategy';
+import {
+  UnlimitedJerricanGainsStrategy,
+  CappedJerricanGainsStrategy,
+} from './jerrican-gains-cap-strategy';
 
 describe('HouseRuleStrategyFactory', () => {
-  it('résout la Strategy par défaut quand aucune règle maison n\'est active', () => {
+  it("résout la Strategy par défaut quand aucune règle maison n'est active", () => {
     const factory = new HouseRuleStrategyFactory(HouseRules.none());
 
     const strategy = factory.createResistanceDistributionStrategy();
@@ -16,8 +28,10 @@ describe('HouseRuleStrategyFactory', () => {
     expect(strategy.key).toBe('defaut');
   });
 
-  it('résout la Strategy par défaut quand une clé active n\'a aucune entrée dans le registre', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['clef_inconnue_du_registre']));
+  it("résout la Strategy par défaut quand une clé active n'a aucune entrée dans le registre", () => {
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['clef_inconnue_du_registre']),
+    );
 
     const strategy = factory.createResistanceDistributionStrategy();
 
@@ -25,7 +39,9 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('résout NoChampionshipPointsStrategy (R1) quand distribution_points_resistance est active', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['distribution_points_resistance']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['distribution_points_resistance']),
+    );
 
     const strategy = factory.createResistanceDistributionStrategy();
 
@@ -50,7 +66,7 @@ describe('HouseRuleStrategyFactory', () => {
   // pas ce conflit — reste vrai tant qu'une seconde règle ne vient pas
   // concurrencer CE point-là.
 
-  it('résout la Strategy par défaut (cagnotte télé) quand aucune règle maison n\'est active', () => {
+  it("résout la Strategy par défaut (cagnotte télé) quand aucune règle maison n'est active", () => {
     const factory = new HouseRuleStrategyFactory(HouseRules.none());
 
     const strategy = factory.createTvBonusDistributionStrategy();
@@ -60,7 +76,9 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('résout CollectiveTvBonusStrategy quand cagnotte_collective_evenement_tele est active', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['cagnotte_collective_evenement_tele']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['cagnotte_collective_evenement_tele']),
+    );
 
     const strategy = factory.createTvBonusDistributionStrategy();
 
@@ -77,12 +95,16 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('active distribution_points_resistance sans effet sur la Strategy de cagnotte télé', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['distribution_points_resistance']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['distribution_points_resistance']),
+    );
 
-    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
+    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(
+      NoTvBonusStrategy,
+    );
   });
 
-  it('résout la Strategy par défaut (revenu de base) quand aucune règle maison n\'est active', () => {
+  it("résout la Strategy par défaut (revenu de base) quand aucune règle maison n'est active", () => {
     const factory = new HouseRuleStrategyFactory(HouseRules.none());
 
     const strategy = factory.createBaseIncomeStrategy();
@@ -92,7 +114,9 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('résout NoBaseIncomeStrategy quand escarmouche_bonus_jerricans est active', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['escarmouche_bonus_jerricans']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['escarmouche_bonus_jerricans']),
+    );
 
     const strategy = factory.createBaseIncomeStrategy();
 
@@ -109,13 +133,19 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('active escarmouche_bonus_jerricans sans effet sur les Strategy de Résistance/cagnotte télé', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['escarmouche_bonus_jerricans']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['escarmouche_bonus_jerricans']),
+    );
 
-    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(DefaultResistanceStrategy);
-    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
+    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(
+      DefaultResistanceStrategy,
+    );
+    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(
+      NoTvBonusStrategy,
+    );
   });
 
-  it('résout la Strategy par défaut (plafond de jerricans) quand aucune règle maison n\'est active', () => {
+  it("résout la Strategy par défaut (plafond de jerricans) quand aucune règle maison n'est active", () => {
     const factory = new HouseRuleStrategyFactory(HouseRules.none());
 
     const strategy = factory.createJerricanGainsCapStrategy();
@@ -125,7 +155,9 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('résout CappedJerricanGainsStrategy quand plafond_jerricans_escarmouche est active', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['plafond_jerricans_escarmouche']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['plafond_jerricans_escarmouche']),
+    );
 
     const strategy = factory.createJerricanGainsCapStrategy();
 
@@ -142,10 +174,18 @@ describe('HouseRuleStrategyFactory', () => {
   });
 
   it('active plafond_jerricans_escarmouche sans effet sur les autres Strategy', () => {
-    const factory = new HouseRuleStrategyFactory(HouseRules.fromPersisted(['plafond_jerricans_escarmouche']));
+    const factory = new HouseRuleStrategyFactory(
+      HouseRules.fromPersisted(['plafond_jerricans_escarmouche']),
+    );
 
-    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(DefaultResistanceStrategy);
-    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(NoTvBonusStrategy);
-    expect(factory.createBaseIncomeStrategy()).toBeInstanceOf(DefaultBaseIncomeStrategy);
+    expect(factory.createResistanceDistributionStrategy()).toBeInstanceOf(
+      DefaultResistanceStrategy,
+    );
+    expect(factory.createTvBonusDistributionStrategy()).toBeInstanceOf(
+      NoTvBonusStrategy,
+    );
+    expect(factory.createBaseIncomeStrategy()).toBeInstanceOf(
+      DefaultBaseIncomeStrategy,
+    );
   });
 });

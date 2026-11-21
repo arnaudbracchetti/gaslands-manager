@@ -10,7 +10,15 @@ import { CampaignState } from '../domain/enums/campaign.enums';
 
 function makeFixture(state: CampaignState) {
   const organizer = new CampaignParticipant(1, 42, 1, true);
-  const campaign = new Campaign(1, 'Campagne Test', state, 'invite-code', [organizer], [], 50);
+  const campaign = new Campaign(
+    1,
+    'Campagne Test',
+    state,
+    'invite-code',
+    [organizer],
+    [],
+    50,
+  );
 
   const campaignRepo: ICampaignRepository = {
     saveStructural: vi.fn().mockResolvedValue(undefined),
@@ -24,21 +32,33 @@ function makeFixture(state: CampaignState) {
     validKeys: vi.fn().mockReturnValue(['distribution_points_resistance']),
   } as unknown as HouseRuleCatalogService;
 
-  const useCase = new SetHouseRulesUseCase(campaignRepo, replayService, houseRuleCatalog);
+  const useCase = new SetHouseRulesUseCase(
+    campaignRepo,
+    replayService,
+    houseRuleCatalog,
+  );
   return { useCase, campaignRepo, campaign };
 }
 
 describe('SetHouseRulesUseCase', () => {
-  it('active une règle valide et persiste, même en EN_COURS (aucune contrainte d\'état)', async () => {
-    const { useCase, campaignRepo, campaign } = makeFixture(CampaignState.EN_COURS);
+  it("active une règle valide et persiste, même en EN_COURS (aucune contrainte d'état)", async () => {
+    const { useCase, campaignRepo, campaign } = makeFixture(
+      CampaignState.EN_COURS,
+    );
 
-    await useCase.execute({ campaignId: 1, userId: 42, houseRules: ['distribution_points_resistance'] });
+    await useCase.execute({
+      campaignId: 1,
+      userId: 42,
+      houseRules: ['distribution_points_resistance'],
+    });
 
-    expect(campaign.houseRules.isEnabled('distribution_points_resistance')).toBe(true);
+    expect(
+      campaign.houseRules.isEnabled('distribution_points_resistance'),
+    ).toBe(true);
     expect(campaignRepo.saveStructural).toHaveBeenCalledWith(campaign);
   });
 
-  it('fonctionne aussi en TERMINEE (aucune contrainte d\'état)', async () => {
+  it("fonctionne aussi en TERMINEE (aucune contrainte d'état)", async () => {
     const { useCase, campaignRepo } = makeFixture(CampaignState.TERMINEE);
 
     await useCase.execute({ campaignId: 1, userId: 42, houseRules: [] });
@@ -55,10 +75,16 @@ describe('SetHouseRulesUseCase', () => {
   });
 
   it('refuse une clé absente du catalogue (DomainException → BadRequestException), sans persister', async () => {
-    const { useCase, campaignRepo } = makeFixture(CampaignState.EN_CONSTRUCTION);
+    const { useCase, campaignRepo } = makeFixture(
+      CampaignState.EN_CONSTRUCTION,
+    );
 
     await expect(
-      useCase.execute({ campaignId: 1, userId: 42, houseRules: ['clef_inconnue'] }),
+      useCase.execute({
+        campaignId: 1,
+        userId: 42,
+        houseRules: ['clef_inconnue'],
+      }),
     ).rejects.toThrow(BadRequestException);
     expect(campaignRepo.saveStructural).not.toHaveBeenCalled();
   });

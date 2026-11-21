@@ -17,7 +17,11 @@ import {
   HouseRuleDefinition,
   SetHouseRulesDto,
 } from './campaign.model';
-import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
+import {
+  CampaignParticipant,
+  StandingsEntry,
+  ValidateParticipantDto,
+} from './campaign-participant.model';
 import type {
   Game,
   GameType,
@@ -35,7 +39,11 @@ import type {
   RollIncomeRequestDto,
   RollIncomeResultDto,
 } from './game.model';
-import type { WorkshopStateDto, ChangeEquipmentDto, AvailableSequellaDto } from './workshop.model';
+import type {
+  WorkshopStateDto,
+  ChangeEquipmentDto,
+  AvailableSequellaDto,
+} from './workshop.model';
 import type {
   AvailableWeaponDto,
   AvailableImprovementDto,
@@ -67,7 +75,9 @@ export class CampaignsService {
    * l'utilisateur connecté ayant au moins une demande d'inscription en attente.
    */
   getOrganizingPendingRequests(): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>('/api/campaigns/organizing/pending-requests');
+    return this.http.get<Campaign[]>(
+      '/api/campaigns/organizing/pending-requests',
+    );
   }
 
   /**
@@ -106,7 +116,9 @@ export class CampaignsService {
    * (tous statuts), avec nom d'utilisateur et d'équipe.
    */
   getParticipants(campaignId: number): Observable<CampaignParticipant[]> {
-    return this.http.get<CampaignParticipant[]>(`/api/campaigns/${campaignId}/participants`);
+    return this.http.get<CampaignParticipant[]>(
+      `/api/campaigns/${campaignId}/participants`,
+    );
   }
 
   /**
@@ -115,7 +127,10 @@ export class CampaignsService {
    * participant VALIDATED, y compris pour consulter l'historique d'un tiers.
    * Retourné à plat ; le regroupement par partie est fait côté frontend.
    */
-  getParticipantJournal(campaignId: number, pid: number): Observable<ParticipantJournalEntryDto[]> {
+  getParticipantJournal(
+    campaignId: number,
+    pid: number,
+  ): Observable<ParticipantJournalEntryDto[]> {
     return this.http.get<ParticipantJournalEntryDto[]>(
       `/api/campaigns/${campaignId}/participants/${pid}/journal`,
     );
@@ -127,16 +142,28 @@ export class CampaignsService {
    * `getParticipantJournal` (tout participant VALIDATED, y compris pour
    * consulter l'équipe d'un tiers). Même forme de réponse que `getWorkshop`.
    */
-  getParticipantWorkshop(campaignId: number, pid: number): Observable<WorkshopStateDto> {
-    return this.http.get<WorkshopStateDto>(`/api/campaigns/${campaignId}/participants/${pid}/workshop`);
+  getParticipantWorkshop(
+    campaignId: number,
+    pid: number,
+  ): Observable<WorkshopStateDto> {
+    return this.http.get<WorkshopStateDto>(
+      `/api/campaigns/${campaignId}/participants/${pid}/workshop`,
+    );
   }
 
   /**
    * PUT /api/campaigns/:id/participants/:pid/validate → valide ou refuse une
    * demande d'inscription (organisateur uniquement).
    */
-  validateParticipant(campaignId: number, pid: number, dto: ValidateParticipantDto): Observable<CampaignParticipant> {
-    return this.http.put<CampaignParticipant>(`/api/campaigns/${campaignId}/participants/${pid}/validate`, dto);
+  validateParticipant(
+    campaignId: number,
+    pid: number,
+    dto: ValidateParticipantDto,
+  ): Observable<CampaignParticipant> {
+    return this.http.put<CampaignParticipant>(
+      `/api/campaigns/${campaignId}/participants/${pid}/validate`,
+      dto,
+    );
   }
 
   /**
@@ -144,15 +171,23 @@ export class CampaignsService {
    * (organisateur uniquement, saison EN_CONSTRUCTION uniquement).
    */
   removeParticipant(campaignId: number, pid: number): Observable<void> {
-    return this.http.delete<void>(`/api/campaigns/${campaignId}/participants/${pid}`);
+    return this.http.delete<void>(
+      `/api/campaigns/${campaignId}/participants/${pid}`,
+    );
   }
 
   /**
    * PUT /api/campaigns/:id/participants/me → change l'équipe engagée par
    * l'utilisateur connecté (saison EN_CONSTRUCTION uniquement).
    */
-  updateMyTeam(campaignId: number, dto: JoinCampaignDto): Observable<CampaignParticipant> {
-    return this.http.put<CampaignParticipant>(`/api/campaigns/${campaignId}/participants/me`, dto);
+  updateMyTeam(
+    campaignId: number,
+    dto: JoinCampaignDto,
+  ): Observable<CampaignParticipant> {
+    return this.http.put<CampaignParticipant>(
+      `/api/campaigns/${campaignId}/participants/me`,
+      dto,
+    );
   }
 
   /**
@@ -184,8 +219,14 @@ export class CampaignsService {
    * PUT /api/campaigns/:id/house-rules → règles maison actives (organisateur,
    * aucune contrainte d'état — contrairement à `update` ci-dessus).
    */
-  setHouseRules(campaignId: number, dto: SetHouseRulesDto): Observable<Campaign> {
-    return this.http.put<Campaign>(`/api/campaigns/${campaignId}/house-rules`, dto);
+  setHouseRules(
+    campaignId: number,
+    dto: SetHouseRulesDto,
+  ): Observable<Campaign> {
+    return this.http.put<Campaign>(
+      `/api/campaigns/${campaignId}/house-rules`,
+      dto,
+    );
   }
 
   /**
@@ -193,7 +234,10 @@ export class CampaignsService {
    * validé au rang de co-organisateur (organisateur uniquement).
    */
   promote(campaignId: number, pid: number): Observable<CampaignParticipant> {
-    return this.http.put<CampaignParticipant>(`/api/campaigns/${campaignId}/participants/${pid}/promote`, {});
+    return this.http.put<CampaignParticipant>(
+      `/api/campaigns/${campaignId}/participants/${pid}/promote`,
+      {},
+    );
   }
 
   /**
@@ -221,7 +265,9 @@ export class CampaignsService {
    * probabilités, seulement le résultat.
    */
   drawRandomScenario(type: GameType): Observable<Scenario> {
-    return this.http.get<Scenario>(`/api/catalog/scenarios/random?type=${type}`);
+    return this.http.get<Scenario>(
+      `/api/catalog/scenarios/random?type=${type}`,
+    );
   }
 
   /**
@@ -244,8 +290,15 @@ export class CampaignsService {
    * PUT /api/campaigns/:id/games/:gameId → modifie une partie PLANIFIE
    * (organisateur, saison EN_COURS).
    */
-  updateGame(campaignId: number, gameId: number, dto: UpdateGameDto): Observable<Game> {
-    return this.http.put<Game>(`/api/campaigns/${campaignId}/games/${gameId}`, dto);
+  updateGame(
+    campaignId: number,
+    gameId: number,
+    dto: UpdateGameDto,
+  ): Observable<Game> {
+    return this.http.put<Game>(
+      `/api/campaigns/${campaignId}/games/${gameId}`,
+      dto,
+    );
   }
 
   /**
@@ -253,7 +306,9 @@ export class CampaignsService {
    * (organisateur, saison EN_COURS).
    */
   deleteGame(campaignId: number, gameId: number): Observable<void> {
-    return this.http.delete<void>(`/api/campaigns/${campaignId}/games/${gameId}`);
+    return this.http.delete<void>(
+      `/api/campaigns/${campaignId}/games/${gameId}`,
+    );
   }
 
   /**
@@ -263,7 +318,9 @@ export class CampaignsService {
    * parties ATELIER/JOUE gardent leur position, jamais transmises ici.
    */
   reorderGames(campaignId: number, gameIds: number[]): Observable<void> {
-    return this.http.put<void>(`/api/campaigns/${campaignId}/games/reorder`, { gameIds });
+    return this.http.put<void>(`/api/campaigns/${campaignId}/games/reorder`, {
+      gameIds,
+    });
   }
 
   /**
@@ -272,8 +329,15 @@ export class CampaignsService {
    * entrer la partie en atelier — elle reste PLANIFIE jusqu'à l'appel explicite
    * de `enterAtelier()` en fin de wizard (écran 3).
    */
-  recordResult(campaignId: number, gameId: number, dto: RecordResultDto): Observable<Game> {
-    return this.http.post<Game>(`/api/campaigns/${campaignId}/games/${gameId}/results`, dto);
+  recordResult(
+    campaignId: number,
+    gameId: number,
+    dto: RecordResultDto,
+  ): Observable<Game> {
+    return this.http.post<Game>(
+      `/api/campaigns/${campaignId}/games/${gameId}/results`,
+      dto,
+    );
   }
 
   /**
@@ -281,7 +345,9 @@ export class CampaignsService {
    * enregistrés d'une partie (tout participant VALIDATED).
    */
   getGameResults(campaignId: number, gameId: number): Observable<GameResult[]> {
-    return this.http.get<GameResult[]>(`/api/campaigns/${campaignId}/games/${gameId}/results`);
+    return this.http.get<GameResult[]>(
+      `/api/campaigns/${campaignId}/games/${gameId}/results`,
+    );
   }
 
   /**
@@ -290,7 +356,9 @@ export class CampaignsService {
    * les événements déjà journalisés (classement, exploits, revenus, épaves).
    */
   resetResult(campaignId: number, gameId: number): Observable<void> {
-    return this.http.delete<void>(`/api/campaigns/${campaignId}/games/${gameId}/results`);
+    return this.http.delete<void>(
+      `/api/campaigns/${campaignId}/games/${gameId}/results`,
+    );
   }
 
   /**
@@ -298,7 +366,11 @@ export class CampaignsService {
    * Escarmouche (1D6 serveur, organisateur), différé en fin de wizard avec les
    * tirages de la Table des Épaves.
    */
-  rollIncome(campaignId: number, gameId: number, dto: RollIncomeRequestDto): Observable<RollIncomeResultDto> {
+  rollIncome(
+    campaignId: number,
+    gameId: number,
+    dto: RollIncomeRequestDto,
+  ): Observable<RollIncomeResultDto> {
     return this.http.post<RollIncomeResultDto>(
       `/api/campaigns/${campaignId}/games/${gameId}/events/income`,
       dto,
@@ -310,7 +382,9 @@ export class CampaignsService {
    * avec équipe, trié par Points de Championnat décroissants.
    */
   getStandings(campaignId: number): Observable<StandingsEntry[]> {
-    return this.http.get<StandingsEntry[]>(`/api/campaigns/${campaignId}/standings`);
+    return this.http.get<StandingsEntry[]>(
+      `/api/campaigns/${campaignId}/standings`,
+    );
   }
 
   /**
@@ -352,7 +426,10 @@ export class CampaignsService {
    * `autoClosedGameId` signale qu'une autre partie encore en atelier a été
    * automatiquement clôturée (ATELIER → JOUE) par cet appel.
    */
-  enterAtelier(campaignId: number, gameId: number): Observable<EnterAtelierResultDto> {
+  enterAtelier(
+    campaignId: number,
+    gameId: number,
+  ): Observable<EnterAtelierResultDto> {
     return this.http.post<EnterAtelierResultDto>(
       `/api/campaigns/${campaignId}/games/${gameId}/enter-atelier`,
       {},
@@ -365,7 +442,10 @@ export class CampaignsService {
    * participant VALIDATED même absent de la partie. Retourné à plat, non
    * groupé — le regroupement par participant est fait côté frontend.
    */
-  getGameJournal(campaignId: number, gameId: number): Observable<GameJournalEntryDto[]> {
+  getGameJournal(
+    campaignId: number,
+    gameId: number,
+  ): Observable<GameJournalEntryDto[]> {
     return this.http.get<GameJournalEntryDto[]>(
       `/api/campaigns/${campaignId}/games/${gameId}/journal`,
     );
@@ -379,7 +459,9 @@ export class CampaignsService {
    * armes et améliorations. Alimente la page Atelier.
    */
   getWorkshop(campaignId: number): Observable<WorkshopStateDto> {
-    return this.http.get<WorkshopStateDto>(`/api/campaigns/${campaignId}/workshop`);
+    return this.http.get<WorkshopStateDto>(
+      `/api/campaigns/${campaignId}/workshop`,
+    );
   }
 
   /**
@@ -389,7 +471,9 @@ export class CampaignsService {
    * est du HTML brut, pas du JSON.
    */
   getTeamSheet(campaignId: number): Observable<string> {
-    return this.http.get(`/api/campaigns/${campaignId}/sheet`, { responseType: 'text' });
+    return this.http.get(`/api/campaigns/${campaignId}/sheet`, {
+      responseType: 'text',
+    });
   }
 
   /**
@@ -399,7 +483,10 @@ export class CampaignsService {
    * VALIDATED). `responseType: 'text'` : la réponse est du HTML brut.
    */
   getParticipantTeamSheet(campaignId: number, pid: number): Observable<string> {
-    return this.http.get(`/api/campaigns/${campaignId}/participants/${pid}/sheet`, { responseType: 'text' });
+    return this.http.get(
+      `/api/campaigns/${campaignId}/participants/${pid}/sheet`,
+      { responseType: 'text' },
+    );
   }
 
   /**
@@ -407,7 +494,10 @@ export class CampaignsService {
    * sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget =
    * cagnotte du participant). Même forme que le verdict "construction d'équipe".
    */
-  getWorkshopAvailableWeapons(campaignId: number, vehicleId: number): Observable<AvailableWeaponDto[]> {
+  getWorkshopAvailableWeapons(
+    campaignId: number,
+    vehicleId: number,
+  ): Observable<AvailableWeaponDto[]> {
     return this.http.get<AvailableWeaponDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-weapons`,
     );
@@ -417,7 +507,10 @@ export class CampaignsService {
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-improvements →
    * améliorations du sponsor avec verdict (budget = cagnotte).
    */
-  getWorkshopAvailableImprovements(campaignId: number, vehicleId: number): Observable<AvailableImprovementDto[]> {
+  getWorkshopAvailableImprovements(
+    campaignId: number,
+    vehicleId: number,
+  ): Observable<AvailableImprovementDto[]> {
     return this.http.get<AvailableImprovementDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-improvements`,
     );
@@ -427,7 +520,10 @@ export class CampaignsService {
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-advantages →
    * avantages du sponsor avec verdict (budget = cagnotte, y compris Cascadeur/Sur Deux Roues).
    */
-  getWorkshopAvailableAdvantages(campaignId: number, vehicleId: number): Observable<AvailableAdvantageDto[]> {
+  getWorkshopAvailableAdvantages(
+    campaignId: number,
+    vehicleId: number,
+  ): Observable<AvailableAdvantageDto[]> {
     return this.http.get<AvailableAdvantageDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-advantages`,
     );
@@ -437,7 +533,10 @@ export class CampaignsService {
    * GET /api/campaigns/:id/workshop/vehicles/:vId/available-sequelles →
    * séquelles ATELIER avec verdict (monnaie Chocs, pas la cagnotte).
    */
-  getWorkshopAvailableSequelles(campaignId: number, vehicleId: number): Observable<AvailableSequellaDto[]> {
+  getWorkshopAvailableSequelles(
+    campaignId: number,
+    vehicleId: number,
+  ): Observable<AvailableSequellaDto[]> {
     return this.http.get<AvailableSequellaDto[]>(
       `/api/campaigns/${campaignId}/workshop/vehicles/${vehicleId}/available-sequelles`,
     );
@@ -450,8 +549,12 @@ export class CampaignsService {
    * encore avant cet achat — mirroir léger (`AvailableVehicleDto`) des 4 verdicts
    * ci-dessus, sans nom/prix/stats (déjà connus via `sponsorCatalog().vehicules`).
    */
-  getWorkshopAvailableVehicles(campaignId: number): Observable<AvailableVehicleDto[]> {
-    return this.http.get<AvailableVehicleDto[]>(`/api/campaigns/${campaignId}/workshop/available-vehicles`);
+  getWorkshopAvailableVehicles(
+    campaignId: number,
+  ): Observable<AvailableVehicleDto[]> {
+    return this.http.get<AvailableVehicleDto[]>(
+      `/api/campaigns/${campaignId}/workshop/available-vehicles`,
+    );
   }
 
   /**
@@ -461,8 +564,14 @@ export class CampaignsService {
    * Le montage sur Tourelle passe par ce même endpoint (`orientation: 'tourelle'`
    * dans le corps, WEAPON/BUY uniquement) — ce n'est pas une opération séparée.
    */
-  changeEquipment(campaignId: number, dto: ChangeEquipmentDto): Observable<void> {
-    return this.http.post<void>(`/api/campaigns/${campaignId}/events/equipment`, dto);
+  changeEquipment(
+    campaignId: number,
+    dto: ChangeEquipmentDto,
+  ): Observable<void> {
+    return this.http.post<void>(
+      `/api/campaigns/${campaignId}/events/equipment`,
+      dto,
+    );
   }
 
   /**
@@ -470,7 +579,14 @@ export class CampaignsService {
    * (204 No Content) — véhicule pré-existant ou transient de la session en cours,
    * aucune distinction côté appelant. Mirroir de `changeEquipment` ci-dessus.
    */
-  renameVehicle(campaignId: number, vehicleId: number, nom: string): Observable<void> {
-    return this.http.post<void>(`/api/campaigns/${campaignId}/events/vehicle-rename`, { vehicleId, nom });
+  renameVehicle(
+    campaignId: number,
+    vehicleId: number,
+    nom: string,
+  ): Observable<void> {
+    return this.http.post<void>(
+      `/api/campaigns/${campaignId}/events/vehicle-rename`,
+      { vehicleId, nom },
+    );
   }
 }

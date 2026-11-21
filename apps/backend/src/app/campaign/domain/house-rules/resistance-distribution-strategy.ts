@@ -58,7 +58,10 @@ export class DefaultResistanceStrategy implements ResistanceDistributionStrategy
 export class NoChampionshipPointsStrategy implements ResistanceDistributionStrategy {
   readonly key: string = 'distribution_points_resistance';
 
-  isEligible(entry: ResistanceEntry, _context: { classified: number }): boolean {
+  isEligible(
+    entry: ResistanceEntry,
+    _context: { classified: number },
+  ): boolean {
     return entry.championshipPointsThisGame === 0;
   }
 }

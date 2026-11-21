@@ -37,9 +37,9 @@ export class HouseRuleCatalogService implements OnModuleInit {
   onModuleInit(): void {
     this.logger.log('Chargement des règles maison depuis regles-maison.yml...');
     try {
-      const houseRules = this.loadYaml<{ regles_maison: HouseRuleDefinition[] }>(
-        'regles-maison.yml',
-      ).regles_maison;
+      const houseRules = this.loadYaml<{
+        regles_maison: HouseRuleDefinition[];
+      }>('regles-maison.yml').regles_maison;
 
       for (const r of houseRules) {
         // Conversion Markdown → HTML une seule fois ici (comme CatalogService).
@@ -73,7 +73,12 @@ export class HouseRuleCatalogService implements OnModuleInit {
    * Protected : surchargeable en test pour fournir un YAML fictif (Template Method).
    */
   protected readFileContent(filename: string): string {
-    const filePath = path.join(process.cwd(), 'database_init', 'data', filename);
+    const filePath = path.join(
+      process.cwd(),
+      'database_init',
+      'data',
+      filename,
+    );
     return fs.readFileSync(filePath, 'utf-8');
   }
 

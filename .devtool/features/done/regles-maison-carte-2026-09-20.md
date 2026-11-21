@@ -1,15 +1,16 @@
 ---
-id: "regles-maison-carte-2026-09-20"
-status: "done"
-priority: "high"
+id: 'regles-maison-carte-2026-09-20'
+status: 'done'
+priority: 'high'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T02:00:00.000Z"
-completedAt: "2026-09-25T02:00:00.000Z"
-labels: ["regles-maison", "mode-campagne", "wayfinder:map"]
-order: "af"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-25T02:00:00.000Z'
+completedAt: '2026-09-25T02:00:00.000Z'
+labels: ['regles-maison', 'mode-campagne', 'wayfinder:map']
+order: 'af'
 ---
+
 # Carte — Règles maison : mécanisme par campagne et première règle
 
 > Carte de route. Index des décisions et des cartes filles — le détail vit dans
@@ -40,16 +41,16 @@ Strategy, sans refonte du mécanisme.
 
 ## Cartes filles
 
-| Carte | Dépend de |
-|---|---|
-| [RM-1 — Conception détaillée du mécanisme (DDD)](./rm-1-conception-ddd-regles-maison-2026-09-20.md) | — (résolu) |
-| [RM-2 — Catalogue YAML des règles maison](./rm-2-catalogue-yaml-regles-maison-2026-09-20.md) | - (résolu) |
-| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md) | RM-1 ✅, RM-2 ✅ — résolu |
-| [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu |
-| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md) | RM-3 ✅, RM-4 ✅ — résolu |
-| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md) | RM-2 ✅, RM-3 ✅ — résolu |
-| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md) | RM-3 ✅, RM-6 ✅ — résolu |
-| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md) | RM-5 ✅, RM-6 ✅, RM-7 ✅ — résolu |
+| Carte                                                                                                                           | Dépend de                          |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| [RM-1 — Conception détaillée du mécanisme (DDD)](./rm-1-conception-ddd-regles-maison-2026-09-20.md)                             | — (résolu)                         |
+| [RM-2 — Catalogue YAML des règles maison](./rm-2-catalogue-yaml-regles-maison-2026-09-20.md)                                    | - (résolu)                         |
+| [RM-3 — Persistance du réglage sur la campagne](./rm-3-persistance-houserules-campagne-2026-09-20.md)                           | RM-1 ✅, RM-2 ✅ — résolu          |
+| [RM-4 — Déplacer la distribution des PR vers l'entrée en Atelier](./rm-4-deplacer-distribution-pr-entree-atelier-2026-09-20.md) | RM-1 ✅ — résolu                   |
+| [RM-5 — Règle R1 : stratégie « aucun point de championnat »](./rm-5-strategie-pr-sans-point-championnat-2026-09-20.md)          | RM-3 ✅, RM-4 ✅ — résolu          |
+| [RM-6 — IHM : régler les règles maison d'une campagne](./rm-6-ihm-reglage-regles-maison-2026-09-20.md)                          | RM-2 ✅, RM-3 ✅ — résolu          |
+| [RM-7 — IHM : affichage en lecture seule](./rm-7-ihm-affichage-lecture-seule-2026-09-20.md)                                     | RM-3 ✅, RM-6 ✅ — résolu          |
+| [RM-8 — Documentation](./rm-8-documentation-regles-maison-2026-09-20.md)                                                        | RM-5 ✅, RM-6 ✅, RM-7 ✅ — résolu |
 
 ## Décisions acquises
 

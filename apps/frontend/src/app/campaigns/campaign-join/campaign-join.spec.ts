@@ -27,8 +27,10 @@ const mockHouseRuleCatalog: HouseRuleDefinition[] = [
   {
     nom: 'Aucun point de championnat',
     nom_interne: 'distribution_points_resistance',
-    description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
-    description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
+    description_decochee:
+      'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
+    description_cochee:
+      'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
   },
 ];
 
@@ -98,8 +100,10 @@ describe('CampaignJoin Component', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('affiche un message d\'erreur générique si le code est invalide (CA2)', async () => {
-    mockCampaignsService.getByCode.mockReturnValue(throwError(() => new Error('404')));
+  it("affiche un message d'erreur générique si le code est invalide (CA2)", async () => {
+    mockCampaignsService.getByCode.mockReturnValue(
+      throwError(() => new Error('404')),
+    );
 
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
@@ -118,7 +122,7 @@ describe('CampaignJoin Component', () => {
     const errorComponent = errorFixture.componentInstance;
     errorFixture.detectChanges();
 
-    expect(errorComponent.error()).toContain('Code d\'invitation invalide');
+    expect(errorComponent.error()).toContain("Code d'invitation invalide");
     expect(errorComponent.summary()).toBeNull();
     expect(errorComponent.loading()).toBe(false);
   });
@@ -131,24 +135,34 @@ describe('CampaignJoin Component', () => {
 
       component.submitJoinRequest();
 
-      expect(mockCampaignsService.requestJoin).toHaveBeenCalledWith(mockSummary.id, { teamId: 7 });
+      expect(mockCampaignsService.requestJoin).toHaveBeenCalledWith(
+        mockSummary.id,
+        { teamId: 7 },
+      );
       expect(component.submitted()).toBe(true);
       expect(component.submitting()).toBe(false);
     });
 
-    it('affiche le message d\'erreur du backend en cas de rejet (CA4/CA5)', () => {
+    it("affiche le message d'erreur du backend en cas de rejet (CA4/CA5)", () => {
       mockCampaignsService.requestJoin.mockReturnValue(
-        throwError(() => ({ error: { message: 'Vous avez déjà une demande d\'inscription pour cette saison.' } })),
+        throwError(() => ({
+          error: {
+            message:
+              "Vous avez déjà une demande d'inscription pour cette saison.",
+          },
+        })),
       );
 
       component.submitJoinRequest();
 
-      expect(component.submitError()).toBe('Vous avez déjà une demande d\'inscription pour cette saison.');
+      expect(component.submitError()).toBe(
+        "Vous avez déjà une demande d'inscription pour cette saison.",
+      );
       expect(component.submitted()).toBe(false);
       expect(component.submitting()).toBe(false);
     });
 
-    it('ne fait rien si aucune équipe n\'est sélectionnée', () => {
+    it("ne fait rien si aucune équipe n'est sélectionnée", () => {
       component.selectedTeamId.set(null);
 
       component.submitJoinRequest();
@@ -172,7 +186,11 @@ describe('CampaignJoin Component', () => {
       };
       mockTeamsService.create.mockReturnValue(of(newTeam));
 
-      const dto: CreateTeamDto = { name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 };
+      const dto: CreateTeamDto = {
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+      };
       component.onTeamCreated(dto);
 
       expect(mockTeamsService.create).toHaveBeenCalledWith(dto);
@@ -181,12 +199,18 @@ describe('CampaignJoin Component', () => {
       expect(component.creatingTeam()).toBe(false);
     });
 
-    it('affiche un message d\'erreur en cas d\'échec de la création', () => {
-      mockTeamsService.create.mockReturnValue(throwError(() => new Error('500')));
+    it("affiche un message d'erreur en cas d'échec de la création", () => {
+      mockTeamsService.create.mockReturnValue(
+        throwError(() => new Error('500')),
+      );
 
-      component.onTeamCreated({ name: 'Équipe du Vendredi', sponsor: 'Rutherford', cans: 50 });
+      component.onTeamCreated({
+        name: 'Équipe du Vendredi',
+        sponsor: 'Rutherford',
+        cans: 50,
+      });
 
-      expect(component.submitError()).toContain('création de l\'équipe');
+      expect(component.submitError()).toContain("création de l'équipe");
       expect(component.creatingTeam()).toBe(false);
     });
   });
@@ -198,7 +222,9 @@ describe('CampaignJoin Component', () => {
       mockCampaignsService.getByCode.mockReturnValue(
         of({ ...mockSummary, houseRules: ['distribution_points_resistance'] }),
       );
-      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+      mockCampaignsService.getHouseRules.mockReturnValue(
+        of(mockHouseRuleCatalog),
+      );
 
       TestBed.resetTestingModule();
       await TestBed.configureTestingModule({
@@ -206,7 +232,10 @@ describe('CampaignJoin Component', () => {
         providers: [
           { provide: CampaignsService, useValue: mockCampaignsService },
           { provide: TeamsService, useValue: mockTeamsService },
-          { provide: ActivatedRoute, useValue: { snapshot: { params: { code: 'abcdef123456' } } } },
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { params: { code: 'abcdef123456' } } },
+          },
         ],
       }).compileComponents();
 
@@ -217,7 +246,9 @@ describe('CampaignJoin Component', () => {
       const selector = el.querySelector('app-house-rules-selector');
       expect(selector).not.toBeNull();
 
-      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const checkbox = selector!.querySelector(
+        'input[type="checkbox"]',
+      ) as HTMLInputElement;
       expect(checkbox.checked).toBe(true);
       expect(checkbox.disabled).toBe(true);
       expect(selector!.textContent).toContain('Comportement alternatif');

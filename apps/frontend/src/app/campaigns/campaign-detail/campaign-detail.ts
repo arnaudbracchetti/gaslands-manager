@@ -15,11 +15,28 @@
  * CA3 : si l'utilisateur n'a pas de CampaignParticipant VALIDATED pour cette saison,
  * le backend renvoie 404 — affiché comme message d'erreur générique.
  */
-import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignsService } from '../campaigns.service';
-import { Campaign, CampaignState, ChangeStateDto, EditCampaignSubmission, HouseRuleDefinition } from '../campaign.model';
-import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
+import {
+  Campaign,
+  CampaignState,
+  ChangeStateDto,
+  EditCampaignSubmission,
+  HouseRuleDefinition,
+} from '../campaign.model';
+import {
+  CampaignParticipant,
+  StandingsEntry,
+} from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { ParticipantList } from '../participant-list/participant-list';
 import { ParticipantJournalModal } from '../participant-journal-modal/participant-journal-modal';
@@ -67,12 +84,16 @@ export class CampaignDetail implements OnInit {
   private authService: AuthService = inject(AuthService);
   private teamsService: TeamsService = inject(TeamsService);
 
-  readonly campaignId: WritableSignal<number> = signal(Number(this.route.snapshot.params['id']));
+  readonly campaignId: WritableSignal<number> = signal(
+    Number(this.route.snapshot.params['id']),
+  );
 
   loading: WritableSignal<boolean> = signal(true);
   error: WritableSignal<string> = signal('');
   campaign: WritableSignal<Campaign | null> = signal<Campaign | null>(null);
-  participants: WritableSignal<CampaignParticipant[]> = signal<CampaignParticipant[]>([]);
+  participants: WritableSignal<CampaignParticipant[]> = signal<
+    CampaignParticipant[]
+  >([]);
   standings: WritableSignal<StandingsEntry[]> = signal<StandingsEntry[]>([]);
   myTeams: WritableSignal<Team[]> = signal<Team[]>([]);
   showChangeTeamModal: WritableSignal<boolean> = signal(false);
@@ -92,28 +113,35 @@ export class CampaignDetail implements OnInit {
   editCampaignError: WritableSignal<string> = signal('');
 
   /** Catalogue des règles maison, pour EditCampaignModal (chargement indépendant, non bloquant). */
-  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
+  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<
+    HouseRuleDefinition[]
+  >([]);
 
   /** Vrai si une partie de la saison est actuellement en statut ATELIER — reçu de CampaignProgram. */
   hasAtelierGame: WritableSignal<boolean> = signal(false);
 
   /** Participant dont l'historique complet est affiché (null = modale fermée). */
-  journalParticipant: WritableSignal<CampaignParticipant | null> = signal<CampaignParticipant | null>(null);
+  journalParticipant: WritableSignal<CampaignParticipant | null> =
+    signal<CampaignParticipant | null>(null);
 
-  participantJournalEntries: WritableSignal<ParticipantJournalEntryDto[]> = signal<ParticipantJournalEntryDto[]>([]);
+  participantJournalEntries: WritableSignal<ParticipantJournalEntryDto[]> =
+    signal<ParticipantJournalEntryDto[]>([]);
 
   loadingParticipantJournal: WritableSignal<boolean> = signal(false);
 
   // ── Confirmations ──────────────────────────────────────────────────────────
 
   /** Participant en attente de confirmation de retrait (null = aucun) */
-  pendingRemoveParticipant: WritableSignal<CampaignParticipant | null> = signal<CampaignParticipant | null>(null);
+  pendingRemoveParticipant: WritableSignal<CampaignParticipant | null> =
+    signal<CampaignParticipant | null>(null);
 
   /** Participant en attente de confirmation de promotion (null = aucun) */
-  pendingPromote: WritableSignal<CampaignParticipant | null> = signal<CampaignParticipant | null>(null);
+  pendingPromote: WritableSignal<CampaignParticipant | null> =
+    signal<CampaignParticipant | null>(null);
 
   /** Nouvel état en attente de confirmation de transition (null = aucun) */
-  pendingState: WritableSignal<CampaignState | null> = signal<CampaignState | null>(null);
+  pendingState: WritableSignal<CampaignState | null> =
+    signal<CampaignState | null>(null);
 
   /** Vrai quand la suppression de la saison attend confirmation */
   showDeleteCampaignConfirm: WritableSignal<boolean> = signal(false);
@@ -126,12 +154,18 @@ export class CampaignDetail implements OnInit {
     return this.participants().find((p) => p.userId === userId) ?? null;
   });
 
-  currentUserId: Signal<number | undefined> = computed(() => this.authService.currentUser()?.id);
+  currentUserId: Signal<number | undefined> = computed(
+    () => this.authService.currentUser()?.id,
+  );
 
-  isOrganizer: Signal<boolean> = computed(() => this.campaign()?.myRole === 'organizer');
+  isOrganizer: Signal<boolean> = computed(
+    () => this.campaign()?.myRole === 'organizer',
+  );
 
   /** Vrai quand le choix d'équipe est encore modifiable (saison EN_CONSTRUCTION). */
-  canChangeTeam: Signal<boolean> = computed(() => this.campaign()?.state === 'EN_CONSTRUCTION');
+  canChangeTeam: Signal<boolean> = computed(
+    () => this.campaign()?.state === 'EN_CONSTRUCTION',
+  );
 
   /**
    * Vrai quand l'organisateur peut ouvrir la modale de modification — aucune
@@ -148,7 +182,9 @@ export class CampaignDetail implements OnInit {
   ]);
 
   /** Message de confirmation pour la transition d'état (utilisé dans le template). */
-  pendingStateLabel: Signal<string> = computed(() => STATE_LABELS[this.pendingState() ?? 'EN_CONSTRUCTION']);
+  pendingStateLabel: Signal<string> = computed(
+    () => STATE_LABELS[this.pendingState() ?? 'EN_CONSTRUCTION'],
+  );
 
   stateLabel: Signal<string> = computed(() => {
     const state = this.campaign()?.state;
@@ -169,7 +205,10 @@ export class CampaignDetail implements OnInit {
    * PENDING/REJECTED, ou VALIDATED n'ayant encore joué aucune partie).
    */
   championshipPoints: Signal<ReadonlyMap<number, number>> = computed(
-    () => new Map(this.standings().map((s) => [s.participantId, s.championshipPoints])),
+    () =>
+      new Map(
+        this.standings().map((s) => [s.participantId, s.championshipPoints]),
+      ),
   );
 
   ngOnInit(): void {
@@ -191,7 +230,9 @@ export class CampaignDetail implements OnInit {
         this.loadParticipants();
       },
       error: () => {
-        this.error.set('Cette saison est introuvable ou vous n\'y avez pas accès.');
+        this.error.set(
+          "Cette saison est introuvable ou vous n'y avez pas accès.",
+        );
         this.loading.set(false);
       },
     });
@@ -204,7 +245,9 @@ export class CampaignDetail implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Cette saison est introuvable ou vous n\'y avez pas accès.');
+        this.error.set(
+          "Cette saison est introuvable ou vous n'y avez pas accès.",
+        );
         this.loading.set(false);
       },
     });
@@ -238,13 +281,17 @@ export class CampaignDetail implements OnInit {
   }
 
   onValidate(event: { pid: number; accept: boolean }): void {
-    this.campaignsService.validateParticipant(this.campaignId(), event.pid, { accept: event.accept }).subscribe({
-      next: (updated: CampaignParticipant) => {
-        this.participants.set(
-          this.participants().map((p) => (p.id === updated.id ? updated : p)),
-        );
-      },
-    });
+    this.campaignsService
+      .validateParticipant(this.campaignId(), event.pid, {
+        accept: event.accept,
+      })
+      .subscribe({
+        next: (updated: CampaignParticipant) => {
+          this.participants.set(
+            this.participants().map((p) => (p.id === updated.id ? updated : p)),
+          );
+        },
+      });
   }
 
   onRemoveParticipant(pid: number): void {
@@ -258,14 +305,18 @@ export class CampaignDetail implements OnInit {
     this.pendingRemoveParticipant.set(null);
     if (!participant) return;
 
-    this.participants.update((list) => list.filter((p) => p.id !== participant.id));
+    this.participants.update((list) =>
+      list.filter((p) => p.id !== participant.id),
+    );
 
-    this.campaignsService.removeParticipant(this.campaignId(), participant.id).subscribe({
-      error: () => {
-        this.error.set('Erreur lors du retrait du participant.');
-        this.loadParticipants();
-      },
-    });
+    this.campaignsService
+      .removeParticipant(this.campaignId(), participant.id)
+      .subscribe({
+        error: () => {
+          this.error.set('Erreur lors du retrait du participant.');
+          this.loadParticipants();
+        },
+      });
   }
 
   onPromote(pid: number): void {
@@ -314,7 +365,7 @@ export class CampaignDetail implements OnInit {
         this.stateTransitioning.set(false);
       },
       error: () => {
-        this.error.set('Erreur lors du changement d\'état.');
+        this.error.set("Erreur lors du changement d'état.");
         this.stateTransitioning.set(false);
       },
     });
@@ -329,16 +380,20 @@ export class CampaignDetail implements OnInit {
     this.participantJournalEntries.set([]);
     this.loadingParticipantJournal.set(true);
 
-    this.campaignsService.getParticipantJournal(this.campaignId(), pid).subscribe({
-      next: (entries: ParticipantJournalEntryDto[]) => {
-        this.participantJournalEntries.set(entries);
-        this.loadingParticipantJournal.set(false);
-      },
-      error: () => {
-        this.error.set('Erreur lors du chargement de l\'historique du participant.');
-        this.loadingParticipantJournal.set(false);
-      },
-    });
+    this.campaignsService
+      .getParticipantJournal(this.campaignId(), pid)
+      .subscribe({
+        next: (entries: ParticipantJournalEntryDto[]) => {
+          this.participantJournalEntries.set(entries);
+          this.loadingParticipantJournal.set(false);
+        },
+        error: () => {
+          this.error.set(
+            "Erreur lors du chargement de l'historique du participant.",
+          );
+          this.loadingParticipantJournal.set(false);
+        },
+      });
   }
 
   /**
@@ -377,14 +432,16 @@ export class CampaignDetail implements OnInit {
 
   onConfirmChangeTeam(teamId: number | null): void {
     this.showChangeTeamModal.set(false);
-    this.campaignsService.updateMyTeam(this.campaignId(), { teamId }).subscribe({
-      next: (updated: CampaignParticipant) => {
-        this.participants.set(
-          this.participants().map((p) => (p.id === updated.id ? updated : p)),
-        );
-      },
-      error: () => this.error.set('Erreur lors du changement d\'équipe.'),
-    });
+    this.campaignsService
+      .updateMyTeam(this.campaignId(), { teamId })
+      .subscribe({
+        next: (updated: CampaignParticipant) => {
+          this.participants.set(
+            this.participants().map((p) => (p.id === updated.id ? updated : p)),
+          );
+        },
+        error: () => this.error.set("Erreur lors du changement d'équipe."),
+      });
   }
 
   openEditCampaignModal(): void {
@@ -411,24 +468,30 @@ export class CampaignDetail implements OnInit {
    * en cas d'échec : le message d'erreur reste affiché inline, pour correction
    * sans réouverture.
    */
-  onConfirmEditCampaign({ nameBudget, houseRules }: EditCampaignSubmission): void {
+  onConfirmEditCampaign({
+    nameBudget,
+    houseRules,
+  }: EditCampaignSubmission): void {
     this.savingCampaign.set(true);
     this.editCampaignError.set('');
 
     const saveHouseRules = (): void => {
-      this.campaignsService.setHouseRules(this.campaignId(), { houseRules }).subscribe({
-        next: (updated: Campaign) => {
-          this.campaign.set(updated);
-          this.showEditCampaignModal.set(false);
-          this.savingCampaign.set(false);
-        },
-        error: (err: { error?: { message?: string } }) => {
-          this.editCampaignError.set(
-            err.error?.message ?? 'Erreur lors de la sauvegarde des règles maison.',
-          );
-          this.savingCampaign.set(false);
-        },
-      });
+      this.campaignsService
+        .setHouseRules(this.campaignId(), { houseRules })
+        .subscribe({
+          next: (updated: Campaign) => {
+            this.campaign.set(updated);
+            this.showEditCampaignModal.set(false);
+            this.savingCampaign.set(false);
+          },
+          error: (err: { error?: { message?: string } }) => {
+            this.editCampaignError.set(
+              err.error?.message ??
+                'Erreur lors de la sauvegarde des règles maison.',
+            );
+            this.savingCampaign.set(false);
+          },
+        });
     };
 
     if (nameBudget) {
@@ -439,7 +502,8 @@ export class CampaignDetail implements OnInit {
         },
         error: (err: { error?: { message?: string } }) => {
           this.editCampaignError.set(
-            err.error?.message ?? 'Erreur lors de la modification de la saison.',
+            err.error?.message ??
+              'Erreur lors de la modification de la saison.',
           );
           this.savingCampaign.set(false);
         },
@@ -460,7 +524,8 @@ export class CampaignDetail implements OnInit {
 
     this.campaignsService.remove(this.campaignId()).subscribe({
       next: () => this.router.navigate(['/campaigns']),
-      error: () => this.error.set('Erreur lors de la suppression de la saison.'),
+      error: () =>
+        this.error.set('Erreur lors de la suppression de la saison.'),
     });
   }
 }

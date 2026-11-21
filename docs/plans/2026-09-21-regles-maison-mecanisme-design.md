@@ -58,16 +58,24 @@ class HouseRules {
 
   /** Depuis une saisie utilisateur — validKeys est le catalogue COURANT (liste des
    *  nom_interne), fourni par l'appelant. Rejette toute clé absente. */
-  static fromUserInput(keys: string[], validKeys: readonly string[]): HouseRules {
+  static fromUserInput(
+    keys: string[],
+    validKeys: readonly string[],
+  ): HouseRules {
     const valid = new Set(validKeys);
     for (const k of keys) {
-      if (!valid.has(k)) throw new DomainException(`Règle maison inconnue : "${k}".`);
+      if (!valid.has(k))
+        throw new DomainException(`Règle maison inconnue : "${k}".`);
     }
     return new HouseRules(new Set(keys));
   }
 
-  isEnabled(nomInterne: string): boolean { return this.enabled.has(nomInterne); }
-  toArray(): string[] { return [...this.enabled]; }
+  isEnabled(nomInterne: string): boolean {
+    return this.enabled.has(nomInterne);
+  }
+  toArray(): string[] {
+    return [...this.enabled];
+  }
 }
 ```
 
@@ -181,9 +189,9 @@ Nouvelle méthode publique, hook polymorphe (§5). Déroulement :
 3. Pour chaque `RankingAssignedEvent`, calcule `championshipPointsThisGame` en
    sommant l'accesseur polymorphe (ci-dessous) sur tout son journal filtré par ce
    `participantId`, construit l'`entry`, appelle `strategy.isEligible(entry, {
-   classified })`.
+classified })`.
 4. Pour chaque participant éligible : `new ResistanceContactedEvent(0, this.id,
-   participantId, 0, strategy.key)`, journalisé via `this.addEvent(...)` (donc
+participantId, 0, strategy.key)`, journalisé via `this.addEvent(...)` (donc
    revalidé par `canAccept`, comme tout événement).
 5. Retourne les événements créés (jamais persistés ici — cf. §6).
 
@@ -386,6 +394,7 @@ noté et accepté sur la carte RM-4 elle-même.
 
 Conformément à CLAUDE.md — chaque carte d'exécution met à jour la doc au fil de
 l'implémentation réelle, pas ce document de conception :
+
 - [docs/spec/CAMPAIGN.md](../spec/CAMPAIGN.md) — nouvelle section « Règles maison »
   (RM-3 pour le réglage, RM-5 pour R1), mise à jour de la section « Limitations
   connues » si pertinent.

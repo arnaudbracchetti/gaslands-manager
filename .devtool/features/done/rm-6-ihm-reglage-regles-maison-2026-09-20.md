@@ -1,15 +1,16 @@
 ---
-id: "rm-6-ihm-reglage-regles-maison-2026-09-20"
-status: "done"
-priority: "medium"
+id: 'rm-6-ihm-reglage-regles-maison-2026-09-20'
+status: 'done'
+priority: 'medium'
 assignee: null
 dueDate: null
-created: "2026-09-20T10:02:28.000Z"
-modified: "2026-09-25T00:00:00.000Z"
-completedAt: "2026-09-25T00:00:00.000Z"
-labels: ["regles-maison", "mode-campagne", "frontend", "wayfinder:task"]
-order: "ac"
+created: '2026-09-20T10:02:28.000Z'
+modified: '2026-09-25T00:00:00.000Z'
+completedAt: '2026-09-25T00:00:00.000Z'
+labels: ['regles-maison', 'mode-campagne', 'frontend', 'wayfinder:task']
+order: 'ac'
 ---
+
 # RM-6 — IHM : régler les règles maison d'une campagne
 
 Carte parente : [Carte — Règles maison](./regles-maison-carte-2026-09-20.md)
@@ -52,6 +53,7 @@ réutilisation en lecture seule par RM-7, désormais débloquée, sans dupliquer
 rendu.
 
 Deux points d'intégration, deux mécaniques de sauvegarde différentes :
+
 - `CampaignForm` (création) — clés cochées accumulées dans un signal local,
   incluses dans le `CreateCampaignDto` émis à la soumission.
 - `EditCampaignModal` (édition) — chaque bascule est auto-sauvegardée

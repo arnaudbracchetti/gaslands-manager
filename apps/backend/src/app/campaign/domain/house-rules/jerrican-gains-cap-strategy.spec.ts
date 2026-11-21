@@ -42,7 +42,7 @@ describe('CappedJerricanGainsStrategy', () => {
     expect(strategy.clamp(6, JERRICAN_GAINS_CAP_AMOUNT + 5)).toBe(0);
   });
 
-  it('crédite exactement jusqu\'au plafond quand la demande dépasse le reliquat disponible', () => {
+  it("crédite exactement jusqu'au plafond quand la demande dépasse le reliquat disponible", () => {
     const strategy = new CappedJerricanGainsStrategy();
 
     expect(strategy.clamp(20, 0)).toBe(JERRICAN_GAINS_CAP_AMOUNT);

@@ -48,10 +48,10 @@ Une campagne traverse trois états, dans cet ordre, sans retour en arrière :
 
 ## Changer d'équipe engagée
 
-Tant que la campagne est *En construction*, chaque participant peut changer
+Tant que la campagne est _En construction_, chaque participant peut changer
 l'équipe qu'il engage parmi ses propres équipes, depuis le sélecteur "Votre
 équipe" de l'écran de la campagne. Cela devient impossible dès que la
-campagne passe *En cours*.
+campagne passe _En cours_.
 
 ## Classement
 

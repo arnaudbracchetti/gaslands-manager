@@ -9,11 +9,21 @@
  * Pour l'US1, seules la liste et la création sont implémentées (pas d'édition,
  * pas de suppression, pas de navigation vers un détail).
  */
-import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  WritableSignal,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CampaignsService } from './campaigns.service';
-import { Campaign, CreateCampaignDto, HouseRuleDefinition } from './campaign.model';
+import {
+  Campaign,
+  CreateCampaignDto,
+  HouseRuleDefinition,
+} from './campaign.model';
 
 import { CampaignCard } from './campaign-card/campaign-card';
 import { CampaignForm } from './campaign-form/campaign-form';
@@ -56,7 +66,9 @@ export class Campaigns implements OnInit {
   userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
 
   /** Catalogue des règles maison, pour CampaignForm (chargement indépendant, non bloquant). */
-  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
+  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<
+    HouseRuleDefinition[]
+  >([]);
 
   /** Code d'invitation saisi dans la modale "Rejoindre via code" */
   joinCode: WritableSignal<string> = signal('');
@@ -68,7 +80,9 @@ export class Campaigns implements OnInit {
   pendingCampaignIds: WritableSignal<Set<number>> = signal(new Set<number>());
 
   /** campaignId → nombre de demandes PENDING à valider, pour les saisons organisées (US4) */
-  organizedPendingCounts: WritableSignal<Map<number, number>> = signal(new Map<number, number>());
+  organizedPendingCounts: WritableSignal<Map<number, number>> = signal(
+    new Map<number, number>(),
+  );
 
   ngOnInit(): void {
     this.loadCampaigns();
@@ -89,7 +103,9 @@ export class Campaigns implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossible de charger vos saisons. Vérifiez votre connexion.');
+        this.error.set(
+          'Impossible de charger vos saisons. Vérifiez votre connexion.',
+        );
         this.loading.set(false);
       },
     });
@@ -112,7 +128,8 @@ export class Campaigns implements OnInit {
    */
   private loadPendingRequests(): void {
     this.campaignsService.getPending().subscribe({
-      next: (campaigns: Campaign[]) => this.pendingCampaignIds.set(new Set(campaigns.map((s) => s.id))),
+      next: (campaigns: Campaign[]) =>
+        this.pendingCampaignIds.set(new Set(campaigns.map((s) => s.id))),
       error: () => this.pendingCampaignIds.set(new Set()),
     });
   }
@@ -126,7 +143,9 @@ export class Campaigns implements OnInit {
     this.campaignsService.getOrganizingPendingRequests().subscribe({
       next: (campaigns: Campaign[]) => {
         const counts = new Map<number, number>();
-        campaigns.forEach((campaign) => counts.set(campaign.id, campaign.pendingRequestsCount ?? 0));
+        campaigns.forEach((campaign) =>
+          counts.set(campaign.id, campaign.pendingRequestsCount ?? 0),
+        );
         this.organizedPendingCounts.set(counts);
       },
       error: () => this.organizedPendingCounts.set(new Map()),
@@ -191,7 +210,9 @@ export class Campaigns implements OnInit {
         this.creatingTeam.set(false);
       },
       error: () => {
-        this.error.set('Erreur lors de la création de l\'équipe. Veuillez réessayer.');
+        this.error.set(
+          "Erreur lors de la création de l'équipe. Veuillez réessayer.",
+        );
         this.creatingTeam.set(false);
       },
     });

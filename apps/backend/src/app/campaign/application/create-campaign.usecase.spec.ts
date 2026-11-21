@@ -26,7 +26,11 @@ function makeFixture(vehiclesCost: number, isTeamEngaged = false) {
     validKeys: vi.fn().mockReturnValue(['distribution_points_resistance']),
   } as unknown as HouseRuleCatalogService;
 
-  const useCase = new CreateCampaignUseCase(campaignRepo, teamRepo, houseRuleCatalog);
+  const useCase = new CreateCampaignUseCase(
+    campaignRepo,
+    teamRepo,
+    houseRuleCatalog,
+  );
   return { useCase, teamRepo, campaignRepo, houseRuleCatalog, team };
 }
 
@@ -34,9 +38,21 @@ describe('CreateCampaignUseCase', () => {
   it('crée la campagne avec le budget fourni', async () => {
     const { useCase, campaignRepo } = makeFixture(12);
 
-    await useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 30 });
+    await useCase.execute({
+      userId: 42,
+      name: 'Coupe Verney',
+      teamId: 3,
+      budget: 30,
+    });
 
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 30, []);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
+      'Coupe Verney',
+      expect.any(String),
+      42,
+      3,
+      30,
+      [],
+    );
   });
 
   it('applique le défaut 50 si aucun budget fourni', async () => {
@@ -44,7 +60,14 @@ describe('CreateCampaignUseCase', () => {
 
     await useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3 });
 
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, 3, 50, []);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
+      'Coupe Verney',
+      expect.any(String),
+      42,
+      3,
+      50,
+      [],
+    );
   });
 
   it('crée sans équipe (organisateur sans équipe engagée)', async () => {
@@ -53,22 +76,39 @@ describe('CreateCampaignUseCase', () => {
     await useCase.execute({ userId: 42, name: 'Coupe Verney' });
 
     expect(teamRepo.findByIdForUser).not.toHaveBeenCalled();
-    expect(campaignRepo.createCampaign).toHaveBeenCalledWith('Coupe Verney', expect.any(String), 42, null, 50, []);
+    expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
+      'Coupe Verney',
+      expect.any(String),
+      42,
+      null,
+      50,
+      [],
+    );
   });
 
-  it('refuse si l\'équipe du créateur dépasse le budget choisi', async () => {
-    const { useCase } = makeFixture(60);  // 5 véhicules à 12 = 60
+  it("refuse si l'équipe du créateur dépasse le budget choisi", async () => {
+    const { useCase } = makeFixture(60); // 5 véhicules à 12 = 60
 
     await expect(
-      useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 50 }),
+      useCase.execute({
+        userId: 42,
+        name: 'Coupe Verney',
+        teamId: 3,
+        budget: 50,
+      }),
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('refuse si l\'équipe est déjà engagée dans une autre campagne', async () => {
+  it("refuse si l'équipe est déjà engagée dans une autre campagne", async () => {
     const { useCase } = makeFixture(12, true);
 
     await expect(
-      useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 50 }),
+      useCase.execute({
+        userId: 42,
+        name: 'Coupe Verney',
+        teamId: 3,
+        budget: 50,
+      }),
     ).rejects.toThrow(ConflictException);
   });
 
@@ -84,7 +124,12 @@ describe('CreateCampaignUseCase', () => {
     });
 
     expect(campaignRepo.createCampaign).toHaveBeenCalledWith(
-      'Coupe Verney', expect.any(String), 42, 3, 30, ['distribution_points_resistance'],
+      'Coupe Verney',
+      expect.any(String),
+      42,
+      3,
+      30,
+      ['distribution_points_resistance'],
     );
   });
 
@@ -92,7 +137,13 @@ describe('CreateCampaignUseCase', () => {
     const { useCase, campaignRepo } = makeFixture(12);
 
     await expect(
-      useCase.execute({ userId: 42, name: 'Coupe Verney', teamId: 3, budget: 30, houseRules: ['clef_inconnue'] }),
+      useCase.execute({
+        userId: 42,
+        name: 'Coupe Verney',
+        teamId: 3,
+        budget: 30,
+        houseRules: ['clef_inconnue'],
+      }),
     ).rejects.toThrow(BadRequestException);
     expect(campaignRepo.createCampaign).not.toHaveBeenCalled();
   });

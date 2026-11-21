@@ -136,7 +136,9 @@ describe('AtelierPage', () => {
 
     expect(mockCampaignsService.getWorkshop).toHaveBeenCalledWith(3);
     expect(mockCampaignsService.getOne).toHaveBeenCalledWith(3);
-    expect(mockCatalogService.getSponsorByName).toHaveBeenCalledWith('Rutherford');
+    expect(mockCatalogService.getSponsorByName).toHaveBeenCalledWith(
+      'Rutherford',
+    );
     expect(component.loading()).toBe(false);
     expect(component.wallet()).toBe(10);
   });
@@ -171,11 +173,19 @@ describe('AtelierPage', () => {
 
     component.onManage(5);
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/campaigns', 3, 'atelier', 'vehicles', 5]);
+    expect(navigateSpy).toHaveBeenCalledWith([
+      '/campaigns',
+      3,
+      'atelier',
+      'vehicles',
+      5,
+    ]);
   });
 
   it("affiche une erreur si le chargement de l'atelier échoue", () => {
-    mockCampaignsService.getWorkshop.mockReturnValue(throwError(() => new Error('Network error')));
+    mockCampaignsService.getWorkshop.mockReturnValue(
+      throwError(() => new Error('Network error')),
+    );
 
     createFixture('3');
 

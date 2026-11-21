@@ -17,7 +17,11 @@ export class CampaignOrm {
   name: string;
 
   // État de la campagne — cf. campaign.enums.ts pour le cycle de vie complet
-  @Column({ type: 'enum', enum: CampaignState, default: CampaignState.EN_CONSTRUCTION })
+  @Column({
+    type: 'enum',
+    enum: CampaignState,
+    default: CampaignState.EN_CONSTRUCTION,
+  })
   state: CampaignState;
 
   // Token partageable hors-app permettant de demander à rejoindre la campagne.

@@ -33,10 +33,14 @@ export class HouseRules {
    * `validKeys` est le catalogue COURANT (liste de `nom_interne`), fourni par
    * l'appelant. Rejette toute clé absente : jamais ignorée silencieusement.
    */
-  static fromUserInput(keys: readonly string[], validKeys: readonly string[]): HouseRules {
+  static fromUserInput(
+    keys: readonly string[],
+    validKeys: readonly string[],
+  ): HouseRules {
     const valid = new Set(validKeys);
     for (const k of keys) {
-      if (!valid.has(k)) throw new DomainException(`Règle maison inconnue : "${k}".`);
+      if (!valid.has(k))
+        throw new DomainException(`Règle maison inconnue : "${k}".`);
     }
     return new HouseRules(new Set(keys));
   }

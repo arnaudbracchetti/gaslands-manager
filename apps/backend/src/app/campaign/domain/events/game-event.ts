@@ -75,9 +75,14 @@ export abstract class GameEvent {
     return false;
   }
 
-  protected findParticipant(participants: readonly CampaignParticipant[]): CampaignParticipant {
+  protected findParticipant(
+    participants: readonly CampaignParticipant[],
+  ): CampaignParticipant {
     const p = participants.find((x) => x.id === this.participantId);
-    if (!p) throw new DomainException(`Participant #${this.participantId} introuvable dans la saison`);
+    if (!p)
+      throw new DomainException(
+        `Participant #${this.participantId} introuvable dans la saison`,
+      );
     return p;
   }
 

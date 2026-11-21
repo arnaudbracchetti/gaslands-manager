@@ -64,14 +64,14 @@ export class GameEventOrm {
 
   // ── Payload : VehicleDestroyedEvent ────────────────────────────────────────
   @Column({ type: 'varchar', nullable: true })
-  weightClass!: string | null;  // WeightClass enum value
+  weightClass!: string | null; // WeightClass enum value
 
   // ── Payload : WalletMovementEvent ──────────────────────────────────────────
   @Column({ type: 'int', nullable: true })
   amount!: number | null;
 
   @Column({ type: 'varchar', nullable: true })
-  walletReason!: string | null;  // WalletReason enum value
+  walletReason!: string | null; // WalletReason enum value
 
   // ── Payload commun : véhicule / arme ciblé ─────────────────────────────────
   @Column({ type: 'int', nullable: true })
@@ -94,20 +94,20 @@ export class GameEventOrm {
   chocsBefore!: number | null;
 
   @Column({ type: 'varchar', nullable: true })
-  wreckResult!: string | null;  // WreckResult enum value
+  wreckResult!: string | null; // WreckResult enum value
 
   @Column({ type: 'int', nullable: true })
   chocsGained!: number | null;
 
   // ── Payload : EquipmentChangedEvent ────────────────────────────────────────
   @Column({ type: 'varchar', nullable: true })
-  operation!: string | null;      // 'BUY' | 'SELL'
+  operation!: string | null; // 'BUY' | 'SELL'
 
   @Column({ type: 'varchar', nullable: true })
-  entityType!: string | null;     // 'VEHICLE' | 'WEAPON'
+  entityType!: string | null; // 'VEHICLE' | 'WEAPON'
 
   @Column({ type: 'varchar', nullable: true })
-  nomInterne!: string | null;     // nom_interne du véhicule ou de l'arme
+  nomInterne!: string | null; // nom_interne du véhicule ou de l'arme
 
   @Column({ type: 'int', nullable: true })
   cost!: number | null;

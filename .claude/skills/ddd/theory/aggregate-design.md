@@ -9,12 +9,12 @@ Exemples neutres : une **commande** (`Order`) et ses **lignes** (`OrderLine`), u
 
 > "Cet objet peut-il être créé, modifié et supprimé indépendamment ?"
 
-| Objet | Peut exister seul ? | Verdict |
-|-------|---------------------|---------|
-| `Order` | Oui — créée directement | Agrégat racine ✅ |
-| `OrderLine` | Non — une ligne sans commande n'a aucun sens | Entité enfant ✅ |
-| `Account` | Oui — créé directement | Agrégat racine ✅ |
-| `Transaction` | Non — une transaction sans compte n'a aucun sens | Entité enfant ✅ |
+| Objet         | Peut exister seul ?                              | Verdict           |
+| ------------- | ------------------------------------------------ | ----------------- |
+| `Order`       | Oui — créée directement                          | Agrégat racine ✅ |
+| `OrderLine`   | Non — une ligne sans commande n'a aucun sens     | Entité enfant ✅  |
+| `Account`     | Oui — créé directement                           | Agrégat racine ✅ |
+| `Transaction` | Non — une transaction sans compte n'a aucun sens | Entité enfant ✅  |
 
 ### Test 2 — Invariantes avec ses propres données
 
@@ -55,6 +55,7 @@ get remaining(): number {
 **Symptôme :** les règles métier nécessitent des données d'un autre agrégat pour être validées.
 
 **Exemple :** `OrderLine` comme agrégat racine.
+
 - `changeQuantity` doit vérifier le plafond → lit `order.plafond` → dépendance inter-agrégats
 - Solution : fusionner `OrderLine` dans `Order` (la ligne devient une entité enfant)
 
@@ -72,6 +73,7 @@ d'entités pour une simple mutation, ou contient un enfant qu'aucune règle de l
 consulte jamais.
 
 **Exemple :** si `Account` incluait tout l'historique de transactions sur plusieurs années.
+
 - Une simple mutation chargerait l'arbre entier → surcoût mémoire/stockage inutile
 - Un enfant qu'aucun invariant de `Account` ne consulte (ex. une transaction vieille de 3 ans)
   n'a pas besoin d'être DANS l'agrégat — c'est un read model, pas une entité enfant
@@ -103,7 +105,8 @@ class OrderService {
 // ✅ Règle métier dans l'agrégat
 class Order {
   addLine(itemType, qty) {
-    if (itemType.unitPrice * qty > this.remaining) // ← règle ici, dans le domaine
+    if (itemType.unitPrice * qty > this.remaining)
+      // ← règle ici, dans le domaine
       throw new DomainException('Plafond dépassé');
     this._lines.push(new OrderLine(itemType, qty));
   }
@@ -133,12 +136,12 @@ class OrderRepository {
 
 ```typescript
 // ❌ Accès direct à une ligne depuis la frontière
-const line = await lineRepo.findOne(lineId);       // OrderLine est une entité enfant
-await lineRepo.save({ ...line, quantity: qty });   // bypass l'agrégat
+const line = await lineRepo.findOne(lineId); // OrderLine est une entité enfant
+await lineRepo.save({ ...line, quantity: qty }); // bypass l'agrégat
 
 // ✅ Toujours passer par l'agrégat racine
 const order = await orderRepo.findByLineId(lineId);
-order.changeLineQuantity(lineId, qty);             // via l'agrégat
+order.changeLineQuantity(lineId, qty); // via l'agrégat
 await orderRepo.save(order);
 ```
 
@@ -147,7 +150,7 @@ await orderRepo.save(order);
 ```typescript
 // ❌ Getter qui dépend d'une donnée transiente non garantie
 class OrderLine {
-  catalogItem?: CatalogItem;                 // peuplé "parfois" par un service
+  catalogItem?: CatalogItem; // peuplé "parfois" par un service
 
   get total(): number {
     return (this.catalogItem?.price ?? 0) * this.quantity; // retourne 0 si oublié !
@@ -156,8 +159,13 @@ class OrderLine {
 
 // ✅ Value Object qui encapsule la donnée de référence dès la création
 class OrderLine {
-  constructor(readonly itemType: ItemType, readonly quantity: number) {}
-  get total(): number { return this.itemType.unitPrice * this.quantity; }
+  constructor(
+    readonly itemType: ItemType,
+    readonly quantity: number,
+  ) {}
+  get total(): number {
+    return this.itemType.unitPrice * this.quantity;
+  }
 }
 // Le VO est passé en argument ; l'entité ne dépend pas d'une hydratation extérieure.
 ```
@@ -183,7 +191,9 @@ class AddLineUseCase {
 class Order {
   addLine(itemType, qty) {
     if (this._status !== OrderStatus.OPEN)
-      throw new DomainException('Commande figée : plus de modification possible');
+      throw new DomainException(
+        'Commande figée : plus de modification possible',
+      );
     // ...
   }
 }
@@ -193,25 +203,32 @@ class Order {
 ### Anti-pattern 6 — Le validateur partiel qui remplace un validateur complet
 
 Piège classique en **déplaçant** une règle vers un nouvel emplacement : le nouveau contrôle ne voit
-qu'une *partie* des données que voyait l'ancien.
+qu'une _partie_ des données que voyait l'ancien.
 
 ```typescript
 // Contexte : une ressource (la capacité) est consommée par DEUX familles d'enfants.
 // ❌ On remonte le contrôle dans un composant qui ne connaît qu'UNE famille
-class SpaceChecker {           // ne compte que le "matériel", pas les "rations"
-  fits(gear, capacity) { return sum(gear) <= capacity; }
+class SpaceChecker {
+  // ne compte que le "matériel", pas les "rations"
+  fits(gear, capacity) {
+    return sum(gear) <= capacity;
+  }
 }
 // → un sac qui dépasse la capacité À CAUSE des rations passe : régression silencieuse.
 
 // ✅ Le contrôle vit là où TOUTES les données consommatrices sont disponibles
 class Backpack {
-  private get usedSpace() { return sum(this._gear) + sum(this._rations); } // les deux familles
-  canAddGear(item) { return item.size <= this.capacity - this.usedSpace; }
+  private get usedSpace() {
+    return sum(this._gear) + sum(this._rations);
+  } // les deux familles
+  canAddGear(item) {
+    return item.size <= this.capacity - this.usedSpace;
+  }
 }
 ```
 
 **Règle :** en déplaçant une règle, lister les données qu'utilisait l'ancien contrôle et vérifier que
-le nouvel emplacement les possède *toutes*.
+le nouvel emplacement les possède _toutes_.
 
 ### Anti-pattern 8 — Tout sur la racine (l'agrégat-dieu)
 
@@ -219,7 +236,7 @@ Une fois la frontière de l'agrégat fixée (les 3 tests ci-dessus), la question
 là : il faut **réappliquer le Test 2, opération par opération**, à l'intérieur même de
 l'agrégat. Une racine qui absorbe systématiquement toute méthode — même celles qui ne
 consultent que les données d'UNE seule entité enfant — devient un agrégat-dieu : symétrique de
-l'Anti-pattern 1 (logique dans le service au lieu du domaine), mais commis *à l'intérieur* du
+l'Anti-pattern 1 (logique dans le service au lieu du domaine), mais commis _à l'intérieur_ du
 domaine plutôt qu'à sa frontière.
 
 ```typescript
@@ -228,8 +245,9 @@ class Order {
   cancelLine(lineId: string, reason: string): void {
     const line = this._lines.find((l) => l.id === lineId);
     if (!line) throw new DomainException('Ligne introuvable');
-    if (line.status === 'SHIPPED') throw new DomainException('Ligne déjà expédiée');
-    line.status = 'CANCELLED';        // Order manipule les champs internes de OrderLine
+    if (line.status === 'SHIPPED')
+      throw new DomainException('Ligne déjà expédiée');
+    line.status = 'CANCELLED'; // Order manipule les champs internes de OrderLine
     line.cancelReason = reason;
     line.cancelledAt = new Date();
   }
@@ -240,7 +258,8 @@ class Order {
 // ✅ La règle vit sur l'entité qui possède les données qu'elle consulte
 class OrderLine {
   cancel(reason: string): void {
-    if (this._status === 'SHIPPED') throw new DomainException('Ligne déjà expédiée');
+    if (this._status === 'SHIPPED')
+      throw new DomainException('Ligne déjà expédiée');
     this._status = 'CANCELLED';
     this._cancelReason = reason;
     this._cancelledAt = new Date();
@@ -255,14 +274,15 @@ class Order {
 }
 ```
 
-**Règle** : pour chaque opération, demander *"quel objet — la racine ou une entité enfant —
-possède les données que cette opération consulte ?"* (même question que le Test 2, appliquée à
+**Règle** : pour chaque opération, demander _"quel objet — la racine ou une entité enfant —
+possède les données que cette opération consulte ?"_ (même question que le Test 2, appliquée à
 l'intérieur de l'agrégat plutôt qu'à sa frontière externe) :
+
 - Une seule entité enfant suffit → la méthode vit **sur cette entité**. La racine ne garde que
   la navigation (`findX(id)`) et la délégation.
 - Plusieurs enfants ou un invariant qui les compare entre eux (ex. "un seul élément actif à la
   fois parmi tous les enfants") → ça reste sur la racine, c'est un vrai rôle de coordination.
-- La racine délègue une opération à un enfant mais doit d'abord trouver *lequel* selon un
+- La racine délègue une opération à un enfant mais doit d'abord trouver _lequel_ selon un
   critère qui porte sur TOUS les enfants (ex. "l'unique ligne encore en brouillon") → ce
   filtrage-là reste sur la racine (elle seule voit toute la collection) ; l'opération elle-même,
   une fois l'enfant identifié, part sur l'enfant.
@@ -305,7 +325,9 @@ de la nature de ce quelque chose. Trois cas, à ne pas confondre :
    }
    class OrderLine {
      private context: OrderPolicyContext | null = null;
-     attachContext(context: OrderPolicyContext): void { this.context = context; }
+     attachContext(context: OrderPolicyContext): void {
+       this.context = context;
+     }
      effectivePrice(): number {
        const policy = this.context?.discountPolicy ?? DiscountPolicy.none();
        return policy.apply(this._basePrice);
@@ -316,14 +338,14 @@ de la nature de ce quelque chose. Trois cas, à ne pas confondre :
      constructor(lines: OrderLine[], discountPolicy: DiscountPolicy) {
        this.discountPolicy = discountPolicy;
        this._lines = lines;
-       for (const line of lines) line.attachContext(this);   // même idiome que attachTeam/attachParent
+       for (const line of lines) line.attachContext(this); // même idiome que attachTeam/attachParent
      }
    }
    ```
 
 3. **Port d'infrastructure** (hasher de mot de passe, horloge, générateur aléatoire) → **paramètre
-   de méthode** (double dispatch, cf. Vernon *Implementing DDD*) — seul cas où un objet technique
-   traverse la frontière du domaine légitimement, précisément parce qu'il n'est *pas* une donnée
+   de méthode** (double dispatch, cf. Vernon _Implementing DDD_) — seul cas où un objet technique
+   traverse la frontière du domaine légitimement, précisément parce qu'il n'est _pas_ une donnée
    ni une politique métier mais une capacité fournie par l'extérieur, à chaque appel qui en a besoin.
 
 Ne pas transposer le cas 3 au cas 2 : un `IPasswordHasher` passé en paramètre ne justifie pas de
@@ -338,11 +360,12 @@ GoF (« le client crée et passe la ConcreteStrategy ») est **fausse dans un ag
 la variante dépend d'un état ou d'une configuration que le domaine possède déjà (cas 2 ci-dessus).
 Un appelant extérieur (use case, controller) qui choisit la Strategy fait fuir une règle métier
 hors du domaine — c'est l'Anti-pattern 1 sous une forme déguisée : la « règle » n'est pas le calcul
-lui-même mais *quel calcul appliquer*.
+lui-même mais _quel calcul appliquer_.
 
 **Règle** : si la variante dépend de l'état/de la configuration du domaine, la sélection est
 **interne au domaine**, jamais exposée dans la signature de la méthode métier. Elle passe par une
 **Factory pure** (aucune dépendance de framework, cf. règle transversale 4) :
+
 - Une Factory **par famille de variantes**, pas une par point de calcul — si plusieurs points de
   calcul sont concernés par la même configuration, une Abstract Factory expose une méthode de
   création par point (`createXStrategy()`, `createYStrategy()`), nommée pour ce qu'elle fait,
@@ -368,7 +391,7 @@ que celui sur lequel elles opèrent.
 class OrderService {
   async update(id, dto) {
     const order = await this.repo.findOne(id);
-    Object.assign(order, dto);   // affecte les champs directement → saute les invariants
+    Object.assign(order, dto); // affecte les champs directement → saute les invariants
     await this.repo.save(order); // ex : un champ "verrouillé après confirmation" est écrasé
   }
 }
@@ -376,7 +399,7 @@ class OrderService {
 // réintroduit un contournement d'invariant. → le supprimer.
 
 // ✅ Toute mutation passe par une méthode de l'agrégat qui protège ses invariants
-order.rename(dto.name);   // lève si l'état interdit le renommage
+order.rename(dto.name); // lève si l'état interdit le renommage
 await orderRepo.save(order);
 ```
 

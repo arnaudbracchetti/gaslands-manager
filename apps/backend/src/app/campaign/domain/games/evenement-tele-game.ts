@@ -31,7 +31,9 @@ export class EvenementTeleGame extends Game {
     super(id, campaignId, status, order, playedAt, events);
   }
 
-  override get type(): string { return 'EVENEMENT_TELE'; }
+  override get type(): string {
+    return 'EVENEMENT_TELE';
+  }
 
   override canAccept(event: GameEvent): boolean {
     if (this.status === GameStatus.PLANIFIE) {
@@ -48,7 +50,8 @@ export class EvenementTeleGame extends Game {
         // générée par le tirage (écran 3 du wizard), AVANT l'entrée en atelier
         // (`enterAtelier`, "Terminer"). Les autres entityType (VEHICLE/WEAPON/
         // IMPROVEMENT/ADVANTAGE) restent exclusivement réservés à l'ATELIER ci-dessous.
-        (event instanceof EquipmentChangedEvent && event.entityType === EquipmentEntityType.SEQUELLE) ||
+        (event instanceof EquipmentChangedEvent &&
+          event.entityType === EquipmentEntityType.SEQUELLE) ||
         event instanceof ResistanceContactedEvent ||
         event instanceof GatesCrossedEvent ||
         event instanceof VehicleDestroyedEvent ||
@@ -66,7 +69,10 @@ export class EvenementTeleGame extends Game {
       // docs/plans/2026-07-11-atelier-annulation-revente-design.md §1.
       // VehicleRenamedEvent référence un vehicleId sans surcharger targetsVehicle() —
       // limitation connue assumée, cf. sa doc et docs/plans/2026-07-17-vehicle-instance-name-design.md.
-      return event instanceof EquipmentChangedEvent || event instanceof VehicleRenamedEvent;
+      return (
+        event instanceof EquipmentChangedEvent ||
+        event instanceof VehicleRenamedEvent
+      );
     }
     return false;
   }
@@ -89,7 +95,8 @@ export class EvenementTeleGame extends Game {
    *    journalisé à ce stade) et interroge la Strategy, un participant à la fois.
    */
   override distributeResistance(): GameEvent[] {
-    const strategy = this.context.strategyFactory.createResistanceDistributionStrategy();
+    const strategy =
+      this.context.strategyFactory.createResistanceDistributionStrategy();
 
     const alreadyDistributed = this.events.some(
       (e) => e instanceof ResistanceContactedEvent && e.strategyKey !== null,
@@ -113,7 +120,13 @@ export class EvenementTeleGame extends Game {
         championshipPointsThisGame,
       };
       if (strategy.isEligible(entry, { classified })) {
-        const event = new ResistanceContactedEvent(0, this.id, ranking.participantId, 0, strategy.key);
+        const event = new ResistanceContactedEvent(
+          0,
+          this.id,
+          ranking.participantId,
+          0,
+          strategy.key,
+        );
         this.addEvent(event);
         events.push(event);
       }

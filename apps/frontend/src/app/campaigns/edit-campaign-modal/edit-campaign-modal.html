@@ -7,12 +7,12 @@
   [confirmLabel]="saving() ? 'Enregistrement...' : 'Enregistrer'"
   [confirmDisabled]="saving()"
   (confirmed)="onConfirm()"
-  (cancelled)="cancelled.emit()">
-
+  (cancelled)="cancelled.emit()"
+>
   <h2><app-icon concept="modifier" size="lg" /> Modifier la saison</h2>
 
   @if (displayError()) {
-    <div class="form-error">{{ displayError() }}</div>
+  <div class="form-error">{{ displayError() }}</div>
   }
 
   <!-- [readonly], pas [disabled] : FormsModule pilote lui-même la propriété DOM
@@ -21,7 +21,6 @@
        toute tentative de la fixer via une liaison séparée — [readonly] n'est
        géré par aucun ControlValueAccessor, donc jamais réécrit. -->
   <div class="form-grid">
-
     <div class="form-group">
       <label for="edit-campaign-name">Nom de la saison *</label>
       <input
@@ -30,7 +29,8 @@
         [class.is-readonly]="!canEditNameBudget()"
         [readonly]="!canEditNameBudget()"
         [ngModel]="formName()"
-        (ngModelChange)="formName.set($event)" />
+        (ngModelChange)="formName.set($event)"
+      />
     </div>
 
     <div class="form-group">
@@ -43,13 +43,16 @@
         [class.is-readonly]="!canEditNameBudget()"
         [readonly]="!canEditNameBudget()"
         [ngModel]="formBudget()"
-        (ngModelChange)="formBudget.set(+$event)" />
+        (ngModelChange)="formBudget.set(+$event)"
+      />
     </div>
 
     @if (!canEditNameBudget()) {
-      <div class="form-group form-group--full">
-        <p class="form-hint">Le nom et le budget ne sont modifiables qu'en construction.</p>
-      </div>
+    <div class="form-group form-group--full">
+      <p class="form-hint">
+        Le nom et le budget ne sont modifiables qu'en construction.
+      </p>
+    </div>
     }
 
     <!-- Règles maison — aucune contrainte d'état, contrairement à nom/budget ci-dessus.
@@ -59,9 +62,8 @@
         [definitions]="houseRuleCatalog()"
         [enabledKeys]="formHouseRules()"
         [locked]="saving()"
-        (toggled)="onHouseRuleToggled($event)" />
+        (toggled)="onHouseRuleToggled($event)"
+      />
     </div>
-
   </div>
-
 </app-modal-shell>

@@ -33,8 +33,24 @@ const mockCampaign: Campaign = {
 };
 
 const mockParticipants: CampaignParticipant[] = [
-  { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
-  { id: 2, userId: 43, teamId: 8, status: 'VALIDATED', isOrganizer: false, userName: 'Alice Martin', teamName: 'Scrap Kings' },
+  {
+    id: 1,
+    userId: 42,
+    teamId: 7,
+    status: 'VALIDATED',
+    isOrganizer: true,
+    userName: 'Jean Dupont',
+    teamName: 'Furies',
+  },
+  {
+    id: 2,
+    userId: 43,
+    teamId: 8,
+    status: 'VALIDATED',
+    isOrganizer: false,
+    userName: 'Alice Martin',
+    teamName: 'Scrap Kings',
+  },
 ];
 
 const mockVehicule: Vehicule = {
@@ -152,13 +168,18 @@ describe('ParticipantAtelierPage', () => {
     fixture.detectChanges();
   }
 
-  it('charge l\'atelier du PARTICIPANT CIBLÉ (pas le sien), le catalogue et les noms de campagne/participant', () => {
+  it("charge l'atelier du PARTICIPANT CIBLÉ (pas le sien), le catalogue et les noms de campagne/participant", () => {
     createFixture('3', '2');
 
-    expect(mockCampaignsService.getParticipantWorkshop).toHaveBeenCalledWith(3, 2);
+    expect(mockCampaignsService.getParticipantWorkshop).toHaveBeenCalledWith(
+      3,
+      2,
+    );
     expect(mockCampaignsService.getOne).toHaveBeenCalledWith(3);
     expect(mockCampaignsService.getParticipants).toHaveBeenCalledWith(3);
-    expect(mockCatalogService.getSponsorByName).toHaveBeenCalledWith('Rutherford');
+    expect(mockCatalogService.getSponsorByName).toHaveBeenCalledWith(
+      'Rutherford',
+    );
     expect(component.loading()).toBe(false);
     expect(component.wallet()).toBe(10);
     expect(component.participantName()).toBe('Alice Martin');
@@ -197,7 +218,9 @@ describe('ParticipantAtelierPage', () => {
     createFixture('3', '2');
 
     expect(component.teamName()).toBe('Scrap Kings');
-    expect(component.headerTitle()).toBe('Atelier de Scrap Kings (Alice Martin)');
+    expect(component.headerTitle()).toBe(
+      'Atelier de Scrap Kings (Alice Martin)',
+    );
     expect(component.breadcrumbs()).toEqual([
       { label: 'Mes Campagnes', route: ['/campaigns'] },
       { label: 'Les Terres Brûlées', route: ['/campaigns', '3'] },
@@ -216,7 +239,9 @@ describe('ParticipantAtelierPage', () => {
   });
 
   it("affiche une erreur si le chargement de l'atelier échoue", () => {
-    mockCampaignsService.getParticipantWorkshop.mockReturnValue(throwError(() => new Error('Network error')));
+    mockCampaignsService.getParticipantWorkshop.mockReturnValue(
+      throwError(() => new Error('Network error')),
+    );
 
     createFixture('3', '2');
 

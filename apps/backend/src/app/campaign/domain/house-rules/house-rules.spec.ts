@@ -13,7 +13,9 @@ describe('HouseRules', () => {
 
   describe('fromPersisted()', () => {
     it('hydrate les clés fournies sans validation', () => {
-      const rules = HouseRules.fromPersisted(['distribution_points_resistance']);
+      const rules = HouseRules.fromPersisted([
+        'distribution_points_resistance',
+      ]);
       expect(rules.isEnabled('distribution_points_resistance')).toBe(true);
     });
 
@@ -28,7 +30,10 @@ describe('HouseRules', () => {
     const validKeys = ['distribution_points_resistance', 'autre_regle'];
 
     it('accepte un ensemble de clés toutes présentes dans validKeys', () => {
-      const rules = HouseRules.fromUserInput(['distribution_points_resistance'], validKeys);
+      const rules = HouseRules.fromUserInput(
+        ['distribution_points_resistance'],
+        validKeys,
+      );
       expect(rules.isEnabled('distribution_points_resistance')).toBe(true);
       expect(rules.isEnabled('autre_regle')).toBe(false);
     });
@@ -39,13 +44,20 @@ describe('HouseRules', () => {
     });
 
     it('rejette une clé absente de validKeys', () => {
-      expect(() => HouseRules.fromUserInput(['clef_inconnue'], validKeys)).toThrow(DomainException);
-      expect(() => HouseRules.fromUserInput(['clef_inconnue'], validKeys)).toThrow(/clef_inconnue/);
+      expect(() =>
+        HouseRules.fromUserInput(['clef_inconnue'], validKeys),
+      ).toThrow(DomainException);
+      expect(() =>
+        HouseRules.fromUserInput(['clef_inconnue'], validKeys),
+      ).toThrow(/clef_inconnue/);
     });
 
-    it('rejette dès qu\'une seule clé du lot est invalide, même mêlée à des clés valides', () => {
+    it("rejette dès qu'une seule clé du lot est invalide, même mêlée à des clés valides", () => {
       expect(() =>
-        HouseRules.fromUserInput(['distribution_points_resistance', 'clef_inconnue'], validKeys),
+        HouseRules.fromUserInput(
+          ['distribution_points_resistance', 'clef_inconnue'],
+          validKeys,
+        ),
       ).toThrow(DomainException);
     });
   });

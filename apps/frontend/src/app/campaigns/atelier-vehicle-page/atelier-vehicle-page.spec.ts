@@ -103,7 +103,10 @@ describe('AtelierVehiclePage', () => {
     getWorkshopAvailableSequelles: ReturnType<typeof vi.fn>;
     changeEquipment: ReturnType<typeof vi.fn>;
   };
-  let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn>; getAllAvantages: ReturnType<typeof vi.fn> };
+  let mockCatalogService: {
+    getSponsorByName: ReturnType<typeof vi.fn>;
+    getAllAvantages: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mockCampaignsService = {
@@ -179,7 +182,9 @@ describe('AtelierVehiclePage', () => {
   });
 
   it("affiche une erreur si le chargement de l'atelier échoue", () => {
-    mockCampaignsService.getWorkshop.mockReturnValue(throwError(() => new Error('Network error')));
+    mockCampaignsService.getWorkshop.mockReturnValue(
+      throwError(() => new Error('Network error')),
+    );
 
     createFixture('3', '5');
 

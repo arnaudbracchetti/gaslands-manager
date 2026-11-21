@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { DefaultBaseIncomeStrategy, NoBaseIncomeStrategy } from './base-income-strategy';
+import {
+  DefaultBaseIncomeStrategy,
+  NoBaseIncomeStrategy,
+} from './base-income-strategy';
 import type { IRandomizer } from '../randomizer.interface';
 
 const randomizer: IRandomizer = {
