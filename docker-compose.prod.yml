@@ -61,7 +61,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/arnaudbracchetti/gaslands-manager-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/arnaudbracchetti/gaslands-manager-backend:${IMAGE_TAG:?IMAGE_TAG doit être défini dans .env (ex. v1.2.0)}
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
@@ -85,10 +85,9 @@ services:
       CORS_ORIGIN: https://${PUBLIC_DOMAIN}
       THROTTLE_TTL: ${THROTTLE_TTL:-60}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-300}
-      # Pas de repli ":-latest" ici (contrairement à l'image: ci-dessus, qui
-      # en a besoin pour choisir l'image à pull) : une valeur vide doit
-      # rester vide, pour que AppService.getVersion() affiche null plutôt
-      # qu'une fausse version.
+      # Même valeur que l'image: ci-dessus (déjà exigée par sa syntaxe
+      # ":?") - exposée par GET /api/version, que le déploiement compare
+      # au tag attendu.
       IMAGE_TAG: ${IMAGE_TAG}
     depends_on:
       postgres:
@@ -121,7 +120,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/arnaudbracchetti/gaslands-manager-frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/arnaudbracchetti/gaslands-manager-frontend:${IMAGE_TAG:?IMAGE_TAG doit être défini dans .env (ex. v1.2.0)}
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile

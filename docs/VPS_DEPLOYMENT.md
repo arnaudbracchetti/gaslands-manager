@@ -158,7 +158,8 @@ mêmes étapes, en remplaçant `gaslands` par son propre nom partout.
   - déclare `edge_net` en `external: true`,
   - garde sa base de données sur un réseau `internal: true` **qui lui est
     propre** (`<app>_db_net`, jamais partagé entre applications),
-  - référence ses images via `image: <registre>/<app>-<service>:${IMAGE_TAG:-latest}`
+  - référence ses images via `image: <registre>/<app>-<service>:${IMAGE_TAG:?}`
+    (`IMAGE_TAG` exigé : sans lui, Compose échoue au lieu de deviner une version)
     plutôt que de les construire sur place (`build:` peut rester présent pour
     un usage local ponctuel, jamais utilisé en production).
 
@@ -193,28 +194,39 @@ first`). D'où un vrai placeholder textuel, substitué **avant** que Caddy
 
 ### 3.2 Construire et publier les images (CI)
 
-Un seul workflow GitHub Actions par dépôt suffit (adapter les noms) :
+La publication vit dans le **même** workflow que la vérification du code
+(un seul fichier, adapter les noms) : un job `image` qui ne tourne que si le
+job de vérification est vert, et seulement sur un tag :
 
 ```yaml
-name: Build and publish Docker images
-
 on:
   push:
-    tags:
-      - 'v*.*.*'
-
-permissions:
-  contents: read
-  packages: write
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
 
 jobs:
-  build-and-push:
+  verify:
+    # format, lint, tests, build, concordance des migrations...
+
+  image:
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         target: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Vérifier que le commit taggé est sur main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -225,15 +237,19 @@ jobs:
           context: .
           file: apps/${{ matrix.target }}/Dockerfile
           push: true
-          tags: |
-            ghcr.io/<compte>/<app>-${{ matrix.target }}:${{ github.ref_name }}
-            ghcr.io/<compte>/<app>-${{ matrix.target }}:latest
+          tags: ghcr.io/<compte>/<app>-${{ matrix.target }}:${{ github.ref_name }}
 ```
 
 Pourquoi ce choix précis :
 
 - **Déclenché sur un tag de version** (`v*.*.*`), pas à chaque push — chaque
   publication d'image correspond à une release explicite.
+- **`needs: verify`** : aucune image n'est publiée si la CI est rouge (c'est
+  arrivé pour Gaslands v0.1.1 à v1.0.0, avant ce garde-fou).
+- **Tag posé sur `main` uniquement** : un tag sur une branche de travail ne
+  publie rien, la prod ne reçoit que du code fusionné.
+- **Un seul tag d'image, la version**, pas de `latest` : la version déployée
+  est toujours celle écrite dans `IMAGE_TAG`, jamais une étiquette mobile.
 - **Runner `ubuntu-latest` = amd64 natif**, comme la quasi-totalité des VPS —
   aucune cross-compilation nécessaire, contrairement à un build local sur un
   Mac Apple Silicon (arm64).
@@ -244,7 +260,7 @@ Pourquoi ce choix précis :
   conteneur, jamais au moment du build) — le VPS n'a donc besoin d'aucun
   `docker login` pour `pull`.
 
-Exemple réel : [`.github/workflows/docker-publish.yml`](../.github/workflows/docker-publish.yml).
+Exemple réel : [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
 ### 3.3 Déployer sur le VPS
 
@@ -369,11 +385,11 @@ cette dernière étape ont été identifiées, non retenues pour l'instant :
   d'entrant hors SSH administratif) — un secret CI qui fuiterait donnerait un
   accès quasi-root au VPS.
 - **"Pull"** — un outil comme _Watchtower_, sur le VPS lui-même, qui surveille
-  périodiquement si l'image `:latest` a changé sur le registre et se
-  redéploie seul. Cohérent avec le principe "rien n'entre depuis
-  l'extérieur", mais impose de suivre le tag mutable `:latest` plutôt qu'un
-  tag figé (perte de traçabilité "quelle version tourne exactement" au
-  niveau de `.env` — récupérable via l'historique Git/GHCR si besoin).
+  périodiquement si une image a changé sur le registre et se redéploie
+  seul. Cohérent avec le principe "rien n'entre depuis l'extérieur", mais
+  impose de suivre un tag mutable (type `:latest`) plutôt qu'un tag figé,
+  incompatible avec le choix actuel de ne publier que des tags de version
+  et d'exiger `IMAGE_TAG` (cf. §3.2).
 
 Aucune des deux n'est mise en œuvre à ce jour — décision à prendre plus tard
 si la fréquence des mises à jour le justifie.

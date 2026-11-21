@@ -67,6 +67,16 @@
         },
         "command": "npx typeorm-ts-node-commonjs schema:log -d src/data-source.ts"
       }
+    },
+    "migration:check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "bash scripts/migration-check.sh"
+      }
     }
   }
 }

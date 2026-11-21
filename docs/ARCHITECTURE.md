@@ -550,6 +550,23 @@ non documentés par TypeORM, résolus par `apps/backend/tsconfig.datasource.json
   (et tolérées) dans les entités TypeORM (`id: number;` sans `!`/initialiseur). D'où
   `"ts-node": { "transpileOnly": true }` dans `tsconfig.datasource.json`.
 
+**Concordance entités/migrations (`backend:migration:check`)** : joue toutes les migrations
+de l'index (`ALL_MIGRATIONS`) sur une base **vide**, puis `migration:generate --check`
+(code de sortie 1 s'il reste un écart ; `schema:log` ne convient pas, il sort toujours en
+0). Exécuté par la CI (job `verify`, service `postgres:16`, cf. §5.4). Une migration
+écrite mais oubliée dans l'index n'est jamais jouée : l'écart apparaît, et le message
+d'échec le suggère. Contrairement aux autres cibles, pas d'`envFile` (absent en CI) : la
+connexion est lue dans l'environnement (`DATABASE_*`, mêmes défauts que
+`src/data-source.ts`). En local, sur une base jetable (jamais la base de dev, déjà peuplée
+par `synchronize`) :
+
+```bash
+docker run -d --rm --name gaslands-migcheck -p 5499:5432 \
+  -e POSTGRES_USER=gaslands -e POSTGRES_PASSWORD=gaslands postgres:16-alpine
+DATABASE_PORT=5499 DATABASE_PASSWORD=gaslands npx nx run backend:migration:check
+docker stop gaslands-migcheck   # --rm : base supprimée avec le conteneur
+```
+
 Procédure de génération d'une migration de référence et garde-fou de non-régression
 (comparaison contre `synchronize`) : cf. `docs/plans/2026-08-02-durcissement-securite-vps-design.md#p0-2--entités-synchronize-migration-de-référence`.
 
@@ -660,24 +677,31 @@ exposer d'autre que Caddy vers l'extérieur.
 
 ### 5.4 Images construites par CI, jamais sur le VPS
 
-`.github/workflows/docker-publish.yml` construit `apps/backend/Dockerfile` et
-`apps/frontend/Dockerfile` sur un runner GitHub Actions (`ubuntu-latest`,
-amd64 natif - même architecture que le VPS, donc aucune cross-compilation),
-et les pousse vers GitHub Container Registry (`ghcr.io/arnaudbracchetti/
-gaslands-manager-{backend,frontend}`), taguées à la fois `${{ github.ref_name
-}}` (le tag Git, ex. `v1.0.0`) et `latest`. Déclenché uniquement sur un tag de
-version (`v*.*.*`), pas à chaque push sur `main` : chaque publication d'image
-correspond à une release explicite. Packages rendus publics (aucun secret
-n'est jamais intégré à l'image - `JWT_SECRET`/`ADMIN_PASSWORD`/etc. sont
-injectés au démarrage via `.env`, jamais au moment du build), donc le VPS n'a
-besoin d'aucun `docker login` pour `pull`.
+Un **workflow unique**, `.github/workflows/ci.yml` (push sur `main`, PR, tags
+`v*.*.*`), porte deux jobs - le détail de chaque choix est commenté dans le
+workflow lui-même :
 
-Le VPS ne construit donc jamais rien : `docker-compose.prod.yml` référence
-ces images via `image: ghcr.io/.../gaslands-manager-<service>:${IMAGE_TAG:-latest}`
-(`build:` y reste présent pour un usage local ponctuel, jamais utilisé en
-production). Mise à jour : `git tag vX.Y.Z && git push origin vX.Y.Z` (déclenche
-le workflow) puis, sur le VPS, `docker compose -f docker-compose.prod.yml pull
-&& up -d`.
+- `verify` : format, lint, tests, build et `backend:migration:check` (cf. §4)
+  sur un service `postgres:16`.
+- `image` : `needs: verify`, seulement sur un tag `v*` posé sur un commit de
+  `main` (sinon rien n'est publié). Construit `apps/backend/Dockerfile` et
+  `apps/frontend/Dockerfile` et les pousse vers GitHub Container Registry
+  (`ghcr.io/arnaudbracchetti/gaslands-manager-{backend,frontend}`), taguées
+  **uniquement** avec la version (ex. `v1.0.0`), jamais `latest`.
+
+Packages rendus publics (aucun secret n'est jamais intégré à l'image -
+`JWT_SECRET`/`ADMIN_PASSWORD`/etc. sont injectés au démarrage via `.env`,
+jamais au moment du build), donc le VPS n'a besoin d'aucun `docker login`
+pour `pull`. Patron générique réutilisable pour une autre application :
+[VPS_DEPLOYMENT.md §3.2](VPS_DEPLOYMENT.md#32-construire-et-publier-les-images-ci).
+
+Le VPS ne construit donc jamais rien : `docker-compose.prod.yml` référence ces
+images via `image: ghcr.io/.../gaslands-manager-<service>:${IMAGE_TAG:?...}`,
+`IMAGE_TAG` étant **exigé** : sans lui, Compose échoue immédiatement plutôt
+que de déployer une version inattendue. `build:` y reste présent pour un usage
+local ponctuel, jamais en production. Mise à jour : `git tag vX.Y.Z && git
+push origin vX.Y.Z` (déclenche le workflow) puis, sur le VPS, `docker compose
+-f docker-compose.prod.yml pull && up -d`.
 
 ---
 
@@ -698,7 +722,7 @@ le workflow) puis, sur le VPS, `docker compose -f docker-compose.prod.yml pull
 
 `GET /api/health` (`app.controller.ts`) exécute un `SELECT 1` via `DataSource` et n'attrape jamais l'exception TypeORM (une base indisponible doit produire un 500, le signal qu'un healthcheck Docker cherche - sondé par les `healthcheck:` des services `backend` de `docker-compose.yml`/`docker-compose.prod.yml`, cf. P0-8 ci-dessous) - décorée `@SkipThrottle({ default: true, secondary: true })` (P0-5) : un `@SkipThrottle()` sans argument ne saute que le throttler nommé `default`, `secondary` resterait sinon actif.
 
-`GET /api/version` (`app.controller.ts`) expose `IMAGE_TAG` pour affichage dans la navbar (`VersionBadge`, cf. [COMPONENTS.md](COMPONENTS.md#versionbadge--shared-version-badge)) - lu via `ConfigService` comme n'importe quelle autre variable optionnelle (`CONTENT_DIR` etc., cf. `env.validation.ts`), sans throttling dédié ni garde d'authentification (même exposition que `/api/health`, aucune donnée sensible). Volontairement **sans valeur par défaut** : `IMAGE_TAG` absent ou vide (`.env` non renseigné, `docker-compose.prod.yml`) donne `{ version: null }`, jamais une chaîne de repli comme `"latest"` qui ferait passer une étiquette mobile pour un vrai numéro de version - le badge ne s'affiche alors simplement pas.
+`GET /api/version` (`app.controller.ts`) expose `IMAGE_TAG` pour affichage dans la navbar (`VersionBadge`, cf. [COMPONENTS.md](COMPONENTS.md#versionbadge--shared-version-badge)) - lu via `ConfigService` comme n'importe quelle autre variable optionnelle (`CONTENT_DIR` etc., cf. `env.validation.ts`), sans throttling dédié ni garde d'authentification (même exposition que `/api/health`, aucune donnée sensible). Volontairement **sans valeur par défaut** : `IMAGE_TAG` absent ou vide (`.env` de dev non renseigné ; en production `docker-compose.prod.yml` l'exige) donne `{ version: null }`, jamais une chaîne de repli comme `"latest"` qui ferait passer une étiquette mobile pour un vrai numéro de version - le badge ne s'affiche alors simplement pas.
 
 **Contre-mesure Caddy (P0-8)** : `ThrottlerGuard` indexe sur `req.ip`, résolu via `trust proxy: 1` + le premier hop `X-Forwarded-For`. Un reverse proxy qui _ajoute_ au lieu d'_écraser_ cet en-tête rendrait la limite contournable avec une valeur arbitraire par requête - `docker/caddy/gaslands.caddy` (importé par le Caddyfile du stack partagé `docker/edge/`, cf. §5.3) force donc `header_up X-Forwarded-For {http.request.remote.host}` + `header_up X-Real-IP {http.request.remote.host}` (écrasement, pas ajout) sur son bloc `handle /api/*`, qui route directement vers `gaslands-backend:3000` - jamais via le conteneur nginx (`frontend`), qui ne sert plus que les fichiers statiques en production (cf. §5 ci-dessous).
 

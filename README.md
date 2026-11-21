@@ -147,7 +147,8 @@ Un seul stack Caddy partagé possède les ports 80/443 de tout le VPS. Chaque
 application (Gaslands compris) est un stack Docker Compose isolé qui ne
 publie jamais de port sur l'hôte et n'est jamais construit sur le serveur —
 les images sont buildées par CI et publiées sur GHCR
-(`.github/workflows/docker-publish.yml`, déclenché par un tag `vX.Y.Z`), le
+(`.github/workflows/ci.yml`, job `image`, déclenché par un tag `vX.Y.Z` posé
+sur `main` et seulement si la vérification est verte), le
 VPS ne fait que `docker compose pull`.
 
 ### Prérequis
