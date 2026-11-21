@@ -141,3 +141,19 @@ Utiliser le skill `nx-generate` pour les générateurs. Points non-évidents :
 - **Module NestJS domaine (DDD)** : créer les dossiers `domain/`, `application/`, `infrastructure/`. Déclarer des tokens d'injection dans `xxx.tokens.ts`. Fournir use cases et mapper en `useFactory` dans le module (voir `vehicle.module.ts` comme modèle).
 - **Composant Angular** : ajouter la route lazy dans [apps/frontend/src/app/app.routes.ts](apps/frontend/src/app/app.routes.ts).
 - **Contenu Markdown** : créer `content/<slug>.md` → disponible sans redémarrage via `GET /api/content/<slug>`.
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Les tickets vivent dans les GitHub Issues du dépôt (CLI `gh`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Les 5 labels canoniques par défaut (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context : `GLOSSARY.md` + `docs/adr/` à la racine (créés à la demande). See `docs/agents/domain.md`.
