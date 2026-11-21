@@ -8,7 +8,7 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * Le coût de l'arme n'est pas remboursé (price inchangé).
  */
 export class WeaponLostEvent extends GameEvent {
-  readonly eventType = GameEventType.WEAPON_LOST;
+  readonly eventType: GameEventType.WEAPON_LOST = GameEventType.WEAPON_LOST;
 
   constructor(
     id: number,
@@ -34,8 +34,12 @@ export class WeaponLostEvent extends GameEvent {
     try {
       const p = this.findParticipant(participants);
       const nom = p.team.findWeapon(this.weaponId).type.nom;
-      const vehicle = p.team.vehicles.find((v) => v.weapons.some((w) => w.id === this.weaponId));
-      const vehicleLabel = vehicle ? ` sur le véhicule ${vehicle.type.nom}` : '';
+      const vehicle = p.team.vehicles.find((v) =>
+        v.weapons.some((w) => w.id === this.weaponId),
+      );
+      const vehicleLabel = vehicle
+        ? ` sur le véhicule ${vehicle.type.nom}`
+        : '';
       return `Arme perdue : ${nom}${vehicleLabel}`;
     } catch {
       return `Arme perdue : #${this.weaponId}`;

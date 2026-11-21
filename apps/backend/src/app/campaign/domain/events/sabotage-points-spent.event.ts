@@ -22,9 +22,10 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * "0 dépensé(s)", quelle que soit la réalité.
  */
 export class SabotagePointsSpentEvent extends GameEvent {
-  private static readonly RESISTANCE_PER_SABOTAGE_POINT = 3;
+  private static readonly RESISTANCE_PER_SABOTAGE_POINT: number = 3;
 
-  readonly eventType = GameEventType.SABOTAGE_POINTS_SPENT;
+  readonly eventType: GameEventType.SABOTAGE_POINTS_SPENT =
+    GameEventType.SABOTAGE_POINTS_SPENT;
 
   constructor(
     id: number,
@@ -38,7 +39,8 @@ export class SabotagePointsSpentEvent extends GameEvent {
 
   execute(participants: CampaignParticipant[]): void {
     this.findParticipant(participants).addResistance(
-      -this.pointsSpent * SabotagePointsSpentEvent.RESISTANCE_PER_SABOTAGE_POINT,
+      -this.pointsSpent *
+        SabotagePointsSpentEvent.RESISTANCE_PER_SABOTAGE_POINT,
     );
   }
 

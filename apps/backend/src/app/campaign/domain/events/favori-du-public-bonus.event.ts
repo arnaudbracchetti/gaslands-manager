@@ -19,7 +19,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * `RankingAssignedEvent`).
  */
 export class FavoriDuPublicBonusEvent extends GameEvent {
-  readonly eventType = GameEventType.FAVORI_DU_PUBLIC_BONUS;
+  readonly eventType: GameEventType.FAVORI_DU_PUBLIC_BONUS =
+    GameEventType.FAVORI_DU_PUBLIC_BONUS;
 
   constructor(
     id: number,

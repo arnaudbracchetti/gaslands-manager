@@ -103,17 +103,22 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
     { provide: RANDOMIZER, useClass: RandomProvider },
     {
       provide: WreckTable,
-      useFactory: (r: IRandomizer, catalog: CatalogService) => new WreckTable(r, catalog),
+      useFactory: (r: IRandomizer, catalog: CatalogService): WreckTable =>
+        new WreckTable(r, catalog),
       inject: [RANDOMIZER, CatalogService],
     },
     {
       provide: ScenarioDrawTable,
-      useFactory: (r: IRandomizer) => new ScenarioDrawTable(r),
+      useFactory: (r: IRandomizer): ScenarioDrawTable =>
+        new ScenarioDrawTable(r),
       inject: [RANDOMIZER],
     },
     {
       provide: DrawRandomScenarioUseCase,
-      useFactory: (catalog: ScenarioCatalogService, table: ScenarioDrawTable) =>
+      useFactory: (
+        catalog: ScenarioCatalogService,
+        table: ScenarioDrawTable,
+      ): DrawRandomScenarioUseCase =>
         new DrawRandomScenarioUseCase(catalog, table),
       inject: [ScenarioCatalogService, ScenarioDrawTable],
     },
@@ -121,202 +126,299 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
     // ── Use cases CRUD (useFactory — domaine sans décorateurs NestJS) ──────────
     {
       provide: CreateCampaignUseCase,
-      useFactory: (repo: ICampaignRepository, team: ITeamRepository) =>
-        new CreateCampaignUseCase(repo, team),
+      useFactory: (
+        repo: ICampaignRepository,
+        team: ITeamRepository,
+      ): CreateCampaignUseCase => new CreateCampaignUseCase(repo, team),
       inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY],
     },
     {
       provide: UpdateCampaignUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new UpdateCampaignUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): UpdateCampaignUseCase => new UpdateCampaignUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ChangeStateUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new ChangeStateUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ChangeStateUseCase => new ChangeStateUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: DeleteCampaignUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new DeleteCampaignUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): DeleteCampaignUseCase => new DeleteCampaignUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: RequestJoinUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, team: ITeamRepository) =>
-        new RequestJoinUseCase(repo, replay, team),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        team: ITeamRepository,
+      ): RequestJoinUseCase => new RequestJoinUseCase(repo, replay, team),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, TEAM_REPOSITORY],
     },
     {
       provide: ValidateParticipantUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ValidateParticipantUseCase =>
         new ValidateParticipantUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: PromoteParticipantUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): PromoteParticipantUseCase =>
         new PromoteParticipantUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: RemoveParticipantUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new RemoveParticipantUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RemoveParticipantUseCase => new RemoveParticipantUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ChangeMyTeamUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, team: ITeamRepository) =>
-        new ChangeMyTeamUseCase(repo, replay, team),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        team: ITeamRepository,
+      ): ChangeMyTeamUseCase => new ChangeMyTeamUseCase(repo, replay, team),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, TEAM_REPOSITORY],
     },
     {
       provide: AddGameUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, scenarios: ScenarioCatalogService) =>
-        new AddGameUseCase(repo, replay, scenarios),
-      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, ScenarioCatalogService],
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        scenarios: ScenarioCatalogService,
+      ): AddGameUseCase => new AddGameUseCase(repo, replay, scenarios),
+      inject: [
+        CAMPAIGN_REPOSITORY,
+        CampaignReplayService,
+        ScenarioCatalogService,
+      ],
     },
     {
       provide: UpdateGameUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, scenarios: ScenarioCatalogService) =>
-        new UpdateGameUseCase(repo, replay, scenarios),
-      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, ScenarioCatalogService],
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        scenarios: ScenarioCatalogService,
+      ): UpdateGameUseCase => new UpdateGameUseCase(repo, replay, scenarios),
+      inject: [
+        CAMPAIGN_REPOSITORY,
+        CampaignReplayService,
+        ScenarioCatalogService,
+      ],
     },
     {
       provide: RemoveGameUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new RemoveGameUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RemoveGameUseCase => new RemoveGameUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ReorderGamesUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new ReorderGamesUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ReorderGamesUseCase => new ReorderGamesUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: RecordResultUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new RecordResultUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RecordResultUseCase => new RecordResultUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ResetResultUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new ResetResultUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ResetResultUseCase => new ResetResultUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: RollIncomeUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, r: IRandomizer) =>
-        new RollIncomeUseCase(repo, replay, r),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        r: IRandomizer,
+      ): RollIncomeUseCase => new RollIncomeUseCase(repo, replay, r),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, RANDOMIZER],
     },
     {
       provide: GetParticipantVehiclesUseCase,
-      useFactory: (replay: CampaignReplayService) => new GetParticipantVehiclesUseCase(replay),
+      useFactory: (
+        replay: CampaignReplayService,
+      ): GetParticipantVehiclesUseCase =>
+        new GetParticipantVehiclesUseCase(replay),
       inject: [CampaignReplayService],
     },
 
     // ── Use cases event sourcing (Parties 4-5) ─────────────────────────────────
     {
       provide: RecordWalletMovementUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RecordWalletMovementUseCase =>
         new RecordWalletMovementUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: RecordVehicleLostUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new RecordVehicleLostUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RecordVehicleLostUseCase => new RecordVehicleLostUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ContactResistanceUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new ContactResistanceUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ContactResistanceUseCase => new ContactResistanceUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: EnterAtelierUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new EnterAtelierUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): EnterAtelierUseCase => new EnterAtelierUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: CloseAtelierUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new CloseAtelierUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): CloseAtelierUseCase => new CloseAtelierUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: GetStandingsUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
-        new GetStandingsUseCase(repo, replay),
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): GetStandingsUseCase => new GetStandingsUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: ChangeEquipmentUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): ChangeEquipmentUseCase =>
         new ChangeEquipmentUseCase(repo, replay, catalog),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, CatalogService],
     },
     {
       provide: RenameCampaignVehicleUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): RenameCampaignVehicleUseCase =>
         new RenameCampaignVehicleUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {
       provide: WreckResolveUseCase,
-      useFactory: (repo: ICampaignRepository, replay: CampaignReplayService, wreckTable: WreckTable) =>
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        wreckTable: WreckTable,
+      ): WreckResolveUseCase =>
         new WreckResolveUseCase(repo, replay, wreckTable),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService, WreckTable],
     },
     {
       provide: GetWorkshopUseCase,
-      useFactory: (replay: CampaignReplayService) => new GetWorkshopUseCase(replay),
+      useFactory: (replay: CampaignReplayService): GetWorkshopUseCase =>
+        new GetWorkshopUseCase(replay),
       inject: [CampaignReplayService],
     },
     {
       provide: GetCampaignTeamSheetUseCase,
-      useFactory: (replay: CampaignReplayService) => new GetCampaignTeamSheetUseCase(replay),
+      useFactory: (
+        replay: CampaignReplayService,
+      ): GetCampaignTeamSheetUseCase => new GetCampaignTeamSheetUseCase(replay),
       inject: [CampaignReplayService],
     },
     {
       provide: GetWorkshopAvailableWeaponsUseCase,
-      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): GetWorkshopAvailableWeaponsUseCase =>
         new GetWorkshopAvailableWeaponsUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
     {
       provide: GetWorkshopAvailableImprovementsUseCase,
-      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): GetWorkshopAvailableImprovementsUseCase =>
         new GetWorkshopAvailableImprovementsUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
     {
       provide: GetWorkshopAvailableAdvantagesUseCase,
-      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): GetWorkshopAvailableAdvantagesUseCase =>
         new GetWorkshopAvailableAdvantagesUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
     {
       provide: GetWorkshopAvailableSequellesUseCase,
-      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): GetWorkshopAvailableSequellesUseCase =>
         new GetWorkshopAvailableSequellesUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
     {
       provide: GetWorkshopAvailableVehiclesUseCase,
-      useFactory: (replay: CampaignReplayService, catalog: CatalogService) =>
+      useFactory: (
+        replay: CampaignReplayService,
+        catalog: CatalogService,
+      ): GetWorkshopAvailableVehiclesUseCase =>
         new GetWorkshopAvailableVehiclesUseCase(replay, catalog),
       inject: [CampaignReplayService, CatalogService],
     },
   ],
-  exports: [TypeOrmModule, ScenarioCatalogService, CampaignReplayService, CAMPAIGN_REPOSITORY],
+  exports: [
+    TypeOrmModule,
+    ScenarioCatalogService,
+    CampaignReplayService,
+    CAMPAIGN_REPOSITORY,
+  ],
 })
 export class CampaignModule {}

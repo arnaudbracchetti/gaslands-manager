@@ -12,7 +12,11 @@
  * Tente de se connecter au backend pendant 30 secondes.
  * Lance une erreur si le backend ne répond pas dans ce délai.
  */
-async function waitForBackend(host: string, port: number, maxWaitMs = 30000): Promise<void> {
+async function waitForBackend(
+  host: string,
+  port: number,
+  maxWaitMs: number = 30000,
+): Promise<void> {
   const url = `http://${host}:${port}/api/catalog/sponsors`;
   const start = Date.now();
 
@@ -31,7 +35,7 @@ async function waitForBackend(host: string, port: number, maxWaitMs = 30000): Pr
 
   throw new Error(
     `Le backend n'a pas démarré dans les ${maxWaitMs / 1000}s. ` +
-    `Assurez-vous que le serveur tourne sur http://${host}:${port}`,
+      `Assurez-vous que le serveur tourne sur http://${host}:${port}`,
   );
 }
 

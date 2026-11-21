@@ -18,7 +18,11 @@ import type {
 } from './behaviors/equipment-behavior';
 
 /** Les 3 arcs sondés par `canAddImprovementInAnyOrientation` pour un verdict de disponibilité. */
-const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'lateral'];
+const ORIENTATIONS_A_SONDER: readonly Orientation[] = [
+  'avant',
+  'arrière',
+  'lateral',
+];
 
 /**
  * Un véhicule appartenant à une équipe — entité enfant de l'agrégat Team.
@@ -28,10 +32,9 @@ const ORIENTATIONS_A_SONDER: readonly Orientation[] = ['avant', 'arrière', 'lat
  * les valeurs nécessaires en paramètre (pattern "tell, don't ask").
  */
 export class Vehicle {
-  
-  private _isLost = false;
-  private _isSold = false;
-  private _hasFavoriDuPublic = false;
+  private _isLost: boolean = false;
+  private _isSold: boolean = false;
+  private _hasFavoriDuPublic: boolean = false;
 
   /**
    * Ids des armes/améliorations/avantages marqués vendus PAR la revente de CE
@@ -45,7 +48,7 @@ export class Vehicle {
   private _cascadeSoldWeaponIds: number[] = [];
   private _cascadeSoldImprovementIds: number[] = [];
   private _cascadeSoldAdvantageIds: number[] = [];
-  private _chocs = 0;
+  private _chocs: number = 0;
   /**
    * Séquelles actives sur ce véhicule (mode campagne). Entités enfants (`Sequella`),
    * miroir d'`Advantage` — mêmes mécaniques `isSold`/prix jamais réduit (perte totale).
@@ -91,7 +94,9 @@ export class Vehicle {
    */
   get nom(): string {
     const resolved = this._nom ?? this.type.nom;
-    return resolved === this.type.nom ? resolved : `${resolved} (${this.type.nom})`;
+    return resolved === this.type.nom
+      ? resolved
+      : `${resolved} (${this.type.nom})`;
   }
 
   /** Renomme ce véhicule. Non vide après trim, 100 caractères max (même limite que `nomInterne`). */
@@ -108,8 +113,12 @@ export class Vehicle {
    */
   static assertValidName(nom: string): string {
     const trimmed = nom.trim();
-    if (!trimmed) throw new DomainException('Le nom du véhicule ne peut pas être vide.');
-    if (trimmed.length > 100) throw new DomainException('Le nom du véhicule est trop long (100 caractères maximum).');
+    if (!trimmed)
+      throw new DomainException('Le nom du véhicule ne peut pas être vide.');
+    if (trimmed.length > 100)
+      throw new DomainException(
+        'Le nom du véhicule est trop long (100 caractères maximum).',
+      );
     return trimmed;
   }
 
@@ -163,8 +172,14 @@ export class Vehicle {
    */
   get cost(): number {
     const weaponsCost = this._weapons.reduce((sum, w) => sum + w.price, 0);
-    const improvementsCost = this._improvements.reduce((sum, i) => sum + i.price, 0);
-    const advantagesCost = this._advantages.reduce((sum, a) => sum + a.price, 0);
+    const improvementsCost = this._improvements.reduce(
+      (sum, i) => sum + i.price,
+      0,
+    );
+    const advantagesCost = this._advantages.reduce(
+      (sum, a) => sum + a.price,
+      0,
+    );
     return this.price + weaponsCost + improvementsCost + advantagesCost;
   }
 
@@ -184,10 +199,14 @@ export class Vehicle {
    */
   get chassisResaleRefund(): number {
     if (this._isLost) {
-      throw new DomainException('Ce véhicule est détruit — il n\'a plus aucune valeur de revente.');
+      throw new DomainException(
+        "Ce véhicule est détruit — il n'a plus aucune valeur de revente.",
+      );
     }
     if (this._isSold) {
-      throw new DomainException('Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.');
+      throw new DomainException(
+        'Ce véhicule est déjà vendu — son remboursement a déjà été calculé et crédité.',
+      );
     }
     return Math.floor(this.type.price / 2);
   }
@@ -216,7 +235,12 @@ export class Vehicle {
     const advantagesRefund = this._advantages
       .filter((a) => !a.isSold)
       .reduce((sum, a) => sum + a.resaleRefund, 0);
-    return this.chassisResaleRefund + weaponsRefund + improvementsRefund + advantagesRefund;
+    return (
+      this.chassisResaleRefund +
+      weaponsRefund +
+      improvementsRefund +
+      advantagesRefund
+    );
   }
 
   /**
@@ -226,7 +250,10 @@ export class Vehicle {
    */
   get usedSlots(): number {
     const weaponSlots = this._weapons.reduce((sum, w) => sum + w.slots, 0);
-    const improvementSlots = this._improvements.reduce((sum, i) => sum + i.slots, 0);
+    const improvementSlots = this._improvements.reduce(
+      (sum, i) => sum + i.slots,
+      0,
+    );
     return weaponSlots + improvementSlots;
   }
 
@@ -310,7 +337,9 @@ export class Vehicle {
    * une fois pour toutes — aucune Strategy n'a besoin de connaître sa propre clé de
    * registre pour se compter elle-même.
    */
-  private buildImprovementPlacementContext(comportement: string | undefined): PlacementContext {
+  private buildImprovementPlacementContext(
+    comportement: string | undefined,
+  ): PlacementContext {
     const active = this._improvements.filter((i) => !i.isSold && !i.isLost);
     const same = active.filter((i) => i.type.comportement === comportement);
     return {
@@ -324,7 +353,9 @@ export class Vehicle {
   }
 
   /** Mirroir de `buildImprovementPlacementContext` pour les avantages (jamais d'orientation). */
-  private buildAdvantagePlacementContext(comportement: string | undefined): PlacementContext {
+  private buildAdvantagePlacementContext(
+    comportement: string | undefined,
+  ): PlacementContext {
     const active = this._advantages.filter((a) => !a.isSold && !a.isLost);
     const same = active.filter((a) => a.type.comportement === comportement);
     return {
@@ -339,13 +370,19 @@ export class Vehicle {
 
   // ── Règles publiques (pour GET /available-weapons et /available-improvements) ──
 
-  canAddWeapon(type: WeaponType, orientation: WeaponOrientation | null, remainingBudget: number): RuleResult {
+  canAddWeapon(
+    type: WeaponType,
+    orientation: WeaponOrientation | null,
+    remainingBudget: number,
+  ): RuleResult {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
-    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    if (this._isLost)
+      return fail('Ce véhicule est hors combat — équipement impossible');
     // Idem pour un véhicule vendu en atelier (cf. markSold) — sans effet observable
     // aujourd'hui (un véhicule vendu est filtré de l'atelier, donc inatteignable
     // depuis l'UI), gardé par cohérence avec la garde _isLost ci-dessus.
-    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
+    if (this._isSold)
+      return fail('Ce véhicule est vendu — équipement impossible');
 
     const montageTourelle = orientation === 'tourelle';
     if (montageTourelle && !type.montableSurTourelle) {
@@ -354,7 +391,7 @@ export class Vehicle {
 
     const price = type.price * (montageTourelle ? 3 : 1);
     if (price > remainingBudget) {
-      return fail('Budget de l\'équipe insuffisant');
+      return fail("Budget de l'équipe insuffisant");
     }
     if (type.slots > this.availableSlots) {
       return fail('Emplacements insuffisants sur ce véhicule');
@@ -365,20 +402,26 @@ export class Vehicle {
         return fail('Une orientation est requise pour cette arme');
       }
       if (!type.requiresOrientation && orientation !== null) {
-        return fail('Les armes d\'équipage ne peuvent pas être orientées');
+        return fail("Les armes d'équipage ne peuvent pas être orientées");
       }
     }
     return ok();
   }
 
-  canAddImprovement(type: ImprovementType, orientation: Orientation | null, remainingBudget: number): RuleResult {
+  canAddImprovement(
+    type: ImprovementType,
+    orientation: Orientation | null,
+    remainingBudget: number,
+  ): RuleResult {
     // Garde de domaine : on ne peut pas équiper un véhicule perdu en campagne.
-    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    if (this._isLost)
+      return fail('Ce véhicule est hors combat — équipement impossible');
     // Idem pour un véhicule vendu en atelier — cf. canAddWeapon.
-    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
+    if (this._isSold)
+      return fail('Ce véhicule est vendu — équipement impossible');
 
     if (type.price > remainingBudget) {
-      return fail('Budget de l\'équipe insuffisant');
+      return fail("Budget de l'équipe insuffisant");
     }
     // Contrôle d'emplacements *global* (armes + améliorations) — la chaîne de décorateurs
     // ci-dessous ne connaît que les améliorations, donc ce garde reste porté par l'agrégat.
@@ -392,8 +435,15 @@ export class Vehicle {
     // orientation exclusive, équipage max…) — Strategy GoF, déléguée par `type` lui-même
     // (cf. `ImprovementType.canPlace`) ; invoquée une seule fois pour le candidat, jamais
     // de re-validation des couches déjà montées.
-    const candidate: PlacementCandidate = { nomInterne: type.nomInterne, nom: type.nom, orientation };
-    const placement = type.canPlace(this.buildImprovementPlacementContext(type.comportement), candidate);
+    const candidate: PlacementCandidate = {
+      nomInterne: type.nomInterne,
+      nom: type.nom,
+      orientation,
+    };
+    const placement = type.canPlace(
+      this.buildImprovementPlacementContext(type.comportement),
+      candidate,
+    );
     if (!placement.ok) return fail(placement.reason);
     return ok();
   }
@@ -409,18 +459,31 @@ export class Vehicle {
    * ET avantages déjà montés, cf. `buildAdvantagePlacementContext`/`effectiveStats`).
    */
   canAddAdvantage(type: AdvantageType, remainingBudget: number): RuleResult {
-    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
+    if (this._isLost)
+      return fail('Ce véhicule est hors combat — équipement impossible');
     // Idem pour un véhicule vendu en atelier — cf. canAddWeapon.
-    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
+    if (this._isSold)
+      return fail('Ce véhicule est vendu — équipement impossible');
 
     if (type.price > remainingBudget) {
-      return fail('Budget de l\'équipe insuffisant');
+      return fail("Budget de l'équipe insuffisant");
     }
-    if (this._advantages.some((a) => !a.isSold && !a.isLost && a.type.equals(type))) {
+    if (
+      this._advantages.some(
+        (a) => !a.isSold && !a.isLost && a.type.equals(type),
+      )
+    ) {
       return fail(`"${type.nom}" est déjà acquis sur ce véhicule`);
     }
-    const candidate: PlacementCandidate = { nomInterne: type.nomInterne, nom: type.nom, orientation: null };
-    const placement = type.canPlace(this.buildAdvantagePlacementContext(type.comportement), candidate);
+    const candidate: PlacementCandidate = {
+      nomInterne: type.nomInterne,
+      nom: type.nom,
+      orientation: null,
+    };
+    const placement = type.canPlace(
+      this.buildAdvantagePlacementContext(type.comportement),
+      candidate,
+    );
     if (!placement.ok) return fail(placement.reason);
     return ok();
   }
@@ -434,17 +497,27 @@ export class Vehicle {
    * de l'équipe (`remainingBudget`), donc pas de paramètre budget ici.
    */
   canAddSequella(type: SequellaType): RuleResult {
-    if (this._isLost) return fail('Ce véhicule est hors combat — équipement impossible');
-    if (this._isSold) return fail('Ce véhicule est vendu — équipement impossible');
+    if (this._isLost)
+      return fail('Ce véhicule est hors combat — équipement impossible');
+    if (this._isSold)
+      return fail('Ce véhicule est vendu — équipement impossible');
 
     if (type.origine !== 'ATELIER') {
-      return fail('Cette séquelle ne peut être imposée que par un tirage de la Table des Épaves');
+      return fail(
+        'Cette séquelle ne peut être imposée que par un tirage de la Table des Épaves',
+      );
     }
-    if (this._sequellas.some((s) => !s.isSold && s.type.origine === 'ATELIER' && s.type.equals(type))) {
+    if (
+      this._sequellas.some(
+        (s) => !s.isSold && s.type.origine === 'ATELIER' && s.type.equals(type),
+      )
+    ) {
       return fail(`"${type.nom}" est déjà acquise sur ce véhicule`);
     }
     if (type.chocsCost > this._chocs) {
-      return fail(`Chocs insuffisants (solde actuel : ${this._chocs}, coût : ${type.chocsCost})`);
+      return fail(
+        `Chocs insuffisants (solde actuel : ${this._chocs}, coût : ${type.chocsCost})`,
+      );
     }
     return ok();
   }
@@ -457,11 +530,16 @@ export class Vehicle {
    * Cette dernière règle vit ici plutôt que dans le use case - c'est un invariant de
    * l'ajout de cette séquelle, pas de l'orchestration. Lève `DomainException` sinon.
    */
-  assertCanAddSequella(type: SequellaType, freeAdvantageType: AdvantageType | null): void {
+  assertCanAddSequella(
+    type: SequellaType,
+    freeAdvantageType: AdvantageType | null,
+  ): void {
     const result = this.canAddSequella(type);
     if (!result.ok) throw new DomainException(result.reason);
     if (type.nomInterne === 'dur_a_cuire' && !freeAdvantageType) {
-      throw new DomainException('Un avantage gratuit doit être choisi pour "Dur à Cuire".');
+      throw new DomainException(
+        'Un avantage gratuit doit être choisi pour "Dur à Cuire".',
+      );
     }
   }
 
@@ -504,7 +582,9 @@ export class Vehicle {
 
   /** Une séquelle de ce nom_interne est-elle active (non vendue) sur ce véhicule ? */
   hasActiveSequella(nomInterne: string): boolean {
-    return this._sequellas.some((s) => !s.isSold && s.type.nomInterne === nomInterne);
+    return this._sequellas.some(
+      (s) => !s.isSold && s.type.nomInterne === nomInterne,
+    );
   }
 
   /**
@@ -513,7 +593,10 @@ export class Vehicle {
    * cause du seul "orientation requise" (Bélier…) — chaque arc à tour de rôle.
    *
    */
-  canAddImprovementInAnyOrientation(type: ImprovementType, remainingBudget: number): RuleResult {
+  canAddImprovementInAnyOrientation(
+    type: ImprovementType,
+    remainingBudget: number,
+  ): RuleResult {
     const direct = this.canAddImprovement(type, null, remainingBudget);
     if (direct.ok) return direct;
 
@@ -528,7 +611,11 @@ export class Vehicle {
 
   // ── Mutations ─────────────────────────────────────────────────────────────────
 
-  addWeapon(type: WeaponType, orientation: WeaponOrientation | null, remainingBudget: number): void {
+  addWeapon(
+    type: WeaponType,
+    orientation: WeaponOrientation | null,
+    remainingBudget: number,
+  ): void {
     const result = this.canAddWeapon(type, orientation, remainingBudget);
     if (!result.ok) throw new DomainException(result.reason);
     this._weapons.push(new Weapon(0, type, orientation, false));
@@ -536,14 +623,21 @@ export class Vehicle {
 
   removeWeapon(weaponId: number): void {
     const index = this._weapons.findIndex((w) => w.id === weaponId);
-    if (index === -1) throw new DomainException('Arme introuvable sur ce véhicule');
+    if (index === -1)
+      throw new DomainException('Arme introuvable sur ce véhicule');
     if (this._weapons[index].estDefaut) {
-      throw new DomainException('Les armes intégrées au profil de base ne peuvent pas être retirées');
+      throw new DomainException(
+        'Les armes intégrées au profil de base ne peuvent pas être retirées',
+      );
     }
     this._weapons.splice(index, 1);
   }
 
-  addImprovement(type: ImprovementType, orientation: Orientation | null, remainingBudget: number): void {
+  addImprovement(
+    type: ImprovementType,
+    orientation: Orientation | null,
+    remainingBudget: number,
+  ): void {
     const result = this.canAddImprovement(type, orientation, remainingBudget);
     if (!result.ok) throw new DomainException(result.reason);
     this._improvements.push(new Improvement(0, type, orientation, false));
@@ -551,9 +645,12 @@ export class Vehicle {
 
   removeImprovement(improvementId: number): void {
     const index = this._improvements.findIndex((i) => i.id === improvementId);
-    if (index === -1) throw new DomainException('Amélioration introuvable sur ce véhicule');
+    if (index === -1)
+      throw new DomainException('Amélioration introuvable sur ce véhicule');
     if (this._improvements[index].estDefaut) {
-      throw new DomainException('Les améliorations intégrées au profil de base ne peuvent pas être retirées');
+      throw new DomainException(
+        'Les améliorations intégrées au profil de base ne peuvent pas être retirées',
+      );
     }
     this._improvements.splice(index, 1);
   }
@@ -566,7 +663,8 @@ export class Vehicle {
 
   removeAdvantage(advantageId: number): void {
     const index = this._advantages.findIndex((a) => a.id === advantageId);
-    if (index === -1) throw new DomainException('Avantage introuvable sur ce véhicule');
+    if (index === -1)
+      throw new DomainException('Avantage introuvable sur ce véhicule');
     this._advantages.splice(index, 1);
   }
 
@@ -577,7 +675,8 @@ export class Vehicle {
    */
   removeSequella(sequellaId: number): void {
     const index = this._sequellas.findIndex((s) => s.id === sequellaId);
-    if (index === -1) throw new DomainException('Séquelle introuvable sur ce véhicule');
+    if (index === -1)
+      throw new DomainException('Séquelle introuvable sur ce véhicule');
     this._sequellas.splice(index, 1);
   }
 
@@ -619,21 +718,32 @@ export class Vehicle {
   markSold(): void {
     if (this._isSold) return;
     this._isSold = true;
-    this._cascadeSoldWeaponIds = this._weapons.filter((w) => !w.isSold).map((w) => w.id);
-    this._cascadeSoldImprovementIds = this._improvements.filter((i) => !i.isSold).map((i) => i.id);
-    this._cascadeSoldAdvantageIds = this._advantages.filter((a) => !a.isSold).map((a) => a.id);
+    this._cascadeSoldWeaponIds = this._weapons
+      .filter((w) => !w.isSold)
+      .map((w) => w.id);
+    this._cascadeSoldImprovementIds = this._improvements
+      .filter((i) => !i.isSold)
+      .map((i) => i.id);
+    this._cascadeSoldAdvantageIds = this._advantages
+      .filter((a) => !a.isSold)
+      .map((a) => a.id);
     for (const id of this._cascadeSoldWeaponIds) this.findWeapon(id).markSold();
-    for (const id of this._cascadeSoldImprovementIds) this.findImprovement(id).markSold();
-    for (const id of this._cascadeSoldAdvantageIds) this.findAdvantage(id).markSold();
+    for (const id of this._cascadeSoldImprovementIds)
+      this.findImprovement(id).markSold();
+    for (const id of this._cascadeSoldAdvantageIds)
+      this.findAdvantage(id).markSold();
   }
 
   /** Undo de markSold() — ne dé-marque que les enfants cascadés par CETTE vente. */
   clearSold(): void {
     if (!this._isSold) return;
     this._isSold = false;
-    for (const id of this._cascadeSoldWeaponIds) this.findWeapon(id).clearSold();
-    for (const id of this._cascadeSoldImprovementIds) this.findImprovement(id).clearSold();
-    for (const id of this._cascadeSoldAdvantageIds) this.findAdvantage(id).clearSold();
+    for (const id of this._cascadeSoldWeaponIds)
+      this.findWeapon(id).clearSold();
+    for (const id of this._cascadeSoldImprovementIds)
+      this.findImprovement(id).clearSold();
+    for (const id of this._cascadeSoldAdvantageIds)
+      this.findAdvantage(id).clearSold();
     this._cascadeSoldWeaponIds = [];
     this._cascadeSoldImprovementIds = [];
     this._cascadeSoldAdvantageIds = [];
@@ -713,11 +823,12 @@ export class Vehicle {
    */
   addChocs(n: number): void {
     if (this._chocs + n < 0) {
-      throw new DomainException(`Chocs insuffisants (solde actuel : ${this._chocs}, demandé : ${Math.abs(n)})`);
+      throw new DomainException(
+        `Chocs insuffisants (solde actuel : ${this._chocs}, demandé : ${Math.abs(n)})`,
+      );
     }
     this._chocs += n;
   }
-
 
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
 
@@ -741,7 +852,11 @@ export class Vehicle {
    * Ajoute une arme avec un id explicite (D-S11 : id négatif = entité transiente campagne).
    * Distinct de addWeapon() qui passe par les règles de budget/emplacements.
    */
-  addCampaignWeapon(weaponType: WeaponType, orientation: WeaponOrientation | null, campaignId: number): Weapon {
+  addCampaignWeapon(
+    weaponType: WeaponType,
+    orientation: WeaponOrientation | null,
+    campaignId: number,
+  ): Weapon {
     const weapon = new Weapon(campaignId, weaponType, orientation, false);
     this._weapons.push(weapon);
     return weapon;
@@ -752,7 +867,11 @@ export class Vehicle {
    * campagne). Miroir d'addCampaignWeapon : ne passe PAS par les règles (canAddImprovement).
    * `estDefaut: false` — une amélioration achetée en atelier n'est jamais intégrée au profil.
    */
-  addCampaignImprovement(type: ImprovementType, orientation: Orientation | null, campaignId: number): Improvement {
+  addCampaignImprovement(
+    type: ImprovementType,
+    orientation: Orientation | null,
+    campaignId: number,
+  ): Improvement {
     const improvement = new Improvement(campaignId, type, orientation, false);
     this._improvements.push(improvement);
     return improvement;
@@ -768,8 +887,16 @@ export class Vehicle {
    * accordé par la séquelle Dur à Cuire (cf. `EquipmentChangedEvent`) — `null` pour
    * un achat normal.
    */
-  addCampaignAdvantage(type: AdvantageType, campaignId: number, grantedBySequellaNomInterne: string | null = null): Advantage {
-    const advantage = new Advantage(campaignId, type, grantedBySequellaNomInterne);
+  addCampaignAdvantage(
+    type: AdvantageType,
+    campaignId: number,
+    grantedBySequellaNomInterne: string | null = null,
+  ): Advantage {
+    const advantage = new Advantage(
+      campaignId,
+      type,
+      grantedBySequellaNomInterne,
+    );
     this._advantages.push(advantage);
     return advantage;
   }
@@ -796,19 +923,22 @@ export class Vehicle {
 
   private findImprovement(id: number): Improvement {
     const imp = this._improvements.find((i) => i.id === id);
-    if (!imp) throw new DomainException('Amélioration introuvable sur ce véhicule');
+    if (!imp)
+      throw new DomainException('Amélioration introuvable sur ce véhicule');
     return imp;
   }
 
   private findAdvantage(id: number): Advantage {
     const advantage = this._advantages.find((a) => a.id === id);
-    if (!advantage) throw new DomainException('Avantage introuvable sur ce véhicule');
+    if (!advantage)
+      throw new DomainException('Avantage introuvable sur ce véhicule');
     return advantage;
   }
 
   private findSequella(id: number): Sequella {
     const sequella = this._sequellas.find((s) => s.id === id);
-    if (!sequella) throw new DomainException('Séquelle introuvable sur ce véhicule');
+    if (!sequella)
+      throw new DomainException('Séquelle introuvable sur ce véhicule');
     return sequella;
   }
 }

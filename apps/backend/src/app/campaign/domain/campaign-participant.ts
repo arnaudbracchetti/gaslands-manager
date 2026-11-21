@@ -23,9 +23,9 @@ import { DomainException } from '../../shared/domain/domain-exception';
  */
 export class CampaignParticipant {
   private _team: Team | undefined;
-  private _rewardsEarned = 0;
-  private _championshipPoints = 0;
-  private _resistancePoints = 0;
+  private _rewardsEarned: number = 0;
+  private _championshipPoints: number = 0;
+  private _resistancePoints: number = 0;
 
   private _teamId: number | null;
   private _isOrganizer: boolean;
@@ -44,21 +44,35 @@ export class CampaignParticipant {
   }
 
   // ── État stocké ────────────────────────────────────────────────────────────
-  get teamId(): number | null { return this._teamId; }
-  get isOrganizer(): boolean { return this._isOrganizer; }
-  get status(): ParticipantStatus { return this._status; }
+  get teamId(): number | null {
+    return this._teamId;
+  }
+  get isOrganizer(): boolean {
+    return this._isOrganizer;
+  }
+  get status(): ParticipantStatus {
+    return this._status;
+  }
 
   // ── État rejoué ────────────────────────────────────────────────────────────
-  get team(): Team { return this._team as Team; }
-  get hasTeam(): boolean { return this._team !== undefined; }
+  get team(): Team {
+    return this._team as Team;
+  }
+  get hasTeam(): boolean {
+    return this._team !== undefined;
+  }
 
   /** Cagnotte dérivée : budget non dépensé (`team.remainingBudget`) + récompenses cumulées. */
   get wallet(): number {
     return this.hasTeam ? this.team.remainingBudget + this._rewardsEarned : 0;
   }
 
-  get championshipPoints(): number { return this._championshipPoints; }
-  get resistancePoints(): number { return this._resistancePoints; }
+  get championshipPoints(): number {
+    return this._championshipPoints;
+  }
+  get resistancePoints(): number {
+    return this._resistancePoints;
+  }
 
   /** Points de sabotage — dérivés des Points de Résistance secrets (1 par tranche de 3,
    *  arrondi à l'inférieur). Seule valeur dérivée révélée : le total brut de
@@ -86,16 +100,24 @@ export class CampaignParticipant {
   // ── Mutations CRUD (état stocké) ──────────────────────────────────────────
 
   /** Passe le participant à VALIDATED (validation d'une demande ou revalidation). */
-  validate(): void { this._status = ParticipantStatus.VALIDATED; }
+  validate(): void {
+    this._status = ParticipantStatus.VALIDATED;
+  }
 
   /** Passe le participant à REJECTED (refus d'une demande ou d'un participant validé). */
-  reject(): void { this._status = ParticipantStatus.REJECTED; }
+  reject(): void {
+    this._status = ParticipantStatus.REJECTED;
+  }
 
   /** Promeut le participant au rang de co-organisateur. */
-  promote(): void { this._isOrganizer = true; }
+  promote(): void {
+    this._isOrganizer = true;
+  }
 
   /** Change l'équipe engagée (null = désengagement, réservé à l'organisateur). */
-  changeTeam(teamId: number | null): void { this._teamId = teamId; }
+  changeTeam(teamId: number | null): void {
+    this._teamId = teamId;
+  }
 
   // ── État rejoué (Receiver GoF) ────────────────────────────────────────────
 
@@ -124,9 +146,15 @@ export class CampaignParticipant {
   }
 
   /** Ne crédite plus que les récompenses (`WalletMovementEvent`) — jamais les achats/reventes d'équipement, qui passent par l'arbre d'entités (cf. doc de classe). */
-  creditWallet(amount: number): void { this._rewardsEarned += amount; }
-  addPoints(n: number): void { this._championshipPoints += n; }
-  addResistance(n: number): void { this._resistancePoints += n; }
+  creditWallet(amount: number): void {
+    this._rewardsEarned += amount;
+  }
+  addPoints(n: number): void {
+    this._championshipPoints += n;
+  }
+  addResistance(n: number): void {
+    this._resistancePoints += n;
+  }
 
   /**
    * Garde de domaine : le participant a-t-il assez de cagnotte pour une dépense de `cost` ?
@@ -136,7 +164,9 @@ export class CampaignParticipant {
    */
   assertCanAfford(cost: number): void {
     if (this.wallet < cost) {
-      throw new DomainException(`Cagnotte insuffisante (${this.wallet} jerricans, coût : ${cost}).`);
+      throw new DomainException(
+        `Cagnotte insuffisante (${this.wallet} jerricans, coût : ${cost}).`,
+      );
     }
   }
 }

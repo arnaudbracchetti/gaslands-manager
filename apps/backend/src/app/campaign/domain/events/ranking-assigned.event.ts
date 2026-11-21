@@ -9,7 +9,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * futur des règles de calcul n'affecte pas les résultats passés.
  */
 export class RankingAssignedEvent extends GameEvent {
-  readonly eventType = GameEventType.RANKING_ASSIGNED;
+  readonly eventType: GameEventType.RANKING_ASSIGNED =
+    GameEventType.RANKING_ASSIGNED;
 
   constructor(
     id: number,

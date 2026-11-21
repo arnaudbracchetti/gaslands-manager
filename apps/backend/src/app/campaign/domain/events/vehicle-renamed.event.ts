@@ -23,7 +23,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * sur `Team.findVehicle`.
  */
 export class VehicleRenamedEvent extends GameEvent {
-  readonly eventType = GameEventType.VEHICLE_RENAMED;
+  readonly eventType: GameEventType.VEHICLE_RENAMED =
+    GameEventType.VEHICLE_RENAMED;
 
   constructor(
     id: number,

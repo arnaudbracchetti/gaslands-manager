@@ -17,11 +17,19 @@ class ChenillesBehavior extends EquipmentBehaviorBase {
   ];
 
   override applyStats(current: VehicleStats): VehicleStats {
-    return { ...current, vitesse_max: current.vitesse_max - 1, manoeuvrabilite: current.manoeuvrabilite + 1 };
+    return {
+      ...current,
+      vitesse_max: current.vitesse_max - 1,
+      manoeuvrabilite: current.manoeuvrabilite + 1,
+    };
   }
 
   override canPlace(ctx: PlacementContext): RuleResult {
-    if (ChenillesBehavior.VEHICULES_INCOMPATIBLES.includes(ctx.baseStats.nom_interne)) {
+    if (
+      ChenillesBehavior.VEHICULES_INCOMPATIBLES.includes(
+        ctx.baseStats.nom_interne,
+      )
+    ) {
       return fail('Chenilles incompatibles avec ce véhicule');
     }
     if (ctx.installedCount >= 1) {
@@ -32,14 +40,15 @@ class ChenillesBehavior extends EquipmentBehaviorBase {
 }
 
 class MembreEquipageBehavior extends EquipmentBehaviorBase {
-  private static readonly MULTIPLICATEUR_MAX = 2;
+  private static readonly MULTIPLICATEUR_MAX: number = 2;
 
   override applyStats(current: VehicleStats): VehicleStats {
     return { ...current, equipage: current.equipage + 1 };
   }
 
   override canPlace(ctx: PlacementContext): RuleResult {
-    const seuil = ctx.baseStats.equipage * MembreEquipageBehavior.MULTIPLICATEUR_MAX;
+    const seuil =
+      ctx.baseStats.equipage * MembreEquipageBehavior.MULTIPLICATEUR_MAX;
     // Le candidat s'applique lui-même AVANT le test : préserve exactement la nuance
     // "seuil sur le catalogue brut (baseStats), valeur testée incluant le candidat".
     const projete = this.applyStats(ctx.currentStats);
@@ -51,9 +60,14 @@ class MembreEquipageBehavior extends EquipmentBehaviorBase {
 }
 
 class BelierBehavior extends EquipmentBehaviorBase {
-  override canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
+  override canPlace(
+    ctx: PlacementContext,
+    candidate: PlacementCandidate,
+  ): RuleResult {
     if (candidate.orientation && ctx.hasOrientation(candidate.orientation)) {
-      return fail(`Un Bélier occupe déjà la position "${candidate.orientation}"`);
+      return fail(
+        `Un Bélier occupe déjà la position "${candidate.orientation}"`,
+      );
     }
     return ok();
   }
@@ -62,7 +76,9 @@ class BelierBehavior extends EquipmentBehaviorBase {
 class BelierExplosifBehavior extends EquipmentBehaviorBase {
   override canPlace(ctx: PlacementContext): RuleResult {
     if (ctx.baseStats.poids === 'Léger') {
-      return fail('Le Bélier Explosif est interdit sur les véhicules de Poids Léger');
+      return fail(
+        'Le Bélier Explosif est interdit sur les véhicules de Poids Léger',
+      );
     }
     if (ctx.installedCount >= 1) {
       return fail('Un seul Bélier Explosif par véhicule');
@@ -78,7 +94,10 @@ class BlindageBehavior extends EquipmentBehaviorBase {
 }
 
 class MishkinExclusifBehavior extends EquipmentBehaviorBase {
-  override canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
+  override canPlace(
+    ctx: PlacementContext,
+    candidate: PlacementCandidate,
+  ): RuleResult {
     if (ctx.installedCount >= 1) {
       return fail(`Un seul exemplaire de "${candidate.nom}" par véhicule`);
     }
@@ -95,7 +114,11 @@ class MishkinExclusifBehavior extends EquipmentBehaviorBase {
  * détectée par ce mécanisme tant qu'elle n'a pas de comportement propre. Le jour où
  * elle en recevra un, elle sera automatiquement couverte sans modifier cette liste.
  */
-const COMPORTEMENTS_REMORQUE: readonly string[] = ['remorque_legere', 'remorque_moyenne', 'remorque_lourde'];
+const COMPORTEMENTS_REMORQUE: readonly string[] = [
+  'remorque_legere',
+  'remorque_moyenne',
+  'remorque_lourde',
+];
 
 class RemorqueMoyenneBehavior extends EquipmentBehaviorBase {
   override applyStats(current: VehicleStats): VehicleStats {
@@ -104,10 +127,12 @@ class RemorqueMoyenneBehavior extends EquipmentBehaviorBase {
 
   override canPlace(ctx: PlacementContext): RuleResult {
     if (ctx.baseStats.poids === 'Léger') {
-      return fail('La Remorque Moyenne est réservée aux véhicules de Poids Moyen ou Lourd');
+      return fail(
+        'La Remorque Moyenne est réservée aux véhicules de Poids Moyen ou Lourd',
+      );
     }
     if (ctx.hasComportementAmong(COMPORTEMENTS_REMORQUE)) {
-      return fail('Un véhicule ne peut être équipé que d\'une seule remorque');
+      return fail("Un véhicule ne peut être équipé que d'une seule remorque");
     }
     return ok();
   }
@@ -120,16 +145,20 @@ class RemorqueLourdeBehavior extends EquipmentBehaviorBase {
 
   override canPlace(ctx: PlacementContext): RuleResult {
     if (ctx.baseStats.poids !== 'Lourd') {
-      return fail('La Remorque Lourde est réservée aux véhicules de Poids Lourd');
+      return fail(
+        'La Remorque Lourde est réservée aux véhicules de Poids Lourd',
+      );
     }
     if (ctx.hasComportementAmong(COMPORTEMENTS_REMORQUE)) {
-      return fail('Un véhicule ne peut être équipé que d\'une seule remorque');
+      return fail("Un véhicule ne peut être équipé que d'une seule remorque");
     }
     return ok();
   }
 }
 
-export const IMPROVEMENT_BEHAVIORS: Readonly<Record<string, EquipmentBehavior>> = {
+export const IMPROVEMENT_BEHAVIORS: Readonly<
+  Record<string, EquipmentBehavior>
+> = {
   chenilles: new ChenillesBehavior(),
   membre_equipage: new MembreEquipageBehavior(),
   belier: new BelierBehavior(),
@@ -140,6 +169,10 @@ export const IMPROVEMENT_BEHAVIORS: Readonly<Record<string, EquipmentBehavior>> 
   remorque_lourde: new RemorqueLourdeBehavior(),
 };
 
-export function resolveImprovementBehavior(comportement: string | undefined): EquipmentBehavior {
-  return IMPROVEMENT_BEHAVIORS[comportement ?? ''] ?? NEUTRAL_EQUIPMENT_BEHAVIOR;
+export function resolveImprovementBehavior(
+  comportement: string | undefined,
+): EquipmentBehavior {
+  return (
+    IMPROVEMENT_BEHAVIORS[comportement ?? ''] ?? NEUTRAL_EQUIPMENT_BEHAVIOR
+  );
 }

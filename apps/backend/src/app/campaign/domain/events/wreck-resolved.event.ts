@@ -4,7 +4,6 @@ import { WreckResult } from '../enums/wreck-result.enum';
 import { GameEventType } from '../enums/game-event-type.enum';
 import { wreckWeightModifier } from '../wreck/wreck-weight-modifier';
 
-
 /**
  * Résultat du lancer de la Table des Épaves
  *
@@ -17,7 +16,8 @@ import { wreckWeightModifier } from '../wreck/wreck-weight-modifier';
  * ultérieure de ce même véhicule.
  */
 export class WreckResolvedEvent extends GameEvent {
-  readonly eventType = GameEventType.WRECK_RESOLVED;
+  readonly eventType: GameEventType.WRECK_RESOLVED =
+    GameEventType.WRECK_RESOLVED;
 
   constructor(
     id: number,
@@ -37,20 +37,23 @@ export class WreckResolvedEvent extends GameEvent {
     const p = this.findParticipant(participants);
     const vehicle = p.team.findVehicle(this.vehicleId);
     vehicle.addChocs(this.chocsGained);
-    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC) vehicle.markFavoriDuPublic();
+    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC)
+      vehicle.markFavoriDuPublic();
   }
 
   undo(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
     const vehicle = p.team.findVehicle(this.vehicleId);
     vehicle.addChocs(-this.chocsGained);
-    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC) vehicle.clearFavoriDuPublic();
+    if (this.wreckResult === WreckResult.FAVORI_DU_PUBLIC)
+      vehicle.clearFavoriDuPublic();
   }
 
   describe(participants: readonly CampaignParticipant[]): string {
-    const chocs = this.chocsGained !== 0
-      ? `, ${this.chocsGained > 0 ? '+' : ''}${this.chocsGained} choc(s)`
-      : '';
+    const chocs =
+      this.chocsGained !== 0
+        ? `, ${this.chocsGained > 0 ? '+' : ''}${this.chocsGained} choc(s)`
+        : '';
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
     const vehicleName = found?.vehicle.nom ?? '';
     // Le modificateur de poids (Léger +1 / Lourd −1) entre dans le calcul du tirage
@@ -59,17 +62,20 @@ export class WreckResolvedEvent extends GameEvent {
     // Sans lui, un total affiché "D6+chocs" pouvait ne pas correspondre à la ligne
     // obtenue pour un véhicule Léger/Lourd (omis, pas 0, l'affichage restait silencieux).
     const weightMod = found ? wreckWeightModifier(found.vehicle.type.poids) : 0;
-    const weightPart = weightMod !== 0
-      ? `, ${weightMod > 0 ? '+' : ''}${weightMod} (${found?.vehicle.type.poids}) = ${this.diceRoll + this.chocsBefore + weightMod}`
-      : '';
-    return `Tirage sur la table des Épaves${vehicleName ? ` pour (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} `
-      + `(D6=${this.diceRoll}+${this.chocsBefore} chocs${weightPart}${chocs})`;
+    const weightPart =
+      weightMod !== 0
+        ? `, ${weightMod > 0 ? '+' : ''}${weightMod} (${found?.vehicle.type.poids}) = ${this.diceRoll + this.chocsBefore + weightMod}`
+        : '';
+    return (
+      `Tirage sur la table des Épaves${vehicleName ? ` pour (${vehicleName})` : ''} : ${WRECK_RESULT_LABELS[this.wreckResult]} ` +
+      `(D6=${this.diceRoll}+${this.chocsBefore} chocs${weightPart}${chocs})`
+    );
   }
 }
 
 const WRECK_RESULT_LABELS: Record<WreckResult, string> = {
   [WreckResult.DEBOSSELE]: 'Débosselé !',
-  [WreckResult.INDEMNE]: 'S\'en sort indemne',
+  [WreckResult.INDEMNE]: "S'en sort indemne",
   [WreckResult.ROUE_CABOSSEE]: 'Passage de roue cabossé',
   [WreckResult.ARRACHEE]: 'Arrachée',
   [WreckResult.PIGNON_ENDOMMAGE]: 'Pignon endommagé',

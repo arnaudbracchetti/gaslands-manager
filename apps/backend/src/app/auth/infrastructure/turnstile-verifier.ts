@@ -21,8 +21,9 @@ interface TurnstileSiteVerifyResponse {
  */
 @Injectable()
 export class TurnstileVerifier implements ICaptchaVerifier {
-  private static readonly VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-  private static readonly TIMEOUT_MS = 5000;
+  private static readonly VERIFY_URL: string =
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+  private static readonly TIMEOUT_MS: number = 5000;
 
   private readonly logger: Logger = new Logger(TurnstileVerifier.name);
 
@@ -33,7 +34,10 @@ export class TurnstileVerifier implements ICaptchaVerifier {
       throw new DomainException('Vérification anti-robot échouée');
     }
 
-    const body = new URLSearchParams({ secret: this.secretKey, response: token });
+    const body = new URLSearchParams({
+      secret: this.secretKey,
+      response: token,
+    });
     if (remoteIp) body.set('remoteip', remoteIp);
 
     let result: TurnstileSiteVerifyResponse;
@@ -51,7 +55,9 @@ export class TurnstileVerifier implements ICaptchaVerifier {
     }
 
     if (!result.success) {
-      this.logger.warn(`Turnstile a rejeté le jeton : ${(result['error-codes'] ?? []).join(', ')}`);
+      this.logger.warn(
+        `Turnstile a rejeté le jeton : ${(result['error-codes'] ?? []).join(', ')}`,
+      );
       throw new DomainException('Vérification anti-robot échouée');
     }
   }

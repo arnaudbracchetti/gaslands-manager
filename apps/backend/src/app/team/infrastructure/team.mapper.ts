@@ -1,5 +1,9 @@
 import { TeamOrm } from './entities/team.entity';
-import { VehicleOrm, VehicleImprovementOrm, VehicleAdvantageOrm } from './entities/vehicle.entity';
+import {
+  VehicleOrm,
+  VehicleImprovementOrm,
+  VehicleAdvantageOrm,
+} from './entities/vehicle.entity';
 import { WeaponOrm } from './entities/weapon.entity';
 import { Team } from '../domain/team';
 import { Vehicle } from '../domain/vehicle';
@@ -20,7 +24,11 @@ export class TeamMapper {
 
   // ── ORM → Domaine ──────────────────────────────────────────────────────────────
 
-  toDomain(orm: TeamOrm, isLocked = false, campaignBudget: number | null = null): Team {
+  toDomain(
+    orm: TeamOrm,
+    isLocked: boolean = false,
+    campaignBudget: number | null = null,
+  ): Team {
     const vehicles = (orm.vehicles ?? []).map((v) => this.vehicleToDomain(v));
     return new Team(
       orm.id,
@@ -38,20 +46,36 @@ export class TeamMapper {
   private vehicleToDomain(orm: VehicleOrm): Vehicle {
     const vehicleType = this.catalogRepo.getVehicleType(orm.nomInterne);
     if (!vehicleType) {
-      throw new Error(`Véhicule catalogue inconnu : "${orm.nomInterne}" (véhicule #${orm.id})`);
+      throw new Error(
+        `Véhicule catalogue inconnu : "${orm.nomInterne}" (véhicule #${orm.id})`,
+      );
     }
 
     const weapons = (orm.weapons ?? []).map((w) => this.weaponToDomain(w));
-    const improvements = (orm.improvements ?? []).map((i) => this.improvementToDomain(i));
-    const advantages = (orm.advantages ?? []).map((a) => this.advantageToDomain(a));
+    const improvements = (orm.improvements ?? []).map((i) =>
+      this.improvementToDomain(i),
+    );
+    const advantages = (orm.advantages ?? []).map((a) =>
+      this.advantageToDomain(a),
+    );
 
-    return new Vehicle(orm.id, orm.teamId, vehicleType, weapons, improvements, advantages, orm.nom ?? null);
+    return new Vehicle(
+      orm.id,
+      orm.teamId,
+      vehicleType,
+      weapons,
+      improvements,
+      advantages,
+      orm.nom ?? null,
+    );
   }
 
   private weaponToDomain(orm: WeaponOrm): Weapon {
     const weaponType = this.catalogRepo.getWeaponType(orm.nomInterne);
     if (!weaponType) {
-      throw new Error(`Arme catalogue inconnue : "${orm.nomInterne}" (weapon #${orm.id})`);
+      throw new Error(
+        `Arme catalogue inconnue : "${orm.nomInterne}" (weapon #${orm.id})`,
+      );
     }
     return new Weapon(orm.id, weaponType, orm.orientation, orm.estDefaut);
   }
@@ -59,15 +83,24 @@ export class TeamMapper {
   private improvementToDomain(orm: VehicleImprovementOrm): Improvement {
     const improvementType = this.catalogRepo.getImprovementType(orm.nomInterne);
     if (!improvementType) {
-      throw new Error(`Amélioration catalogue inconnue : "${orm.nomInterne}" (improvement #${orm.id})`);
+      throw new Error(
+        `Amélioration catalogue inconnue : "${orm.nomInterne}" (improvement #${orm.id})`,
+      );
     }
-    return new Improvement(orm.id, improvementType, orm.orientation, orm.estDefaut);
+    return new Improvement(
+      orm.id,
+      improvementType,
+      orm.orientation,
+      orm.estDefaut,
+    );
   }
 
   private advantageToDomain(orm: VehicleAdvantageOrm): Advantage {
     const advantageType = this.catalogRepo.getAdvantageType(orm.nomInterne);
     if (!advantageType) {
-      throw new Error(`Avantage catalogue inconnu : "${orm.nomInterne}" (advantage #${orm.id})`);
+      throw new Error(
+        `Avantage catalogue inconnu : "${orm.nomInterne}" (advantage #${orm.id})`,
+      );
     }
     return new Advantage(orm.id, advantageType);
   }
@@ -99,8 +132,12 @@ export class TeamMapper {
       nom: domain.customName,
       teamId: domain.teamId || undefined,
       weapons: domain.weapons.map((w) => this.weaponToOrm(w, domain.id)),
-      improvements: domain.improvements.map((i) => this.improvementToOrm(i, domain.id)),
-      advantages: domain.advantages.map((a) => this.advantageToOrm(a, domain.id)),
+      improvements: domain.improvements.map((i) =>
+        this.improvementToOrm(i, domain.id),
+      ),
+      advantages: domain.advantages.map((a) =>
+        this.advantageToOrm(a, domain.id),
+      ),
     };
   }
 
@@ -114,7 +151,10 @@ export class TeamMapper {
     };
   }
 
-  private improvementToOrm(domain: Improvement, vehicleId: number): Partial<VehicleImprovementOrm> {
+  private improvementToOrm(
+    domain: Improvement,
+    vehicleId: number,
+  ): Partial<VehicleImprovementOrm> {
     return {
       id: domain.id || undefined,
       nomInterne: domain.type.nomInterne,
@@ -124,7 +164,10 @@ export class TeamMapper {
     };
   }
 
-  private advantageToOrm(domain: Advantage, vehicleId: number): Partial<VehicleAdvantageOrm> {
+  private advantageToOrm(
+    domain: Advantage,
+    vehicleId: number,
+  ): Partial<VehicleAdvantageOrm> {
     return {
       id: domain.id || undefined,
       nomInterne: domain.type.nomInterne,

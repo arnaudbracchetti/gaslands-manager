@@ -58,10 +58,22 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeamOrm, VehicleOrm, VehicleImprovementOrm, VehicleAdvantageOrm, WeaponOrm, CampaignParticipantOrm]),
+    TypeOrmModule.forFeature([
+      TeamOrm,
+      VehicleOrm,
+      VehicleImprovementOrm,
+      VehicleAdvantageOrm,
+      WeaponOrm,
+      CampaignParticipantOrm,
+    ]),
     CatalogModule,
   ],
-  controllers: [TeamController, VehicleTeamController, VehicleController, WeaponController],
+  controllers: [
+    TeamController,
+    VehicleTeamController,
+    VehicleController,
+    WeaponController,
+  ],
   providers: [
     // ── Couche infrastructure ──────────────────────────────────────────────────
 
@@ -71,7 +83,7 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
     // TeamMapper a besoin d'ICatalogRepository pour résoudre les Value Objects
     {
       provide: TeamMapper,
-      useFactory: (cr: ICatalogRepository) => new TeamMapper(cr),
+      useFactory: (cr: ICatalogRepository): TeamMapper => new TeamMapper(cr),
       inject: [CATALOG_REPOSITORY],
     },
 
@@ -82,22 +94,26 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
     {
       provide: GetTeamSummariesUseCase,
-      useFactory: (tr: ITeamRepository) => new GetTeamSummariesUseCase(tr),
+      useFactory: (tr: ITeamRepository): GetTeamSummariesUseCase =>
+        new GetTeamSummariesUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: CreateTeamUseCase,
-      useFactory: (tr: ITeamRepository) => new CreateTeamUseCase(tr),
+      useFactory: (tr: ITeamRepository): CreateTeamUseCase =>
+        new CreateTeamUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: UpdateTeamUseCase,
-      useFactory: (tr: ITeamRepository) => new UpdateTeamUseCase(tr),
+      useFactory: (tr: ITeamRepository): UpdateTeamUseCase =>
+        new UpdateTeamUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: RemoveTeamUseCase,
-      useFactory: (tr: ITeamRepository) => new RemoveTeamUseCase(tr),
+      useFactory: (tr: ITeamRepository): RemoveTeamUseCase =>
+        new RemoveTeamUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
 
@@ -105,32 +121,42 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
     {
       provide: AddVehicleUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new AddVehicleUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): AddVehicleUseCase => new AddVehicleUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: GetAvailableVehiclesUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new GetAvailableVehiclesUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): GetAvailableVehiclesUseCase => new GetAvailableVehiclesUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: RemoveVehicleUseCase,
-      useFactory: (tr: ITeamRepository) => new RemoveVehicleUseCase(tr),
+      useFactory: (tr: ITeamRepository): RemoveVehicleUseCase =>
+        new RemoveVehicleUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: RenameVehicleUseCase,
-      useFactory: (tr: ITeamRepository) => new RenameVehicleUseCase(tr),
+      useFactory: (tr: ITeamRepository): RenameVehicleUseCase =>
+        new RenameVehicleUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: GetVehicleDetailUseCase,
-      useFactory: (tr: ITeamRepository) => new GetVehicleDetailUseCase(tr),
+      useFactory: (tr: ITeamRepository): GetVehicleDetailUseCase =>
+        new GetVehicleDetailUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
     {
       provide: GetTeamSheetUseCase,
-      useFactory: (tr: ITeamRepository) => new GetTeamSheetUseCase(tr),
+      useFactory: (tr: ITeamRepository): GetTeamSheetUseCase =>
+        new GetTeamSheetUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
 
@@ -138,18 +164,24 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
     {
       provide: GetAvailableWeaponsUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
-        new GetAvailableWeaponsUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): GetAvailableWeaponsUseCase => new GetAvailableWeaponsUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: AddWeaponUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) => new AddWeaponUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): AddWeaponUseCase => new AddWeaponUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: RemoveWeaponUseCase,
-      useFactory: (tr: ITeamRepository) => new RemoveWeaponUseCase(tr),
+      useFactory: (tr: ITeamRepository): RemoveWeaponUseCase =>
+        new RemoveWeaponUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
 
@@ -157,19 +189,25 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
     {
       provide: GetAvailableImprovementsUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): GetAvailableImprovementsUseCase =>
         new GetAvailableImprovementsUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: AddImprovementUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
-        new AddImprovementUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): AddImprovementUseCase => new AddImprovementUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: RemoveImprovementUseCase,
-      useFactory: (tr: ITeamRepository) => new RemoveImprovementUseCase(tr),
+      useFactory: (tr: ITeamRepository): RemoveImprovementUseCase =>
+        new RemoveImprovementUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
 
@@ -177,19 +215,25 @@ import { TEAM_REPOSITORY, CATALOG_REPOSITORY } from './team.tokens';
 
     {
       provide: GetAvailableAdvantagesUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): GetAvailableAdvantagesUseCase =>
         new GetAvailableAdvantagesUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: AddAdvantageUseCase,
-      useFactory: (tr: ITeamRepository, cr: ICatalogRepository) =>
-        new AddAdvantageUseCase(tr, cr),
+      useFactory: (
+        tr: ITeamRepository,
+        cr: ICatalogRepository,
+      ): AddAdvantageUseCase => new AddAdvantageUseCase(tr, cr),
       inject: [TEAM_REPOSITORY, CATALOG_REPOSITORY],
     },
     {
       provide: RemoveAdvantageUseCase,
-      useFactory: (tr: ITeamRepository) => new RemoveAdvantageUseCase(tr),
+      useFactory: (tr: ITeamRepository): RemoveAdvantageUseCase =>
+        new RemoveAdvantageUseCase(tr),
       inject: [TEAM_REPOSITORY],
     },
   ],

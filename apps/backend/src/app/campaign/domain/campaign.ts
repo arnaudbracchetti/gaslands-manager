@@ -50,7 +50,7 @@ export class Campaign {
     inviteCode: string,
     participants: CampaignParticipant[],
     games: Game[],
-    budget = 50,
+    budget: number = 50,
   ) {
     this._name = name;
     this._state = state;
@@ -60,14 +60,30 @@ export class Campaign {
     this._games = games;
   }
 
-  get name(): string { return this._name; }
-  get state(): CampaignState { return this._state; }
-  get inviteCode(): string { return this._inviteCode; }
-  get budget(): number { return this._budget; }
-  get participants(): readonly CampaignParticipant[] { return this._participants; }
-  get games(): readonly Game[] { return this._games; }
-  get removedParticipantIds(): readonly number[] { return this._removedParticipantIds; }
-  get removedGameIds(): readonly number[] { return this._removedGameIds; }
+  get name(): string {
+    return this._name;
+  }
+  get state(): CampaignState {
+    return this._state;
+  }
+  get inviteCode(): string {
+    return this._inviteCode;
+  }
+  get budget(): number {
+    return this._budget;
+  }
+  get participants(): readonly CampaignParticipant[] {
+    return this._participants;
+  }
+  get games(): readonly Game[] {
+    return this._games;
+  }
+  get removedParticipantIds(): readonly number[] {
+    return this._removedParticipantIds;
+  }
+  get removedGameIds(): readonly number[] {
+    return this._removedGameIds;
+  }
 
   /**
    * Une équipe ne peut être engagée que si le coût cumulé de ses véhicules tient
@@ -87,13 +103,19 @@ export class Campaign {
 
   findGame(gameId: number): Game {
     const g = this._games.find((x) => x.id === gameId);
-    if (!g) throw new DomainException(`Partie #${gameId} introuvable dans la campagne`);
+    if (!g)
+      throw new DomainException(
+        `Partie #${gameId} introuvable dans la campagne`,
+      );
     return g;
   }
 
   findParticipant(participantId: number): CampaignParticipant {
     const p = this._participants.find((x) => x.id === participantId);
-    if (!p) throw new DomainException(`Participant #${participantId} introuvable dans la campagne`);
+    if (!p)
+      throw new DomainException(
+        `Participant #${participantId} introuvable dans la campagne`,
+      );
     return p;
   }
 
@@ -116,7 +138,7 @@ export class Campaign {
    */
   replay(): void {
     for (const p of this._participants) {
-      p.reset();  // wallet = team.remainingBudget, PC = 0, PR = 0 + team.resetCampaignState()
+      p.reset(); // wallet = team.remainingBudget, PC = 0, PR = 0 + team.resetCampaignState()
     }
     const sorted = [...this._games].sort((a, b) => a.order - b.order);
     for (const game of sorted) {
@@ -151,7 +173,9 @@ export class Campaign {
    * case). EN_CONSTRUCTION uniquement.
    */
   rename(name: string): void {
-    this.assertConstruction('Le nom ne peut être modifié que tant que la campagne est en construction.');
+    this.assertConstruction(
+      'Le nom ne peut être modifié que tant que la campagne est en construction.',
+    );
     this._name = name;
   }
 
@@ -162,7 +186,9 @@ export class Campaign {
    * équipe déjà engagée illégale (cf. assertTeamFitsBudget).
    */
   changeBudget(budget: number): void {
-    this.assertConstruction('Le budget ne peut être modifié que tant que la campagne est en construction.');
+    this.assertConstruction(
+      'Le budget ne peut être modifié que tant que la campagne est en construction.',
+    );
     for (const p of this._participants) {
       if (p.status === ParticipantStatus.VALIDATED && p.hasTeam) {
         this.assertTeamFitsBudget(p.team, budget);
@@ -193,10 +219,18 @@ export class Campaign {
   requestJoin(userId: number, team: Team): CampaignParticipant {
     this.assertConstruction();
     if (this._participants.some((p) => p.userId === userId)) {
-      throw new DomainException('Vous avez déjà une demande d\'inscription pour cette campagne.');
+      throw new DomainException(
+        "Vous avez déjà une demande d'inscription pour cette campagne.",
+      );
     }
     this.assertTeamFitsBudget(team);
-    const participant = new CampaignParticipant(0, userId, team.id, false, ParticipantStatus.PENDING);
+    const participant = new CampaignParticipant(
+      0,
+      userId,
+      team.id,
+      false,
+      ParticipantStatus.PENDING,
+    );
     this._participants.push(participant);
     return participant;
   }
@@ -208,11 +242,19 @@ export class Campaign {
    * joueur a pu grossir son équipe entre sa demande et la validation, tant que la
    * campagne reste EN_CONSTRUCTION.
    */
-  validateParticipant(participantId: number, accept: boolean): CampaignParticipant {
+  validateParticipant(
+    participantId: number,
+    accept: boolean,
+  ): CampaignParticipant {
     const participant = this.findParticipant(participantId);
     if (participant.status === ParticipantStatus.VALIDATED && !accept) {
-      this.assertConstruction('Cette campagne n\'accepte plus de modifications de participants.');
-      this.assertNotLastOrganizer(participant, 'Impossible de refuser le dernier organisateur de la campagne.');
+      this.assertConstruction(
+        "Cette campagne n'accepte plus de modifications de participants.",
+      );
+      this.assertNotLastOrganizer(
+        participant,
+        'Impossible de refuser le dernier organisateur de la campagne.',
+      );
     }
     if (accept) {
       if (participant.hasTeam) this.assertTeamFitsBudget(participant.team);
@@ -242,8 +284,13 @@ export class Campaign {
    */
   removeParticipant(participantId: number): void {
     const participant = this.findParticipant(participantId);
-    this.assertConstruction('Cette campagne n\'accepte plus de modifications de participants.');
-    this.assertNotLastOrganizer(participant, 'Impossible de retirer le dernier organisateur de la campagne.');
+    this.assertConstruction(
+      "Cette campagne n'accepte plus de modifications de participants.",
+    );
+    this.assertNotLastOrganizer(
+      participant,
+      'Impossible de retirer le dernier organisateur de la campagne.',
+    );
     const idx = this._participants.indexOf(participant);
     this._participants.splice(idx, 1);
     if (participant.id > 0) this._removedParticipantIds.push(participant.id);
@@ -255,23 +302,35 @@ export class Campaign {
    * l'unicité de l'équipe sont vérifiées en amont (use case) ; la nouvelle équipe
    * doit tenir dans le budget de la campagne (cf. assertTeamFitsBudget).
    */
-  changeParticipantTeam(userId: number, team: Team | null): CampaignParticipant {
+  changeParticipantTeam(
+    userId: number,
+    team: Team | null,
+  ): CampaignParticipant {
     const participant = this._participants.find(
       (p) => p.userId === userId && p.status === ParticipantStatus.VALIDATED,
     );
-    if (!participant) throw new DomainException('Participant introuvable dans la campagne.');
-    this.assertConstruction('Cette campagne n\'accepte plus de changement d\'équipe.');
+    if (!participant)
+      throw new DomainException('Participant introuvable dans la campagne.');
+    this.assertConstruction(
+      "Cette campagne n'accepte plus de changement d'équipe.",
+    );
     if (team === null && !participant.isOrganizer) {
-      throw new DomainException('Seul un organisateur peut retirer son équipe sans en choisir une autre.');
+      throw new DomainException(
+        'Seul un organisateur peut retirer son équipe sans en choisir une autre.',
+      );
     }
     const teamId = team?.id ?? null;
-    if (teamId !== participant.teamId && this.hasParticipantHistory(participant.id)) {
+    if (
+      teamId !== participant.teamId &&
+      this.hasParticipantHistory(participant.id)
+    ) {
       throw new DomainException(
         'Ce participant a déjà des événements journalisés dans cette campagne : ' +
           'son équipe engagée ne peut plus être changée.',
       );
     }
-    if (team !== null && teamId !== participant.teamId) this.assertTeamFitsBudget(team);
+    if (team !== null && teamId !== participant.teamId)
+      this.assertTeamFitsBudget(team);
     participant.changeTeam(teamId);
     return participant;
   }
@@ -285,7 +344,9 @@ export class Campaign {
    * d'origine (`Team.findVehicle` introuvable), cf. spec/CAMPAIGN.md.
    */
   private hasParticipantHistory(participantId: number): boolean {
-    return this._games.some((g) => g.events.some((e) => e.participantId === participantId));
+    return this._games.some((g) =>
+      g.events.some((e) => e.participantId === participantId),
+    );
   }
 
   // ── Commandes CRUD — parties ─────────────────────────────────────────────────
@@ -297,7 +358,15 @@ export class Campaign {
   addGame(scenarioId: string, type: string): Game {
     this.assertManageable();
     const order = this.nextOrder();
-    const game = this.createGame(0, type, scenarioId, order, GameStatus.PLANIFIE, null, []);
+    const game = this.createGame(
+      0,
+      type,
+      scenarioId,
+      order,
+      GameStatus.PLANIFIE,
+      null,
+      [],
+    );
     this._games.push(game);
     return game;
   }
@@ -308,7 +377,15 @@ export class Campaign {
     const game = this.findGame(gameId);
     this.assertPlanifie(game);
     // Remplace la partie par une instance du bon sous-type, en conservant id/order.
-    const replaced = this.createGame(game.id, type, scenarioId, game.order, GameStatus.PLANIFIE, null, [...game.events]);
+    const replaced = this.createGame(
+      game.id,
+      type,
+      scenarioId,
+      game.order,
+      GameStatus.PLANIFIE,
+      null,
+      [...game.events],
+    );
     const idx = this._games.indexOf(game);
     this._games.splice(idx, 1, replaced);
     return replaced;
@@ -336,7 +413,9 @@ export class Campaign {
    */
   reorderGames(gameIds: number[]): void {
     this.assertManageable();
-    const planifieGames = this._games.filter((g) => g.status === GameStatus.PLANIFIE);
+    const planifieGames = this._games.filter(
+      (g) => g.status === GameStatus.PLANIFIE,
+    );
     const currentIds = new Set(planifieGames.map((g) => g.id));
     const providedIds = new Set(gameIds);
     const sameSet =
@@ -365,7 +444,9 @@ export class Campaign {
   enterAtelier(gameId: number): { autoClosedGameId: number | null } {
     const game = this.findGame(gameId);
     if (game.status !== GameStatus.PLANIFIE) {
-      throw new DomainException('Seule une partie PLANIFIE peut entrer en atelier.');
+      throw new DomainException(
+        'Seule une partie PLANIFIE peut entrer en atelier.',
+      );
     }
 
     const openAtelier = this._games.find(
@@ -403,21 +484,35 @@ export class Campaign {
 
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
-  private assertConstruction(message = 'Action réservée à une campagne en construction.'): void {
-    if (this._state !== CampaignState.EN_CONSTRUCTION) throw new DomainException(message);
+  private assertConstruction(
+    message: string = 'Action réservée à une campagne en construction.',
+  ): void {
+    if (this._state !== CampaignState.EN_CONSTRUCTION)
+      throw new DomainException(message);
   }
 
   private assertManageable(): void {
-    if (this._state !== CampaignState.EN_CONSTRUCTION && this._state !== CampaignState.EN_COURS) {
-      throw new DomainException('Le programme ne peut être géré que tant que la campagne n\'est pas terminée.');
+    if (
+      this._state !== CampaignState.EN_CONSTRUCTION &&
+      this._state !== CampaignState.EN_COURS
+    ) {
+      throw new DomainException(
+        "Le programme ne peut être géré que tant que la campagne n'est pas terminée.",
+      );
     }
   }
 
-  private assertPlanifie(game: Game, message = 'Une partie déjà jouée ne peut plus être modifiée.'): void {
+  private assertPlanifie(
+    game: Game,
+    message: string = 'Une partie déjà jouée ne peut plus être modifiée.',
+  ): void {
     if (game.status !== GameStatus.PLANIFIE) throw new DomainException(message);
   }
 
-  private assertNotLastOrganizer(participant: CampaignParticipant, message: string): void {
+  private assertNotLastOrganizer(
+    participant: CampaignParticipant,
+    message: string,
+  ): void {
     if (!participant.isOrganizer) return;
     const organizers = this._participants.filter(
       (p) => p.isOrganizer && p.status === ParticipantStatus.VALIDATED,
@@ -440,9 +535,25 @@ export class Campaign {
   ): Game {
     switch (type) {
       case 'EVENEMENT_TELE':
-        return new EvenementTeleGame(id, this.id, status, order, scenarioId, playedAt, events);
+        return new EvenementTeleGame(
+          id,
+          this.id,
+          status,
+          order,
+          scenarioId,
+          playedAt,
+          events,
+        );
       case 'ESCARMOUCHE':
-        return new EscarmoucheGame(id, this.id, status, order, scenarioId, playedAt, events);
+        return new EscarmoucheGame(
+          id,
+          this.id,
+          status,
+          order,
+          scenarioId,
+          playedAt,
+          events,
+        );
       default:
         throw new DomainException(`Type de partie invalide : "${type}"`);
     }

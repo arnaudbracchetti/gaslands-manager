@@ -14,7 +14,14 @@
  * la garde ci-dessous fait retomber `isMobile` sur `false` plutôt que de
  * lever une exception à l'instanciation du service.
  */
-import { DestroyRef, Injectable, Signal, inject, signal } from '@angular/core';
+import {
+  DestroyRef,
+  Injectable,
+  Signal,
+  WritableSignal,
+  inject,
+  signal,
+} from '@angular/core';
 
 const MOBILE_BREAKPOINT_PX = 640;
 
@@ -25,7 +32,9 @@ export class ViewportService {
       ? window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`)
       : null;
 
-  private readonly _isMobile = signal<boolean>(this.mediaQuery?.matches ?? false);
+  private readonly _isMobile: WritableSignal<boolean> = signal<boolean>(
+    this.mediaQuery?.matches ?? false,
+  );
 
   /** Vrai sous 640px de large — même seuil que `bp.mobile` (SCSS). */
   readonly isMobile: Signal<boolean> = this._isMobile.asReadonly();
@@ -35,8 +44,11 @@ export class ViewportService {
       return;
     }
 
-    const listener = (event: MediaQueryListEvent): void => this._isMobile.set(event.matches);
+    const listener = (event: MediaQueryListEvent): void =>
+      this._isMobile.set(event.matches);
     this.mediaQuery.addEventListener('change', listener);
-    inject(DestroyRef).onDestroy(() => this.mediaQuery?.removeEventListener('change', listener));
+    inject(DestroyRef).onDestroy(() =>
+      this.mediaQuery?.removeEventListener('change', listener),
+    );
   }
 }

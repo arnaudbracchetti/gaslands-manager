@@ -11,7 +11,7 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * les parties déjà jouées.
  */
 export class GatesCrossedEvent extends GameEvent {
-  readonly eventType = GameEventType.GATES_CROSSED;
+  readonly eventType: GameEventType.GATES_CROSSED = GameEventType.GATES_CROSSED;
 
   constructor(
     id: number,

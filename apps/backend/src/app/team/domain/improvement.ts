@@ -9,8 +9,8 @@ import type { VehicleStats } from './behaviors/equipment-behavior';
  * Entité enfant de Vehicle, lui-même entité enfant de l'agrégat Team.
  */
 export class Improvement {
-  private _isLost = false;
-  private _isSold = false;
+  private _isLost: boolean = false;
+  private _isSold: boolean = false;
 
   constructor(
     readonly id: number,
@@ -36,7 +36,9 @@ export class Improvement {
    */
   get resaleRefund(): number {
     if (this._isSold) {
-      throw new DomainException('Cette amélioration est déjà vendue — son remboursement a déjà été calculé et crédité.');
+      throw new DomainException(
+        'Cette amélioration est déjà vendue — son remboursement a déjà été calculé et crédité.',
+      );
     }
     return Math.floor(this.price / 2);
   }
@@ -62,7 +64,9 @@ export class Improvement {
    * améliorations actives, `!isSold && !isLost`).
    */
   applyStats(current: VehicleStats): VehicleStats {
-    return resolveImprovementBehavior(this.type.comportement).applyStats(current);
+    return resolveImprovementBehavior(this.type.comportement).applyStats(
+      current,
+    );
   }
 
   get isLost(): boolean {

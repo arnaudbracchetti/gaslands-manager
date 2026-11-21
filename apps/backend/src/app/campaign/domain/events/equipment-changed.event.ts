@@ -6,7 +6,10 @@ import type { ImprovementType } from '../../../team/domain/value-objects/improve
 import type { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import type { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import type { Orientation, WeaponOrientation } from '../../../team/domain/team';
-import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../enums/equipment-change.enums';
 import { GameEventType } from '../enums/game-event-type.enum';
 
 export { EquipmentOperation, EquipmentEntityType };
@@ -79,7 +82,8 @@ export { EquipmentOperation, EquipmentEntityType };
  * éparpillerait cette complexité au lieu de la réduire.
  */
 export class EquipmentChangedEvent extends GameEvent {
-  readonly eventType = GameEventType.EQUIPMENT_CHANGED;
+  readonly eventType: GameEventType.EQUIPMENT_CHANGED =
+    GameEventType.EQUIPMENT_CHANGED;
 
   constructor(
     id: number,
@@ -139,7 +143,10 @@ export class EquipmentChangedEvent extends GameEvent {
    */
   execute(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    this.applyChocsDelta(p, this.operation === EquipmentOperation.BUY ? -this.cost : this.cost);
+    this.applyChocsDelta(
+      p,
+      this.operation === EquipmentOperation.BUY ? -this.cost : this.cost,
+    );
     if (this.operation === EquipmentOperation.BUY) {
       this.createTransientEquipment(p, -this.id);
       return;
@@ -149,7 +156,10 @@ export class EquipmentChangedEvent extends GameEvent {
 
   undo(participants: CampaignParticipant[]): void {
     const p = this.findParticipant(participants);
-    this.applyChocsDelta(p, this.operation === EquipmentOperation.BUY ? this.cost : -this.cost);
+    this.applyChocsDelta(
+      p,
+      this.operation === EquipmentOperation.BUY ? this.cost : -this.cost,
+    );
     if (this.operation === EquipmentOperation.BUY) {
       this.removeTransientEquipment(p, -this.id);
       return;
@@ -164,7 +174,10 @@ export class EquipmentChangedEvent extends GameEvent {
   }
 
   /** Recrée l'entité transiente (Vehicle/Weapon/Improvement/Advantage) avec l'id fourni — undo d'un achat (BUY) uniquement. */
-  private createTransientEquipment(p: CampaignParticipant, entityId: number): void {
+  private createTransientEquipment(
+    p: CampaignParticipant,
+    entityId: number,
+  ): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
         p.team.addCampaignVehicle(
@@ -175,22 +188,45 @@ export class EquipmentChangedEvent extends GameEvent {
         );
         break;
       case EquipmentEntityType.WEAPON:
-        p.team.addCampaignWeapon(this.targetVehicleId!, this.resolvedWeaponType!, this.orientation, entityId);
+        p.team.addCampaignWeapon(
+          this.targetVehicleId!,
+          this.resolvedWeaponType!,
+          this.orientation,
+          entityId,
+        );
         break;
       case EquipmentEntityType.IMPROVEMENT:
         // Une amélioration ne porte jamais 'tourelle' — invariant garanti à la construction
         // de l'événement (jamais émis par le use case pour ce entityType).
-        p.team.addCampaignImprovement(this.targetVehicleId!, this.resolvedImprovementType!, this.orientation as Orientation | null, entityId);
+        p.team.addCampaignImprovement(
+          this.targetVehicleId!,
+          this.resolvedImprovementType!,
+          this.orientation as Orientation | null,
+          entityId,
+        );
         break;
       case EquipmentEntityType.ADVANTAGE:
-        p.team.addCampaignAdvantage(this.targetVehicleId!, this.resolvedAdvantageType!, entityId);
+        p.team.addCampaignAdvantage(
+          this.targetVehicleId!,
+          this.resolvedAdvantageType!,
+          entityId,
+        );
         break;
       case EquipmentEntityType.SEQUELLE:
-        p.team.addCampaignSequella(this.targetVehicleId!, this.resolvedSequellaType!, entityId);
+        p.team.addCampaignSequella(
+          this.targetVehicleId!,
+          this.resolvedSequellaType!,
+          entityId,
+        );
         // Dur à Cuire : un seul événement porte les deux effets (cf. doc de classe) — même
         // id transient que la séquelle, aucune collision possible (collections distinctes).
         if (this.resolvedFreeAdvantageType) {
-          p.team.addCampaignAdvantage(this.targetVehicleId!, this.resolvedFreeAdvantageType, entityId, this.nomInterne);
+          p.team.addCampaignAdvantage(
+            this.targetVehicleId!,
+            this.resolvedFreeAdvantageType,
+            entityId,
+            this.nomInterne,
+          );
         }
         break;
     }
@@ -204,7 +240,10 @@ export class EquipmentChangedEvent extends GameEvent {
    * chemin entièrement différent (`Game.collectSessionEventsForVehicle`, suppression
    * d'événements en base, jamais `undo()`).
    */
-  private removeTransientEquipment(p: CampaignParticipant, entityId: number): void {
+  private removeTransientEquipment(
+    p: CampaignParticipant,
+    entityId: number,
+  ): void {
     switch (this.entityType) {
       case EquipmentEntityType.VEHICLE:
         p.team.removeCampaignVehicle(entityId);
@@ -251,7 +290,10 @@ export class EquipmentChangedEvent extends GameEvent {
       case EquipmentEntityType.SEQUELLE:
         p.team.markSequellaSold(this.targetVehicleId!, entityId);
         if (this.nomInterne === 'dur_a_cuire') {
-          p.team.markGrantedAdvantageSold(this.targetVehicleId!, this.nomInterne);
+          p.team.markGrantedAdvantageSold(
+            this.targetVehicleId!,
+            this.nomInterne,
+          );
         }
         break;
     }
@@ -275,7 +317,10 @@ export class EquipmentChangedEvent extends GameEvent {
       case EquipmentEntityType.SEQUELLE:
         p.team.clearSequellaSold(this.targetVehicleId!, entityId);
         if (this.nomInterne === 'dur_a_cuire') {
-          p.team.clearGrantedAdvantageSold(this.targetVehicleId!, this.nomInterne);
+          p.team.clearGrantedAdvantageSold(
+            this.targetVehicleId!,
+            this.nomInterne,
+          );
         }
         break;
     }
@@ -299,24 +344,33 @@ export class EquipmentChangedEvent extends GameEvent {
 
   describe(participants: readonly CampaignParticipant[]): string {
     const verb = this.operation === EquipmentOperation.BUY ? 'Achat' : 'Vente';
-    const nom = this.resolvedWeaponType?.nom
-      ?? this.resolvedImprovementType?.nom
-      ?? this.resolvedAdvantageType?.nom
-      ?? this.resolvedVehicleType?.nom
-      ?? this.resolvedSequellaType?.nom
-      ?? this.nomInterne;
+    const nom =
+      this.resolvedWeaponType?.nom ??
+      this.resolvedImprovementType?.nom ??
+      this.resolvedAdvantageType?.nom ??
+      this.resolvedVehicleType?.nom ??
+      this.resolvedSequellaType?.nom ??
+      this.nomInterne;
 
     const details: string[] = [];
     if (this.orientation) details.push(this.orientation);
-    if (this.entityType !== EquipmentEntityType.VEHICLE && this.targetVehicleId !== null) {
-      const hostVehicle = this.findVehicleWithTeam(participants, this.targetVehicleId)?.vehicle;
+    if (
+      this.entityType !== EquipmentEntityType.VEHICLE &&
+      this.targetVehicleId !== null
+    ) {
+      const hostVehicle = this.findVehicleWithTeam(
+        participants,
+        this.targetVehicleId,
+      )?.vehicle;
       if (hostVehicle) details.push(`sur ${hostVehicle.nom}`);
     }
-    if (this.resolvedFreeAdvantageType) details.push(`+ avantage ${this.resolvedFreeAdvantageType.nom}`);
+    if (this.resolvedFreeAdvantageType)
+      details.push(`+ avantage ${this.resolvedFreeAdvantageType.nom}`);
     const detailsText = details.join(', ');
 
     // Monnaie affichée : Chocs pour une séquelle (véhicule), jerricans pour tout le reste (cagnotte).
-    const monnaie = this.entityType === EquipmentEntityType.SEQUELLE ? 'chocs' : 'jerricans';
+    const monnaie =
+      this.entityType === EquipmentEntityType.SEQUELLE ? 'chocs' : 'jerricans';
     return `${verb} : ${nom}${detailsText ? ` ${detailsText}` : ''} (${this.cost} ${monnaie})`;
   }
 }

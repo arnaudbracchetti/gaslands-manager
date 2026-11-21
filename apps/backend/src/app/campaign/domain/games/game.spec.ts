@@ -25,10 +25,20 @@ import { WeightClass } from '../enums/weight-class.enum';
 import { WreckResult } from '../enums/wreck-result.enum';
 import { WreckOutcome } from '../wreck/wreck-outcome';
 import { WreckTable, type WreckTableResult } from '../wreck/wreck-table';
-import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../enums/equipment-change.enums';
 import { CampaignParticipant } from '../campaign-participant';
 import { ParticipantStatus } from '../enums/campaign.enums';
-import { makeTestParticipant, makeTestParticipantWithAdvantage, makeVehicleType, makeWeaponType, makeImprovementType, makeAdvantageType } from '../test-helpers';
+import {
+  makeTestParticipant,
+  makeTestParticipantWithAdvantage,
+  makeVehicleType,
+  makeWeaponType,
+  makeImprovementType,
+  makeAdvantageType,
+} from '../test-helpers';
 import { Team } from '../../../team/domain/team';
 import { Vehicle } from '../../../team/domain/vehicle';
 import { WeaponType } from '../../../team/domain/value-objects/weapon-type';
@@ -62,9 +72,19 @@ function makeWalletEvent(id = 2): WalletMovementEvent {
 
 function makeEquipmentEvent(id = 3): EquipmentChangedEvent {
   return new EquipmentChangedEvent(
-    id, 10, 1, id,
-    EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
-    1, null, null, null, null,
+    id,
+    10,
+    1,
+    id,
+    EquipmentOperation.BUY,
+    EquipmentEntityType.WEAPON,
+    'mitrailleuse',
+    5,
+    1,
+    null,
+    null,
+    null,
+    null,
   );
 }
 
@@ -75,9 +95,21 @@ function makeVehicleLostEvent(id = 9): VehicleLostEvent {
 /** Séquelle imposée par la Table des Épaves — seule sous-catégorie d'EquipmentChangedEvent acceptée hors ATELIER. */
 function makeSequellaEquipmentEvent(id = 4): EquipmentChangedEvent {
   return new EquipmentChangedEvent(
-    id, 10, 1, id,
-    EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
-    1, null, null, null, null, null, null,
+    id,
+    10,
+    1,
+    id,
+    EquipmentOperation.BUY,
+    EquipmentEntityType.SEQUELLE,
+    'siege_irrecuperable',
+    0,
+    1,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
   );
 }
 
@@ -106,7 +138,15 @@ function makeVehicleRenamedEvent(id = 15): VehicleRenamedEvent {
 }
 
 describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
-  const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen_1', null, []);
+  const game = new EvenementTeleGame(
+    10,
+    1,
+    GameStatus.PLANIFIE,
+    1,
+    'scen_1',
+    null,
+    [],
+  );
 
   it('accepte RankingAssignedEvent', () => {
     expect(game.canAccept(makeRankingEvent())).toBe(true);
@@ -150,7 +190,15 @@ describe('EvenementTeleGame — canAccept en PLANIFIE', () => {
 });
 
 describe('EvenementTeleGame — canAccept en ATELIER', () => {
-  const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen_1', new Date(), []);
+  const game = new EvenementTeleGame(
+    10,
+    1,
+    GameStatus.ATELIER,
+    1,
+    'scen_1',
+    new Date(),
+    [],
+  );
 
   it('accepte EquipmentChangedEvent', () => {
     expect(game.canAccept(makeEquipmentEvent())).toBe(true);
@@ -189,24 +237,40 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
     ['ImprovementLostEvent', false, makeImprovementLostEvent],
     ['AdvantageLostEvent', false, makeAdvantageLostEvent],
     ['FavoriDuPublicBonusEvent', false, makeFavoriDuPublicBonusEvent],
-    ['ResistanceContactedEvent', false, () => new ResistanceContactedEvent(11, 10, 1, 11)],
+    [
+      'ResistanceContactedEvent',
+      false,
+      () => new ResistanceContactedEvent(11, 10, 1, 11),
+    ],
     ['WeaponLostEvent', false, () => new WeaponLostEvent(12, 10, 1, 12, 10)],
     ['VehicleLostEvent', false, makeVehicleLostEvent],
     [
       'WreckResolvedEvent',
       false,
-      () => new WreckResolvedEvent(13, 10, 1, 13, 1, 2, 0, WreckResult.INDEMNE, 0),
+      () =>
+        new WreckResolvedEvent(13, 10, 1, 13, 1, 2, 0, WreckResult.INDEMNE, 0),
     ],
     ['VehicleRenamedEvent', true, makeVehicleRenamedEvent],
   ];
 
-  it.each(allKnownEvents)('%s → accepté=%s en ATELIER', (_name, expected, factory) => {
-    expect(game.canAccept(factory())).toBe(expected);
-  });
+  it.each(allKnownEvents)(
+    '%s → accepté=%s en ATELIER',
+    (_name, expected, factory) => {
+      expect(game.canAccept(factory())).toBe(expected);
+    },
+  );
 });
 
 describe('EscarmoucheGame — canAccept en PLANIFIE', () => {
-  const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 2, 'scen_2', null, []);
+  const game = new EscarmoucheGame(
+    10,
+    1,
+    GameStatus.PLANIFIE,
+    2,
+    'scen_2',
+    null,
+    [],
+  );
 
   it('accepte RankingAssignedEvent (contrainte PC=0 est write-time, pas ici)', () => {
     expect(game.canAccept(makeRankingEvent())).toBe(true);
@@ -243,19 +307,43 @@ describe('EscarmoucheGame — canAccept en PLANIFIE', () => {
 
 describe('Game — addEvent / DomainException', () => {
   it('lève si canAccept retourne false', () => {
-    const atelier = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const atelier = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     const ranking = makeRankingEvent();
     expect(() => atelier.addEvent(ranking)).toThrow('pas autorisé');
   });
 
   it('refuse tout événement sur une partie figée (JOUE)', () => {
-    const partie = new EvenementTeleGame(10, 1, GameStatus.JOUE, 1, 'scen', new Date(), []);
+    const partie = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.JOUE,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     expect(() => partie.addEvent(makeRankingEvent())).toThrow('figée');
     expect(() => partie.addEvent(makeEquipmentEvent())).toThrow('figée');
   });
 
   it('enterAtelier fait passer PLANIFIE → ATELIER, horodate', () => {
-    const partie = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const partie = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
     partie.enterAtelier();
     expect(partie.status).toBe(GameStatus.ATELIER);
     expect(partie.playedAt).toBeInstanceOf(Date);
@@ -263,42 +351,86 @@ describe('Game — addEvent / DomainException', () => {
     expect(partie.canAccept(makeEquipmentEvent())).toBe(true);
   });
 
-  it('enterAtelier refuse si la partie n\'est pas PLANIFIE', () => {
-    const partie = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+  it("enterAtelier refuse si la partie n'est pas PLANIFIE", () => {
+    const partie = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     expect(() => partie.enterAtelier()).toThrow('PLANIFIE');
   });
 
   it('closeAtelier fige la partie (ATELIER → JOUE)', () => {
-    const partie = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const partie = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     partie.closeAtelier();
     expect(partie.status).toBe(GameStatus.JOUE);
     expect(() => partie.addEvent(makeEquipmentEvent())).toThrow('figée');
   });
 
-  it('closeAtelier refuse si la partie n\'est pas en ATELIER', () => {
-    const partie = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+  it("closeAtelier refuse si la partie n'est pas en ATELIER", () => {
+    const partie = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
     expect(() => partie.closeAtelier()).toThrow('atelier');
   });
 
   it('_events triés par eventOrder dans replayEvents', () => {
     const applied: number[] = [];
     class SpyEvent extends RankingAssignedEvent {
-      override execute(): void { applied.push(this.eventOrder); }
-      override undo(): void { }
+      override execute(): void {
+        applied.push(this.eventOrder);
+      }
+      override undo(): void {
+        /* no-op : seul execute() est observé */
+      }
     }
     const e1 = new SpyEvent(1, 10, 1, 3, 1, 0);
     const e2 = new SpyEvent(2, 10, 1, 1, 1, 0);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e1, e2]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [e1, e2],
+    );
     game.replayEvents([]);
-    expect(applied).toEqual([1, 3]);  // sorted by eventOrder
+    expect(applied).toEqual([1, 3]); // sorted by eventOrder
   });
 });
 
 describe('Game — journal', () => {
-  it('retourne les événements dans l\'ordre chronologique avec leur description', () => {
+  it("retourne les événements dans l'ordre chronologique avec leur description", () => {
     const e1 = new RankingAssignedEvent(100, 10, 1, 1, 1, 10);
     const e2 = new GatesCrossedEvent(200, 10, 1, 2, 3, 3);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [e2, e1]); // volontairement désordonné en entrée
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [e2, e1],
+    ); // volontairement désordonné en entrée
 
     const journal = game.journal([]);
 
@@ -308,9 +440,17 @@ describe('Game — journal', () => {
     expect(journal[1].description).toContain('porte');
   });
 
-  it('inclut tous les types d\'événements, y compris ResistanceContactedEvent', () => {
+  it("inclut tous les types d'événements, y compris ResistanceContactedEvent", () => {
     const resistanceEvent = new ResistanceContactedEvent(300, 10, 1, 1);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, [resistanceEvent]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [resistanceEvent],
+    );
 
     const journal = game.journal([]);
 
@@ -321,14 +461,37 @@ describe('Game — journal', () => {
 
 describe('Game — recordResult', () => {
   it('crée un RankingAssignedEvent par participant sans finaliser la partie', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
-    const events = game.recordResult([
-      { participantId: 1, rank: 1 },
-      { participantId: 2, rank: 2 },
-    ], [p1, p2]);
+    const events = game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
 
     // 2 RankingAssignedEvent + 1 ResistanceContactedEvent automatique (p2 non classé).
     expect(events).toHaveLength(3);
@@ -336,124 +499,335 @@ describe('Game — recordResult', () => {
     // fin complète du wizard, via un appel explicite à enterAtelier().
     expect(game.status).toBe(GameStatus.PLANIFIE);
     // EVENEMENT_TELE, classified = ceil(2/2) = 1 → rang 1 = 10 PC, rang 2 = 0.
-    const rankingEvents = events.filter((e) => e instanceof RankingAssignedEvent) as RankingAssignedEvent[];
-    expect(rankingEvents.find((e) => e.participantId === 1)?.championshipPoints).toBe(10);
-    expect(rankingEvents.find((e) => e.participantId === 2)?.championshipPoints).toBe(0);
+    const rankingEvents = events.filter(
+      (e) => e instanceof RankingAssignedEvent,
+    ) as RankingAssignedEvent[];
+    expect(
+      rankingEvents.find((e) => e.participantId === 1)?.championshipPoints,
+    ).toBe(10);
+    expect(
+      rankingEvents.find((e) => e.participantId === 2)?.championshipPoints,
+    ).toBe(0);
   });
 
   it('crédite automatiquement +3 PR au participant non classé, même sans exploit', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
-    const events = game.recordResult([
-      { participantId: 1, rank: 1 },
-      { participantId: 2, rank: 2 },
-    ], [p1, p2]);
+    const events = game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
 
-    const resistanceEvents = events.filter((e) => e instanceof ResistanceContactedEvent);
+    const resistanceEvents = events.filter(
+      (e) => e instanceof ResistanceContactedEvent,
+    );
     expect(resistanceEvents).toHaveLength(1);
     expect(resistanceEvents[0].participantId).toBe(2);
   });
 
   it('ne crédite aucune PR automatique quand tout le monde est classé', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordResult([{ participantId: 1, rank: 1 }], [p1]);
 
-    expect(events.some((e) => e instanceof ResistanceContactedEvent)).toBe(false);
+    expect(events.some((e) => e instanceof ResistanceContactedEvent)).toBe(
+      false,
+    );
   });
 
   it('refuse des rangs non consécutifs', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    expect(() => game.recordResult([{ participantId: 1, rank: 2 }], [p1])).toThrow('consécutifs');
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    expect(() =>
+      game.recordResult([{ participantId: 1, rank: 2 }], [p1]),
+    ).toThrow('consécutifs');
   });
 
   it('refuse un participant non validé', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    expect(() => game.recordResult([{ participantId: 99, rank: 1 }], [p1])).toThrow();
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    expect(() =>
+      game.recordResult([{ participantId: 99, rank: 1 }], [p1]),
+    ).toThrow();
   });
 
   it('refuse si la partie a déjà été jouée', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
-    expect(() => game.recordResult([{ participantId: 1, rank: 1 }], [p1])).toThrow('déjà été jouée');
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
+    expect(() =>
+      game.recordResult([{ participantId: 1, rank: 1 }], [p1]),
+    ).toThrow('déjà été jouée');
   });
 
   it('crée un GatesCrossedEvent quand gatesCrossed > 0 (+1 PC par porte)', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
-    const events = game.recordResult([{ participantId: 1, rank: 1, gatesCrossed: 3 }], [p1]);
+    const events = game.recordResult(
+      [{ participantId: 1, rank: 1, gatesCrossed: 3 }],
+      [p1],
+    );
 
-    const gatesEvent = events.find((e) => e instanceof GatesCrossedEvent) as GatesCrossedEvent;
+    const gatesEvent = events.find(
+      (e) => e instanceof GatesCrossedEvent,
+    ) as GatesCrossedEvent;
     expect(gatesEvent).toBeDefined();
     expect(gatesEvent.gatesCrossed).toBe(3);
     expect(gatesEvent.championshipPoints).toBe(3);
   });
 
   it('ignore gatesCrossed=0 ou absent (aucun GatesCrossedEvent créé)', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
-    const events = game.recordResult([{ participantId: 1, rank: 1, gatesCrossed: 0 }], [p1]);
+    const events = game.recordResult(
+      [{ participantId: 1, rank: 1, gatesCrossed: 0 }],
+      [p1],
+    );
 
     expect(events.some((e) => e instanceof GatesCrossedEvent)).toBe(false);
   });
 
   it('crée un VehicleDestroyedEvent par véhicule ennemi détruit, PC dérivés du poids réel du véhicule', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
     const legerVehicle = new Vehicle(55, 3, makeVehicleType('Léger'), [], []);
     const lourdVehicle = new Vehicle(56, 3, makeVehicleType('Lourd'), [], []);
-    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [legerVehicle, lourdVehicle]);
+    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [
+      legerVehicle,
+      lourdVehicle,
+    ]);
     p2.attachTeam(team);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     // weightClass n'est PAS fourni par l'appelant (cf. DestroyedVehicleInput) — dérivé
     // par Game.recordResult depuis l'équipe réelle de p2, pas depuis le client.
-    const events = game.recordResult([
-      {
-        participantId: 1,
-        rank: 1,
-        destroyedVehicles: [{ vehicleId: 55 }, { vehicleId: 56 }],
-      },
-      { participantId: 2, rank: 2 },
-    ], [p1, p2]);
+    const events = game.recordResult(
+      [
+        {
+          participantId: 1,
+          rank: 1,
+          destroyedVehicles: [{ vehicleId: 55 }, { vehicleId: 56 }],
+        },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
 
-    const destroyedEvents = events.filter((e) => e instanceof VehicleDestroyedEvent) as VehicleDestroyedEvent[];
+    const destroyedEvents = events.filter(
+      (e) => e instanceof VehicleDestroyedEvent,
+    ) as VehicleDestroyedEvent[];
     expect(destroyedEvents).toHaveLength(2);
     // Le destructeur (participant 1) est crédité, pas le propriétaire du véhicule détruit.
     expect(destroyedEvents.every((e) => e.participantId === 1)).toBe(true);
-    expect(destroyedEvents.find((e) => e.vehicleId === 55)?.championshipPoints).toBe(1);   // Léger
-    expect(destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints).toBe(3);   // Lourd
+    expect(
+      destroyedEvents.find((e) => e.vehicleId === 55)?.championshipPoints,
+    ).toBe(1); // Léger
+    expect(
+      destroyedEvents.find((e) => e.vehicleId === 56)?.championshipPoints,
+    ).toBe(3); // Lourd
   });
 
   it('rejette un vehicleId de destroyedVehicles introuvable dans aucune équipe (empêche de forger des PC)', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     expect(() =>
-      game.recordResult([
-        { participantId: 1, rank: 1, destroyedVehicles: [{ vehicleId: 999 }] },
-      ], [p1]),
+      game.recordResult(
+        [
+          {
+            participantId: 1,
+            rank: 1,
+            destroyedVehicles: [{ vehicleId: 999 }],
+          },
+        ],
+        [p1],
+      ),
     ).toThrow('introuvable');
   });
 
   it('refuse le classement pour une Escarmouche (pas de PC de classement)', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    expect(() => game.recordResult([{ participantId: 1, rank: 1 }], [p1])).toThrow('Événement Télévisé');
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    expect(() =>
+      game.recordResult([{ participantId: 1, rank: 1 }], [p1]),
+    ).toThrow('Événement Télévisé');
   });
 });
 
 describe('Game — rollBaseIncome (Escarmouche)', () => {
   it('crédite le D6 tiré en jerricans (WalletMovementEvent RECOMPENSE)', () => {
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const randomizer = { roll: (): number => 4, pick: <T>(pool: T[]): T => pool[0] };
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    const randomizer = {
+      roll: (): number => 4,
+      pick: <T>(pool: T[]): T => pool[0],
+    };
 
     const events = game.rollBaseIncome(1, randomizer);
 
@@ -468,7 +842,15 @@ describe('Game — rollBaseIncome (Escarmouche)', () => {
 
 describe('Game — recordJerricanGains (Escarmouche)', () => {
   it('crée un WalletMovementEvent par participant', () => {
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordJerricanGains([
       { participantId: 1, amount: 5 },
@@ -478,18 +860,42 @@ describe('Game — recordJerricanGains (Escarmouche)', () => {
     expect(events).toHaveLength(2);
     expect(events.find((e) => e.participantId === 1)?.amount).toBe(5);
     expect(events.find((e) => e.participantId === 2)?.amount).toBe(2);
-    expect(events.every((e) => e.reason === WalletReason.RECOMPENSE)).toBe(true);
+    expect(events.every((e) => e.reason === WalletReason.RECOMPENSE)).toBe(
+      true,
+    );
   });
 });
 
 describe('Game — recordDestroyedVehicleTraces (Escarmouche)', () => {
   it('crée un VehicleDestroyedEvent à 0 PC par véhicule, poids dérivé du véhicule réel', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const p2 = new CampaignParticipant(2, 7, 3, false, ParticipantStatus.VALIDATED);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
     const lourdVehicle = new Vehicle(56, 3, makeVehicleType('Lourd'), [], []);
-    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [lourdVehicle]);
+    const team = new Team(3, 7, 'Les Ennemis', 'Rutherford', 50, null, [
+      lourdVehicle,
+    ]);
     p2.attachTeam(team);
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordDestroyedVehicleTraces(
       [{ destroyerId: 1, vehicleId: 56 }],
@@ -503,10 +909,27 @@ describe('Game — recordDestroyedVehicleTraces (Escarmouche)', () => {
   });
 
   it('rejette un vehicleId introuvable dans aucune équipe', () => {
-    const p1 = new CampaignParticipant(1, 42, 1, true, ParticipantStatus.VALIDATED);
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
     expect(() =>
-      game.recordDestroyedVehicleTraces([{ destroyerId: 1, vehicleId: 999 }], [p1]),
+      game.recordDestroyedVehicleTraces(
+        [{ destroyerId: 1, vehicleId: 999 }],
+        [p1],
+      ),
     ).toThrow('introuvable');
   });
 });
@@ -515,7 +938,15 @@ describe('Game — recordSabotageSpent (applicable aux deux types de partie)', (
   it('crée un SabotagePointsSpentEvent par participant ayant un solde disponible', () => {
     const { participant, participants } = makeTestParticipant();
     participant.addResistance(9); // sabotagePoints = 3
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordSabotageSpent(
       [{ participantId: participant.id, pointsSpent: 2 }],
@@ -531,7 +962,15 @@ describe('Game — recordSabotageSpent (applicable aux deux types de partie)', (
   it('clampe silencieusement une sur-déclaration, sans lever de DomainException', () => {
     const { participant, participants } = makeTestParticipant();
     participant.addResistance(9); // sabotagePoints = 3
-    const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordSabotageSpent(
       [{ participantId: participant.id, pointsSpent: 10 }],
@@ -542,12 +981,23 @@ describe('Game — recordSabotageSpent (applicable aux deux types de partie)', (
     expect(events[0].pointsSpent).toBe(3);
   });
 
-  it("ne crée aucun événement pour une entrée à 0 ou pour un solde de sabotage nul", () => {
+  it('ne crée aucun événement pour une entrée à 0 ou pour un solde de sabotage nul', () => {
     const { participant, participants } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const events = game.recordSabotageSpent(
-      [{ participantId: participant.id, pointsSpent: 0 }, { participantId: participant.id, pointsSpent: 5 }],
+      [
+        { participantId: participant.id, pointsSpent: 0 },
+        { participantId: participant.id, pointsSpent: 5 },
+      ],
       participants,
     );
 
@@ -557,10 +1007,21 @@ describe('Game — recordSabotageSpent (applicable aux deux types de partie)', (
 
   it('lève une DomainException pour un participantId inconnu de la campagne', () => {
     const { participants } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     expect(() =>
-      game.recordSabotageSpent([{ participantId: 999, pointsSpent: 5 }], participants),
+      game.recordSabotageSpent(
+        [{ participantId: 999, pointsSpent: 5 }],
+        participants,
+      ),
     ).toThrow('introuvable');
   });
 });
@@ -568,12 +1029,41 @@ describe('Game — recordSabotageSpent (applicable aux deux types de partie)', (
 describe('Game — resolveWreck', () => {
   it('passe les événements de WreckTable à la partie et les retourne', () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
-    const outcome = new WreckOutcome(vehicle.id, 2, 0, WreckResult.INDEMNE, 0, null);
-    const wreckEvent = new WreckResolvedEvent(0, 10, participant.id, 0, vehicle.id, 2, 0, WreckResult.INDEMNE, 0);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    const outcome = new WreckOutcome(
+      vehicle.id,
+      2,
+      0,
+      WreckResult.INDEMNE,
+      0,
+      null,
+    );
+    const wreckEvent = new WreckResolvedEvent(
+      0,
+      10,
+      participant.id,
+      0,
+      vehicle.id,
+      2,
+      0,
+      WreckResult.INDEMNE,
+      0,
+    );
     const weaponEvent = new WeaponLostEvent(0, 10, participant.id, 0, 10);
 
-    const result = game.resolveWreck(participant, vehicle.id, new FixedWreckTable(outcome, [wreckEvent, weaponEvent]));
+    const result = game.resolveWreck(
+      participant,
+      vehicle.id,
+      new FixedWreckTable(outcome, [wreckEvent, weaponEvent]),
+    );
 
     expect(result.outcome).toBe(outcome);
     expect(result.events).toHaveLength(2);
@@ -582,13 +1072,22 @@ describe('Game — resolveWreck', () => {
     expect(game.events).toHaveLength(2);
   });
 
-  it('lève DomainException si le véhicule est introuvable dans l\'équipe', () => {
+  it("lève DomainException si le véhicule est introuvable dans l'équipe", () => {
     const { participant } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
     const outcome = new WreckOutcome(999, 2, 0, WreckResult.INDEMNE, 0, null);
 
-    expect(() => game.resolveWreck(participant, 999, new FixedWreckTable(outcome, [])))
-      .toThrow('introuvable');
+    expect(() =>
+      game.resolveWreck(participant, 999, new FixedWreckTable(outcome, [])),
+    ).toThrow('introuvable');
   });
 });
 
@@ -596,7 +1095,15 @@ describe('Game — creditFavoriDuPublicBonus', () => {
   it('crédite +5 PC quand le véhicule est éligible et le joueur le demande', () => {
     const { participant, vehicle } = makeTestParticipant();
     vehicle.markFavoriDuPublic();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, true);
 
@@ -607,17 +1114,37 @@ describe('Game — creditFavoriDuPublicBonus', () => {
   it('ne crédite rien si le joueur ne le demande pas', () => {
     const { participant, vehicle } = makeTestParticipant();
     vehicle.markFavoriDuPublic();
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
-    const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, false);
+    const bonus = game.creditFavoriDuPublicBonus(
+      participant,
+      vehicle.id,
+      false,
+    );
 
     expect(bonus).toBeNull();
   });
 
-  it('ne crédite rien si le véhicule n\'est pas réellement éligible, même si le joueur le demande', () => {
+  it("ne crédite rien si le véhicule n'est pas réellement éligible, même si le joueur le demande", () => {
     const { participant, vehicle } = makeTestParticipant();
     // hasFavoriDuPublic jamais marqué — le serveur ne fait pas confiance au seul booléen client.
-    const game = new EvenementTeleGame(10, 1, GameStatus.PLANIFIE, 1, 'scen', null, []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
 
     const bonus = game.creditFavoriDuPublicBonus(participant, vehicle.id, true);
 
@@ -626,9 +1153,17 @@ describe('Game — creditFavoriDuPublicBonus', () => {
 });
 
 describe('Game — renameVehicle', () => {
-  it('génère un VehicleRenamedEvent avec le previousName capturé depuis l\'état courant', () => {
+  it("génère un VehicleRenamedEvent avec le previousName capturé depuis l'état courant", () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const events = game.renameVehicle(participant, vehicle.id, 'La Teigne');
 
@@ -641,7 +1176,15 @@ describe('Game — renameVehicle', () => {
 
   it('des renommages successifs chaînent : le previousName du 2ᵉ est le newName du 1ᵉʳ', () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const [first] = game.renameVehicle(participant, vehicle.id, 'La Teigne');
     (first as VehicleRenamedEvent).execute([participant]);
@@ -651,18 +1194,36 @@ describe('Game — renameVehicle', () => {
     expect((second as VehicleRenamedEvent).newName).toBe('Le Monstre');
   });
 
-  it('rejette un nom invalide AVANT de journaliser l\'événement (validation eager, pas différée au replay)', () => {
+  it("rejette un nom invalide AVANT de journaliser l'événement (validation eager, pas différée au replay)", () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.renameVehicle(participant, vehicle.id, '   ')).toThrow('ne peut pas être vide');
+    expect(() => game.renameVehicle(participant, vehicle.id, '   ')).toThrow(
+      'ne peut pas être vide',
+    );
     expect(game.events).toHaveLength(0);
   });
 
   it('fonctionne sur un véhicule transient (id négatif, D-S11)', () => {
     const { participant, team } = makeTestParticipant();
     team.addCampaignVehicle(makeVehicleType(), -5);
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const events = game.renameVehicle(participant, -5, 'La Teigne');
 
@@ -673,48 +1234,113 @@ describe('Game — renameVehicle', () => {
 
 describe('Game — changeEquipment', () => {
   it('BUY : calcule le coût depuis le catalogue et débite la cagnotte (garde assertCanAfford)', () => {
-    const { participant } = makeTestParticipant();  // wallet = 50
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const { participant } = makeTestParticipant(); // wallet = 50
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.VEHICLE, nomInterne: 'voiture',
-      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.BUY,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: 'voiture',
+      resolvedVehicleType: makeVehicleType(),
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
     const event = result.events[0] as EquipmentChangedEvent;
-    expect(event.cost).toBe(12);  // prix catalogue de makeVehicleType()
+    expect(event.cost).toBe(12); // prix catalogue de makeVehicleType()
   });
 
   it('BUY : refuse si la cagnotte est insuffisante', () => {
     const { participant } = makeTestParticipant();
-    participant.creditWallet(-45);  // wallet = 5, véhicule coûte 12
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    participant.creditWallet(-45); // wallet = 5, véhicule coûte 12
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.VEHICLE, nomInterne: 'voiture',
-      resolvedVehicleType: makeVehicleType(), resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('Cagnotte insuffisante');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.BUY,
+        entityType: EquipmentEntityType.VEHICLE,
+        nomInterne: 'voiture',
+        resolvedVehicleType: makeVehicleType(),
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('Cagnotte insuffisante');
   });
 
   it('BUY : refuse un nomInterne inconnu du catalogue', () => {
     const { participant } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'inconnue',
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('inconnu');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.BUY,
+        entityType: EquipmentEntityType.WEAPON,
+        nomInterne: 'inconnue',
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('inconnu');
   });
 
-  it('SELL : revente d\'une arme pré-existante — coût = moitié prix arrondie inférieur (p.170)', () => {
+  it("SELL : revente d'une arme pré-existante — coût = moitié prix arrondie inférieur (p.170)", () => {
     const { participant, vehicle, weapon } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
-      targetVehicleId: vehicle.id, targetEntityId: weapon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.WEAPON,
+      nomInterne: 'mitrailleuse',
+      targetVehicleId: vehicle.id,
+      targetEntityId: weapon.id,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -724,17 +1350,33 @@ describe('Game — changeEquipment', () => {
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2);
   });
 
-  it('SELL : dérive le nomInterne + le type de l\'entité vendue (même si le client ne les transmet pas)', () => {
+  it("SELL : dérive le nomInterne + le type de l'entité vendue (même si le client ne les transmet pas)", () => {
     // Régression : le frontend envoie nomInterne="" pour un SELL. Sans dérivation,
     // l'événement persisté portait "" → le mapper de replay échouait ("Arme catalogue
     // introuvable"). L'agrégat doit donc renseigner le nomInterne depuis l'arme vendue.
     const { participant, vehicle, weapon } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: weapon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.WEAPON,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: weapon.id,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     const event = result.events[0] as EquipmentChangedEvent;
@@ -744,61 +1386,126 @@ describe('Game — changeEquipment', () => {
 
   it('SELL : refuse une arme introuvable sur le véhicule visé', () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
-      targetVehicleId: vehicle.id, targetEntityId: 999,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('introuvable');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.WEAPON,
+        nomInterne: 'mitrailleuse',
+        targetVehicleId: vehicle.id,
+        targetEntityId: 999,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('introuvable');
   });
 
-  it('SELL sur un achat de CETTE session : annule l\'achat (deleteEventIds, aucun événement créé)', () => {
+  it("SELL sur un achat de CETTE session : annule l'achat (deleteEventIds, aucun événement créé)", () => {
     // L'arme transiente (id=-99) simule le résultat d'un replay ayant déjà appliqué le
     // BUY (event id=99) de cette même partie ATELIER — cf. D-S11 (id transient = -event.id).
     const weaponType = makeWeaponType();
     const transientWeapon = new Weapon(-99, weaponType, null);
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [transientWeapon], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     const buyEvent = new EquipmentChangedEvent(
-      99, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
-      vehicle.id, null, null, null, weaponType, null,
+      99,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.WEAPON,
+      'mitrailleuse',
+      5,
+      vehicle.id,
+      null,
+      null,
+      null,
+      weaponType,
+      null,
     );
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [buyEvent],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: -99,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.WEAPON,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: -99,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([99]);
     expect(result.events).toHaveLength(0);
   });
 
-  it('SELL sur un achat d\'une AUTRE session (partie différente) : revente normale, pas annulation', () => {
+  it("SELL sur un achat d'une AUTRE session (partie différente) : revente normale, pas annulation", () => {
     // Même id transient négatif, mais le BUY appartient à une AUTRE partie (gameId=20,
     // pas la partie ATELIER courante id=10) — findSameSessionPurchase ne doit PAS le
     // trouver (il ne cherche que dans this._events, scopés à la partie courante).
     const weaponType = makeWeaponType();
     const transientWeapon = new Weapon(-77, weaponType, null);
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [transientWeapon], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     // Partie ATELIER courante (id=10) — aucun événement à elle (le BUY appartient à la
     // partie 20, déjà JOUE, non représentée ici).
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: -77,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.WEAPON,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: -77,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -806,67 +1513,147 @@ describe('Game — changeEquipment', () => {
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(2); // floor(5/2)
   });
 
-  it('BUY WEAPON avec orientation \'tourelle\' : coût ×3 débité de la cagnotte', () => {
+  it("BUY WEAPON avec orientation 'tourelle' : coût ×3 débité de la cagnotte", () => {
     const { participant } = makeTestParticipant(); // wallet = 50
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     const montable = WeaponType.from({
-      nom: 'Mitrailleuse', nom_interne: 'mitrailleuse', type: 'base',
-      prix: 5, emplacement: 1, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+      nom: 'Mitrailleuse',
+      nom_interne: 'mitrailleuse',
+      type: 'base',
+      prix: 5,
+      emplacement: 1,
+      description: '',
+      regles: '',
+      sponsors_autorises: [],
+      montable_tourelle: true,
       necessite_orientation: true,
     });
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
+      operation: EquipmentOperation.BUY,
+      entityType: EquipmentEntityType.WEAPON,
+      nomInterne: 'mitrailleuse',
       orientation: 'tourelle',
-      resolvedVehicleType: null, resolvedWeaponType: montable, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: montable,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     const event = result.events[0] as EquipmentChangedEvent;
     expect(event.cost).toBe(15); // 3 × 5
   });
 
-  it('BUY WEAPON avec orientation \'tourelle\' refuse une arme non montable sur Tourelle', () => {
+  it("BUY WEAPON avec orientation 'tourelle' refuse une arme non montable sur Tourelle", () => {
     const { participant } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse',
-      orientation: 'tourelle',
-      resolvedVehicleType: null, resolvedWeaponType: makeWeaponType(), resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('ne peut pas être montée sur Tourelle');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.BUY,
+        entityType: EquipmentEntityType.WEAPON,
+        nomInterne: 'mitrailleuse',
+        orientation: 'tourelle',
+        resolvedVehicleType: null,
+        resolvedWeaponType: makeWeaponType(),
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('ne peut pas être montée sur Tourelle');
   });
 
   it('SELL WEAPON refuse une arme intégrée au profil de base (estDefaut)', () => {
     const canonType = WeaponType.from({
-      nom: 'Canon de 125mm', nom_interne: 'canon_125mm', type: 'avancée',
-      prix: 6, emplacement: 3, description: '', regles: '', sponsors_autorises: [], montable_tourelle: true,
+      nom: 'Canon de 125mm',
+      nom_interne: 'canon_125mm',
+      type: 'avancée',
+      prix: 6,
+      emplacement: 3,
+      description: '',
+      regles: '',
+      sponsors_autorises: [],
+      montable_tourelle: true,
       necessite_orientation: true,
     });
     const canon = new Weapon(1, canonType, 'tourelle', true);
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [canon], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.WEAPON, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: canon.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('intégrées au profil de base');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.WEAPON,
+        nomInterne: '',
+        targetVehicleId: vehicle.id,
+        targetEntityId: canon.id,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('intégrées au profil de base');
   });
 
   // ── ADVANTAGE — perte totale à la revente (pas de moitié prix) ────────────────
 
   it('BUY ADVANTAGE : calcule le coût depuis le catalogue et débite la cagnotte', () => {
     const { participant } = makeTestParticipant(); // wallet = 29
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: 'tireur_elite',
+      operation: EquipmentOperation.BUY,
+      entityType: EquipmentEntityType.ADVANTAGE,
+      nomInterne: 'tireur_elite',
       targetVehicleId: 1,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null,
-      resolvedAdvantageType: makeAdvantageType(), resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: makeAdvantageType(),
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -876,23 +1663,57 @@ describe('Game — changeEquipment', () => {
 
   it('BUY ADVANTAGE : refuse un nomInterne inconnu du catalogue', () => {
     const { participant } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.BUY, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: 'inconnu',
-      targetVehicleId: 1,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('inconnu');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.BUY,
+        entityType: EquipmentEntityType.ADVANTAGE,
+        nomInterne: 'inconnu',
+        targetVehicleId: 1,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('inconnu');
   });
 
-  it('SELL ADVANTAGE : revente d\'un avantage pré-existant — coût = 0 (perte totale, aucun remboursement)', () => {
-    const { participant, vehicle, advantage } = makeTestParticipantWithAdvantage();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+  it("SELL ADVANTAGE : revente d'un avantage pré-existant — coût = 0 (perte totale, aucun remboursement)", () => {
+    const { participant, vehicle, advantage } =
+      makeTestParticipantWithAdvantage();
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.ADVANTAGE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: advantage.id,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]); // avantage pré-existant (id positif) → revente, pas annulation
@@ -904,27 +1725,63 @@ describe('Game — changeEquipment', () => {
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(0);
   });
 
-  it('SELL ADVANTAGE : dérive le nomInterne depuis l\'entité vendue (même si le client ne le transmet pas)', () => {
-    const { participant, vehicle, advantage } = makeTestParticipantWithAdvantage();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+  it("SELL ADVANTAGE : dérive le nomInterne depuis l'entité vendue (même si le client ne le transmet pas)", () => {
+    const { participant, vehicle, advantage } =
+      makeTestParticipantWithAdvantage();
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.ADVANTAGE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: advantage.id,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
-    expect((result.events[0] as EquipmentChangedEvent).nomInterne).toBe('tireur_elite');
+    expect((result.events[0] as EquipmentChangedEvent).nomInterne).toBe(
+      'tireur_elite',
+    );
   });
 
-  it('SELL ADVANTAGE : execute() marque l\'avantage vendu SANS jamais réduire son prix (perte totale)', () => {
-    const { participant, participants, vehicle, advantage } = makeTestParticipantWithAdvantage();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+  it("SELL ADVANTAGE : execute() marque l'avantage vendu SANS jamais réduire son prix (perte totale)", () => {
+    const { participant, participants, vehicle, advantage } =
+      makeTestParticipantWithAdvantage();
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: advantage.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.ADVANTAGE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: advantage.id,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
     result.events[0].execute(participants);
 
@@ -934,37 +1791,92 @@ describe('Game — changeEquipment', () => {
 
   it('SELL ADVANTAGE refuse un avantage introuvable sur le véhicule visé', () => {
     const { participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: 999,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('introuvable');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.ADVANTAGE,
+        nomInterne: '',
+        targetVehicleId: vehicle.id,
+        targetEntityId: 999,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('introuvable');
   });
 
-  it('SELL ADVANTAGE sur un achat de CETTE session : annule l\'achat (deleteEventIds, aucun événement créé)', () => {
+  it("SELL ADVANTAGE sur un achat de CETTE session : annule l'achat (deleteEventIds, aucun événement créé)", () => {
     // Même pattern que le mirroir WEAPON ci-dessus : l'avantage transient (id=-42)
     // simule le résultat d'un replay ayant déjà appliqué le BUY (event id=42) de
     // cette même partie ATELIER (D-S11, id transient = -event.id).
     const advantageType = makeAdvantageType();
     const transientAdvantage = new Advantage(-42, advantageType);
-    const vehicle = new Vehicle(1, 1, makeVehicleType(), [], [], [transientAdvantage]);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const vehicle = new Vehicle(
+      1,
+      1,
+      makeVehicleType(),
+      [],
+      [],
+      [transientAdvantage],
+    );
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     const buyEvent = new EquipmentChangedEvent(
-      42, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.ADVANTAGE, 'tireur_elite', 2,
-      vehicle.id, null, null, null, null, null, advantageType,
+      42,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.ADVANTAGE,
+      'tireur_elite',
+      2,
+      vehicle.id,
+      null,
+      null,
+      null,
+      null,
+      null,
+      advantageType,
     );
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [buyEvent],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.ADVANTAGE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: -42,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.ADVANTAGE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: -42,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([42]);
@@ -974,77 +1886,173 @@ describe('Game — changeEquipment', () => {
   // ── SEQUELLE — TABLE_EPAVES jamais retirable, ATELIER inchangée ──────────────
 
   const tableEpavesType = SequellaType.from({
-    nom: 'Siège irrécupérable', nom_interne: 'siege_irrecuperable', description: '', regles: '',
-    chocs_cost: 0, origine: 'TABLE_EPAVES',
+    nom: 'Siège irrécupérable',
+    nom_interne: 'siege_irrecuperable',
+    description: '',
+    regles: '',
+    chocs_cost: 0,
+    origine: 'TABLE_EPAVES',
   });
   const atelierSequellaType = SequellaType.from({
-    nom: 'Suicidaire', nom_interne: 'suicidaire', description: '', regles: '',
-    chocs_cost: 1, origine: 'ATELIER',
+    nom: 'Suicidaire',
+    nom_interne: 'suicidaire',
+    description: '',
+    regles: '',
+    chocs_cost: 1,
+    origine: 'ATELIER',
   });
   const legendeVivanteType = SequellaType.from({
-    nom: 'Légende Vivante', nom_interne: 'legende_vivante', description: '', regles: '',
-    chocs_cost: 11, origine: 'ATELIER',
+    nom: 'Légende Vivante',
+    nom_interne: 'legende_vivante',
+    description: '',
+    regles: '',
+    chocs_cost: 11,
+    origine: 'ATELIER',
   });
 
-  it('SELL SEQUELLE (TABLE_EPAVES) sur un tirage de CETTE session : toujours refusé (pas d\'annulation)', () => {
+  it("SELL SEQUELLE (TABLE_EPAVES) sur un tirage de CETTE session : toujours refusé (pas d'annulation)", () => {
     // La séquelle TABLE_EPAVES (id transient -60) simule un tirage de la Table des Épaves
     // journalisé sur CETTE MÊME partie, juste avant l'entrée en atelier (BUY event id=60,
     // même gameId) — le cas exact que le court-circuit d'annulation intercepterait sinon.
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team); // resetCampaignState() d'abord — la séquelle est ajoutée APRÈS
     vehicle.addCampaignSequella(tableEpavesType, -60);
 
     const buyEvent = new EquipmentChangedEvent(
-      60, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
-      vehicle.id, null, null, null, null, null, null, tableEpavesType,
+      60,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.SEQUELLE,
+      'siege_irrecuperable',
+      0,
+      vehicle.id,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      tableEpavesType,
     );
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [buyEvent],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: -60,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('Table des Épaves');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.SEQUELLE,
+        nomInterne: '',
+        targetVehicleId: vehicle.id,
+        targetEntityId: -60,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('Table des Épaves');
   });
 
   it('SELL SEQUELLE (TABLE_EPAVES) cross-session : toujours refusé même avec Légende Vivante active', () => {
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team); // resetCampaignState() d'abord — les séquelles sont ajoutées APRÈS
     vehicle.addCampaignSequella(tableEpavesType, 100); // pré-existante (id positif)
     vehicle.addCampaignSequella(legendeVivanteType, 101); // active sur ce véhicule
 
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: 100,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('Table des Épaves');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.SEQUELLE,
+        nomInterne: '',
+        targetVehicleId: vehicle.id,
+        targetEntityId: 100,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('Table des Épaves');
   });
 
   it('SELL SEQUELLE (ATELIER) sur un achat de CETTE session : annulation inchangée', () => {
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team); // resetCampaignState() d'abord — la séquelle est ajoutée APRÈS
     vehicle.addCampaignSequella(atelierSequellaType, -70);
 
     const buyEvent = new EquipmentChangedEvent(
-      70, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'suicidaire', 1,
-      vehicle.id, null, null, null, null, null, null, atelierSequellaType,
+      70,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.SEQUELLE,
+      'suicidaire',
+      1,
+      vehicle.id,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      atelierSequellaType,
     );
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), [buyEvent]);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [buyEvent],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: -70,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.SEQUELLE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: -70,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([70]);
@@ -1053,18 +2061,36 @@ describe('Game — changeEquipment', () => {
 
   it('SELL SEQUELLE (ATELIER) cross-session : revente autorisée si Légende Vivante active', () => {
     const vehicle = new Vehicle(1, 1, makeVehicleType(), [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [vehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      vehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team); // resetCampaignState() d'abord — les séquelles sont ajoutées APRÈS
     vehicle.addCampaignSequella(atelierSequellaType, 100); // pré-existante (id positif)
     vehicle.addCampaignSequella(legendeVivanteType, 101); // active sur ce véhicule
 
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.SEQUELLE, nomInterne: '',
-      targetVehicleId: vehicle.id, targetEntityId: 100,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.SEQUELLE,
+      nomInterne: '',
+      targetVehicleId: vehicle.id,
+      targetEntityId: 100,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -1075,14 +2101,29 @@ describe('Game — changeEquipment', () => {
 
   // ── VEHICLE — revente par élément vs annulation cascade same-session ─────────
 
-  it('SELL VEHICLE : revente d\'un véhicule pré-existant — coût = châssis + équipement actif, tous à moitié prix', () => {
+  it("SELL VEHICLE : revente d'un véhicule pré-existant — coût = châssis + équipement actif, tous à moitié prix", () => {
     const { team, participant, vehicle } = makeTestParticipant();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]); // véhicule pré-existant (id positif) → revente, pas annulation
@@ -1100,13 +2141,30 @@ describe('Game — changeEquipment', () => {
   it('SELL VEHICLE rejette un véhicule détruit (isLost) — plus aucune valeur de revente, aucun crédit indu', () => {
     const { participant, vehicle } = makeTestParticipant();
     vehicle.markLost();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
-    expect(() => game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
-      targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
-    })).toThrow('détruit');
+    expect(() =>
+      game.changeEquipment(participant, {
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.VEHICLE,
+        nomInterne: '',
+        targetEntityId: vehicle.id,
+        resolvedVehicleType: null,
+        resolvedWeaponType: null,
+        resolvedImprovementType: null,
+        resolvedAdvantageType: null,
+        resolvedSequellaType: null,
+        resolvedFreeAdvantageType: null,
+      }),
+    ).toThrow('détruit');
   });
 
   it('SELL VEHICLE sur un achat de CETTE session : annule intégralement le véhicule ET tout événement de la session qui le référence (cascade)', () => {
@@ -1119,40 +2177,103 @@ describe('Game — changeEquipment', () => {
     const weaponType = makeWeaponType();
     const improvementType = makeImprovementType();
     const transientWeapon = new Weapon(-51, weaponType, 'avant');
-    const transientImprovement = new Improvement(-52, improvementType, null, false);
-    const transientVehicle = new Vehicle(-50, 1, vehicleType, [transientWeapon], [transientImprovement]);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const transientImprovement = new Improvement(
+      -52,
+      improvementType,
+      null,
+      false,
+    );
+    const transientVehicle = new Vehicle(
+      -50,
+      1,
+      vehicleType,
+      [transientWeapon],
+      [transientImprovement],
+    );
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      transientVehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     const buyVehicleEvent = new EquipmentChangedEvent(
-      50, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'voiture', 12,
-      null, null, null, vehicleType, null, null, null,
+      50,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.VEHICLE,
+      'voiture',
+      12,
+      null,
+      null,
+      null,
+      vehicleType,
+      null,
+      null,
+      null,
     );
     const buyWeaponEvent = new EquipmentChangedEvent(
-      51, 10, participant.id, 1,
-      EquipmentOperation.BUY, EquipmentEntityType.WEAPON, 'mitrailleuse', 5,
-      -50, null, 'avant', null, weaponType, null, null,
+      51,
+      10,
+      participant.id,
+      1,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.WEAPON,
+      'mitrailleuse',
+      5,
+      -50,
+      null,
+      'avant',
+      null,
+      weaponType,
+      null,
+      null,
     );
     const buyImprovementEvent = new EquipmentChangedEvent(
-      52, 10, participant.id, 2,
-      EquipmentOperation.BUY, EquipmentEntityType.IMPROVEMENT, 'blindage', 4,
-      -50, null, null, null, null, improvementType, null,
+      52,
+      10,
+      participant.id,
+      2,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.IMPROVEMENT,
+      'blindage',
+      4,
+      -50,
+      null,
+      null,
+      null,
+      null,
+      improvementType,
+      null,
     );
     const game = new EvenementTeleGame(
-      10, 1, GameStatus.ATELIER, 1, 'scen', new Date(),
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
       [buyVehicleEvent, buyWeaponEvent, buyImprovementEvent],
     );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: -50,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.events).toHaveLength(0);
-    expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([50, 51, 52]);
+    expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([
+      50, 51, 52,
+    ]);
   });
 
   it('SELL VEHICLE sur un achat de CETTE session : la cascade inclut aussi un VehicleRenamedEvent de la même session (régression targetsVehicle)', () => {
@@ -1162,46 +2283,97 @@ describe('Game — changeEquipment', () => {
     // PROCHAIN replay lèverait une DomainException sur `Team.findVehicle`.
     const vehicleType = makeVehicleType();
     const transientVehicle = new Vehicle(-50, 1, vehicleType, [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      transientVehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     const buyVehicleEvent = new EquipmentChangedEvent(
-      50, 10, participant.id, 0,
-      EquipmentOperation.BUY, EquipmentEntityType.VEHICLE, 'voiture', 12,
-      null, null, null, vehicleType, null, null, null,
+      50,
+      10,
+      participant.id,
+      0,
+      EquipmentOperation.BUY,
+      EquipmentEntityType.VEHICLE,
+      'voiture',
+      12,
+      null,
+      null,
+      null,
+      vehicleType,
+      null,
+      null,
+      null,
     );
-    const renameEvent = new VehicleRenamedEvent(53, 10, participant.id, 1, -50, 'Voiture', 'La Teigne');
+    const renameEvent = new VehicleRenamedEvent(
+      53,
+      10,
+      participant.id,
+      1,
+      -50,
+      'Voiture',
+      'La Teigne',
+    );
     const game = new EvenementTeleGame(
-      10, 1, GameStatus.ATELIER, 1, 'scen', new Date(),
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
       [buyVehicleEvent, renameEvent],
     );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: -50,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.events).toHaveLength(0);
     expect([...result.deleteEventIds].sort((a, b) => a - b)).toEqual([50, 53]);
   });
 
-  it('SELL VEHICLE sur un achat d\'une AUTRE session : revente normale, pas d\'annulation cascade', () => {
+  it("SELL VEHICLE sur un achat d'une AUTRE session : revente normale, pas d'annulation cascade", () => {
     const vehicleType = makeVehicleType();
     const transientVehicle = new Vehicle(-77, 1, vehicleType, [], []);
-    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [transientVehicle]);
+    const team = new Team(1, 42, 'Les Furieux', 'Rutherford', 50, null, [
+      transientVehicle,
+    ]);
     const participant = new CampaignParticipant(1, 42, 1, false);
     participant.attachTeam(team);
 
     // Partie ATELIER courante (id=10) — aucun événement à elle (le BUY_VEHICLE appartient
     // à une partie déjà JOUE, non représentée ici).
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: -77,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
 
     expect(result.deleteEventIds).toEqual([]);
@@ -1217,13 +2389,29 @@ describe('Game — changeEquipment', () => {
   });
 
   it('SELL VEHICLE : cascade sur toute arme/amélioration/avantage pas encore vendu(e)', () => {
-    const { team, participant, vehicle, weapon, improvement, advantage } = makeTestParticipantWithAdvantage();
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const { team, participant, vehicle, weapon, improvement, advantage } =
+      makeTestParticipantWithAdvantage();
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
 
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
     // floor(12/2) châssis + floor(5/2) arme + floor(4/2) amélioration + floor_avantage(0) = 6+2+2+0 = 10.
     expect((result.events[0] as EquipmentChangedEvent).cost).toBe(10);
@@ -1239,16 +2427,32 @@ describe('Game — changeEquipment', () => {
   });
 
   it('SELL VEHICLE : undo() restaure le véhicule et les enfants cascadés, mais PAS un enfant déjà vendu individuellement avant', () => {
-    const { team, participant, vehicle, weapon, improvement, advantage } = makeTestParticipantWithAdvantage();
+    const { team, participant, vehicle, weapon, improvement, advantage } =
+      makeTestParticipantWithAdvantage();
     // Simule une vente individuelle antérieure de l'arme (session déjà close) — la cascade
     // de la vente du véhicule ne doit ni la re-vendre (déjà vendue) ni la restaurer à l'undo.
     weapon.markSold();
 
-    const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'scen', new Date(), []);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
     const result = game.changeEquipment(participant, {
-      operation: EquipmentOperation.SELL, entityType: EquipmentEntityType.VEHICLE, nomInterne: '',
+      operation: EquipmentOperation.SELL,
+      entityType: EquipmentEntityType.VEHICLE,
+      nomInterne: '',
       targetEntityId: vehicle.id,
-      resolvedVehicleType: null, resolvedWeaponType: null, resolvedImprovementType: null, resolvedAdvantageType: null, resolvedSequellaType: null, resolvedFreeAdvantageType: null,
+      resolvedVehicleType: null,
+      resolvedWeaponType: null,
+      resolvedImprovementType: null,
+      resolvedAdvantageType: null,
+      resolvedSequellaType: null,
+      resolvedFreeAdvantageType: null,
     });
     result.events[0].execute([participant]);
     expect(weapon.isSold).toBe(true); // déjà vendue avant, inchangé

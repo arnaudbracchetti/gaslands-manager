@@ -10,8 +10,8 @@ import type { VehicleStats } from './behaviors/equipment-behavior';
  * catalogue n'a d'avantage intégré à son profil de base).
  */
 export class Advantage {
-  private _isSold = false;
-  private _isLost = false;
+  private _isSold: boolean = false;
+  private _isLost: boolean = false;
 
   constructor(
     readonly id: number,
@@ -48,7 +48,9 @@ export class Advantage {
    */
   get resaleRefund(): number {
     if (this._isSold) {
-      throw new DomainException('Cet avantage est déjà vendu — son remboursement a déjà été calculé et crédité.');
+      throw new DomainException(
+        'Cet avantage est déjà vendu — son remboursement a déjà été calculé et crédité.',
+      );
     }
     return 0;
   }

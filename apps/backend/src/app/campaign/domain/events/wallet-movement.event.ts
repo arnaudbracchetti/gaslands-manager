@@ -8,7 +8,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * `amount` peut être positif (gain) ou négatif (dépense).
  */
 export class WalletMovementEvent extends GameEvent {
-  readonly eventType = GameEventType.WALLET_MOVEMENT;
+  readonly eventType: GameEventType.WALLET_MOVEMENT =
+    GameEventType.WALLET_MOVEMENT;
 
   constructor(
     id: number,

@@ -10,8 +10,8 @@ import { DomainException } from '../../shared/domain/domain-exception';
  * Weapon porte l'état propre à cette instance (orientation choisie au moment de la pose).
  */
 export class Weapon {
-  private _isLost = false;
-  private _isSold = false;
+  private _isLost: boolean = false;
+  private _isSold: boolean = false;
 
   constructor(
     readonly id: number,
@@ -51,7 +51,9 @@ export class Weapon {
    */
   get resaleRefund(): number {
     if (this._isSold) {
-      throw new DomainException('Cette arme est déjà vendue — son remboursement a déjà été calculé et crédité.');
+      throw new DomainException(
+        'Cette arme est déjà vendue — son remboursement a déjà été calculé et crédité.',
+      );
     }
     return Math.floor(this.price / 2);
   }

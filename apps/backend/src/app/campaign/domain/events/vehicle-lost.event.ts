@@ -7,7 +7,7 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * Pose un flag transient sur le véhicule en mémoire — jamais persisté.
  */
 export class VehicleLostEvent extends GameEvent {
-  readonly eventType = GameEventType.VEHICLE_LOST;
+  readonly eventType: GameEventType.VEHICLE_LOST = GameEventType.VEHICLE_LOST;
 
   constructor(
     id: number,

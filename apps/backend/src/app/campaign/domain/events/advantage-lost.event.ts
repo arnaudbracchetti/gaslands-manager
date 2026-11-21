@@ -10,7 +10,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * Mirroir exact de `WeaponLostEvent` et `ImprovementLostEvent`.
  */
 export class AdvantageLostEvent extends GameEvent {
-  readonly eventType = GameEventType.ADVANTAGE_LOST;
+  readonly eventType: GameEventType.ADVANTAGE_LOST =
+    GameEventType.ADVANTAGE_LOST;
 
   constructor(
     id: number,
@@ -36,8 +37,12 @@ export class AdvantageLostEvent extends GameEvent {
     try {
       const p = this.findParticipant(participants);
       const nom = p.team.findAdvantage(this.advantageId).type.nom;
-      const vehicle = p.team.vehicles.find((v) => v.advantages.some((a) => a.id === this.advantageId));
-      const vehicleLabel = vehicle ? ` sur le véhicule ${vehicle.type.nom}` : '';
+      const vehicle = p.team.vehicles.find((v) =>
+        v.advantages.some((a) => a.id === this.advantageId),
+      );
+      const vehicleLabel = vehicle
+        ? ` sur le véhicule ${vehicle.type.nom}`
+        : '';
       return `Avantage perdu${vehicleLabel} : ${nom}`;
     } catch {
       return `Avantage perdu : #${this.advantageId}`;

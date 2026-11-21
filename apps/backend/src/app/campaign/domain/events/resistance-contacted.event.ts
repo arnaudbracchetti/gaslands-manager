@@ -7,9 +7,10 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * Les PR ne sont jamais exposés au classement public (cf. standings()).
  */
 export class ResistanceContactedEvent extends GameEvent {
-  private static readonly PR_BONUS = 3;
+  private static readonly PR_BONUS: number = 3;
 
-  readonly eventType = GameEventType.RESISTANCE_CONTACTED;
+  readonly eventType: GameEventType.RESISTANCE_CONTACTED =
+    GameEventType.RESISTANCE_CONTACTED;
 
   constructor(
     id: number,
@@ -21,11 +22,15 @@ export class ResistanceContactedEvent extends GameEvent {
   }
 
   execute(participants: CampaignParticipant[]): void {
-    this.findParticipant(participants).addResistance(ResistanceContactedEvent.PR_BONUS);
+    this.findParticipant(participants).addResistance(
+      ResistanceContactedEvent.PR_BONUS,
+    );
   }
 
   undo(participants: CampaignParticipant[]): void {
-    this.findParticipant(participants).addResistance(-ResistanceContactedEvent.PR_BONUS);
+    this.findParticipant(participants).addResistance(
+      -ResistanceContactedEvent.PR_BONUS,
+    );
   }
 
   describe(): string {

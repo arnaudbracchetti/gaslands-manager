@@ -12,6 +12,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Signal,
   WritableSignal,
   afterNextRender,
   computed,
@@ -50,23 +51,34 @@ export class Register {
    * déclenche qu'une fois les deux champs renseignés pour ne pas flasher une
    * erreur avant que l'utilisateur ait atteint le second champ.
    */
-  readonly passwordMismatch = computed<boolean>(
-    () => this.confirmPassword() !== '' && this.password() !== this.confirmPassword(),
+  readonly passwordMismatch: Signal<boolean> = computed<boolean>(
+    () =>
+      this.confirmPassword() !== '' &&
+      this.password() !== this.confirmPassword(),
   );
-  readonly passwordTooShort = computed<boolean>(() => this.password().length > 0 && this.password().length < 6);
+  readonly passwordTooShort: Signal<boolean> = computed<boolean>(
+    () => this.password().length > 0 && this.password().length < 6,
+  );
 
   /**
    * Faux en dev/e2e (clé de site vide, cf. environments/environment.ts) : le
    * widget n'est alors jamais rendu et le bouton reste toujours actif - c'est
    * tout le mécanisme de neutralisation du captcha hors production.
    */
-  readonly captchaEnabled: WritableSignal<boolean> = signal(environment.turnstileSiteKey !== '');
+  readonly captchaEnabled: WritableSignal<boolean> = signal(
+    environment.turnstileSiteKey !== '',
+  );
   readonly captchaToken: WritableSignal<string> = signal('');
-  readonly canSubmit = computed<boolean>(
-    () => (!this.captchaEnabled() || this.captchaToken() !== '') && !this.passwordMismatch() && !this.passwordTooShort(),
+  readonly canSubmit: Signal<boolean> = computed<boolean>(
+    () =>
+      (!this.captchaEnabled() || this.captchaToken() !== '') &&
+      !this.passwordMismatch() &&
+      !this.passwordTooShort(),
   );
 
-  private readonly turnstileHost = viewChild<ElementRef<HTMLDivElement>>('turnstileHost');
+  private readonly turnstileHost: Signal<
+    ElementRef<HTMLDivElement> | undefined
+  > = viewChild<ElementRef<HTMLDivElement>>('turnstileHost');
   private widgetId: string | undefined;
 
   constructor() {
@@ -91,7 +103,9 @@ export class Register {
           });
         })
         .catch(() => {
-          this.errorMessage.set('Impossible de charger la vérification anti-robot. Rechargez la page.');
+          this.errorMessage.set(
+            'Impossible de charger la vérification anti-robot. Rechargez la page.',
+          );
         });
     });
 
@@ -103,12 +117,20 @@ export class Register {
   }
 
   onSubmit(): void {
-    if (!this.firstName() || !this.lastName() || !this.pseudo() || !this.email() || !this.password()) {
+    if (
+      !this.firstName() ||
+      !this.lastName() ||
+      !this.pseudo() ||
+      !this.email() ||
+      !this.password()
+    ) {
       this.errorMessage.set('Veuillez remplir tous les champs');
       return;
     }
     if (this.passwordTooShort()) {
-      this.errorMessage.set('Le mot de passe doit contenir au moins 6 caractères');
+      this.errorMessage.set(
+        'Le mot de passe doit contenir au moins 6 caractères',
+      );
       return;
     }
     if (this.password() !== this.confirmPassword()) {
@@ -137,7 +159,9 @@ export class Register {
           this.router.navigate(['/home']);
         },
         error: (err: HttpErrorResponse) => {
-          this.errorMessage.set(err.error?.message ?? 'Erreur lors de la création du compte');
+          this.errorMessage.set(
+            err.error?.message ?? 'Erreur lors de la création du compte',
+          );
           this.isLoading.set(false);
           // Les jetons Turnstile sont à usage unique : sans ce reset, un 409
           // "email déjà pris" rendrait toute nouvelle tentative impossible.

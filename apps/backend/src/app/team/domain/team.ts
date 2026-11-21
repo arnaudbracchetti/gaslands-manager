@@ -62,8 +62,8 @@ export class Team {
    * 10/20 milliards place ces ids dans un espace qu'aucun `-event.id` réel ne peut
    * jamais atteindre — garantie d'unicité mathématique, pas probabiliste.
    */
-  private static readonly DEFAULT_WEAPON_ID_OFFSET = 10_000_000_000;
-  private static readonly DEFAULT_IMPROVEMENT_ID_OFFSET = 20_000_000_000;
+  private static readonly DEFAULT_WEAPON_ID_OFFSET: number = 10_000_000_000;
+  private static readonly DEFAULT_IMPROVEMENT_ID_OFFSET: number = 20_000_000_000;
 
   constructor(
     readonly id: number,
@@ -77,13 +77,27 @@ export class Team {
     private readonly _campaignBudget: number | null = null,
   ) {}
 
-  get name(): string { return this._name; }
-  get sponsor(): string { return this._sponsor; }
-  get cans(): number { return this._cans; }
-  get description(): string | null { return this._description; }
-  get vehicles(): readonly Vehicle[] { return this._vehicles; }
-  get isLocked(): boolean { return this._isLocked; }
-  get campaignBudget(): number | null { return this._campaignBudget; }
+  get name(): string {
+    return this._name;
+  }
+  get sponsor(): string {
+    return this._sponsor;
+  }
+  get cans(): number {
+    return this._cans;
+  }
+  get description(): string | null {
+    return this._description;
+  }
+  get vehicles(): readonly Vehicle[] {
+    return this._vehicles;
+  }
+  get isLocked(): boolean {
+    return this._isLocked;
+  }
+  get campaignBudget(): number | null {
+    return this._campaignBudget;
+  }
 
   /**
    * Une équipe engagée (participant VALIDATED) dans une campagne qui n'est plus
@@ -134,7 +148,9 @@ export class Team {
     if (dto.description !== undefined) this._description = dto.description;
     if (dto.sponsor !== undefined && dto.sponsor !== this._sponsor) {
       if (this._vehicles.length > 0) {
-        throw new DomainException('Le sponsor ne peut plus être modifié car l\'équipe possède des véhicules');
+        throw new DomainException(
+          "Le sponsor ne peut plus être modifié car l'équipe possède des véhicules",
+        );
       }
       this._sponsor = dto.sponsor;
     }
@@ -148,12 +164,24 @@ export class Team {
    * d'autorisation sponsor (vehicleType ∈ sponsor.vehicules) est faite par le use case
    * avant d'appeler cette méthode.
    */
-  addVehicle(vehicleType: VehicleType, defaultImprovements: Improvement[], defaultWeapons: Weapon[] = []): Vehicle {
+  addVehicle(
+    vehicleType: VehicleType,
+    defaultImprovements: Improvement[],
+    defaultWeapons: Weapon[] = [],
+  ): Vehicle {
     this.assertNotLocked();
     if (vehicleType.price > this.remainingBudget) {
-      throw new DomainException("Budget de l'équipe insuffisant pour ce véhicule");
+      throw new DomainException(
+        "Budget de l'équipe insuffisant pour ce véhicule",
+      );
     }
-    const vehicle = new Vehicle(0, this.id, vehicleType, defaultWeapons, defaultImprovements);
+    const vehicle = new Vehicle(
+      0,
+      this.id,
+      vehicleType,
+      defaultWeapons,
+      defaultImprovements,
+    );
     this._vehicles.push(vehicle);
     return vehicle;
   }
@@ -169,14 +197,18 @@ export class Team {
    */
   canAddVehicle(vehicleType: VehicleType, budget: number): RuleResult {
     if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
-    if (vehicleType.price > budget) return fail("Budget de l'équipe insuffisant");
+    if (vehicleType.price > budget)
+      return fail("Budget de l'équipe insuffisant");
     return ok();
   }
 
   removeVehicle(vehicleId: number): void {
     this.assertNotLocked();
     const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
-    if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
+    if (idx === -1)
+      throw new DomainException(
+        `Véhicule #${vehicleId} introuvable dans l'équipe`,
+      );
     this._vehicles.splice(idx, 1);
   }
 
@@ -193,7 +225,10 @@ export class Team {
 
   findVehicle(vehicleId: number): Vehicle {
     const v = this._vehicles.find((v) => v.id === vehicleId);
-    if (!v) throw new DomainException(`Véhicule #${vehicleId} introuvable dans l'équipe`);
+    if (!v)
+      throw new DomainException(
+        `Véhicule #${vehicleId} introuvable dans l'équipe`,
+      );
     return v;
   }
 
@@ -217,10 +252,14 @@ export class Team {
    */
   findImprovement(improvementId: number): Improvement {
     for (const vehicle of this._vehicles) {
-      const improvement = vehicle.improvements.find((i) => i.id === improvementId);
+      const improvement = vehicle.improvements.find(
+        (i) => i.id === improvementId,
+      );
       if (improvement) return improvement;
     }
-    throw new DomainException(`Amélioration #${improvementId} introuvable dans l'équipe`);
+    throw new DomainException(
+      `Amélioration #${improvementId} introuvable dans l'équipe`,
+    );
   }
 
   /**
@@ -233,7 +272,9 @@ export class Team {
       const advantage = vehicle.advantages.find((a) => a.id === advantageId);
       if (advantage) return advantage;
     }
-    throw new DomainException(`Avantage #${advantageId} introuvable dans l'équipe`);
+    throw new DomainException(
+      `Avantage #${advantageId} introuvable dans l'équipe`,
+    );
   }
 
   // ── Mutations Weapon (déléguées au Vehicle) ───────────────────────────────────
@@ -261,14 +302,26 @@ export class Team {
    * "indisponible" sans faire échouer la requête. Évite de dupliquer ce test dans
    * chaque use case de listing (`GetAvailableWeaponsUseCase`…).
    */
-  canAddWeaponToVehicle(vehicleId: number, weaponType: WeaponType, orientation: WeaponOrientation | null): RuleResult {
+  canAddWeaponToVehicle(
+    vehicleId: number,
+    weaponType: WeaponType,
+    orientation: WeaponOrientation | null,
+  ): RuleResult {
     if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
-    return this.findVehicle(vehicleId).canAddWeapon(weaponType, orientation, this.remainingBudget);
+    return this.findVehicle(vehicleId).canAddWeapon(
+      weaponType,
+      orientation,
+      this.remainingBudget,
+    );
   }
 
   // ── Mutations Improvement (déléguées au Vehicle) ──────────────────────────────
 
-  addImprovementToVehicle(vehicleId: number, improvementType: ImprovementType, orientation: Orientation | null): void {
+  addImprovementToVehicle(
+    vehicleId: number,
+    improvementType: ImprovementType,
+    orientation: Orientation | null,
+  ): void {
     this.assertNotLocked();
     const vehicle = this.findVehicle(vehicleId);
     vehicle.addImprovement(improvementType, orientation, this.remainingBudget);
@@ -281,9 +334,15 @@ export class Team {
   }
 
   /** Miroir de `canAddWeaponToVehicle` pour les améliorations — cf. sa doc. */
-  canAddImprovementToVehicle(vehicleId: number, improvementType: ImprovementType): RuleResult {
+  canAddImprovementToVehicle(
+    vehicleId: number,
+    improvementType: ImprovementType,
+  ): RuleResult {
     if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
-    return this.findVehicle(vehicleId).canAddImprovementInAnyOrientation(improvementType, this.remainingBudget);
+    return this.findVehicle(vehicleId).canAddImprovementInAnyOrientation(
+      improvementType,
+      this.remainingBudget,
+    );
   }
 
   // ── Mutations Advantage (déléguées au Vehicle) ────────────────────────────────
@@ -301,9 +360,15 @@ export class Team {
   }
 
   /** Miroir de `canAddWeaponToVehicle` pour les avantages — cf. sa doc. */
-  canAddAdvantageToVehicle(vehicleId: number, advantageType: AdvantageType): RuleResult {
+  canAddAdvantageToVehicle(
+    vehicleId: number,
+    advantageType: AdvantageType,
+  ): RuleResult {
     if (this._isLocked) return fail('Équipe verrouillée : campagne en cours');
-    return this.findVehicle(vehicleId).canAddAdvantage(advantageType, this.remainingBudget);
+    return this.findVehicle(vehicleId).canAddAdvantage(
+      advantageType,
+      this.remainingBudget,
+    );
   }
 
   // ── Méthodes campagne (D-S5 / D-S11) ────────────────────────────────────────
@@ -346,12 +411,31 @@ export class Team {
     defaultWeaponType: WeaponType | null = null,
   ): Vehicle {
     const defaultImprovements = defaultImprovementTypes.map(
-      (type, index) => new Improvement(campaignId - Team.DEFAULT_IMPROVEMENT_ID_OFFSET - index, type, null, true),
+      (type, index) =>
+        new Improvement(
+          campaignId - Team.DEFAULT_IMPROVEMENT_ID_OFFSET - index,
+          type,
+          null,
+          true,
+        ),
     );
     const defaultWeapons = defaultWeaponType
-      ? [new Weapon(campaignId - Team.DEFAULT_WEAPON_ID_OFFSET, defaultWeaponType, 'tourelle', true)]
+      ? [
+          new Weapon(
+            campaignId - Team.DEFAULT_WEAPON_ID_OFFSET,
+            defaultWeaponType,
+            'tourelle',
+            true,
+          ),
+        ]
       : [];
-    const vehicle = new Vehicle(campaignId, this.id, vehicleType, defaultWeapons, defaultImprovements);
+    const vehicle = new Vehicle(
+      campaignId,
+      this.id,
+      vehicleType,
+      defaultWeapons,
+      defaultImprovements,
+    );
     this._vehicles.push(vehicle);
     return vehicle;
   }
@@ -359,7 +443,10 @@ export class Team {
   /** Retire un véhicule par son id (persisté ou transient campagne). */
   removeCampaignVehicle(vehicleId: number): void {
     const idx = this._vehicles.findIndex((v) => v.id === vehicleId);
-    if (idx === -1) throw new DomainException(`Véhicule #${vehicleId} introuvable pour suppression campagne`);
+    if (idx === -1)
+      throw new DomainException(
+        `Véhicule #${vehicleId} introuvable pour suppression campagne`,
+      );
     this._vehicles.splice(idx, 1);
   }
 
@@ -384,7 +471,11 @@ export class Team {
     orientation: WeaponOrientation | null,
     campaignId: number,
   ): Weapon {
-    return this.findVehicle(vehicleId).addCampaignWeapon(weaponType, orientation, campaignId);
+    return this.findVehicle(vehicleId).addCampaignWeapon(
+      weaponType,
+      orientation,
+      campaignId,
+    );
   }
 
   /** Retire une arme par son id d'un véhicule spécifique. */
@@ -399,7 +490,11 @@ export class Team {
     orientation: Orientation | null,
     campaignId: number,
   ): Improvement {
-    return this.findVehicle(vehicleId).addCampaignImprovement(improvementType, orientation, campaignId);
+    return this.findVehicle(vehicleId).addCampaignImprovement(
+      improvementType,
+      orientation,
+      campaignId,
+    );
   }
 
   /**
@@ -418,7 +513,11 @@ export class Team {
     campaignId: number,
     grantedBySequellaNomInterne: string | null = null,
   ): Advantage {
-    return this.findVehicle(vehicleId).addCampaignAdvantage(advantageType, campaignId, grantedBySequellaNomInterne);
+    return this.findVehicle(vehicleId).addCampaignAdvantage(
+      advantageType,
+      campaignId,
+      grantedBySequellaNomInterne,
+    );
   }
 
   /** Retire un avantage par son id d'un véhicule spécifique (annulation d'achat en session courante). */
@@ -427,8 +526,15 @@ export class Team {
   }
 
   /** Ajoute une séquelle transiente sur un véhicule avec un id explicite (D-S11). */
-  addCampaignSequella(vehicleId: number, sequellaType: SequellaType, campaignId: number): Sequella {
-    return this.findVehicle(vehicleId).addCampaignSequella(sequellaType, campaignId);
+  addCampaignSequella(
+    vehicleId: number,
+    sequellaType: SequellaType,
+    campaignId: number,
+  ): Sequella {
+    return this.findVehicle(vehicleId).addCampaignSequella(
+      sequellaType,
+      campaignId,
+    );
   }
 
   /** Retire une séquelle par son id d'un véhicule spécifique (annulation d'achat en session courante). */
@@ -492,14 +598,19 @@ export class Team {
   }
 
   /** Marque/démarque vendu l'avantage gratuit accordé par une séquelle (Dur à Cuire). */
-  markGrantedAdvantageSold(vehicleId: number, sequellaNomInterne: string): void {
+  markGrantedAdvantageSold(
+    vehicleId: number,
+    sequellaNomInterne: string,
+  ): void {
     this.findVehicle(vehicleId).markGrantedAdvantageSold(sequellaNomInterne);
   }
 
-  clearGrantedAdvantageSold(vehicleId: number, sequellaNomInterne: string): void {
+  clearGrantedAdvantageSold(
+    vehicleId: number,
+    sequellaNomInterne: string,
+  ): void {
     this.findVehicle(vehicleId).clearGrantedAdvantageSold(sequellaNomInterne);
   }
-
 }
 
 // Ré-export pour que les consumers importent depuis team.ts sans connaître vehicle.ts

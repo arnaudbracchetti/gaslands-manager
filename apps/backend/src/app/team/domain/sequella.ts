@@ -10,7 +10,7 @@ import type { VehicleStats } from './behaviors/equipment-behavior';
  * seule différence, la monnaie est le Choc du véhicule, pas le Jerrican de l'équipe.
  */
 export class Sequella {
-  private _isSold = false;
+  private _isSold: boolean = false;
 
   constructor(
     readonly id: number,
@@ -29,7 +29,9 @@ export class Sequella {
   /** Perte totale — miroir d'`Advantage.resaleRefund`, cf. sa doc. */
   get resaleRefund(): number {
     if (this._isSold) {
-      throw new DomainException('Cette séquelle est déjà vendue — son remboursement a déjà été calculé et crédité.');
+      throw new DomainException(
+        'Cette séquelle est déjà vendue — son remboursement a déjà été calculé et crédité.',
+      );
     }
     return 0;
   }

@@ -34,8 +34,12 @@ describe('ViewportService', () => {
       ({
         matches: true,
         media: query,
-        addEventListener: () => {},
-        removeEventListener: () => {},
+        addEventListener: () => {
+          /* stub : aucun abonnement nécessaire */
+        },
+        removeEventListener: () => {
+          /* stub : aucun désabonnement nécessaire */
+        },
       }) as unknown as MediaQueryList) as MatchMediaStub;
 
     const service = TestBed.inject(ViewportService);
@@ -49,10 +53,15 @@ describe('ViewportService', () => {
       ({
         matches: false,
         media: query,
-        addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
+        addEventListener: (
+          _type: string,
+          listener: (event: MediaQueryListEvent) => void,
+        ) => {
           capturedListener = listener;
         },
-        removeEventListener: () => {},
+        removeEventListener: () => {
+          /* stub : aucun désabonnement nécessaire */
+        },
       }) as unknown as MediaQueryList) as MatchMediaStub;
 
     const service = TestBed.inject(ViewportService);

@@ -14,7 +14,8 @@ import { GameEventType } from '../enums/game-event-type.enum';
  * moment de l'enregistrement (même raisonnement D-S8 que `RankingAssignedEvent`).
  */
 export class VehicleDestroyedEvent extends GameEvent {
-  readonly eventType = GameEventType.VEHICLE_DESTROYED;
+  readonly eventType: GameEventType.VEHICLE_DESTROYED =
+    GameEventType.VEHICLE_DESTROYED;
 
   constructor(
     id: number,
@@ -38,10 +39,13 @@ export class VehicleDestroyedEvent extends GameEvent {
 
   describe(participants: readonly CampaignParticipant[]): string {
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
-    const label = found ? `${found.vehicle.type.nom} (${found.team.name})` : `#${this.vehicleId}`;
+    const label = found
+      ? `${found.vehicle.type.nom} (${found.team.name})`
+      : `#${this.vehicleId}`;
     // Escarmouche (Game.recordDestroyedVehicleTraces) fige toujours 0 PC : la destruction
     // reste tracée dans le journal, sans afficher un gain de PC inexistant.
-    const suffix = this.championshipPoints > 0 ? ` (+${this.championshipPoints} PC)` : '';
+    const suffix =
+      this.championshipPoints > 0 ? ` (+${this.championshipPoints} PC)` : '';
     return `Véhicule ennemi détruit : ${label} - ${WEIGHT_CLASS_LABELS[this.weightClass]}${suffix}`;
   }
 }
