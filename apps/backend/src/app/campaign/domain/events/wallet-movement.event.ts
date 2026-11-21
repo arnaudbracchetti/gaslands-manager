@@ -30,6 +30,10 @@ export class WalletMovementEvent extends GameEvent {
     this.findParticipant(participants).creditWallet(-this.amount);
   }
 
+  override get recompenseJerricansAwarded(): number {
+    return this.reason === WalletReason.RECOMPENSE ? this.amount : 0;
+  }
+
   describe(): string {
     const sign = this.amount >= 0 ? '+' : '';
     return `Budget : ${sign}${this.amount} jerricans (${WALLET_REASON_LABELS[this.reason]})`;
@@ -40,4 +44,5 @@ const WALLET_REASON_LABELS: Record<WalletReason, string> = {
   [WalletReason.RECOMPENSE]: 'Récompense',
   [WalletReason.ACHAT]: 'Achat atelier',
   [WalletReason.REVENTE]: 'Revente atelier',
+  [WalletReason.CAGNOTTE_TELE]: 'Cagnotte Télé',
 };

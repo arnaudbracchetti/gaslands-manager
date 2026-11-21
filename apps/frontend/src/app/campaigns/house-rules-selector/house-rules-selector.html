@@ -1,0 +1,26 @@
+<!-- Liste des règles maison du catalogue — une case à cocher, avec une ligne
+     qui bascule selon l'état (cochée : comportement alternatif ; décochée :
+     rappel du comportement par défaut). -->
+<div class="hrs">
+  <h3 class="hrs__title">Règles maison</h3>
+
+  @if (definitions().length === 0) {
+    <p class="hrs__hint">Aucune règle maison disponible.</p>
+  }
+
+  <div class="hrs__list">
+    @for (def of definitions(); track def.nom_interne) {
+      <div class="hrs__rule">
+        <label class="hrs__rule-row">
+          <input
+            type="checkbox"
+            [checked]="isEnabled(def)"
+            [disabled]="locked()"
+            (change)="onToggle(def, $any($event.target).checked)" />
+          <span>{{ def.nom }}</span>
+        </label>
+        <p class="hrs__rule-description" [innerHTML]="isEnabled(def) ? def.description_cochee : def.description_decochee"></p>
+      </div>
+    }
+  </div>
+</div>

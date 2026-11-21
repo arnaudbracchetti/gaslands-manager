@@ -27,12 +27,26 @@ import type { WeaponOrientation } from '../../../team/domain/team';
 import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
 import { ParticipantStatus } from '../enums/campaign.enums';
 import type { RankingInput, ChangeEquipmentInput, GameJournalEntry, ChangeEquipmentResult } from './game-commands';
+import type { GameRulesContext } from './game-context';
+import { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
+import { HouseRules } from '../house-rules/house-rules';
+import { TV_BONUS_AMOUNT_JERRICANS } from '../house-rules/tv-bonus-distribution-strategy';
 
 // Points de Championnat attribués par rang (index 0 = rang 1). Rang 5+ → 0.
 const POINTS_TABLE = [10, 5, 2, 1];
 
 /** +5 PC — Table des Épaves, ligne 9 (Favori du public), effet différé confirmé ligne 10+. */
 const FAVORI_DU_PUBLIC_BONUS_POINTS = 5;
+
+/**
+ * Contexte par défaut, utilisé tant qu'aucune `Campaign` n'a attaché le sien
+ * (`attachContext`) — toute règle maison désactivée (`HouseRules.none()`). Permet
+ * de construire et tester un `Game` isolément (`new EvenementTeleGame(...)`, sans
+ * `Campaign`), cf. skill `ddd`, règle transversale 8 (domaine testable sans mock).
+ */
+const DEFAULT_GAME_RULES_CONTEXT: GameRulesContext = {
+  strategyFactory: new HouseRuleStrategyFactory(HouseRules.none()),
+};
 
 /**
  * Partie de campagne — GoF Invoker.
@@ -53,6 +67,14 @@ export abstract class Game {
   private _status: GameStatus;
   private _playedAt: Date | null;
   private _order: number;
+  /**
+   * Configuration attachée par `Campaign` (interface étroite `GameRulesContext`,
+   * jamais l'agrégat `Campaign` complet) — `null` tant qu'aucune `Campaign` ne l'a
+   * attachée (`attachContext`), auquel cas `context` retombe sur
+   * `DEFAULT_GAME_RULES_CONTEXT`. Cf. sa doc pour la distinction avec les données
+   * reçues en paramètre (siblings, participants…).
+   */
+  private _context: GameRulesContext | null = null;
 
   constructor(
     readonly id: number,
@@ -72,6 +94,21 @@ export abstract class Game {
   get status(): GameStatus { return this._status; }
   get playedAt(): Date | null { return this._playedAt; }
   get order(): number { return this._order; }
+
+  /**
+   * Configuration attachée par la `Campaign` propriétaire — lue à la demande
+   * (jamais copiée), pour qu'un changement ultérieur de règles maison soit vu sans
+   * réattacher. Protégé : seuls `Game` et ses sous-types y accèdent, jamais un
+   * appelant extérieur au domaine.
+   */
+  protected get context(): GameRulesContext { return this._context ?? DEFAULT_GAME_RULES_CONTEXT; }
+
+  /**
+   * Attache la configuration de la `Campaign` propriétaire — appelée par
+   * `Campaign` (constructeur + `createGame`), jamais par un use case. Même idiome
+   * que `CampaignParticipant.attachTeam(team)`.
+   */
+  attachContext(context: GameRulesContext): void { this._context = context; }
 
   /** Sous-type de partie. Utilisé par le mapper ORM pour l'hydratation STI. */
   abstract get type(): string;
@@ -151,9 +188,22 @@ export abstract class Game {
 
   /**
    * Enregistre le résultat de cette partie : calcule les PC, journalise un
-   * `RankingAssignedEvent` par participant (+ exploits/résistance). Ne fait PAS
-   * entrer la partie en atelier — cf. `Campaign.enterAtelier()`, action séparée.
-   * Les événements créés portent id=0 ; le use case les persiste via `appendEvents`.
+   * `RankingAssignedEvent` par participant (+ exploits). Ne fait PAS entrer la
+   * partie en atelier — cf. `Campaign.enterAtelier()`, action séparée. Les
+   * événements créés portent id=0 ; le use case les persiste via `appendEvents`.
+   *
+   * Ne distribue PAS les Points de Résistance automatiques (US-F1) — ce calcul a
+   * été déplacé vers `distributeResistance()`, appelé à l'entrée en Atelier (RM-4) :
+   * seul cet instant garantit que le total de PC de la partie est complet (le bonus
+   * Favori du Public, crédité après l'enregistrement du résultat, doit déjà compter).
+   *
+   * Distribue en revanche la cagnotte télé collective (règle maison) : contrairement
+   * aux PR, son éligibilité ("tout participant `VALIDATED` de la campagne") ne dépend
+   * d'aucune donnée produite plus tard dans le wizard — rien n'impose d'attendre
+   * l'entrée en Atelier. Cette règle cible délibérément TOUS les participants
+   * `VALIDATED` de la campagne (`validatedIds`, cf. ci-dessous), pas seulement ceux
+   * classés dans `rankings` : c'est ce qui permet de créditer un participant absent
+   * de cette partie précise.
    */
   recordResult(rankings: RankingInput[], participants: readonly CampaignParticipant[]): GameEvent[] {
     if (this._status !== GameStatus.PLANIFIE) {
@@ -193,15 +243,6 @@ export abstract class Game {
       this.addEvent(rankingEvent);
       events.push(rankingEvent);
 
-      // Points de Résistance automatiques (US-F1) : tout participant non classé (hors du
-      // top `classified`) reçoit +3 PR secrets, même s'il a marqué des PC d'exploit —
-      // aucune saisie manuelle, l'organisateur n'a pas d'écran dédié pour cette étape.
-      if (r.rank > classified) {
-        const resistanceEvent = new ResistanceContactedEvent(0, this.id, r.participantId, 0);
-        this.addEvent(resistanceEvent);
-        events.push(resistanceEvent);
-      }
-
       // Exploits (US-B2) : portes franchies + véhicules ennemis détruits par poids.
       // PC figés à l'écriture (D-S8), comme pour le classement.
       if (r.gatesCrossed && r.gatesCrossed > 0) {
@@ -224,7 +265,38 @@ export abstract class Game {
       }
     }
 
+    // Cagnotte télé collective (règle maison) — un WalletMovementEvent par
+    // participant VALIDATED de la campagne, y compris ceux absents de cette partie.
+    // No-op par défaut (NoTvBonusStrategy) tant que la règle n'est pas activée.
+    const tvBonusStrategy = this.context.strategyFactory.createTvBonusDistributionStrategy();
+    for (const participantId of validatedIds) {
+      if (!tvBonusStrategy.isEligible({ participantId })) continue;
+      events.push(...this.recordWalletMovement(participantId, TV_BONUS_AMOUNT_JERRICANS, WalletReason.CAGNOTTE_TELE));
+    }
+
     return events;
+  }
+
+  /**
+   * Distribue les Points de Résistance automatiques (US-F1) pour cette partie —
+   * hook polymorphe (Événement Télévisé uniquement) : liste vide par défaut ici,
+   * surchargée par `EvenementTeleGame`. `EscarmoucheGame` hérite du no-op — une
+   * Escarmouche ne distribue jamais de PR.
+   *
+   * **Sans paramètre** : la Strategy à appliquer (règle par défaut ou règle maison)
+   * n'est jamais choisie par l'appelant (use case) — `EvenementTeleGame` la résout
+   * elle-même via `this.context.strategyFactory`, cf. `attachContext`/`context` et
+   * skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une Strategy ? ».
+   *
+   * Appelée à l'entrée en Atelier (`EnterAtelierUseCase`), PAS à l'enregistrement du
+   * résultat (`recordResult`) : seul cet instant garantit que le total de PC de la
+   * partie est complet (le bonus Favori du Public, émis après `recordResult`, doit
+   * déjà être pris en compte). Les événements créés portent id=0 ; l'appelant les
+   * persiste via `appendEvents`, **avant** de persister la transition de statut
+   * (`Campaign.enterAtelier` + `saveCampaign`) — jamais l'inverse.
+   */
+  distributeResistance(): GameEvent[] {
+    return [];
   }
 
   /**
@@ -478,26 +550,51 @@ export abstract class Game {
 
   /**
    * Escarmouche uniquement — revenu de base : un jet de D6 crédité en jerricans à un
-   * participant présent. Différé en fin de wizard (phase de résolution), tiré une fois
-   * par participant, en même temps que les tirages de la Table des Épaves — même aléa
-   * serveur autoritaire (cf. spec/CAMPAIGN.md — Wizard de fin de partie). Délègue
-   * entièrement à `recordWalletMovement` une fois le dé tiré : aucune règle propre à
-   * porter au-delà de "revenu = 1D6".
+   * participant présent, sauf si la règle maison « Bonus de jerricans pour la
+   * participation à une escarmouche » (nom_interne `escarmouche_bonus_jerricans`)
+   * est active, auquel cas aucun revenu de base n'est distribué (`NoBaseIncomeStrategy`,
+   * aucun événement créé — même principe que `NoTvBonusStrategy`, cf. `recordResult`).
+   * Différé en fin de wizard (phase de résolution), tiré une fois par participant, en
+   * même temps que les tirages de la Table des Épaves — même aléa serveur autoritaire
+   * (cf. spec/CAMPAIGN.md — Wizard de fin de partie).
+   *
+   * Résout sa propre Strategy via `this.context.strategyFactory` — jamais reçue en
+   * paramètre (cf. skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une
+   * Strategy ? »), même principe que `recordResult`/`distributeResistance`.
+   *
+   * Réservé à une Escarmouche, le montant tiré est en plus soumis au plafond de
+   * gains (règle maison « Plafond de jerricans par Escarmouche », nom_interne
+   * `plafond_jerricans_escarmouche`) — cf. `recordJerricanGains` ci-dessous pour le
+   * détail du cumul partagé entre les deux sources de gains d'une Escarmouche.
    */
   rollBaseIncome(participantId: number, randomizer: IRandomizer): GameEvent[] {
-    const amount = randomizer.roll(6);
-    return this.recordWalletMovement(participantId, amount, WalletReason.RECOMPENSE);
+    const amount = this.context.strategyFactory.createBaseIncomeStrategy().roll(randomizer);
+    if (amount === null) {
+      return [];
+    }
+    const credited = this.applyJerricanGainsCap(participantId, amount);
+    if (credited <= 0) {
+      return [];
+    }
+    return this.recordWalletMovement(participantId, credited, WalletReason.RECOMPENSE);
   }
 
   /**
    * Escarmouche uniquement — butin manuel de jerricans (scénario `gain_jerricans`),
    * saisi par l'organisateur et cumulable avec le revenu de base (`rollBaseIncome`).
    * Boucle sur `recordWalletMovement`, comme `recordResult` boucle sur les rangs.
+   *
+   * Chaque montant est soumis au plafond de gains (règle maison « Plafond de
+   * jerricans par Escarmouche ») — cf. `applyJerricanGainsCap`, qui recalcule le
+   * cumul déjà journalisé pour CE participant après chaque événement ajouté, afin
+   * qu'un même appel avec plusieurs entrées pour un même participant reste correct.
    */
   recordJerricanGains(gains: { participantId: number; amount: number }[]): GameEvent[] {
     const events: GameEvent[] = [];
     for (const gain of gains) {
-      events.push(...this.recordWalletMovement(gain.participantId, gain.amount, WalletReason.RECOMPENSE));
+      const credited = this.applyJerricanGainsCap(gain.participantId, gain.amount);
+      if (credited <= 0) continue;
+      events.push(...this.recordWalletMovement(gain.participantId, credited, WalletReason.RECOMPENSE));
     }
     return events;
   }
@@ -610,6 +707,39 @@ export abstract class Game {
   private computePoints(rank: number, classified: number): number {
     if (rank > classified) return 0;
     return POINTS_TABLE[rank - 1] ?? 0;
+  }
+
+  /**
+   * Réduit, si nécessaire, un montant de jerricans "récompense" à créditer à
+   * `participantId`, pour respecter le plafond de la règle maison « Plafond de
+   * jerricans par Escarmouche » — no-op (montant inchangé) hors Escarmouche ou si la
+   * règle maison est désactivée (`UnlimitedJerricanGainsStrategy`). Le cumul déjà
+   * gagné est recalculé depuis `this.events` à chaque appel plutôt que mémorisé : les
+   * deux sources de gains (`recordJerricanGains`, persisté à l'écran Jerricans du
+   * wizard, puis `rollBaseIncome`, tiré à l'écran Résolution) sont journalisées par
+   * des appels de use case séparés qui rechargent systématiquement le journal complet
+   * (`CampaignReplayService.loadAndReplay`) avant d'agir.
+   */
+  private applyJerricanGainsCap(participantId: number, requestedAmount: number): number {
+    if (this.type !== 'ESCARMOUCHE') {
+      return requestedAmount;
+    }
+    const capStrategy = this.context.strategyFactory.createJerricanGainsCapStrategy();
+    const alreadyEarned = this.recompenseEarnedBy(participantId);
+    return capStrategy.clamp(requestedAmount, alreadyEarned);
+  }
+
+  /**
+   * Somme des jerricans "récompense" (`WalletReason.RECOMPENSE`) déjà journalisés
+   * pour ce participant sur CETTE partie — via le getter générique
+   * `GameEvent.recompenseJerricansAwarded` (0 par défaut, surchargé par
+   * `WalletMovementEvent`), même idiome que le calcul de PC de
+   * `EvenementTeleGame.distributeResistance`.
+   */
+  private recompenseEarnedBy(participantId: number): number {
+    return this.events
+      .filter((e) => e.participantId === participantId)
+      .reduce((sum, e) => sum + e.recompenseJerricansAwarded, 0);
   }
 
   /**

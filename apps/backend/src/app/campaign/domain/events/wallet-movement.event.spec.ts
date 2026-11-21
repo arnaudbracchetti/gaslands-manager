@@ -38,4 +38,9 @@ describe('WalletMovementEvent — execute / undo', () => {
     const event = new WalletMovementEvent(1, 10, 1, 1, -5, WalletReason.ACHAT);
     expect(event.describe()).toBe('Budget : -5 jerricans (Achat atelier)');
   });
+
+  it('describe() résume la cagnotte télé (règle maison)', () => {
+    const event = new WalletMovementEvent(1, 10, 1, 1, 5, WalletReason.CAGNOTTE_TELE);
+    expect(event.describe()).toBe('Budget : +5 jerricans (Cagnotte Télé)');
+  });
 });

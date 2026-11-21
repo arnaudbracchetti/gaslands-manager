@@ -12,6 +12,7 @@ import { Game } from '../domain/games/game';
 import { EvenementTeleGame } from '../domain/games/evenement-tele-game';
 import { EscarmoucheGame } from '../domain/games/escarmouche-game';
 import { GameStatus } from '../domain/enums/game-status.enum';
+import { HouseRules } from '../domain/house-rules/house-rules';
 
 import { GameEvent } from '../domain/events/game-event';
 import { RankingAssignedEvent } from '../domain/events/ranking-assigned.event';
@@ -92,6 +93,7 @@ export class CampaignMapper {
       participants,
       games,
       campaignOrm.budget,
+      HouseRules.fromPersisted(campaignOrm.houseRules),
     );
   }
 
@@ -146,7 +148,7 @@ export class CampaignMapper {
         return this.toEquipmentChangedEvent(orm);
 
       case GameEventType.RESISTANCE_CONTACTED:
-        return new ResistanceContactedEvent(id, gameId, participantId, eventOrder);
+        return new ResistanceContactedEvent(id, gameId, participantId, eventOrder, orm.resistanceStrategyKey);
 
       case GameEventType.GATES_CROSSED:
         return new GatesCrossedEvent(id, gameId, participantId, eventOrder, orm.gatesCrossed!, orm.championshipPoints!);

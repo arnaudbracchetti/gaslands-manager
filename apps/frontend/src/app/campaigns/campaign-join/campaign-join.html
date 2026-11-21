@@ -41,6 +41,11 @@
         </p>
         <p class="campaign-join-card__budget">Budget des équipes : {{ summary()!.budget }} jerricans</p>
 
+        <app-house-rules-selector
+          [definitions]="houseRuleCatalog()"
+          [enabledKeys]="summary()!.houseRules"
+          [locked]="true" />
+
         @if (submitError()) {
           <div class="campaign-join-error">{{ submitError() }}</div>
         }

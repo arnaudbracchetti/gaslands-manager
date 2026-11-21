@@ -10,6 +10,7 @@ import { GameStatus } from '../domain/enums/game-status.enum';
 import { CampaignState } from '../domain/enums/campaign.enums';
 import { WalletMovementEvent } from '../domain/events/wallet-movement.event';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
+import { HouseRules } from '../domain/house-rules/house-rules';
 
 class FixedRandomizer implements IRandomizer {
   constructor(private readonly fixedRoll: number) {}
@@ -17,14 +18,26 @@ class FixedRandomizer implements IRandomizer {
   pick<T>(pool: T[]): T { return pool[0]; }
 }
 
-function makeFixture(randomizer: IRandomizer): {
+function makeFixture(
+  randomizer: IRandomizer,
+  houseRules: HouseRules = HouseRules.none(),
+): {
   useCase: RollIncomeUseCase;
   campaignRepo: ICampaignRepository;
   game: EscarmoucheGame;
 } {
   const organizer = new CampaignParticipant(1, 42, 1, true);
   const game = new EscarmoucheGame(10, 1, GameStatus.PLANIFIE, 1, 'embuscade', null, []);
-  const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [organizer], [game]);
+  const campaign = new Campaign(
+    1,
+    'Campagne Test',
+    CampaignState.EN_COURS,
+    'invite-code',
+    [organizer],
+    [game],
+    50,
+    houseRules,
+  );
 
   const campaignRepo: ICampaignRepository = {
     appendEvents: vi.fn().mockResolvedValue(undefined),
@@ -65,5 +78,18 @@ describe('RollIncomeUseCase', () => {
     await expect(
       useCase.execute({ campaignId: 1, gameId: 10, userId: 999, participantId: 1 }),
     ).rejects.toThrow();
+  });
+
+  it('règle maison escarmouche_bonus_jerricans active — ne crédite rien et ne journalise rien', async () => {
+    const { useCase, campaignRepo, game } = makeFixture(
+      new FixedRandomizer(4),
+      HouseRules.fromPersisted(['escarmouche_bonus_jerricans']),
+    );
+
+    const result = await useCase.execute({ campaignId: 1, gameId: 10, userId: 42, participantId: 1 });
+
+    expect(result).toEqual({ amount: 0, descriptions: [] });
+    expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, []);
+    expect(game.events).toHaveLength(0);
   });
 });

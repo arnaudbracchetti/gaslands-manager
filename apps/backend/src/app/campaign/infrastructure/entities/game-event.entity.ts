@@ -142,6 +142,15 @@ export class GameEventOrm {
   @Column({ type: 'int', nullable: true })
   sabotagePointsSpent!: number | null;
 
+  /**
+   * Payload : ResistanceContactedEvent — clé de la stratégie de distribution
+   * automatique qui a créé cet événement (ex. `"defaut"`, RM-4/RM-5). `NULL` pour un
+   * contact manuel (route dédiée organisateur) — distingue automatique/manuel au
+   * journal et sert de marqueur d'idempotence à `Game.distributeResistance`.
+   */
+  @Column({ type: 'varchar', nullable: true })
+  resistanceStrategyKey!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

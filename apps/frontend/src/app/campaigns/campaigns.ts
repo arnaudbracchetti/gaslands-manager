@@ -13,7 +13,7 @@ import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CampaignsService } from './campaigns.service';
-import { Campaign, CreateCampaignDto } from './campaign.model';
+import { Campaign, CreateCampaignDto, HouseRuleDefinition } from './campaign.model';
 
 import { CampaignCard } from './campaign-card/campaign-card';
 import { CampaignForm } from './campaign-form/campaign-form';
@@ -55,6 +55,9 @@ export class Campaigns implements OnInit {
   /** Équipes de l'utilisateur connecté, pour le select de CampaignForm (CA3) */
   userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
 
+  /** Catalogue des règles maison, pour CampaignForm (chargement indépendant, non bloquant). */
+  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
+
   /** Code d'invitation saisi dans la modale "Rejoindre via code" */
   joinCode: WritableSignal<string> = signal('');
 
@@ -72,6 +75,7 @@ export class Campaigns implements OnInit {
     this.loadUserTeams();
     this.loadPendingRequests();
     this.loadOrganizedPendingCounts();
+    this.loadHouseRuleCatalog();
   }
 
   /** Charge toutes les saisons depuis l'API et met à jour le signal */
@@ -126,6 +130,19 @@ export class Campaigns implements OnInit {
         this.organizedPendingCounts.set(counts);
       },
       error: () => this.organizedPendingCounts.set(new Map()),
+    });
+  }
+
+  /**
+   * Charge le catalogue des règles maison pour CampaignForm. Erreur
+   * silencieuse — même raisonnement que loadPendingRequests : ne doit pas
+   * bloquer l'affichage des saisons (le formulaire afficherait alors une
+   * liste vide, dégradation propre).
+   */
+  private loadHouseRuleCatalog(): void {
+    this.campaignsService.getHouseRules().subscribe({
+      next: (rules: HouseRuleDefinition[]) => this.houseRuleCatalog.set(rules),
+      error: () => this.houseRuleCatalog.set([]),
     });
   }
 

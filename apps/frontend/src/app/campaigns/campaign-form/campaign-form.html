@@ -39,6 +39,14 @@
       <p class="form-hint">Seules les équipes dont le coût total tient dans ce budget pourront rejoindre la campagne.</p>
     </div>
 
+    <!-- Règles maison -->
+    <div class="form-group form-group--full">
+      <app-house-rules-selector
+        [definitions]="houseRuleCatalog()"
+        [enabledKeys]="formHouseRules()"
+        (toggled)="onHouseRuleToggled($event)" />
+    </div>
+
     <!-- Équipe engagée (optionnelle) -->
     <div class="form-group form-group--full">
       <label for="campaign-team">Mon équipe engagée</label>

@@ -11,7 +11,7 @@ import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { CampaignDetail } from './campaign-detail';
 import { CampaignsService } from '../campaigns.service';
-import { Campaign } from '../campaign.model';
+import { Campaign, HouseRuleDefinition } from '../campaign.model';
 import { CampaignParticipant, StandingsEntry } from '../campaign-participant.model';
 import { ParticipantJournalEntryDto } from '../game.model';
 import { AuthService } from '../../auth/auth.service';
@@ -27,6 +27,7 @@ const mockCampaign: Campaign = {
   updatedAt: '2025-01-01T00:00:00.000Z',
   participantCount: 2,
   budget: 50,
+  houseRules: [],
   myRole: 'organizer',
 };
 
@@ -42,6 +43,15 @@ const mockCurrentUser: User = {
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
 };
+
+const mockHouseRuleCatalog: HouseRuleDefinition[] = [
+  {
+    nom: 'Aucun point de championnat',
+    nom_interne: 'distribution_points_resistance',
+    description_decochee: 'Comportement par défaut : les participants classés en seconde moitié reçoivent des Points de Résistance.',
+    description_cochee: 'Comportement alternatif : les participants sans point de championnat reçoivent des Points de Résistance.',
+  },
+];
 
 const mockParticipants: CampaignParticipant[] = [
   { id: 1, userId: 42, teamId: 7, status: 'VALIDATED', isOrganizer: true, userName: 'Jean Dupont', teamName: 'Furies' },
@@ -62,6 +72,8 @@ describe('CampaignDetail', () => {
     remove: ReturnType<typeof vi.fn>;
     changeState: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    getHouseRules: ReturnType<typeof vi.fn>;
+    setHouseRules: ReturnType<typeof vi.fn>;
     promote: ReturnType<typeof vi.fn>;
     getParticipantJournal: ReturnType<typeof vi.fn>;
     getTeamSheet: ReturnType<typeof vi.fn>;
@@ -98,6 +110,8 @@ describe('CampaignDetail', () => {
       remove: vi.fn(),
       changeState: vi.fn(),
       update: vi.fn(),
+      getHouseRules: vi.fn().mockReturnValue(of([])),
+      setHouseRules: vi.fn(),
       promote: vi.fn(),
       getParticipantJournal: vi.fn().mockReturnValue(of([])),
       getTeamSheet: vi.fn().mockReturnValue(of('<!doctype html><html></html>')),
@@ -488,7 +502,7 @@ describe('CampaignDetail', () => {
   // ── canEditCampaign / modification nom-budget ───────────────────────────
 
   describe('canEditCampaign', () => {
-    it('vrai pour l\'organisateur tant que la saison est EN_CONSTRUCTION', () => {
+    it('vrai pour l\'organisateur quand la saison est EN_CONSTRUCTION', () => {
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
       component = fixture.componentInstance;
@@ -508,7 +522,7 @@ describe('CampaignDetail', () => {
       expect(component.canEditCampaign()).toBe(false);
     });
 
-    it('faux hors EN_CONSTRUCTION, même pour l\'organisateur', () => {
+    it('reste vrai pour l\'organisateur hors EN_CONSTRUCTION — les règles maison sont réglables à tout moment', () => {
       mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
 
       configure();
@@ -516,14 +530,16 @@ describe('CampaignDetail', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      expect(component.canEditCampaign()).toBe(false);
+      expect(component.canEditCampaign()).toBe(true);
     });
   });
 
   describe('onConfirmEditCampaign()', () => {
-    it('met à jour la campagne et ferme la modale en cas de succès', () => {
-      const updated: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
-      mockCampaignsService.update.mockReturnValue(of(updated));
+    it('met à jour nom/budget puis les règles maison, et ferme la modale en cas de succès (EN_CONSTRUCTION)', () => {
+      const updatedNameBudget: Campaign = { ...mockCampaign, name: 'Coupe Rutherford', budget: 30 };
+      const updatedHouseRules: Campaign = { ...updatedNameBudget, houseRules: ['distribution_points_resistance'] };
+      mockCampaignsService.update.mockReturnValue(of(updatedNameBudget));
+      mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -533,15 +549,42 @@ describe('CampaignDetail', () => {
       component.openEditCampaignModal();
       expect(component.showEditCampaignModal()).toBe(true);
 
-      component.onConfirmEditCampaign({ name: 'Coupe Rutherford', budget: 30 });
+      component.onConfirmEditCampaign({
+        nameBudget: { name: 'Coupe Rutherford', budget: 30 },
+        houseRules: ['distribution_points_resistance'],
+      });
 
       expect(mockCampaignsService.update).toHaveBeenCalledWith(1, { name: 'Coupe Rutherford', budget: 30 });
-      expect(component.campaign()).toEqual(updated);
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
+        houseRules: ['distribution_points_resistance'],
+      });
+      expect(component.campaign()).toEqual(updatedHouseRules);
       expect(component.showEditCampaignModal()).toBe(false);
       expect(component.savingCampaign()).toBe(false);
     });
 
-    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec (budget trop bas)', () => {
+    it('ne soumet que les règles maison quand nameBudget est null (hors EN_CONSTRUCTION)', () => {
+      const updatedHouseRules: Campaign = { ...mockCampaign, houseRules: ['distribution_points_resistance'] };
+      mockCampaignsService.setHouseRules.mockReturnValue(of(updatedHouseRules));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
+
+      expect(mockCampaignsService.update).not.toHaveBeenCalled();
+      expect(mockCampaignsService.setHouseRules).toHaveBeenCalledWith(1, {
+        houseRules: ['distribution_points_resistance'],
+      });
+      expect(component.campaign()).toEqual(updatedHouseRules);
+      expect(component.showEditCampaignModal()).toBe(false);
+      expect(component.savingCampaign()).toBe(false);
+    });
+
+    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec de nom/budget, sans soumettre les règles maison', () => {
       mockCampaignsService.update.mockReturnValue(
         throwError(() => ({ error: { message: 'L\'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne (30).' } })),
       );
@@ -552,10 +595,30 @@ describe('CampaignDetail', () => {
       fixture.detectChanges();
 
       component.openEditCampaignModal();
-      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
 
       expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
       expect(component.editCampaignError()).toContain('Escouade');
+      expect(component.savingCampaign()).toBe(false);
+      expect(component.campaign()).toEqual(mockCampaign); // inchangé
+      expect(mockCampaignsService.setHouseRules).not.toHaveBeenCalled();
+    });
+
+    it('garde la modale ouverte et affiche l\'erreur serveur en cas d\'échec des règles maison', () => {
+      mockCampaignsService.setHouseRules.mockReturnValue(
+        throwError(() => ({ error: { message: 'Erreur serveur.' } })),
+      );
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.openEditCampaignModal();
+      component.onConfirmEditCampaign({ nameBudget: null, houseRules: ['distribution_points_resistance'] });
+
+      expect(component.showEditCampaignModal()).toBe(true); // reste ouverte
+      expect(component.editCampaignError()).toBe('Erreur serveur.');
       expect(component.savingCampaign()).toBe(false);
       expect(component.campaign()).toEqual(mockCampaign); // inchangé
     });
@@ -568,7 +631,7 @@ describe('CampaignDetail', () => {
       component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.onConfirmEditCampaign({ name: 'Coupe Verney', budget: 30 });
+      component.onConfirmEditCampaign({ nameBudget: { name: 'Coupe Verney', budget: 30 }, houseRules: [] });
 
       expect(component.editCampaignError()).toBe('Erreur lors de la modification de la saison.');
     });
@@ -761,8 +824,20 @@ describe('CampaignDetail', () => {
       expect(el.querySelector('.campaign-detail-edit-btn')).not.toBeNull();
     });
 
-    it('masque le bouton Modifier hors EN_CONSTRUCTION', () => {
+    it('affiche le bouton Modifier hors EN_CONSTRUCTION — les règles maison restent réglables', () => {
       mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, state: 'EN_COURS' }));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.campaign-detail-edit-btn')).not.toBeNull();
+    });
+
+    it('masque le bouton Modifier pour un non-organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant' }));
 
       configure();
       fixture = TestBed.createComponent(CampaignDetail);
@@ -793,6 +868,50 @@ describe('CampaignDetail', () => {
 
       const el = fixture.nativeElement as HTMLElement;
       expect(el.querySelector('.campaign-state-card')).toBeNull();
+    });
+  });
+
+  // ── Règles maison — lecture seule (RM-7) ─────────────────────────────────
+
+  describe('règles maison en lecture seule', () => {
+    it('affiche les règles maison actives, verrouillées, pour l\'organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(
+        of({ ...mockCampaign, houseRules: ['distribution_points_resistance'] }),
+      );
+      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const selector = el.querySelector('app-house-rules-selector');
+      expect(selector).not.toBeNull();
+
+      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox.checked).toBe(true);
+      expect(checkbox.disabled).toBe(true);
+      expect(selector!.textContent).toContain('Comportement alternatif');
+    });
+
+    it('reste visible pour un non-organisateur', () => {
+      mockCampaignsService.getOne.mockReturnValue(of({ ...mockCampaign, myRole: 'participant', houseRules: [] }));
+      mockCampaignsService.getHouseRules.mockReturnValue(of(mockHouseRuleCatalog));
+
+      configure();
+      fixture = TestBed.createComponent(CampaignDetail);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const selector = el.querySelector('app-house-rules-selector');
+      expect(selector).not.toBeNull();
+
+      const checkbox = selector!.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox.checked).toBe(false);
+      expect(checkbox.disabled).toBe(true);
+      expect(selector!.textContent).toContain('Comportement par défaut');
     });
   });
 });

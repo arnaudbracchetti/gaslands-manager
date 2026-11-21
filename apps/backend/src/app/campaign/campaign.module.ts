@@ -13,6 +13,7 @@ import { CampaignController } from './campaign.controller';
 // Lecture (CQRS) + catalogue
 import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { HouseRuleCatalogService } from './house-rule-catalog.service';
 
 // Modules externes
 import { CatalogModule } from '../catalog/catalog.module';
@@ -36,6 +37,7 @@ import type { IRandomizer } from './domain/randomizer.interface';
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
 import { UpdateCampaignUseCase } from './application/update-campaign.usecase';
+import { SetHouseRulesUseCase } from './application/set-house-rules.usecase';
 import { ChangeStateUseCase } from './application/change-state.usecase';
 import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
 import { RequestJoinUseCase } from './application/request-join.usecase';
@@ -95,6 +97,7 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
     // Lecture + catalogue
     CampaignQueryService,
     ScenarioCatalogService,
+    HouseRuleCatalogService,
 
     // Infrastructure campagne
     CampaignMapper,
@@ -129,8 +132,10 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
       useFactory: (
         repo: ICampaignRepository,
         team: ITeamRepository,
-      ): CreateCampaignUseCase => new CreateCampaignUseCase(repo, team),
-      inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY],
+        catalog: HouseRuleCatalogService,
+      ): CreateCampaignUseCase =>
+        new CreateCampaignUseCase(repo, team, catalog),
+      inject: [CAMPAIGN_REPOSITORY, TEAM_REPOSITORY, HouseRuleCatalogService],
     },
     {
       provide: UpdateCampaignUseCase,
@@ -139,6 +144,20 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
         replay: CampaignReplayService,
       ): UpdateCampaignUseCase => new UpdateCampaignUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: SetHouseRulesUseCase,
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+        catalog: HouseRuleCatalogService,
+      ): SetHouseRulesUseCase =>
+        new SetHouseRulesUseCase(repo, replay, catalog),
+      inject: [
+        CAMPAIGN_REPOSITORY,
+        CampaignReplayService,
+        HouseRuleCatalogService,
+      ],
     },
     {
       provide: ChangeStateUseCase,
@@ -417,6 +436,7 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
   exports: [
     TypeOrmModule,
     ScenarioCatalogService,
+    HouseRuleCatalogService,
     CampaignReplayService,
     CAMPAIGN_REPOSITORY,
   ],

@@ -1,4 +1,6 @@
-<!-- Formulaire de modification d'une saison EN_CONSTRUCTION. Chrome délégué à ModalShell (mode "action"). -->
+<!-- Formulaire de modification d'une saison. Chrome délégué à ModalShell (mode "action").
+     "Enregistrer" reste toujours actif : il soumet toujours les règles maison, et en
+     plus nom/budget quand canEditNameBudget() (cf. edit-campaign-modal.ts). -->
 <app-modal-shell
   ariaLabel="Modifier la saison"
   variant="primary"
@@ -13,6 +15,11 @@
     <div class="form-error">{{ displayError() }}</div>
   }
 
+  <!-- [readonly], pas [disabled] : FormsModule pilote lui-même la propriété DOM
+       `disabled` d'un champ lié par [ngModel] (setDisabledState, état du
+       FormControl sous-jacent, toujours "enabled" ici) et écrase silencieusement
+       toute tentative de la fixer via une liaison séparée — [readonly] n'est
+       géré par aucun ControlValueAccessor, donc jamais réécrit. -->
   <div class="form-grid">
 
     <div class="form-group">
@@ -20,6 +27,8 @@
       <input
         id="edit-campaign-name"
         type="text"
+        [class.is-readonly]="!canEditNameBudget()"
+        [readonly]="!canEditNameBudget()"
         [ngModel]="formName()"
         (ngModelChange)="formName.set($event)" />
     </div>
@@ -31,8 +40,26 @@
         type="number"
         min="1"
         max="999"
+        [class.is-readonly]="!canEditNameBudget()"
+        [readonly]="!canEditNameBudget()"
         [ngModel]="formBudget()"
         (ngModelChange)="formBudget.set(+$event)" />
+    </div>
+
+    @if (!canEditNameBudget()) {
+      <div class="form-group form-group--full">
+        <p class="form-hint">Le nom et le budget ne sont modifiables qu'en construction.</p>
+      </div>
+    }
+
+    <!-- Règles maison — aucune contrainte d'état, contrairement à nom/budget ci-dessus.
+         Bascule purement locale (formHouseRules) : persistée seulement au clic "Enregistrer". -->
+    <div class="form-group form-group--full">
+      <app-house-rules-selector
+        [definitions]="houseRuleCatalog()"
+        [enabledKeys]="formHouseRules()"
+        [locked]="saving()"
+        (toggled)="onHouseRuleToggled($event)" />
     </div>
 
   </div>

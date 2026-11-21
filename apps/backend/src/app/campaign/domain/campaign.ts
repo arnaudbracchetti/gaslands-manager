@@ -3,10 +3,13 @@ import { CampaignParticipant } from './campaign-participant';
 import type { Team } from '../../team/domain/team';
 import type { Game } from './games/game';
 import type { GameEvent } from './events/game-event';
+import type { GameRulesContext } from './games/game-context';
 import { GameStatus } from './enums/game-status.enum';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { EscarmoucheGame } from './games/escarmouche-game';
 import { CampaignState, ParticipantStatus } from './enums/campaign.enums';
+import { HouseRules } from './house-rules/house-rules';
+import { HouseRuleStrategyFactory } from './house-rules/house-rule-strategy.factory';
 
 export interface StandingsEntry {
   participantId: number;
@@ -30,8 +33,14 @@ export interface StandingsEntry {
  * vérifications qui nécessitent des données externes (appartenance d'une équipe à
  * un utilisateur, unicité d'engagement, existence d'un scénario) restent dans les
  * use cases.
+ *
+ * Implémente `GameRulesContext` : c'est elle qui détient la configuration stable
+ * (règles maison) qu'elle attache à chacune de ses parties (`attachContext`, cf.
+ * `createGame` et le constructeur) — jamais l'inverse, une `Game` ne reçoit ni ne
+ * choisit sa Strategy depuis un appelant extérieur au domaine (cf. skill `ddd`,
+ * theory/aggregate-design.md, « Qui sélectionne une Strategy ? »).
  */
-export class Campaign {
+export class Campaign implements GameRulesContext {
   private _name: string;
   private _state: CampaignState;
   private readonly _inviteCode: string;
@@ -42,6 +51,14 @@ export class Campaign {
   private readonly _removedParticipantIds: number[] = [];
   /** Ids de parties retirées (removeGame) — pour la persistance structurelle. */
   private readonly _removedGameIds: number[] = [];
+  /**
+   * Réglage des règles maison — hydraté par le mapper (`HouseRules.fromPersisted`)
+   * ou fixé à la création (`HouseRules.none()` par défaut). Muté uniquement via
+   * `setHouseRules` (RM-3). Le mécanisme de sélection de Strategy (cette classe,
+   * `HouseRuleStrategyFactory`, `Game.distributeResistance`) lit toujours ce champ
+   * via `strategyFactory` ci-dessous — jamais une Strategy choisie par un use case.
+   */
+  private _houseRules: HouseRules;
 
   constructor(
     readonly id: number,
@@ -51,6 +68,7 @@ export class Campaign {
     participants: CampaignParticipant[],
     games: Game[],
     budget: number = 50,
+    houseRules: HouseRules = HouseRules.none(),
   ) {
     this._name = name;
     this._state = state;
@@ -58,6 +76,8 @@ export class Campaign {
     this._budget = budget;
     this._participants = participants;
     this._games = games;
+    this._houseRules = houseRules;
+    for (const game of this._games) game.attachContext(this);
   }
 
   get name(): string {
@@ -83,6 +103,16 @@ export class Campaign {
   }
   get removedGameIds(): readonly number[] {
     return this._removedGameIds;
+  }
+  get houseRules(): HouseRules {
+    return this._houseRules;
+  }
+
+  /** `GameRulesContext.strategyFactory` — reconstruite à la demande depuis
+   *  `_houseRules` plutôt que mémoïsée, pour qu'un futur `setHouseRules` (RM-3)
+   *  soit reflété sans devoir réattacher le contexte à chaque partie. */
+  get strategyFactory(): HouseRuleStrategyFactory {
+    return new HouseRuleStrategyFactory(this._houseRules);
   }
 
   /**
@@ -195,6 +225,17 @@ export class Campaign {
       }
     }
     this._budget = budget;
+  }
+
+  /**
+   * Active/désactive l'ensemble des règles maison. Aucune contrainte d'état :
+   * contrairement au budget (éligibilité des équipes), rien ne justifie de limiter
+   * ce réglage à EN_CONSTRUCTION. `validKeys` est un instantané des clés du
+   * catalogue courant, fourni par l'appelant (use case) — le domaine ne connaît
+   * jamais le catalogue (cf. HouseRules.fromUserInput).
+   */
+  setHouseRules(keys: string[], validKeys: readonly string[]): void {
+    this._houseRules = HouseRules.fromUserInput(keys, validKeys);
   }
 
   /**
@@ -524,6 +565,12 @@ export class Campaign {
     return this._games.reduce((max, g) => Math.max(max, g.order), 0) + 1;
   }
 
+  /**
+   * Construit une partie du bon sous-type et lui attache immédiatement CE contexte
+   * (`GameRulesContext`) — nécessaire ici en plus de la boucle du constructeur :
+   * `addGame`/`updateGame` appellent `createGame` APRÈS la construction de
+   * `Campaign`, sur une partie qui n'a donc jamais traversé cette boucle.
+   */
   private createGame(
     id: number,
     type: string,
@@ -533,9 +580,10 @@ export class Campaign {
     playedAt: Date | null,
     events: GameEvent[],
   ): Game {
+    let game: Game;
     switch (type) {
       case 'EVENEMENT_TELE':
-        return new EvenementTeleGame(
+        game = new EvenementTeleGame(
           id,
           this.id,
           status,
@@ -544,8 +592,9 @@ export class Campaign {
           playedAt,
           events,
         );
+        break;
       case 'ESCARMOUCHE':
-        return new EscarmoucheGame(
+        game = new EscarmoucheGame(
           id,
           this.id,
           status,
@@ -554,8 +603,11 @@ export class Campaign {
           playedAt,
           events,
         );
+        break;
       default:
         throw new DomainException(`Type de partie invalide : "${type}"`);
     }
+    game.attachContext(this);
+    return game;
   }
 }

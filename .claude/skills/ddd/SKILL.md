@@ -171,9 +171,14 @@ Options :
   - Non — elle compare/coordonne plusieurs enfants, ou vérifie un invariant qui les traverse
     (ex. "un seul élément actif à la fois")
     → la méthode reste sur la racine, c'est un vrai rôle de coordination.
-  - L'enfant a besoin d'une donnée détenue par un sibling ou par la racine
-    → cette donnée lui est passée EN PARAMÈTRE de méthode, jamais détenue en référence
-    permanente (pas de champ this.parent / this.siblings sur l'entité enfant).
+  - L'enfant a besoin d'une donnée, d'une configuration ou d'un port détenu par un sibling ou
+    par la racine → voir [theory/aggregate-design.md, « Ce dont un enfant a besoin : donnée,
+    configuration, ou port »](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port)
+    pour la distinction (paramètre vs configuration attachée vs port d'infra).
+  - Le comportement varie selon un algorithme interchangeable (Strategy) → qui sélectionne la
+    variante ? Voir [theory/aggregate-design.md, « Qui sélectionne une
+    Strategy ? »](theory/aggregate-design.md#qui-sélectionne-une-strategy-) — jamais l'appelant
+    quand la variante dépend d'un état/d'une configuration du domaine.
 ```
 
 Une racine où *toutes* les méthodes vivent à sa surface — y compris celles qui ne touchent
@@ -251,7 +256,7 @@ Au-delà de la délimitation de l'agrégat, appliquer ces règles pendant la con
 6. **Un Value Object possède ses conversions de données brutes.** Les casts / accès aux données brutes du catalogue vivent *dans* le VO qui possède le type. N'exposer un accès brut (`toRaw()`) qu'au collaborateur qui en a légitimement besoin, jamais par commodité.
 7. **Au mapping domaine ↔ persistance, préserver l'identité** des entités enfants. Sans l'`id` d'origine, le store ne distingue plus création et mise à jour → doublons ou écrasements silencieux.
 8. **Un domaine sans framework se teste trivialement.** `new Aggregate(...)`, appeler la méthode, asserter l'invariant — sans mock ni base de données. C'est le retour sur investissement direct de la règle 4 (aucune dépendance à un framework) et de l'inversion de dépendance (Phase 5, point 5) : si un test de domaine a besoin d'un mock, une dépendance s'est glissée là où elle ne devrait pas être.
-9. **La racine n'est pas le seul endroit légitime pour une méthode métier.** Une fois l'agrégat délimité, réappliquer le test des invariantes (Phase 2b) *opération par opération* : si une commande ne consulte que les données d'UNE entité enfant, elle vit sur cette entité — la racine se limite à trouver l'enfant puis déléguer. Sinon la racine devient un agrégat-dieu qui micro-gère ses enfants au lieu de leur déléguer (voir [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit en paramètre de méthode, jamais en référence permanente stockée.
+9. **La racine n'est pas le seul endroit légitime pour une méthode métier.** Une fois l'agrégat délimité, réappliquer le test des invariantes (Phase 2b) *opération par opération* : si une commande ne consulte que les données d'UNE entité enfant, elle vit sur cette entité — la racine se limite à trouver l'enfant puis déléguer. Sinon la racine devient un agrégat-dieu qui micro-gère ses enfants au lieu de leur déléguer (voir [theory/aggregate-design.md, anti-pattern 8](theory/aggregate-design.md)). Ce qu'un enfant reçoit de ses siblings ou de la racine (donnée, configuration, port) et qui sélectionne une Strategy le cas échéant : voir [theory/aggregate-design.md](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port).
 
 ---
 

@@ -281,6 +281,7 @@ graph TD
         InviteLink
         ChangeTeamModal
         EditCampaignModal
+        HouseRulesSelector
         CampaignProgram["CampaignProgram (smart)"]
         GameList
         GameForm
@@ -328,6 +329,8 @@ graph TD
     CampaignsPage --> CampaignCard
     CampaignsPage --> CampaignForm
     CampaignForm --> QuickTeamCreate
+    CampaignForm --> HouseRulesSelector
+    EditCampaignModal --> HouseRulesSelector
     CampaignJoin --> QuickTeamCreate
     CampaignDetail --> ParticipantList
     CampaignDetail --> ParticipantJournalModal
@@ -1034,15 +1037,17 @@ Carte d'affichage d'une campagne : nom, état, badge de rôle (🏆 Organisateur
 
 ### `CampaignForm` — `campaigns/campaign-form/`
 
-Formulaire de création d'une campagne (nom + budget des équipes + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) - le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
+Formulaire de création d'une campagne (nom + budget des équipes + règles maison + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) - le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
 
 **Budget des équipes** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : champ numérique `formBudget`, pré-rempli à `DEFAULT_CANS` (50). Le computed `ineligibleTeamIds` grise en direct (`[disabled]`, mention "(hors budget)") toute option d'équipe dont `team.vehiclesCost` dépasse la valeur actuellement saisie - recalculé à chaque frappe, avant même la soumission. `saveForm()` revérifie côté client qu'une équipe sélectionnée reste éligible (défense en profondeur, la garde réelle est côté domaine).
+
+**Règles maison** (RM-6, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)) : `HouseRulesSelector` accumule les clés cochées dans le signal local `formHouseRules` (`onHouseRuleToggled`), incluses dans le `CreateCampaignDto` émis à la soumission — aucune campagne n'existe encore à ce stade, donc pas de sauvegarde avant soumission (même principe que `EditCampaignModal` ci-dessous depuis RM-8, qui a abandonné son ancienne auto-sauvegarde immédiate).
 
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-form` |
 | **Type** | Dumb |
-| **Compose** | `QuickTeamCreate`, `ModalShell` |
+| **Compose** | `QuickTeamCreate`, `ModalShell`, `HouseRulesSelector` |
 
 **Inputs**
 
@@ -1051,12 +1056,13 @@ Formulaire de création d'une campagne (nom + budget des équipes + sélection o
 | `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
 | `teams` | `Team[]` | `[]` | Équipes disponibles pour la sélection (`vehiclesCost` pilote le grisage budget) |
 | `creatingTeam` | `boolean` | `false` | Affiche un indicateur pendant la création rapide |
+| `houseRuleCatalog` | `HouseRuleDefinition[]` | `[]` | Catalogue des règles maison, transmis à `HouseRulesSelector` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `saved` | `CreateCampaignDto` | Données de création soumises `{ name, budget, teamId? }` |
+| `saved` | `CreateCampaignDto` | Données de création soumises `{ name, budget, houseRules, teamId? }` |
 | `formCancel` | `void` | Annulation |
 | `teamCreated` | `CreateTeamDto` | Relaie la demande de création rapide d'équipe vers le parent |
 
@@ -1070,7 +1076,9 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 
 **Badge budget** : à côté du nom et du badge d'état, un badge neutre (mirroir du registre `TERMINEE` - bordure rust, texte atténué, pas de fond teinté, puisque purement informatif) affiche `campaign()!.budget` en jerricans - cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
 
-**Modification de la campagne (nom/budget)** : un bouton icône "✏️ Modifier" (`.campaign-detail-edit-btn`, mirroir de `.game-list__edit`), gated `canEditCampaign()` (`isOrganizer() && state === 'EN_CONSTRUCTION'`), ouvre `EditCampaignModal` (état possédé par ce composant : `showEditCampaignModal`/`savingCampaign`/`editCampaignError`). Contrairement à `onConfirmChangeTeam` (qui ferme la modale avant même l'appel HTTP), `onConfirmEditCampaign()` **ne ferme pas** `showEditCampaignModal` en cas d'échec serveur - seul `editCampaignError` est renseigné (message domaine tel quel, ex. équipe fautive + son coût), pour que l'organisateur corrige la valeur sans rouvrir la modale. `error` (bandeau générique de la page) n'est jamais utilisé pour ce flux.
+**Modification de la campagne (nom/budget + règles maison)** : un bouton icône "✏️ Modifier" (`.campaign-detail-edit-btn`, mirroir de `.game-list__edit`), gated `canEditCampaign()` (`isOrganizer()` seul — RM-6 a retiré la condition `state === 'EN_CONSTRUCTION'`, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)), ouvre `EditCampaignModal` (état possédé par ce composant : `showEditCampaignModal`/`savingCampaign`/`editCampaignError`, plus `houseRuleCatalog`). `onConfirmEditCampaign({ nameBudget, houseRules })` (RM-8) enchaîne, sur le seul clic "Enregistrer" de la modale, `PUT /api/campaigns/:id` (si `nameBudget` non-null) **puis** `PUT .../house-rules` (toujours) — si le premier échoue, le second n'est pas tenté. Contrairement à `onConfirmChangeTeam` (qui ferme la modale avant même l'appel HTTP), `onConfirmEditCampaign()` **ne ferme pas** `showEditCampaignModal` en cas d'échec serveur, sur aucun des deux appels - seul `editCampaignError` est renseigné (message domaine tel quel, ex. équipe fautive + son coût, ou l'erreur des règles maison), pour que l'organisateur corrige la valeur sans rouvrir la modale (l'état local `formHouseRules` de la modale n'est pas perdu). `error` (bandeau générique de la page) n'est jamais utilisé pour ce flux.
+
+**Règles maison — affichage lecture seule (RM-7)** : dans le rail (`aside.campaign-detail-rail`), sous la section Participants, une section dédiée affiche `app-house-rules-selector` avec `[locked]="true"`, `[definitions]="houseRuleCatalog()"` (déjà chargé pour `EditCampaignModal`, réutilisé tel quel) et `[enabledKeys]="campaign()!.houseRules"` — sans gate `isOrganizer()`/`canEditCampaign()`, visible par tout participant validé, contrairement au bouton "✏️ Modifier".
 
 | | |
 |---|---|
@@ -1078,7 +1086,7 @@ Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'
 | **Type** | Smart |
 | **Route** | `/campaigns/:id` |
 | **Services** | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService` |
-| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `ConfirmModal`, `Breadcrumb` |
+| **Compose** | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `HouseRulesSelector`, `ConfirmModal`, `Breadcrumb` |
 
 **Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`, `journalParticipant`, `participantJournalEntries`, `loadingParticipantJournal`.
 
@@ -1090,15 +1098,17 @@ Page de demande d'inscription à une campagne via son code d'invitation (`/campa
 
 **Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise toute option d'équipe dont `team.vehiclesCost` dépasse `summary()!.budget`. Un `effect()` sélectionne automatiquement la première équipe éligible (ni déjà engagée, ni hors budget) dès que le résumé de la campagne et les équipes de l'utilisateur sont tous deux chargés - ces deux appels HTTP étant indépendants (`loadSummary`/`loadUserTeams`), leur ordre d'arrivée n'est pas garanti.
 
+**Règles maison — affichage lecture seule (RM-7)** : juste après la ligne budget, `app-house-rules-selector` (`[locked]="true"`, `[enabledKeys]="summary()!.houseRules"`) — même principe que le budget, visible avant même de rejoindre la campagne. Le catalogue (`houseRuleCatalog`) est chargé indépendamment dans `ngOnInit()` (`CampaignsService.getHouseRules()`, non bloquant), sur le même modèle que `CampaignDetail`.
+
 | | |
 |---|---|
 | **Sélecteur** | `app-campaign-join` |
 | **Type** | Smart |
 | **Route** | `/campaigns/join/:code` |
 | **Services** | `ActivatedRoute`, `CampaignsService`, `TeamsService` |
-| **Compose** | `QuickTeamCreate` |
+| **Compose** | `QuickTeamCreate`, `HouseRulesSelector` |
 
-**Signals clés** : `loading`, `summary`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
+**Signals clés** : `loading`, `summary`, `houseRuleCatalog`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
 
 ---
 
@@ -1222,39 +1232,111 @@ Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. L
 
 ### `EditCampaignModal` - `campaigns/edit-campaign-modal/`
 
-Modification du nom et du budget d'une campagne `EN_CONSTRUCTION` (organisateur). Pré-remplit
-le formulaire depuis `campaign` (input) via un `effect()` constructeur - même idiome que
-`ChangeTeamModal`/`TeamForm`. Chrome délégué à `ModalShell` (mode `action`, `variant="primary"`).
+Modification d'une campagne (organisateur). Pré-remplit le formulaire nom/budget/règles
+maison depuis `campaign` (input) via un `effect()` constructeur - même idiome que
+`ChangeTeamModal`/`TeamForm`. Chrome délégué à `ModalShell` (mode `action`,
+`variant="primary"`).
+
+**Un seul bouton "Enregistrer", toujours actif** - contrairement à une précédente version
+qui auto-sauvegardait chaque bascule de règle maison immédiatement et désactivait
+"Enregistrer" hors `EN_CONSTRUCTION` (laissant "Annuler" comme seule sortie possible, ce
+qui persistait silencieusement les règles maison malgré son nom - comportement jugé non
+logique et corrigé) : toute bascule d'`HouseRulesSelector` ne modifie plus qu'un état
+**local** (`formHouseRules`, même pattern que `CampaignForm`) - aucun appel réseau tant que
+la modale reste ouverte. `[confirmDisabled]` de `ModalShell` ne dépend plus que de
+`saving()`.
+
+**Nom/budget réservés à `EN_CONSTRUCTION`, la modale elle-même ne l'est plus** (RM-6) :
+`canEditNameBudget` (computed, `campaign().state === 'EN_CONSTRUCTION'`) pilote l'état
+`[readonly]` des deux champs (jamais `[disabled]` - un champ lié par `[ngModel]` voit sa
+propriété DOM `disabled` réinitialisée par `FormsModule`, qui écrase silencieusement toute
+liaison séparée ; `[readonly]` n'est géré par aucun `ControlValueAccessor`) et l'affichage
+d'une note explicative. La section règles maison, elle, reste toujours éditable - cf.
+ci-dessous.
+
+**`onConfirm()`** émet un unique `EditCampaignSubmission` (`{ nameBudget, houseRules }`,
+`campaign.model.ts`) : `nameBudget` vaut `null` hors `EN_CONSTRUCTION` (rien à soumettre,
+`houseRules` reste seul concerné) ; sinon `{ name, budget }` validé localement (nom non
+vide, trimmé). `houseRules` est toujours présent (`formHouseRules()`).
+
+**`cancelled`** ferme la modale sans rien émettre - toute bascule de règle maison faite
+pendant la session est perdue (le parent recrée le composant via `@if` à la prochaine
+ouverture, `formHouseRules` repart alors de `campaign().houseRules`).
 
 **Ne se ferme jamais automatiquement sur `confirmed`** - différence volontaire avec
 `ChangeTeamModal` : c'est le parent (`CampaignDetail`) qui décide de la fermeture,
-uniquement en cas de succès serveur. `error` (input, message domaine transmis par le
-parent, ex. "L'équipe « Escouade » coûte 40 jerricans, au-delà du budget de la campagne
-(30).") reste affiché sous les champs tant que la modale est ouverte, pour que
-l'organisateur corrige la valeur sans rouvrir la modale - cf.
-[spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
+uniquement en cas de succès serveur (nom/budget ET règles maison, cf. ci-dessous). `error`
+(input, message domaine transmis par le parent, ex. "L'équipe « Escouade » coûte 40
+jerricans, au-delà du budget de la campagne (30).") reste affiché sous les champs tant que
+la modale est ouverte, pour que l'organisateur corrige la valeur sans rouvrir la modale -
+cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
 `displayError` (computed) priorise l'erreur de validation locale (nom vide) sur `error`.
+
+**Règles maison** (RM-6/RM-8, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)) :
+`HouseRulesSelector` lit `formHouseRules()` (état local, pas `campaign().houseRules`
+directement) et son `(toggled)` met à jour ce même signal - aucun événement ne sort du
+composant avant le clic sur "Enregistrer".
 
 | | |
 |---|---|
 | **Sélecteur** | `app-edit-campaign-modal` |
 | **Type** | Dumb |
-| **Compose** | `ModalShell` |
+| **Compose** | `ModalShell`, `HouseRulesSelector` |
 
 **Inputs**
 
 | Nom | Type | Défaut | Description |
 |-----|------|--------|-------------|
-| `campaign` | `Campaign` | - | Campagne à modifier - sert de pré-remplissage |
-| `saving` | `boolean` | `false` | Désactive le bouton de confirmation pendant l'appel API |
-| `error` | `string` | `''` | Message d'erreur serveur (ex. budget trop bas pour une équipe déjà engagée) |
+| `campaign` | `Campaign` | - | Campagne à modifier - sert de pré-remplissage (nom/budget/règles maison) |
+| `saving` | `boolean` | `false` | Désactive le bouton de confirmation et `HouseRulesSelector` pendant l'appel API (nom/budget et/ou règles maison) |
+| `error` | `string` | `''` | Message d'erreur serveur (nom/budget ou règles maison - une seule soumission désormais) |
+| `houseRuleCatalog` | `HouseRuleDefinition[]` | `[]` | Catalogue des règles maison, transmis à `HouseRulesSelector` |
 
 **Outputs**
 
 | Nom | Type | Description |
 |-----|------|-------------|
-| `confirmed` | `UpdateCampaignDto` | `{ name, budget }` validé localement (nom non vide, trimmé) |
-| `cancelled` | `void` | Annulation |
+| `confirmed` | `EditCampaignSubmission` | `{ nameBudget, houseRules }` - `nameBudget` non-null seulement si `canEditNameBudget()` |
+| `cancelled` | `void` | Annulation - aucune bascule de règle maison n'est persistée |
+
+---
+
+### `HouseRulesSelector` — `campaigns/house-rules-selector/`
+
+Liste des règles maison du catalogue - une case à cocher par règle, une ligne
+explicative en dessous dont le texte bascule selon l'état (cochée :
+`description_cochee`, comportement alternatif ; décochée : `description_decochee`,
+rappel du comportement par défaut) - cf. [spec/CAMPAIGN.md — Règles
+maison](../docs/spec/CAMPAIGN.md#règles-maison). Composant **dumb**, entièrement
+contrôlé par le parent (aucun état local mutable, aucun appel HTTP) - même pattern
+que `SponsorCarousel`. Porte le pattern `locked` du projet (cf. §Conventions en
+tête de ce document), réutilisé tel quel en mode non modifiable par
+`CampaignDetail`/`CampaignJoin` (RM-7 — affichage lecture seule, `[locked]="true"`
+constant, sans `(toggled)` branché), sans dupliquer le rendu - `EquipmentManager`/
+`MountedEquipment` en sont d'autres exemples.
+
+| | |
+|---|---|
+| **Sélecteur** | `app-house-rules-selector` |
+| **Type** | Dumb |
+
+**Inputs**
+
+| Nom | Type | Défaut | Description |
+|-----|------|--------|-------------|
+| `definitions` | `HouseRuleDefinition[]` | `[]` | Catalogue des règles maison (`GET /api/catalog/regles-maison`) |
+| `enabledKeys` | `string[]` | `[]` | Clés (`nom_interne`) actuellement activées |
+| `locked` | `boolean` | `false` | Lecture seule - désactive les cases et ignore tout clic |
+
+**Outputs**
+
+| Nom | Type | Description |
+|-----|------|-------------|
+| `toggled` | `HouseRuleToggledEvent` | `{ nomInterne, enabled }` - émis à chaque bascule ; le parent décide comment persister (inclusion dans un DTO de création, ou sauvegarde immédiate en modale d'édition) |
+
+Utilisé par : `CampaignForm`, `EditCampaignModal` (mode modifiable) ; `CampaignDetail`
+(rail, tout participant validé) et `CampaignJoin` (avant de rejoindre, comme le
+budget) en mode lecture seule (`[locked]="true"`).
 
 ---
 

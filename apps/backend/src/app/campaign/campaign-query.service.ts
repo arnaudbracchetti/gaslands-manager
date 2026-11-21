@@ -134,6 +134,7 @@ export class CampaignQueryService {
       organizerName: organizer ? UserMapper.toDomain(organizer.user).callName : '',
       participantCount,
       budget: campaign.budget,
+      houseRules: campaign.houseRules,
     };
   }
 

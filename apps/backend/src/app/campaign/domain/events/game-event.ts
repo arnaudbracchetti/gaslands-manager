@@ -34,6 +34,28 @@ export abstract class GameEvent {
   abstract undo(participants: CampaignParticipant[]): void;
 
   /**
+   * Points de Championnat effectivement attribués par CET événement — `0` par défaut,
+   * surchargé par les 4 événements qui appellent `addPoints()` (`RankingAssignedEvent`,
+   * `GatesCrossedEvent`, `VehicleDestroyedEvent`, `FavoriDuPublicBonusEvent`). Permet à
+   * `Game.distributeResistance` de sommer le total de PC d'un participant sur toute la
+   * partie sans jamais tester de type — un futur événement porteur de points est pris
+   * en compte sans toucher ce calcul.
+   */
+  get championshipPointsAwarded(): number {
+    return 0;
+  }
+
+  /**
+   * Jerricans de type "récompense" effectivement crédités par CET événement — `0` par
+   * défaut, surchargé par `WalletMovementEvent` quand `reason === WalletReason.RECOMPENSE`.
+   * Permet à `Game` de sommer le total déjà gagné par un participant sur la partie sans
+   * jamais tester de type — même idiome que `championshipPointsAwarded` ci-dessus.
+   */
+  get recompenseJerricansAwarded(): number {
+    return 0;
+  }
+
+  /**
    * Ligne de texte (français) décrivant cet événement — utilisée par la synthèse de fin
    * de partie et le journal complet d'une partie. `participants` (état rejoué, équipes
    * attachées) permet de résoudre les noms lisibles de véhicules/équipes à partir des

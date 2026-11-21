@@ -1,0 +1,39 @@
+# ── Catalogue des règles maison Gaslands (mode campagne) ───────────────────────
+#
+# Ce fichier est chargé une seule fois au démarrage par HouseRuleCatalogService
+# (même mécanisme que CatalogService/ScenarioCatalogService).
+#
+# Une règle maison est une variante optionnelle du règlement officiel, activable
+# ou non par campagne par l'organisateur. Chaque entrée ne porte que deux textes
+# courts, jamais de règle détaillée (donnée morte tant qu'aucun écran n'affiche
+# ce niveau de détail) :
+#   - description_decochee : rappel du comportement PAR DÉFAUT (case décochée)
+#   - description_cochee   : comportement ALTERNATIF appliqué si la règle est activée
+#
+# Structure de chaque entrée :
+#   nom                     - Nom affiché dans l'UI
+#   nom_interne              - Identifiant technique stable (snake_case, sans accents),
+#                              clé du catalogue
+#   description_decochee    - Texte affiché sous la case à cocher, case décochée
+#   description_cochee      - Texte affiché sous la case à cocher, case cochée
+
+regles_maison:
+  - nom: "Distribution des points de Résistance aux équipes"
+    nom_interne: "distribution_points_resistance"
+    description_decochee: "Les participants classés dans la seconde moitié du classement de la partie gagnent tous 3 Points de Résistance."
+    description_cochee: "Les participants qui n'ont gagné aucun point de championnat sur la partie gagnent 3 Points de Résistance."
+
+  - nom: "Cagnotte collective de fin d'Événement Télévisé"
+    nom_interne: "cagnotte_collective_evenement_tele"
+    description_decochee: "Les participants ayant participé à l'événement télévisé perçoivent leurs récompenses habituelles."
+    description_cochee: "En plus des récompenses habituelles, tous les participants de la campagne reçoivent 5 jerricans de salaire, y compris ceux absents de cette partie."
+
+  - nom: "Bonus de jerricans pour la participation à une escarmouche"
+    nom_interne: "escarmouche_bonus_jerricans"
+    description_decochee: "Chaque participant présent à une Escarmouche reçoit un revenu de base de 1D6 jerricans, en plus des récompenses du scénario."
+    description_cochee: "Aucun revenu de base n'est distribué : seules les récompenses du scénario sont prises en compte."
+
+  - nom: "Plafond de jerricans par Escarmouche"
+    nom_interne: "plafond_jerricans_escarmouche"
+    description_decochee: "Un participant peut gagner autant de jerricans que le revenu de base et le butin de scénario le permettent lors d'une Escarmouche."
+    description_cochee: "Un participant ne peut jamais gagner plus de 15 jerricans au total (revenu de base + butin de scénario) sur une même Escarmouche."

@@ -544,6 +544,14 @@ classDiagram
         +effet_court : string | undefined
     }
 
+    class HouseRuleDefinition {
+        <<Catalogue>>
+        +nom : string
+        +nom_interne : string
+        +description_decochee : string
+        +description_cochee : string
+    }
+
     Sponsor "1" o-- "0..*" Vehicule : autorise
     Sponsor "1" o-- "0..*" Arme : autorise
     Sponsor "1" o-- "0..*" Amelioration : autorise
@@ -552,7 +560,11 @@ classDiagram
 
 `Sequelle` n'a **aucune** relation avec `Sponsor` — contrairement aux trois autres
 catalogues d'équipement (et même à `Avantage`, résolu par `categorie`), une séquelle
-est applicable à tout véhicule quel que soit le sponsor de l'équipe.
+est applicable à tout véhicule quel que soit le sponsor de l'équipe. `HouseRuleDefinition`
+non plus : une règle maison n'a aucun lien avec sponsors ou équipement, chargée par un
+service dédié (`HouseRuleCatalogService`, cf. [ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-structure-des-modules))
+plutôt que par `CatalogService` — seule sa clé (`nom_interne`) est référencée ailleurs
+(`Campaign.houseRules`, cf. §4 ci-dessous), jamais l'inverse.
 
 Les cinq types `VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType`,
 `SequellaType` (§1) enveloppent respectivement `Vehicule`, `Arme`, `Amelioration`,
@@ -662,6 +674,7 @@ erDiagram
         enum state "EN_CONSTRUCTION|EN_COURS|TERMINEE"
         string inviteCode UK
         number budget "défaut 50 - remplace Team.cans pour toute équipe engagée"
+        json houseRules "tableau de clés (nom_interne) activées - défaut [] (RM-3)"
         date createdAt
         date updatedAt
     }
@@ -721,6 +734,7 @@ erDiagram
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"
         number sabotagePointsSpent "nullable — SabotagePointsSpentEvent, DÉJÀ clampé au solde disponible à la déclaration"
+        string resistanceStrategyKey "nullable — ResistanceContactedEvent, clé de la stratégie automatique (ex. 'defaut', RM-4/RM-5) ; NULL pour un contact manuel"
         date createdAt
     }
 ```
@@ -760,14 +774,17 @@ classDiagram
     direction TB
 
     class Campaign {
-        <<Aggregate Root>>
+        <<Aggregate Root — implements GameRulesContext>>
         +id : number
         +budget : number
+        +houseRules : HouseRules
+        +strategyFactory : HouseRuleStrategyFactory
         +participants : readonly CampaignParticipant[]
         +games : readonly Game[]
         +replay() void
         +rename(name) void
         +changeBudget(budget) void
+        +setHouseRules(keys, validKeys) void
         +enterAtelier(gameId) autoClosedGameId
         +closeAtelier(gameId) void
         +closeCampaign() void
@@ -810,6 +827,8 @@ classDiagram
         +revert(participants) void
         +reorder(newOrder) void
         +recordResult(rankings, participants) GameEvent[]
+        +distributeResistance() GameEvent[]
+        +attachContext(context) void
         +resolveWreck(participant, vehicleId, wreckTable) WreckTableResult
         +creditFavoriDuPublicBonus(participantId, vehicleId, wasDestroyed) GameEvent?
         +changeEquipment(participant, cmd) GameEvent[]
@@ -858,7 +877,9 @@ classDiagram
 un seul atelier actif à la fois sur l'ensemble des parties de la campagne) et
 orchestration multi-parties (`replay`, cycle de vie, CRUD programme/participants).
 **La construction des événements d'une partie donnée vit sur `Game`, pas sur
-`Campaign`** : `recordResult`, `resolveWreck`, `creditFavoriDuPublicBonus`,
+`Campaign`** : `recordResult`, `distributeResistance` (Points de Résistance
+automatiques, US-F1 — hook polymorphe, no-op hors Événement Télévisé, appelé à
+l'entrée en Atelier plutôt qu'à `recordResult`, cf. RM-4), `resolveWreck`, `creditFavoriDuPublicBonus`,
 `changeEquipment` (achat/revente d'équipement **et** de séquelles, un seul
 point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles)),
 `contactResistance`, `recordWalletMovement`,
@@ -866,7 +887,10 @@ point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](s
 `Game` — chacune reçoit en paramètre les `CampaignParticipant` dont elle a
 besoin (même convention que `GameEvent.execute(participants)`/
 `Game.apply(participants)`, qui ne détiennent pas non plus de référence
-permanente aux participants). Les use cases naviguent explicitement via
+permanente aux participants — donnée qui varie à chaque appel, pas une
+configuration stable ; cf. [ARCHITECTURE.md §3.4, « Convention projet — qui
+sélectionne une Strategy »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)
+pour le cas distinct d'une configuration attachée par la racine). Les use cases naviguent explicitement via
 l'agrégat racine (`campaign.findGame(gameId)` ou `campaign.findAtelierGame()`)
 puis appellent la méthode sur l'objet `Game` obtenu — `Campaign` n'expose plus
 de méthode de pur passage (`applyNewEvent`, ancien point d'entrée générique,
@@ -898,6 +922,214 @@ Un seul `Game` en statut `ATELIER` à la fois par campagne : `enterAtelier`
 clôture automatiquement (`ATELIER → JOUE`) toute autre partie encore en
 atelier.
 
+### Règles maison — Strategy par point de calcul
+
+Résumé du mécanisme détaillé en [spec/CAMPAIGN.md — Règles
+maison](spec/CAMPAIGN.md#règles-maison) et
+[docs/plans/2026-09-21-regles-maison-mecanisme-design.md](plans/2026-09-21-regles-maison-mecanisme-design.md) —
+un **quatrième** pattern GoF (Strategy + Abstract Factory), aux côtés des trois
+imbriqués Command/Invoker/Receiver ci-dessus (cf. [ARCHITECTURE.md §3.8, « Trois
+patterns GoF imbriqués
+»](ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)) : une règle
+maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace (R1),
+ajoute (R2) ou supprime (R3) la Strategy résolue pour UN point de calcul précis.
+Trois points existent à ce jour : la distribution des Points de Résistance (R1),
+la cagnotte collective de fin d'Événement Télévisé (R2) et le revenu de base
+d'une Escarmouche (R3).
+
+```mermaid
+classDiagram
+    direction TB
+
+    class GameRulesContext {
+        <<Interface étroite>>
+        +strategyFactory : HouseRuleStrategyFactory
+    }
+
+    class Campaign {
+        <<Aggregate Root — implements GameRulesContext>>
+        +houseRules : HouseRules
+        +strategyFactory : HouseRuleStrategyFactory
+    }
+
+    class Game {
+        <<Invoker GoF — abstract>>
+        -_context : GameRulesContext | null
+        +attachContext(context) void
+        #context : GameRulesContext
+        +distributeResistance() GameEvent[]
+        +recordResult(rankings, participants) GameEvent[]
+        +rollBaseIncome(participantId, randomizer) GameEvent[]
+    }
+
+    class HouseRuleStrategyFactory {
+        <<Abstract Factory — unique, une méthode par point de calcul>>
+        -rules : HouseRules
+        +createResistanceDistributionStrategy() ResistanceDistributionStrategy
+        +createTvBonusDistributionStrategy() TvBonusDistributionStrategy
+        +createBaseIncomeStrategy() BaseIncomeStrategy
+        +createJerricanGainsCapStrategy() JerricanGainsCapStrategy
+    }
+
+    class ResistanceDistributionStrategy {
+        <<Interface>>
+        +key : string
+        +isEligible(entry, context) boolean
+    }
+
+    class DefaultResistanceStrategy {
+        +key : "defaut"
+        +isEligible(entry, context) boolean
+    }
+
+    class NoChampionshipPointsStrategy {
+        +key : "distribution_points_resistance"
+        +isEligible(entry, context) boolean
+    }
+
+    class TvBonusDistributionStrategy {
+        <<Interface>>
+        +key : string
+        +isEligible(entry) boolean
+    }
+
+    class NoTvBonusStrategy {
+        +key : "defaut"
+        +isEligible(entry) boolean
+    }
+
+    class CollectiveTvBonusStrategy {
+        +key : "cagnotte_collective_evenement_tele"
+        +isEligible(entry) boolean
+    }
+
+    class BaseIncomeStrategy {
+        <<Interface>>
+        +key : string
+        +roll(randomizer) number | null
+    }
+
+    class DefaultBaseIncomeStrategy {
+        +key : "defaut"
+        +roll(randomizer) number
+    }
+
+    class NoBaseIncomeStrategy {
+        +key : "escarmouche_bonus_jerricans"
+        +roll(randomizer) null
+    }
+
+    class JerricanGainsCapStrategy {
+        <<Interface>>
+        +key : string
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
+    class UnlimitedJerricanGainsStrategy {
+        +key : "defaut"
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
+    class CappedJerricanGainsStrategy {
+        +key : "plafond_jerricans_escarmouche"
+        +clamp(requestedAmount, alreadyEarned) number
+    }
+
+    Campaign ..|> GameRulesContext
+    Campaign "1" *-- "0..*" Game : attachContext() à la construction/hydratation
+    Game --> GameRulesContext : context (jamais Campaign entière)
+    GameRulesContext --> HouseRuleStrategyFactory : strategyFactory
+    HouseRuleStrategyFactory --> ResistanceDistributionStrategy : résout (distributeResistance)
+    HouseRuleStrategyFactory --> TvBonusDistributionStrategy : résout (recordResult)
+    HouseRuleStrategyFactory --> BaseIncomeStrategy : résout (rollBaseIncome)
+    HouseRuleStrategyFactory --> JerricanGainsCapStrategy : résout (rollBaseIncome, recordJerricanGains)
+    DefaultResistanceStrategy ..|> ResistanceDistributionStrategy
+    NoChampionshipPointsStrategy ..|> ResistanceDistributionStrategy
+    NoTvBonusStrategy ..|> TvBonusDistributionStrategy
+    CollectiveTvBonusStrategy ..|> TvBonusDistributionStrategy
+    DefaultBaseIncomeStrategy ..|> BaseIncomeStrategy
+    NoBaseIncomeStrategy ..|> BaseIncomeStrategy
+    UnlimitedJerricanGainsStrategy ..|> JerricanGainsCapStrategy
+    CappedJerricanGainsStrategy ..|> JerricanGainsCapStrategy
+```
+
+- **`GameRulesContext`** (`domain/games/game-context.ts`) — interface étroite que
+  `Campaign` expose à chacune de ses parties (constructeur + `createGame`,
+  `attachContext`, même idiome que `CampaignParticipant.attachTeam(team)`) :
+  `Game` ne reçoit jamais l'agrégat `Campaign` complet, seulement ce qu'il lui
+  faut pour résoudre sa propre politique de jeu.
+- **`HouseRuleStrategyFactory`** (`domain/house-rules/house-rule-strategy.factory.ts`)
+  — Abstract Factory **unique** pour toutes les règles maison présentes et
+  futures, une méthode `create…Strategy()` par point de calcul concerné
+  (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`,
+  `createBaseIncomeStrategy()` aujourd'hui). Construite depuis `Campaign.houseRules`, reconstruite à la
+  demande par le getter `Campaign.strategyFactory` plutôt que mémoïsée — pour
+  qu'un `setHouseRules` ultérieur soit immédiatement pris en compte, sans
+  invalidation à gérer. Registre pur (`HOUSE_RULE_REGISTRY`, une entrée par
+  règle maison qui remplace ou complète un calcul par défaut — union
+  discriminée par `point : CalculationPoint` pour que chaque méthode récupère
+  une Strategy correctement typée sans `any`) — même idiome que
+  `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (module équipe, cf.
+  [ARCHITECTURE.md §3.4](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)).
+  Lève une `DomainException` si plusieurs règles maison actives couvrent le
+  même point (jamais silencieusement l'une ou l'autre).
+- **`ResistanceDistributionStrategy`** (`domain/house-rules/resistance-distribution-strategy.ts`)
+  — un calcul unitaire par participant (`isEligible(entry, context)`), jamais
+  un filtrage en bloc : `EvenementTeleGame.distributeResistance()` calcule
+  `classified` et le total de PC de la partie pour chaque participant, puis
+  interroge la Strategy résolue un participant à la fois. Deux
+  implémentations : `DefaultResistanceStrategy` (`key = "defaut"`, comportement
+  historique US-F1 — rang hors du top classé) et `NoChampionshipPointsStrategy`
+  (`key = "distribution_points_resistance"`, règle maison R1 — aucun point
+  de championnat gagné sur la partie). `key` est stampée sur l'événement créé
+  (`ResistanceContactedEvent.strategyKey`), jamais recalculée a posteriori —
+  c'est ce qui gèle le résultat au moment du calcul (cf.
+  [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison)).
+- **`TvBonusDistributionStrategy`** (`domain/house-rules/tv-bonus-distribution-strategy.ts`)
+  — mirroir de `ResistanceDistributionStrategy` en plus simple : `isEligible(entry)`
+  sans second paramètre `context`, l'éligibilité ne dépendant d'aucune donnée de
+  la partie. Deux implémentations : `NoTvBonusStrategy` (`key = "defaut"`,
+  jamais éligible — cette règle maison AJOUTE un effet plutôt que de remplacer
+  un critère déjà actif par défaut, contrairement à R1) et
+  `CollectiveTvBonusStrategy` (`key = "cagnotte_collective_evenement_tele"`,
+  règle maison R2 — toujours éligible). Résolue et consommée directement par
+  `Game.recordResult()` (pas par un hook polymorphe séparé comme
+  `distributeResistance()`) : son éligibilité ne dépendant d'aucune donnée
+  produite plus tard dans le wizard, rien n'impose d'attendre l'entrée en
+  Atelier.
+- **`BaseIncomeStrategy`** (`domain/house-rules/base-income-strategy.ts`) —
+  contrairement aux deux Strategy ci-dessus (un `isEligible` par participant),
+  encapsule directement le tirage (`roll(randomizer): number | null`) : il n'y a
+  aucune liste à filtrer, une seule décision par appel. Deux implémentations :
+  `DefaultBaseIncomeStrategy` (`key = "defaut"`, tire 1D6 — comportement
+  historique) et `NoBaseIncomeStrategy` (`key = "escarmouche_bonus_jerricans"`,
+  règle maison R3 — retourne toujours `null`, aucun événement journalisé).
+  Résolue et consommée directement par `Game.rollBaseIncome()`, indépendamment
+  à chaque tirage (un par participant présent, à l'écran Résolution du wizard) —
+  ni à l'entrée en Atelier (R1) ni à l'enregistrement du résultat (R2).
+- **`JerricanGainsCapStrategy`** (`domain/house-rules/jerrican-gains-cap-strategy.ts`)
+  — seule Strategy de règle maison à ce jour consommée par **deux** méthodes de
+  `Game` (`rollBaseIncome()` et `recordJerricanGains()`), puisque son plafond
+  porte sur le cumul des deux sources de gains "récompense" d'une même
+  Escarmouche plutôt que sur un seul point de calcul isolé. `clamp(requestedAmount,
+  alreadyEarned)` réduit, si nécessaire, le montant à créditer — jamais
+  d'exception, un dépassement est simplement réduit au reliquat disponible
+  (jusqu'à `0`). Deux implémentations : `UnlimitedJerricanGainsStrategy`
+  (`key = "defaut"`, ne réduit jamais) et `CappedJerricanGainsStrategy`
+  (`key = "plafond_jerricans_escarmouche"`, règle maison R4 — plafond fixé à 15
+  jerricans). `alreadyEarned` est calculé par `Game` à chaque appel, en sommant
+  le getter générique `GameEvent.recompenseJerricansAwarded` (`0` par défaut,
+  surchargé par `WalletMovementEvent` quand `reason === WalletReason.
+  RECOMPENSE`) sur `this.events` — même idiome que `championshipPointsAwarded`
+  (cf. [§Hiérarchie GameEvent](#hiérarchie-gameevent-command) ci-dessous),
+  jamais un compteur mémorisé séparément.
+- **Qui sélectionne la Strategy** : jamais un use case — `EvenementTeleGame`
+  (`distributeResistance`), `Game.recordResult()`, `Game.rollBaseIncome()` et
+  `Game.recordJerricanGains()` la résolvent elles-mêmes via
+  `this.context.strategyFactory`, cf.
+  [ARCHITECTURE.md §3.4, « Convention projet — qui sélectionne une Strategy
+  »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+
 ### Hiérarchie GameEvent (Command)
 
 Chaque `GameEvent` implémente aussi `describe(): string` — une ligne de texte en
@@ -922,7 +1154,7 @@ d'événements confondus.
 | `WreckResolvedEvent` | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) ; `vehicle.markFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` | `vehicle.addChocs(-n)` ; `vehicle.clearFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` |
 | `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`) | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity` | Inverse de execute |
 | `EquipmentChangedEvent` (`entityType = SEQUELLE`) | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`) | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte |
-| `ResistanceContactedEvent` | `participant.addResistance(+3)` | `addResistance(-3)` |
+| `ResistanceContactedEvent` (automatique via `Game.distributeResistance`, RM-4 — critère résolu par `HouseRuleStrategyFactory`, règle par défaut ou règle maison R1, cf. §Règles maison ci-dessus — ou manuel, route dédiée organisateur) | `participant.addResistance(+3)` | `addResistance(-3)` |
 | `GatesCrossedEvent` (US-B2) | `participant.addPoints(+1 par porte)` | `addPoints(-n)` |
 | `VehicleDestroyedEvent` (US-B2) | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé | `addPoints(-n)` |
 | `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9) | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`) | `addPoints(-5)` + `vehicle.markFavoriDuPublic()` |

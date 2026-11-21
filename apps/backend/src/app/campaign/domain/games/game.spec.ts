@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { GameStatus } from '../enums/game-status.enum';
 import { EvenementTeleGame } from './evenement-tele-game';
 import { EscarmoucheGame } from './escarmouche-game';
@@ -17,6 +17,21 @@ import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import type { GameEvent } from '../events/game-event';
+import type { GameRulesContext } from './game-context';
+import type { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
+import {
+  NoChampionshipPointsStrategy,
+  type ResistanceDistributionStrategy,
+} from '../house-rules/resistance-distribution-strategy';
+import {
+  CollectiveTvBonusStrategy,
+  NoTvBonusStrategy,
+} from '../house-rules/tv-bonus-distribution-strategy';
+import {
+  DefaultBaseIncomeStrategy,
+  NoBaseIncomeStrategy,
+} from '../house-rules/base-income-strategy';
+import { CappedJerricanGainsStrategy } from '../house-rules/jerrican-gains-cap-strategy';
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
@@ -493,8 +508,10 @@ describe('Game — recordResult', () => {
       [p1, p2],
     );
 
-    // 2 RankingAssignedEvent + 1 ResistanceContactedEvent automatique (p2 non classé).
-    expect(events).toHaveLength(3);
+    // 2 RankingAssignedEvent — plus de ResistanceContactedEvent ici depuis RM-4 : la
+    // distribution des PR automatiques a été déplacée vers `distributeResistance()`,
+    // appelée à l'entrée en Atelier (cf. describe ci-dessous).
+    expect(events).toHaveLength(2);
     // La partie reste PLANIFIE — la finalisation (JOUE + atelier) n'a lieu qu'à la
     // fin complète du wizard, via un appel explicite à enterAtelier().
     expect(game.status).toBe(GameStatus.PLANIFIE);
@@ -508,71 +525,6 @@ describe('Game — recordResult', () => {
     expect(
       rankingEvents.find((e) => e.participantId === 2)?.championshipPoints,
     ).toBe(0);
-  });
-
-  it('crédite automatiquement +3 PR au participant non classé, même sans exploit', () => {
-    const p1 = new CampaignParticipant(
-      1,
-      42,
-      1,
-      true,
-      ParticipantStatus.VALIDATED,
-    );
-    const p2 = new CampaignParticipant(
-      2,
-      7,
-      3,
-      false,
-      ParticipantStatus.VALIDATED,
-    );
-    const game = new EvenementTeleGame(
-      10,
-      1,
-      GameStatus.PLANIFIE,
-      1,
-      'scen',
-      null,
-      [],
-    );
-
-    const events = game.recordResult(
-      [
-        { participantId: 1, rank: 1 },
-        { participantId: 2, rank: 2 },
-      ],
-      [p1, p2],
-    );
-
-    const resistanceEvents = events.filter(
-      (e) => e instanceof ResistanceContactedEvent,
-    );
-    expect(resistanceEvents).toHaveLength(1);
-    expect(resistanceEvents[0].participantId).toBe(2);
-  });
-
-  it('ne crédite aucune PR automatique quand tout le monde est classé', () => {
-    const p1 = new CampaignParticipant(
-      1,
-      42,
-      1,
-      true,
-      ParticipantStatus.VALIDATED,
-    );
-    const game = new EvenementTeleGame(
-      10,
-      1,
-      GameStatus.PLANIFIE,
-      1,
-      'scen',
-      null,
-      [],
-    );
-
-    const events = game.recordResult([{ participantId: 1, rank: 1 }], [p1]);
-
-    expect(events.some((e) => e instanceof ResistanceContactedEvent)).toBe(
-      false,
-    );
   });
 
   it('refuse des rangs non consécutifs', () => {
@@ -813,6 +765,639 @@ describe('Game — recordResult', () => {
   });
 });
 
+describe('Game — recordResult avec la cagnotte télé (règle maison)', () => {
+  it('sans règle maison active (contexte de secours), aucun WalletMovementEvent créé', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+
+    const events = game.recordResult([{ participantId: 1, rank: 1 }], [p1, p2]);
+
+    expect(events.some((e) => e instanceof WalletMovementEvent)).toBe(false);
+  });
+
+  it('règle active — crédite +5 jerricans à CHAQUE participant VALIDATED, y compris un absent du classement', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const absent = new CampaignParticipant(
+      3,
+      9,
+      5,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.attachContext({
+      strategyFactory: {
+        createTvBonusDistributionStrategy: () =>
+          new CollectiveTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    // Seuls p1/p2 sont classés dans cette partie — `absent` n'apparaît dans aucun
+    // rang, mais reste VALIDATED dans la campagne (3ᵉ élément de `participants`).
+    const events = game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2, absent],
+    );
+
+    const walletEvents = events.filter(
+      (e): e is WalletMovementEvent => e instanceof WalletMovementEvent,
+    );
+    expect(walletEvents).toHaveLength(3);
+    expect(
+      walletEvents.every(
+        (e) => e.amount === 5 && e.reason === WalletReason.CAGNOTTE_TELE,
+      ),
+    ).toBe(true);
+    expect(walletEvents.map((e) => e.participantId).sort()).toEqual([1, 2, 3]);
+  });
+
+  it('règle active — ne crédite jamais un participant PENDING ou REJECTED', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const pending = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.PENDING,
+    );
+    const rejected = new CampaignParticipant(
+      3,
+      9,
+      5,
+      false,
+      ParticipantStatus.REJECTED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.attachContext({
+      strategyFactory: {
+        createTvBonusDistributionStrategy: () =>
+          new CollectiveTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    const events = game.recordResult(
+      [{ participantId: 1, rank: 1 }],
+      [p1, pending, rejected],
+    );
+
+    const walletEvents = events.filter(
+      (e): e is WalletMovementEvent => e instanceof WalletMovementEvent,
+    );
+    expect(walletEvents).toHaveLength(1);
+    expect(walletEvents[0].participantId).toBe(1);
+  });
+});
+
+describe('Game — distributeResistance (RM-4)', () => {
+  it('crédite automatiquement +3 PR au participant non classé, même sans exploit', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
+
+    const events = game.distributeResistance();
+
+    const resistanceEvents = events.filter(
+      (e): e is ResistanceContactedEvent =>
+        e instanceof ResistanceContactedEvent,
+    );
+    expect(resistanceEvents).toHaveLength(1);
+    expect(resistanceEvents[0].participantId).toBe(2);
+    expect(resistanceEvents[0].strategyKey).toBe('defaut');
+    // Journalisé sur la partie elle-même (l'appelant persiste via appendEvents).
+    expect(game.events).toEqual(expect.arrayContaining(resistanceEvents));
+  });
+
+  it('ne crédite aucune PR quand tout le monde est classé', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult([{ participantId: 1, rank: 1 }], [p1]);
+
+    const events = game.distributeResistance();
+
+    expect(events).toHaveLength(0);
+  });
+
+  it("reste basé sur le rang, pas sur le total de PC — un participant non classé reçoit les PR même avec des PC d'exploit", () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2, gatesCrossed: 3 },
+      ],
+      [p1, p2],
+    );
+
+    const events = game.distributeResistance();
+
+    expect(
+      events.some(
+        (e) => e instanceof ResistanceContactedEvent && e.participantId === 2,
+      ),
+    ).toBe(true);
+  });
+
+  it("garde d'idempotence — un second appel ne recrée rien une fois le journal déjà marqué", () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
+
+    const first = game.distributeResistance();
+    expect(first).toHaveLength(1);
+
+    const second = game.distributeResistance();
+    expect(second).toHaveLength(0);
+    // Aucun doublon dans le journal de la partie.
+    expect(
+      game.events.filter((e) => e instanceof ResistanceContactedEvent),
+    ).toHaveLength(1);
+  });
+
+  it("un contact Résistance manuel préexistant (strategyKey null) ne déclenche pas la garde d'idempotence", () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const manualEvent = new ResistanceContactedEvent(500, 10, 2, 1);
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [manualEvent],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
+
+    const events = game.distributeResistance();
+
+    expect(events).toHaveLength(1);
+    expect((events[0] as ResistanceContactedEvent).strategyKey).toBe('defaut');
+  });
+
+  it('no-op sur une Escarmouche — ne distribue jamais de PR (hook non surchargé)', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+
+    const events = game.distributeResistance();
+
+    expect(events).toHaveLength(0);
+  });
+});
+
+/**
+ * Construit un `GameRulesContext` dont la Factory résout toujours la Strategy
+ * donnée pour la Résistance — utilisé par les blocs `distributeResistance avec R1`
+ * et `attachContext` ci-dessous pour attacher une Strategy de test sans passer par
+ * un vrai `HouseRules`/`HouseRuleStrategyFactory`. `createTvBonusDistributionStrategy`
+ * retombe sur `NoTvBonusStrategy` (repli neutre) : `recordResult()` l'appelle
+ * systématiquement, y compris dans des tests qui ne portent que sur la Résistance.
+ */
+function makeContextReturning(
+  strategy: ResistanceDistributionStrategy,
+): GameRulesContext {
+  return {
+    strategyFactory: {
+      createResistanceDistributionStrategy: () => strategy,
+      createTvBonusDistributionStrategy: () => new NoTvBonusStrategy(),
+    } as HouseRuleStrategyFactory,
+  };
+}
+
+describe('Game — distributeResistance avec R1 (NoChampionshipPointsStrategy, RM-5)', () => {
+  function attachR1(game: EvenementTeleGame): void {
+    game.attachContext(
+      makeContextReturning(new NoChampionshipPointsStrategy()),
+    );
+  }
+
+  it("un participant classé dernier mais ayant franchi des portes n'est PAS éligible sous R1", () => {
+    const participants = [1, 2, 3, 4, 5].map(
+      (id) =>
+        new CampaignParticipant(
+          id,
+          40 + id,
+          id,
+          false,
+          ParticipantStatus.VALIDATED,
+        ),
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachR1(game);
+    // classified = ceil(5/2) = 3 → sous la règle PAR DÉFAUT, le rang 5 serait éligible
+    // (5 > 3). Sous R1, ses 3 PC d'exploit (portes franchies) l'en empêchent : son
+    // total de PC de la partie n'est pas zéro.
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4 },
+        { participantId: 5, rank: 5, gatesCrossed: 3 },
+      ],
+      participants,
+    );
+
+    const events = game.distributeResistance();
+
+    expect(events.some((e) => e.participantId === 5)).toBe(false);
+  });
+
+  it("un participant dont les seuls points viennent du bonus Favori du Public n'est PAS éligible sous R1", () => {
+    const { participant: p5, vehicle } = makeTestParticipant(5);
+    vehicle.markFavoriDuPublic();
+    const fillers = [1, 2, 3, 4].map(
+      (id) =>
+        new CampaignParticipant(
+          id,
+          40 + id,
+          id,
+          false,
+          ParticipantStatus.VALIDATED,
+        ),
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachR1(game);
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4 },
+        { participantId: 5, rank: 5 },
+      ],
+      [...fillers, p5],
+    );
+    // Crédité après l'enregistrement du résultat (comme le fait réellement le wizard
+    // à l'écran Résolution) mais avant l'entrée en Atelier, donc pris en compte par
+    // distributeResistance() ci-dessous.
+    game.creditFavoriDuPublicBonus(p5, vehicle.id, true);
+
+    const events = game.distributeResistance();
+
+    expect(events.some((e) => e.participantId === 5)).toBe(false);
+  });
+
+  it('reste éligible sous R1 un participant sans aucun point de championnat — et lui seul', () => {
+    const participants = [1, 2, 3, 4, 5].map(
+      (id) =>
+        new CampaignParticipant(
+          id,
+          40 + id,
+          id,
+          false,
+          ParticipantStatus.VALIDATED,
+        ),
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachR1(game);
+    // `Game.computePoints` renvoie 0 dès que `rank > classified` (3 ici), sans repli
+    // sur POINTS_TABLE — rangs 4 ET 5 partent donc tous deux à 0 PC de base. On les
+    // distingue ici en donnant des portes franchies au rang 4 (2 PC d'exploit) : seul
+    // le rang 5, resté à 0 PC au total, est éligible sous R1.
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+        { participantId: 3, rank: 3 },
+        { participantId: 4, rank: 4, gatesCrossed: 2 },
+        { participantId: 5, rank: 5 },
+      ],
+      participants,
+    );
+
+    const events = game.distributeResistance();
+
+    const resistanceEvents = events.filter(
+      (e): e is ResistanceContactedEvent =>
+        e instanceof ResistanceContactedEvent,
+    );
+    expect(resistanceEvents).toHaveLength(1);
+    expect(resistanceEvents[0].participantId).toBe(5);
+    expect(resistanceEvents[0].strategyKey).toBe(
+      'distribution_points_resistance',
+    );
+  });
+});
+
+describe('Game — attachContext (sélection de Strategy interne au domaine)', () => {
+  /** Strategy de test : personne n'est jamais éligible, quel que soit le rang. */
+  const neverEligibleStrategy: ResistanceDistributionStrategy = {
+    key: 'jamais_eligible',
+    isEligible: () => false,
+  };
+
+  it('sans attachContext, résout la Strategy par défaut (contexte de secours)', () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
+
+    const events = game.distributeResistance();
+
+    expect(events).toHaveLength(1);
+    expect((events[0] as ResistanceContactedEvent).strategyKey).toBe('defaut');
+  });
+
+  it("une fois attaché, délègue la sélection au contexte — n'appelle jamais l'appelant pour choisir", () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const p2 = new CampaignParticipant(
+      2,
+      7,
+      3,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult(
+      [
+        { participantId: 1, rank: 1 },
+        { participantId: 2, rank: 2 },
+      ],
+      [p1, p2],
+    );
+    game.attachContext(makeContextReturning(neverEligibleStrategy));
+
+    // Signature sans paramètre : rien n'indique ici QUELLE Strategy est appliquée —
+    // c'est le contexte attaché qui en décide, pas cet appel.
+    const events = game.distributeResistance();
+
+    expect(events).toHaveLength(0);
+  });
+
+  it("lit le contexte à la demande — jamais copié à l'attache (rappelé à CHAQUE appel)", () => {
+    const p1 = new CampaignParticipant(
+      1,
+      42,
+      1,
+      true,
+      ParticipantStatus.VALIDATED,
+    );
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    game.recordResult([{ participantId: 1, rank: 1 }], [p1]);
+
+    const createStrategy = vi.fn().mockReturnValue(neverEligibleStrategy);
+    game.attachContext({
+      strategyFactory: {
+        createResistanceDistributionStrategy: createStrategy,
+        createTvBonusDistributionStrategy: () => new NoTvBonusStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    // La résolution de Strategy précède la garde d'idempotence (cf. EvenementTeleGame) :
+    // un second appel la relit bien, même s'il ne journalise plus rien de nouveau —
+    // preuve que `context` est relu depuis l'objet attaché, jamais mis en cache.
+    game.distributeResistance();
+    game.distributeResistance();
+
+    expect(createStrategy).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('Game — rollBaseIncome (Escarmouche)', () => {
   it('crédite le D6 tiré en jerricans (WalletMovementEvent RECOMPENSE)', () => {
     const game = new EscarmoucheGame(
@@ -837,6 +1422,31 @@ describe('Game — rollBaseIncome (Escarmouche)', () => {
     expect(event.amount).toBe(4);
     expect(event.reason).toBe(WalletReason.RECOMPENSE);
     expect(event.participantId).toBe(1);
+  });
+
+  it('règle maison escarmouche_bonus_jerricans active — ne journalise aucun événement', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    const randomizer = {
+      roll: (): number => 4,
+      pick: <T>(pool: T[]): T => pool[0],
+    };
+    game.attachContext({
+      strategyFactory: {
+        createBaseIncomeStrategy: () => new NoBaseIncomeStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+
+    const events = game.rollBaseIncome(1, randomizer);
+
+    expect(events).toHaveLength(0);
   });
 });
 
@@ -863,6 +1473,152 @@ describe('Game — recordJerricanGains (Escarmouche)', () => {
     expect(events.every((e) => e.reason === WalletReason.RECOMPENSE)).toBe(
       true,
     );
+  });
+});
+
+describe('Game — plafond de jerricans (R4, plafond_jerricans_escarmouche)', () => {
+  function attachCap(game: EscarmoucheGame | EvenementTeleGame): void {
+    game.attachContext({
+      strategyFactory: {
+        createBaseIncomeStrategy: () => new DefaultBaseIncomeStrategy(),
+        createJerricanGainsCapStrategy: () => new CappedJerricanGainsStrategy(),
+      } as HouseRuleStrategyFactory,
+    });
+  }
+
+  it('rollBaseIncome — réduit le D6 tiré au reliquat quand un butin manuel a déjà été journalisé', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+    const randomizer = {
+      roll: (): number => 6,
+      pick: <T>(pool: T[]): T => pool[0],
+    };
+    game.recordJerricanGains([{ participantId: 1, amount: 10 }]);
+
+    const events = game.rollBaseIncome(1, randomizer) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(5); // 15 - 10 déjà gagnés
+  });
+
+  it('rollBaseIncome — ne journalise rien si le plafond est déjà atteint', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+    const randomizer = {
+      roll: (): number => 6,
+      pick: <T>(pool: T[]): T => pool[0],
+    };
+    game.recordJerricanGains([{ participantId: 1, amount: 15 }]);
+
+    const events = game.rollBaseIncome(1, randomizer);
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('recordJerricanGains — réduit un butin manuel qui dépasse le plafond à lui seul', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+
+    const events = game.recordJerricanGains([
+      { participantId: 1, amount: 20 },
+    ]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(15);
+  });
+
+  it('cumule les deux sources de gains (butin puis revenu de base) pour un même participant', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+    const randomizer = {
+      roll: (): number => 6,
+      pick: <T>(pool: T[]): T => pool[0],
+    };
+
+    const gainEvents = game.recordJerricanGains([
+      { participantId: 1, amount: 12 },
+    ]) as WalletMovementEvent[];
+    const incomeEvents = game.rollBaseIncome(
+      1,
+      randomizer,
+    ) as WalletMovementEvent[];
+
+    expect(gainEvents[0].amount).toBe(12);
+    expect(incomeEvents).toHaveLength(1);
+    expect(incomeEvents[0].amount).toBe(3); // 15 - 12
+  });
+
+  it('ne plafonne pas un autre participant que celui déjà à son plafond', () => {
+    const game = new EscarmoucheGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+    game.recordJerricanGains([{ participantId: 1, amount: 15 }]);
+
+    const events = game.recordJerricanGains([
+      { participantId: 2, amount: 15 },
+    ]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(15);
+  });
+
+  it("n'affecte jamais un Événement Télévisé, même si la règle maison est active", () => {
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.PLANIFIE,
+      1,
+      'scen',
+      null,
+      [],
+    );
+    attachCap(game);
+
+    const events = game.recordJerricanGains([
+      { participantId: 1, amount: 30 },
+    ]) as WalletMovementEvent[];
+
+    expect(events).toHaveLength(1);
+    expect(events[0].amount).toBe(30);
   });
 });
 

@@ -31,6 +31,10 @@ export class RankingAssignedEvent extends GameEvent {
     this.findParticipant(participants).addPoints(-this.championshipPoints);
   }
 
+  override get championshipPointsAwarded(): number {
+    return this.championshipPoints;
+  }
+
   describe(): string {
     return `Classement : véhicule classé ${this.rank} (+${this.championshipPoints} PC)`;
   }

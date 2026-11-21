@@ -1,0 +1,59 @@
+.hrs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__title {
+    font-family: var(--font-display);
+    font-size: var(--fs-sm);
+    color: var(--tb-os);
+    margin: 0;
+  }
+
+  &__hint {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__rule {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__rule-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-family: var(--font-text);
+    color: var(--tb-os);
+
+    input[type='checkbox'] {
+      accent-color: var(--tb-danger);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+
+      &:disabled {
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__rule-description {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    margin: 0 0 0 calc(16px + 0.75rem);
+  }
+}

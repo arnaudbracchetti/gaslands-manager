@@ -58,11 +58,208 @@ relue à chaque replay via `Team.campaignBudget`, hydraté par `TeamRepository` 
 chargement de l'agrégat (même mécanisme que le flag `isLocked`, cf.
 [spec/TEAMS.md](TEAMS.md#crud-équipes)).
 
-Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible uniquement en
-`EN_CONSTRUCTION`) ouvre `EditCampaignModal` (nom + budget). En cas de refus serveur, la
-modale reste ouverte et affiche le message d'erreur inline (nom de l'équipe fautive et
-son coût) plutôt que de se fermer et de reporter l'erreur sur un bandeau générique -
-l'organisateur corrige la valeur sans rouvrir la modale.
+Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible dans **tout
+état** de la campagne — cf. §Règles maison ci-dessous, qui n'a pas la même contrainte
+d'état que nom/budget) ouvre `EditCampaignModal` (nom + budget + règles maison). Les
+champs nom/budget y sont en lecture seule hors `EN_CONSTRUCTION`, avec une note
+explicative — mais le bouton "Enregistrer" reste **toujours actif** : il soumet toujours
+les règles maison basculées dans la modale, et en plus nom/budget si `canEditNameBudget()`
+(cf. §Règles maison ci-dessous pour le détail de cette soumission unique). "Annuler" ferme
+la modale sans rien persister, y compris les règles maison basculées pendant la session. En
+cas de refus serveur sur nom/budget ou sur les règles maison, la modale reste ouverte et
+affiche le message d'erreur inline plutôt que de se fermer et de reporter l'erreur sur un
+bandeau générique - l'organisateur corrige la valeur sans rouvrir la modale.
+
+---
+
+## Règles maison
+
+Une **règle maison** est une variante optionnelle du règlement, activable individuellement
+par l'organisateur d'une campagne — catalogue en mémoire (`GET /api/catalog/regles-maison`,
+public, chargé par `HouseRuleCatalogService` depuis `database_init/data/regles-maison.yml`,
+même mécanisme que le catalogue de scénarios). `Campaign.houseRules` (Value Object
+`HouseRules`) ne stocke que l'**ensemble des clés (`nom_interne`) activées** — une règle
+absente équivaut à son comportement par défaut, donc une règle ajoutée après coup au
+catalogue est automatiquement "décochée" partout, sans reprise de données.
+
+**4 règles au catalogue** à ce jour (R1 Points de Résistance, R2 Cagnotte collective de
+fin d'Événement Télévisé, R3 Bonus de jerricans pour la participation à une escarmouche,
+R4 Plafond de jerricans par Escarmouche — cf. ci-dessous).
+
+**Aucune contrainte d'état** — contrairement au budget (dont la restriction
+`EN_CONSTRUCTION` tient à l'éligibilité des équipes engagées, sans objet ici), le réglage
+des règles maison est modifiable à tout moment de la vie de la campagne : construction, en
+cours, et jusqu'à la fin. C'est pour cette raison qu'il est exposé par une **route dédiée**,
+`PUT /api/campaigns/:id/house-rules`, distincte de `PUT /api/campaigns/:id` (nom/budget,
+réservée à `EN_CONSTRUCTION`) — réutiliser cette dernière aurait bloqué le réglage des
+règles maison chaque fois que le nom/budget sont eux-mêmes verrouillés.
+
+**Validation stricte à l'écriture, tolérante à la lecture** : une clé absente du catalogue
+courant est rejetée en HTTP 400 (jamais ignorée silencieusement) lors d'un réglage explicite
+(`HouseRules.fromUserInput`, appelé par `SetHouseRulesUseCase`/`CreateCampaignUseCase` avec
+la liste des `nom_interne` du catalogue). À l'inverse, l'hydratation depuis la base
+(`HouseRules.fromPersisted`, appelée par `CampaignMapper`) ne valide jamais : une clé
+orpheline (retirée depuis du catalogue après avoir été activée) reste présente en base mais
+inerte, jusqu'au prochain réglage explicite qui la fait disparaître.
+
+**Réglable à la création** (`POST /api/campaigns`, `houseRules?: string[]`, défaut aucune
+règle active) **et à la modification** (`PUT /api/campaigns/:id/house-rules`,
+`houseRules: string[]` requis — un tableau vide désactive toutes les règles).
+
+**Exposition** : la valeur activée apparaît dans toutes les réponses de campagne
+(`CampaignResponseDto`, dérivé par spread de l'entité ORM — même mécanisme que `budget`) et
+sur la route de consultation par code d'invitation (`GET /api/campaigns/by-code/:code`,
+`CampaignSummaryDto.houseRules`) — l'écran d'inscription en a besoin pour afficher les
+règles actives avant que le joueur ne rejoigne.
+
+**IHM (RM-6)** : `HouseRulesSelector` (`campaigns/house-rules-selector/`) affiche le
+catalogue sous forme d'une case à cocher par règle — sous chaque case, une seule ligne dont
+le texte bascule selon l'état (cochée : `description_cochee`, comportement alternatif ;
+décochée : `description_decochee`, rappel du comportement par défaut). Composant **dumb**,
+entièrement contrôlé par le parent (`enabledKeys`/`toggled`, même pattern que
+`SponsorCarousel`) — porte l'input `locked` (pattern déjà en place dans le projet, cf.
+COMPONENTS.md) pour une réutilisation future en lecture seule (RM-7), sans dupliquer le
+rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différentes :
+
+- **`CampaignForm`** (création) : la campagne n'existe pas encore — les clés cochées sont
+  accumulées dans un signal local (`formHouseRules`) et incluses dans le
+  `CreateCampaignDto` émis à la soumission du formulaire, avec le reste (nom, budget,
+  équipe).
+- **`EditCampaignModal`** (édition) : chaque bascule ne modifie qu'un état **local**
+  (`formHouseRules`, même pattern que `CampaignForm` ci-dessus) — aucun appel réseau tant
+  que la modale reste ouverte. Le clic sur "Enregistrer" émet un unique
+  `EditCampaignSubmission` (`{ nameBudget, houseRules }`, `campaign.model.ts`) que
+  `CampaignDetail.onConfirmEditCampaign` traduit en un ou deux appels enchaînés : toujours
+  `PUT /api/campaigns/:id/house-rules`, précédé de `PUT /api/campaigns/:id` si
+  `nameBudget` est non-null (`canEditNameBudget()`, EN_CONSTRUCTION uniquement). Si
+  nom/budget échoue, les règles maison ne sont **pas** soumises non plus - la modale reste
+  ouverte, `formHouseRules` n'étant pas perdu (composant non détruit), l'organisateur
+  corrige et retente sans reperdre sa bascule. "Annuler" ne déclenche aucun appel : les
+  règles maison basculées mais jamais confirmées sont perdues à la fermeture (le composant
+  est recréé par le `@if` du parent à la prochaine ouverture, reparti de l'état serveur
+  actuel). Les règles maison ne rejoignent jamais `UpdateCampaignDto` (route backend
+  dédiée, cf. ci-dessus) - `EditCampaignSubmission` les porte à côté, jamais dedans.
+
+**Mécanisme de calcul — Strategy par point** : activer une case ne fait rien par
+elle-même — une règle maison ne prend effet que si un point de calcul du domaine la
+consulte explicitement. Deux points existent à ce jour : la distribution automatique
+des Points de Résistance (cf. [Limitations connues — Points de
+Résistance](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) ci-dessous) et
+la cagnotte collective de fin d'Événement Télévisé (R2, cf. ci-dessous).
+`HouseRuleStrategyFactory` (`domain/house-rules/house-rule-strategy.factory.ts`,
+construite depuis `Campaign.houseRules`, exposée via le getter `Campaign.
+strategyFactory` — jamais choisie par un use case, cf. [ARCHITECTURE.md §3.4,
+« Convention projet — qui sélectionne une Strategy
+»](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)) résout, pour ce
+point, soit la règle par défaut soit la règle maison qui la remplace si elle est
+active (au plus une à la fois par point — deux règles maison actives sur le même
+point lèvent une `DomainException`). Ajouter une seconde règle maison sur ce MÊME
+point demande une nouvelle classe Strategy et une entrée dans le registre pur du
+domaine (`HOUSE_RULE_REGISTRY`) ; ajouter une règle maison sur un NOUVEAU point de
+calcul demande en plus une nouvelle méthode sur la Factory — jamais de refonte du
+mécanisme lui-même.
+
+**R1 — « Distribution des points de Résistance aux équipes »**
+(`nom_interne distribution_points_resistance`) : remplace, pour la distribution automatique des Points de Résistance,
+le critère par défaut (participant classé dans la seconde moitié du classement) par
+« participant dont le total de Points de Championnat de CETTE partie — classement +
+exploits + bonus Favori du Public — vaut zéro » : le rang n'entre plus en jeu.
+Montant inchangé (+3 PR), Événement Télévisé uniquement (comme la règle par
+défaut). Portée par `NoChampionshipPointsStrategy`
+(`domain/house-rules/resistance-distribution-strategy.ts`).
+
+**Gel au moment du calcul, jamais recalculé après coup** : la règle maison
+consultée est celle active **au moment où `Game.distributeResistance()`
+s'exécute** (entrée en Atelier — cf. [§Cycle de vie d'une partie et phase
+Atelier](#cycle-de-vie-dune-partie-et-phase-atelier)) ; le résultat (crédit ou non
+de PR, tracé par `ResistanceContactedEvent.strategyKey`) devient ensuite un fait
+journalisé comme un autre — le replay le réapplique tel quel, il ne le recalcule
+jamais. Changer le réglage après cette partie n'affecte donc que les parties
+suivantes, jamais celle déjà résolue, même si la campagne revient en
+`EN_CONSTRUCTION` entre-temps (transitions bidirectionnelles, cf. §Vue
+d'ensemble). `strategyKey` vaut `"defaut"` pour la règle par défaut (jamais
+`null` pour une distribution automatique — `null` reste réservé au contact
+Résistance manuel, route dédiée organisateur) ; `describe()` de l'événement
+mentionne la règle appliquée, pour qu'un joueur puisse comparer deux parties
+d'une même campagne malgré un réglage modifiable en cours de route.
+
+**R2 — « Cagnotte collective de fin d'Événement Télévisé »**
+(`nom_interne cagnotte_collective_evenement_tele`) : à la désactivation (comportement
+par défaut, `NoTvBonusStrategy`), aucun événement n'est créé — cette règle n'existe
+que pour AJOUTER un effet, contrairement à R1 qui remplace un critère déjà actif par
+défaut. Activée (`CollectiveTvBonusStrategy`), crédite +5 jerricans
+(`WalletMovementEvent`, `WalletReason.CAGNOTTE_TELE`) à **tout participant
+`VALIDATED` de la campagne**, y compris ceux absents de cette partie précise —
+contrairement à R1, son éligibilité ne dépend d'aucune donnée propre à un
+participant (rang, PC, présence) ; R3 ci-dessous partage ce trait. Portée par
+`CollectiveTvBonusStrategy`/`NoTvBonusStrategy`
+(`domain/house-rules/tv-bonus-distribution-strategy.ts`).
+
+**Calculée à l'enregistrement du résultat, pas à l'entrée en Atelier** —
+contrairement à R1/la distribution des PR : `Game.recordResult()` construit les
+`WalletMovementEvent` de cette règle dans le même appel que les
+`RankingAssignedEvent`/exploits, en itérant sur son propre paramètre `participants`
+(déjà la liste complète de la campagne, pas seulement les classés de cette partie).
+Contrairement au critère de R1 (qui dépend du total de PC de la partie, pas encore
+complet avant le bonus Favori du Public de l'écran Résolution — cf. RM-4 ci-dessus),
+l'éligibilité de R2 ("tout participant validé") ne dépend d'aucune donnée produite
+plus tard dans le wizard : rien n'impose d'attendre l'entrée en Atelier. Comme pour
+R1, le résultat devient un fait journalisé, jamais recalculé après coup — annuler le
+wizard en cours (`DELETE .../results`, partie encore `PLANIFIE`) supprime ces
+événements comme les autres (`Game.resultEventIdsForReset()` n'en distingue pas le
+type).
+
+**R3 — « Bonus de jerricans pour la participation à une escarmouche »**
+(`nom_interne escarmouche_bonus_jerricans`) : contrairement à R1 (qui remplace un
+critère déjà actif par défaut) et R2 (qui ajoute un effet), R3 **supprime** un
+effet par défaut — Escarmouche uniquement. À la désactivation (comportement par
+défaut, `DefaultBaseIncomeStrategy`), chaque participant présent reçoit un revenu
+de base tiré au D6 (`WalletMovementEvent`, `WalletReason.RECOMPENSE`), comme avant
+l'introduction de cette règle. Activée (`NoBaseIncomeStrategy`), ce tirage ne
+journalise plus aucun événement — seules les récompenses du scénario
+(`Game.recordJerricanGains`, écran Jerricans du wizard, non concerné par cette
+règle) restent créditées. Portée par `DefaultBaseIncomeStrategy`/
+`NoBaseIncomeStrategy` (`domain/house-rules/base-income-strategy.ts`).
+
+**Résolue à chaque tirage, pas en bloc pour toute la partie** — contrairement à
+R1 (à l'entrée en Atelier, une seule fois) et R2 (à l'enregistrement du résultat,
+une seule fois pour tous les participants) : `Game.rollBaseIncome()` résout sa
+Strategy indépendamment à chaque appel, un participant présent à la fois, à
+l'écran Résolution du wizard (`POST .../events/income`) — cf. [§Wizard de fin de
+partie](#wizard-de-fin-de-partie). Sans effet sur un Événement Télévisé, qui
+n'appelle jamais `rollBaseIncome`.
+
+**R4 — « Plafond de jerricans par Escarmouche »**
+(`nom_interne plafond_jerricans_escarmouche`) : contrairement à R1/R2/R3
+(chacune ne consulte qu'un seul point de calcul), R4 **plafonne le cumul** de
+deux sources de gains distinctes d'une même Escarmouche — le revenu de base D6
+(`Game.rollBaseIncome`) et le butin manuel de scénario
+(`Game.recordJerricanGains`, écran Jerricans du wizard) — jamais un Événement
+Télévisé, même si son scénario porte `gain_jerricans`. À la désactivation
+(comportement par défaut, `UnlimitedJerricanGainsStrategy`), un participant peut
+gagner autant de jerricans que ces deux sources le permettent, sans limite.
+Activée (`CappedJerricanGainsStrategy`), aucun participant ne peut dépasser
+**15 jerricans de type récompense au total sur une même partie** — un montant
+qui ferait dépasser ce plafond est réduit **silencieusement** au reliquat
+disponible (jamais rejeté), y compris jusqu'à 0 si le plafond est déjà atteint,
+auquel cas aucun événement n'est journalisé. Portée par
+`UnlimitedJerricanGainsStrategy`/`CappedJerricanGainsStrategy`
+(`domain/house-rules/jerrican-gains-cap-strategy.ts`).
+
+**Cumul recalculé depuis le journal de la partie, jamais mémorisé** — `Game`
+ne garde aucun compteur "déjà gagné" : à chaque appel de `rollBaseIncome`/
+`recordJerricanGains`, le cumul déjà crédité à ce participant sur CETTE partie
+est recalculé en sommant `GameEvent.recompenseJerricansAwarded` (getter
+générique valant `0` par défaut, surchargé par `WalletMovementEvent` quand
+`reason === WalletReason.RECOMPENSE` — même idiome que
+`championshipPointsAwarded`, cf. [DOMAIN_MODEL.md
+§4](../DOMAIN_MODEL.md#hiérarchie-gameevent-command)) sur `this.events`. Comme
+le butin manuel (persisté à l'écran Jerricans, avant l'écran Résolution) est
+toujours journalisé avant le revenu de base (tiré à l'écran Résolution), et que
+chaque use case recharge le journal complet via `CampaignReplayService.
+loadAndReplay` avant d'agir, le plafond s'applique correctement au total
+combiné des deux sources, quel que soit l'ordre dans lequel un participant les
+reçoit.
 
 ---
 
@@ -1054,10 +1251,22 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
   qu'aucun atelier ne reste ouvert pendant qu'une partie est en cours de jeu,
   du lancement jusqu'à l'enregistrement de son résultat.
 - **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
-  **automatique** : `Game.recordResult()` crédite tout participant hors du
-  top `classified` (rang > `ceil(n/2)`), sans action de l'organisateur ni écran
-  dédié — cohérent avec le secret de cette mécanique. Le **total brut** reste
-  caché, y compris à son propriétaire — aucun endpoint ne l'expose tel quel.
+  **automatique** : `Game.distributeResistance()` crédite tout participant hors
+  du top `classified` (rang > `ceil(n/2)`) — critère **par défaut**, remplaçable
+  pour une campagne donnée par la règle maison R1 (cf. [§Règles
+  maison](#règles-maison) ci-dessus) —, sans action de l'organisateur ni
+  écran dédié — cohérent avec le secret de cette mécanique. Le calcul a lieu à
+  l'entrée en Atelier (`EnterAtelierUseCase`, fin du wizard), **pas** à
+  l'enregistrement du résultat (`Game.recordResult`, qui ne s'en occupe plus
+  depuis RM-4) — seul cet instant garantit que le total de Points de
+  Championnat de la partie est complet (le bonus Favori du Public, cf.
+  [§Faveur du Public](#faveur-du-public), est crédité après l'enregistrement du
+  résultat). Conséquence observable : les lignes de contact Résistance
+  apparaissent désormais en fin de journal de partie, après les tirages
+  d'épave, plutôt qu'intercalées avec le classement ; annuler le wizard avant
+  "Terminer" (écran Résolution) ne crédite donc plus rien du tout côté
+  Résistance. Le **total brut** reste caché, y compris à son propriétaire —
+  aucun endpoint ne l'expose tel quel.
   Un dérivé (`sabotagePoints`, cf. [§Points de sabotage](#points-de-sabotage))
   est désormais exposé au propriétaire dans l'Atelier, mais le secret vis-à-vis
   des **autres joueurs** reste total : ce dérivé n'apparaît jamais dans la
@@ -1152,13 +1361,15 @@ tout type de partie).
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
 | GET | `/api/campaigns` | JWT | Mes campagnes (participant `VALIDATED`) |
-| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi |
+| GET | `/api/catalog/regles-maison` | Non | Catalogue public des règles maison (cf. [§Règles maison](#règles-maison)) |
+| POST | `/api/campaigns` | JWT | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne) ; `houseRules?: string[]` - défaut aucune règle active, cf. [§Règles maison](#règles-maison)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi, ou si une clé de `houseRules` est absente du catalogue |
 | GET | `/api/campaigns/pending` | JWT | Mes demandes d'inscription en attente |
 | GET | `/api/campaigns/organizing/pending-requests` | JWT | Inscriptions en attente dans mes campagnes (organisateur) |
-| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) |
+| GET | `/api/campaigns/by-code/:code` | JWT | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) et `houseRules` (cf. [§Règles maison](#règles-maison)) |
 | GET | `/api/campaigns/:id` | JWT | Détail d'une campagne (participant `VALIDATED`) |
 | DELETE | `/api/campaigns/:id` | JWT | Supprimer la campagne (organisateur, cascade sur les participants) |
 | PUT | `/api/campaigns/:id` | JWT | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne)) |
+| PUT | `/api/campaigns/:id/house-rules` | JWT | Règles maison actives (organisateur, **aucune contrainte d'état** - `{ houseRules: string[] }`, tableau vide = aucune règle active) - HTTP 400 si une clé est absente du catalogue courant (cf. [§Règles maison](#règles-maison)) |
 | PUT | `/api/campaigns/:id/state` | JWT | Transition d'état (organisateur) |
 | GET | `/api/campaigns/:id/participants` | JWT | Liste des participants |
 | POST | `/api/campaigns/:id/participants` | JWT | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne)) |
@@ -1193,7 +1404,7 @@ supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant
 | DELETE | `/api/campaigns/:id/games/:gameId/results` | JWT | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/results` | JWT | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results` |
 | GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT | Véhicules courants (hors perdus **et hors vendus**) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) et le roster de l'écran Désignation des épaves (y compris les véhicules du participant lui-même) ; un véhicule vendu en atelier n'appartient plus à l'équipe au moment de la partie suivante, il ne peut donc jamais y avoir participé |
-| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) |
+| POST | `/api/campaigns/:id/games/:gameId/events/income` | JWT | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) — `amount: 0`/`descriptions: []` sans aucun événement journalisé si la règle maison R3 (`escarmouche_bonus_jerricans`, cf. §Règles maison) est active |
 | POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | JWT | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`) |
 | POST | `/api/campaigns/:id/games/:gameId/close-atelier` | JWT | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204 |
 | GET | `/api/campaigns/:id/games/:gameId/journal` | JWT | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie) |

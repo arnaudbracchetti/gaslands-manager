@@ -45,6 +45,10 @@ export class FavoriDuPublicBonusEvent extends GameEvent {
     p.addPoints(-this.championshipPoints);
   }
 
+  override get championshipPointsAwarded(): number {
+    return this.championshipPoints;
+  }
+
   describe(participants: readonly CampaignParticipant[]): string {
     const found = this.findVehicleWithTeam(participants, this.vehicleId);
     const label = found ? ` : ${found.vehicle.type.nom}` : '';

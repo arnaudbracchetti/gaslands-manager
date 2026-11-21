@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Campaign } from './campaign';
 import { CampaignParticipant } from './campaign-participant';
-import type { Game } from './games/game';
+import { Game } from './games/game';
 import { EvenementTeleGame } from './games/evenement-tele-game';
 import { RankingAssignedEvent } from './events/ranking-assigned.event';
 import { GameStatus } from './enums/game-status.enum';
@@ -270,6 +270,36 @@ describe('Campaign - modification (rename/changeBudget)', () => {
   });
 });
 
+describe('Campaign - setHouseRules', () => {
+  const validKeys = ['distribution_points_resistance'];
+
+  it.each([CampaignState.EN_CONSTRUCTION, CampaignState.EN_COURS, CampaignState.TERMINEE])(
+    'accepte des clés valides quel que soit l\'état (%s) — aucune contrainte d\'état',
+    (state) => {
+      const campaign = new Campaign(1, 'Campagne Test', state, 'invite-code', [], []);
+
+      expect(() => campaign.setHouseRules(['distribution_points_resistance'], validKeys)).not.toThrow();
+      expect(campaign.houseRules.isEnabled('distribution_points_resistance')).toBe(true);
+    },
+  );
+
+  it('rejette une clé absente du catalogue courant, sans muter le réglage', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
+
+    expect(() => campaign.setHouseRules(['clef_inconnue'], validKeys)).toThrow('Règle maison inconnue');
+    expect(campaign.houseRules.toArray()).toEqual([]);
+  });
+
+  it('remplace intégralement le réglage précédent (pas un merge)', () => {
+    const campaign = new Campaign(1, 'Campagne Test', CampaignState.EN_CONSTRUCTION, 'invite-code', [], []);
+    campaign.setHouseRules(['distribution_points_resistance'], validKeys);
+
+    campaign.setHouseRules([], validKeys);
+
+    expect(campaign.houseRules.toArray()).toEqual([]);
+  });
+});
+
 // ── Commandes CRUD (Phase 2 — basculement DDD) ─────────────────────────────────
 
 describe('Campaign — requestJoin', () => {
@@ -460,6 +490,43 @@ describe('Campaign — addGame / updateGame / removeGame', () => {
 
     expect(campaign.games.find((g) => g.id === 10)).toBeUndefined();
     expect(campaign.removedGameIds).toContain(10);
+  });
+});
+
+describe('Campaign — attache son GameRulesContext à ses parties', () => {
+  // Vérifie le CÂBLAGE (attachContext bien appelé, sur la bonne instance), pas le
+  // comportement de résolution de Strategy — déjà couvert par
+  // house-rule-strategy.factory.spec.ts et game.spec.ts (Game — attachContext).
+
+  it('attache son propre contexte aux parties passées au constructeur (chargement/mapper)', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const spy = vi.spyOn(g1, 'attachContext');
+
+    const campaign = makeCampaign([participant], [g1]);
+
+    expect(spy).toHaveBeenCalledWith(campaign);
+  });
+
+  it('attache son contexte à une partie créée après coup via addGame', () => {
+    const { participant } = makeTestParticipant();
+    const campaign = makeCampaign([participant], []);
+    const spy = vi.spyOn(Game.prototype, 'attachContext');
+
+    campaign.addGame('scen', 'EVENEMENT_TELE');
+
+    expect(spy).toHaveBeenCalledWith(campaign);
+  });
+
+  it('réattache son contexte à la partie de remplacement créée par updateGame', () => {
+    const { participant } = makeTestParticipant();
+    const g1 = makeGame(10, 1);
+    const campaign = makeCampaign([participant], [g1]);
+    const spy = vi.spyOn(Game.prototype, 'attachContext');
+
+    campaign.updateGame(10, 'scen', 'EVENEMENT_TELE');
+
+    expect(spy).toHaveBeenCalledWith(campaign);
   });
 });
 

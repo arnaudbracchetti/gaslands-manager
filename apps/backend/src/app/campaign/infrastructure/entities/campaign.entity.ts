@@ -31,6 +31,12 @@ export class CampaignOrm {
   @Column({ default: 50 })
   budget: number;
 
+  // Clés (nom_interne) des règles maison activées, cf. regles-maison.yml — HouseRules
+  // ne stocke que les clés ACTIVÉES (cf. domain/house-rules/house-rules.ts). Première
+  // colonne jsonb du projet.
+  @Column({ type: 'jsonb', default: [] })
+  houseRules: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 

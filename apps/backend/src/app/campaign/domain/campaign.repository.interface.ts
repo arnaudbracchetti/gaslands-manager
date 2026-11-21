@@ -44,6 +44,7 @@ export interface ICampaignRepository {
     organizerUserId: number,
     teamId: number | null,
     budget: number,
+    houseRules: string[],
   ): Promise<number>;
 
   /**

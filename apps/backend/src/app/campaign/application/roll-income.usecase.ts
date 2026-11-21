@@ -14,19 +14,24 @@ export interface RollIncomeCommand {
 }
 
 export interface RollIncomeResult {
+  /** 0 si la règle maison `escarmouche_bonus_jerricans` est active (aucun revenu de
+   *  base distribué) — jamais négatif, jamais `null`. */
   amount: number;
-  /** Une ligne de texte par événement créé (cf. `GameEvent.describe()`). */
+  /** Une ligne de texte par événement créé — vide si la règle maison ci-dessus
+   *  supprime le tirage (cf. `GameEvent.describe()`). */
   descriptions: string[];
 }
 
 /**
  * Escarmouche uniquement — revenu de base : tire 1D6 côté serveur (`IRandomizer`, même
  * port hexagonal que la Table des Épaves) et le crédite en jerricans à un participant
- * présent. Appelé une fois par participant pendant la phase de résolution du wizard de
- * fin de partie — miroir de `WreckResolveUseCase`, appelé une fois par véhicule.
+ * présent, sauf règle maison active (cf. `Game.rollBaseIncome`). Appelé une fois par
+ * participant pendant la phase de résolution du wizard de fin de partie — miroir de
+ * `WreckResolveUseCase`, appelé une fois par véhicule.
  *
- * L'interprétation ("revenu = 1D6") vit sur `Game.rollBaseIncome` (domaine) ; ce use
- * case ne fait que tirer le dé (infrastructure) et déléguer.
+ * L'interprétation ("revenu = 1D6, ou rien si la règle maison le supprime") vit sur
+ * `Game.rollBaseIncome` (domaine) ; ce use case ne fait que tirer le dé (infrastructure)
+ * et déléguer.
  */
 export class RollIncomeUseCase {
   constructor(
@@ -50,9 +55,15 @@ export class RollIncomeUseCase {
 
     await this.campaignRepo.appendEvents(cmd.gameId, events);
     const [incomeEvent] = events;
-    if (!(incomeEvent instanceof WalletMovementEvent)) {
+    // `events` est vide quand la règle maison `escarmouche_bonus_jerricans` est
+    // active (cf. `Game.rollBaseIncome`) — un tableau non vide, en revanche, doit
+    // toujours contenir exactement un WalletMovementEvent.
+    if (incomeEvent && !(incomeEvent instanceof WalletMovementEvent)) {
       throw new Error('Game.rollBaseIncome doit toujours produire un WalletMovementEvent.');
     }
-    return { amount: incomeEvent.amount, descriptions: events.map((e) => e.describe(campaign.participants)) };
+    return {
+      amount: incomeEvent instanceof WalletMovementEvent ? incomeEvent.amount : 0,
+      descriptions: events.map((e) => e.describe(campaign.participants)),
+    };
   }
 }

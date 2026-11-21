@@ -16,16 +16,17 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CampaignsService } from '../campaigns.service';
-import { CampaignSummary } from '../campaign.model';
+import { CampaignSummary, HouseRuleDefinition } from '../campaign.model';
 import { TeamsService } from '../../teams/teams.service';
 import { Team, CreateTeamDto } from '../../teams/team.model';
 import { QuickTeamCreate } from '../../teams/quick-team-create/quick-team-create';
+import { HouseRulesSelector } from '../house-rules-selector/house-rules-selector';
 import { Icon } from '../../shared/icon/icon';
 
 @Component({
   selector: 'app-campaign-join',
   standalone: true,
-  imports: [FormsModule, QuickTeamCreate, RouterLink, Icon],
+  imports: [FormsModule, QuickTeamCreate, RouterLink, HouseRulesSelector, Icon],
   templateUrl: './campaign-join.html',
   styleUrl: './campaign-join.scss',
 })
@@ -45,6 +46,9 @@ export class CampaignJoin implements OnInit {
 
   /** Résumé minimal de la saison (nom, état, organisateur) — null si non chargé */
   summary: WritableSignal<CampaignSummary | null> = signal<CampaignSummary | null>(null);
+
+  /** Catalogue des règles maison, pour l'affichage en lecture seule (RM-7) — chargement indépendant, non bloquant. */
+  houseRuleCatalog: WritableSignal<HouseRuleDefinition[]> = signal<HouseRuleDefinition[]>([]);
 
   /** Équipes de l'utilisateur connecté, pour le select */
   userTeams: WritableSignal<Team[]> = signal<Team[]>([]);
@@ -94,6 +98,11 @@ export class CampaignJoin implements OnInit {
   ngOnInit(): void {
     this.loadSummary();
     this.loadUserTeams();
+
+    this.campaignsService.getHouseRules().subscribe({
+      next: (rules: HouseRuleDefinition[]) => this.houseRuleCatalog.set(rules),
+      error: () => this.houseRuleCatalog.set([]),
+    });
   }
 
   private loadSummary(): void {

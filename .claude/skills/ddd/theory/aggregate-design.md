@@ -267,26 +267,99 @@ l'intérieur de l'agrégat plutôt qu'à sa frontière externe) :
   filtrage-là reste sur la racine (elle seule voit toute la collection) ; l'opération elle-même,
   une fois l'enfant identifié, part sur l'enfant.
 
-**Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit en paramètre de
-méthode** — il ne les détient jamais en référence permanente (pas de `this.parent` ni de
-`this.siblings` stockés en champ). Ça préserve son encapsulation (l'enfant reste testable seul,
-`new OrderLine(...)`, sans construire tout l'agrégat) et évite un couplage bidirectionnel
-enfant↔racine. Exemple : une règle sur `OrderLine` qui doit comparer l'état de toutes les lignes
-(« pas deux lignes du même produit ») reçoit `siblings: OrderLine[]` en paramètre — fourni par
-`Order`, qui les détient déjà :
+### Ce dont un enfant a besoin : donnée, configuration, ou port
 
-```typescript
-class OrderLine {
-  assertNoDuplicateProduct(siblings: readonly OrderLine[]): void {
-    if (siblings.some((s) => s !== this && s.productId === this.productId))
-      throw new DomainException('Produit déjà présent dans une autre ligne');
-  }
-}
-```
+Un enfant qui a besoin de quelque chose venant de ses siblings ou de la racine ne le détient
+**jamais en référence permanente typée** (pas de champ `this.parent: Order` ni
+`this.siblings: OrderLine[]` stocké sur l'entité enfant) — mais la façon de le lui fournir dépend
+de la nature de ce quelque chose. Trois cas, à ne pas confondre :
 
-Symptôme à surveiller en revue : un agrégat où **toutes** les méthodes vivent sur la racine,
-alors qu'une bonne moitié d'entre elles ne touchent jamais aux données d'un autre enfant que
-celui sur lequel elles opèrent.
+1. **Donnée qui varie à chaque appel** (l'état courant des siblings, un montant saisi par
+   l'utilisateur, un id ciblé) → **paramètre de méthode**. C'est le cas par défaut : l'enfant
+   reste testable seul (`new OrderLine(...)`, appel direct de la méthode), sans construire tout
+   l'agrégat, et sans couplage bidirectionnel enfant↔racine. Exemple : une règle sur `OrderLine`
+   qui doit comparer l'état de toutes les lignes (« pas deux lignes du même produit ») reçoit
+   `siblings: OrderLine[]` en paramètre — fourni par `Order`, qui les détient déjà :
+
+   ```typescript
+   class OrderLine {
+     assertNoDuplicateProduct(siblings: readonly OrderLine[]): void {
+       if (siblings.some((s) => s !== this && s.productId === this.productId))
+         throw new DomainException('Produit déjà présent dans une autre ligne');
+     }
+   }
+   ```
+
+2. **Configuration ou politique stable de l'agrégat** (un réglage activé/désactivé pour toute la
+   durée de vie de l'agrégat, un barème, une variante de règle) → la racine l'**attache** à
+   l'enfant via une **interface étroite** (pas l'agrégat entier), relue à la demande plutôt que
+   copiée. Un paramètre de méthode serait ici un bruit répété à chaque appel pour une valeur qui
+   ne change pas d'un appel à l'autre ; une référence permanente **non typée sur la racine**
+   (l'interface ne expose que ce dont l'enfant a besoin) évite pour autant le couplage
+   bidirectionnel que l'option « donnée » cherche à éviter :
+
+   ```typescript
+   // L'enfant ne connaît qu'une interface étroite, jamais le type concret de la racine
+   interface OrderPolicyContext {
+     readonly discountPolicy: DiscountPolicy;
+   }
+   class OrderLine {
+     private context: OrderPolicyContext | null = null;
+     attachContext(context: OrderPolicyContext): void { this.context = context; }
+     effectivePrice(): number {
+       const policy = this.context?.discountPolicy ?? DiscountPolicy.none();
+       return policy.apply(this._basePrice);
+     }
+   }
+   class Order implements OrderPolicyContext {
+     readonly discountPolicy: DiscountPolicy;
+     constructor(lines: OrderLine[], discountPolicy: DiscountPolicy) {
+       this.discountPolicy = discountPolicy;
+       this._lines = lines;
+       for (const line of lines) line.attachContext(this);   // même idiome que attachTeam/attachParent
+     }
+   }
+   ```
+
+3. **Port d'infrastructure** (hasher de mot de passe, horloge, générateur aléatoire) → **paramètre
+   de méthode** (double dispatch, cf. Vernon *Implementing DDD*) — seul cas où un objet technique
+   traverse la frontière du domaine légitimement, précisément parce qu'il n'est *pas* une donnée
+   ni une politique métier mais une capacité fournie par l'extérieur, à chaque appel qui en a besoin.
+
+Ne pas transposer le cas 3 au cas 2 : un `IPasswordHasher` passé en paramètre ne justifie pas de
+passer une politique métier stable (ex. une Strategy) en paramètre — la politique appartient au
+domaine et doit y être sélectionnée, cf. ci-dessous.
+
+### Qui sélectionne une Strategy ?
+
+Quand un comportement de l'agrégat varie selon un algorithme interchangeable (pattern Strategy),
+la question « qui choisit la variante ? » se pose systématiquement — et la réponse par défaut du
+GoF (« le client crée et passe la ConcreteStrategy ») est **fausse dans un agrégat DDD** dès que
+la variante dépend d'un état ou d'une configuration que le domaine possède déjà (cas 2 ci-dessus).
+Un appelant extérieur (use case, controller) qui choisit la Strategy fait fuir une règle métier
+hors du domaine — c'est l'Anti-pattern 1 sous une forme déguisée : la « règle » n'est pas le calcul
+lui-même mais *quel calcul appliquer*.
+
+**Règle** : si la variante dépend de l'état/de la configuration du domaine, la sélection est
+**interne au domaine**, jamais exposée dans la signature de la méthode métier. Elle passe par une
+**Factory pure** (aucune dépendance de framework, cf. règle transversale 4) :
+- Une Factory **par famille de variantes**, pas une par point de calcul — si plusieurs points de
+  calcul sont concernés par la même configuration, une Abstract Factory expose une méthode de
+  création par point (`createXStrategy()`, `createYStrategy()`), nommée pour ce qu'elle fait,
+  jamais pour former une phrase à l'appel (`factory.for(...)` est un mauvais nom).
+- La Factory retourne une stratégie par défaut si aucune configuration ne s'applique, et refuse
+  (exception de domaine) si plusieurs variantes concurrentes s'appliquent au même point de calcul.
+- Le client explicite (l'appelant choisit vraiment) reste légitime uniquement quand le choix est
+  réellement celui de l'appelant — ex. un utilisateur qui sélectionne un mode de tri dans une UI —
+  jamais quand le choix découle d'une règle métier que le domaine connaît déjà.
+
+Symptôme à surveiller en revue : un use case qui instancie `new XxxStrategy()` ou appelle
+`campaign.resolveXxxStrategy()` puis passe le résultat en paramètre à une méthode de domaine — les
+deux glissent la décision hors de l'endroit qui possède la configuration.
+
+Symptôme à surveiller en revue (agrégat-dieu) : un agrégat où **toutes** les méthodes vivent sur la
+racine, alors qu'une bonne moitié d'entre elles ne touchent jamais aux données d'un autre enfant
+que celui sur lequel elles opèrent.
 
 ### Anti-pattern 9 — Le service mort qui contourne l'agrégat
 
@@ -314,7 +387,8 @@ await orderRepo.save(order);
 - [ ] L'agrégat peut-il enforcer **toutes** ses invariantes sans lire de données extérieures ?
 - [ ] Toutes les mutations passent-elles par l'agrégat racine (jamais directement sur les enfants, depuis l'EXTÉRIEUR de l'agrégat) ?
 - [ ] À l'INTÉRIEUR de l'agrégat, chaque méthode vit-elle sur l'objet (racine ou entité enfant) qui possède les données qu'elle consulte — pas systématiquement sur la racine (anti-pattern 8) ?
-- [ ] Un enfant qui a besoin de données de ses siblings ou de la racine les reçoit-il en paramètre de méthode, plutôt qu'en référence permanente stockée ?
+- [ ] Un enfant qui a besoin d'une donnée/configuration/port suit-il la distinction de « [Ce dont un enfant a besoin : donnée, configuration, ou port](#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port) » (jamais de référence permanente typée sur la racine) ?
+- [ ] Si l'agrégat sélectionne une Strategy, la sélection est-elle interne au domaine (Factory pure), jamais choisie par l'appelant — cf. « [Qui sélectionne une Strategy ?](#qui-sélectionne-une-strategy-) » ?
 - [ ] L'agrégat est-il aussi petit que possible (chaque enfant est-il nécessaire à un invariant de la racine), le seuil de ~200 entités n'étant qu'un garde-fou de dernier recours ?
 - [ ] Les références vers d'autres agrégats se font-elles par identité (id), jamais par objet direct ?
 - [ ] Les entités enfants sont-elles supprimées en cascade avec leur racine ?

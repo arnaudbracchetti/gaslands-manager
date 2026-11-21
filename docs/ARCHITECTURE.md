@@ -103,9 +103,11 @@ apps/backend/src/app/
     ├── campaign.controller.ts       ← Controller HTTP unique (39 routes : CRUD ligue/participants + Programme + atelier + event-sourcing)
     ├── campaign-query.service.ts     ← Côté lecture (CQRS) : read models, `/results` dérivé du journal
     ├── scenario-catalog.service.ts   ← Catalogue de scénarios (singleton en mémoire, §3.3)
+    ├── house-rule-catalog.service.ts ← Catalogue de règles maison (singleton en mémoire, §3.3)
     ├── domain/          ← Campaign (agrégat, ex-Season), CampaignParticipant, GameEvent hierarchy, Game hierarchy, WreckOutcome, WreckTable, IRandomizer
     │   ├── events/      ← 8 événements concrets (GoF Command)
     │   ├── games/       ← EvenementTeleGame, EscarmoucheGame (GoF Invoker)
+    │   ├── house-rules/ ← HouseRules (Value Object), HouseRuleStrategyFactory (Abstract Factory), ResistanceDistributionStrategy + TvBonusDistributionStrategy, 2 implémentations chacune (GoF Strategy)
     │   ├── enums/       ← GameStatus, WalletReason, WreckResult
     │   └── wreck/       ← WreckTable (domain service, 9 lignes + événements), WreckOutcome (Value Object), IRandomizer (port hexagonal)
     ├── application/     ← 29 Use Cases (CRUD + GetWorkshop + 2 verdicts d'équipement atelier + event-sourcing)
@@ -126,6 +128,18 @@ apps/backend/src/app/
 > `assertOrganizer` / `assertParticipant` (`application/authorization.helpers.ts`) — helpers
 > qui opèrent sur `campaign.participants` après replay, sans accès à la base. Les endpoints
 > en **lecture** délèguent à `CampaignQueryService` (accès ORM direct, CQRS).
+
+> **`HouseRuleCatalogService`** (`campaign/`) est un **quatrième exemple** du même
+> pattern, miroir fichier pour fichier de `ScenarioCatalogService` ci-dessus :
+> charge `database_init/data/regles-maison.yml` au démarrage, l'indexe par
+> `nom_interne`, expose `getAll()`/`getByNomInterne()`/`validKeys()`. Service dédié
+> plutôt qu'extension de `CatalogService` (module équipe) ou de
+> `ScenarioCatalogService` : une règle maison n'a de lien ni avec les sponsors, ni
+> avec l'équipement, ni avec les scénarios (cf.
+> [DOMAIN_MODEL.md §2](DOMAIN_MODEL.md#2-catalogue-en-mémoire)). `validKeys()` est
+> l'instantané passé à `HouseRules.fromUserInput()` par tout use case qui règle les
+> règles maison d'une campagne (création, modification) — cf. §3.8 ci-dessous pour
+> le mécanisme de Strategy qui consomme ensuite ce réglage.
 
 Tout nouveau module doit être importé dans `app.module.ts` et ses entités TypeORM ajoutées dans la liste `entities`. Les modules domaine complexes suivent l'architecture DDD décrite en §3.4.
 
@@ -189,6 +203,18 @@ addWeapon(type: WeaponType, orientation: Orientation | null, budget: number): vo
 **Value Objects** (`domain/value-objects/`) — wrappent les données catalogue brutes (YAML) et exposent une API métier typée (`price`, `slots`, `isEquipage`, `montableSurTourelle`, `requiresOrientation`…). Éliminent les casts `as number` répandus dans les anciens services.
 
 **Pattern Strategy pour les stats effectives** — `Vehicle.effectiveStats` (`domain/vehicle.ts`) calcule les stats **effectives** du véhicule (après bonus des séquelles/améliorations/avantages déjà montés) en un seul `reduce()` par famille, dans l'ordre séquelles → améliorations → avantages. Chaque comportement de jeu (Chenilles, Bélier, Cascadeur, Remorque Moyenne…) est une petite classe Strategy stateless (`EquipmentBehavior`, `domain/behaviors/*.ts`), invoquée directement sur l'état fourni — remplace un ancien Pattern Decorator (chaîne d'objets qui s'enveloppent) courant juillet 2026, pour permettre à la capacité en emplacements de devenir extensible (Remorque Moyenne +1, Remorque Lourde +3, cf. [spec/VEHICLES.md](spec/VEHICLES.md#améliorations-de-véhicule-19-au-total)) et éliminer une re-validation redondante des couches déjà montées. `canPlace(ctx, candidate)` est porté par `ImprovementType`/`AdvantageType` (le Value Object — un candidat n'a pas encore d'instance) ; `applyStats(current)` par `Improvement`/`Advantage`/`Sequella` (l'entité — un équipement déjà monté a toujours une instance), chacun délégant à la Strategy résolue depuis son propre `comportement` (`resolveImprovementBehavior`/`resolveAdvantageBehavior`/`resolveSequellaBehavior`) — `Vehicle` ne connaît jamais ces fonctions de résolution directement. `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (Record `comportement` → instance singleton) couvrent respectivement 8 et 3 comportements ; `SEQUELLA_BEHAVIORS` (Map, clé `nom_interne` — les séquelles n'ont pas de champ `comportement`) couvre les 4 séquelles à effet chiffré. Une méthode générique `PlacementContext.hasComportementAmong(comportements)` porte les règles d'unicité transversales à plusieurs `comportement` (ex. Remorque Moyenne/Lourde mutuellement exclusives). Détail complet (diagramme de classes, flux, tables comportement→Strategy) : [VEHICLE_SYSTEM.md §4](VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior).
+
+**Convention projet — qui sélectionne une Strategy** : jamais l'appelant (use case, controller).
+La sélection est interne au domaine, via une Factory pure, dès que la variante dépend d'un état ou
+d'une configuration du domaine — principe générique et justification :
+[skill `ddd`, theory/aggregate-design.md, « Qui sélectionne une Strategy ?
+»](../.claude/skills/ddd/theory/aggregate-design.md#qui-sélectionne-une-strategy-).
+`EquipmentBehavior` ci-dessus en est le premier exemple (`resolveImprovementBehavior` etc.,
+invisibles depuis un use case) ; le mécanisme de règles maison (mode campagne, cf.
+[spec/CAMPAIGN.md](spec/CAMPAIGN.md)) en est le second, une Factory unique par famille de variantes
+(`HouseRuleStrategyFactory`, une méthode `create…Strategy()` par point de calcul concerné) attachée
+à `Game` par `Campaign` via une interface étroite — jamais un use case qui instancie une Strategy et
+la passe en paramètre à une méthode de domaine.
 
 **Dependency Inversion** — le domaine définit `ITeamRepository` et `ICatalogRepository` (`domain/`). L'infrastructure les implémente (`TeamRepository`, `CatalogAdapter`). Le domaine ne connaît jamais TypeORM ni NestJS.
 
@@ -308,8 +334,16 @@ Ce type remplace l'ancien `TeamWithCount = Team & { vehicleCount }`.
 | `apps/backend/src/app/team/team.tokens.ts` | Tokens d'injection NestJS pour les interfaces |
 | `apps/backend/src/app/campaign/campaign.controller.ts` | Controller HTTP unique (39 routes) — délègue aux use cases (écritures) et à `CampaignQueryService` (lectures) |
 | `apps/backend/src/app/campaign/campaign-query.service.ts` | Côté lecture (CQRS) — read models ; `/results` dérivé du journal `game_events` |
-| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
-| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult`, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
+| `apps/backend/src/app/campaign/domain/campaign.ts` | Agrégat racine campagne — commandes CRUD + `replay`, `enterAtelier`, `closeAtelier`, `closeCampaign`, `standings`, navigation (`findGame`/`findParticipant`/`findAtelierGame`), `setHouseRules`, implémente `GameRulesContext` (`strategyFactory`, attaché à chaque `Game` via `attachContext`). La construction des événements d'une partie (`recordResult`, `changeEquipment`…) vit sur `Game`, cf. §3.8 |
+| `apps/backend/src/app/campaign/domain/games/game.ts` | Entité enfant — Invoker GoF (`canAccept`/`addEvent`) **et** propriétaire de la construction des événements d'une partie (`recordResult` — inclut désormais la cagnotte télé collective, règle maison R2, résolue via `this.context.strategyFactory` dans le même appel que le classement —, `distributeResistance` — Points de Résistance automatiques, hook polymorphe appelé à l'entrée en Atelier, cf. RM-4, critère résolu via `this.context.strategyFactory` cf. RM-5 —, `resolveWreck`, `changeEquipment` — achat/revente d'équipement **et** de séquelles, cf. §Séquelles ci-dessous —, `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal`) |
+| `apps/backend/src/app/campaign/domain/games/game-context.ts` | `GameRulesContext` — interface étroite exposée par `Campaign` à chaque `Game` (`attachContext`), pour que `Game` résolve sa propre politique de jeu (Strategy de règle maison) sans jamais recevoir cette décision en paramètre depuis un use case, cf. §3.8 |
+| `apps/backend/src/app/campaign/house-rule-catalog.service.ts` | Catalogue de règles maison — singleton en mémoire (§3.3), miroir de `scenario-catalog.service.ts` |
+| `apps/backend/src/app/campaign/domain/house-rules/house-rules.ts` | `HouseRules` — Value Object immuable, ensemble des clés (`nom_interne`) activées sur une campagne. Deux fabriques : `fromPersisted` (hydratation, tolérante) / `fromUserInput` (saisie, stricte — rejette une clé absente du catalogue) |
+| `apps/backend/src/app/campaign/domain/house-rules/house-rule-strategy.factory.ts` | `HouseRuleStrategyFactory` — Abstract Factory unique pour toutes les règles maison, une méthode `create…Strategy()` par point de calcul concerné (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`). Registre pur `HOUSE_RULE_REGISTRY` (union discriminée par `point`), cf. §3.8 |
+| `apps/backend/src/app/campaign/domain/house-rules/resistance-distribution-strategy.ts` | `ResistanceDistributionStrategy` (interface) + `DefaultResistanceStrategy` (règle par défaut US-F1) + `NoChampionshipPointsStrategy` (règle maison R1) |
+| `apps/backend/src/app/campaign/domain/house-rules/tv-bonus-distribution-strategy.ts` | `TvBonusDistributionStrategy` (interface) + `NoTvBonusStrategy` (défaut, aucun bonus) + `CollectiveTvBonusStrategy` (règle maison R2 — cagnotte collective de fin d'Événement Télévisé) |
+| `apps/backend/src/app/campaign/domain/house-rules/base-income-strategy.ts` | `BaseIncomeStrategy` (interface) + `DefaultBaseIncomeStrategy` (défaut, 1D6) + `NoBaseIncomeStrategy` (règle maison R3 — aucun revenu de base d'Escarmouche) |
+| `apps/backend/src/app/campaign/domain/house-rules/jerrican-gains-cap-strategy.ts` | `JerricanGainsCapStrategy` (interface) + `UnlimitedJerricanGainsStrategy` (défaut, aucun plafond) + `CappedJerricanGainsStrategy` (règle maison R4 — plafonne à 15 jerricans/partie le cumul revenu de base + butin manuel d'une Escarmouche) |
 | `apps/backend/src/app/campaign/domain/campaign-participant.ts` | Entité enfant — Receiver GoF, compteurs transients (wallet, PC, points résistance) |
 | `apps/backend/src/app/campaign/domain/campaign.repository.interface.ts` | Contrat persistence campagne `ICampaignRepository` |
 | `apps/backend/src/app/campaign/infrastructure/campaign.repository.ts` | Implémentation TypeORM d'`ICampaignRepository` |
@@ -372,6 +406,13 @@ d'orchestration des use cases (absent de DOMAIN_MODEL.md) :
 
 ```
 EnterAtelierUseCase (partie PLANIFIE → ATELIER)
+  ├─ game.distributeResistance() — PR automatiques (US-F1, RM-4), no-op
+  │    hors Événement Télévisé ; garde d'idempotence si déjà distribué.
+  │    Sans paramètre : résout elle-même sa Strategy via this.context.
+  │    strategyFactory.createResistanceDistributionStrategy() — règle par
+  │    défaut ou règle maison active sur ce point, cf. §Règles maison ci-dessous
+  │    et jamais choisie par ce use case (RM-5)
+  │    └─ persisté via appendEvents(gameId, events), AVANT la ligne suivante
   └─ campaign.enterAtelier(gameId)
        ├─ clôt automatiquement une autre partie encore en ATELIER, s'il y en a une
        │   (ATELIER → JOUE, id retourné via autoClosedGameId pour avertissement)
@@ -382,6 +423,27 @@ CloseAtelierUseCase (partie ATELIER → JOUE, organisateur, manuel)
   └─ campaign.closeAtelier(gameId)
        └─ persisté via saveCampaign(campaign)
 ```
+
+#### Règles maison (RM-1 à RM-8, règles R1/R2)
+
+Mécanisme complet (Strategy, Abstract Factory, `GameRulesContext`, gel du calcul,
+règles R1/R2) : [DOMAIN_MODEL.md §4 — Règles maison](DOMAIN_MODEL.md#règles-maison--strategy-par-point-de-calcul)
+et [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison). Catalogue :
+`HouseRuleCatalogService` (note ci-dessus, §3.1). Réglage : `Campaign.houseRules`
+(Value Object `HouseRules`), exposé par `PUT /api/campaigns/:id/house-rules`
+(sans contrainte d'état, contrairement à nom/budget) et à la création
+(`POST /api/campaigns`). Quatre points de calcul consomment ce réglage à ce jour :
+la distribution des PR (R1, `distributeResistance()`, à l'entrée en Atelier — cf.
+diagramme ci-dessus), la cagnotte télé collective (R2, `recordResult()`,
+directement à l'enregistrement du résultat — son éligibilité, contrairement à
+R1, ne dépend d'aucune donnée produite plus tard dans le wizard), le revenu
+de base d'une Escarmouche (R3, `rollBaseIncome()` — premier point porté par
+`EscarmoucheGame` plutôt que par `EvenementTeleGame`/`Game.recordResult`,
+résolu indépendamment à chaque tirage plutôt qu'une fois pour toute la partie)
+et le plafond de gains de jerricans d'une Escarmouche (R4, appliqué à
+l'intérieur de `rollBaseIncome()` **et** `recordJerricanGains()` — seul point à
+ce jour partagé par deux méthodes de commande, car son cumul porte sur les
+deux sources de gains "récompense" d'une même partie).
 
 Pourquoi le replay reconstitue les événements d'atelier dans le bon ordre
 sans mécanisme supplémentaire (`order` fractionnaire) : voir

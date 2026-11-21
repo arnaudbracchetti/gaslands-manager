@@ -34,12 +34,14 @@ import type { User } from '../auth/domain/user';
 // Lecture (CQRS)
 import { CampaignQueryService } from './campaign-query.service';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import { HouseRuleCatalogService } from './house-rule-catalog.service';
 import { GameType } from './game.enums';
 import { DrawRandomScenarioUseCase } from './application/draw-random-scenario.usecase';
 
 // Use cases CRUD (Phase 2)
 import { CreateCampaignUseCase } from './application/create-campaign.usecase';
 import { UpdateCampaignUseCase } from './application/update-campaign.usecase';
+import { SetHouseRulesUseCase } from './application/set-house-rules.usecase';
 import { ChangeStateUseCase } from './application/change-state.usecase';
 import { DeleteCampaignUseCase } from './application/delete-campaign.usecase';
 import { RequestJoinUseCase } from './application/request-join.usecase';
@@ -82,6 +84,7 @@ import { JoinCampaignDto } from './dto/join-campaign.dto';
 import { ValidateParticipantDto } from './dto/validate-participant.dto';
 import { ChangeStateDto } from './dto/change-state.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { SetHouseRulesDto } from './dto/set-house-rules.dto';
 import { CampaignParticipantResponseDto } from './dto/campaign-participant-response.dto';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
@@ -108,6 +111,7 @@ import type { AvailableSequellaDto } from '../team/dto/available-sequella.dto';
 import type { AvailableVehicleDto } from '../team/dto/available-vehicle.dto';
 import type { ParticipantVehiclesDto } from './dto/participant-vehicles-response.dto';
 import type { Scenario } from './scenario.interfaces';
+import type { HouseRuleDefinition } from './house-rule.interfaces';
 import type { EnterAtelierResult } from './application/enter-atelier.usecase';
 import type { WreckResolveResult } from './application/wreck-resolve.usecase';
 
@@ -122,10 +126,12 @@ export class CampaignController {
   constructor(
     private readonly query: CampaignQueryService,
     private readonly scenarioCatalog: ScenarioCatalogService,
+    private readonly houseRuleCatalog: HouseRuleCatalogService,
     private readonly drawRandomScenarioUseCase: DrawRandomScenarioUseCase,
     // CRUD
     private readonly createCampaignUseCase: CreateCampaignUseCase,
     private readonly updateCampaignUseCase: UpdateCampaignUseCase,
+    private readonly setHouseRulesUseCase: SetHouseRulesUseCase,
     private readonly changeStateUseCase: ChangeStateUseCase,
     private readonly deleteCampaignUseCase: DeleteCampaignUseCase,
     private readonly requestJoinUseCase: RequestJoinUseCase,
@@ -168,6 +174,12 @@ export class CampaignController {
     return this.scenarioCatalog.getAll();
   }
 
+  /** GET /api/catalog/regles-maison - liste publique des règles maison (pas de JWT). */
+  @Get('catalog/regles-maison')
+  getHouseRules(): HouseRuleDefinition[] {
+    return this.houseRuleCatalog.getAll();
+  }
+
   /**
    * GET /api/catalog/scenarios/random?type=... — tirage D6 (tableaux officiels
    * Gaslands p.128-129), pas de JWT. Déclarée avant toute route paramétrée qui
@@ -202,6 +214,7 @@ export class CampaignController {
       name: dto.name,
       teamId: dto.teamId ?? null,
       budget: dto.budget,
+      houseRules: dto.houseRules,
     });
     return this.query.findOne(id, req.user.id);
   }
@@ -839,6 +852,22 @@ export class CampaignController {
       userId: req.user.id,
       name: dto.name,
       budget: dto.budget,
+    });
+    return this.query.findOne(id, req.user.id);
+  }
+
+  /** PUT /api/campaigns/:id/house-rules — règles maison (organisateur, tout état). */
+  @UseGuards(JwtAuthGuard)
+  @Put('campaigns/:id/house-rules')
+  async setHouseRules(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetHouseRulesDto,
+  ): Promise<CampaignResponseDto> {
+    await this.setHouseRulesUseCase.execute({
+      campaignId: id,
+      userId: req.user.id,
+      houseRules: dto.houseRules,
     });
     return this.query.findOne(id, req.user.id);
   }

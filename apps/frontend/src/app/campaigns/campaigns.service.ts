@@ -7,7 +7,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Campaign, CreateCampaignDto, CampaignSummary, JoinCampaignDto, ChangeStateDto, UpdateCampaignDto } from './campaign.model';
+import {
+  Campaign,
+  CreateCampaignDto,
+  CampaignSummary,
+  JoinCampaignDto,
+  ChangeStateDto,
+  UpdateCampaignDto,
+  HouseRuleDefinition,
+  SetHouseRulesDto,
+} from './campaign.model';
 import { CampaignParticipant, StandingsEntry, ValidateParticipantDto } from './campaign-participant.model';
 import type {
   Game,
@@ -161,6 +170,22 @@ export class CampaignsService {
    */
   update(campaignId: number, dto: UpdateCampaignDto): Observable<Campaign> {
     return this.http.put<Campaign>(`/api/campaigns/${campaignId}`, dto);
+  }
+
+  /**
+   * GET /api/catalog/regles-maison → catalogue public des règles maison
+   * (case à cocher + ligne descriptive par règle, cf. HouseRulesSelector).
+   */
+  getHouseRules(): Observable<HouseRuleDefinition[]> {
+    return this.http.get<HouseRuleDefinition[]>('/api/catalog/regles-maison');
+  }
+
+  /**
+   * PUT /api/campaigns/:id/house-rules → règles maison actives (organisateur,
+   * aucune contrainte d'état — contrairement à `update` ci-dessus).
+   */
+  setHouseRules(campaignId: number, dto: SetHouseRulesDto): Observable<Campaign> {
+    return this.http.put<Campaign>(`/api/campaigns/${campaignId}/house-rules`, dto);
   }
 
   /**
