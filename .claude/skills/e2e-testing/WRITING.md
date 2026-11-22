@@ -58,6 +58,10 @@ se poser avant d'en ajouter un :
 - **Armer `page.waitForResponse(...)` AVANT l'action qui déclenche la requête**, jamais
   après (cf. `waitForEquipmentEvent`) - sinon course possible entre la réponse et
   l'attente.
+- **Jamais `locator.count() > 0` pour décider d'un clic juste après un rendu** : `.count()`
+  lit le DOM instantanément (état pré-rendu en zoneless) → clic en trop qui bloque sur
+  "element was detached". Utiliser `locator.waitFor({ state: 'visible', timeout })
+  .catch(() => false)` (cf. `completePreDesignationSteps` dans `support/campaigns.ts`).
 - **Ne jamais asserter la valeur exacte d'un tirage serveur aléatoire** (D6 de la Table
   des Épaves) : pas de randomizer fixé côté e2e (contrairement aux tests unitaires
   backend, qui utilisent `FixedRandomizer`). Voir `campaign-wreck-designation.spec.ts`

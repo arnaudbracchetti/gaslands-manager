@@ -1,7 +1,7 @@
 # Gaslands Manager — Tests
 
 > Détail des patterns de tests **unitaires** backend/frontend. Contexte général et
-> commandes : [ARCHITECTURE.md §8](ARCHITECTURE.md#8-tests). Pour tout ce qui est
+> commandes : [ARCHITECTURE.md §8](ARCHITECTURE.md#7-tests). Pour tout ce qui est
 > **e2e** (infrastructure, commandes, bonnes pratiques, pièges, troubleshooting,
 > cadre de décision e2e-vs-unitaire) : skill `e2e-testing`
 > (`.claude/skills/e2e-testing/SKILL.md`), seule source à jour sur le sujet.
@@ -13,7 +13,7 @@
 
 **Service avec TypeORM** : mock du `Repository` via `getRepositoryToken` dans `Test.createTestingModule`.
 
-**Service sans DI** (ex : `CatalogService`) : instanciation directe + Pattern Template Method (voir [ARCHITECTURE.md §3.3](ARCHITECTURE.md#33-catalogue-de-jeu--singleton-en-mémoire)). Appeler `service.onModuleInit()` manuellement dans `beforeEach`.
+**Service sans DI** (ex : `CatalogService`) : instanciation directe + Pattern Template Method (voir [ARCHITECTURE.md §3.3](ARCHITECTURE.md#33-catalogues---singleton-en-mémoire)). Appeler `service.onModuleInit()` manuellement dans `beforeEach`.
 
 Ce qu'on teste : cas nominaux, `NotFoundException`, isolation par `userId`, câblage controller → service, relations pré-résolues.
 Ce qu'on ne teste pas en unitaire : auth JWT (testé via le guard), SQL réel (→ e2e).

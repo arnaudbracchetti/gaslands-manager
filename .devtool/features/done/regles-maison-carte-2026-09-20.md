@@ -168,7 +168,7 @@ un seul point à ce jour) et la règle R1 elle-même dans
 [spec/CAMPAIGN.md](../../../docs/spec/CAMPAIGN.md#règles-maison) ; une nouvelle
 sous-section dédiée avec son propre diagramme de classes (quatrième pattern GoF,
 aux côtés de Command/Invoker/Receiver) dans
-[DOMAIN_MODEL.md](../../../docs/DOMAIN_MODEL.md#règles-maison--strategy-de-distribution-des-points-de-résistance),
+[DOMAIN_MODEL.md](../../../docs/DOMAIN_MODEL.md#règles-maison--strategy-par-point-de-calcul),
 plus le catalogue `HouseRuleDefinition` ajouté au diagramme des catalogues en
 mémoire ; `HouseRuleCatalogService` documenté comme quatrième exemple du pattern
 singleton-en-mémoire dans [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md), dont le

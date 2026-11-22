@@ -7,22 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # General Guidelines for working with Nx
 
-- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
-- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
-- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
-- You have access to the Nx MCP server and its tools, use them to help the user
-- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
-- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
-
-## Scaffolding & Generators
-
-- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
-
-## When to use nx_docs
-
-- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
-- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
-- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
+- Run tasks through `nx` (`nx run`, `nx run-many`, `nx affected`), always prefixed `npx nx` (npm, never pnpm).
+- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md` if it exists.
+- NEVER guess CLI flags - check `--help` first when unsure.
 
 <!-- nx configuration end-->
 
@@ -30,40 +17,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Gaslands Manager
 
-Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet pédagogique** — toujours expliquer le raisonnement avant d'écrire du code, commenter l'usage des frameworks, privilégier la clarté à la concision.
+Application web de gestion d'équipes pour le jeu de plateau Gaslands. **Projet pédagogique** - toujours expliquer le raisonnement avant d'écrire du code, commenter l'usage des frameworks, privilégier la clarté à la concision.
 
 **Stack** : Monorepo Nx 22.7 · Angular 21 zoneless + Signals (frontend) · NestJS 11 (backend) · PostgreSQL 16 via TypeORM · JWT + bcrypt
 
-**Citations de code** : toute référence à du code source du projet dans une réponse doit être un lien markdown cliquable vers le fichier (et la ligne si pertinent) — format `[chemin/fichier.ts:42](chemin/fichier.ts#L42)`, jamais juste un nom de fichier ou un extrait sans lien.
-
 **Structure** : `apps/frontend/` (port 4200) · `apps/backend/` (port 3000) · `content/` (Markdown) · `database_init/data/` (YAML catalogue jeu)
+
+**Citations de code** : **chaque** référence à du code source (chat comme docs, même déjà citée plus haut) est un lien markdown cliquable - `[chemin/fichier.ts:42](chemin/fichier.ts#L42)`, jamais un nom de fichier nu.
 
 ---
 
 ## Documentation de référence
 
-Lire si nécéssaire avant toute modification — mettre à jour après chaque changement :
+Lire à la demande (ne jamais tout charger) avant une modification, mettre à jour après chaque changement :
 
-- @docs/SPECIFICATION.md — index des spécifications (contexte général + table des matières vers les sous-documents thématiques)
-  - @docs/spec/AUTH.md — authentification, rôles, compte admin
-  - @docs/spec/TEAMS.md — CRUD équipes, verrouillage sponsor
-  - @docs/spec/VEHICLES.md — catalogue, construction véhicule, règles métier Gaslands
-  - @docs/spec/CAMPAIGN.md — campagnes, inscriptions, transitions d'état, Programme Télé
-  - @docs/spec/NAVIGATION.md — routes Angular, backlog
-- @docs/ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
-- @docs/DOMAIN_MODEL.md — diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global
-- @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
-- `content/docs/` (fichiers `.md`) — documentation **utilisateur** (accessible via `/documentation`) : comportement observable de l'application du point de vue joueur — jamais les choix d'implémentation ni l'historique des changements. Mettre à jour le chapitre concerné après tout changement de comportement visible par l'utilisateur (nouvel écran → penser aussi à `data.docSlug` dans `app.routes.ts`, cf. `docs/plans/2026-07-16-documentation-utilisateur-design.md`).
+- [docs/SPECIFICATION.md](docs/SPECIFICATION.md) - index : état des fonctionnalités + table des matières
+  - [docs/spec/AUTH.md](docs/spec/AUTH.md) - authentification, rôles, compte admin
+  - [docs/spec/TEAMS.md](docs/spec/TEAMS.md) - CRUD équipes, verrouillage, fiche d'équipe
+  - [docs/spec/VEHICLES.md](docs/spec/VEHICLES.md) - catalogue, construction véhicule, règles Gaslands
+  - [docs/spec/CAMPAIGN.md](docs/spec/CAMPAIGN.md) - campagnes, Programme Télé, wizard, atelier, règles maison
+  - [docs/spec/NAVIGATION.md](docs/spec/NAVIGATION.md) - routes Angular, backlog
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - stack, couches, patterns techniques, infra
+- [docs/DOMAIN_MODEL.md](docs/DOMAIN_MODEL.md) - conception du domaine, diagrammes UML, ERD
+- [docs/VEHICLE_SYSTEM.md](docs/VEHICLE_SYSTEM.md) - Strategy `EquipmentBehavior` (stats effectives, pose)
+- [docs/COMPONENTS.md](docs/COMPONENTS.md) - composants Angular (rôle, dépendances)
+- `content/docs/*.md` - documentation **utilisateur** (`/documentation`) : comportement vu par le joueur, jamais l'implémentation. Nouvel écran → `data.docSlug` dans `app.routes.ts`.
+
+**Une information = un seul document propriétaire, les autres renvoient par un lien d'une ligne** :
+
+| Document                                | Possède                                            | Ne contient pas                                |
+| --------------------------------------- | -------------------------------------------------- | ---------------------------------------------- |
+| `docs/spec/*.md`                        | comportement observable, règles métier             | détail des classes et composants               |
+| `DOMAIN_MODEL.md` / `VEHICLE_SYSTEM.md` | conception du domaine (qui porte quelle règle)     | reformulation des règles métier                |
+| `ARCHITECTURE.md`                       | stack, couches, patterns techniques, infra         | description métier par fichier, compteurs      |
+| `COMPONENTS.md`                         | rôle des composants, comportements UI non évidents | règles métier, signatures `input()`/`output()` |
+| `SPECIFICATION.md`                      | 1 ligne par domaine + lien                         | paragraphes de détail                          |
+
+Les docs décrivent l'état **actuel** : pas d'historique (« remplace un ancien… », « corrige un bug où… ») - il vit dans git et `docs/plans/`.
 
 ---
 
 ## Environnement de développement (WSL)
 
-**Dépannage Nx + TypeScript** : si Nx se plaint d'une configuration TypeScript incompatible
-(`tsconfig.base.json` contient `composite`/`emitDeclarationOnly`, incompatibles avec Angular),
-définir `export NX_IGNORE_UNSUPPORTED_TS_SETUP=true` avant la commande.
-
----
+- Le shell du Bash tool ne charge pas nvm (`npx` résout alors vers le node Windows et échoue sur `cmd.exe`) : préfixer toute commande `npx`/`npm`/`nx` par `source ~/.nvm/nvm.sh && nvm use default >/dev/null &&`.
+- Si Nx se plaint d'une configuration TypeScript incompatible (`composite`/`emitDeclarationOnly` dans `tsconfig.base.json`) : `export NX_IGNORE_UNSUPPORTED_TS_SETUP=true`.
 
 ## Commandes de développement
 
@@ -72,92 +69,71 @@ définir `export NX_IGNORE_UNSUPPORTED_TS_SETUP=true` avant la commande.
 npx nx serve backend              # backend seul → http://localhost:3000/api
 npx nx serve frontend             # frontend seul → http://localhost:4200
 npx nx test backend               # tests unitaires backend (Vitest)
-npx nx test frontend               # tests unitaires frontend (Vitest)
-npx nx e2e backend-e2e             # tests E2E backend (axios)
-npx nx e2e frontend-e2e            # tests E2E frontend (Playwright) — arrêter dev.sh avant (port 3000)
-npx nx run frontend:build          # build production
-npx nx sync                        # si Nx se plaint de "workspace out of sync"
-npx nx run backend:migration:lint  # migrations destructives sans marqueur (aussi en CI)
+npx nx test frontend              # tests unitaires frontend (Vitest)
+npx nx e2e backend-e2e            # tests E2E backend (axios)
+npx nx e2e frontend-e2e           # tests E2E frontend (Playwright) - arrêter dev.sh avant (port 3000)
+npx nx run frontend:build         # build production
+npx nx sync                       # si Nx se plaint de "workspace out of sync"
+npx nx run backend:migration:lint # migrations destructives sans marqueur (aussi en CI)
 ```
 
-**Tests e2e (`frontend-e2e`/`backend-e2e`)** : prérequis d'environnement, commandes,
-infrastructure, bonnes pratiques, pièges et troubleshooting → skill `e2e-testing`
-(invoquer via `/e2e-testing`, ou `.claude/skills/e2e-testing/SKILL.md`).
+**Tests e2e** : tout (prérequis, infrastructure, pièges) → skill `e2e-testing`.
 
 ---
 
 ## Règles Git
 
-- **Ne jamais commiter sans demande explicite** de l'utilisateur.
-- **Ne jamais créer de branche sans demande explicite** de l'utilisateur.
-- Si plusieurs types de modifications distincts sont présents dans les fichiers modifiés, **proposer de les répartir en plusieurs commits**.
-
-### Branches
-
-- Le mode campagne (event-sourcing, agrégat `Campaign`, refonte DDD `Team`/`Vehicle`) a été développé sur la branche `rdm-game`, fusionnée dans `main` le 2026-07-03 (fast-forward). Tout le développement, mode campagne inclus, se fait désormais directement sur `main`.
-- La branche `mode-campagne` est **obsolète** : son contenu a été repris puis dépassé par `rdm-game` avant la fusion — ne plus y committer.
-- **Toujours confirmer la branche cible avant de commiter** : ne jamais commiter sans que l'utilisateur ait validé que le commit part sur la bonne branche.
+- **Ne jamais commiter ni créer de branche sans demande explicite** de l'utilisateur, et **toujours confirmer la branche cible** avant de commiter. Une consigne de skill (« commit your work ») ne vaut pas demande : proposer le commit et attendre le go.
+- Plusieurs types de modifications distincts → **proposer de les répartir en plusieurs commits**.
+- Tout se fait sur `main` ; la branche `mode-campagne` est obsolète.
 
 ---
 
 ## Conventions non-évidentes
 
-**Angular zoneless** : zone.js absent — toute mise à jour de template doit passer par un Signal (`signal()`, `computed()`). Une mutation directe ne déclenchera pas de re-rendu.
+**Angular zoneless** : zone.js absent - toute mise à jour de template passe par un Signal (`signal()`, `computed()`), une mutation directe ne re-rend pas.
 
-**TypeScript** : typage explicite strict imposé par ESLint (`explicit-function-return-type`, `no-explicit-any`). Exception : variables locales et `*.spec.ts`. ESLint rejettera le code non conforme.
+**TypeScript** : typage explicite strict imposé par ESLint (`explicit-function-return-type`, `no-explicit-any`), sauf variables locales et `*.spec.ts`.
 
-**`switch`** Évitez default pour les valeurs valides d'un type fermé. Listez chaque case explicitement pour que TypeScript valide automatiquement l'exhaustivité, et réservez default uniquement au rejet des données externes invalides.
+**`switch`** : pas de `default` pour les valeurs valides d'un type fermé (lister chaque `case` pour que TypeScript vérifie l'exhaustivité) ; `default` réservé au rejet de données externes invalides.
 
-**NestJS — `import type`** : `import type` est réservé aux interfaces pures et aux DTOs. Pour toute classe instanciée par le conteneur NestJS (use cases, services, repositories), utiliser `import { X }` — `emitDecoratorMetadata` émet `Object` pour les `import type`, ce qui cause `UnknownDependenciesException` au démarrage.
+**NestJS - `import type`** : réservé aux interfaces pures et DTOs. Toute classe injectée par NestJS (use case, service, repository) s'importe avec `import { X }` - sinon `emitDecoratorMetadata` émet `Object` → `UnknownDependenciesException`.
 
-**NestJS — DDD et tokens d'injection** : les interfaces TypeScript (`IVehicleRepository`, `ICatalogRepository`) ne sont pas injectables directement. Utiliser des tokens string (voir `vehicle.tokens.ts`) et fournir les use cases en `useFactory` dans le module pour garder le domaine sans décorateurs NestJS.
+**NestJS - DDD et tokens d'injection** : interfaces non injectables → tokens string (`team.tokens.ts`), use cases fournis en `useFactory` (modèle : `team.module.ts`, détail [ARCHITECTURE.md §3.4](docs/ARCHITECTURE.md#34-architecture-ddd---standard-du-projet)).
 
-**TypeORM — `where` sur une relation de collection** : un `where` posé sur une relation `OneToMany`/`ManyToMany` qui est aussi hydratée via `relations` **filtre la collection chargée** — elle ne contiendra que les lignes correspondant au critère, pas toutes. Pour récupérer l'agrégat complet à partir d'un de ses enfants, résoudre d'abord l'`id` du parent (`select: { id: true }`) puis recharger via un find par `id` scalaire (qui, lui, n'altère pas l'hydratation). Modèle : `VehicleRepository.findByWeaponId` → `findByIdForUser`.
+**TypeORM - `where` sur une relation de collection hydratée** : filtre la collection chargée. Pour charger un agrégat via un enfant : résoudre l'id du parent, puis recharger par id scalaire (modèle `TeamRepository.findByWeaponId`, cf. [ARCHITECTURE.md §3.4](docs/ARCHITECTURE.md#34-architecture-ddd---standard-du-projet)).
 
-**Migrations — additives uniquement** : une migration destructive (suppression, renommage, changement de type, `NOT NULL` sans `DEFAULT`, séquence d'enum TypeORM…) doit être réécrite en forme additive ou porter `// incompatible : <raison>` ; nouvelle valeur d'enum par `ALTER TYPE … ADD VALUE`, jamais utilisée dans le même lot ; `CONCURRENTLY` interdit. Vérifié en CI par `backend:migration:lint` — règle et raison : [docs/ARCHITECTURE.md §4](docs/ARCHITECTURE.md#4-base-de-données--postgresql-16).
+**Migrations - additives uniquement** : sinon marqueur `// incompatible : <raison>` ; nouvelle valeur d'enum par `ALTER TYPE … ADD VALUE`, jamais utilisée dans le même lot ; `CONCURRENTLY` interdit. Vérifié en CI (`backend:migration:lint`) - règle et raison : [ARCHITECTURE.md §4](docs/ARCHITECTURE.md#4-base-de-données-postgresql-16).
 
-**Journal d'événements — déclarer les valeurs nouvelles de sa release** : toute release qui ajoute une valeur persistée que la version précédente ne connaît pas (type d'événement, valeur d'énumération, clé de règle maison, clé de stratégie…) la déclare dans [apps/backend/src/migrations/valeurs-nouvelles.txt](apps/backend/src/migrations/valeurs-nouvelles.txt) — liste complète des cas, format et raison : en-tête de ce fichier.
+**Journal d'événements** : toute release qui ajoute une valeur persistée inconnue de la version précédente (type d'événement, valeur d'enum, clé de règle maison, clé de stratégie…) la déclare dans [valeurs-nouvelles.txt](apps/backend/src/migrations/valeurs-nouvelles.txt) (cas et format : en-tête du fichier).
 
-**CSS — Design tokens** : couleurs, fonds et transparence sont centralisés comme propriétés CSS natives dans le bloc `:root` de `apps/frontend/src/styles.scss` (palette "Terres Brûlées", `--tb-*`, thème sombre unique — pas de dark/light mode). Ne jamais coder une couleur en dur (hex ou `rgba()`) dans un fichier `.scss` de composant — utiliser `var(--tb-nom)`/`var(--clr-nom)` pour une couleur solide. Pour un fond/bordure/texte semi-transparent (badges, box d'état), utiliser exclusivement le jeu **fini** de tints sémantiques `--tint-{accent,danger,success,info}-{bg,border,text}` (+ `--tint-accent-bg-hover`/`--tint-danger-border-strong`) — ne jamais composer un `rgba()` ad hoc : au-delà d'un certain alpha le contraste texte/fond **redescend** plutôt que de monter (fond qui converge vers la couleur du texte), donc un nouveau palier doit être calculé (formule de luminance relative WCAG) et ajouté à ce jeu, jamais improvisé localement. La transparence reste réservée aux tints ci-dessus et à l'overlay de modale (`--clr-overlay`) — fonds solides partout ailleurs (cartes/boutons/panneaux). Détail de la conception (calculs de contraste, patterns par fichier) : `docs/plans/2026-07-19-couleurs-fonds-transparence-design.md`.
+**CSS - tokens** (bloc `:root` de `apps/frontend/src/styles.scss`, thème sombre unique) : jamais de couleur ni de taille de police en dur dans un `.scss` de composant.
 
-**CSS — Échelle de tailles de police** : même principe que les couleurs ci-dessus, appliqué à `font-size` — 13 tokens `--fs-{3xs,2xs,xs,sm,base,md,lg,xl,2xl,3xl,display-{sm,md,lg}}` dans le même bloc `:root` de `styles.scss`. Ne jamais coder une taille de police en dur (`rem`/`px`) dans un fichier `.scss` de composant — utiliser `var(--fs-nom)`. Ce bloc est redéfini une seconde fois dans un `@include bp.mobile { ... }` (breakpoint mobile partagé, `apps/frontend/src/app/shared/styles/_breakpoints.scss`, 640px) pour réduire **tous** les tokens de 20% sur petit écran, `--fs-3xs`/`--fs-2xs` compris — les exclure casserait la hiérarchie de tailles (ils se retrouveraient plus grands que `--fs-xs`/`--fs-sm` une fois ces derniers réduits). Exception documentée : `.markdown-content code` (`styles.scss`) reste en `0.88em` plutôt qu'un token — taille volontairement relative au titre englobant (`h1`/`h2`/`h3`/`p`), un token en `rem` casserait ce comportement.
+- Couleur solide : `var(--tb-*)`/`var(--clr-*)`. Semi-transparence : uniquement le jeu fini `--tint-{accent,danger,success,info}-{bg,border,text}` (+ `--tint-accent-bg-hover`, `--tint-danger-border-strong`) et `--clr-overlay` ; jamais de `rgba()` ad hoc (un nouveau palier se calcule en contraste WCAG). Fonds solides partout ailleurs.
+- Police : `var(--fs-*)` (13 tokens, tous réduits de 20 % sous 640px via `bp.mobile`).
+- Icônes : tailles inline (`ICON_SIZE_PX`, échelle desktop uniquement) ; la réduction mobile passe par `ViewportService.isMobile`, jamais par `ICON_SIZE_PX`.
+- Détail : [docs/plans/2026-07-19-couleurs-fonds-transparence-design.md](docs/plans/2026-07-19-couleurs-fonds-transparence-design.md).
 
-**CSS/TS — Échelle de tailles d'icônes** : `Icon` (`shared/icon/icon.ts`) affiche des icônes en sprite via des styles inline calculés en TypeScript (`ICON_SIZE_PX`, `icon-sizes.ts`) — un `@media` CSS n'a aucune prise sur un style inline, contrairement aux tokens `--fs-*` ci-dessus. La réduction de 20% sous 640px de large passe donc par un signal réactif (`ViewportService.isMobile`, `shared/viewport.service.ts` — `window.matchMedia`, même seuil 640px que `bp.mobile`), consommé par `Icon.sizePx` (`× 0.8` si mobile). Ne jamais modifier `ICON_SIZE_PX` pour cibler le mobile — ces valeurs sont l'échelle desktop uniquement.
+**Modales** : une modale à bouton « Enregistrer » ne persiste rien en dehors de ce bouton (pas d'auto-save partiel) - sinon « Annuler » devient trompeur.
 
 ---
 
 ## Processus obligatoire avant toute nouvelle fonctionnalité backend
 
-Avant d'écrire la moindre ligne de code, **invoquer le skill `ddd`** (théorie DDD,
-brainstorming de conception, questions de cadrage détaillées dans le skill —
-nouvel agrégat vs nouvelle règle métier, entités enfants/Value Objects, interfaces
-de repository, use case).
-
-Ce brainstorming évite de placer des règles métier au mauvais endroit (controller, repository, service utilitaire). La règle : logique métier → agrégat (`domain/`), orchestration → use case (`application/`), TypeORM/NestJS → infrastructure uniquement.
+**Invoquer le skill `ddd`** avant d'écrire du code. Règle : logique métier → agrégat (`domain/`), orchestration → use case (`application/`), TypeORM/NestJS → infrastructure. Aucune règle métier ni choix d'exception NestJS dans un use case si l'agrégat peut la porter (même refus → même chemin `DomainException` → 400) ; un contrôle en use case n'est légitime que s'il exige une donnée que l'agrégat n'a pas (catalogue, sponsor).
 
 ---
 
-## Scaffolding — étapes post-génération
+## Scaffolding - étapes post-génération
 
-Utiliser le skill `nx-generate` pour les générateurs. Points non-évidents :
-
-- **Module NestJS simple** : importer dans `app.module.ts`, ajouter l'entité dans la liste `entities` de TypeORM.
-- **Module NestJS domaine (DDD)** : créer les dossiers `domain/`, `application/`, `infrastructure/`. Déclarer des tokens d'injection dans `xxx.tokens.ts`. Fournir use cases et mapper en `useFactory` dans le module (voir `vehicle.module.ts` comme modèle).
-- **Composant Angular** : ajouter la route lazy dans [apps/frontend/src/app/app.routes.ts](apps/frontend/src/app/app.routes.ts).
-- **Contenu Markdown** : créer `content/<slug>.md` → disponible sans redémarrage via `GET /api/content/<slug>`.
+- **Module NestJS** : importer dans `app.module.ts`, ajouter l'entité à `ALL_ENTITIES` (`apps/backend/src/app/entities.ts`). Module domaine : dossiers `domain/`/`application/`/`infrastructure/` + tokens, modèle `team.module.ts`.
+- **Composant Angular** : route lazy dans [app.routes.ts](apps/frontend/src/app/app.routes.ts).
+- **Contenu Markdown** : `content/<slug>.md` → `GET /api/content/<slug>` sans redémarrage.
 
 ---
 
 ## Agent skills
 
-### Issue tracker
-
-Les tickets vivent dans les GitHub Issues du dépôt (CLI `gh`). See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Les 5 labels canoniques par défaut (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context : `GLOSSARY.md` + `docs/adr/` à la racine (créés à la demande). See `docs/agents/domain.md`.
+- **Issue tracker** : GitHub Issues (CLI `gh`), cf. `docs/agents/issue-tracker.md`.
+- **Triage labels** : `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, cf. `docs/agents/triage-labels.md`.
+- **Domain docs** : single-context, `GLOSSARY.md` + `docs/adr/` à la racine (créés à la demande), cf. `docs/agents/domain.md`.

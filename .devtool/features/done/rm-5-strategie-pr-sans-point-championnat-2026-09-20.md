@@ -30,7 +30,7 @@ déplacé (RM-4) et le réglage disponible (RM-3).
 > amendement du design
 > ([docs/plans/2026-09-21-regles-maison-mecanisme-design.md §4](../../docs/plans/2026-09-21-regles-maison-mecanisme-design.md))
 > et convention projet
-> ([ARCHITECTURE.md §3.4](../../docs/ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)).
+> ([ARCHITECTURE.md §3.4](../../docs/ARCHITECTURE.md#34-architecture-ddd---standard-du-projet)).
 > RM-5 implémente `NoChampionshipPointsStrategy` comme une entrée de plus dans le
 > registre de `HouseRuleStrategyFactory`, pas dans un registre séparé.
 

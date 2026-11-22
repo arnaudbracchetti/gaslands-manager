@@ -42,7 +42,7 @@ règle du jeu). Dans `content/docs/` :
 
 Chaque chapitre décrit le comportement observable de l'application, jamais
 les choix d'implémentation ni l'historique des changements. Les limitations
-connues (cf. [CAMPAIGN.md](../spec/CAMPAIGN.md#limitations-connues-vérifiées-dans-le-code-le-2026-07-03))
+connues (cf. [CAMPAIGN.md](../spec/CAMPAIGN.md#limitations-connues))
 sont mentionnées en langage joueur quand elles affectent un usage courant
 (ex. Atelier, Escarmouche) — pas en jargon technique.
 

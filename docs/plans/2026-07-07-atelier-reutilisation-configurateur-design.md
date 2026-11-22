@@ -21,7 +21,7 @@
 > assignWeaponToTourelle`/`unassignWeaponFromTourelle`, ci-dessous), une conception
 > **abandonnée**. Le montage sur Tourelle est désormais un attribut de l'arme
 > (`Weapon.montageTourelle`, coché à l'achat) — cf.
-> [spec/VEHICLES.md §Montage sur Tourelle](../spec/VEHICLES.md#montage-sur-tourelle-attribut-de-larme).
+> [spec/VEHICLES.md §Montage sur Tourelle](../spec/VEHICLES.md#montage-sur-tourelle).
 > Conséquence directe pour l'atelier : aucun endpoint ni événement dédié n'est nécessaire,
 > `POST .../events/equipment` (achat d'arme) suffit — la Tourelle hérite automatiquement du
 > mécanisme de revente/annulation déjà en place pour toute arme.

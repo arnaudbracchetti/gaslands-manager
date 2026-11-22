@@ -1,167 +1,105 @@
 # Équipes (Teams)
 
-> Sous-document de [SPECIFICATION.md](../SPECIFICATION.md).
-> Mettre à jour après tout changement du module Teams.
+> Sous-document de [SPECIFICATION.md](../SPECIFICATION.md) - propriétaire du CRUD équipes, des
+> verrouillages et de la fiche d'équipe exportable.
 
 ---
 
-## CRUD Équipes
+## CRUD équipes
 
-- **Lister** ses équipes (`GET /api/teams`) — filtrées par utilisateur connecté
-- **Créer** une équipe (`POST /api/teams`) : nom, sponsor (validé via le catalogue), budget en jerricans (défaut : 50), description optionnelle
-- **Modifier** une équipe (`PUT /api/teams/:id`) : tous les champs modifiables
-- **Supprimer** une équipe (`DELETE /api/teams/:id`) — avec confirmation utilisateur
+- **Lister** ses équipes (`GET /api/teams`), **créer** (`POST`, nom, sponsor validé par le catalogue,
+  budget en jerricans défaut 50, description optionnelle), **modifier** (`PUT /api/teams/:id`),
+  **supprimer** (`DELETE`, avec confirmation).
+- **Choix du sponsor** : carousel des 13 sponsors (description, classes, avantages).
+- **Sécurité** : un utilisateur n'accède qu'à ses équipes (filtre `userId`) ; sinon 404.
 
-**Réponse enrichie** : toutes les réponses de l'API Teams incluent `vehicleCount: number` — le nombre de véhicules appartenant à l'équipe.
+**Verrouillage du sponsor** : dès le premier véhicule, le sponsor n'est plus modifiable (badge, carousel
+bloqué), piloté côté frontend par `vehicleCount`. Raison : [VEHICLES.md](VEHICLES.md#sponsors-13).
 
-**Carousel de sélection du sponsor** : le formulaire de création/modification charge les 13 sponsors enrichis depuis `/api/catalog/sponsors` et les présente via un carousel interactif (navigation ←/→, indicateurs de position, description + classes + avantages de chaque sponsor).
+**Verrouillage par une campagne en cours** : une équipe engagée (participant `VALIDATED`) dans une
+campagne `EN_COURS` ou `TERMINEE` est entièrement verrouillée : `Team.assertNotLocked()` refuse (400)
+toute mutation directe (équipe, véhicules, armes, améliorations, avantages, renommage). Le flag est
+calculé par `TeamRepository` (jointure participant → état de campagne) au chargement, jamais stocké.
+**L'atelier n'est pas concerné** : il passe par l'event sourcing de la campagne et des méthodes de
+l'agrégat non soumises à ce verrou ([CAMPAIGN.md](CAMPAIGN.md#cycle-de-vie-dune-partie-et-phase-atelier)).
 
-**Règle de verrouillage du sponsor** : dès qu'un premier véhicule est ajouté à une équipe, le sponsor ne peut plus être modifié. Le carousel affiche un badge 🔒 et bloque la navigation. Cette règle est appliquée côté frontend via le champ `vehicleCount` retourné par l'API.
-
-Sécurité : un utilisateur ne peut accéder qu'à ses propres équipes (filtre `userId` côté backend). Toute tentative d'accès à une équipe d'un autre utilisateur retourne HTTP 404.
-
-**Verrouillage par une campagne en cours** : dès qu'une équipe est engagée (participant `VALIDATED`) dans une campagne dont l'état n'est plus `EN_CONSTRUCTION` (`EN_COURS` ou `TERMINEE`), l'équipe est intégralement verrouillée — `Team.assertNotLocked()` refuse (`DomainException` → HTTP 400) toute mutation directe : modification/suppression de l'équipe, ajout/suppression de véhicule, arme (montée sur Tourelle ou non), amélioration. Le flag est calculé par `TeamRepository` (jointure `CampaignParticipant` → `Campaign.state`) au chargement de l'agrégat, pas stocké en colonne. **Le flux atelier campagne n'est pas concerné** — pendant qu'une partie est en statut `ATELIER`, l'équipement continue de transiter par l'event-sourcing (`POST /api/campaigns/:id/events/equipment`, cf. [CAMPAIGN.md](CAMPAIGN.md)), qui utilise des méthodes dédiées de l'agrégat (`addCampaignVehicle`, `addCampaignWeapon`…) non soumises à ce verrou.
-
-**Suppression d'une équipe engagée comme organisateur de campagne** :
-`campaign_participants.teamId` porte une cascade SQL (`ON DELETE CASCADE`) —
-supprimer une équipe supprime silencieusement toute ligne `CampaignParticipant`
-qui la référence, sans jamais passer par l'agrégat `Campaign` ni sa garde
-`assertNotLastOrganizer`. `RemoveTeamUseCase` refuse donc (400) la suppression
-d'une équipe qui est l'équipe engagée du **dernier organisateur validé**
-d'une campagne (cette garde s'applique en pratique aux campagnes encore
-`EN_CONSTRUCTION` : au-delà, l'équipe est déjà bloquée par le verrouillage
-ci-dessus) — la vérification interroge
-`ITeamRepository.findCampaignsOrphanedIfTeamRemoved(teamId)`, mirroir de
-`ICampaignRepository.findCampaignsWhereSoleValidatedOrganizer(userId)` déjà
-utilisé côté suppression de compte (cf. [AUTH.md — Suppression d'un compte
-engagé comme organisateur de
-campagne](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne),
-même invariant, appliqué ici côté équipe plutôt que côté compte — implémenté
-directement dans `TeamRepository` via `CampaignParticipantOrm`, déjà accessible
-dans `TeamModule`, plutôt que via `ICampaignRepository`, pour ne pas créer de
-dépendance circulaire entre `TeamModule` et `CampaignModule`). Le message
-d'erreur liste les campagnes concernées par leur nom ; pour résoudre le
-blocage, engager une autre équipe ou promouvoir un autre organisateur avant
-de retenter la suppression.
+**Suppression de l'équipe du dernier organisateur** : `campaign_participants.teamId` porte un
+`ON DELETE CASCADE` qui supprimerait la participation sans passer par l'agrégat `Campaign`.
+`RemoveTeamUseCase` refuse donc (400, campagnes concernées citées) de supprimer l'équipe engagée du
+dernier organisateur validé d'une campagne (en pratique `EN_CONSTRUCTION`, au-delà le verrou ci-dessus
+s'applique). Vérification par `ITeamRepository.findCampaignsOrphanedIfTeamRemoved` (implémentée dans
+`TeamRepository` pour éviter une dépendance circulaire `TeamModule` ↔ `CampaignModule`). Même invariant
+côté compte : [AUTH.md](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne).
 
 ---
 
-## Résumé des véhicules sur la carte d'équipe
+## Liste des véhicules d'une équipe
 
-Chaque carte d'équipe affiche la liste de ses véhicules — nom (résolu depuis le catalogue via `nomInterne`) et coût total (prix de base du véhicule + somme des prix de ses armes et améliorations montées). Le frontend charge cette liste via `GET /api/teams/:id/vehicles` et résout les prix via le catalogue du sponsor (`GET /api/catalog/sponsors/:nom`, déjà chargé pour le carousel/builder).
-
-**Cas du montage sur Tourelle** : la Tourelle n'est pas une amélioration séparée mais une
-valeur d'orientation de l'arme (`Weapon.orientation === 'tourelle'`, cf.
-[VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation))
-— son coût ×3 est déjà porté par `weapon.prix`, résolu côté backend. Le total affiché
-est donc toujours exact, sans approximation (cf. `apps/frontend/src/app/teams/vehicle-summary.ts`).
-
----
-
-## Modifier / supprimer un véhicule depuis la liste d'équipe
-
-Chaque ligne de la liste (`VehicleSummaryCard`) est cliquable dans son intégralité pour *Gérer l'équipement* — même convention que les cartes équipe/campagne (`TeamCard`/`CampaignCard`) — et porte en plus un bouton dédié 🗑 *Supprimer*. "Modifier un véhicule" ne porte PAS sur ses caractéristiques de base (`nomInterne` immutable) mais sur son équipement : le clic sur la carte navigue vers `/teams/:teamId/vehicles/:vehicleId`, page dédiée (`VehicleConfiguratorPage` → `VehicleConfigurator`) qui permet d'ajouter ET de retirer armes/améliorations sur un véhicule existant. Le bouton *Supprimer* reste une action séparée (`$event.stopPropagation()` empêche son clic de déclencher aussi la navigation).
-
-La suppression d'un véhicule entier (`DELETE /api/vehicles/:id`, cascade sur son équipement) demande confirmation et **ne procède pas par suppression optimiste** : `vehicleCount` doit être resynchronisé après coup — il peut retomber à 0 et déverrouiller le choix du sponsor (cf. règle de verrouillage ci-dessus) — d'où un rechargement complet (`Teams.loadTeams`, déclenché par la recréation du composant au retour sur `/teams`) après chaque action destructrice.
+- Chaque carte d'équipe liste ses véhicules : nom et coût total (base + armes, améliorations et avantages,
+  coût ×3 d'une tourelle déjà porté par `weapon.prix`), calculés par `vehicle-summary.ts`.
+- Sur `/teams/:id/edit`, chaque carte véhicule est cliquable vers la gestion de l'équipement
+  (`/teams/:teamId/vehicles/:vehicleId`) ; un bouton dédié supprime le véhicule.
+- La suppression (`DELETE /api/vehicles/:id`, cascade) demande confirmation et **n'est pas optimiste** :
+  la liste est rechargée, car `vehicleCount` peut retomber à 0 et déverrouiller le sponsor.
 
 ---
 
 ## Fiche d'équipe exportable
 
-Bouton "Exporter la fiche d'équipe" sur `/teams/:id/edit` (`TeamEditPage`, masqué si
-l'équipe est verrouillée par une campagne en cours - cf. `isLockedByCampaign` ci-dessus)
-- génère un document HTML complet et imprimable (A4), destiné à servir de fiche de
-référence physique pendant une partie : 2 véhicules par ligne, statistiques (Manœuvrabilité/
-Équipage/Emplacements, et carré à dé pour la vitesse courante où le joueur pose un dé
-physique) suivies de la carrosserie en cases à cocher, puis un tableau d'équipement
-(armes/améliorations/avantages) avec une colonne "N°" étroite (renvoi vers l'annexe de
-règles, dédupliqué entre véhicules partageant un même équipement) et une colonne "Effet"
-(libellé court et/ou cases de munitions selon l'équipement) - une annexe de règles numérotée
-clôt le document. Sur écran (hors impression), le rendu est lui-même contraint à la largeur
-d'une page A4 (centré, `@media screen`) pour prévisualiser fidèlement la mise en page imprimée.
+Bouton « Exporter la fiche d'équipe » sur `/teams/:id/edit`, masqué si l'équipe est verrouillée par une
+campagne. `GET /api/teams/:id/sheet` renvoie un document HTML autonome (`text/html`), ouvert dans un
+nouvel onglet ; le joueur imprime ou enregistre en PDF depuis son navigateur (CSS `@page` A4, pas de PDF
+côté serveur). À l'écran, le rendu est contraint à la largeur A4 pour prévisualiser l'impression.
 
-**Bandeau d'en-tête** : outre le nom d'équipe, le sponsor et le coût total, affiche le nom
-du joueur connecté (son **pseudo**, via `req.user.callName` — cf.
-[AUTH.md — Nom d'affichage](AUTH.md#nom-daffichage-callname) ; jamais une requête DB
-supplémentaire) et, si disponibles, les points de sabotage sous forme de cases à cocher
-(une case par point) - une case par point permet au joueur de les cocher au fur et à mesure
-qu'il les dépense pendant la partie physique, même idiome visuel que les cases de munitions
-d'une ligne d'équipement. Cette ligne Sabotage n'apparaît que sur la fiche mode campagne
-(`GET /api/campaigns/:id/sheet`, cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode
-campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)) : la fiche "construction
-d'équipe" ci-dessous n'a pas cette notion (`sabotagePoints` toujours `null`), les Points de
-Résistance n'existant que dans le contexte d'une campagne (cf.
-[CAMPAIGN.md — Points de sabotage](CAMPAIGN.md#points-de-sabotage)). Sur cette même fiche
-mode campagne, le coût total lui-même est en plus **remplacé** par les Votes du Public
-gagnés en début de partie (cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode
-campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)).
+- **Bandeau** : logo (data URI, car une fenêtre `about:blank` ne résout pas d'URL relative), nom
+  d'équipe, sponsor, coût total, nom du joueur (`req.user.callName`, sans requête supplémentaire).
+- **Véhicules** : 2 par ligne ; statistiques (Manœuvrabilité, Équipage, Emplacements, carré à dé pour la
+  vitesse), carrosserie en cases à cocher, tableau d'équipement (armes, améliorations, avantages,
+  séquelles) avec colonne « N° » (renvoi vers l'annexe, dédupliqué entre véhicules) et colonne « Effet »
+  (`effet_court` et/ou cases de munitions).
+- **Annexe** de règles numérotée, toujours sur une nouvelle page.
+- **Pagination** : une carte véhicule n'est jamais coupée ; `break-inside: avoid` est posé à chaque niveau
+  (ligne, carte, sections, chaque ligne du tableau), par prudence envers les moteurs qui l'appliquent mal
+  aux conteneurs flex/table.
+- **Équipe verrouillée** : refusé (400) plutôt qu'une fiche incomplète - chocs et séquelles ne sont connus
+  que par replay de la campagne. La fiche se prend alors depuis la page de la campagne, qui ajoute
+  points de sabotage et Votes du Public ([CAMPAIGN.md](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)).
 
-**Pagination à l'impression** : une carte véhicule (et le texte de ses lignes d'équipement)
-ne doit jamais être coupée par un saut de page - si elle ne tient pas entièrement dans la
-place restante sur la page courante, elle est intégralement reportée sur la page suivante.
-`break-inside: avoid` (CSS) est posé à chaque niveau imbriqué de la carte (ligne de 2
-véhicules, carte, en-tête, statistiques, carrosserie, tableau d'équipement ET chacune de ses
-lignes) plutôt qu'une seule fois en haut, par prudence vis-à-vis des moteurs de rendu qui
-n'appliquent pas toujours cette règle de façon fiable à un conteneur flex/table. L'annexe
-démarre en plus systématiquement sur une nouvelle page (`break-before: page`), jamais à la
-suite de la dernière ligne de véhicules sur la page courante.
-
-**Logo dans l'en-tête** : le logo (`assets/logo-watermark.webp`, copie backend de
-`apps/frontend/public/logo-gaslands-manager.webp` - format WebP, bien plus léger que le
-PNG d'origine à qualité visuelle équivalente) est affiché en pleine opacité dans le
-bandeau d'en-tête, à gauche du nom d'équipe. Encodé en data URI directement dans le HTML
-(document autonome, cf. ci-dessus) plutôt que chargé via une URL - une fenêtre `about:blank`
-(où ce HTML est écrit côté frontend) ne résout aucune URL relative.
-
-**Pas de PDF généré côté backend** : `GET /api/teams/:id/sheet` renvoie du HTML brut
-(`Content-Type: text/html`), ouvert dans un nouvel onglet - le joueur utilise ensuite
-l'impression native de son navigateur ("Enregistrer en PDF"), le CSS `@page`/A4 étant
-déjà prévu pour un rendu imprimé propre.
-
-**Équipe verrouillée par une campagne** (cf. règle de verrouillage ci-dessus) : ce
-endpoint la rejette (HTTP 400) plutôt que de produire une fiche silencieusement
-incomplète - les chocs/séquelles réels d'une équipe engagée ne sont recalculés que par
-replay campagne, jamais reflétés par cette lecture directe. Pour une équipe engagée,
-la fiche s'exporte depuis la page de la campagne à la place - cf.
-[CAMPAIGN.md — Fiche d'équipe exportable (mode campagne)](CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne).
-
-Détail du format (mapper/renderer partagés avec le point d'entrée campagne, DTOs,
-règles de dédup des renvois) : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+Mapper et renderer partagés : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd---standard-du-projet).
 
 ---
 
-## Modèle de données — `Team`
+## Modèle de données - `Team`
 
 | Champ | Type | Contraintes |
-|-------|------|-------------|
-| `id` | number | PK, auto-incrémenté |
+|---|---|---|
+| `id` | number | PK |
 | `name` | string(100) | obligatoire |
-| `sponsor` | string(50) | défaut : `"Rutherford"` — immutable dès le 1er véhicule |
-| `cans` | number | budget en jerricans, défaut : 50 - valeur brute saisie par le joueur, ignorée pour tout calcul dès que l'équipe est engagée dans une campagne (cf. `budget`/`campaignBudget` ci-dessous et [spec/CAMPAIGN.md - Budget de campagne](CAMPAIGN.md#budget-de-campagne)) |
+| `sponsor` | string(50) | défaut `"Rutherford"`, immuable dès le 1er véhicule |
+| `cans` | number | budget saisi, défaut 50 ; inerte si l'équipe est engagée dans une campagne |
 | `description` | text | nullable |
-| `userId` | number | FK → User (`CASCADE` on delete) |
-| `createdAt` | Date | auto |
-| `updatedAt` | Date | auto |
+| `userId` | number | FK → User `CASCADE` |
+| `createdAt` / `updatedAt` | Date | auto |
 
-**Champs calculés dans la réponse API** (non stockés en base, exposés via `TeamSummaryDto` - cf. [ARCHITECTURE.md §3.6](../ARCHITECTURE.md)) :
+**Champs calculés** (`TeamSummaryDto`, depuis l'agrégat chargé) :
 
-| Champ | Type | Description |
-|-------|------|-------------|
-| `vehicleCount` | number | Nombre de véhicules de l'équipe. Utilisé par le frontend pour verrouiller le choix du sponsor. |
-| `vehiclesCost` | number | Coût cumulé de tous les véhicules de l'équipe (`Team.vehiclesCost`) - critère d'éligibilité au budget d'une campagne, comparé côté frontend au `budget` de la campagne visée (formulaires de création/inscription/changement d'équipe). |
-| `budget` | number | Budget applicable (`Team.budget`) : celui de la campagne engageante si elle en a une, sinon `cans`. Jamais recalculé par un consommateur. |
-| `campaignBudget` | number \| null | Non-null ⇒ budget imposé par une campagne - le champ `cans` devient alors en lecture seule côté IHM (`TeamEditPage`), cf. [spec/CAMPAIGN.md - Budget de campagne](CAMPAIGN.md#budget-de-campagne). |
-
-`TeamSummaryDto` (`team.repository.interface.ts`) - calculé via l'agrégat domaine chargé, jamais stocké en colonne.
+| Champ | Description |
+|---|---|
+| `vehicleCount` | nombre de véhicules (verrouillage du sponsor) |
+| `vehiclesCost` | coût cumulé des véhicules (éligibilité au budget d'une campagne) |
+| `budget` | budget applicable : celui de la campagne engageante, sinon `cans` |
+| `campaignBudget` | non null ⇒ budget imposé par une campagne, `cans` en lecture seule dans l'IHM |
+| `isEngaged` | équipe engagée dans une campagne |
+| `isLockedByCampaign` | verrouillage par une campagne en cours |
 
 ---
 
-## API Endpoints — Équipes
+## API Endpoints (JWT)
 
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| GET | `/api/teams` | JWT | Liste des équipes de l'utilisateur connecté |
-| POST | `/api/teams` | JWT | Créer une équipe |
-| PUT | `/api/teams/:id` | JWT | Modifier une équipe |
-| DELETE | `/api/teams/:id` | JWT | Supprimer une équipe — HTTP 400 si verrouillée par une campagne en cours, ou si elle est l'équipe engagée du dernier organisateur validé d'une campagne (cf. §Suppression d'une équipe engagée comme organisateur de campagne) |
-| GET | `/api/teams/:id/sheet` | JWT | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) — HTTP 400 si l'équipe est verrouillée par une campagne en cours |
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/teams` | mes équipes |
+| POST | `/api/teams` | créer |
+| PUT | `/api/teams/:id` | modifier (400 si verrouillée) |
+| DELETE | `/api/teams/:id` | supprimer (400 si verrouillée, ou équipe du dernier organisateur d'une campagne) |
+| GET | `/api/teams/:id/sheet` | fiche d'équipe HTML (400 si verrouillée) |

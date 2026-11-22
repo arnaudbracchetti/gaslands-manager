@@ -129,7 +129,7 @@ réussi, lint propre sur tout le code nouveau (les erreurs `typedef` restantes s
 les fichiers touchés sont préexistantes — même motif que `readonly eventType = …`
 déjà présent sur tous les autres événements). Documentation mise à jour :
 [spec/CAMPAIGN.md](../../../docs/spec/CAMPAIGN.md#points-de-résistance-mécanique-secrète)
-(limitation US-F1), [ARCHITECTURE.md §3.8](../../../docs/ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)
+(limitation US-F1), [ARCHITECTURE.md §3.8](../../../docs/ARCHITECTURE.md#38-mode-campagne---event-sourcing)
 (flux `EnterAtelierUseCase`, table des fichiers clés), et
 [DOMAIN_MODEL.md §4](../../../docs/DOMAIN_MODEL.md) (ERD, diagramme de classe `Game`,
 table des événements, répartition Campaign/Game).

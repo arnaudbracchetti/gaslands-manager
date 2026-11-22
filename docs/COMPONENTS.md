@@ -1,227 +1,18 @@
-# Composants Angular — Gaslands Manager
+# Composants Angular - Gaslands Manager
 
-> Source unique de vérité pour l'architecture frontend. Mettre à jour après tout ajout ou suppression de composant.
+> Rôle de chaque composant et comportements UI non évidents. Les signatures
+> (`input()`/`output()`) se lisent dans le code ; les règles métier sont dans
+> `docs/spec/`. Mettre à jour après tout ajout ou suppression de composant.
 
 ---
 
 ## Conventions
 
-### Smart vs Dumb
-
-- **Smart** : connaît les services, gère les appels HTTP et l'état d'affichage (Signals d'état, computed, subscriptions). Exemples : `Teams`, `SeasonDetail`, `EquipmentManager`.
-- **Dumb** : reçoit des données via `input()`, émet des événements via `output()`. Ne connaît aucun service. Exemples : `TeamCard`, `SponsorCarousel`, `ConfirmModal`.
-
-### Pattern `locked`
-
-Un composant dumb peut recevoir un input booléen `locked` pour appliquer une contrainte métier sans en connaître la raison. Le parent seul décide quand et pourquoi verrouiller (ex : sponsor immutable dès qu'un véhicule existe dans `SponsorCarousel`).
-
-### Signals et zoneless
-
-Zone.js est absent — tout changement d'état doit passer par un Signal (`signal()`, `computed()`). Utiliser `effect()` dans le constructeur pour réagir aux changements d'un `input()` Signal (ex : pré-remplissage de formulaire quand l'entité à éditer change).
-
----
-
-## Composants réutilisables
-
-Ces quatre composants sont indépendants de tout domaine métier et utilisables partout.
-
-### `SlotGauge` — `shared/slot-gauge/`
-
-Jauge visuelle représentant des emplacements occupés/disponibles (grille de carrés plein/vide).
-
-|               |                  |
-| ------------- | ---------------- |
-| **Sélecteur** | `app-slot-gauge` |
-| **Type**      | Dumb             |
-
-**Inputs**
-
-| Nom     | Type                   | Défaut | Description          |
-| ------- | ---------------------- | ------ | -------------------- |
-| `used`  | `number`               | —      | Emplacements occupés |
-| `total` | `number`               | —      | Capacité totale      |
-| `size`  | `'sm' \| 'md' \| 'lg'` | `'sm'` | Taille des carrés    |
-
-Utilisé par : `TeamCard`, `VehicleChoiceCard`, `VehicleSummaryCard`, `VehicleCostSummary`.
-
----
-
-### `ModalShell` — `shared/modal-shell/`
-
-Coquille de présentation commune à toutes les modales "standard" du design
-system Terres Brûlées (panel métal + coins d'enregistrement + bande
-HazardTape). Composant **dumb** malgré la projection de contenu via
-`<ng-content>` (première utilisation de ce mécanisme dans le projet) — il ne
-détient aucun service, seulement le chrome. Le contenu (titre, message,
-formulaire, liste...) est entièrement laissé au consommateur ; les styles du
-shell ne s'appliquent qu'à son propre chrome, jamais au contenu projeté
-(encapsulation de vue Angular : un nœud projeté garde l'attribut de portée du
-composant qui l'a créé, pas celui du shell).
-
-Couvre les **deux familles** de modales de l'application via `mode` :
-
-- `action` : deux boutons (Annuler/Action) — seuls eux ferment la modale,
-  aucune fermeture au clic hors de la boîte. Ex. `ConfirmModal`,
-  `SellVehicleModal`, `UserDetailsModal`, `ChangePasswordModal`,
-  `ChangeTeamModal`, `SequellaAdvantagePicker`.
-- `consultation` : un seul bouton (Fermer) — fermeture par ce bouton **ou**
-  par un clic hors de la boîte (ou touche Échap). Ex. `EquipmentDetailModal`,
-  `SequellaDetailModal`, `GameJournalModal`, `ParticipantJournalModal` — ces
-  deux derniers gagnent au passage la fermeture au clic extérieur/Échap
-  qu'ils n'avaient pas avant leur migration sur ce shell (lecture seule,
-  aucun état non sauvegardé — changement de comportement sans risque).
-
-`.ms-modal` porte `cdkTrapFocus`/`cdkTrapFocusAutoCapture` (Angular CDK) :
-`Tab` reste confiné à la boîte de dialogue, et le focus se déplace
-automatiquement vers son premier élément focusable à l'ouverture (restauré à
-la fermeture) — gratuit pour tous les consommateurs du shell, sans code
-supplémentaire de leur côté.
-
-|               |                   |
-| ------------- | ----------------- |
-| **Sélecteur** | `app-modal-shell` |
-| **Type**      | Dumb              |
-
-**Inputs**
-
-| Nom               | Type                         | Défaut        | Description                                                                                       |
-| ----------------- | ---------------------------- | ------------- | ------------------------------------------------------------------------------------------------- |
-| `ariaLabel`       | `string`                     | —             | Libellé accessible du dialog (requis)                                                             |
-| `mode`            | `'action' \| 'consultation'` | `'action'`    | Nombre de boutons et mécanisme de fermeture, cf. ci-dessus                                        |
-| `variant`         | `'danger' \| 'primary'`      | `'danger'`    | Couleur des coins/bande/bouton d'action (rouille / ambre)                                         |
-| `size`            | `'md' \| 'lg' \| 'xl'`       | `'md'`        | Largeur du panel (440px / 480px / 560px — `xl` pour un contenu riche : listes, règles détaillées) |
-| `confirmLabel`    | `string`                     | `'Confirmer'` | Ignoré en mode `consultation`                                                                     |
-| `cancelLabel`     | `string`                     | `'Annuler'`   | Libellé du bouton de fermeture                                                                    |
-| `confirmDisabled` | `boolean`                    | `false`       | Ignoré en mode `consultation`                                                                     |
-
-**Outputs**
-
-| Nom         | Type   | Description                                                                                          |
-| ----------- | ------ | ---------------------------------------------------------------------------------------------------- |
-| `confirmed` | `void` | Clic sur le bouton d'action (mode `action` uniquement — le bouton n'existe pas en `consultation`)    |
-| `cancelled` | `void` | Fermeture — clic bouton dans les deux modes, plus clic/Échap hors de la boîte en mode `consultation` |
-
-**Comportement mobile délibérément simplifié** : `ModalShell` ne rétrécit le
-panel que dans une limite `min(…, 96vw)` centrée — pas de bottom-sheet plein
-écran ancré en bas ni de footer d'actions sticky. Plusieurs des modales
-migrées vers ce shell (`ChangeTeamModal`, `GameJournalModal`,
-`ParticipantJournalModal`, `SequellaAdvantagePicker`) implémentaient
-auparavant un tel bottom-sheet à la main ; il a été abandonné au profit de ce
-comportement uniforme plutôt que d'étendre l'API du shell pour un seul usage.
-
-Utilisé par : `ConfirmModal`, `SellVehicleModal`, `UserDetailsModal`,
-`ChangePasswordModal`, `EquipmentDetailModal`, `SequellaDetailModal`,
-`GameJournalModal`, `ParticipantJournalModal`, `ChangeTeamModal`,
-`SequellaAdvantagePicker`, `CampaignForm`, et directement par `Campaigns`
-(modale "Rejoindre via code", markup inline sans composant dédié).
-
----
-
-### `ConfirmModal` — `shared/confirm-modal/`
-
-Dialog de confirmation générique. Le parent contrôle la visibilité via `@if`.
-Compose `ModalShell` (mode `action`) — ne garde en propre que le message
-projeté ; API externe inchangée par cette composition.
-
-|               |                     |
-| ------------- | ------------------- |
-| **Sélecteur** | `app-confirm-modal` |
-| **Type**      | Dumb                |
-| **Compose**   | `ModalShell`        |
-
-**Inputs**
-
-| Nom            | Type                    | Défaut        | Description                    |
-| -------------- | ----------------------- | ------------- | ------------------------------ |
-| `message`      | `string`                | —             | Question posée à l'utilisateur |
-| `confirmLabel` | `string`                | `'Confirmer'` | Label du bouton de validation  |
-| `cancelLabel`  | `string`                | `'Annuler'`   | Label du bouton d'annulation   |
-| `variant`      | `'danger' \| 'primary'` | `'danger'`    | Style du bouton de validation  |
-
-**Outputs**
-
-| Nom         | Type   | Description              |
-| ----------- | ------ | ------------------------ |
-| `confirmed` | `void` | L'utilisateur a confirmé |
-| `cancelled` | `void` | L'utilisateur a annulé   |
-
-Utilisé par : `TeamEditPage`, `EquipmentManager`, `CampaignDetail`, `AdminUsers`.
-
----
-
-### `Breadcrumb` — `shared/breadcrumb/`
-
-Fil d'ariane de navigation. Les items avec `route` sont des `RouterLink`, les autres sont du texte brut.
-
-|               |                  |
-| ------------- | ---------------- |
-| **Sélecteur** | `app-breadcrumb` |
-| **Type**      | Dumb             |
-
-**Inputs**
-
-| Nom      | Type               | Défaut | Description                                 |
-| -------- | ------------------ | ------ | ------------------------------------------- |
-| `crumbs` | `BreadcrumbItem[]` | —      | Liste `{ label: string; route?: string[] }` |
-
-Utilisé par : `VehicleConfiguratorPage`, `CampaignDetail`, `AtelierPage`, `AtelierVehiclePage`, `Documentation`, `DocumentationChapter`.
-
----
-
-### `VersionBadge` — `shared/version-badge/`
-
-Petit badge affichant la version actuellement déployée. Charge lui-même
-`GET /api/version` à l'initialisation (`IMAGE_TAG` lu par le backend via
-`process.env`, cf. [ARCHITECTURE.md §6](../ARCHITECTURE.md)) — composant
-autonome plutôt qu'intégré à `App` (le composant racine, déjà volumineux :
-menu utilisateur, modales de compte, aide contextuelle), pour isoler le fetch
-et son échec silencieux d'un simple repère cosmétique.
-
-**Pas de valeur par défaut** : si `IMAGE_TAG` est absent/vide côté serveur
-(`{ version: null }`) ou si la requête échoue, le badge ne s'affiche
-simplement pas — jamais de texte de repli (ex. "latest") qui laisserait
-croire à un vrai numéro de version.
-
-|               |                                    |
-| ------------- | ---------------------------------- |
-| **Sélecteur** | `app-version-badge`                |
-| **Type**      | Smart (fait son propre appel HTTP) |
-| **Services**  | `HttpClient`                       |
-
-Aucun input, aucun output.
-
-Utilisé par : `App` (composant racine, dans `.navbar-brand`, à côté du logo).
-
----
-
-### `ImpersonationBanner` — `shared/impersonation-banner/`
-
-Bandeau permanent affiché tant qu'un administrateur agit en usurpant
-l'identité d'un autre compte ("se connecter en tant que", cf.
-[AUTH.md — Usurpation d'identité](../docs/spec/AUTH.md#usurpation-didentité-se-connecter-en-tant-que)).
-Composant dumb : ne connaît ni `AuthService` ni la notion d'usurpation
-elle-même, seulement le nom à afficher et le clic sur "Revenir à mon compte".
-
-|               |                            |
-| ------------- | -------------------------- |
-| **Sélecteur** | `app-impersonation-banner` |
-| **Type**      | Dumb                       |
-
-**Inputs**
-
-| Nom                    | Type     | Défaut | Description                                                |
-| ---------------------- | -------- | ------ | ---------------------------------------------------------- |
-| `impersonatedUserName` | `string` | —      | Nom d'affichage (`callName`) du compte actuellement usurpé |
-
-**Outputs**
-
-| Nom             | Type   | Description                                                                                   |
-| --------------- | ------ | --------------------------------------------------------------------------------------------- |
-| `returnClicked` | `void` | Clic sur "Revenir à mon compte" — le parent (`App`) appelle `AuthService.stopImpersonation()` |
-
-Utilisé par : `App` (composant racine, entre `<nav>` et `<main>` - seul
-emplacement garanti visible sur tout écran), gated
-`@if (authService.impersonationActive())`.
+- **Smart** : connaît les services, fait les appels HTTP, porte l'état (Signals). **Dumb** : `input()`/`output()` uniquement, aucun service.
+- **Pattern `locked`** : un composant dumb reçoit un booléen `locked` pour appliquer une contrainte métier sans en connaître la raison (ex. `SponsorCarousel`, `HouseRulesSelector`, `MountedEquipment`).
+- **Le parent possède l'état d'une modale** (visibilité via `@if`, `saving`, `error`) ; la modale ne fait qu'émettre. Le `@if` recrée le composant à chaque ouverture, ce qui réinitialise son état local.
+- **Zoneless** : tout état passe par `signal()`/`computed()` ; réagir à un `input()` via `effect()` dans le constructeur (pré-remplissage de formulaire).
+- **Export de fiche HTML** : ouvrir la fenêtre de façon **synchrone** (`window.open('', '_blank')`) avant l'appel HTTP, sinon le navigateur la bloque comme popup ; écrire ensuite le HTML via `openHtmlDocumentInNewTab` (`shared/html-export.util.ts`).
 
 ---
 
@@ -288,6 +79,7 @@ graph TD
         GameForm
         GameResultWizard
         PresenceStep
+        SabotageStep
         RankingStep
         GatesStep
         JerricansStep
@@ -333,11 +125,13 @@ graph TD
     CampaignForm --> HouseRulesSelector
     EditCampaignModal --> HouseRulesSelector
     CampaignJoin --> QuickTeamCreate
+    CampaignJoin --> HouseRulesSelector
     CampaignDetail --> ParticipantList
     CampaignDetail --> ParticipantJournalModal
     CampaignDetail --> InviteLink
     CampaignDetail --> ChangeTeamModal
     CampaignDetail --> EditCampaignModal
+    CampaignDetail --> HouseRulesSelector
     CampaignDetail --> ConfirmModal
     CampaignDetail --> Breadcrumb
     CampaignDetail --> CampaignProgram
@@ -348,6 +142,7 @@ graph TD
     CampaignProgram --> ConfirmModal
     CampaignProgram -.->|navigate| AtelierPage
     AtelierPage --> VehicleSummaryCard
+    AtelierPage --> VehicleChoiceCard
     AtelierPage --> SellVehicleModal
     AtelierPage --> Breadcrumb
     AtelierPage -.->|navigate| AtelierVehiclePage
@@ -360,6 +155,7 @@ graph TD
     ParticipantAtelierPage --> TeamBudget
     ParticipantAtelierPage --> Breadcrumb
     GameResultWizard --> PresenceStep
+    GameResultWizard --> SabotageStep
     GameResultWizard --> RankingStep
     GameResultWizard --> GatesStep
     GameResultWizard --> JerricansStep
@@ -389,1614 +185,388 @@ graph TD
 
 ---
 
-## Domaine Auth
+## Shared - `shared/`
 
-### `Login` — `auth/login/`
+### SlotGauge
 
-Page de connexion (email + mot de passe). Navigue vers `/home` en cas de succès.
+_`shared/slot-gauge/` (dumb)_
 
-|               |                         |
-| ------------- | ----------------------- |
-| **Sélecteur** | `app-login`             |
-| **Type**      | Smart                   |
-| **Route**     | `/login`                |
-| **Services**  | `AuthService`, `Router` |
+Jauge d'emplacements occupés/disponibles (grille de carrés), tailles `sm`/`md`/`lg`.
 
----
+### ModalShell
 
-### `Register` — `auth/register/`
+_`shared/modal-shell/` (dumb)_
 
-Page d'inscription (prénom, nom, **pseudo**, email, mot de passe). Tous les champs sont obligatoires. Le pseudo est le nom sous lequel le joueur apparaîtra partout dans l'application (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)). Crée le compte et navigue vers `/home`.
+Chrome commun à toutes les modales (panel métal, coins, bande HazardTape, boutons) ; le contenu est projeté par `<ng-content>` et garde les styles de son composant d'origine.
 
-|               |                         |
-| ------------- | ----------------------- |
-| **Sélecteur** | `app-register`          |
-| **Type**      | Smart                   |
-| **Route**     | `/register`             |
-| **Services**  | `AuthService`, `Router` |
+- `mode="action"` : Annuler + Action, fermeture uniquement par ces boutons.
+- `mode="consultation"` : un seul bouton Fermer, fermeture aussi au clic hors de la boîte ou par Échap.
+- `cdkTrapFocus` sur la boîte : `Tab` confiné, focus initial automatique, restauré à la fermeture.
+- `variant` `danger` (rouille) / `primary` (ambre) ; `size` `md`/`lg`/`xl` (440/480/560px).
+- Mobile : simple rétrécissement `min(…, 96vw)`, pas de bottom-sheet (abandonné volontairement pour un comportement uniforme).
+- Bouton d'action hors de tout `<form>` : les modales à formulaire gardent un bouton submit invisible dans le `<form>` pour la soumission au clavier (Entrée).
 
----
+### ConfirmModal
 
-### `UserDetailsModal` — `auth/user-details-modal/`
+_`shared/confirm-modal/` (dumb, compose `ModalShell`)_
 
-Dialog "Détails du compte", ouvert depuis le menu utilisateur de la navbar
-(`App`, clic sur le pseudo en haut à droite — même structure trigger/
-backdrop/panel que le menu "⋯" de `ParticipantList`). Porte le formulaire
-Informations (prénom/nom/pseudo/email), avec son propre état de sauvegarde
-et sa propre erreur possédés par le parent (`App`) — même pattern que
-`ChangeTeamModal` (pré-remplissage via `effect()` sur l'input `user`,
-resynchronisé à chaque ouverture puisque l'instance du composant persiste
-entre deux ouvertures). Le rôle n'est pas affiché sur ce dialog (cf.
-[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)). Le changement de mot
-de passe vit dans sa propre modale, `ChangePasswordModal` (cf. ci-dessous),
-ouverte depuis une entrée de menu séparée. Compose `ModalShell` (mode
-`action`) — le bouton d'action du shell, hors de tout `<form>`, appelle
-directement `onProfileSubmit()` ; un bouton submit invisible reste dans le
-`<form>` pour préserver la soumission au clavier (Entrée dans un champ).
+Confirmation générique (message + 2 boutons).
 
-|               |                          |
-| ------------- | ------------------------ |
-| **Sélecteur** | `app-user-details-modal` |
-| **Type**      | Dumb                     |
-| **Compose**   | `ModalShell`             |
+### Breadcrumb
 
-**Inputs**
+_`shared/breadcrumb/` (dumb)_
 
-| Nom             | Type      | Défaut  | Description                                         |
-| --------------- | --------- | ------- | --------------------------------------------------- |
-| `user`          | `User`    | —       | Utilisateur courant (pré-remplissage du formulaire) |
-| `profileSaving` | `boolean` | `false` | Sauvegarde du formulaire Informations en cours      |
-| `profileError`  | `string`  | `''`    | Message d'erreur serveur du formulaire Informations |
+Fil d'ariane ; un item avec `route` est un `RouterLink`, sinon du texte.
 
-**Outputs**
+### VersionBadge
 
-| Nom                | Type               | Description                                                                                                                                                                             |
-| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cancelled`        | `void`             | Fermeture du dialog (bouton du shell)                                                                                                                                                   |
-| `profileSubmitted` | `UpdateProfileDto` | Formulaire Informations validé (prénom/nom/pseudo/email non vides). Le champ pseudo est pré-rempli avec `user.pseudo` — la valeur BRUTE, pas `user.callName` qui en dérive côté backend |
+_`shared/version-badge/` (smart)_
 
-Utilisé par : `App` (composant racine).
+Affiche la version déployée (`GET /api/version`) dans la navbar. Absent si la version est `null` ou si la requête échoue - jamais de texte de repli.
+
+### ImpersonationBanner
+
+_`shared/impersonation-banner/` (dumb)_
+
+Bandeau permanent pendant une usurpation d'identité (cf. [AUTH.md](spec/AUTH.md#usurpation-didentité-se-connecter-en-tant-que)), bouton « Revenir à mon compte ». Placé par `App` entre `<nav>` et `<main>`.
 
 ---
 
-### `ChangePasswordModal` — `auth/change-password-modal/`
+## Shell et Auth
 
-Dialog "Changer le mot de passe", ouvert depuis le menu utilisateur de la
-navbar (`App`), à côté de "Détails du compte" — extrait de
-`UserDetailsModal` pour devenir son propre point d'entrée. Pas d'input
-`user` (`ChangePasswordDto` ne référence aucune donnée de profil à
-pré-remplir), état de sauvegarde/erreur possédés par le parent (`App`),
-même principe que `UserDetailsModal`. Après un changement réussi, le parent
-appelle `authService.logout()` (déconnexion forcée, cf.
-[AUTH.md](../docs/spec/AUTH.md#auto-édition-du-profil)) — le dialog n'a donc
-pas besoin de vider ses propres champs, la redirection vers `/login` le
-démonte. Compose `ModalShell` (mode `action`), même traitement du bouton
-submit invisible que `UserDetailsModal` ci-dessus.
+### App
 
-|               |                             |
-| ------------- | --------------------------- |
-| **Sélecteur** | `app-change-password-modal` |
-| **Type**      | Dumb                        |
-| **Compose**   | `ModalShell`                |
+_racine (smart)_
 
-**Inputs**
+Navbar, menu utilisateur (« Détails du compte », « Changer le mot de passe »), possède l'état des deux modales de compte, lien « Aide sur cet écran » déduit de `data.docSlug` de la route active.
 
-| Nom      | Type      | Défaut  | Description              |
-| -------- | --------- | ------- | ------------------------ |
-| `saving` | `boolean` | `false` | Sauvegarde en cours      |
-| `error`  | `string`  | `''`    | Message d'erreur serveur |
+### Login / Register
 
-**Outputs**
+_`auth/login/`, `auth/register/` (smart)_
 
-| Nom         | Type                | Description                                                   |
-| ----------- | ------------------- | ------------------------------------------------------------- |
-| `cancelled` | `void`              | Fermeture du dialog (bouton du shell)                         |
-| `submitted` | `ChangePasswordDto` | Formulaire validé (correspondance + longueur ≥ 6 côté client) |
+Connexion et inscription (le pseudo est le nom affiché partout, cf. [AUTH.md](spec/AUTH.md#nom-daffichage-callname)), puis navigation vers `/home`.
 
-Utilisé par : `App` (composant racine).
+### UserDetailsModal
+
+_`auth/user-details-modal/` (dumb, compose `ModalShell`)_
+
+Édition prénom/nom/pseudo/email. Pré-remplie par `effect()` sur `user` ; le champ édité est le pseudo **brut**, jamais `callName`. Le rôle n'est pas affiché.
+
+### ChangePasswordModal
+
+_`auth/change-password-modal/` (dumb, compose `ModalShell`)_
+
+Changement de mot de passe ; après succès le parent appelle `logout()`, donc aucun reset des champs nécessaire.
 
 ---
 
 ## Pages publiques
 
-### `Home` — `home/`
-
-Page d'accueil publique avec présentation et liens vers les sections.
-
-|               |            |
-| ------------- | ---------- |
-| **Sélecteur** | `app-home` |
-| **Type**      | Smart      |
-| **Route**     | `/home`    |
+- **`Home`** - `home/` : accueil.
+- **`Documentation`** - `documentation/` : sommaire ; liste des chapitres générée depuis `GET /api/content/docs` (jamais codée en dur dans `index.md`).
+- **`DocumentationChapter`** - `documentation/documentation-chapter/` : s'abonne à `route.paramMap` (pas au snapshot) car l'instance est réutilisée d'un chapitre à l'autre.
+- **`DocLinksDirective`** (`[appDocLinks]`) : intercepte par délégation les clics sur les liens `/documentation/...` du HTML injecté (`[innerHTML]` n'est jamais compilé, donc pas de `routerLink`) pour naviguer sans rechargement.
+- **`Vehicles`** / **`Weapons`** : placeholders (cf. backlog [NAVIGATION.md](spec/NAVIGATION.md)).
 
 ---
 
-### `Documentation` — `documentation/`
+## Domaine Teams - `teams/`
 
-Sommaire de la documentation utilisateur (remplace l'ancien `Rules`, cf. [`docs/plans/2026-07-16-documentation-utilisateur-design.md`](plans/2026-07-16-documentation-utilisateur-design.md)). Charge l'intro (`GET /api/content/docs/index`) et, indépendamment, le sommaire ordonné (`GET /api/content/docs`) pour générer la liste des chapitres programmatiquement — jamais codée en dur dans `index.md`, seule source de vérité pour l'ordre/titres.
+### Teams
 
-|               |                                   |
-| ------------- | --------------------------------- |
-| **Sélecteur** | `app-documentation`               |
-| **Type**      | Smart                             |
-| **Route**     | `/documentation`                  |
-| **Services**  | `HttpClient`                      |
-| **Compose**   | `DocLinksDirective`, `Breadcrumb` |
+_`teams/` (smart, route `/teams`)_
 
-Fil d'ariane statique (un seul maillon, "Documentation", non cliquable — le sommaire est déjà la racine de la section).
+Liste des équipes, création via modale inline, charge les résumés de véhicules de chaque équipe.
 
----
+### TeamCard
 
-### `DocumentationChapter` — `documentation/documentation-chapter/`
+_`teams/team-card/` (dumb)_
 
-Un chapitre de la documentation utilisateur. S'abonne à `route.paramMap` (pas `route.snapshot.params`) : Angular réutilise cette même instance de composant en naviguant d'un chapitre à un autre (même route paramétrée), un snapshot lu une seule fois dans `ngOnInit` ne verrait jamais le changement de `:slug`. Le fil d'ariane ("Documentation" › titre du chapitre, `computed()` sur le titre chargé) remplace l'ancien lien "← Retour au sommaire" — même destination, cohérent avec le reste de l'appli où le fil d'ariane porte seul la navigation de retour.
+Carte d'équipe (sponsor, budget, véhicules), entièrement cliquable vers l'édition.
 
-|               |                                   |
-| ------------- | --------------------------------- |
-| **Sélecteur** | `app-documentation-chapter`       |
-| **Type**      | Smart                             |
-| **Route**     | `/documentation/:slug`            |
-| **Services**  | `HttpClient`, `ActivatedRoute`    |
-| **Compose**   | `DocLinksDirective`, `Breadcrumb` |
+### TeamForm
 
----
+_`teams/team-form/` (dumb)_
 
-### `DocLinksDirective` — `documentation/doc-links.directive.ts`
+Formulaire création/édition d'équipe ; `hasVehicles` verrouille le sponsor.
 
-Directive attributaire (`appDocLinks`), pas un composant — appliquée au conteneur `[innerHTML]` de `Documentation` et `DocumentationChapter`. Le contenu injecté n'étant jamais compilé par Angular, un `<a>` qu'il contient n'est jamais reconnu par `routerLink` ; cette directive écoute les clics par délégation d'événement sur le conteneur et prend la main uniquement sur les liens internes vers `/documentation/...` (`preventDefault` + `Router.navigateByUrl`), pour une navigation SPA sans rechargement. Les ancres `#section` same-page n'ont besoin d'aucune interception (défilement natif du navigateur).
+### SponsorCarousel
 
-|               |                          |
-| ------------- | ------------------------ |
-| **Sélecteur** | `[appDocLinks]`          |
-| **Type**      | Directive (attributaire) |
-| **Services**  | `Router`                 |
+_`teams/sponsor-carousel/` (dumb)_
 
----
+Carousel de choix du sponsor ; `avantages_sponsorises` converti en HTML côté client (`marked` + `DomSanitizer`) ; navigation bloquée si `locked`.
 
-### `Vehicles` — `vehicles/`
+### TeamEditPage
 
-Placeholder — affichera à terme le catalogue dynamique des véhicules depuis `/api/catalog/vehicules`.
+_`teams/team-edit-page/` (smart, route `/teams/:id/edit`)_
 
-|               |                |
-| ------------- | -------------- |
-| **Sélecteur** | `app-vehicles` |
-| **Type**      | —              |
-| **Route**     | `/vehicles`    |
+Deux panneaux : formulaire d'équipe, liste des véhicules (`VehicleSummaryCard`). Bouton « Exporter la fiche d'équipe » masqué si l'équipe est verrouillée par une campagne (cf. [TEAMS.md](spec/TEAMS.md#fiche-déquipe-exportable)).
 
----
+### VehicleSummaryCard
 
-### `Weapons` — `weapons/`
+_`teams/vehicle-summary-card/` (dumb)_
 
-Placeholder — affichera à terme le catalogue dynamique des armes depuis `/api/catalog/armes`.
+Résumé d'un véhicule (nom, coût, emplacements).
 
-|               |               |
-| ------------- | ------------- |
-| **Sélecteur** | `app-weapons` |
-| **Type**      | —             |
-| **Route**     | `/weapons`    |
+- Carte entièrement cliquable (`cardClicked`, clavier compris) ; le bouton supprimer/vendre stoppe la propagation (clic et clavier).
+- `isSold`/`isLost` affichent un tampon « Vendu »/« Perdu » ; `disabled` rend la carte inerte (ni rôle, ni focus, ni clic) et grisée.
+- `selected` : surbrillance, utilisée par `ParticipantAtelierPage`.
 
----
+### QuickTeamCreate
 
-## Domaine Teams
+_`teams/quick-team-create/` (dumb)_
 
-### `Teams` — `teams/` 🧠
+Création d'équipe par son seul nom, depuis les formulaires de campagne.
 
-Page principale listant toutes les équipes de l'utilisateur connecté. Gère la création via une modale inline et charge les résumés de véhicules pour chaque équipe.
+### VehicleConfiguratorPage
 
-|               |                                                              |
-| ------------- | ------------------------------------------------------------ |
-| **Sélecteur** | `app-teams`                                                  |
-| **Type**      | Smart                                                        |
-| **Route**     | `/teams`                                                     |
-| **Services**  | `TeamsService`, `VehicleService`, `CatalogService`, `Router` |
-| **Compose**   | `TeamCard`, `TeamForm`                                       |
+_`teams/vehicle-configurator-page/` (smart)_
 
-**Signals clés** : `teams`, `loading`, `showForm`, `vehicleSummaries: Map<number, VehicleSummary[]>`.
+Routes `/teams/:teamId/vehicles/new` et `/teams/:teamId/vehicles/:vehicleId`. Détermine le mode depuis la route, charge l'équipe, fournit le fil d'ariane. Gabarit `.vcp-page`/`.vcp-header` (sticky sous le fil d'ariane, `max-width: 1600px`), repris par les pages d'atelier.
 
----
+### VehicleConfigurator
 
-### `TeamCard` — `teams/team-card/`
+_`teams/vehicle-configurator/` (smart)_
 
-Carte d'affichage d'une équipe : nom, sponsor, barre de budget, liste des véhicules. Navigue vers la page d'édition au clic.
+En création : choix du véhicule (`VehicleChoiceCard`) ; une fois le véhicule créé ou chargé : `EquipmentManager`.
 
-|               |                 |
-| ------------- | --------------- |
-| **Sélecteur** | `app-team-card` |
-| **Type**      | Dumb            |
-| **Compose**   | `SlotGauge`     |
+### VehicleChoiceCard
 
-**Inputs**
+_`teams/vehicle-configurator/vehicle-choice-card/` (dumb)_
 
-| Nom        | Type               | Défaut | Description                              |
-| ---------- | ------------------ | ------ | ---------------------------------------- |
-| `team`     | `Team`             | —      | Équipe à afficher                        |
-| `index`    | `number`           | `1`    | Indice pour l'affichage (numéro formaté) |
-| `vehicles` | `VehicleSummary[]` | `[]`   | Résumés des véhicules de l'équipe        |
+Carte de choix d'un type de véhicule avec ses statistiques.
 
-**Outputs**
+### EquipmentManager
 
-| Nom           | Type   | Description                                   |
-| ------------- | ------ | --------------------------------------------- |
-| `cardClicked` | `Team` | Clic sur la carte → navigation vers l'édition |
+_`teams/vehicle-configurator/equipment-manager/` (smart)_
 
----
+Cœur de la gestion d'équipement, partagé entre construction d'équipe et atelier.
 
-### `TeamForm` — `teams/team-form/`
+- Passe par l'abstraction **`EquipmentDataSource`** (token `EQUIPMENT_DATA_SOURCE`, `equipment-data-source.ts`) : `TeamEquipmentDataSource` (construction, appels directs) ou `AtelierEquipmentDataSource` (atelier, `POST .../events/equipment` puis relecture `GET .../workshop`). Il ignore laquelle il utilise ; `renameVehicle` suit le même principe.
+- Les avantages sont affichés en 2 sous-listes, une par catégorie du sponsor (`classes_avantage[0]`/`[1]`) ; un avantage n'a jamais d'emplacement ni d'orientation.
+- Le montage sur Tourelle est une valeur d'orientation de l'arme (`'tourelle'`), choisie dans `EquipmentOption`.
+- **Séquelles** (4ᵉ catégorie, uniquement si `campaignId` est renseigné) : injecte directement `CampaignsService`/`CatalogService` (hors `EquipmentDataSource`, la monnaie est les Chocs et n'existe qu'en atelier). Cartes dédiées `em-sequella-card` (pas `EquipmentOption`, qui suppose jerricans + emplacement), clic → `SequellaDetailModal`. Dur à Cuire ouvre d'abord `SequellaAdvantagePicker`. Après un achat/retrait de séquelle, émet `sequellaChanged` (sans payload) : le parent recharge l'atelier. Règles : [CAMPAIGN.md - Séquelles](spec/CAMPAIGN.md#séquelles).
 
-Formulaire de création ou de modification d'une équipe (nom, sponsor, budget, description). Charge le catalogue de sponsors pour le carousel.
+### EquipmentOption
 
-|               |                   |
-| ------------- | ----------------- |
-| **Sélecteur** | `app-team-form`   |
-| **Type**      | Dumb              |
-| **Services**  | `CatalogService`  |
-| **Compose**   | `SponsorCarousel` |
+_`teams/vehicle-configurator/equipment-option/` (dumb, compose `EquipmentDetailModal`)_
 
-**Inputs**
+Carte d'un équipement disponible ; si orientable, sélecteur de direction (+ bouton « Tourelle x3 » si `montableSurTourelle`) avant d'émettre le choix. Carte cliquable → détail ; le bouton « + » stoppe la propagation.
 
-| Nom           | Type           | Défaut  | Description                                             |
-| ------------- | -------------- | ------- | ------------------------------------------------------- |
-| `team`        | `Team \| null` | `null`  | `null` = mode création, sinon pré-remplit le formulaire |
-| `saving`      | `boolean`      | `false` | Désactive les boutons pendant la sauvegarde             |
-| `hasVehicles` | `boolean`      | `false` | Verrouille le choix du sponsor                          |
+### EquipmentDetailModal
 
-**Outputs**
+_`.../equipment-option/equipment-detail-modal/` (dumb, `ModalShell` consultation `xl`)_
 
-| Nom          | Type            | Description                                 |
-| ------------ | --------------- | ------------------------------------------- |
-| `saved`      | `CreateTeamDto` | Formulaire soumis avec les données validées |
-| `formCancel` | `void`          | Annulation                                  |
+Détail d'un équipement (coût, emplacement, description, règles, raison de refus), sans action.
+
+### MountedEquipment
+
+_`.../equipment-manager/mounted-equipment/` (dumb)_
+
+Armes, améliorations, avantages et séquelles montés, avec boutons de retrait.
+
+- Arme sur Tourelle : badge « (Tourelle) ».
+- Équipement vendu : filigrane « Vendu » ; emplacements lus tels quels sur le DTO (déjà résiduels).
+- Séquelles (`showSequellas`, atelier uniquement) : « Retirer » seulement si `purchasedThisSession || sequellaResaleUnlocked`, sinon icône verrou.
+- `showWeapons`/`showImprovements`/`showAdvantages` (vrai par défaut) permettent de répartir les groupes sur plusieurs instances/colonnes (`ParticipantAtelierPage`).
+
+### TeamBudget
+
+_`.../equipment-manager/team-budget/` (dumb)_
+
+Budget de l'équipe tous véhicules confondus (barre, utilisé/total, solde ou dépassement) ; valeurs précalculées par le parent.
+
+### VehicleCostSummary
+
+_`.../equipment-manager/vehicle-cost-summary/` (dumb avec état local)_
+
+Nom éditable (auto-save au blur, émis seulement si changé) + jauge + coûts base/équipement/total + Chocs (atelier). Reçoit séparément `customName` (brut, `null` si jamais renommé) et `typeNom` ; l'état local `formNom` n'est resynchronisé que quand ces inputs changent, jamais pendant la frappe. Le format « Nom (Type) » est calculé côté backend.
+
+### SequellaAdvantagePicker
+
+_`.../equipment-manager/sequella-advantage-picker/` (dumb, `ModalShell` action)_
+
+Choix de l'avantage gratuit de Dur à Cuire parmi les 6 avantages « Dur à Cuire » (filtre fait par `EquipmentManager`) ; « Valider » désactivé sans choix.
+
+### SequellaDetailModal
+
+_`.../equipment-manager/sequella-detail-modal/` (dumb, `ModalShell` consultation `xl`)_
+
+Détail d'une séquelle (coût en Chocs, description, règles) - dédiée car `EquipmentDetailModal` suppose jerricans + emplacement.
 
 ---
 
-### `SponsorCarousel` — `teams/sponsor-carousel/`
+## Domaine Campaigns - `campaigns/`
 
-Carousel interactif pour choisir un sponsor. Navigation ←/→, affichage du nom, de la description et des avantages (Markdown → HTML). Navigation bloquée si `locked`.
+### Campaigns
 
-|               |                        |
-| ------------- | ---------------------- |
-| **Sélecteur** | `app-sponsor-carousel` |
-| **Type**      | Dumb                   |
-| **Services**  | `DomSanitizer`         |
+_`campaigns/` (smart, route `/campaigns`)_
 
-**Inputs**
+Liste des campagnes, badges de demandes en attente, création (`CampaignForm`) et modale « Rejoindre via code » inline (directement sur `ModalShell`).
 
-| Nom               | Type            | Défaut  | Description                                    |
-| ----------------- | --------------- | ------- | ---------------------------------------------- |
-| `sponsors`        | `SponsorInfo[]` | `[]`    | Liste des sponsors chargés depuis le catalogue |
-| `selectedSponsor` | `string`        | `''`    | Nom du sponsor actuellement sélectionné        |
-| `locked`          | `boolean`       | `false` | Bloque la navigation (équipe avec véhicules)   |
+### CampaignCard
 
-**Outputs**
+_`campaigns/campaign-card/` (dumb)_
 
-| Nom             | Type     | Description                        |
-| --------------- | -------- | ---------------------------------- |
-| `sponsorChange` | `string` | Nouveau nom de sponsor sélectionné |
+Carte de campagne : état, rôle, nombre de demandes à valider.
 
----
+### CampaignForm
 
-### `TeamEditPage` — `teams/team-edit-page/` 🧠
+_`campaigns/campaign-form/` (dumb, compose `ModalShell`, `QuickTeamCreate`, `HouseRulesSelector`)_
 
-Page de gestion d'une équipe (`/teams/:id/edit`). Layout deux panneaux : formulaire d'édition à gauche, liste des véhicules à droite. Gère la modification de l'équipe, l'ajout/suppression de véhicules.
+Création de campagne (nom, budget, règles maison, équipe optionnelle). Grise en direct les équipes hors budget (`ineligibleTeamIds`, recalculé à chaque frappe) ; sélectionne automatiquement une équipe créée à la volée ; règles maison accumulées localement et envoyées avec le reste.
 
-**Export de la fiche d'équipe** : bouton "Exporter la fiche d'équipe" dans l'en-tête du panneau véhicules, visible uniquement si `!isLocked()` (réutilise le même computed que le reste du verrouillage campagne — `Team.isLockedByCampaign`, pas `isEngaged`, cf. [spec/TEAMS.md](../docs/spec/TEAMS.md#fiche-déquipe-exportable)). `onExportSheet()` ouvre une fenêtre de façon SYNCHRONE (`window.open('', '_blank')`) avant l'appel à `TeamsService.getSheet()`, pour éviter qu'elle soit bloquée comme un popup non désiré ; le HTML reçu y est écrit via `openHtmlDocumentInNewTab` (`shared/html-export.util.ts`).
+### CampaignDetail
 
-|               |                                                                                |
-| ------------- | ------------------------------------------------------------------------------ |
-| **Sélecteur** | `app-team-edit-page`                                                           |
-| **Type**      | Smart                                                                          |
-| **Route**     | `/teams/:id/edit`                                                              |
-| **Services**  | `ActivatedRoute`, `Router`, `TeamsService`, `VehicleService`, `CatalogService` |
-| **Compose**   | `SponsorCarousel`, `VehicleSummaryCard`, `ConfirmModal`                        |
+_`campaigns/campaign-detail/` (smart, route `/campaigns/:id`)_
 
-**Signals clés** : `team`, `vehicles`, `loading`, `saving`, `hasVehicles`, `budgetUtilise`, `budgetRestant`, `pendingDeleteTeam`, `pendingDeleteVehicleId`.
+Page de détail ; fait le pont entre composants frères :
 
----
+- charge le classement (`/standings`, non bloquant) pour `ParticipantList`, rechargé sur `resultRecorded` de `CampaignProgram` ;
+- relaie `atelierStatusChanged` de `CampaignProgram` vers `ParticipantList` (`hasAtelierGame`) ;
+- possède l'état de `ParticipantJournalModal`, `ChangeTeamModal`, `EditCampaignModal`.
+- Modales rendues **hors** de `.campaign-detail-rail` : un ancêtre `position: sticky` piège un descendant `position: fixed` dans son propre rectangle.
+- `onExportSheet(pid)` choisit l'endpoint de fiche (soi-même ou un tiers) en comparant `pid` à `myParticipant().id`.
+- `onConfirmEditCampaign` enchaîne `PUT :id` (si nom/budget modifiables) puis `PUT :id/house-rules` ; si le premier échoue, le second n'est pas tenté et la modale reste ouverte avec l'erreur (jamais le bandeau générique).
+- Rail : section règles maison en lecture seule (`HouseRulesSelector` `locked`), visible par tous.
 
-### `VehicleSummaryCard` — `teams/vehicle-summary-card/`
+### CampaignJoin
 
-Carte affichant le résumé d'un véhicule dans la liste de l'équipe : nom, coût total, emplacements. Toute la carte est cliquable (`cardClicked`, même pattern que `TeamCard`/`CampaignCard` — `role="button"`, `tabindex="0"`, `(keydown.enter)`/`(keydown.space)`) ; le bouton supprimer/vendre reste une action séparée dans un coin de la carte, protégée par `$event.stopPropagation()` (clic ET clavier, pour ne pas déclencher `cardClicked` en même temps).
+_`campaigns/campaign-join/` (smart, route `/campaigns/join/:code`)_
 
-**Véhicule vendu/détruit (atelier campagne)** : `vehicle().isSold`/`.isLost` (cf.
-[spec/CAMPAIGN.md — Annulation d'achat vs revente](spec/CAMPAIGN.md#annulation-dachat-vs-revente))
-affichent un tampon "Vendu"/"Perdu" (`.tep-vehicle-card__status-badge`, même idiome
-visuel — inclinaison, tampon rouge en filigrane — que `.me-item__watermark` de
-`MountedEquipment`). L'input `disabled` (ci-dessous) rend en plus la carte inactive :
-retire `role`/`tabindex`, ignore clic/Entrée/Espace, grise la carte
-(`.tep-vehicle-card--disabled`, `filter: grayscale(0.4); opacity: 0.75`). `AtelierPage`
-pousse ces cartes en fin de liste (tri stable) et lie `disabled`/`showDelete` sur
-`isSold || isLost` ; `ParticipantAtelierPage` (lecture seule d'un tiers) applique le
-même tri et le même badge, mais laisse le clic actif (sélection pour consultation,
-aucun risque de mutation).
+Demande d'inscription par code. Grise les équipes hors budget ; un `effect()` sélectionne la première équipe éligible dès que le résumé **et** les équipes sont chargés (deux appels indépendants, ordre non garanti). Affiche les règles maison actives en lecture seule.
 
-|               |                            |
-| ------------- | -------------------------- |
-| **Sélecteur** | `app-vehicle-summary-card` |
-| **Type**      | Dumb                       |
-| **Compose**   | `SlotGauge`                |
+### ParticipantList
 
-**Inputs**
+_`campaigns/participant-list/` (dumb)_
 
-| Nom        | Type             | Défaut  | Description                                                                                                                                                                                                      |
-| ---------- | ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vehicle`  | `VehicleSummary` | —       | Résumé du véhicule                                                                                                                                                                                               |
-| `selected` | `boolean`        | `false` | Surbrillance "sélectionné" — utilisée par `ParticipantAtelierPage` (vue maître-détail en lecture seule) pour indiquer le véhicule actuellement consulté                                                          |
-| `disabled` | `boolean`        | `false` | Carte inactive (véhicule vendu/détruit) — retire rôle/focus clavier, ignore le clic, assombrit la carte. N'affecte pas l'affichage du badge "Vendu"/"Perdu" (piloté uniquement par `vehicle().isSold`/`.isLost`) |
+Liste unifiée des participants, triée par PC décroissants (tri stable ; badge PC seulement pour les `VALIDATED`).
 
-**Outputs**
+- Sa propre ligne : lien « Gérer mon équipe » dont la cible dépend de `manageTeamMode()` (`EN_CONSTRUCTION` → `/teams/:id/edit` ; atelier ouvert → `/campaigns/:id/atelier` ; sinon bouton grisé, pas absent) ; boutons historique et fiche d'équipe.
+- Ligne d'un autre : menu ⋯ visible par tout participant ; « Voir l'historique » et « Voir l'atelier » (lien direct vers `ParticipantAtelierPage`, hors `EN_CONSTRUCTION`) pour tous ; Promouvoir/Refuser/Retirer et « Fiche d'équipe » pour l'organisateur seulement.
+- Sections « En attente »/« Refusé » absentes du DOM pour un non-organisateur.
 
-| Nom             | Type             | Description                                                                                                                                                                                                                                                   |
-| --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cardClicked`   | `number`         | ID du véhicule, émis au clic (ou Entrée/Espace) sur la carte, sauf si `disabled` — l'action déclenchée dépend de l'écran appelant : navigation vers le configurateur (`AtelierPage`/`TeamEditPage`) ou sélection pour consultation (`ParticipantAtelierPage`) |
-| `deleteClicked` | `VehicleSummary` | Demande de suppression/vente du véhicule (bouton dédié, n'émet jamais `cardClicked`)                                                                                                                                                                          |
+### ParticipantJournalModal
 
----
+_`campaigns/participant-journal-modal/` (dumb, `ModalShell` consultation `xl`)_
 
-### `QuickTeamCreate` — `teams/quick-team-create/`
+Historique d'un participant sur toutes les parties, regroupé par partie (`Map` qui garde l'ordre déjà trié par le backend).
 
-Widget de création rapide d'équipe (champ nom uniquement). Utilisé dans les formulaires de saison pour créer une équipe à la volée sans quitter le flux.
+### InviteLink
 
-|               |                         |
-| ------------- | ----------------------- |
-| **Sélecteur** | `app-quick-team-create` |
-| **Type**      | Dumb                    |
+_`campaigns/invite-link/` (dumb)_
 
-**Inputs**
+Code d'invitation + bouton Copier (retour « Copié ! » temporaire).
 
-| Nom      | Type      | Défaut  | Description                                 |
-| -------- | --------- | ------- | ------------------------------------------- |
-| `saving` | `boolean` | `false` | Désactive les boutons pendant la sauvegarde |
+### ChangeTeamModal
 
-**Outputs**
+_`campaigns/change-team-modal/` (dumb, `ModalShell` action `primary`)_
 
-| Nom       | Type            | Description                  |
-| --------- | --------------- | ---------------------------- |
-| `created` | `CreateTeamDto` | Données de création soumises |
+Choix de l'équipe engagée ; grise les équipes hors budget **sauf** l'équipe déjà engagée ; option « Aucune équipe » pour l'organisateur.
 
----
+### EditCampaignModal
 
-### `VehicleConfiguratorPage` — `teams/vehicle-configurator-page/` 🧠
+_`campaigns/edit-campaign-modal/` (dumb, compose `ModalShell`, `HouseRulesSelector`)_
 
-Wrapper de page pour la configuration d'un véhicule. Détermine le mode (création vs édition) depuis la route, charge l'équipe, fournit le fil d'ariane.
+Modification nom/budget/règles maison. Toutes les bascules restent locales (`formHouseRules`) jusqu'à « Enregistrer », qui émet `{ nameBudget, houseRules }` (`nameBudget` `null` hors `EN_CONSTRUCTION`) ; « Annuler » ne persiste rien. Hors `EN_CONSTRUCTION`, nom/budget en `[readonly]` - pas `[disabled]`, que `FormsModule` écrase sur un champ `[ngModel]`. Ne se ferme jamais d'elle-même : le parent ferme en cas de succès ; l'erreur locale (nom vide) prime sur l'erreur serveur.
 
-|               |                                                                      |
-| ------------- | -------------------------------------------------------------------- |
-| **Sélecteur** | `app-vehicle-configurator-page`                                      |
-| **Type**      | Smart                                                                |
-| **Routes**    | `/teams/:teamId/vehicles/new` · `/teams/:teamId/vehicles/:vehicleId` |
-| **Services**  | `ActivatedRoute`, `Router`, `TeamsService`                           |
-| **Compose**   | `VehicleConfigurator`, `Breadcrumb`                                  |
+### HouseRulesSelector
 
-**Signals clés** : `team`, `vehicleId`, `loading`, `error`, `backRoute`, `breadcrumbs`.
+_`campaigns/house-rules-selector/` (dumb, `locked`)_
 
----
+Une case par règle maison, avec la ligne explicative qui bascule entre `description_cochee`/`description_decochee`. Entièrement contrôlé par le parent. Modifiable dans `CampaignForm`/`EditCampaignModal`, lecture seule dans `CampaignDetail`/`CampaignJoin`.
 
-### `VehicleConfigurator` — `teams/vehicle-configurator/` 🧠
+### CampaignProgram
 
-Orchestrateur unifié pour la création et l'édition d'équipement d'un véhicule. En mode création : affiche le choix du véhicule de base. Une fois le véhicule créé ou chargé, affiche `EquipmentManager`.
+_`campaigns/campaign-program/` (smart)_
 
-|               |                                         |
-| ------------- | --------------------------------------- |
-| **Sélecteur** | `app-vehicle-configurator`              |
-| **Type**      | Smart                                   |
-| **Services**  | `CatalogService`, `VehicleService`      |
-| **Compose**   | `VehicleChoiceCard`, `EquipmentManager` |
+Programme Télé : CRUD et réordonnancement des parties, ouverture du journal, pilotage du wizard de fin de partie (porte tous les appels HTTP du wizard : `recordResult`, `rollIncome`, `resolveWreck`, `resetResult`, `enterAtelier`).
 
-**Inputs**
+- Gestion active si organisateur et campagne pas `TERMINEE` (`canManage`).
+- Après un réordonnancement, recharge toujours (succès ou échec) pour se recaler sur le serveur.
+- `onWizardCancelled()` décide seul d'un reset serveur, selon que `wizardResultRecorded` est déjà non nul.
+- Émet `resultRecorded` et `atelierStatusChanged` (à chaque rechargement des parties) pour `CampaignDetail`.
 
-| Nom         | Type             | Défaut | Description                                      |
-| ----------- | ---------------- | ------ | ------------------------------------------------ |
-| `team`      | `Team`           | —      | Équipe propriétaire                              |
-| `vehicleId` | `number \| null` | —      | `null` = création, sinon ID du véhicule à éditer |
+### GameList
 
-**Outputs**
+_`campaigns/game-list/` (dumb)_
 
-| Nom    | Type   | Description                        |
-| ------ | ------ | ---------------------------------- |
-| `done` | `void` | Fin de la session de configuration |
+Liste des parties.
 
----
+- Réordonnancement (glisser-déposer CDK ou flèches, même idiome que `RankingStep`) limité aux parties `PLANIFIE` : les autres ne sont ni déplaçables (`cdkDragDisabled`) ni des cibles (`cdkDropListSortPredicate`). Copie locale `orderedGames` réinitialisée par `effect()` ; chaque déplacement émet aussitôt `reorderRequested`, sans bouton de validation.
+- Boutons Journal et Atelier visibles par tout participant (parties `ATELIER`/`JOUE`).
 
-### `VehicleChoiceCard` — `teams/vehicle-configurator/vehicle-choice-card/`
+### GameForm
 
-Carte de sélection du type de véhicule de base. Affiche les statistiques du véhicule (carrosserie, manoeuvrabilité, vitesse, équipage, emplacements, prix).
+_`campaigns/game-form/` (dumb)_
 
-|               |                           |
-| ------------- | ------------------------- |
-| **Sélecteur** | `app-vehicle-choice-card` |
-| **Type**      | Dumb                      |
-| **Compose**   | `SlotGauge`               |
+Ajout/édition d'une partie ; le type est déduit du scénario.
 
-**Inputs**
+### GameResultWizard
 
-| Nom        | Type       | Défaut | Description                              |
-| ---------- | ---------- | ------ | ---------------------------------------- |
-| `vehicule` | `Vehicule` | —      | Véhicule du catalogue filtré par sponsor |
+_`campaigns/game-result-wizard/` (dumb)_
 
-**Outputs**
+Orchestre les étapes du wizard de fin de partie ; la liste des étapes (`activeSteps`) dépend du type de partie et du scénario - règles et persistance : [CAMPAIGN.md - Wizard de fin de partie](spec/CAMPAIGN.md#wizard-de-fin-de-partie).
 
-| Nom      | Type       | Description                            |
-| -------- | ---------- | -------------------------------------- |
-| `chosen` | `Vehicule` | Le joueur a choisi ce type de véhicule |
+- Aucun appel HTTP : émet `batchReady` à la transition Désignation → Résolution, puis `incomeRollRequested`/`wreckRollRequested` (un `effect()`, un tirage à la fois, verrou `resolving`) et `wizardCompleted` ; les résultats reviennent par inputs.
+- Calcule `destroyedBy` pour l'écran Résolution.
+
+Étapes (dumb, sous `game-result-wizard/`) :
+
+- **`PresenceStep`** : présents (ordre de coche), « Suivant » désactivé sous 2 équipes.
+- **`SabotageStep`** : points de sabotage dépensés par équipe, 0 par défaut ; aucune validation client (solde secret, clamp serveur).
+- **`RankingStep`** : classement par glisser-déposer (Événement Télévisé).
+- **`GatesStep`** : portes franchies par équipe classée.
+- **`JerricansStep`** : butin manuel de scénario.
+- **`WreckDesignationStep`** : intact / mis en épave par X / seul, par véhicule ; case « Favori du public » seulement si le véhicule a le statut **et** `showFavoriDuPublic`.
+- **`WreckResolutionStep`** : synthèse automatique (revenus si `showIncome`, puis épaves), « Terminer » actif quand tous les résultats sont reçus.
+
+### GameJournalModal
+
+_`campaigns/game-journal-modal/` (dumb, `ModalShell` consultation `xl`)_
+
+Journal d'une partie, regroupé par participant dans l'ordre de première apparition.
+
+### AtelierPage
+
+_`campaigns/atelier-page/` (smart, route `/campaigns/:id/atelier`)_
+
+Liste des véhicules de l'équipe engagée en atelier (grille de `VehicleSummaryCard`, bouton vendre/annuler selon `purchasedThisSession`), achat d'un véhicule (`VehicleChoiceCard`), Cagnotte et Points de sabotage dans le même cadre. Véhicules vendus/détruits poussés en fin de liste (tri stable), cartes `disabled` sans bouton. Clic → `AtelierVehiclePage`.
+
+### SellVehicleModal
+
+_`campaigns/atelier-page/sell-vehicle-modal/` (dumb, `ModalShell` action `lg`)_
+
+Synthèse avant vente/annulation d'un véhicule : contenu actif, prix initial et montant récupéré par ligne, total. Montants calculés par le backend, jamais recalculés côté client.
+
+### AtelierVehiclePage
+
+_`campaigns/atelier-vehicle-page/` (smart, route `/campaigns/:id/atelier/vehicles/:vehicleId`)_
+
+Branche directement `EquipmentManager` (sans `VehicleConfigurator`) avec `AtelierEquipmentDataSource` fournie au niveau du composant. Budget calibré pour que le solde affiché égale la cagnotte. Transmet `chocs`/`sequellas` depuis `WorkshopVehicleDto` (seule forme qui les porte) ; recharge l'atelier à chaque `vehicleChanged`/`sequellaChanged`.
+
+### ParticipantAtelierPage
+
+_`campaigns/participant-atelier-page/` (smart, route `/campaigns/:id/participants/:pid/atelier`)_
+
+Atelier d'un autre participant en lecture seule, en maître-détail sur une seule page (la sélection du véhicule est un signal local, pas une route) : colonne de gauche `TeamBudget` + véhicules, détail à droite sur 2 colonnes (2 instances de `MountedEquipment`).
+
+- N'utilise **jamais** `EquipmentManager` : ses appels sont scopés à « mon » équipe côté backend.
+- Cartes vendues/détruites en fin de liste mais restent sélectionnables.
+- Titre « Atelier de [Équipe] ([Joueur]) » via `getParticipants`.
 
 ---
 
-### `EquipmentManager` — `teams/vehicle-configurator/equipment-manager/` 🧠
+## Domaine Admin - `admin/`
 
-Cœur de la gestion d'équipement. Charge les armes, améliorations **et avantages** disponibles (avec verdicts du backend), gère l'ajout/retrait — y compris le montage sur Tourelle, simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) choisie au moment de son ajout — et affiche le budget de l'équipe. Les avantages disponibles sont scindés en **2 sous-listes** (`advantagesCategoryA`/`advantagesCategoryB`), une par catégorie du sponsor (`Sponsor.classes_avantage[0]`/`[1]`), chacune sous son propre titre de section — un avantage n'occupe jamais d'emplacement (synthétisé à `0` sur l'option transmise à `EquipmentOption`) et ne demande jamais d'orientation.
+### AdminUsers
 
-**Renommage du véhicule** : `onRenameVehicle(nom)` délègue à `EquipmentDataSource.renameVehicle(vehicleId, nom)` (nouvelle méthode de l'abstraction DI, implémentée différemment par `TeamEquipmentDataSource`/`AtelierEquipmentDataSource` — cf. `AtelierVehiclePage` plus bas), câblé sur le `nameChanged` de `VehicleCostSummary` (`[customName]="vehicle().customName"`, `[typeNom]="chosenVehicule()?.nom ?? vehicle().nomInterne"`, `[disabled]="locked()"`).
+_`admin/users/` (smart, route `/admin/users`)_
 
-**Séquelles — 4ᵉ catégorie, atelier campagne uniquement** : si `campaignId` est renseigné (jamais le cas côté `VehicleConfigurator`, construction d'équipe), `EquipmentManager` charge aussi les séquelles ATELIER disponibles (`CampaignsService.getWorkshopAvailableSequelles`, injecté DIRECTEMENT — pas via `EquipmentDataSource`, qui ne couvre pas la monnaie Chocs) et affiche une section catalogue "Séquelles" au même niveau que Armes/Améliorations/Avantages, réutilisant le toggle "Afficher les indisponibles" existant. Chaque carte (`em-sequella-card`, dédiée — pas `EquipmentOption`, dont les badges supposent jerricans + emplacement) affiche une description courte et s'ouvre au clic sur `SequellaDetailModal` (description + règles complètes), même modèle d'interaction que Armes/Améliorations/Avantages (`EquipmentOption` → `EquipmentDetailModal`) — le bouton "Acquérir" stoppe la propagation du clic pour ne pas ouvrir la modale en même temps. Achat direct en un clic pour la plupart des séquelles ; **Dur à Cuire** ouvre d'abord `SequellaAdvantagePicker` (choix d'un avantage gratuit) avant l'achat (`CampaignsService.changeEquipment`). Retrait : annulation même-session toujours proposée (`purchasedThisSession`) ; revente cross-session gardée par `sequellaResaleUnlocked` (présence active de la séquelle "Légende Vivante" sur le véhicule — mirroir de `Vehicle.canRemoveSequella` côté backend), avec perte totale de Chocs (aucun remboursement, comme un avantage revendu). Les séquelles déjà acquises sont affichées par `MountedEquipment` (4ᵉ groupe, colonne de gauche) et le compteur de Chocs par `VehicleCostSummary` (en-tête, colonne de gauche) — tous deux `null`/absents en construction d'équipe.
+Gestion des comptes ; actions (activer/désactiver, réinitialiser le mot de passe, se connecter en tant que - comptes `user` uniquement, supprimer) dans un menu ⋯ posé à la main (pas de CDK Overlay, aucun ancêtre sticky ici). Pas de menu sur son propre compte. Seul écran qui montre pseudo **et** prénom/nom. En cas de suppression refusée (400), `loadUsers()` est appelé **avant** d'afficher le message serveur, sinon son `error.set('')` l'efface.
 
-|               |                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sélecteur** | `app-equipment-manager`                                                                                                                     |
-| **Type**      | Smart                                                                                                                                       |
-| **Services**  | `VehicleService`, `CampaignsService`, `CatalogService` (les deux derniers utilisés uniquement si `campaignId` est renseigné)                |
-| **Compose**   | `EquipmentOption`, `MountedEquipment`, `TeamBudget`, `VehicleCostSummary`, `ConfirmModal`, `SequellaAdvantagePicker`, `SequellaDetailModal` |
+### AdminResetPasswordModal
 
-**Inputs**
+_`admin/users/reset-password-modal/` (dumb, `ModalShell` action `primary`)_
 
-| Nom              | Type                    | Défaut | Description                                                                            |
-| ---------------- | ----------------------- | ------ | -------------------------------------------------------------------------------------- |
-| `vehicle`        | `Vehicle`               | —      | Entité véhicule brute (avec armes/améliorations montées)                               |
-| `sponsorCatalog` | `Sponsor`               | —      | Catalogue complet du sponsor (noms, prix, règles)                                      |
-| `team`           | `Team`                  | —      | Équipe (budget, autres véhicules)                                                      |
-| `campaignId`     | `number \| null`        | `null` | Présence ⇒ mode atelier actif (séquelles) — jamais renseigné par `VehicleConfigurator` |
-| `chocs`          | `number \| null`        | `null` | Chocs accumulés par ce véhicule, transmis à `VehicleCostSummary`                       |
-| `sequellas`      | `WorkshopSequellaDto[]` | `[]`   | Séquelles acquises, transmises à `MountedEquipment`                                    |
-
-**Outputs**
-
-| Nom               | Type      | Description                                                                                                                                            |
-| ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `vehicleChanged`  | `Vehicle` | Émis après chaque mutation d'armes/améliorations/avantages — le parent met à jour son signal                                                           |
-| `sequellaChanged` | `void`    | Émis après chaque achat/retrait de séquelle — sans payload (chocs/séquelles vivent hors du modèle `Vehicle`), le parent recharge tout l'état d'atelier |
-
-**Signals computed clés** : `emplacementsUtilises`, `emplacementsTotal`, `coutBase`, `coutEquipement` (inclut désormais les avantages), `coutTotal`, `budgetRestant`, `budgetDepasse`, `visibleWeapons`, `visibleImprovements`, `visibleAdvantages`, `visibleSequellas`, `advantagesCategoryA`/`advantagesCategoryB`, `sequellaResaleUnlocked`.
-
----
-
-### `EquipmentOption` — `teams/vehicle-configurator/equipment-option/`
-
-Carte d'un équipement disponible dans le catalogue. Si orientable, affiche un sélecteur de direction avant d'émettre le choix. Pour une arme catalogue `montableSurTourelle`, le sélecteur inclut aussi un bouton « Tourelle x3 » (même style que les 4 boutons d'orientation, coût ×3, exclusif avec le choix de direction). Ouvre `EquipmentDetailModal` au clic sur la carte.
-
-|               |                        |
-| ------------- | ---------------------- |
-| **Sélecteur** | `app-equipment-option` |
-| **Type**      | Dumb                   |
-| **Compose**   | `EquipmentDetailModal` |
-
-**Inputs**
-
-| Nom                   | Type                 | Défaut  | Description                                                                              |
-| --------------------- | -------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `option`              | `EquipmentOptionDto` | —       | Arme ou amélioration avec verdict de disponibilité (`montableSurTourelle` pour une arme) |
-| `requiresOrientation` | `boolean`            | `false` | Indique si un arc de tir doit être sélectionné                                           |
-
-**Outputs**
-
-| Nom      | Type              | Description                                                                                                               |
-| -------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `chosen` | `EquipmentChoice` | `{ nomInterne, orientation? }` (armes : 5 valeurs possibles dont `'tourelle'`) — émis seulement quand l'info est complète |
-
----
-
-### `EquipmentDetailModal` — `teams/vehicle-configurator/equipment-option/equipment-detail-modal/`
-
-Popup d'information sur un équipement : nom, coût, emplacement, description, règles complètes. Purement informative — aucune action d'ajout. Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`).
-
-|               |                              |
-| ------------- | ---------------------------- |
-| **Sélecteur** | `app-equipment-detail-modal` |
-| **Type**      | Dumb                         |
-| **Compose**   | `ModalShell`                 |
-
-**Inputs**
-
-| Nom                   | Type                 | Défaut  | Description                  |
-| --------------------- | -------------------- | ------- | ---------------------------- |
-| `option`              | `EquipmentOptionDto` | —       | Données de l'équipement      |
-| `requiresOrientation` | `boolean`            | `false` | Affiché dans les métadonnées |
-
-**Outputs**
-
-| Nom      | Type   | Description                                                              |
-| -------- | ------ | ------------------------------------------------------------------------ |
-| `closed` | `void` | Fermeture de la popup ("Annuler", clic hors de la boîte ou touche Échap) |
-
----
-
-### `MountedEquipment` — `teams/vehicle-configurator/equipment-manager/mounted-equipment/`
-
-Affiche les armes, améliorations, avantages **et séquelles** actuellement montés/acquis sur le véhicule, avec leurs boutons de retrait. Une arme montée sur Tourelle (`Weapon.orientation === 'tourelle'`) reçoit un badge « (Tourelle) » dans la liste des armes — ce n'est pas une ligne d'amélioration séparée. Un avantage revendu en atelier affiche le même filigrane "Vendu" que les autres équipements, mais son prix affiché **ne change jamais** (perte totale à la revente, contrairement à la moitié-prix des armes/améliorations) — reflet direct d'`Advantage.price`, jamais réduit. Le 4ᵉ groupe "Séquelles" (`showSequellas`, `false` par défaut — actif uniquement côté atelier) suit la même règle de perte totale à la revente, avec une nuance propre : le bouton "Retirer" n'apparaît que si `sequella.purchasedThisSession || sequellaResaleUnlocked()` — sinon une icône 🔒 indique que la revente cross-session est fermée (mirroir de `Vehicle.canRemoveSequella` côté backend).
-
-**Répartition sur plusieurs colonnes** : `showWeapons`/`showImprovements`/`showAdvantages` (mirroir de `showSequellas`, mais `true` par défaut — comportement historique inchangé pour `EquipmentManager`/`AtelierVehiclePage`, qui ne les renseignent jamais) permettent à un consommateur d'instancier le composant plusieurs fois, chacune ne gardant qu'un sous-ensemble des 4 groupes, pour répartir le détail sur plusieurs colonnes visuelles sans dupliquer le template. Utilisé par `ParticipantAtelierPage` (cf. ci-dessous) : une instance Armes+Améliorations, une instance Avantages+Séquelles.
-
-|               |                         |
-| ------------- | ----------------------- |
-| **Sélecteur** | `app-mounted-equipment` |
-| **Type**      | Dumb                    |
-
-**Inputs**
-
-| Nom                      | Type                    | Défaut  | Description                                                                                                                                                                                                                    |
-| ------------------------ | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `weapons`                | `Weapon[]`              | —       | Armes montées                                                                                                                                                                                                                  |
-| `showWeapons`            | `boolean`               | `true`  | Affiche le groupe "Armes" — `false` pour l'omettre d'une instance dédiée à d'autres groupes (cf. ci-dessus)                                                                                                                    |
-| `improvements`           | `VehicleImprovement[]`  | —       | Améliorations montées                                                                                                                                                                                                          |
-| `showImprovements`       | `boolean`               | `true`  | Affiche le groupe "Améliorations" — mirroir de `showWeapons`                                                                                                                                                                   |
-| `advantages`             | `VehicleAdvantage[]`    | —       | Avantages acquis (jamais d'orientation ni d'emplacement)                                                                                                                                                                       |
-| `showAdvantages`         | `boolean`               | `true`  | Affiche le groupe "Avantages" — mirroir de `showWeapons`                                                                                                                                                                       |
-| `sequellas`              | `WorkshopSequellaDto[]` | `[]`    | Séquelles acquises — atelier uniquement. `nom` déjà résolu côté backend (pas de résolution catalogue nécessaire, contrairement aux 3 autres)                                                                                   |
-| `sequellaResaleUnlocked` | `boolean`               | `false` | Débloque le retrait des séquelles pré-existantes (calculé par `EquipmentManager` depuis `sequellas`)                                                                                                                           |
-| `showSequellas`          | `boolean`               | `false` | Affiche le groupe "Séquelles" — gate explicite, jamais activé côté construction d'équipe                                                                                                                                       |
-| `sponsorCatalog`         | `Sponsor`               | —       | Pour résoudre les **noms** affichés depuis les `nomInterne` (les emplacements sont lus directement sur le DTO — `weapon.emplacement`/`improvement.emplacement`, résiduel résolu côté backend, `0` une fois l'équipement vendu) |
-
-**Outputs**
-
-| Nom                  | Type                  | Description                                                                        |
-| -------------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| `weaponRemoved`      | `Weapon`              | Demande de retrait d'une arme                                                      |
-| `improvementRemoved` | `VehicleImprovement`  | Demande de retrait d'une amélioration                                              |
-| `advantageRemoved`   | `VehicleAdvantage`    | Demande de retrait d'un avantage (mirroir de `weaponRemoved`/`improvementRemoved`) |
-| `sequellaRemoved`    | `WorkshopSequellaDto` | Demande de retrait d'une séquelle (mirroir des 3 outputs ci-dessus)                |
-
----
-
-### `TeamBudget` — `teams/vehicle-configurator/equipment-manager/team-budget/`
-
-Bloc d'affichage du budget de l'équipe (tous véhicules confondus) : barre de progression, jerricans utilisés/total, solde ou dépassement. Toutes les valeurs sont pré-calculées par `EquipmentManager`.
-
-|               |                   |
-| ------------- | ----------------- |
-| **Sélecteur** | `app-team-budget` |
-| **Type**      | Dumb              |
-
-**Inputs**
-
-| Nom                 | Type      | Défaut | Description                                 |
-| ------------------- | --------- | ------ | ------------------------------------------- |
-| `budgetEquipe`      | `number`  | —      | Budget total de l'équipe                    |
-| `coutEquipeTotal`   | `number`  | —      | Coût total de tous les véhicules            |
-| `budgetRestant`     | `number`  | —      | Solde restant (peut être négatif)           |
-| `budgetDepasse`     | `boolean` | —      | Vrai si dépassement                         |
-| `budgetPourcentage` | `number`  | —      | Pourcentage pour la barre (0–100, plafonné) |
-
----
-
-### `VehicleCostSummary` — `teams/vehicle-configurator/equipment-manager/vehicle-cost-summary/`
-
-Récapitulatif du coût du véhicule en cours : nom **éditable** (champ texte, auto-save au blur — même pattern que `TeamEditPage`/`formName`), jauge d'emplacements, décomposition base / équipement / total. Le nom est distinct du type catalogue (cf. [spec/VEHICLES.md — Nom du véhicule](../docs/spec/VEHICLES.md#construction-dun-véhicule)) : `customName` (valeur brute, `null` si jamais renommé) et `typeNom` (nom du type, fallback d'affichage/édition) sont fournis séparément par le parent — c'est le getter `Vehicle.nom` (backend) qui porte seul la règle d'affichage `"Nom (Type)"`, ce composant n'en a pas besoin pour l'édition (il travaille sur la valeur brute). Pas un composant purement "dumb" au sens habituel : il porte l'état local du champ (`formNom`), synchronisé par `effect()` uniquement quand `customName()`/`typeNom()` changent (jamais pendant la frappe).
-
-|               |                                  |
-| ------------- | -------------------------------- |
-| **Sélecteur** | `app-vehicle-cost-summary`       |
-| **Type**      | Dumb (avec état local d'édition) |
-| **Compose**   | `SlotGauge`                      |
-
-**Inputs**
-
-| Nom                    | Type             | Défaut  | Description                                                                                                                |
-| ---------------------- | ---------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `customName`           | `string \| null` | —       | Valeur brute du nom personnalisé, `null` si jamais renommé                                                                 |
-| `typeNom`              | `string`         | —       | Nom du type catalogue — fallback d'affichage/édition quand `customName` est `null`                                         |
-| `disabled`             | `boolean`        | `false` | Désactive le champ (équipe verrouillée hors Atelier)                                                                       |
-| `emplacementsUtilises` | `number`         | —       | Emplacements occupés                                                                                                       |
-| `emplacementsTotal`    | `number`         | —       | Capacité totale                                                                                                            |
-| `coutBase`             | `number`         | —       | Prix du châssis                                                                                                            |
-| `coutEquipement`       | `number`         | —       | Somme des armes et améliorations                                                                                           |
-| `coutTotal`            | `number`         | —       | Base + équipement                                                                                                          |
-| `chocs`                | `number \| null` | `null`  | Chocs accumulés (atelier uniquement) — ligne "💥 Chocs" affichée seulement si non-`null`, absente en construction d'équipe |
-
-**Outputs**
-
-| Nom           | Type     | Description                                                                                                                                  |
-| ------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nameChanged` | `string` | Émis au blur, uniquement si la valeur a changé (déjà trimmée) — le parent (`EquipmentManager`) délègue à `EquipmentDataSource.renameVehicle` |
-
----
-
-## Domaine Campaigns
-
-### `Campaigns` — `campaigns/` 🧠
-
-Page principale listant toutes les campagnes de l'utilisateur. Gère la création via une modale et affiche les badges de demandes en attente. Porte aussi la modale "Rejoindre via code" (markup inline, pas de composant dédié — un seul champ, pas de logique propre à extraire) : chrome délégué à `ModalShell` directement dans `campaigns.html`, même convention de bouton submit caché dans le `<form>` qu'`UserDetailsModal`/`ChangePasswordModal` pour préserver la soumission au clavier.
-
-|               |                                                                                   |
-| ------------- | --------------------------------------------------------------------------------- |
-| **Sélecteur** | `app-campaigns`                                                                   |
-| **Type**      | Smart                                                                             |
-| **Route**     | `/campaigns`                                                                      |
-| **Services**  | `CampaignsService`, `TeamsService`, `Router`                                      |
-| **Compose**   | `CampaignCard`, `CampaignForm`, `ModalShell` (modale "Rejoindre via code" inline) |
-
-**Signals clés** : `campaigns`, `loading`, `showForm`, `userTeams`, `pendingCampaignIds`, `organizedPendingCounts`.
-
----
-
-### `CampaignCard` — `campaigns/campaign-card/`
-
-Carte d'affichage d'une campagne : nom, état, badge de rôle (🏆 Organisateur / ⏳ En attente), alerte de demandes à valider.
-
-|               |                     |
-| ------------- | ------------------- |
-| **Sélecteur** | `app-campaign-card` |
-| **Type**      | Dumb                |
-
-**Inputs**
-
-| Nom                    | Type       | Défaut  | Description                                       |
-| ---------------------- | ---------- | ------- | ------------------------------------------------- |
-| `campaign`             | `Campaign` | —       | Campagne à afficher                               |
-| `index`                | `number`   | `1`     | Indice pour l'affichage                           |
-| `isPending`            | `boolean`  | `false` | Affiche le badge "En attente"                     |
-| `pendingRequestsCount` | `number`   | `0`     | Nombre de demandes à valider (badge organisateur) |
-
----
-
-### `CampaignForm` — `campaigns/campaign-form/`
-
-Formulaire de création d'une campagne (nom + budget des équipes + règles maison + sélection optionnelle d'une équipe). Propose la création rapide d'équipe via `QuickTeamCreate`. Auto-sélectionne la nouvelle équipe via `effect()`. Chrome (panel métal + coins + bande HazardTape + boutons) délégué à `ModalShell` (mode `action`, `variant="primary"`) - le composant porte sa propre modale, `Campaigns` (parent) n'a plus besoin de l'envelopper dans un overlay.
-
-**Budget des équipes** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : champ numérique `formBudget`, pré-rempli à `DEFAULT_CANS` (50). Le computed `ineligibleTeamIds` grise en direct (`[disabled]`, mention "(hors budget)") toute option d'équipe dont `team.vehiclesCost` dépasse la valeur actuellement saisie - recalculé à chaque frappe, avant même la soumission. `saveForm()` revérifie côté client qu'une équipe sélectionnée reste éligible (défense en profondeur, la garde réelle est côté domaine).
-
-**Règles maison** (RM-6, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)) : `HouseRulesSelector` accumule les clés cochées dans le signal local `formHouseRules` (`onHouseRuleToggled`), incluses dans le `CreateCampaignDto` émis à la soumission — aucune campagne n'existe encore à ce stade, donc pas de sauvegarde avant soumission (même principe que `EditCampaignModal` ci-dessous depuis RM-8, qui a abandonné son ancienne auto-sauvegarde immédiate).
-
-|               |                                                       |
-| ------------- | ----------------------------------------------------- |
-| **Sélecteur** | `app-campaign-form`                                   |
-| **Type**      | Dumb                                                  |
-| **Compose**   | `QuickTeamCreate`, `ModalShell`, `HouseRulesSelector` |
-
-**Inputs**
-
-| Nom                | Type                    | Défaut  | Description                                                                     |
-| ------------------ | ----------------------- | ------- | ------------------------------------------------------------------------------- |
-| `saving`           | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde                                     |
-| `teams`            | `Team[]`                | `[]`    | Équipes disponibles pour la sélection (`vehiclesCost` pilote le grisage budget) |
-| `creatingTeam`     | `boolean`               | `false` | Affiche un indicateur pendant la création rapide                                |
-| `houseRuleCatalog` | `HouseRuleDefinition[]` | `[]`    | Catalogue des règles maison, transmis à `HouseRulesSelector`                    |
-
-**Outputs**
-
-| Nom           | Type                | Description                                                          |
-| ------------- | ------------------- | -------------------------------------------------------------------- |
-| `saved`       | `CreateCampaignDto` | Données de création soumises `{ name, budget, houseRules, teamId? }` |
-| `formCancel`  | `void`              | Annulation                                                           |
-| `teamCreated` | `CreateTeamDto`     | Relaie la demande de création rapide d'équipe vers le parent         |
-
----
-
-### `CampaignDetail` — `campaigns/campaign-detail/` 🧠
-
-Page de détail d'une campagne (`/campaigns/:id`). Affiche participants, code d'invitation, transitions d'état. Les sections "En attente" et "Refusé" sont absentes du DOM pour les non-organisateurs. Charge également le classement (`GET .../standings`) pour transmettre les Points de Championnat à `ParticipantList` — chargement indépendant et non bloquant : si `/standings` échoue, la liste des participants reste affichée sans PC. Rechargé aussi via `onResultRecorded()`, appelé quand `CampaignProgram` émet `resultRecorded` après l'enregistrement d'un résultat de partie — sans ce pont, le classement resterait figé jusqu'au prochain rechargement de page. Relaie de même `atelierStatusChanged` (`onAtelierStatusChanged()`, signal `hasAtelierGame`) vers `ParticipantList`, pour que le lien "Gérer mon équipe" bascule vers l'Atelier dès qu'une partie y entre — cf. `ParticipantList` ci-dessous. Possède également l'état de la modale `ParticipantJournalModal` (`journalParticipant`/`participantJournalEntries`/`loadingParticipantJournal`, `onViewJournal()`/`onParticipantJournalClosed()`), ouverte quand `ParticipantList` émet `viewJournal` — même pattern "parent smart possède l'état de la modale" que `ChangeTeamModal`. Rendue en dehors de `.campaign-detail-rail` (colonne `position: sticky`), au même niveau que les `ConfirmModal` en bas du template — un ancêtre `sticky` peut piéger un descendant `position: fixed` dans son propre rectangle au lieu du viewport complet (bug constaté : le Programme, colonne principale, apparaissait par-dessus la modale).
-
-**Export de la fiche d'équipe** (déplacé depuis `GameList`/`CampaignProgram`) : `onExportSheet(pid)` répond à l'output `exportSheet` de `ParticipantList` — détermine self vs tiers en comparant `pid` à `myParticipant()?.id` (deux routes backend distinctes, pas de paramètre optionnel unique) et appelle `CampaignsService.getTeamSheet()` ou `getParticipantTeamSheet()` en conséquence. Même pattern `window.open` synchrone + `openHtmlDocumentInNewTab` que l'ancien `CampaignProgram.onExportSheet()` (désormais retiré de ce composant).
-
-**Badge budget** : à côté du nom et du badge d'état, un badge neutre (mirroir du registre `TERMINEE` - bordure rust, texte atténué, pas de fond teinté, puisque purement informatif) affiche `campaign()!.budget` en jerricans - cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
-
-**Modification de la campagne (nom/budget + règles maison)** : un bouton icône "✏️ Modifier" (`.campaign-detail-edit-btn`, mirroir de `.game-list__edit`), gated `canEditCampaign()` (`isOrganizer()` seul — RM-6 a retiré la condition `state === 'EN_CONSTRUCTION'`, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)), ouvre `EditCampaignModal` (état possédé par ce composant : `showEditCampaignModal`/`savingCampaign`/`editCampaignError`, plus `houseRuleCatalog`). `onConfirmEditCampaign({ nameBudget, houseRules })` (RM-8) enchaîne, sur le seul clic "Enregistrer" de la modale, `PUT /api/campaigns/:id` (si `nameBudget` non-null) **puis** `PUT .../house-rules` (toujours) — si le premier échoue, le second n'est pas tenté. Contrairement à `onConfirmChangeTeam` (qui ferme la modale avant même l'appel HTTP), `onConfirmEditCampaign()` **ne ferme pas** `showEditCampaignModal` en cas d'échec serveur, sur aucun des deux appels - seul `editCampaignError` est renseigné (message domaine tel quel, ex. équipe fautive + son coût, ou l'erreur des règles maison), pour que l'organisateur corrige la valeur sans rouvrir la modale (l'état local `formHouseRules` de la modale n'est pas perdu). `error` (bandeau générique de la page) n'est jamais utilisé pour ce flux.
-
-**Règles maison — affichage lecture seule (RM-7)** : dans le rail (`aside.campaign-detail-rail`), sous la section Participants, une section dédiée affiche `app-house-rules-selector` avec `[locked]="true"`, `[definitions]="houseRuleCatalog()"` (déjà chargé pour `EditCampaignModal`, réutilisé tel quel) et `[enabledKeys]="campaign()!.houseRules"` — sans gate `isOrganizer()`/`canEditCampaign()`, visible par tout participant validé, contrairement au bouton "✏️ Modifier".
-
-|               |                                                                                                                                                        |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Sélecteur** | `app-campaign-detail`                                                                                                                                  |
-| **Type**      | Smart                                                                                                                                                  |
-| **Route**     | `/campaigns/:id`                                                                                                                                       |
-| **Services**  | `ActivatedRoute`, `Router`, `CampaignsService`, `AuthService`, `TeamsService`                                                                          |
-| **Compose**   | `ParticipantList`, `ParticipantJournalModal`, `InviteLink`, `ChangeTeamModal`, `EditCampaignModal`, `HouseRulesSelector`, `ConfirmModal`, `Breadcrumb` |
-
-**Signals clés** : `campaign`, `participants`, `standings`, `championshipPoints`, `myTeams`, `loading`, `myParticipant`, `isOrganizer`, `canChangeTeam`, `validatedCount`, `pendingCount`, `journalParticipant`, `participantJournalEntries`, `loadingParticipantJournal`.
-
----
-
-### `CampaignJoin` — `campaigns/campaign-join/` 🧠
-
-Page de demande d'inscription à une campagne via son code d'invitation (`/campaigns/join/:code`). Charge le résumé de la campagne, propose la création rapide d'équipe.
-
-**Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise toute option d'équipe dont `team.vehiclesCost` dépasse `summary()!.budget`. Un `effect()` sélectionne automatiquement la première équipe éligible (ni déjà engagée, ni hors budget) dès que le résumé de la campagne et les équipes de l'utilisateur sont tous deux chargés - ces deux appels HTTP étant indépendants (`loadSummary`/`loadUserTeams`), leur ordre d'arrivée n'est pas garanti.
-
-**Règles maison — affichage lecture seule (RM-7)** : juste après la ligne budget, `app-house-rules-selector` (`[locked]="true"`, `[enabledKeys]="summary()!.houseRules"`) — même principe que le budget, visible avant même de rejoindre la campagne. Le catalogue (`houseRuleCatalog`) est chargé indépendamment dans `ngOnInit()` (`CampaignsService.getHouseRules()`, non bloquant), sur le même modèle que `CampaignDetail`.
-
-|               |                                                      |
-| ------------- | ---------------------------------------------------- |
-| **Sélecteur** | `app-campaign-join`                                  |
-| **Type**      | Smart                                                |
-| **Route**     | `/campaigns/join/:code`                              |
-| **Services**  | `ActivatedRoute`, `CampaignsService`, `TeamsService` |
-| **Compose**   | `QuickTeamCreate`, `HouseRulesSelector`              |
-
-**Signals clés** : `loading`, `summary`, `houseRuleCatalog`, `userTeams`, `selectedTeamId`, `submitting`, `submitted`, `ineligibleTeamIds`.
-
----
-
-### `ParticipantList` — `campaigns/participant-list/`
-
-Liste unifiée des participants d'une campagne avec boutons d'action adaptés au statut et au rôle. Encapsule toutes les règles de visibilité (organisateur uniquement, pas de self-reject sur le dernier organisateur, etc.).
-
-**Historique complet d'un participant** : sur sa propre ligne, un bouton icône 📜 (à côté du lien "Gérer mon équipe") émet `viewJournal`, toujours affiché tant que `participant.teamId` est renseigné — indépendamment de `campaignState`/`hasAtelierGame`. Sur toute autre ligne, le menu ⋯ (cf. ci-dessous) porte une entrée "Voir l'historique" qui émet le même événement. Contrairement aux autres entrées du menu, celle-ci est visible par **tout participant**, pas seulement l'organisateur — le menu ⋯, jusqu'ici gated `isOrganizer() && !isSelf(participant)`, est désormais gated uniquement `!isSelf(participant)` ; les actions organisateur (Promouvoir/Refuser/Retirer) restent gated individuellement à l'intérieur.
-
-**Classement (PC)** : la liste est triée par Points de Championnat décroissants (tri stable — tant qu'aucun point n'existe pour aucun participant, l'ordre affiché reste celui d'origine). Le badge "🏆 X PC" n'est affiché que pour les participants `VALIDATED` ; les `PENDING`/`REJECTED` comptent pour 0 PC dans le tri sans afficher de badge. Les PC proviennent de `GET /api/campaigns/:id/standings` (calculé côté backend, cf. [CAMPAIGN.md](spec/CAMPAIGN.md)), chargé par `CampaignDetail` et transmis sous forme de map.
-
-**Lien "Gérer mon équipe"** (propre ligne uniquement, `participant.teamId` requis) : cible dynamique, pilotée par le computed `manageTeamMode()` (`'edit' | 'atelier' | null`) — `EN_CONSTRUCTION` → `/teams/:id/edit` (construction standard) ; sinon, si une partie de la campagne est actuellement en statut `ATELIER` (`hasAtelierGame`) → `/campaigns/:id/atelier` ; sinon (campagne démarrée, aucun atelier ouvert) le bouton reste affiché mais **grisé** (`<button disabled>`, même classe visuelle que le lien actif) plutôt qu'absent du DOM. `hasAtelierGame` est une notion **campagne-wide** (un seul atelier actif à la fois) que `ParticipantList` ne peut pas déterminer elle-même — elle lui est transmise par `CampaignDetail`, qui la reçoit de `CampaignProgram` (composant frère, seul à charger la liste des parties) via l'output `atelierStatusChanged`, cf. `CampaignProgram` ci-dessous.
-
-**Consultation en lecture seule de l'atelier d'un tiers** : sur la ligne d'un autre participant, le menu ⋯ porte une entrée "Voir l'atelier" — visible dès que `participant.teamId` est renseigné **et** que `campaignState() !== 'EN_CONSTRUCTION'`. Contrairement à "Voir l'historique" (qui émet un `output` vers `CampaignDetail`, lequel possède l'état de la modale), c'est un lien direct (`[routerLink]` vers `ParticipantAtelierPage`, cf. ci-dessous) — la destination est une route déterministe, aucun état à posséder côté parent. Pas de contrainte d'atelier ouvert (contrairement à "Gérer mon équipe") : la lecture seule reste possible dès que la campagne a démarré.
-
-**Fiche d'équipe** (déplacée depuis `GameList`, cf. [CAMPAIGN.md — Fiche d'équipe exportable (mode campagne)](spec/CAMPAIGN.md#fiche-déquipe-exportable-mode-campagne)) : sur sa propre ligne, un bouton icône (à côté de "Voir mon historique") émet `exportSheet`, affiché dès que `participant.teamId && campaignId()` — **pas** de condition d'atelier ouvert, contrairement à son ancien emplacement dans `GameList` (le backend n'exige que `me.hasTeam`). Sur la ligne d'un autre participant, une entrée "Fiche d'équipe" dans le menu ⋯, réservée à l'organisateur (`@if (isOrganizer())`, aux côtés de Promouvoir/Refuser/Retirer) — contrairement à "Voir l'historique"/"Voir l'atelier", ouverts à tout participant. `CampaignDetail` (parent) détermine ensuite, selon le `pid` reçu, quel des deux endpoints backend appeler (soi-même vs tiers, cf. `onExportSheet` ci-dessus).
-
-|               |                        |
-| ------------- | ---------------------- |
-| **Sélecteur** | `app-participant-list` |
-| **Type**      | Dumb                   |
-
-**Inputs**
-
-| Nom                  | Type                          | Défaut      | Description                                                                                                       |
-| -------------------- | ----------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| `participants`       | `CampaignParticipant[]`       | —           | Tous statuts confondus                                                                                            |
-| `championshipPoints` | `ReadonlyMap<number, number>` | `new Map()` | PC par `participantId` — absent = 0 (aucune partie jouée)                                                         |
-| `isOrganizer`        | `boolean`                     | `false`     | Active les boutons d'action organisateur                                                                          |
-| `currentUserId`      | `number \| undefined`         | `undefined` | Pour masquer les actions sur soi-même                                                                             |
-| `canChangeTeam`      | `boolean`                     | `false`     | Affiche le lien "Changer d'équipe"                                                                                |
-| `campaignId`         | `number \| undefined`         | `undefined` | Pour construire le lien "Gérer mon équipe" (`TeamEditPage` ou Atelier)                                            |
-| `campaignState`      | `CampaignState \| undefined`  | `undefined` | Pilote la cible du lien "Gérer mon équipe" (`EN_CONSTRUCTION` → édition)                                          |
-| `hasAtelierGame`     | `boolean`                     | `false`     | Vrai si une partie de la campagne est actuellement en statut `ATELIER` — pilote la bascule du lien vers l'Atelier |
-
-**Outputs**
-
-| Nom           | Type                               | Description                                                                                                     |
-| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `validate`    | `{ pid: number; accept: boolean }` | Couvre PENDING→VALIDATED/REJECTED, VALIDATED→REJECTED, REJECTED→VALIDATED                                       |
-| `remove`      | `number`                           | `pid` — suppression définitive (organisateur, EN_CONSTRUCTION)                                                  |
-| `promote`     | `number`                           | `pid` — promotion co-organisateur                                                                               |
-| `changeTeam`  | `void`                             | Ouvre la modale de changement d'équipe                                                                          |
-| `viewJournal` | `number`                           | `pid` — consultation de l'historique complet (soi-même ou un autre participant, tout participant VALIDATED)     |
-| `exportSheet` | `number`                           | `pid` — export de la fiche d'équipe (soi-même, ou un autre participant via le menu ⋯ — organisateur uniquement) |
-
----
-
-### `ParticipantJournalModal` — `campaigns/participant-journal-modal/`
-
-Historique complet d'un participant, toutes parties de la campagne confondues — mirroir de `GameJournalModal` (cf. ci-dessous), mais groupé par **partie** (`gameId`) plutôt que par participant, puisque le participant est ici fixe et les parties multiples. Composant dumb : reçoit la liste plate des événements (`ParticipantJournalEntryDto`, avec `gameId`/`gameOrder`/`scenarioName` par entrée) et les regroupe via un `computed()` (`Map`, ordre d'insertion préservé) — le backend renvoie déjà les entrées triées par ordre de partie puis chronologiquement à l'intérieur de chaque partie. Ouverte depuis le bouton/menu "Voir l'historique" de `ParticipantList`, possédée par `CampaignDetail`. Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`).
-
-|               |                                 |
-| ------------- | ------------------------------- |
-| **Sélecteur** | `app-participant-journal-modal` |
-| **Type**      | Dumb                            |
-| **Compose**   | `ModalShell`                    |
-
-**Inputs**
-
-| Nom           | Type                           | Défaut  | Description                                |
-| ------------- | ------------------------------ | ------- | ------------------------------------------ |
-| `participant` | `CampaignParticipant`          | —       | Participant dont l'historique est affiché  |
-| `entries`     | `ParticipantJournalEntryDto[]` | `[]`    | Événements à plat, tels que reçus de l'API |
-| `loading`     | `boolean`                      | `false` | Affiche l'état de chargement               |
-
-**Outputs**
-
-| Nom      | Type   | Description            |
-| -------- | ------ | ---------------------- |
-| `closed` | `void` | Fermeture de la modale |
-
----
-
-### `InviteLink` — `campaigns/invite-link/`
-
-Affiche le code d'invitation d'une campagne avec un bouton "Copier". Feedback visuel temporaire "Copié !" après copie dans le presse-papiers.
-
-|               |                   |
-| ------------- | ----------------- |
-| **Sélecteur** | `app-invite-link` |
-| **Type**      | Dumb              |
-
-**Inputs**
-
-| Nom          | Type     | Défaut | Description                  |
-| ------------ | -------- | ------ | ---------------------------- |
-| `inviteCode` | `string` | —      | Code d'invitation à afficher |
-
----
-
-### `ChangeTeamModal` — `campaigns/change-team-modal/`
-
-Sélection d'une autre équipe à engager dans une campagne `EN_CONSTRUCTION`. Le parent contrôle la visibilité. Chrome délégué à `ModalShell` (mode `action`, `variant="primary"` — reproduit l'ambre `--tb-danger` du bouton "Valider", une action réversible, pas destructive).
-
-**Budget de campagne** (cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne)) : le computed `ineligibleTeamIds` grise (`[disabled]`, mention "(hors budget)") toute option d'équipe dont `team.vehiclesCost` dépasse `campaignBudget()` - sauf l'équipe déjà engagée (`currentTeamId`), jamais grisée par cette règle même si un arrondi ou un budget modifié entre-temps la mettrait tout juste hors budget, pour ne pas bloquer visuellement la sélection déjà valide en base.
-
-|               |                         |
-| ------------- | ----------------------- |
-| **Sélecteur** | `app-change-team-modal` |
-| **Type**      | Dumb                    |
-| **Compose**   | `ModalShell`            |
-
-**Inputs**
-
-| Nom              | Type             | Défaut  | Description                                                        |
-| ---------------- | ---------------- | ------- | ------------------------------------------------------------------ |
-| `teams`          | `Team[]`         | -       | Équipes de l'utilisateur (`vehiclesCost` pilote le grisage budget) |
-| `currentTeamId`  | `number \| null` | —       | Équipe actuellement engagée                                        |
-| `isOrganizer`    | `boolean`        | `false` | Affiche l'option "Aucune équipe" (organisateur peut se désengager) |
-| `campaignBudget` | `number`         | -       | Budget en jerricans de la campagne, requis                         |
-
-**Outputs**
-
-| Nom         | Type             | Description                                        |
-| ----------- | ---------------- | -------------------------------------------------- |
-| `confirmed` | `number \| null` | `teamId` sélectionné, ou `null` pour se désengager |
-| `cancelled` | `void`           | Annulation                                         |
-
----
-
-### `EditCampaignModal` - `campaigns/edit-campaign-modal/`
-
-Modification d'une campagne (organisateur). Pré-remplit le formulaire nom/budget/règles
-maison depuis `campaign` (input) via un `effect()` constructeur - même idiome que
-`ChangeTeamModal`/`TeamForm`. Chrome délégué à `ModalShell` (mode `action`,
-`variant="primary"`).
-
-**Un seul bouton "Enregistrer", toujours actif** - contrairement à une précédente version
-qui auto-sauvegardait chaque bascule de règle maison immédiatement et désactivait
-"Enregistrer" hors `EN_CONSTRUCTION` (laissant "Annuler" comme seule sortie possible, ce
-qui persistait silencieusement les règles maison malgré son nom - comportement jugé non
-logique et corrigé) : toute bascule d'`HouseRulesSelector` ne modifie plus qu'un état
-**local** (`formHouseRules`, même pattern que `CampaignForm`) - aucun appel réseau tant que
-la modale reste ouverte. `[confirmDisabled]` de `ModalShell` ne dépend plus que de
-`saving()`.
-
-**Nom/budget réservés à `EN_CONSTRUCTION`, la modale elle-même ne l'est plus** (RM-6) :
-`canEditNameBudget` (computed, `campaign().state === 'EN_CONSTRUCTION'`) pilote l'état
-`[readonly]` des deux champs (jamais `[disabled]` - un champ lié par `[ngModel]` voit sa
-propriété DOM `disabled` réinitialisée par `FormsModule`, qui écrase silencieusement toute
-liaison séparée ; `[readonly]` n'est géré par aucun `ControlValueAccessor`) et l'affichage
-d'une note explicative. La section règles maison, elle, reste toujours éditable - cf.
-ci-dessous.
-
-**`onConfirm()`** émet un unique `EditCampaignSubmission` (`{ nameBudget, houseRules }`,
-`campaign.model.ts`) : `nameBudget` vaut `null` hors `EN_CONSTRUCTION` (rien à soumettre,
-`houseRules` reste seul concerné) ; sinon `{ name, budget }` validé localement (nom non
-vide, trimmé). `houseRules` est toujours présent (`formHouseRules()`).
-
-**`cancelled`** ferme la modale sans rien émettre - toute bascule de règle maison faite
-pendant la session est perdue (le parent recrée le composant via `@if` à la prochaine
-ouverture, `formHouseRules` repart alors de `campaign().houseRules`).
-
-**Ne se ferme jamais automatiquement sur `confirmed`** - différence volontaire avec
-`ChangeTeamModal` : c'est le parent (`CampaignDetail`) qui décide de la fermeture,
-uniquement en cas de succès serveur (nom/budget ET règles maison, cf. ci-dessous). `error`
-(input, message domaine transmis par le parent, ex. "L'équipe « Escouade » coûte 40
-jerricans, au-delà du budget de la campagne (30).") reste affiché sous les champs tant que
-la modale est ouverte, pour que l'organisateur corrige la valeur sans rouvrir la modale -
-cf. [spec/CAMPAIGN.md - Budget de campagne](../docs/spec/CAMPAIGN.md#budget-de-campagne).
-`displayError` (computed) priorise l'erreur de validation locale (nom vide) sur `error`.
-
-**Règles maison** (RM-6/RM-8, cf. [spec/CAMPAIGN.md — Règles maison](../docs/spec/CAMPAIGN.md#règles-maison)) :
-`HouseRulesSelector` lit `formHouseRules()` (état local, pas `campaign().houseRules`
-directement) et son `(toggled)` met à jour ce même signal - aucun événement ne sort du
-composant avant le clic sur "Enregistrer".
-
-|               |                                    |
-| ------------- | ---------------------------------- |
-| **Sélecteur** | `app-edit-campaign-modal`          |
-| **Type**      | Dumb                               |
-| **Compose**   | `ModalShell`, `HouseRulesSelector` |
-
-**Inputs**
-
-| Nom                | Type                    | Défaut  | Description                                                                                                      |
-| ------------------ | ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `campaign`         | `Campaign`              | -       | Campagne à modifier - sert de pré-remplissage (nom/budget/règles maison)                                         |
-| `saving`           | `boolean`               | `false` | Désactive le bouton de confirmation et `HouseRulesSelector` pendant l'appel API (nom/budget et/ou règles maison) |
-| `error`            | `string`                | `''`    | Message d'erreur serveur (nom/budget ou règles maison - une seule soumission désormais)                          |
-| `houseRuleCatalog` | `HouseRuleDefinition[]` | `[]`    | Catalogue des règles maison, transmis à `HouseRulesSelector`                                                     |
-
-**Outputs**
-
-| Nom         | Type                     | Description                                                                             |
-| ----------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| `confirmed` | `EditCampaignSubmission` | `{ nameBudget, houseRules }` - `nameBudget` non-null seulement si `canEditNameBudget()` |
-| `cancelled` | `void`                   | Annulation - aucune bascule de règle maison n'est persistée                             |
-
----
-
-### `HouseRulesSelector` — `campaigns/house-rules-selector/`
-
-Liste des règles maison du catalogue - une case à cocher par règle, une ligne
-explicative en dessous dont le texte bascule selon l'état (cochée :
-`description_cochee`, comportement alternatif ; décochée : `description_decochee`,
-rappel du comportement par défaut) - cf. [spec/CAMPAIGN.md — Règles
-maison](../docs/spec/CAMPAIGN.md#règles-maison). Composant **dumb**, entièrement
-contrôlé par le parent (aucun état local mutable, aucun appel HTTP) - même pattern
-que `SponsorCarousel`. Porte le pattern `locked` du projet (cf. §Conventions en
-tête de ce document), réutilisé tel quel en mode non modifiable par
-`CampaignDetail`/`CampaignJoin` (RM-7 — affichage lecture seule, `[locked]="true"`
-constant, sans `(toggled)` branché), sans dupliquer le rendu - `EquipmentManager`/
-`MountedEquipment` en sont d'autres exemples.
-
-|               |                            |
-| ------------- | -------------------------- |
-| **Sélecteur** | `app-house-rules-selector` |
-| **Type**      | Dumb                       |
-
-**Inputs**
-
-| Nom           | Type                    | Défaut  | Description                                                    |
-| ------------- | ----------------------- | ------- | -------------------------------------------------------------- |
-| `definitions` | `HouseRuleDefinition[]` | `[]`    | Catalogue des règles maison (`GET /api/catalog/regles-maison`) |
-| `enabledKeys` | `string[]`              | `[]`    | Clés (`nom_interne`) actuellement activées                     |
-| `locked`      | `boolean`               | `false` | Lecture seule - désactive les cases et ignore tout clic        |
-
-**Outputs**
-
-| Nom       | Type                    | Description                                                                                                                                                             |
-| --------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `toggled` | `HouseRuleToggledEvent` | `{ nomInterne, enabled }` - émis à chaque bascule ; le parent décide comment persister (inclusion dans un DTO de création, ou sauvegarde immédiate en modale d'édition) |
-
-Utilisé par : `CampaignForm`, `EditCampaignModal` (mode modifiable) ; `CampaignDetail`
-(rail, tout participant validé) et `CampaignJoin` (avant de rejoindre, comme le
-budget) en mode lecture seule (`[locked]="true"`).
-
----
-
-### `CampaignProgram` — `campaigns/campaign-program/` 🧠
-
-Gère le Programme Télé (mode campagne) dans `CampaignDetail`. Charge les parties et le catalogue de scénarios, gère l'ajout/édition (formulaire inline), la suppression (confirmation) et le réordonnancement des parties `PLANIFIE` (`onReorder`, US-A4, cf. `GameList` ci-dessous — délègue à `CampaignsService.reorderGames` puis recharge systématiquement, succès ou échec, pour resynchroniser l'affichage sur l'état serveur). Toujours affiché par le parent ; la gestion (ajout/édition/suppression/réordonnancement) est active en `EN_CONSTRUCTION`/`EN_COURS` et passe en lecture seule en `TERMINEE` (via `canManage`).
-
-|               |                                                                                |
-| ------------- | ------------------------------------------------------------------------------ |
-| **Sélecteur** | `app-campaign-program`                                                         |
-| **Type**      | Smart                                                                          |
-| **Services**  | `CampaignsService`                                                             |
-| **Compose**   | `GameList`, `GameForm`, `GameResultWizard`, `GameJournalModal`, `ConfirmModal` |
-
-**Inputs**
-
-| Nom             | Type            | Défaut  | Description                                              |
-| --------------- | --------------- | ------- | -------------------------------------------------------- |
-| `campaignId`    | `number`        | —       | Campagne concernée                                       |
-| `isOrganizer`   | `boolean`       | `false` | Rôle organisateur (condition de gestion)                 |
-| `campaignState` | `CampaignState` | —       | État de la campagne ; `canManage` est faux en `TERMINEE` |
-
-**Outputs**
-
-| Nom                    | Type      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `resultRecorded`       | `void`    | Émis après l'enregistrement réussi d'un résultat de partie — signale au parent que les PC ont changé, pour rafraîchir le classement affiché par `ParticipantList` (composant frère, sans lien direct)                                                                                                                                                                                                                                                  |
-| `atelierStatusChanged` | `boolean` | Émis à chaque rechargement du programme (`loadGames()` — donc après toute mutation pouvant faire varier le statut d'une partie : création/édition/suppression, entrée/sortie d'atelier) — vrai si une partie de la campagne est actuellement en statut `ATELIER`. `CampaignDetail` le relaie à `ParticipantList` (`hasAtelierGame`) pour piloter la cible du lien "Gérer mon équipe", composant frère qui n'a sinon aucun moyen de connaître ce statut |
-
-**Signals clés** : `games`, `scenarios`, `loading`, `showForm`, `editingGame`, `saving`, `pendingDeleteGame`, `canManage` (= `isOrganizer && campaignState !== 'TERMINEE'`), `journalGame`, `journalEntries`, `loadingJournal` (état du journal d'une partie, cf. `GameJournalModal`), `recordingGame`, `wizardResultRecorded`, `wreckOutcomes`, `wreckDescriptions`, `incomeResults`, `resolving` (verrou revenu/épave, un tirage à la fois), `finalizingGame`, `resettingResult` (état du wizard de fin de partie, cf. `GameResultWizard`).
-
----
-
-### `GameList` — `campaigns/game-list/`
-
-Liste ordonnée des parties du programme (numéro, scénario, badges type/statut). Émet les actions Modifier/Supprimer/Enregistrer, affichées uniquement pour les parties `PLANIFIE` gérables.
-
-**Réordonnancement (US-A4)** : même idiome que l'écran Classement du wizard de fin
-de partie (`RankingStep`, cf. ci-dessous) — glisser-déposer Angular CDK (poignée
-⠿) ou flèches ▲▼ — mais restreint aux lignes `PLANIFIE` : une partie
-`ATELIER`/`JOUE` n'est ni draggable (`cdkDragDisabled`) ni un point de chute
-valide (`cdkDropListSortPredicate` refuse tout index actuellement occupé par une
-partie non-`PLANIFIE`), donc sa position ne bouge jamais, y compris pendant le
-survol d'un glisser. `orderedGames`, copie locale réordonnable de `games()`
-(même pattern `effect()` que `RankingStep.orderedParticipants`, réinitialisée à
-chaque changement de l'input), porte l'affichage ; `moveUp`/`moveDown` permutent
-directement deux parties `PLANIFIE` (jamais un décalage qui déplacerait une
-partie non-`PLANIFIE` intercalée). Chaque déplacement (drag ou flèche) émet
-aussitôt `reorderRequested` — pas de bouton de validation séparé, le parent
-(`CampaignProgram`) persiste puis recharge dans tous les cas (succès ou échec)
-pour resynchroniser l'affichage sur l'état serveur.
-
-|               |                 |
-| ------------- | --------------- |
-| **Sélecteur** | `app-game-list` |
-| **Type**      | Dumb            |
-
-**Inputs**
-
-| Nom         | Type      | Défaut  | Description                                                         |
-| ----------- | --------- | ------- | ------------------------------------------------------------------- |
-| `games`     | `Game[]`  | —       | Parties, déjà triées par le backend                                 |
-| `canManage` | `boolean` | `false` | Organisateur hors `TERMINEE` — active Modifier/Supprimer/Réordonner |
-| `canRecord` | `boolean` | `false` | Organisateur + campagne `EN_COURS` — active Enregistrer résultat    |
-
-**Outputs**
-
-| Nom                | Type       | Description                                                                                                                                                                                           |
-| ------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `editGame`         | `Game`     | Demande d'édition d'une partie                                                                                                                                                                        |
-| `deleteGame`       | `Game`     | Demande de suppression d'une partie                                                                                                                                                                   |
-| `recordGame`       | `Game`     | Ouvre le formulaire d'enregistrement de résultat                                                                                                                                                      |
-| `openJournal`      | `Game`     | Ouvre le journal de la partie — bouton visible pour **tout participant** dès que la partie est `ATELIER` ou `JOUE` (seule action affichée sur ces lignes-là, indépendante de `canManage`/`canRecord`) |
-| `openAtelier`      | `Game`     | Ouvre l'atelier (bouton 🔧 visible pour **tout participant** sur une partie en `ATELIER`) — le parent navigue vers `/campaigns/:id/atelier` (l'atelier est au niveau campagne, pas de la partie)      |
-| `reorderRequested` | `number[]` | Ids des parties `PLANIFIE` dans leur nouvel ordre relatif (jamais les ids `ATELIER`/`JOUE`) — émis après un drag ou un clic sur ▲▼                                                                    |
-
----
-
-### `GameForm` — `campaigns/game-form/`
-
-Formulaire d'ajout ou d'édition d'une partie. Sélecteur de scénario ; le type est déduit du scénario. `effect()` pré-remplit en mode édition (`game` non nul).
-
-|               |                 |
-| ------------- | --------------- |
-| **Sélecteur** | `app-game-form` |
-| **Type**      | Dumb            |
-
-**Inputs**
-
-| Nom         | Type           | Défaut  | Description                                    |
-| ----------- | -------------- | ------- | ---------------------------------------------- |
-| `scenarios` | `Scenario[]`   | `[]`    | Catalogue des scénarios pour le sélecteur      |
-| `saving`    | `boolean`      | `false` | Désactive les boutons pendant la sauvegarde    |
-| `game`      | `Game \| null` | `null`  | `null` = création, sinon pré-remplit (édition) |
-
-**Outputs**
-
-| Nom          | Type            | Description                                   |
-| ------------ | --------------- | --------------------------------------------- |
-| `saved`      | `CreateGameDto` | `{ scenarioId }` validé (création ou édition) |
-| `formCancel` | `void`          | Annulation                                    |
-
----
-
-### `GameResultWizard` — `campaigns/game-result-wizard/`
-
-Orchestrateur du wizard de fin de partie — **étapes variables**, pilotées par le type de
-partie (Événement Télévisé/Escarmouche) et les métadonnées du scénario
-(`franchissementPortes`/`gainJerricans`) : jusqu'à 7 écrans possibles (Présence →
-Sabotage → Classement → Portes → Jerricans → Désignation des épaves → Résolution),
-jamais tous affichés en même temps (`activeSteps` computed). Affiché via
-`CampaignProgram` pour les parties `PLANIFIE` en `EN_COURS`. Documents de conception :
-[`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
-(conception initiale, 3 écrans),
-[`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
-(refonte à étapes variables + parcours Escarmouche) puis
-[`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md)
-(ajout de l'écran Sabotage).
-
-**Persistance différée** : les 6 premiers écrans sont de l'état purement client (rien
-n'est envoyé au serveur) — le lot accumulé (classement+exploits+sabotage pour un ET, ou
-jerricans+destructions à 0 PC+sabotage pour une Escarmouche) n'est construit et émis
-(`batchReady`) qu'à la transition Désignation → Résolution.
-
-|               |                                                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Sélecteur** | `app-game-result-wizard`                                                                                                   |
-| **Type**      | Dumb                                                                                                                       |
-| **Compose**   | `PresenceStep`, `SabotageStep`, `RankingStep`, `GatesStep`, `JerricansStep`, `WreckDesignationStep`, `WreckResolutionStep` |
-
-**Inputs**
-
-| Nom                   | Type                                           | Défaut      | Description                                                                                                                                                                                           |
-| --------------------- | ---------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `game`                | `Game`                                         | —           | Partie dont on saisit le résultat — `type`/`franchissementPortes`/`gainJerricans` déterminent `activeSteps`                                                                                           |
-| `participants`        | `CampaignParticipant[]`                        | —           | Participants `VALIDATED` de la campagne                                                                                                                                                               |
-| `saving`              | `boolean`                                      | `false`     | Désactive les boutons pendant `recordResult()`                                                                                                                                                        |
-| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant (clé = `participantId`), pour l'écran Désignation                                                                                                                  |
-| `resultRecorded`      | `Game \| null`                                 | `null`      | Non-null une fois `recordResult()` résolu — fait avancer le wizard vers l'écran Résolution (`effect()`). La partie reste `PLANIFIE` à ce stade — la finalisation JOUE n'a lieu qu'à `wizardCompleted` |
-| `wreckOutcomes`       | `ReadonlyMap<number, WreckOutcomeDto>`         | `new Map()` | Résultats de tirage d'épave reçus, clé = `vehicleId`                                                                                                                                                  |
-| `wreckDescriptions`   | `ReadonlyMap<number, string[]>`                | `new Map()` | Lignes de texte décrivant les événements de chaque tirage d'épave (`GameEvent.describe()`), clé = `vehicleId`                                                                                         |
-| `incomeResults`       | `ReadonlyMap<number, RollIncomeResultDto>`     | `new Map()` | Résultats de revenu de base Escarmouche reçus, clé = `participantId`                                                                                                                                  |
-| `resolving`           | `boolean`                                      | `false`     | Verrou "un tirage à la fois" (revenu ou épave) — consommé par l'`effect()` de déclenchement automatique de l'écran Résolution                                                                         |
-| `finalizingGame`      | `boolean`                                      | `false`     | Désactive "Terminer" pendant l'appel à `enterAtelier()`                                                                                                                                               |
-| `resetting`           | `boolean`                                      | `false`     | Désactive "Annuler" à l'écran Résolution pendant l'appel à `resetResult()`                                                                                                                            |
-
-**Outputs**
-
-| Nom                          | Type                     | Description                                                                                                                                                                       |
-| ---------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `presentParticipantsChanged` | `number[]`               | Ids des présents à chaque changement (écran Présence) — le parent recharge `participantVehicles` en réponse                                                                       |
-| `batchReady`                 | `RecordResultDto`        | Lot accumulé (classement+exploits+sabotage ET, ou jerricans+destructions+sabotage Escarmouche), émis à la transition Désignation → Résolution                                     |
-| `incomeRollRequested`        | `number`                 | Demande de tirage de revenu automatique, un participant présent à la fois (écran Résolution, Escarmouche) — émis par un `effect()` interne                                        |
-| `wreckRollRequested`         | `WreckResolveRequestDto` | Demande de tirage d'épave automatique, un véhicule à la fois (écran Résolution, après les revenus le cas échéant) — émis par un `effect()` interne                                |
-| `wizardCompleted`            | `void`                   | Le wizard est entièrement terminé (écran Résolution, "Terminer") — le parent appelle `enterAtelier()` à ce signal, **c'est le seul moment où la partie passe PLANIFIE → ATELIER** |
-| `formCancel`                 | `void`                   | Annulation, à tout moment — le parent (`CampaignProgram`) décide seul si un reset serveur est nécessaire, selon que `wizardResultRecorded` est déjà non-null                      |
-
-Reste un composant "dumb" au sens habituel (aucun appel HTTP direct) : `CampaignProgram` (smart) porte `recordResult()`, `rollIncome()`, `resolveWreck()`, `resetResult()` et `enterAtelier()`, et repasse les résultats via `resultRecorded`/`wreckOutcomes`/`wreckDescriptions`/`incomeResults` — même pattern que `participantVehicles`/`presentParticipantsChanged` déjà en place. Calcule aussi `destroyedBy` (computed, à partir des `destroyedVehicles` capturés à l'écran Désignation) transmis à `WreckResolutionStep` pour afficher "Détruit par [participant]", et `activeSteps`/`currentStepId`/`rankedParticipants` pour piloter la navigation.
-
----
-
-### `PresenceStep` — `campaigns/game-result-wizard/presence-step/`
-
-Premier écran du wizard, toujours affiché : cases à cocher des participants `VALIDATED`
-présents à la partie. Extrait de l'ancien `RankingStep` (qui combinait présence et
-classement) — l'ordre de coche sert de point de départ à `RankingStep` pour un Événement
-Télévisé ; pour une Escarmouche (pas de classement), c'est directement l'ensemble des
-présents. Bouton "Suivant" désactivé tant que moins de deux équipes sont cochées
-(`hasMinimumPresence` computed, `MIN_PRESENT = 2`) — une partie oppose toujours au moins
-deux participants, jamais une partie en solo ; un avertissement (`.pst__hint--warning`)
-s'affiche dès qu'une seule équipe est cochée.
-
-|               |                     |
-| ------------- | ------------------- |
-| **Sélecteur** | `app-presence-step` |
-| **Type**      | Dumb                |
-
-**Inputs**
-
-| Nom            | Type                    | Défaut  | Description                                 |
-| -------------- | ----------------------- | ------- | ------------------------------------------- |
-| `participants` | `CampaignParticipant[]` | —       | Participants `VALIDATED` de la campagne     |
-| `saving`       | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde |
-
-**Outputs**
-
-| Nom                          | Type       | Description                                             |
-| ---------------------------- | ---------- | ------------------------------------------------------- |
-| `next`                       | `number[]` | Ids présents (ordre de coche), une fois l'étape validée |
-| `presentParticipantsChanged` | `number[]` | Ids des présents à chaque changement                    |
-| `formCancel`                 | `void`     | Annulation                                              |
-
----
-
-### `SabotageStep` — `campaigns/game-result-wizard/sabotage-step/`
-
-Écran Sabotage — **toujours affiché**, juste après Présence, sans condition de
-scénario (contrairement à `GatesStep`/`JerricansStep`). Déclaration rétroactive par
-l'organisateur du nombre de points de sabotage dépensés par équipe pendant la partie
-(annonce orale à table) — cf. [spec/CAMPAIGN.md — Points de
-sabotage](spec/CAMPAIGN.md#points-de-sabotage). Même gabarit que `GatesStep`/
-`JerricansStep` : un champ numérique par participant présent, à 0 par défaut — "Suivant"
-ne coûte qu'un clic si personne n'a rien déclaré. Le solde de sabotage n'est jamais
-affiché à cet écran (secret) : aucune validation côté client, le clamp au solde
-réellement disponible est entièrement fait côté serveur (silencieux, jamais un rejet).
-
-|               |                     |
-| ------------- | ------------------- |
-| **Sélecteur** | `app-sabotage-step` |
-| **Type**      | Dumb                |
-
-**Inputs**
-
-| Nom            | Type                    | Défaut  | Description                                                       |
-| -------------- | ----------------------- | ------- | ----------------------------------------------------------------- |
-| `participants` | `CampaignParticipant[]` | —       | Participants présents à la partie (transmis par l'écran Présence) |
-| `saving`       | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde                       |
-
-**Outputs**
-
-| Nom          | Type                   | Description                                                                             |
-| ------------ | ---------------------- | --------------------------------------------------------------------------------------- |
-| `next`       | `SabotageSpentEntry[]` | `{ participantId, pointsSpent }[]` — uniquement les participants avec `pointsSpent > 0` |
-| `back`       | `void`                 | Retour à l'écran Présence                                                               |
-| `formCancel` | `void`                 | Annulation                                                                              |
-
----
-
-### `RankingStep` — `campaigns/game-result-wizard/ranking-step/`
-
-Écran Classement — **Événement Télévisé uniquement**, absent du parcours Escarmouche.
-Ordonne par glisser-déposer (CDK) les participants déjà sélectionnés à l'écran Présence
-(reçus en `input()`, la présence elle-même n'est plus gérée ici). Les portes franchies
-ont été extraites vers `GatesStep`, son propre écran.
-
-|               |                    |
-| ------------- | ------------------ |
-| **Sélecteur** | `app-ranking-step` |
-| **Type**      | Dumb               |
-
-**Inputs**
-
-| Nom                   | Type                    | Défaut  | Description                                                                  |
-| --------------------- | ----------------------- | ------- | ---------------------------------------------------------------------------- |
-| `game`                | `Game`                  | —       | Fournit le type (barème PC) et le scénario                                   |
-| `presentParticipants` | `CampaignParticipant[]` | —       | Participants déjà choisis à l'écran Présence (ordre de départ, réordonnable) |
-| `saving`              | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde                                  |
-
-**Outputs**
-
-| Nom          | Type             | Description                                                      |
-| ------------ | ---------------- | ---------------------------------------------------------------- |
-| `next`       | `RankingEntry[]` | Classement (`{ participantId, rank }`), une fois l'étape validée |
-| `back`       | `void`           | Retour à l'écran Présence                                        |
-| `formCancel` | `void`           | Annulation                                                       |
-
----
-
-### `GatesStep` — `campaigns/game-result-wizard/gates-step/`
-
-Écran Portes franchies — **Événement Télévisé, uniquement si le scénario porte
-`franchissement_portes`**. Extrait de l'ancien champ intégré à `RankingStep` : saisie du
-nombre de portes franchies (exploit, US-B2) par équipe classée, dans l'ordre du rang.
-
-|               |                  |
-| ------------- | ---------------- |
-| **Sélecteur** | `app-gates-step` |
-| **Type**      | Dumb             |
-
-**Inputs**
-
-| Nom            | Type                    | Défaut  | Description                                                     |
-| -------------- | ----------------------- | ------- | --------------------------------------------------------------- |
-| `participants` | `CampaignParticipant[]` | —       | Participants classés à l'écran Classement, dans l'ordre du rang |
-| `saving`       | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde                     |
-
-**Outputs**
-
-| Nom          | Type           | Description                                                                               |
-| ------------ | -------------- | ----------------------------------------------------------------------------------------- |
-| `next`       | `GatesEntry[]` | `{ participantId, gatesCrossed }[]` — uniquement les participants avec `gatesCrossed > 0` |
-| `back`       | `void`         | Retour à l'écran Classement                                                               |
-| `formCancel` | `void`         | Annulation                                                                                |
-
----
-
-### `JerricansStep` — `campaigns/game-result-wizard/jerricans-step/`
-
-Écran Jerricans — affiché **si le scénario porte `gain_jerricans`** (butin manuel, tout
-type de partie). Saisie du nombre de jerricans gagnés par équipe présente, indépendant du
-revenu de base D6 par participant (Escarmouche, tiré automatiquement à l'écran
-Résolution) — les deux se cumulent.
-
-|               |                      |
-| ------------- | -------------------- |
-| **Sélecteur** | `app-jerricans-step` |
-| **Type**      | Dumb                 |
-
-**Inputs**
-
-| Nom            | Type                    | Défaut  | Description                                 |
-| -------------- | ----------------------- | ------- | ------------------------------------------- |
-| `participants` | `CampaignParticipant[]` | —       | Participants présents à la partie           |
-| `saving`       | `boolean`               | `false` | Désactive les boutons pendant la sauvegarde |
-
-**Outputs**
-
-| Nom          | Type                | Description                                                                              |
-| ------------ | ------------------- | ---------------------------------------------------------------------------------------- |
-| `next`       | `JerricanGainDto[]` | `{ participantId, amount }[]` — uniquement les participants avec `amount > 0`            |
-| `back`       | `void`              | Retour à l'écran précédent (Classement/Portes pour un ET, Présence pour une Escarmouche) |
-| `formCancel` | `void`              | Annulation                                                                               |
-
----
-
-### `WreckDesignationStep` — `campaigns/game-result-wizard/wreck-designation-step/`
-
-Écran Désignation des épaves : pour chaque véhicule des équipes présentes, désigne s'il a été mis en épave (par un adversaire ou seul). Le picker destructeur reste actif pour les deux types de partie ; une case "Favori du public" (bonus PC) n'apparaît que pour un véhicule qui porte réellement ce statut (`ParticipantVehicleDto.hasFavoriDuPublic`, dérivé côté serveur d'un tirage antérieur de la Table des Épaves — jamais une simple déclaration libre), et uniquement pour un Événement Télévisé, masquée pour une Escarmouche via `showFavoriDuPublic` — cf. [spec/CAMPAIGN.md — Faveur du Public](spec/CAMPAIGN.md#faveur-du-public). C'est ici que se fait la saisie "véhicules ennemis détruits" (US-B2, tout type de partie — 0 PC pour une Escarmouche, tracé au journal uniquement).
-
-|               |                              |
-| ------------- | ---------------------------- |
-| **Sélecteur** | `app-wreck-designation-step` |
-| **Type**      | Dumb                         |
-
-**Inputs**
-
-| Nom                   | Type                                           | Défaut      | Description                                                                                                                                                                                                                   |
-| --------------------- | ---------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `presentParticipants` | `CampaignParticipant[]`                        | —           | Participants retenus à l'écran Présence                                                                                                                                                                                       |
-| `participantVehicles` | `ReadonlyMap<number, ParticipantVehicleDto[]>` | `new Map()` | Véhicules courants par participant présent                                                                                                                                                                                    |
-| `showFavoriDuPublic`  | `boolean`                                      | `true`      | Autorise la case "Favori du public" (bonus PC, Événement Télévisé uniquement) — masquée pour une Escarmouche. Ne suffit pas seul à l'afficher : le véhicule doit aussi être réellement éligible (`vehicle.hasFavoriDuPublic`) |
-| `saving`              | `boolean`                                      | `false`     | Désactive les boutons pendant `recordResult()`                                                                                                                                                                                |
-
-**Outputs**
-
-| Nom          | Type                     | Description                                                                                                                                                                                               |
-| ------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `next`       | `WreckDesignationResult` | `{ destroyedVehicles, wreckedVehicles }` — le premier alimente `RecordResultDto` (converti en forme nichée ou à plat selon le type de partie par `GameResultWizard`), le second pilote l'écran Résolution |
-| `back`       | `void`                   | Retour à l'écran précédent (rien n'est encore persisté)                                                                                                                                                   |
-| `formCancel` | `void`                   | Annulation                                                                                                                                                                                                |
-
----
-
-### `WreckResolutionStep` — `campaigns/game-result-wizard/wreck-resolution-step/`
-
-Dernier écran du wizard : **synthèse automatique**, sans bouton ni sélecteur (hors
-Annuler/Terminer). Les tirages D6 sont déclenchés par `GameResultWizard` (un `effect()`,
-un à la fois) dès l'arrivée sur cet écran — d'abord les **revenus** (Escarmouche
-uniquement, un par participant présent, section "Revenus" gated par `showIncome`), puis
-les **épaves** (tout type de partie, un par véhicule désigné à l'écran précédent).
-Affiche, pour chaque entrée, un indicateur "en cours" puis le résultat reçu (jerricans
-gagnés, ou Chocs/perte d'équipement/lignes `descriptions`/"Détruit par [participant]").
-"Terminer" n'est actif que lorsque tous les revenus (si affichés) et tous les véhicules
-ont un résultat ; son clic déclenche l'entrée en atelier de la partie côté parent
-(`enterAtelier()`). "Annuler" reste disponible sur cet écran (contrairement aux
-versions précédentes) — déclenche un reset serveur côté parent.
-
-|               |                             |
-| ------------- | --------------------------- |
-| **Sélecteur** | `app-wreck-resolution-step` |
-| **Type**      | Dumb                        |
-
-**Inputs**
-
-| Nom                   | Type                                       | Défaut      | Description                                                                                                                |
-| --------------------- | ------------------------------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `wreckedVehicles`     | `WreckedVehicleEntry[]`                    | —           | Véhicules désignés à l'écran précédent                                                                                     |
-| `vehicleLabels`       | `ReadonlyMap<number, string>`              | `new Map()` | Libellé "nom (équipe)" par véhicule, résolu par le parent                                                                  |
-| `destroyedBy`         | `ReadonlyMap<number, string>`              | `new Map()` | Libellé du destructeur par véhicule détruit (si applicable), résolu par le parent                                          |
-| `outcomes`            | `ReadonlyMap<number, WreckOutcomeDto>`     | `new Map()` | Résultats d'épave reçus, clé = `vehicleId`                                                                                 |
-| `descriptions`        | `ReadonlyMap<number, string[]>`            | `new Map()` | Lignes de texte décrivant les événements de chaque tirage d'épave (`GameEvent.describe()`)                                 |
-| `showIncome`          | `boolean`                                  | `false`     | Affiche la section "Revenus" — gate explicite, Escarmouche uniquement (même principe que `EquipmentManager.showSequellas`) |
-| `presentParticipants` | `CampaignParticipant[]`                    | `[]`        | Source de la section "Revenus" (Escarmouche uniquement)                                                                    |
-| `incomeResults`       | `ReadonlyMap<number, RollIncomeResultDto>` | `new Map()` | Résultats de revenu reçus, clé = `participantId`                                                                           |
-| `finalizing`          | `boolean`                                  | `false`     | Désactive "Terminer" pendant l'appel à `enterAtelier()`                                                                    |
-| `resetting`           | `boolean`                                  | `false`     | Désactive "Annuler" pendant l'appel à `resetResult()`                                                                      |
-
-**Outputs**
-
-| Nom          | Type   | Description                                                                    |
-| ------------ | ------ | ------------------------------------------------------------------------------ |
-| `completed`  | `void` | Clic sur "Terminer" (uniquement si tous les revenus/véhicules ont un résultat) |
-| `formCancel` | `void` | Clic sur "Annuler"                                                             |
-
----
-
-### `GameJournalModal` — `campaigns/game-journal-modal/`
-
-Modale listant tous les événements journalisés sur une partie `ATELIER` ou
-`JOUE` — classement, exploits, table des épaves, atelier, contact Résistance —
-traduits en texte lisible par `GameEvent.describe()` (backend). Regroupe les
-entrées reçues à plat par participant, en préservant l'ordre d'apparition (le
-premier événement chronologique d'un participant détermine la position de son
-groupe) ; chronologique à l'intérieur d'un groupe. Ouverte depuis le bouton
-"📜 Journal" de `GameList`, visible par tout participant `VALIDATED`. Chrome
-délégué à `ModalShell` (mode `consultation`, `size="xl"`).
-
-|               |                          |
-| ------------- | ------------------------ |
-| **Sélecteur** | `app-game-journal-modal` |
-| **Type**      | Dumb                     |
-| **Compose**   | `ModalShell`             |
-
-**Inputs**
-
-| Nom       | Type                    | Défaut  | Description                                |
-| --------- | ----------------------- | ------- | ------------------------------------------ |
-| `game`    | `Game`                  | —       | Partie dont on consulte le journal         |
-| `entries` | `GameJournalEntryDto[]` | `[]`    | Événements à plat, tels que reçus de l'API |
-| `loading` | `boolean`               | `false` | Affiche l'état de chargement               |
-
-**Outputs**
-
-| Nom      | Type   | Description            |
-| -------- | ------ | ---------------------- |
-| `closed` | `void` | Fermeture de la modale |
-
----
-
-### `AtelierPage` — `campaigns/atelier-page/` 🧠
-
-Écran LISTE de l'atelier campagne (`/campaigns/:id/atelier`, phase garage post-partie) — même principe que `TeamEditPage` côté équipe : une `VehicleSummaryCard` par véhicule de l'équipe engagée (`showDelete=true`, libellé/icône adaptés — "Vendre"/💰 ou "Annuler l'achat" selon `purchasedThisSession`), construite via la même fonction pure `buildVehicleSummary`, affichées en grille pleine largeur (`.atp-vehicles-grid`, `repeat(auto-fill, minmax(320px, 1fr))` — même principe que la grille de choix de véhicule de `VehicleConfigurator`). Cliquer sur une carte navigue vers `AtelierVehiclePage`, qui porte seule le rendu d'`EquipmentManager`. Un bouton "+ Ajouter un véhicule" ouvre une grille de `VehicleChoiceCard` (réutilisé tel quel) alimentée par `sponsorCatalog().vehicules`, pour acheter un nouveau véhicule via la cagnotte. Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier`) et le gabarit pleine largeur `.atp-page`/`.atp-header` — mêmes règles CSS que `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (sticky sous le fil d'Ariane, `max-width: 1600px`), simplement reprises sous un préfixe de classe propre à ce composant.
-
-**Véhicules vendus/détruits** : `vehicleSummaries` pousse en fin de liste (tri stable,
-ordre relatif conservé de part et d'autre) tout résumé avec `isSold || isLost` — ils
-restent affichés (badge, cf. `VehicleSummaryCard`) mais reçoivent `[disabled]="summary.isSold
-|| summary.isLost"` et `[showDelete]="!(summary.isSold || summary.isLost)"` : aucune
-action possible (ni navigation vers `AtelierVehiclePage`, ni vente), cohérent avec le
-fait qu'un véhicule détruit n'a plus aucune valeur de revente (`Vehicle.chassisResaleRefund`
-lève `DomainException`, cf. [spec/CAMPAIGN.md — Annulation d'achat vs
-revente](../docs/spec/CAMPAIGN.md#annulation-dachat-vs-revente)).
-
-**Points de sabotage** : partage le même cadre que la Cagnotte (`.atp-summary`, une ligne par valeur — `.atp-summary-row`, séparées par un filet `border-hair`) plutôt que deux bandeaux distincts. Affiche le compteur dérivé `WorkshopStateDto.sabotagePoints` — 1 point pour 3 Points de Résistance secrets, `Math.floor(resistancePoints / 3)`, cf. [spec/CAMPAIGN.md — Points de sabotage](../docs/spec/CAMPAIGN.md#points-de-sabotage). Exposé uniquement sur cet écran (l'atelier "personnel"), jamais sur `ParticipantAtelierPage` (lecture d'un tiers, où l'API renvoie `null`).
-
-|               |                                                                             |
-| ------------- | --------------------------------------------------------------------------- |
-| **Sélecteur** | `app-atelier-page`                                                          |
-| **Type**      | Smart                                                                       |
-| **Route**     | `/campaigns/:id/atelier`                                                    |
-| **Services**  | `ActivatedRoute`, `Router`, `CampaignsService`, `CatalogService`            |
-| **Compose**   | `Breadcrumb`, `VehicleSummaryCard`, `VehicleChoiceCard`, `SellVehicleModal` |
-
-**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `sabotagePoints` (computed), `vehicles` (computed — véhicules d'atelier mappés vers `Vehicle`), `vehicleSummaries` (computed via `buildVehicleSummary`), `breadcrumbs` (computed `BreadcrumbItem[]`), `pendingSaleVehicleId`, `saleSummary` (computed via `buildVehicleSaleSummary`), `showAddVehicle`.
-
----
-
-### `SellVehicleModal` — `campaigns/atelier-page/sell-vehicle-modal/`
-
-Fenêtre de synthèse avant vente/annulation d'un véhicule d'atelier — affiche le contenu (armes/améliorations/avantages actifs, équipement déjà vendu/détruit exclu), le coût d'achat initial total, et le montant récupéré. Texte et libellé du bouton discriminés par `summary.purchasedThisSession` : "Annuler l'achat" (remboursement intégral) si acheté cette session, "Vendre" (remboursement par élément) sinon. Dans ce dernier cas, **chaque ligne** (châssis compris) affiche à la fois le prix initial et le montant de la vente pour cet élément précis (`item.price` → `item.refund`, `summary.chassisPrice` → `summary.chassisRefund`) — valeurs backend (`Weapon`/`Improvement`/`Advantage.resaleRefund`, `Vehicle.chassisResaleRefund`), jamais recalculées côté client. Le pied de modale garde le total agrégé (`summary.refund` — `Vehicle.resaleRefund`). Compose `ModalShell` (mode `action`, `size="lg"`) — ne garde que son contenu structuré propre (véhicule, liste d'équipement, totaux) comme contenu projeté.
-
-|               |                          |
-| ------------- | ------------------------ |
-| **Sélecteur** | `app-sell-vehicle-modal` |
-| **Type**      | Dumb                     |
-| **Compose**   | `ModalShell`             |
-
-**Inputs**
-
-| Nom       | Type                 | Défaut | Description                                         |
-| --------- | -------------------- | ------ | --------------------------------------------------- |
-| `summary` | `VehicleSaleSummary` | —      | Synthèse pré-calculée par `buildVehicleSaleSummary` |
-
-**Outputs**
-
-| Nom         | Type   | Description                |
-| ----------- | ------ | -------------------------- |
-| `confirmed` | `void` | Vente/annulation confirmée |
-| `cancelled` | `void` | Fermeture sans action      |
-
-Utilisé par : `AtelierPage`.
-
----
-
-### `AtelierVehiclePage` — `campaigns/atelier-vehicle-page/` 🧠
-
-Écran de configuration d'équipement d'UN véhicule de l'atelier (`/campaigns/:id/atelier/vehicles/:vehicleId`), atteint depuis `AtelierPage`. Miroir de `VehicleConfiguratorPage` côté équipe, mais sans branche création (l'atelier Temps 1 n'autorise aucun achat de nouveau véhicule) : branche directement `EquipmentManager` — le même composant que la construction d'équipe — sans passer par `VehicleConfigurator`. Cette route fournit `AtelierEquipmentDataSource` (event-sourcing, `POST .../events/equipment` + relecture `GET .../workshop`) via le token `EQUIPMENT_DATA_SOURCE`, au niveau du composant (une instance par véhicule visité). Le budget passé à `EquipmentManager` est calibré pour que son `budgetRestant` affiché égale la cagnotte (`wallet`, déjà nette des achats). Utilise `Breadcrumb` (`Mes Campagnes › [Campagne] › Atelier › [Véhicule]`) et reprend **littéralement** les classes CSS `.vcp-page`/`.vcp-header` de `VehicleConfiguratorPage` (même fichier de styles, dupliqué à l'identique — l'encapsulation de vue Angular évite toute collision entre les deux composants). Achat/retrait d'armes et d'améliorations, et revente à moitié prix, sont implémentés — y compris le montage sur Tourelle, une simple valeur d'orientation de l'arme (`EquipmentChoice.orientation = 'tourelle'`) et non une opération séparée. La gestion des Chocs/séquelles est directement intégrée à `EquipmentManager` (`[campaignId]`/`[chocs]`/`[sequellas]`, cf. son en-tête) — cette page transmet `targetWorkshopVehicle()?.chocs`/`.sequellas` en plus du véhicule traduit — hors périmètre : uniquement les épaves (véhicules perdus, cf. [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)).
-
-|               |                                                                                                    |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| **Sélecteur** | `app-atelier-vehicle-page`                                                                         |
-| **Type**      | Smart                                                                                              |
-| **Route**     | `/campaigns/:id/atelier/vehicles/:vehicleId`                                                       |
-| **Services**  | `ActivatedRoute`, `CampaignsService`, `CatalogService`                                             |
-| **Compose**   | `Breadcrumb`, `EquipmentManager` (via `AtelierEquipmentDataSource` fournie au niveau du composant) |
-
-**Signals clés** : `loading`, `error`, `workshop`, `sponsorCatalog`, `campaignName`, `wallet` (computed), `vehicle` (computed — véhicule ciblé par la route, traduit pour `EquipmentManager`), `targetWorkshopVehicle` (computed — le MÊME véhicule sous sa forme brute `WorkshopVehicleDto`, seule forme qui porte encore `chocs`/`sequellas`, transmise à `EquipmentManager` via ses inputs `chocs`/`sequellas`), `vehicleName` (computed), `budget` (computed `BudgetView`), `breadcrumbs` (computed `BreadcrumbItem[]`). Recharge l'état complet (`getWorkshop`) à chaque `vehicleChanged`/`sequellaChanged` (émis par `EquipmentManager`) pour rafraîchir cagnotte + budget + Chocs.
-
-> **`EquipmentDataSource` (abstraction partagée)** — interface + token `EQUIPMENT_DATA_SOURCE` (`teams/vehicle-configurator/equipment-data-source.ts`). Deux implémentations : `TeamEquipmentDataSource` (construction d'équipe) et `AtelierEquipmentDataSource` (`campaigns/atelier-vehicle-page/`). C'est le miroir frontend du Dependency Inversion backend — `EquipmentManager` ignore laquelle il utilise. `renameVehicle(vehicleId, nom)` suit le même principe : `TeamEquipmentDataSource` appelle `PATCH /api/vehicles/:id/name` directement, `AtelierEquipmentDataSource` appelle `POST /api/campaigns/:id/events/vehicle-rename` puis relit `GET .../workshop` (même schéma que les autres mutations atelier). Les séquelles n'ont PAS besoin de cette abstraction : elles n'existent que côté atelier (aucun second contexte "construction d'équipe" à supporter), donc `EquipmentManager` injecte directement `CampaignsService`/`CatalogService` pour leur logique.
-
----
-
-### `ParticipantAtelierPage` — `campaigns/participant-atelier-page/` 🧠
-
-Consultation en LECTURE SEULE de l'atelier d'un AUTRE participant
-(`/campaigns/:id/participants/:pid/atelier`), atteinte depuis le menu ⋯ de
-`ParticipantList` sur `/campaigns/:id`. Vue **maître-détail sur une seule
-page** (pas de sous-route par véhicule, contrairement à
-`AtelierPage`/`AtelierVehiclePage` côté "mon" équipe) : colonne de gauche
-regroupant la synthèse de budget d'équipe (`TeamBudget`, budget total/consommé
-"à l'instant t" — `budgetEquipeTotal = wallet + coût de tous les véhicules`,
-`budgetRestant = wallet`) puis la liste de tous les véhicules (façon onglets —
-`VehicleSummaryCard`, `[showDelete]="false"` (aucun bouton de vente en lecture
-seule) et `[selected]` lié à `selectedVehicleId`, dont le clic sur la carte
-(`cardClicked`) est détourné pour **sélectionner** le signal local
-`selectedVehicleId` plutôt que naviguer) ; partie droite affichant la
-configuration complète du véhicule
-sélectionné, répartie sur **2 sous-colonnes** (`.pap-equipment-columns`,
-CSS Grid `1fr 1fr`) pour éviter qu'une seule colonne d'équipement s'étire sur
-toute la largeur du panneau : Armes + Améliorations à gauche, Avantages +
-Séquelles à droite — 2 instances de `MountedEquipment`, chacune gardant
-uniquement ses groupes via `showWeapons`/`showImprovements`/`showAdvantages`
-(cf. `MountedEquipment` ci-dessus). Titre `headerTitle()` = "Atelier de
-[Équipe] ([Joueur])" (fil d'ariane assorti), résolu depuis `CampaignParticipant.
-teamName`/`.userName` (déjà chargés par `getParticipants` pour identifier la
-cible, cf. ci-dessous) — retombe sur "Atelier" tant que non chargé.
-
-Ne branche **jamais** `EquipmentManager` : celui-ci ferait des appels HTTP
-mutants scopés à "mon" équipe (`available-weapons/improvements/advantages/
-sequelles`, achats/reventes via `AtelierEquipmentDataSource`), inutilisables
-et non autorisés sur le véhicule d'un tiers — le backend les résout par
-`req.user.id`, jamais par un `vehicleId` de route. Même tri que `AtelierPage` sur la
-colonne de véhicules (véhicules vendus/détruits poussés en fin de liste, badge
-"Vendu"/"Perdu" via `VehicleSummaryCard`) — mais sans `[disabled]` : la sélection pour
-consultation reste possible sur ces cartes, lecture seule sans risque de mutation. Le
-panneau de détail
-compose directement `VehicleCostSummary` (`[disabled]="true"`) et
-`MountedEquipment` (`[locked]="true"`) — les deux étaient déjà des composants
-"dumb" dotés d'un mode verrouillé natif ; seuls les 3 nouveaux gates
-`showWeapons`/`showImprovements`/`showAdvantages` ont été ajoutés à
-`MountedEquipment` (défaut `true`, sans effet sur ses autres consommateurs)
-pour permettre cette répartition en 2 colonnes.
-
-|               |                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| **Sélecteur** | `app-participant-atelier-page`                                                             |
-| **Type**      | Smart                                                                                      |
-| **Route**     | `/campaigns/:id/participants/:pid/atelier`                                                 |
-| **Services**  | `ActivatedRoute`, `CampaignsService`, `CatalogService`                                     |
-| **Compose**   | `Breadcrumb`, `TeamBudget`, `VehicleSummaryCard`, `VehicleCostSummary`, `MountedEquipment` |
-
-**Signals clés** : `loading`, `error`, `workshop` (via `getParticipantWorkshop`,
-pas `getWorkshop`), `sponsorCatalog`, `campaignName`, `participantName`/
-`teamName` (résolus ensemble via `getParticipants`, pour l'en-tête/fil
-d'ariane), `headerTitle` (computed — "Atelier de [Équipe] ([Joueur])"),
-`selectedVehicleId` (sélection locale, auto-initialisée au premier véhicule
-chargé), `vehicles`/`vehicleSummaries` (colonne de gauche), `totalVehiclesCost`/`budgetEquipeTotal`/
-`budgetRestant`/`budgetDepasse`/`budgetPourcentage` (bandeau de synthèse),
-`selectedVehicle`/`targetWorkshopVehicle`/`typeNom`/`emplacementsUtilises`/
-`coutBase`/`coutEquipement`/`coutTotal` (panneau de détail — mêmes formules
-que `EquipmentManager`, appliquées au véhicule sélectionné plutôt qu'au seul
-véhicule de la route).
-
----
-
-### `SequellaAdvantagePicker` — `teams/vehicle-configurator/equipment-manager/sequella-advantage-picker/`
-
-Modale de choix de l'avantage gratuit accordé par la séquelle Dur à Cuire. Composant dumb — reçoit la liste déjà filtrée aux 6 avantages de catégorie "Dur à Cuire" (tous sponsors confondus — la règle du livre les accorde même hors accès normal du sponsor), sélection locale, "Valider" désactivé tant qu'aucun choix n'est fait (`confirmDisabled` de `ModalShell`). Chrome délégué à `ModalShell` (mode `action`, `variant="primary"` — même raison que `ChangeTeamModal`).
-
-|               |                                 |
-| ------------- | ------------------------------- |
-| **Sélecteur** | `app-sequella-advantage-picker` |
-| **Type**      | Dumb                            |
-| **Compose**   | `ModalShell`                    |
-
-**Inputs**
-
-| Nom          | Type         | Défaut | Description                                                                     |
-| ------------ | ------------ | ------ | ------------------------------------------------------------------------------- |
-| `advantages` | `Avantage[]` | —      | Les 6 avantages de catégorie "Dur à Cuire", déjà filtrés par `EquipmentManager` |
-
-**Outputs**
-
-| Nom         | Type     | Description                        |
-| ----------- | -------- | ---------------------------------- |
-| `confirmed` | `string` | `nom_interne` de l'avantage choisi |
-| `cancelled` | `void`   | Fermeture sans choix               |
-
----
-
-### `SequellaDetailModal` — `teams/vehicle-configurator/equipment-manager/sequella-detail-modal/`
-
-Popup de détail d'une séquelle, ouverte au clic sur `em-sequella-card` — mirroir d'`EquipmentDetailModal` pour les séquelles : nom, coût en Chocs, description ET règles complètes. Composant dédié plutôt que réutilisation d'`EquipmentDetailModal` (qui suppose un coût en jerricans et un emplacement, deux notions absentes d'une séquelle). Purement informative — la seule sortie est `closed` ("Annuler", clic hors de la boîte ou touche Échap). Chrome délégué à `ModalShell` (mode `consultation`, `size="xl"`) — la carte, elle, stoppe la propagation du clic sur le bouton "Acquérir" pour ne pas ouvrir la modale en même temps.
-
-|               |                             |
-| ------------- | --------------------------- |
-| **Sélecteur** | `app-sequella-detail-modal` |
-| **Type**      | Dumb                        |
-| **Compose**   | `ModalShell`                |
-
-**Inputs**
-
-| Nom        | Type                   | Défaut | Description                                                            |
-| ---------- | ---------------------- | ------ | ---------------------------------------------------------------------- |
-| `sequella` | `AvailableSequellaDto` | —      | La séquelle à détailler — même DTO que la carte qui a ouvert la modale |
-
-**Outputs**
-
-| Nom      | Type   | Description                                                       |
-| -------- | ------ | ----------------------------------------------------------------- |
-| `closed` | `void` | Fermeture sans action (bouton "Annuler" ou clic hors de la boîte) |
-
----
-
-## Domaine Admin
-
-### `AdminUsers` — `admin/users/` 🧠
-
-Page de gestion des utilisateurs, réservée aux administrateurs (`/admin/users`). Liste tous les comptes, avec 4 actions par ligne — Activer/Désactiver, Réinitialiser le mot de passe, Se connecter en tant que (comptes `role: 'user'` uniquement, cf. [AUTH.md — Usurpation d'identité](spec/AUTH.md#usurpation-didentité-se-connecter-en-tant-que)), Supprimer — groupées derrière un menu "⋯" (`openMenuUserId`, un seul ouvert à la fois) plutôt que des boutons pleine largeur, mirroir simplifié du menu ⋯ de `ParticipantList` : même principe visuel (déclencheur + panneau ancré + fermeture au clic extérieur), mais posé à la main (`position: absolute` + backdrop cliquable) plutôt que via Angular CDK Overlay — cette page n'a aucun ancêtre `position: sticky` susceptible de piéger un panneau positionné ainsi, contrairement à `.campaign-detail-rail`. Masque entièrement le menu sur le compte connecté (l'admin garde son propre "Changer le mot de passe" dans son menu utilisateur, cf. [AUTH.md — Auto-édition du profil](spec/AUTH.md#auto-édition-du-profil)). Seul écran à afficher **à la fois** le pseudo et l'identité légale (prénom/nom) : partout ailleurs, seul le pseudo est montré (cf. [AUTH.md — Nom d'affichage](spec/AUTH.md#nom-daffichage-callname)) — un administrateur a besoin des deux.
-
-**Suppression bloquée par le backend** (400) si elle laisserait une campagne
-sans organisateur `VALIDATED` (cf. [AUTH.md](spec/AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne)) :
-`onConfirmDeleteUser()` affiche alors le message serveur tel quel (liste des
-campagnes concernées) plutôt qu'un texte générique — `loadUsers()` (qui
-resynchronise la liste après l'échec) est appelé **avant** de fixer ce
-message, pas après, sinon son `error.set('')` interne l'effacerait aussitôt.
-
-|               |                                           |
-| ------------- | ----------------------------------------- |
-| **Sélecteur** | `app-admin-users`                         |
-| **Type**      | Smart                                     |
-| **Route**     | `/admin/users`                            |
-| **Services**  | `UsersService`, `AuthService`             |
-| **Compose**   | `ConfirmModal`, `AdminResetPasswordModal` |
-
-**Signals clés** : `users`, `loading`, `error`, `pendingDeleteUser`, `pendingResetPasswordUser`, `resettingPassword`, `resetPasswordError`, `openMenuUserId`.
-
----
-
-### `AdminResetPasswordModal` — `admin/users/reset-password-modal/`
-
-Dialog "Réinitialiser le mot de passe" d'un compte tiers, ouvert depuis
-`AdminUsers`. Mirroir de `ChangePasswordModal` (auto-service) **sans** le
-champ "mot de passe actuel" — une réinitialisation admin n'a pas à le
-connaître (`User.resetPasswordAsAdmin`, cf.
-[AUTH.md](spec/AUTH.md#administration-des-comptes)). L'input `user`
-supplémentaire affiche la cible dans le titre, pour que l'admin confirme
-visuellement le bon compte avant de soumettre. Compose `ModalShell` (mode
-`action`, `variant="primary"`), même traitement du bouton submit invisible
-que `ChangePasswordModal`.
-
-|               |                                  |
-| ------------- | -------------------------------- |
-| **Sélecteur** | `app-admin-reset-password-modal` |
-| **Type**      | Dumb                             |
-| **Compose**   | `ModalShell`                     |
-
-**Inputs**
-
-| Nom      | Type      | Défaut  | Description                                   |
-| -------- | --------- | ------- | --------------------------------------------- |
-| `user`   | `User`    | —       | Compte ciblé (requis) — affiché dans le titre |
-| `saving` | `boolean` | `false` | Sauvegarde en cours                           |
-| `error`  | `string`  | `''`    | Message d'erreur serveur                      |
-
-**Outputs**
-
-| Nom         | Type     | Description                                                                                                                                   |
-| ----------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cancelled` | `void`   | Fermeture du dialog (bouton du shell)                                                                                                         |
-| `submitted` | `string` | Nouveau mot de passe validé (correspondance + longueur ≥ 6 côté client) — le `userId` est déjà connu du parent via `pendingResetPasswordUser` |
-
-Utilisé par : `AdminUsers`.
+Réinitialisation du mot de passe d'un tiers, sans l'ancien ; le compte ciblé est affiché dans le titre.

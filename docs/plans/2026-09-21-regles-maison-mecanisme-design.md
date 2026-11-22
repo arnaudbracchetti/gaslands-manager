@@ -15,7 +15,7 @@ l'exécutent sans avoir à re-décider quoi que ce soit. Conception menée via l
 `ddd` et `grilling`, après exploration complète du code existant : la distribution
 automatique des Points de Résistance (`Game.recordResult`,
 `ResistanceContactedEvent`), l'event-sourcing campagne (`Campaign`/`Game`/
-`GameEvent`, cf. [ARCHITECTURE.md §3.8](../ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)),
+`GameEvent`, cf. [ARCHITECTURE.md §3.8](../ARCHITECTURE.md#38-mode-campagne---event-sourcing)),
 le précédent `Campaign.budget` de bout en bout, les catalogues YAML en mémoire
 (`CatalogService`, `ScenarioCatalogService`), et les migrations TypeORM du projet.
 
@@ -225,7 +225,7 @@ Sur la classe de base `GameEvent`, ex. `championshipPointsAwarded: number`, vala
 > Principe générique et justification : skill `ddd`,
 > [theory/aggregate-design.md, « Qui sélectionne une Strategy ?
 > »](../../.claude/skills/ddd/theory/aggregate-design.md#qui-sélectionne-une-strategy-).
-> Convention projet : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+> Convention projet : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd---standard-du-projet).
 > Le paragraphe ci-dessous est conservé tel quel pour l'historique de la décision
 > initiale — ne pas l'implémenter tel quel.
 

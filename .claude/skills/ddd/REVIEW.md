@@ -290,4 +290,4 @@ tort à une politique métier pure.
 [theory/aggregate-design.md](theory/aggregate-design.md#ce-dont-un-enfant-a-besoin--donnée-configuration-ou-port),
 seule source du principe — `SKILL.md` n'y renvoie plus qu'en une ligne, pour éviter de recréer la
 duplication à l'origine du défaut. Convention projet correspondante :
-[ARCHITECTURE.md §3.4](../../../docs/ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+[ARCHITECTURE.md §3.4](../../../docs/ARCHITECTURE.md#34-architecture-ddd---standard-du-projet).

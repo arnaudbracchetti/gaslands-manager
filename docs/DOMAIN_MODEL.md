@@ -1,20 +1,18 @@
-# Gaslands Manager — Modélisation du domaine
+# Gaslands Manager - Modèle du domaine
 
-> Diagrammes UML du modèle de domaine.
-> Mettre à jour après tout changement d'agrégat, d'entité ou de relation entre modules.
-> Architecture et patterns : [ARCHITECTURE.md](ARCHITECTURE.md).
+> **Propriétaire** : conception du domaine (agrégats, qui porte quelle règle, diagrammes).
+> Les règles métier elles-mêmes sont dans `docs/spec/` ; ce document y renvoie au lieu de les
+> reformuler. Patterns techniques : [ARCHITECTURE.md](ARCHITECTURE.md). Strategy d'équipement :
+> [VEHICLE_SYSTEM.md](VEHICLE_SYSTEM.md).
 
 ---
 
-## 1. Agrégat Team (Domain-Driven Design)
+## 1. Agrégat Team
 
-Le module `team/` est l'agrégat DDD principal. `Team` est la racine ; `Vehicle`,
-`Weapon`, `Improvement`, `Advantage` et `Sequella` sont des entités enfants dont le
-cycle de vie est entièrement contrôlé par la racine. Les **Value Objects**
-(`VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType`, `SequellaType`)
-enveloppent les données brutes du catalogue YAML et exposent une API métier typée.
-`Sequella` n'existe que côté mode campagne (créée exclusivement via
-`addCampaignSequella`, jamais à la construction d'équipe) — cf. §Séquelles ci-dessous.
+`Team` est la racine ; `Vehicle`, `Weapon`, `Improvement`, `Advantage` et `Sequella` sont des entités
+enfants dont la racine contrôle le cycle de vie. Les **Value Objects** (`VehicleType`, `WeaponType`,
+`ImprovementType`, `AdvantageType`, `SequellaType`) enveloppent les données catalogue et exposent une
+API typée.
 
 ```mermaid
 classDiagram
@@ -233,124 +231,43 @@ classDiagram
     Vehicle ..> DomainException : lève
 ```
 
-**Invariant clé** : `vehicle.cost` est calculé en mémoire depuis l'agrégat chargé —
-jamais via une requête SQL. `Team.remainingBudget` agrège le coût de tous ses véhicules.
-Toute mutation valide d'abord les règles métier et lève `DomainException` si une règle
-est violée. La couche application convertit `DomainException` → `BadRequestException`.
-
-**Budget de campagne** : `Team.budget` (getter) résout le budget applicable - celui de
-la campagne engageante (`_campaignBudget`, hydraté par `TeamRepository` au chargement,
-`null` si l'équipe n'est engagée dans aucune campagne) s'il y en a une, sinon `cans`.
-`remainingBudget` et tous ses appelants (`addVehicle`, `canAddWeapon`...) lisent
-`this.budget`, jamais `this._cans` directement - un seul point de changement pour que
-la règle "le budget de campagne remplace le budget d'équipe" s'applique partout sans
-exception. `vehiclesCost` (Σ `vehicle.cost`) est le pendant exposé côté API
-(`TeamSummaryDto`) pour comparer une équipe non encore engagée au budget d'une
-campagne visée - cf. [spec/CAMPAIGN.md - Budget de campagne](spec/CAMPAIGN.md#budget-de-campagne).
-
-**Montage sur Tourelle** : n'est pas modélisé comme une amélioration indépendante, ni
-comme un booléen orthogonal à l'orientation — c'est la valeur `'tourelle'` du type
-`WeaponOrientation = Orientation | 'tourelle'` (distinct de l'`Orientation` à 3 valeurs
-utilisée par `VehicleImprovement`, qui ne supporte jamais ce montage). `Weapon.orientation
-=== 'tourelle'` triple `price` (arc à 360°) ; l'ancien état invalide « orientation ET
-montage Tourelle choisis en même temps » est désormais impossible à représenter, plutôt
-que gardé à l'exécution. Ce choix élimine toute notion d'« assignation » séparée :
-réassigner une arme sur une Tourelle revient à revendre l'arme actuelle (`removeWeapon`)
-puis en acheter une nouvelle avec `orientation: 'tourelle'` — l'arme montée hérite alors
-directement du mécanisme de revente/annulation déjà en place pour toute arme
-(`isSold`/`purchasedThisSession`, prix résiduel), sans code dédié. Seule
-`WeaponType.montableSurTourelle` (attribut catalogue, `Arme.montable_tourelle`) détermine
-si une arme peut être montée ainsi — tous les sponsors l'acceptent.
-
-**Orientation requise** : `WeaponType.requiresOrientation` et `ImprovementType.requiresOrientation`
-lisent directement le champ catalogue `necessite_orientation` (`Arme`/`Amelioration`,
-booléen obligatoire) — ni l'un ni l'autre n'est dérivé (`WeaponType` ne dérive plus de
-son `type` catalogue, il n'existe d'ailleurs plus de getter `isEquipage`) ou codé en dur
-(les Strategy `BelierBehavior`/`BelierExplosifBehavior`, seuls jusque-là à exiger une
-orientation, ont perdu leur vérification manuelle au profit d'une garde générique dans
-`Vehicle.canAddImprovement`, symétrique à celle déjà en place sur `canAddWeapon`). Détail
-des valeurs catalogue : [spec/VEHICLES.md](spec/VEHICLES.md#orientation-requise-champ-catalogue-necessite_orientation).
-
-**Calcul des stats effectives et validation de pose — Pattern Strategy** : `Vehicle`
-calcule ses stats effectives (`effectiveStats`, un seul `reduce()` par famille — séquelles
-puis améliorations puis avantages, cf. [VEHICLE_SYSTEM.md §4](VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior))
-et valide la pose d'un candidat via de petites classes Strategy stateless
-(`EquipmentBehavior`, une par `comportement` de jeu — Chenilles, Bélier, Cascadeur,
-Remorque Moyenne…), remplaçant un ancien Pattern Decorator (chaîne d'objets qui
-s'enveloppent) courant juillet 2026. `canPlace(ctx, candidate)` est porté par
-`ImprovementType`/`AdvantageType` (le Value Object — un candidat n'a pas encore
-d'instance au moment de sa validation) ; `applyStats(current)` est porté par
-`Improvement`/`Advantage`/`Sequella` (l'entité — un équipement déjà monté a toujours une
-instance), cohérent avec `price`/`slots`/`resaleRefund` déjà présents à cet endroit.
-`Advantage.price` retourne toujours `type.price`, jamais réduit même `isSold: true` —
-c'est ce qui porte entièrement la règle de "perte totale" à la revente en atelier (aucun
-second mécanisme de calcul de prix résiduel, contrairement à `Weapon`/`Improvement`).
-Détail : [spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total).
-
-**Séquelles** : `Sequella` est un miroir quasi exact d'`Advantage` (mêmes mécaniques
-`isSold`/prix jamais réduit à la revente) — seule différence, sa monnaie est `vehicle.chocs`
-(compteur mutable propre au véhicule), pas le budget Jerricans de l'équipe. `Vehicle.canAddSequella`
-garde l'origine catalogue (`SequellaType.origine`, une séquelle `TABLE_EPAVES` ne peut être
-imposée que par un tirage de la Table des Épaves), l'unicité (comme `canAddAdvantage`) et les
-Chocs suffisants ; `Vehicle.isSequellaRemovable` rejette absolument le retrait (annulation
-même-session comprise) d'une séquelle `TABLE_EPAVES` — un dommage permanent, jamais un objet
-ordinaire — et `Vehicle.canRemoveSequella` ferme par défaut, pour une séquelle `ATELIER`, la
-revente cross-session, sauf présence active de la séquelle `legende_vivante` sur le véhicule.
-Contrairement aux autres
-entités enfants, les mutations campagne d'une séquelle (`addCampaignSequella`, `markSequellaSold`…)
-sont journalisées via `EquipmentChangedEvent` (entityType `SEQUELLE`) plutôt qu'un événement dédié
-— cf. [§4 — Séquelles](#séquelles-event-sourcing) et [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles).
-
-**Revente d'un véhicule pré-existant en atelier** : `Vehicle` porte, comme
-`Weapon`/`Improvement`/`Advantage`, un flag `isSold` et un prix résiduel — le
-châssis contribue `Math.ceil(type.price / 2)` à `cost` une fois vendu, au lieu
-du prix plein. `markSold()` (sans paramètre, auto-suffisant) **cascade** sur
-toute arme/amélioration/avantage pas encore vendu(e) du véhicule — un véhicule
-vendu doit voir tout son équipement vendu avec lui, par cohérence d'état, même
-si `Advantage.price` ne varie jamais avec `isSold` (aucun effet monétaire pour
-les avantages, seulement l'intégrité de l'état). Pour que `clearSold()` (undo)
-ne dé-marque QUE les enfants cascadés par CETTE vente — pas un enfant déjà
-vendu individuellement avant — `Vehicle` mémorise transitoirement (D-S5) les
-ids cascadés dans trois tableaux, recalculés à chaque replay complet. Seule
-différence restante avec une arme/amélioration vendue : côté application,
-`GetWorkshopUseCase` filtre entièrement un véhicule vendu de la liste exposée
-(il disparaît), plutôt que de le laisser visible barré avec un badge "Vendu" —
-cf. [spec/CAMPAIGN.md — Annulation d'achat vs revente](spec/CAMPAIGN.md#annulation-dachat-vs-revente).
-
-**Verrouillage campagne** : `_isLocked` est hydraté par `TeamRepository` au chargement
-de l'agrégat (jointure `CampaignParticipant` → `Campaign.state`, pas une colonne
-persistée sur `Team`). `assertNotLocked()` est appelé en tête de toutes les méthodes de
-mutation directe (`update`, `addVehicle`, `addWeaponToVehicle`…) mais **pas** des
-méthodes "campagne" (`addCampaignVehicle`, `markWeaponSold`…, section D-S5/D-S11),
-utilisées par le flux atelier event-sourcing qui doit rester fonctionnel pendant que la
-campagne est `EN_COURS`. Détail : [spec/TEAMS.md](spec/TEAMS.md#crud-équipes).
-
-**Nom d'instance du véhicule** : `Vehicle._nom` (nullable) porte le nom personnalisé
-donné par le joueur, distinct du type catalogue (`type.nomInterne`/`type.nom`) — `null`
-tant que jamais renommé. Le getter `nom` résout et FORMATE en un seul endroit :
-nom personnalisé (ou type par défaut), puis `"Nom (Type)"` uniquement si le résolu
-diffère du type — aucun consommateur (DTO, `describe()` d'événement, frontend) ne
-reformate. `rename(nom)` valide (non vide après trim, 100 caractères max, même limite
-que `nomInterne`) et lève `DomainException` sinon ; sa validation pure est exposée en
-statique (`Vehicle.assertValidName`) pour que `Game.renameVehicle` (mode campagne)
-puisse rejeter un nom invalide AVANT de construire/persister l'événement. Même
-dédoublement construction/campagne que le reste de l'agrégat : `Team.renameVehicle`
-(`assertNotLocked()` + délégation, construction d'équipe) vs `Team.renameCampaignVehicle`
-(délégation seule, atelier — la garde "Atelier uniquement" vit dans `Game.canAccept()`,
-pas ici). Détail complet, y compris pourquoi le renommage en atelier passe par un
-événement dédié plutôt qu'une écriture directe : [spec/CAMPAIGN.md — Renommage d'un
-véhicule en atelier](spec/CAMPAIGN.md#renommage-dun-véhicule-en-atelier).
+**Principes de l'agrégat** :
+- Toute mutation valide d'abord les règles et lève `DomainException` ; le use case la traduit en 400.
+- Coûts et budget calculés en mémoire depuis l'agrégat chargé, jamais en SQL. `Team.budget` est le
+  **seul** point qui choisit entre budget de campagne (`_campaignBudget`, hydraté par le repository)
+  et `cans` - tous les calculs (`remainingBudget`, `canAdd…`) le lisent ([CAMPAIGN.md - Budget](spec/CAMPAIGN.md#budget-de-campagne)).
+- **Verrouillage** : `_isLocked` hydraté par `TeamRepository` (jointure participant → état de campagne,
+  aucune colonne). `assertNotLocked()` garde toutes les mutations directes, **pas** les méthodes
+  « campagne » (`addCampaignVehicle`, `markWeaponSold`, `renameCampaignVehicle`…) utilisées par le
+  replay de l'atelier ([TEAMS.md](spec/TEAMS.md#crud-équipes)).
+- **Tourelle** : valeur `'tourelle'` du type `WeaponOrientation = Orientation | 'tourelle'` (distinct de
+  l'`Orientation` à 3 valeurs des améliorations) - l'état « orientation + tourelle » est impossible à
+  représenter. Réassigner une tourelle = revendre l'arme puis en racheter une, sans code dédié
+  ([VEHICLES.md](spec/VEHICLES.md#montage-sur-tourelle)).
+- **Orientation requise** : lue du champ catalogue `necessite_orientation` par `WeaponType`/
+  `ImprovementType.requiresOrientation`, gardée génériquement par `canAddWeapon`/`canAddImprovement`.
+- **Stats effectives et validation de pose** : Strategy `EquipmentBehavior` ; `canPlace()` porté par
+  le Value Object (un candidat n'a pas d'instance), `applyStats()` par l'entité montée
+  ([VEHICLE_SYSTEM.md §4](VEHICLE_SYSTEM.md#4-pattern-strategy---equipmentbehavior)).
+- **Revente** : `isSold` sur `Weapon`/`Improvement`/`Advantage`/`Sequella`/`Vehicle`. Le prix résiduel
+  est porté par le getter `price` de chaque entité (`ceil(prix/2)` pour arme, amélioration et châssis ;
+  `Advantage.price` et `Sequella.price` ne varient jamais, ce qui suffit à porter la perte totale).
+  `Vehicle.markSold()` cascade sur l'équipement pas encore vendu et mémorise transitoirement les ids
+  cascadés, pour que `clearSold()` (undo) ne dé-marque que ceux-là ([CAMPAIGN.md](spec/CAMPAIGN.md#annulation-dachat-vs-revente)).
+- **Séquelles** : miroir d'`Advantage` dont la monnaie est `vehicle.chocs`. Gardes :
+  `canAddSequella` (origine, unicité, Chocs), `isSequellaRemovable` (une `TABLE_EPAVES` n'est jamais
+  retirable), `canRemoveSequella` (revente fermée sauf `legende_vivante`). Créées uniquement en
+  campagne ([CAMPAIGN.md](spec/CAMPAIGN.md#séquelles)).
+- **Nom d'instance** : `_nom` nullable ; le getter `nom` résout **et formate** (« Nom (Type) » seulement
+  si personnalisé), aucun consommateur ne reformate. `Vehicle.assertValidName` (statique) permet à
+  `Game.renameVehicle` de rejeter un nom invalide avant de construire l'événement.
 
 ---
 
 ## 1 bis. Agrégat User
 
-Agrégat **sans entité enfant** — une seule ligne `users`, aucune collection. Sa
-valeur n'est donc pas la composition mais la **centralisation des règles du
-compte**, jusque-là dispersées dans des services anémiques (`UserService`/
-`AuthService`, supprimés), et surtout du getter `callName` : le seul endroit qui
-décide quel nom afficher pour un utilisateur, partout dans l'application (cf.
-[spec/AUTH.md](spec/AUTH.md#nom-daffichage-callname)).
+Agrégat sans entité enfant : sa valeur est de centraliser les règles du compte et le getter `callName`
+(seule source du nom affiché, [AUTH.md](spec/AUTH.md#nom-daffichage-callname)).
 
 ```mermaid
 classDiagram
@@ -416,38 +333,21 @@ classDiagram
     ITokenIssuer ..> User : lit id/email/role
 ```
 
-**`callName`, unique point de vérité** : retourne aujourd'hui `_pseudo`. Aucun
-consommateur (use case, controller, read model, frontend) ne lit `pseudo` pour de
-l'affichage — changer la règle ne demande de toucher que ce getter. Le pseudo
-**brut** reste exposé séparément par le DTO HTTP, pour le seul pré-remplissage du
-formulaire d'édition : même couple que `Vehicle.customName` (brut) / `Vehicle.nom`
-(résolu), §1.
-
-**`_role` est `readonly`** : l'impossibilité pour un utilisateur de changer son
-propre rôle est structurelle, pas une vérification qu'un appelant pourrait
-oublier. Seules les fabriques `register()`/`registerAdmin()` le fixent.
-
-**Le hachage passe par un port** (`IPasswordHasher`, implémenté par
-`BcryptPasswordHasher`) plutôt que par un import direct de bcrypt : c'est ce qui
-permet aux règles qui en dépendent (« le mot de passe actuel doit correspondre »,
-« un compte désactivé ne peut pas se connecter ») de vivre dans l'agrégat tout en
-gardant le domaine sans dépendance technique. Même intention qu'`IRandomizer`
-pour la Table des Épaves (§4). Le hasher est **passé en paramètre de méthode**,
-jamais détenu en champ — l'agrégat reste sérialisable et sans dépendance stockée.
-
-**Seule règle du compte hors agrégat** : l'unicité de l'email, qui exige de
-connaître les AUTRES utilisateurs — donnée qu'un agrégat n'a structurellement pas.
-Elle vit dans la contrainte `unique` PostgreSQL, traduite en `ConflictException`
-par `UserRepository`.
+- `callName` renvoie aujourd'hui `_pseudo` ; le DTO expose aussi le pseudo brut pour le seul
+  pré-remplissage du formulaire (même couple que `Vehicle.customName`/`nom`).
+- `_role` est `readonly` : seules les fabriques `register()`/`registerAdmin()` le fixent.
+- Hachage via le port `IPasswordHasher`, **passé en paramètre** de méthode (jamais stocké) : les règles
+  « mot de passe actuel correct », « compte désactivé » vivent dans l'agrégat sans dépendre de bcrypt.
+- Seule règle hors agrégat : l'unicité de l'email (exige de connaître les autres utilisateurs),
+  portée par la contrainte `unique` PostgreSQL → `ConflictException` dans `UserRepository`.
 
 ---
 
 ## 2. Catalogue en mémoire
 
-Les données de jeu sont chargées **une seule fois au démarrage** depuis les fichiers YAML
-(`database_init/data/`) et conservées en mémoire sous forme de `Map`. Aucune entité ORM
-n'existe pour ces types — ils servent de **référence immuable** que les Value Objects
-enveloppent.
+Chargé une fois au démarrage depuis `database_init/data/*.yml` (cf.
+[ARCHITECTURE.md §3.3](ARCHITECTURE.md#33-catalogues---singleton-en-mémoire)), aucune entité ORM :
+référence immuable enveloppée par les Value Objects (`static from(raw)`).
 
 ```mermaid
 classDiagram
@@ -532,6 +432,8 @@ classDiagram
         +nom_interne : string
         +type : EVENEMENT_TELE|ESCARMOUCHE
         +description : string
+        +franchissement_portes : boolean
+        +gain_jerricans : boolean
     }
 
     class Sequelle {
@@ -558,43 +460,16 @@ classDiagram
     Sponsor "1" o-- "0..*" Avantage : autorise (par categorie)
 ```
 
-`Sequelle` n'a **aucune** relation avec `Sponsor` — contrairement aux trois autres
-catalogues d'équipement (et même à `Avantage`, résolu par `categorie`), une séquelle
-est applicable à tout véhicule quel que soit le sponsor de l'équipe. `HouseRuleDefinition`
-non plus : une règle maison n'a aucun lien avec sponsors ou équipement, chargée par un
-service dédié (`HouseRuleCatalogService`, cf. [ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-structure-des-modules))
-plutôt que par `CatalogService` — seule sa clé (`nom_interne`) est référencée ailleurs
-(`Campaign.houseRules`, cf. §4 ci-dessous), jamais l'inverse.
-
-Les cinq types `VehicleType`, `WeaponType`, `ImprovementType`, `AdvantageType`,
-`SequellaType` (§1) enveloppent respectivement `Vehicule`, `Arme`, `Amelioration`,
-`Avantage` et `Sequelle` via `static from(raw)`. **`Avantage` est résolu différemment
-des autres** : pas de champ `sponsors_autorises` — la relation Sponsor→Avantage passe
-par correspondance de `categorie` avec `Sponsor.classes_avantage[2]` (cf.
-[spec/VEHICLES.md — Avantages de véhicule](spec/VEHICLES.md#avantages-de-véhicule-72-au-total)).
-`Sequelle` va plus loin : ni `sponsors_autorises` ni `categorie`, aucune résolution
-sponsor du tout (cf. ci-dessus). Le catalogue `Scenario` est géré par
-`ScenarioCatalogService` (même singleton pattern que `CatalogService`).
-
-**`munitions`/`effet_court`** (fiche d'équipe exportable, cf.
-[spec/TEAMS.md](spec/TEAMS.md#fiche-déquipe-exportable)) : deux champs optionnels
-purement présentationnels, sans effet sur aucune règle métier — contrairement à
-`necessite_orientation` (obligatoire, dérive une vraie règle de pose). `munitions`
-existe sur `Arme` **et** `Amelioration` (une amélioration à usage limité — Bélier
-Explosif, Nitro toutes variantes — porte elle aussi un nombre d'utilisations de
-départ, jusqu'ici seulement décrit en texte libre dans `regles`, ex. "1 munition")
-— jamais sur `Avantage`/`Sequelle`, qui n'ont pas cette notion. `effet_court`
-existe sur les 4 types (y compris `Sequelle`, seul catalogue où il apparaît en
-dehors des trois autres relations Sponsor). Les Value Objects
-(`WeaponType`/`ImprovementType.munitions`/`.effetCourt`, `AdvantageType`/
-`SequellaType.effetCourt`) les exposent tels quels — `undefined` si non
-renseignés, géré par repli côté renderer (jamais une erreur).
+- Résolution par sponsor : véhicules, armes, améliorations via `sponsors_autorises` ; avantages par
+  `categorie ∈ Sponsor.classes_avantage` ; séquelles et règles maison sans aucun lien sponsor.
+- `munitions`/`effet_court` : champs purement présentationnels (fiche d'équipe), cf.
+  [VEHICLES.md](spec/VEHICLES.md#catalogue-en-mémoire-pas-en-base-de-données).
+- `Scenario` et `HouseRuleDefinition` sont chargés par leurs propres services (`ScenarioCatalogService`,
+  `HouseRuleCatalogService`).
 
 ---
 
 ## 3. Diagramme entité-relation (base de données)
-
-Toutes les entités TypeORM persistées dans PostgreSQL.
 
 ```mermaid
 erDiagram
@@ -739,35 +614,22 @@ erDiagram
     }
 ```
 
-**Clés logiques (pas de FK SQL)** : `VEHICLE.nomInterne` → `Vehicule.nom_interne`,
-`WEAPON.nomInterne` → `Arme.nom_interne`, `VEHICLE_IMPROVEMENT.nomInterne` →
-`Amelioration.nom_interne`, `VEHICLE_ADVANTAGE.nomInterne` → `Avantage.nom_interne`,
-`GAME.scenarioId` → `Scenario.nom_interne`, `GAME_EVENT.nomInterne` (quand
-`entityType = SEQUELLE`) → `Sequelle.nom_interne`, `GAME_EVENT.freeAdvantageNomInterne`
-→ `Avantage.nom_interne`. Ces références pointent vers des données en mémoire, pas
-des tables SQL.
-
-**Pas de table `VEHICLE_SEQUELLE`** : contrairement à `Weapon`/`Improvement`/`Advantage`
-(qui existent à la fois en table persistée — construction d'équipe — et en entité
-transiente D-S11 — atelier), une séquelle n'a **aucune** table SQL propre : elle
-n'existe que via `EquipmentChangedEvent` (entityType `SEQUELLE`) et le mécanisme
-transient D-S11 (`id = -event.id`), jamais créée à la construction d'équipe.
-
-**Contrainte unique composite** : `(CAMPAIGN_PARTICIPANT.campaignId, CAMPAIGN_PARTICIPANT.userId)` — un utilisateur ne peut engager qu'une équipe par campagne.
-
-**Résultats dérivés du journal** : il n'existe plus de table `GAME_RESULT` (ni d'entité `GameResultOrm`). Le classement d'une partie est **reconstruit à la lecture** depuis les `GAME_EVENT` de type `RANKING_ASSIGNED` (rang + PC figés à l'enregistrement) — convergence event-sourcing du basculement Phase 2. `GET /api/campaigns/:id/games/:gameId/results` produit la même forme de réponse qu'auparavant.
-
-**Table plate `GAME_EVENT`** : toutes les colonnes payload sont nullable — seules celles pertinentes au type d'événement (`eventType`) sont renseignées. Ce choix évite la hiérarchie STI TypeORM.
+- **Clés logiques, sans FK SQL** : tout `nomInterne` (et `GAME.scenarioId`, `GAME_EVENT.freeAdvantageNomInterne`)
+  pointe vers le catalogue en mémoire.
+- **Pas de table de séquelles** : une séquelle n'existe que par `EquipmentChangedEvent` et comme entité
+  transiente (§4).
+- **Pas de table de résultats** : le classement est reconstruit depuis les `GAME_EVENT` `RANKING_ASSIGNED`.
+- **`GAME_EVENT` est une table plate** : colonnes payload toutes nullable, seules celles du type
+  d'événement sont renseignées (évite une hiérarchie STI TypeORM).
+- Unique `(CAMPAIGN_PARTICIPANT.campaignId, userId)`.
 
 ---
 
-## 4. Domaine Campagne — Event Sourcing (`game/domain/`)
+## 4. Domaine campagne (event sourcing)
 
-L'état campagne n'est jamais persisté directement. Il est **recalculé par replay** du journal `game_events` à chaque lecture. L'agrégat racine est `Campaign` (ex-`Season`, renommé pour unifier la terminologie du domaine — cf. commit `727d6e3`).
-
-> ⚠️ Ne pas confondre avec l'entité TypeORM `CampaignOrm` — cf.
-> [ARCHITECTURE.md §3.1](ARCHITECTURE.md#31-structure-des-modules) pour le détail
-> de cette collision de nom.
+Code : `apps/backend/src/app/campaign/domain/`. L'état n'est jamais persisté : il est **recalculé par
+replay** du journal `game_events` à chaque chargement. Ne pas confondre l'agrégat `Campaign` avec
+l'entité `CampaignOrm`.
 
 ```mermaid
 classDiagram
@@ -872,70 +734,30 @@ classDiagram
 
 ### Répartition des responsabilités Campaign / Game
 
-`Campaign` ne porte que ce qui dépasse une seule partie : navigation
-(`findGame`, `findParticipant`), invariants transversaux (`findAtelierGame` —
-un seul atelier actif à la fois sur l'ensemble des parties de la campagne) et
-orchestration multi-parties (`replay`, cycle de vie, CRUD programme/participants).
-**La construction des événements d'une partie donnée vit sur `Game`, pas sur
-`Campaign`** : `recordResult`, `distributeResistance` (Points de Résistance
-automatiques, US-F1 — hook polymorphe, no-op hors Événement Télévisé, appelé à
-l'entrée en Atelier plutôt qu'à `recordResult`, cf. RM-4), `resolveWreck`, `creditFavoriDuPublicBonus`,
-`changeEquipment` (achat/revente d'équipement **et** de séquelles, un seul
-point d'entrée depuis l'unification — cf. [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles)),
-`contactResistance`, `recordWalletMovement`,
-`recordVehicleLost`, `journal()` sont toutes des méthodes de
-`Game` — chacune reçoit en paramètre les `CampaignParticipant` dont elle a
-besoin (même convention que `GameEvent.execute(participants)`/
-`Game.apply(participants)`, qui ne détiennent pas non plus de référence
-permanente aux participants — donnée qui varie à chaque appel, pas une
-configuration stable ; cf. [ARCHITECTURE.md §3.4, « Convention projet — qui
-sélectionne une Strategy »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)
-pour le cas distinct d'une configuration attachée par la racine). Les use cases naviguent explicitement via
-l'agrégat racine (`campaign.findGame(gameId)` ou `campaign.findAtelierGame()`)
-puis appellent la méthode sur l'objet `Game` obtenu — `Campaign` n'expose plus
-de méthode de pur passage (`applyNewEvent`, ancien point d'entrée générique,
-a été supprimé). Ce choix évite que `Campaign` devienne une classe fourre-tout
-portant des règles qui appartiennent en réalité à ses parties.
+- `Campaign` ne porte que ce qui dépasse une partie : navigation (`findGame`, `findParticipant`),
+  invariant « un seul atelier » (`findAtelierGame`), replay, cycle de vie, CRUD programme/participants.
+- **La construction des événements d'une partie vit sur `Game`** (`recordResult`,
+  `distributeResistance`, `resolveWreck`, `creditFavoriDuPublicBonus`, `changeEquipment`,
+  `contactResistance`, `recordWalletMovement`, `recordVehicleLost`, `journal()`…). Les use cases
+  naviguent (`campaign.findGame(id)`) puis appellent la méthode sur la partie.
+- Les `CampaignParticipant` sont passés **en paramètre** (donnée variable à chaque appel) ; la
+  configuration stable (règles maison) est attachée par la racine (`attachContext`, ci-dessous).
 
 ### Hiérarchie Game (Invoker)
 
-Pas de sous-type dédié à l'atelier : la phase garage post-partie est un
-statut du cycle de vie de la partie elle-même (`PLANIFIE → ATELIER → JOUE`),
-pas une entité séparée (cf.
-[design doc](plans/2026-07-05-atelier-lifecycle-design.md) et
-[CAMPAIGN.md](spec/CAMPAIGN.md#cycle-de-vie-dune-partie-et-phase-atelier)).
-`canAccept(event)` dépend donc du statut courant, pas seulement du sous-type :
+Pas de sous-type atelier : `ATELIER` est un statut (`PLANIFIE → ATELIER → JOUE`). `canAccept(event)`
+dépend du statut :
 
-| Classe              | Type             | Statuts                     | Événements acceptés en PLANIFIE                                                                                                                                                                                                              | Événements acceptés en ATELIER                     |
-| ------------------- | ---------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `EvenementTeleGame` | `EVENEMENT_TELE` | `PLANIFIE → ATELIER → JOUE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, EquipmentChanged (entityType `SEQUELLE` uniquement), ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus, SabotagePointsSpent | EquipmentChanged (tout entityType), VehicleRenamed |
-| `EscarmoucheGame`   | `ESCARMOUCHE`    | `PLANIFIE → ATELIER → JOUE` | Idem EvenementTele (listes dupliquées à l'identique, volontairement non factorisées — appelées à diverger)                                                                                                                                   | EquipmentChanged (tout entityType), VehicleRenamed |
+| Statut | Événements acceptés (`EvenementTeleGame` et `EscarmoucheGame`, listes volontairement dupliquées) |
+|---|---|
+| `PLANIFIE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus, SabotagePointsSpent, EquipmentChanged **`SEQUELLE` seulement** (séquelle imposée par la Table des Épaves) |
+| `ATELIER` | EquipmentChanged (tout `entityType`), VehicleRenamed |
+| `JOUE` | aucun |
 
-`EquipmentChangedEvent` est la seule classe acceptée dans les deux statuts, mais
-pas pour les mêmes `entityType` : en `PLANIFIE`, seul `SEQUELLE` passe (séquelle
-`TABLE_EPAVES` imposée par la Table des Épaves, lignes "Siège irrécupérable"/
-"Châssis fragilisé" — générées par le tirage, _avant_ l'entrée en atelier) ; `VEHICLE`/`WEAPON`/
-`IMPROVEMENT`/`ADVANTAGE`, et `SEQUELLE` `ATELIER` (achat volontaire contre des
-Chocs), restent exclusifs à `ATELIER`.
+### Règles maison : Strategy par point de calcul
 
-Un seul `Game` en statut `ATELIER` à la fois par campagne : `enterAtelier`
-clôture automatiquement (`ATELIER → JOUE`) toute autre partie encore en
-atelier.
-
-### Règles maison — Strategy par point de calcul
-
-Résumé du mécanisme détaillé en [spec/CAMPAIGN.md — Règles
-maison](spec/CAMPAIGN.md#règles-maison) et
-[docs/plans/2026-09-21-regles-maison-mecanisme-design.md](plans/2026-09-21-regles-maison-mecanisme-design.md) —
-un **quatrième** pattern GoF (Strategy + Abstract Factory), aux côtés des trois
-imbriqués Command/Invoker/Receiver ci-dessus (cf. [ARCHITECTURE.md §3.8, « Trois
-patterns GoF imbriqués
-»](ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign)) : une règle
-maison ne modifie jamais `Game` ou `Campaign` directement, elle remplace (R1),
-ajoute (R2) ou supprime (R3) la Strategy résolue pour UN point de calcul précis.
-Trois points existent à ce jour : la distribution des Points de Résistance (R1),
-la cagnotte collective de fin d'Événement Télévisé (R2) et le revenu de base
-d'une Escarmouche (R3).
+Une règle maison ne modifie jamais `Game`/`Campaign` : elle remplace la Strategy résolue pour **un**
+point de calcul. Effets fonctionnels : [CAMPAIGN.md - Règles maison](spec/CAMPAIGN.md#règles-maison).
 
 ```mermaid
 classDiagram
@@ -1053,164 +875,65 @@ classDiagram
     CappedJerricanGainsStrategy ..|> JerricanGainsCapStrategy
 ```
 
-- **`GameRulesContext`** (`domain/games/game-context.ts`) — interface étroite que
-  `Campaign` expose à chacune de ses parties (constructeur + `createGame`,
-  `attachContext`, même idiome que `CampaignParticipant.attachTeam(team)`) :
-  `Game` ne reçoit jamais l'agrégat `Campaign` complet, seulement ce qu'il lui
-  faut pour résoudre sa propre politique de jeu.
-- **`HouseRuleStrategyFactory`** (`domain/house-rules/house-rule-strategy.factory.ts`)
-  — Abstract Factory **unique** pour toutes les règles maison présentes et
-  futures, une méthode `create…Strategy()` par point de calcul concerné
-  (`createResistanceDistributionStrategy()`, `createTvBonusDistributionStrategy()`,
-  `createBaseIncomeStrategy()` aujourd'hui). Construite depuis `Campaign.houseRules`, reconstruite à la
-  demande par le getter `Campaign.strategyFactory` plutôt que mémoïsée — pour
-  qu'un `setHouseRules` ultérieur soit immédiatement pris en compte, sans
-  invalidation à gérer. Registre pur (`HOUSE_RULE_REGISTRY`, une entrée par
-  règle maison qui remplace ou complète un calcul par défaut — union
-  discriminée par `point : CalculationPoint` pour que chaque méthode récupère
-  une Strategy correctement typée sans `any`) — même idiome que
-  `IMPROVEMENT_BEHAVIORS`/`ADVANTAGE_BEHAVIORS` (module équipe, cf.
-  [ARCHITECTURE.md §3.4](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)).
-  Lève une `DomainException` si plusieurs règles maison actives couvrent le
-  même point (jamais silencieusement l'une ou l'autre).
-- **`ResistanceDistributionStrategy`** (`domain/house-rules/resistance-distribution-strategy.ts`)
-  — un calcul unitaire par participant (`isEligible(entry, context)`), jamais
-  un filtrage en bloc : `EvenementTeleGame.distributeResistance()` calcule
-  `classified` et le total de PC de la partie pour chaque participant, puis
-  interroge la Strategy résolue un participant à la fois. Deux
-  implémentations : `DefaultResistanceStrategy` (`key = "defaut"`, comportement
-  historique US-F1 — rang hors du top classé) et `NoChampionshipPointsStrategy`
-  (`key = "distribution_points_resistance"`, règle maison R1 — aucun point
-  de championnat gagné sur la partie). `key` est stampée sur l'événement créé
-  (`ResistanceContactedEvent.strategyKey`), jamais recalculée a posteriori —
-  c'est ce qui gèle le résultat au moment du calcul (cf.
-  [spec/CAMPAIGN.md — Règles maison](spec/CAMPAIGN.md#règles-maison)).
-- **`TvBonusDistributionStrategy`** (`domain/house-rules/tv-bonus-distribution-strategy.ts`)
-  — mirroir de `ResistanceDistributionStrategy` en plus simple : `isEligible(entry)`
-  sans second paramètre `context`, l'éligibilité ne dépendant d'aucune donnée de
-  la partie. Deux implémentations : `NoTvBonusStrategy` (`key = "defaut"`,
-  jamais éligible — cette règle maison AJOUTE un effet plutôt que de remplacer
-  un critère déjà actif par défaut, contrairement à R1) et
-  `CollectiveTvBonusStrategy` (`key = "cagnotte_collective_evenement_tele"`,
-  règle maison R2 — toujours éligible). Résolue et consommée directement par
-  `Game.recordResult()` (pas par un hook polymorphe séparé comme
-  `distributeResistance()`) : son éligibilité ne dépendant d'aucune donnée
-  produite plus tard dans le wizard, rien n'impose d'attendre l'entrée en
-  Atelier.
-- **`BaseIncomeStrategy`** (`domain/house-rules/base-income-strategy.ts`) —
-  contrairement aux deux Strategy ci-dessus (un `isEligible` par participant),
-  encapsule directement le tirage (`roll(randomizer): number | null`) : il n'y a
-  aucune liste à filtrer, une seule décision par appel. Deux implémentations :
-  `DefaultBaseIncomeStrategy` (`key = "defaut"`, tire 1D6 — comportement
-  historique) et `NoBaseIncomeStrategy` (`key = "escarmouche_bonus_jerricans"`,
-  règle maison R3 — retourne toujours `null`, aucun événement journalisé).
-  Résolue et consommée directement par `Game.rollBaseIncome()`, indépendamment
-  à chaque tirage (un par participant présent, à l'écran Résolution du wizard) —
-  ni à l'entrée en Atelier (R1) ni à l'enregistrement du résultat (R2).
-- **`JerricanGainsCapStrategy`** (`domain/house-rules/jerrican-gains-cap-strategy.ts`)
-  — seule Strategy de règle maison à ce jour consommée par **deux** méthodes de
-  `Game` (`rollBaseIncome()` et `recordJerricanGains()`), puisque son plafond
-  porte sur le cumul des deux sources de gains "récompense" d'une même
-  Escarmouche plutôt que sur un seul point de calcul isolé. `clamp(requestedAmount,
-alreadyEarned)` réduit, si nécessaire, le montant à créditer — jamais
-  d'exception, un dépassement est simplement réduit au reliquat disponible
-  (jusqu'à `0`). Deux implémentations : `UnlimitedJerricanGainsStrategy`
-  (`key = "defaut"`, ne réduit jamais) et `CappedJerricanGainsStrategy`
-  (`key = "plafond_jerricans_escarmouche"`, règle maison R4 — plafond fixé à 15
-  jerricans). `alreadyEarned` est calculé par `Game` à chaque appel, en sommant
-  le getter générique `GameEvent.recompenseJerricansAwarded` (`0` par défaut,
-  surchargé par `WalletMovementEvent` quand `reason === WalletReason.
-RECOMPENSE`) sur `this.events` — même idiome que `championshipPointsAwarded`
-  (cf. [§Hiérarchie GameEvent](#hiérarchie-gameevent-command) ci-dessous),
-  jamais un compteur mémorisé séparément.
-- **Qui sélectionne la Strategy** : jamais un use case — `EvenementTeleGame`
-  (`distributeResistance`), `Game.recordResult()`, `Game.rollBaseIncome()` et
-  `Game.recordJerricanGains()` la résolvent elles-mêmes via
-  `this.context.strategyFactory`, cf.
-  [ARCHITECTURE.md §3.4, « Convention projet — qui sélectionne une Strategy
-  »](ARCHITECTURE.md#34-architecture-ddd--standard-du-projet).
+- **`GameRulesContext`** : interface étroite que `Campaign` attache à chaque `Game` (`attachContext`),
+  pour que la partie résolve sa politique sans recevoir l'agrégat entier ni une décision d'un use case.
+- **`HouseRuleStrategyFactory`** : Factory **unique**, une méthode `create…Strategy()` par point de
+  calcul. Reconstruite à chaque accès à `Campaign.strategyFactory` (pas de cache à invalider après
+  `setHouseRules`). Registre pur `HOUSE_RULE_REGISTRY` (union discriminée par `point`, Strategy typée
+  sans `any`). Deux règles actives sur le même point → `DomainException`.
+- **4 points de calcul** :
+
+| Point | Consommé par | Défaut | Règle maison |
+|---|---|---|---|
+| Distribution des PR | `EvenementTeleGame.distributeResistance()` (un `isEligible` par participant) | `DefaultResistanceStrategy` | R1 `NoChampionshipPointsStrategy` |
+| Cagnotte télé | `Game.recordResult()` | `NoTvBonusStrategy` | R2 `CollectiveTvBonusStrategy` |
+| Revenu de base | `Game.rollBaseIncome()` (`roll()` → montant ou `null`) | `DefaultBaseIncomeStrategy` | R3 `NoBaseIncomeStrategy` |
+| Plafond de gains | `rollBaseIncome()` **et** `recordJerricanGains()` (`clamp(demandé, déjàGagné)`) | `UnlimitedJerricanGainsStrategy` | R4 `CappedJerricanGainsStrategy` |
+
+- La `key` de la Strategy est stampée sur l'événement (ex. `ResistanceContactedEvent.strategyKey`) :
+  le résultat est figé, jamais recalculé au replay.
+- Le cumul « déjà gagné » de R4 est recalculé depuis `this.events` via le getter générique
+  `GameEvent.recompenseJerricansAwarded` (même idiome que `championshipPointsAwarded`), jamais mémorisé.
+- **Qui sélectionne** : toujours `Game` via `this.context.strategyFactory`, jamais un use case
+  ([ARCHITECTURE.md §3.4](ARCHITECTURE.md#34-architecture-ddd---standard-du-projet)).
 
 ### Hiérarchie GameEvent (Command)
 
-Chaque `GameEvent` implémente aussi `describe(): string` — une ligne de texte en
-français résumant l'événement (ex. `"Classé 1 (+10 PC)"`,
-`"Table des Épaves : Arrachée (D6=5+0 chocs, +1 choc(s))"`). Utilisée par la
-synthèse de l'écran Résolution du wizard de fin de partie (cf.
-[`docs/spec/CAMPAIGN.md`](spec/CAMPAIGN.md#wizard-de-fin-de-partie)) : `WreckResolveUseCase`
-et `RollIncomeUseCase` renvoient `descriptions: string[]` (une par événement créé) ; et
-par `Game.journal()` (cf.
-[spec/CAMPAIGN.md — Journal d'une partie](spec/CAMPAIGN.md#journal-dune-partie)),
-qui traduit **tout** le journal d'une partie pour affichage, tous types
-d'événements confondus.
+Chaque événement implémente `execute()`/`undo()` et `describe()` (une ligne de texte, utilisée par le
+journal et l'écran Résolution du wizard).
 
-| Événement                                                                                                                                                                                                                                | Effet `execute()`                                                                                                                                                                                                                    | `undo()`                                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `RankingAssignedEvent`                                                                                                                                                                                                                   | `participant.addPoints(+PC)`                                                                                                                                                                                                         | `addPoints(-PC)`                                                                             |
-| `WalletMovementEvent`                                                                                                                                                                                                                    | `participant.creditWallet(amount)`                                                                                                                                                                                                   | `creditWallet(-amount)`                                                                      |
-| `VehicleLostEvent`                                                                                                                                                                                                                       | `vehicle.markLost()`                                                                                                                                                                                                                 | `vehicle.clearLost()`                                                                        |
-| `WeaponLostEvent`                                                                                                                                                                                                                        | `weapon.markLost()`                                                                                                                                                                                                                  | `weapon.clearLost()`                                                                         |
-| `ImprovementLostEvent`                                                                                                                                                                                                                   | `improvement.markLost()` (mirroir `WeaponLostEvent`)                                                                                                                                                                                 | `improvement.clearLost()`                                                                    |
-| `AdvantageLostEvent`                                                                                                                                                                                                                     | `advantage.markLost()` (mirroir `WeaponLostEvent`/`ImprovementLostEvent`)                                                                                                                                                            | `advantage.clearLost()`                                                                      |
-| `WreckResolvedEvent`                                                                                                                                                                                                                     | `vehicle.addChocs(+n)` (`n` peut être négatif — ligne `DEBOSSELE`) ; `vehicle.markFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC`                                                                                              | `vehicle.addChocs(-n)` ; `vehicle.clearFavoriDuPublic()` si `wreckResult = FAVORI_DU_PUBLIC` |
-| `EquipmentChangedEvent` (`entityType` ≠ `SEQUELLE`)                                                                                                                                                                                      | BUY : `creditWallet(-cost)` + `addCampaignVehicle/Weapon/…` ; SELL : `markSoldEntity`                                                                                                                                                | Inverse de execute                                                                           |
-| `EquipmentChangedEvent` (`entityType = SEQUELLE`)                                                                                                                                                                                        | BUY : `vehicle.addChocs(-cost)` + `addCampaignSequella` (+ `addCampaignAdvantage` taggé si `dur_a_cuire`) ; SELL : `vehicle.addChocs(+refund)` + `markSequellaSold` (+ `markGrantedAdvantageSold` si `dur_a_cuire`)                  | Inverse de execute — monnaie `vehicle.chocs`, jamais la cagnotte                             |
-| `ResistanceContactedEvent` (automatique via `Game.distributeResistance`, RM-4 — critère résolu par `HouseRuleStrategyFactory`, règle par défaut ou règle maison R1, cf. §Règles maison ci-dessus — ou manuel, route dédiée organisateur) | `participant.addResistance(+3)`                                                                                                                                                                                                      | `addResistance(-3)`                                                                          |
-| `GatesCrossedEvent` (US-B2)                                                                                                                                                                                                              | `participant.addPoints(+1 par porte)`                                                                                                                                                                                                | `addPoints(-n)`                                                                              |
-| `VehicleDestroyedEvent` (US-B2)                                                                                                                                                                                                          | `participant.addPoints(+1/+2/+3/+5 selon poids)` — crédite le destructeur, ne mute jamais le véhicule ciblé                                                                                                                          | `addPoints(-n)`                                                                              |
-| `FavoriDuPublicBonusEvent` (Table des Épaves, ligne 9)                                                                                                                                                                                   | `participant.addPoints(+5)` + `vehicle.clearFavoriDuPublic()` (consomme le statut) — effet différé, revérifié côté serveur via `Vehicle.hasFavoriDuPublic` avant construction de l'événement (cf. `Game.creditFavoriDuPublicBonus`)  | `addPoints(-5)` + `vehicle.markFavoriDuPublic()`                                             |
-| `VehicleRenamedEvent`                                                                                                                                                                                                                    | `vehicle.renameCampaignVehicle(newName)` (via `Team`, pas `assertNotLocked()` — cf. §1)                                                                                                                                              | `vehicle.renameCampaignVehicle(previousName)`                                                |
-| `SabotagePointsSpentEvent` (déclaration rétroactive, wizard de fin de partie)                                                                                                                                                            | `participant.addResistance(-3 × pointsSpent)` — `pointsSpent` est DÉJÀ le montant clampé au solde disponible, calculé par `Game.recordSabotageSpent` AVANT construction (jamais recalculé dans `execute()`/`describe()`, cf. sa doc) | `addResistance(+3 × pointsSpent)`                                                            |
+| Événement | `execute()` | `undo()` |
+|---|---|---|
+| `RankingAssignedEvent`, `GatesCrossedEvent` | `addPoints(+PC)` | inverse |
+| `VehicleDestroyedEvent` | `addPoints(+PC)` au destructeur, ne touche pas le véhicule | inverse |
+| `WalletMovementEvent` | `creditWallet(amount)` | inverse |
+| `VehicleLostEvent` / `WeaponLostEvent` / `ImprovementLostEvent` / `AdvantageLostEvent` | `markLost()` | `clearLost()` |
+| `WreckResolvedEvent` | `addChocs(n)` (n peut être négatif) ; `markFavoriDuPublic()` si ce résultat | inverse |
+| `EquipmentChangedEvent` (hors `SEQUELLE`) | BUY : crée l'entité (`addCampaign…`) ; SELL : `markSold…` | inverse |
+| `EquipmentChangedEvent` (`SEQUELLE`) | BUY : `addChocs(-coût)` + séquelle (+ avantage gratuit si Dur à Cuire) ; SELL : séquelle (et avantage lié) vendus | inverse |
+| `ResistanceContactedEvent` | `addResistance(+3)` | inverse |
+| `FavoriDuPublicBonusEvent` | `addPoints(+5)` + `clearFavoriDuPublic()` | inverse |
+| `VehicleRenamedEvent` | `renameCampaignVehicle(newName)` | `renameCampaignVehicle(previousName)` |
+| `SabotagePointsSpentEvent` | `addResistance(-3 × pointsSpent)` (montant déjà clampé à la construction) | inverse |
+
+Les montants dérivés d'une règle (PC selon le poids, clamp, éligibilité Favori du Public…) sont
+calculés par `Game` **avant** la construction de l'événement, jamais dans `execute()`.
 
 ### Entités transientes (D-S11)
 
-Les véhicules, armes, améliorations, avantages et séquelles achetés en atelier
-**n'ont pas de ligne en base**. Leur identité est `id = -event.id` (espace
-négatif). À chaque replay, `EquipmentChangedEvent.execute()` les recrée avec
-cet id. Les ids positifs restent réservés aux entités persistées (`VEHICLE`,
-`WEAPON`, `VEHICLE_IMPROVEMENT`, `VEHICLE_ADVANTAGE` — aucune table pour
-`Sequella`, toujours transiente, cf. §3). Cas particulier Dur à Cuire : la
-séquelle et l'avantage gratuit qu'elle accorde partagent le **même** id
-(`-event.id`, un seul événement les crée tous les deux) — sans collision
-possible, ces deux entités vivant dans des collections distinctes
-(`vehicle.sequellas` / `vehicle.advantages`).
+Véhicules, armes, améliorations, avantages et séquelles achetés en atelier n'ont **pas de ligne en
+base** : identité `id = -event.id`, recréés à chaque replay par `EquipmentChangedEvent.execute()`. Les
+ids positifs restent aux entités persistées (aucune table pour `Sequella`).
+- Dur à Cuire : séquelle et avantage gratuit partagent `-event.id` sans collision (collections distinctes).
+- Équipement intégré d'un véhicule acheté en atelier : le véhicule garde `-event.id` (contrat utilisé
+  par `findSameSessionPurchase`/`collectSessionEventsForVehicle`) ; ses entités par défaut reçoivent un
+  id décalé d'un offset constant (`Team.DEFAULT_IMPROVEMENT_ID_OFFSET`/`DEFAULT_WEAPON_ID_OFFSET`,
+  10/20 milliards), supérieur à la capacité de `GAME_EVENT.id` (`integer`) : collision impossible.
 
-**Équipement par défaut d'un véhicule acheté en atelier** : un second cas de
-plusieurs entités créées par un seul événement `BUY_VEHICLE` — le véhicule lui-même
-GARDE `id = -event.id` (contrat exploité par `Game.findSameSessionPurchase`/
-`collectSessionEventsForVehicle`), mais son amélioration/arme intégrée
-(`estDefaut: true`, résolues depuis `VehicleType.defaultImprovements`/
-`.defaultWeaponNomInterne`) reçoit un id dérivé par **offset constant**
-(`Team.DEFAULT_IMPROVEMENT_ID_OFFSET`/`DEFAULT_WEAPON_ID_OFFSET`, cf.
-`Team.addCampaignVehicle`) plutôt que `-event.id` directement — nécessaire car
-ces entités vivent dans des collections où d'AUTRES événements (`BUY_WEAPON`/
-`BUY_IMPROVEMENT`) déposent déjà des entités à `-leur_event.id`. L'offset
-(10/20 milliards) dépasse la capacité de la colonne `GAME_EVENT.id`
-(Postgres `integer`, max ~2,147,483,647) : aucune collision possible avec un id
-d'événement réel, garantie mathématique plutôt que probabiliste.
+### Séquelles (event sourcing)
 
-### Séquelles (event-sourcing)
-
-Résumé de la partie event-sourcing du système de séquelles — conception
-complète : [spec/CAMPAIGN.md — Séquelles](spec/CAMPAIGN.md#séquelles) et
-[docs/plans/2026-07-13-sequelles-design.md](plans/2026-07-13-sequelles-design.md).
-
-- **Aucun événement dédié** : `SequellaAddedEvent` (et l'idée d'un
-  `SequellaRemovedEvent`, jamais implémentée) sont retirés — tout passe par
-  `EquipmentChangedEvent`, `entityType SEQUELLE`.
-- **Monnaie différente** : `vehicle.chocs`, pas `participant.wallet` — seule
-  exception à "le wallet n'est plus jamais touché" par un événement d'atelier.
-- **Revente gardée** : contrairement aux 4 autres `entityType`, la revente
-  cross-session d'une séquelle est rejetée par défaut
-  (`Vehicle.canRemoveSequella()`), sauf présence active de `legende_vivante`
-  sur le véhicule.
-- **Dur à Cuire** : un seul événement porte deux effets (séquelle + avantage
-  gratuit taggé `Advantage.grantedBySequellaNomInterne`) — annulation même
-  session atomique par construction (un seul événement supprimé du journal).
-- **Maintenu par la Rouille / Légende Vivante** : aucun événement spécifique —
-  deux modificateurs permanents de `WreckTable` (double tirage chaîné / D6
-  forcé à 1), lus par présence (`Vehicle.hasActiveSequella`) à chaque
-  résolution de la Table des Épaves.
-- **`WreckTable` gagne une dépendance `ICatalogRepository`** (résout les
-  séquelles imposées automatiquement — `siege_irrecuperable`,
-  `chassis_fragilise` — pour construire l'`EquipmentChangedEvent` imposé),
-  en plus de son `IRandomizer` existant.
+- Aucun événement dédié : `EquipmentChangedEvent`, `entityType: SEQUELLE`, seule exception où la
+  monnaie est `vehicle.chocs` au lieu de la cagnotte.
+- Maintenu par la Rouille / Légende Vivante : pas d'événement, deux modificateurs de `WreckTable` lus
+  par présence (`Vehicle.hasActiveSequella`) à chaque tirage.
+- `WreckTable` dépend d'`ICatalogRepository` (séquelles imposées) en plus d'`IRandomizer`.

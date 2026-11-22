@@ -1,1278 +1,415 @@
 # Campagnes
 
-> Sous-document de [SPECIFICATION.md](../SPECIFICATION.md).
-> Mettre à jour après tout changement du module Campaign.
-> Document de conception détaillé : [`docs/plans/2026-06-14-saisons-design.md`](../plans/2026-06-14-saisons-design.md) (conception initiale, terminologie "saison" — renommée `Campaign` depuis, cf. commit `727d6e3`).
+> Sous-document de [SPECIFICATION.md](../SPECIFICATION.md) - **propriétaire** des règles
+> du mode campagne (comportement observable). La conception (classes, Strategy,
+> event-sourcing) est dans [DOMAIN_MODEL.md §4](../DOMAIN_MODEL.md#4-domaine-campagne-event-sourcing),
+> les composants dans [COMPONENTS.md](../COMPONENTS.md).
 
 ---
 
 ## Vue d'ensemble
 
-Une **Campagne** est une "ligue" regroupant plusieurs équipes (chacune appartenant à un
-utilisateur différent) qui jouent ensemble plusieurs parties au fil du temps. Un
-utilisateur crée la campagne (devenant automatiquement son organisateur), peut y inviter
-d'autres joueurs via un code partageable, et valide leurs demandes d'inscription.
+Une **Campagne** est une ligue : plusieurs équipes (une par utilisateur) jouent une suite
+de parties. Le créateur en devient organisateur, invite par un code partageable et valide
+les inscriptions.
 
-**Cycle de vie** (`CampaignState`) : `EN_CONSTRUCTION` (état initial — gestion libre des
-inscriptions) → `EN_COURS` → `TERMINEE`. Transitions **bidirectionnelles** en
-pratique (`Campaign.changeState()`, décision de design du refactor DDD Phase 2) :
-un organisateur peut aussi bien faire avancer que reculer la campagne (ex. revenir
-en `EN_CONSTRUCTION` depuis `EN_COURS` pour rouvrir les inscriptions) — ce n'est
-donc pas un cycle strictement séquentiel malgré l'ordre naturel ci-dessus.
+**Cycle de vie** (`CampaignState`) : `EN_CONSTRUCTION` (initial) → `EN_COURS` → `TERMINEE`.
+Les transitions sont **bidirectionnelles** (`Campaign.changeState()`) : l'organisateur peut
+revenir en arrière (ex. rouvrir les inscriptions).
 
 ---
 
 ## Budget de campagne
 
-L'organisateur fixe, à la création de la campagne, un **budget en jerricans**
-(`Campaign.budget`, défaut 50 si non renseigné) qui remplace `Team.cans` pour tout
-calcul de budget effectué en contexte campagne - construction d'équipe une fois
-engagée, verdicts d'atelier, cagnotte. `Team.budget` (getter de l'agrégat) résout
-la valeur applicable : celui de la campagne engageante s'il y en a une, sinon
-`cans` - `cans` reste alors la valeur brute saisie par le joueur, jamais recalculée,
-simplement inerte tant que l'équipe est engagée (cf. [spec/VEHICLES.md](VEHICLES.md)
-et [spec/TEAMS.md](TEAMS.md) pour le détail de ce getter et son usage dans le
-configurateur).
+L'organisateur fixe à la création un **budget en jerricans** (`Campaign.budget`, défaut 50)
+qui remplace `Team.cans` pour tout calcul en contexte campagne (construction d'une équipe
+engagée, atelier, cagnotte). Résolution par `Team.budget` : budget de la campagne engageante,
+sinon `cans` (qui reste la valeur saisie, inerte tant que l'équipe est engagée).
 
-**Éligibilité à l'inscription** : une équipe ne peut être engagée (demande
-d'inscription, changement d'équipe, validation d'une demande) que si le coût
-cumulé de ses véhicules (`Team.vehiclesCost`) tient dans le budget de la
-campagne - `coût ≤ budget`, une équipe construite exactement au budget reste
-éligible. Portée par `Campaign.assertTeamFitsBudget(team)`, appelée par
-`requestJoin`, `changeParticipantTeam` et `validateParticipant` (cette dernière
-revérifie à l'acceptation d'une demande `PENDING`, le joueur ayant pu grossir son
-équipe entre-temps tant que la campagne reste `EN_CONSTRUCTION`) - violation
-traduite en HTTP 400 (`DomainException`).
+**Éligibilité** : une équipe n'est engagée (demande d'inscription, changement d'équipe,
+validation d'une demande) que si `Team.vehiclesCost ≤ budget`. Portée par
+`Campaign.assertTeamFitsBudget(team, budget?)` ; la validation revérifie car l'équipe a pu
+grossir entre-temps. Violation → HTTP 400.
 
-**Modification du nom et du budget** (`PUT /api/campaigns/:id`, organisateur,
-`EN_CONSTRUCTION` uniquement) : `Campaign.rename(name)` et `Campaign.changeBudget(budget)`
-portent chacune leur propre garde `EN_CONSTRUCTION`. `changeBudget` revérifie **chaque**
-équipe actuellement engagée (participant `VALIDATED` avec équipe attachée) contre le
-budget candidat via `assertTeamFitsBudget(team, budget)` - la règle d'éligibilité
-ci-dessus, conçue dès le départ pour cet usage (second paramètre `budget` optionnel,
-`this._budget` par défaut). La première équipe en infraction interrompt l'opération
-(`DomainException` → HTTP 400) **avant** toute mutation : le budget stocké ne change
-jamais si une seule équipe déjà engagée deviendrait illégale. Le budget n'est jamais
-recopié (ni sur le participant, ni sur l'équipe) : c'est une donnée unique sur `Campaign`,
-relue à chaque replay via `Team.campaignBudget`, hydraté par `TeamRepository` au
-chargement de l'agrégat (même mécanisme que le flag `isLocked`, cf.
-[spec/TEAMS.md](TEAMS.md#crud-équipes)).
+**Modification nom/budget** (`PUT /api/campaigns/:id`, organisateur, `EN_CONSTRUCTION`
+uniquement) : `changeBudget` revérifie **chaque** équipe engagée contre le nouveau budget et
+refuse (400) **avant** toute mutation si une seule deviendrait illégale. Le budget n'est
+jamais recopié : il est relu à chaque chargement via `Team.campaignBudget` (hydraté par
+`TeamRepository`, même mécanisme que le verrouillage).
 
-Écran `/campaigns/:id` : un bouton "✏️ Modifier" (organisateur, visible dans **tout
-état** de la campagne — cf. §Règles maison ci-dessous, qui n'a pas la même contrainte
-d'état que nom/budget) ouvre `EditCampaignModal` (nom + budget + règles maison). Les
-champs nom/budget y sont en lecture seule hors `EN_CONSTRUCTION`, avec une note
-explicative — mais le bouton "Enregistrer" reste **toujours actif** : il soumet toujours
-les règles maison basculées dans la modale, et en plus nom/budget si `canEditNameBudget()`
-(cf. §Règles maison ci-dessous pour le détail de cette soumission unique). "Annuler" ferme
-la modale sans rien persister, y compris les règles maison basculées pendant la session. En
-cas de refus serveur sur nom/budget ou sur les règles maison, la modale reste ouverte et
-affiche le message d'erreur inline plutôt que de se fermer et de reporter l'erreur sur un
-bandeau générique - l'organisateur corrige la valeur sans rouvrir la modale.
+**Écran** : bouton « Modifier » (organisateur, **tout état**) ouvrant une modale nom + budget
++ règles maison. Nom/budget en lecture seule hors `EN_CONSTRUCTION` ; « Enregistrer » reste
+actif (il soumet au moins les règles maison) ; « Annuler » ne persiste rien. En cas de refus
+serveur, la modale reste ouverte avec l'erreur.
 
 ---
 
 ## Règles maison
 
-Une **règle maison** est une variante optionnelle du règlement, activable individuellement
-par l'organisateur d'une campagne — catalogue en mémoire (`GET /api/catalog/regles-maison`,
-public, chargé par `HouseRuleCatalogService` depuis `database_init/data/regles-maison.yml`,
-même mécanisme que le catalogue de scénarios). `Campaign.houseRules` (Value Object
-`HouseRules`) ne stocke que l'**ensemble des clés (`nom_interne`) activées** — une règle
-absente équivaut à son comportement par défaut, donc une règle ajoutée après coup au
-catalogue est automatiquement "décochée" partout, sans reprise de données.
+Variante optionnelle du règlement, activable par l'organisateur. Catalogue en mémoire
+(`database_init/data/regles-maison.yml`, `GET /api/catalog/regles-maison`, public).
+`Campaign.houseRules` ne stocke que l'ensemble des clés (`nom_interne`) activées : une règle
+absente = comportement par défaut, donc une règle ajoutée au catalogue est décochée partout
+sans reprise de données.
 
-**4 règles au catalogue** à ce jour (R1 Points de Résistance, R2 Cagnotte collective de
-fin d'Événement Télévisé, R3 Bonus de jerricans pour la participation à une escarmouche,
-R4 Plafond de jerricans par Escarmouche — cf. ci-dessous).
+- **Aucune contrainte d'état** : réglable à tout moment, d'où une route dédiée
+  `PUT /api/campaigns/:id/house-rules` (distincte de nom/budget, réservés à `EN_CONSTRUCTION`).
+  Aussi réglable à la création (`POST /api/campaigns`, `houseRules?`).
+- **Validation stricte à l'écriture** (clé hors catalogue → 400), **tolérante à la lecture**
+  (une clé retirée du catalogue reste en base, inerte, jusqu'au prochain réglage).
+- **Exposition** : dans toutes les réponses de campagne et sur `GET .../by-code/:code` (affichées
+  avant de rejoindre). Affichées en lecture seule sur `/campaigns/:id` à tout participant.
+- **Effet** : une règle ne fait rien seule ; chaque point de calcul du domaine résout sa
+  Strategy (défaut ou règle maison active, au plus une par point) - mécanisme :
+  [DOMAIN_MODEL.md §4 - Règles maison](../DOMAIN_MODEL.md#règles-maison--strategy-par-point-de-calcul).
+- **Gel** : le résultat d'une règle devient un fait journalisé au moment du calcul, jamais
+  recalculé ; changer le réglage n'affecte que les parties suivantes.
 
-**Aucune contrainte d'état** — contrairement au budget (dont la restriction
-`EN_CONSTRUCTION` tient à l'éligibilité des équipes engagées, sans objet ici), le réglage
-des règles maison est modifiable à tout moment de la vie de la campagne : construction, en
-cours, et jusqu'à la fin. C'est pour cette raison qu'il est exposé par une **route dédiée**,
-`PUT /api/campaigns/:id/house-rules`, distincte de `PUT /api/campaigns/:id` (nom/budget,
-réservée à `EN_CONSTRUCTION`) — réutiliser cette dernière aurait bloqué le réglage des
-règles maison chaque fois que le nom/budget sont eux-mêmes verrouillés.
+| Règle | `nom_interne` | Effet si activée | Calculé quand |
+|---|---|---|---|
+| R1 | `distribution_points_resistance` | Les +3 Points de Résistance (Événement Télévisé) vont aux participants dont le total de PC de **cette** partie (classement + exploits + Favori du Public) vaut 0, au lieu de la seconde moitié du classement | entrée en Atelier (le total de PC n'est complet qu'après l'écran Résolution) |
+| R2 | `cagnotte_collective_evenement_tele` | +5 jerricans (`CAGNOTTE_TELE`) à **tout** participant `VALIDATED`, présent ou non, à la fin d'un Événement Télévisé (par défaut : rien) | enregistrement du résultat (`POST .../results`) |
+| R3 | `escarmouche_bonus_jerricans` | Supprime le revenu de base D6 d'une Escarmouche (le butin de scénario reste) | à chaque tirage de revenu |
+| R4 | `plafond_jerricans_escarmouche` | Plafonne à 15 le total de jerricans « récompense » (revenu D6 + butin manuel) par participant sur une même Escarmouche ; l'excédent est réduit **silencieusement** (jusqu'à 0, auquel cas rien n'est journalisé) | à chaque gain, cumul recalculé depuis le journal de la partie |
 
-**Validation stricte à l'écriture, tolérante à la lecture** : une clé absente du catalogue
-courant est rejetée en HTTP 400 (jamais ignorée silencieusement) lors d'un réglage explicite
-(`HouseRules.fromUserInput`, appelé par `SetHouseRulesUseCase`/`CreateCampaignUseCase` avec
-la liste des `nom_interne` du catalogue). À l'inverse, l'hydratation depuis la base
-(`HouseRules.fromPersisted`, appelée par `CampaignMapper`) ne valide jamais : une clé
-orpheline (retirée depuis du catalogue après avoir été activée) reste présente en base mais
-inerte, jusqu'au prochain réglage explicite qui la fait disparaître.
-
-**Réglable à la création** (`POST /api/campaigns`, `houseRules?: string[]`, défaut aucune
-règle active) **et à la modification** (`PUT /api/campaigns/:id/house-rules`,
-`houseRules: string[]` requis — un tableau vide désactive toutes les règles).
-
-**Exposition** : la valeur activée apparaît dans toutes les réponses de campagne
-(`CampaignResponseDto`, dérivé par spread de l'entité ORM — même mécanisme que `budget`) et
-sur la route de consultation par code d'invitation (`GET /api/campaigns/by-code/:code`,
-`CampaignSummaryDto.houseRules`) — l'écran d'inscription en a besoin pour afficher les
-règles actives avant que le joueur ne rejoigne.
-
-**IHM (RM-6)** : `HouseRulesSelector` (`campaigns/house-rules-selector/`) affiche le
-catalogue sous forme d'une case à cocher par règle — sous chaque case, une seule ligne dont
-le texte bascule selon l'état (cochée : `description_cochee`, comportement alternatif ;
-décochée : `description_decochee`, rappel du comportement par défaut). Composant **dumb**,
-entièrement contrôlé par le parent (`enabledKeys`/`toggled`, même pattern que
-`SponsorCarousel`) — porte l'input `locked` (pattern déjà en place dans le projet, cf.
-COMPONENTS.md) pour une réutilisation future en lecture seule (RM-7), sans dupliquer le
-rendu. Deux points d'intégration, avec des mécaniques de sauvegarde différentes :
-
-- **`CampaignForm`** (création) : la campagne n'existe pas encore — les clés cochées sont
-  accumulées dans un signal local (`formHouseRules`) et incluses dans le
-  `CreateCampaignDto` émis à la soumission du formulaire, avec le reste (nom, budget,
-  équipe).
-- **`EditCampaignModal`** (édition) : chaque bascule ne modifie qu'un état **local**
-  (`formHouseRules`, même pattern que `CampaignForm` ci-dessus) — aucun appel réseau tant
-  que la modale reste ouverte. Le clic sur "Enregistrer" émet un unique
-  `EditCampaignSubmission` (`{ nameBudget, houseRules }`, `campaign.model.ts`) que
-  `CampaignDetail.onConfirmEditCampaign` traduit en un ou deux appels enchaînés : toujours
-  `PUT /api/campaigns/:id/house-rules`, précédé de `PUT /api/campaigns/:id` si
-  `nameBudget` est non-null (`canEditNameBudget()`, EN_CONSTRUCTION uniquement). Si
-  nom/budget échoue, les règles maison ne sont **pas** soumises non plus - la modale reste
-  ouverte, `formHouseRules` n'étant pas perdu (composant non détruit), l'organisateur
-  corrige et retente sans reperdre sa bascule. "Annuler" ne déclenche aucun appel : les
-  règles maison basculées mais jamais confirmées sont perdues à la fermeture (le composant
-  est recréé par le `@if` du parent à la prochaine ouverture, reparti de l'état serveur
-  actuel). Les règles maison ne rejoignent jamais `UpdateCampaignDto` (route backend
-  dédiée, cf. ci-dessus) - `EditCampaignSubmission` les porte à côté, jamais dedans.
-
-**Mécanisme de calcul — Strategy par point** : activer une case ne fait rien par
-elle-même — une règle maison ne prend effet que si un point de calcul du domaine la
-consulte explicitement. Deux points existent à ce jour : la distribution automatique
-des Points de Résistance (cf. [Limitations connues — Points de
-Résistance](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) ci-dessous) et
-la cagnotte collective de fin d'Événement Télévisé (R2, cf. ci-dessous).
-`HouseRuleStrategyFactory` (`domain/house-rules/house-rule-strategy.factory.ts`,
-construite depuis `Campaign.houseRules`, exposée via le getter `Campaign.
-strategyFactory` — jamais choisie par un use case, cf. [ARCHITECTURE.md §3.4,
-« Convention projet — qui sélectionne une Strategy
-»](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet)) résout, pour ce
-point, soit la règle par défaut soit la règle maison qui la remplace si elle est
-active (au plus une à la fois par point — deux règles maison actives sur le même
-point lèvent une `DomainException`). Ajouter une seconde règle maison sur ce MÊME
-point demande une nouvelle classe Strategy et une entrée dans le registre pur du
-domaine (`HOUSE_RULE_REGISTRY`) ; ajouter une règle maison sur un NOUVEAU point de
-calcul demande en plus une nouvelle méthode sur la Factory — jamais de refonte du
-mécanisme lui-même.
-
-**R1 — « Distribution des points de Résistance aux équipes »**
-(`nom_interne distribution_points_resistance`) : remplace, pour la distribution automatique des Points de Résistance,
-le critère par défaut (participant classé dans la seconde moitié du classement) par
-« participant dont le total de Points de Championnat de CETTE partie — classement +
-exploits + bonus Favori du Public — vaut zéro » : le rang n'entre plus en jeu.
-Montant inchangé (+3 PR), Événement Télévisé uniquement (comme la règle par
-défaut). Portée par `NoChampionshipPointsStrategy`
-(`domain/house-rules/resistance-distribution-strategy.ts`).
-
-**Gel au moment du calcul, jamais recalculé après coup** : la règle maison
-consultée est celle active **au moment où `Game.distributeResistance()`
-s'exécute** (entrée en Atelier — cf. [§Cycle de vie d'une partie et phase
-Atelier](#cycle-de-vie-dune-partie-et-phase-atelier)) ; le résultat (crédit ou non
-de PR, tracé par `ResistanceContactedEvent.strategyKey`) devient ensuite un fait
-journalisé comme un autre — le replay le réapplique tel quel, il ne le recalcule
-jamais. Changer le réglage après cette partie n'affecte donc que les parties
-suivantes, jamais celle déjà résolue, même si la campagne revient en
-`EN_CONSTRUCTION` entre-temps (transitions bidirectionnelles, cf. §Vue
-d'ensemble). `strategyKey` vaut `"defaut"` pour la règle par défaut (jamais
-`null` pour une distribution automatique — `null` reste réservé au contact
-Résistance manuel, route dédiée organisateur) ; `describe()` de l'événement
-mentionne la règle appliquée, pour qu'un joueur puisse comparer deux parties
-d'une même campagne malgré un réglage modifiable en cours de route.
-
-**R2 — « Cagnotte collective de fin d'Événement Télévisé »**
-(`nom_interne cagnotte_collective_evenement_tele`) : à la désactivation (comportement
-par défaut, `NoTvBonusStrategy`), aucun événement n'est créé — cette règle n'existe
-que pour AJOUTER un effet, contrairement à R1 qui remplace un critère déjà actif par
-défaut. Activée (`CollectiveTvBonusStrategy`), crédite +5 jerricans
-(`WalletMovementEvent`, `WalletReason.CAGNOTTE_TELE`) à **tout participant
-`VALIDATED` de la campagne**, y compris ceux absents de cette partie précise —
-contrairement à R1, son éligibilité ne dépend d'aucune donnée propre à un
-participant (rang, PC, présence) ; R3 ci-dessous partage ce trait. Portée par
-`CollectiveTvBonusStrategy`/`NoTvBonusStrategy`
-(`domain/house-rules/tv-bonus-distribution-strategy.ts`).
-
-**Calculée à l'enregistrement du résultat, pas à l'entrée en Atelier** —
-contrairement à R1/la distribution des PR : `Game.recordResult()` construit les
-`WalletMovementEvent` de cette règle dans le même appel que les
-`RankingAssignedEvent`/exploits, en itérant sur son propre paramètre `participants`
-(déjà la liste complète de la campagne, pas seulement les classés de cette partie).
-Contrairement au critère de R1 (qui dépend du total de PC de la partie, pas encore
-complet avant le bonus Favori du Public de l'écran Résolution — cf. RM-4 ci-dessus),
-l'éligibilité de R2 ("tout participant validé") ne dépend d'aucune donnée produite
-plus tard dans le wizard : rien n'impose d'attendre l'entrée en Atelier. Comme pour
-R1, le résultat devient un fait journalisé, jamais recalculé après coup — annuler le
-wizard en cours (`DELETE .../results`, partie encore `PLANIFIE`) supprime ces
-événements comme les autres (`Game.resultEventIdsForReset()` n'en distingue pas le
-type).
-
-**R3 — « Bonus de jerricans pour la participation à une escarmouche »**
-(`nom_interne escarmouche_bonus_jerricans`) : contrairement à R1 (qui remplace un
-critère déjà actif par défaut) et R2 (qui ajoute un effet), R3 **supprime** un
-effet par défaut — Escarmouche uniquement. À la désactivation (comportement par
-défaut, `DefaultBaseIncomeStrategy`), chaque participant présent reçoit un revenu
-de base tiré au D6 (`WalletMovementEvent`, `WalletReason.RECOMPENSE`), comme avant
-l'introduction de cette règle. Activée (`NoBaseIncomeStrategy`), ce tirage ne
-journalise plus aucun événement — seules les récompenses du scénario
-(`Game.recordJerricanGains`, écran Jerricans du wizard, non concerné par cette
-règle) restent créditées. Portée par `DefaultBaseIncomeStrategy`/
-`NoBaseIncomeStrategy` (`domain/house-rules/base-income-strategy.ts`).
-
-**Résolue à chaque tirage, pas en bloc pour toute la partie** — contrairement à
-R1 (à l'entrée en Atelier, une seule fois) et R2 (à l'enregistrement du résultat,
-une seule fois pour tous les participants) : `Game.rollBaseIncome()` résout sa
-Strategy indépendamment à chaque appel, un participant présent à la fois, à
-l'écran Résolution du wizard (`POST .../events/income`) — cf. [§Wizard de fin de
-partie](#wizard-de-fin-de-partie). Sans effet sur un Événement Télévisé, qui
-n'appelle jamais `rollBaseIncome`.
-
-**R4 — « Plafond de jerricans par Escarmouche »**
-(`nom_interne plafond_jerricans_escarmouche`) : contrairement à R1/R2/R3
-(chacune ne consulte qu'un seul point de calcul), R4 **plafonne le cumul** de
-deux sources de gains distinctes d'une même Escarmouche — le revenu de base D6
-(`Game.rollBaseIncome`) et le butin manuel de scénario
-(`Game.recordJerricanGains`, écran Jerricans du wizard) — jamais un Événement
-Télévisé, même si son scénario porte `gain_jerricans`. À la désactivation
-(comportement par défaut, `UnlimitedJerricanGainsStrategy`), un participant peut
-gagner autant de jerricans que ces deux sources le permettent, sans limite.
-Activée (`CappedJerricanGainsStrategy`), aucun participant ne peut dépasser
-**15 jerricans de type récompense au total sur une même partie** — un montant
-qui ferait dépasser ce plafond est réduit **silencieusement** au reliquat
-disponible (jamais rejeté), y compris jusqu'à 0 si le plafond est déjà atteint,
-auquel cas aucun événement n'est journalisé. Portée par
-`UnlimitedJerricanGainsStrategy`/`CappedJerricanGainsStrategy`
-(`domain/house-rules/jerrican-gains-cap-strategy.ts`).
-
-**Cumul recalculé depuis le journal de la partie, jamais mémorisé** — `Game`
-ne garde aucun compteur "déjà gagné" : à chaque appel de `rollBaseIncome`/
-`recordJerricanGains`, le cumul déjà crédité à ce participant sur CETTE partie
-est recalculé en sommant `GameEvent.recompenseJerricansAwarded` (getter
-générique valant `0` par défaut, surchargé par `WalletMovementEvent` quand
-`reason === WalletReason.RECOMPENSE` — même idiome que
-`championshipPointsAwarded`, cf. [DOMAIN_MODEL.md
-§4](../DOMAIN_MODEL.md#hiérarchie-gameevent-command)) sur `this.events`. Comme
-le butin manuel (persisté à l'écran Jerricans, avant l'écran Résolution) est
-toujours journalisé avant le revenu de base (tiré à l'écran Résolution), et que
-chaque use case recharge le journal complet via `CampaignReplayService.
-loadAndReplay` avant d'agir, le plafond s'applique correctement au total
-combiné des deux sources, quel que soit l'ordre dans lequel un participant les
-reçoit.
+R1 trace la règle appliquée (`ResistanceContactedEvent.strategyKey`, `"defaut"` pour la règle
+par défaut, `null` pour un contact manuel) et la mentionne dans le journal, pour comparer deux
+parties malgré un réglage modifiable en cours de campagne. Annuler le wizard (`DELETE .../results`)
+supprime aussi les événements de R2.
 
 ---
 
 ## Inscription
 
-`ParticipantStatus` : `PENDING` | `VALIDATED` | `REJECTED`
+`ParticipantStatus` : `PENDING` | `VALIDATED` | `REJECTED`.
 
-- Toute personne disposant du code d'invitation peut soumettre une demande
-  d'inscription (choix d'une de ses équipes) → crée un `CampaignParticipant` `PENDING`.
-- Un organisateur valide (`PENDING → VALIDATED`) ou refuse (`PENDING → REJECTED`) chaque
-  demande.
-- **"Refuser" un participant validé** (`VALIDATED → REJECTED`) : action réversible,
-  distincte du retrait définitif (`DELETE`). Réservée aux organisateurs,
-  `EN_CONSTRUCTION` uniquement. Un organisateur ne peut pas se refuser lui-même s'il est
-  le dernier organisateur `VALIDATED` de la campagne (pas de campagne "orpheline",
-  `Campaign.assertNotLastOrganizer`). Même invariant appliqué de façon transversale
-  (toutes les campagnes d'un utilisateur, pas une seule déjà chargée) à la
-  **suppression de compte** — cf. [AUTH.md — Suppression d'un compte engagé comme
-  organisateur de campagne](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne).
-- **"Valider" un participant refusé** (`REJECTED → VALIDATED`) : revalidation, sans
-  contrainte d'état supplémentaire.
-- **Retirer un participant** (`DELETE`) : suppression définitive de la ligne
-  `CampaignParticipant`, réservée aux organisateurs, `EN_CONSTRUCTION` uniquement.
+- Avec le code d'invitation, tout utilisateur demande à rejoindre avec une de ses équipes → `PENDING`.
+- L'organisateur valide (`→ VALIDATED`) ou refuse (`→ REJECTED`). Il peut aussi refuser un
+  `VALIDATED` (réversible, `EN_CONSTRUCTION` uniquement) et revalider un `REJECTED` (sans
+  contrainte d'état).
+- **Retirer** (`DELETE`) : suppression définitive, organisateur, `EN_CONSTRUCTION` uniquement.
+- **Jamais de campagne sans organisateur** : le dernier organisateur `VALIDATED` ne peut pas
+  être refusé (`Campaign.assertNotLastOrganizer`). Même invariant appliqué à la suppression
+  d'un compte ([AUTH.md](AUTH.md#suppression-dun-compte-engagé-comme-organisateur-de-campagne))
+  et d'une équipe ([TEAMS.md](TEAMS.md#crud-équipes)).
 
-**Changer l'équipe engagée** : tant que la campagne est `EN_CONSTRUCTION`, chaque
-participant `VALIDATED` (organisateur ou non) peut changer l'équipe qu'il engage parmi
-ses propres équipes, via le sélecteur "Votre équipe" de l'écran `/campaigns/:id`.
-**Verrou supplémentaire** (`Campaign.changeParticipantTeam`) : ce changement reste
-bloqué (`DomainException` → HTTP 400) dès que le participant a déjà au moins un
-`GameEvent` journalisé dans la campagne (a déjà joué une partie) — même si la
-campagne est revenue en `EN_CONSTRUCTION` (cf. transitions bidirectionnelles
-ci-dessus). Sans ce verrou, rattacher le participant à une autre équipe ferait
-échouer le prochain replay complet de la campagne : tout événement historique qui
-référence un véhicule de l'équipe d'origine (achat/revente d'équipement,
-renommage, résultat de Table des Épaves…) ne le retrouverait plus
-(`Team.findVehicle` introuvable) dans la nouvelle équipe attachée. "Changer" vers
-la MÊME équipe déjà engagée reste toujours autorisé (no-op).
+**Changer l'équipe engagée** (`EN_CONSTRUCTION`, tout participant `VALIDATED`) : refusé (400)
+dès que le participant a au moins un événement journalisé, même si la campagne est revenue en
+`EN_CONSTRUCTION` - sinon le replay ne retrouverait plus les véhicules référencés par ses
+événements dans la nouvelle équipe. Changer vers la même équipe reste un no-op autorisé.
 
 ---
 
-## Écran `/campaigns/:id` — structure par visibilité
+## Écran `/campaigns/:id` - structure par visibilité
 
-- En-tête : nom, état, badge "🏆 Organisateur" et bouton "🗑 Supprimer la campagne"
-  (organisateurs uniquement).
-- "Votre équipe" : sélecteur modifiable (`EN_CONSTRUCTION`) ou affichage en lecture
-  seule sinon.
-- "Les autres équipes" : participants `VALIDATED` autres que l'utilisateur courant,
-  avec un bouton "Refuser" (organisateurs uniquement, masqué sur le dernier
-  organisateur).
-- "En attente de validation" et "Refusé" : **visibles uniquement par les
-  organisateurs** — entièrement absentes du DOM pour les autres participants, pas
-  seulement masquées. Boutons Valider/Refuser/Retirer (en attente) et Valider
-  (refusé) respectivement.
+- En-tête : nom, état, badge budget, badge « Organisateur » et « Supprimer la campagne » (organisateurs).
+- « Votre équipe » : modifiable en `EN_CONSTRUCTION`, lecture seule sinon.
+- Liste des participants triée par PC décroissants, avec actions selon le rôle (cf. [COMPONENTS.md](../COMPONENTS.md#participantlist)).
+- « En attente » et « Refusé » : **absentes du DOM** pour un non-organisateur.
 
-Sécurité : un utilisateur ne peut accéder qu'aux campagnes où il est `CampaignParticipant`
-`VALIDATED` (ou via le code d'invitation pour les infos minimales). Toute autre
-tentative d'accès retourne HTTP 404 (pas de fuite d'information).
+Sécurité : seul un participant `VALIDATED` accède à une campagne (ou à ses infos minimales via
+le code) ; sinon HTTP 404, sans fuite d'information.
 
 ---
 
-## Programme Télé (mode campagne — US-A1)
+## Programme Télé
 
-Une section **Programme Télé** est affichée sur `/campaigns/:id` **dans tous les
-états** de la campagne. L'organisateur y planifie des **parties** (`Game`) — chacune
-rattachée à un _scénario_ du catalogue (`EVENEMENT_TELE` ou `ESCARMOUCHE`). La
-gestion est possible en `EN_CONSTRUCTION` et `EN_COURS` ; en `TERMINEE`, le
-programme reste **visible en lecture seule**.
+Section affichée dans **tous les états** : l'organisateur planifie des parties (`Game`), chacune
+liée à un scénario du catalogue (`database_init/data/scenarios.yml`, `GET /api/catalog/scenarios`,
+type `EVENEMENT_TELE` ou `ESCARMOUCHE`).
 
-- **Catalogue de scénarios** : chargé au démarrage depuis
-  `database_init/data/scenarios.yml` par `ScenarioCatalogService` (même mécanisme
-  que le catalogue de jeu, cf. ARCHITECTURE.md §3.3). Exposé en lecture publique
-  via `GET /api/catalog/scenarios`.
-- **Ajout d'une partie** (`POST /api/campaigns/:id/games`) : organisateur, campagne
-  `EN_CONSTRUCTION` ou `EN_COURS` (refusé en `TERMINEE`, HTTP 400). La partie est
-  créée `PLANIFIE`, en **fin de programme** (ordre auto-append = MAX+1). Le type
-  est repris du scénario par défaut.
-- **Édition / suppression** (`PUT`/`DELETE .../games/:gameId`) : organisateur,
-  `EN_CONSTRUCTION` ou `EN_COURS` (refusé en `TERMINEE`, HTTP 400). Une partie
-  `JOUE` est **figée** (HTTP 400 si on tente de la modifier ou supprimer). _Le
-  statut `JOUE` n'est pas encore atteignable — l'enregistrement de résultat est
-  une story ultérieure ; la garde est posée dès maintenant._
-- **Consultation** (`GET /api/campaigns/:id/games`) : tout participant `VALIDATED`
-  voit le programme trié, en lecture seule, **quel que soit l'état** de la campagne.
-  Les actions de gestion ne s'affichent que pour l'organisateur et hors `TERMINEE`.
-- **Réordonnancement** (US-A4, `PUT /api/campaigns/:id/games/reorder`,
-  organisateur, `EN_CONSTRUCTION`/`EN_COURS`) : porte **uniquement** sur les
-  parties encore `PLANIFIE` — une partie `ATELIER`/`JOUE` garde sa position
-  figée dans le Programme, jamais déplacée. Le corps (`{ gameIds: number[] }`)
-  doit contenir exactement l'ensemble des parties `PLANIFIE` actuelles de la
-  campagne, dans le nouvel ordre voulu (HTTP 400 sinon) —
-  `Campaign.reorderGames` réattribue alors les valeurs d'`order` que ces
-  parties occupaient déjà (les emplacements laissés entre deux parties déjà
-  jouées) selon ce nouvel ordre, sans jamais toucher à l'`order` d'une partie
-  `ATELIER`/`JOUE`. Interface (`GameList`) : glisser-déposer (poignée ⠿,
-  Angular CDK) ou flèches ▲▼ — même idiome que l'écran Classement du wizard de
-  fin de partie (`RankingStep`) — restreint aux lignes `PLANIFIE`
-  (`cdkDragDisabled` sur les autres, `cdkDropListSortPredicate` empêchant tout
-  point de chute sur une ligne non-`PLANIFIE`, pour que leur position ne
-  bouge jamais visuellement). Chaque déplacement (drag ou flèche) appelle
-  immédiatement l'API puis recharge le programme depuis le serveur (pas de
-  bouton de validation séparé).
+- Gestion (ajout, édition, suppression, réordonnancement) : organisateur, `EN_CONSTRUCTION`/`EN_COURS` ;
+  lecture seule en `TERMINEE` (400 sur toute écriture). Consultation : tout participant `VALIDATED`.
+- Ajout : partie `PLANIFIE`, en fin de programme, type repris du scénario.
+- Une partie `ATELIER`/`JOUE` ne peut être ni modifiée ni supprimée (400).
+- **Réordonnancement** (`PUT .../games/reorder`, `{ gameIds }`) : porte uniquement sur les parties
+  `PLANIFIE` ; le corps doit contenir exactement toutes les parties `PLANIFIE` (sinon 400). Les
+  parties `PLANIFIE` se répartissent les valeurs d'`order` qu'elles occupaient déjà ; une partie
+  `ATELIER`/`JOUE` ne bouge jamais. Chaque déplacement est persisté immédiatement.
 
-Sécurité : autorisation assurée dans chaque use case (écritures) via les helpers
-`assertOrganizer` / `assertParticipant` opérant sur l'état replay, et dans
-`CampaignQueryService` (lectures) via `assertVisibleParticipant` — toute tentative
-non autorisée retourne HTTP 404 (pas de fuite d'information), même pattern que le
-reste du module Campaign.
+Autorisation : `assertOrganizer`/`assertParticipant` dans les use cases (sur l'état rejoué),
+`assertVisibleParticipant` côté lecture ; refus → 404.
 
 ---
 
-## Exploits de partie (mode campagne — US-B2)
+## Exploits de partie
 
-En plus du classement (US-B1), l'organisateur saisit les exploits réalisés par
-chaque participant présent — Course à la Mort, p.167 — dans la **même
-soumission** `POST .../results` que le classement (converge dans
-`RecordResultDto.results`, même si le wizard de fin de partie les répartit
-aujourd'hui sur des écrans séparés, cf. [§Wizard de fin de
-partie](#wizard-de-fin-de-partie)) :
+Saisis dans la même soumission que le classement (`POST .../results`) :
 
-- **Portes franchies** : +1 PC par porte, saisie en nombre libre par participant
-  (`gatesCrossed`, optionnel — 0/absent si aucune).
-- **Véhicules ennemis détruits** : l'organisateur **sélectionne le véhicule
-  ennemi détruit** dans une liste (pas seulement un compteur par poids) — le
-  client ne transmet que `vehicleId` ; le poids (`WeightClass` :
-  `LEGER`/`MOYEN`/`LOURD`/`FORTERESSE`) est **redérivé côté serveur**
-  (recherché par `Game.recordResult` dans les équipes réelles de la
-  campagne) et attribue +1/+2/+3/+5 PC au **destructeur** — jamais accepté tel
-  que fourni par l'appelant, pour empêcher un organisateur malveillant de
-  désigner n'importe quel véhicule comme `FORTERESSE` afin d'obtenir +5 PC
-  indus. `FORTERESSE` n'existe pas encore dans le catalogue de véhicules
-  (aucun n'y est classé — cf. `docs/spec/VEHICLES.md`), mais la valeur et son
-  barème sont posés dès maintenant : le code n'aura rien à changer le jour où
-  un véhicule y sera classé.
-- **Aucun effet sur l'état du véhicule ciblé** : la sélection ne marque jamais
-  ce véhicule `isLost` — seul le calcul de PC est concerné. La perte réelle
-  d'un véhicule reste gérée séparément par la Table des Épaves (US-E1–E4).
-- La liste de véhicules proposée pour la sélection est le **roster actuel** des
-  **autres participants présents à cette partie** (pas l'ensemble de la
-  campagne, pas de notion de "véhicules engagés pour la partie" séparée du
-  roster) — exposée par `GET .../participant-vehicles` (cf. table
-  d'endpoints ci-dessous).
-- Les **jerricans gagnés par exploit restent hors scope** de cette US
-  spécifique (portes/véhicules détruits) : traités séparément par le butin
-  manuel de scénario et le revenu de base Escarmouche, tous deux intégrés au
-  wizard de fin de partie (cf. [§Wizard de fin de
-  partie](#wizard-de-fin-de-partie)), via le même `WalletReason.RECOMPENSE`.
-
-**Modèle event-sourcing** : deux nouveaux types d'événement, journalisés par
-`Game.recordResult` en plus du `RankingAssignedEvent` — `GatesCrossedEvent`
-(`gatesCrossed`, `championshipPoints` figé à l'écriture) et
-`VehicleDestroyedEvent` (`vehicleId` informatif, `weightClass` dérivé côté
-serveur — jamais transmis par l'appelant, cf. ci-dessus —,
-`championshipPoints` figé selon le barème). Les PC restent **toujours dérivés
-du journal** : `Campaign.standings()` ne change pas, elle lit déjà
-`participant.championshipPoints`, incrémenté par tout événement qui appelle
-`addPoints()` (classement et exploits confondus).
+- **Portes franchies** : +1 PC par porte.
+- **Véhicules ennemis détruits** : l'organisateur sélectionne le véhicule détruit (roster actuel
+  des **autres** participants présents) ; le client n'envoie que `vehicleId`, le poids
+  (`LEGER`/`MOYEN`/`LOURD`/`FORTERESSE`) est **redérivé côté serveur** et rapporte +1/+2/+3/+5 PC
+  au destructeur - jamais accepté de l'appelant, pour empêcher des PC indus. `FORTERESSE` n'a
+  encore aucun véhicule au catalogue.
+- La sélection ne marque **jamais** le véhicule perdu : la perte relève de la Table des Épaves.
+- Les PC sont toujours dérivés du journal (`GatesCrossedEvent`, `VehicleDestroyedEvent`, PC figés
+  à l'écriture) ; `Campaign.standings()` les additionne.
 
 ---
 
 ## Wizard de fin de partie
 
-L'enregistrement du résultat d'une partie (`EN_COURS`) est un **wizard à
-étapes variables** (`GameResultWizard`), pilotées par le type de partie
-(`EVENEMENT_TELE`/`ESCARMOUCHE`) et par les métadonnées du scénario
-(`Scenario.franchissement_portes`/`gain_jerricans`) — jusqu'à 7 écrans
-possibles, jamais tous affichés en même temps. Documents de conception :
-[`docs/plans/2026-07-04-wizard-fin-partie-design.md`](../plans/2026-07-04-wizard-fin-partie-design.md)
-(conception initiale, 3 écrans, Événement Télévisé uniquement),
-[`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md)
-(refonte à étapes variables, ajout du parcours Escarmouche) puis
-[`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md)
-(ajout de l'écran Sabotage).
+Enregistrement du résultat d'une partie (campagne `EN_COURS`) en étapes variables selon le type
+de partie et le scénario (`franchissement_portes`, `gain_jerricans`). Conception :
+[`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md),
+[`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md).
 
-| #   | Écran                        | Composant              | Visible si                                      |
-| --- | ---------------------------- | ---------------------- | ----------------------------------------------- |
-| 1   | Présence                     | `PresenceStep`         | toujours                                        |
-| 2   | Sabotage (points dépensés)   | `SabotageStep`         | toujours                                        |
-| 3   | Classement                   | `RankingStep`          | `EVENEMENT_TELE` uniquement                     |
-| 4   | Portes franchies             | `GatesStep`            | `EVENEMENT_TELE` **et** `franchissement_portes` |
-| 5   | Jerricans (butin manuel)     | `JerricansStep`        | `gain_jerricans`                                |
-| 6   | Désignation des épaves       | `WreckDesignationStep` | toujours                                        |
-| 7   | Résolution (revenu + épaves) | `WreckResolutionStep`  | toujours                                        |
+| # | Écran | Visible si | Contenu |
+|---|---|---|---|
+| 1 | Présence | toujours | participants présents, **au moins 2** |
+| 2 | Sabotage | toujours | points de sabotage dépensés par équipe (0 par défaut, cf. [§Points de sabotage](#points-de-sabotage)) |
+| 3 | Classement | Événement Télévisé | ordre des présents (une Escarmouche n'attribue jamais de PC de classement) |
+| 4 | Portes franchies | Événement Télévisé **et** `franchissement_portes` | portes par équipe |
+| 5 | Jerricans | `gain_jerricans` | butin manuel de scénario, cumulé avec le revenu D6 |
+| 6 | Désignation des épaves | toujours | par véhicule : intact / mis en épave par X / seul ; case Favori du Public si éligible (cf. [§Faveur du Public](#faveur-du-public)) |
+| 7 | Résolution | toujours | synthèse automatique : revenu de base D6 (Escarmouche, par présent) puis Table des Épaves (par véhicule désigné) |
 
-1. **Présence** (`PresenceStep`) — cases à cocher des participants
-   `VALIDATED`, toujours le premier écran. Émet la liste des présents (ordre
-   de coche), qui alimente `participant-vehicles` pour l'écran Désignation
-   et sert de point de départ à l'écran Classement. **Minimum deux équipes**
-   cochées pour continuer (bouton "Suivant" désactivé sinon, avertissement
-   affiché) — une partie n'oppose jamais un seul participant.
-2. **Sabotage** (`SabotageStep`, toujours affiché — pas de gate scénario,
-   contrairement à Portes/Jerricans) — déclaration rétroactive par
-   l'organisateur du nombre de points de sabotage dépensés par équipe pendant
-   la partie physique (annonce orale à table), cf. [§Points de
-   sabotage](#points-de-sabotage) pour la mécanique complète. Un champ
-   numérique par participant présent, à 0 par défaut : "Suivant" ne coûte
-   qu'un clic si personne n'a rien dépensé — même gabarit que
-   `GatesStep`/`JerricansStep`. Le solde de sabotage n'est jamais affiché à
-   cet écran (secret, y compris pour l'organisateur) : rien n'est validé
-   côté client, le clamp au solde réel se fait entièrement côté serveur.
-3. **Classement** (`RankingStep`, Événement Télévisé uniquement) — ordre par
-   glisser-déposer des présents (la présence elle-même a été déplacée à
-   l'écran 1). Absent pour une Escarmouche, qui n'attribue jamais de PC de
-   classement (`Game.recordResult` rejette d'ailleurs tout appel hors
-   Événement Télévisé, cf. §Exploits ci-dessus).
-4. **Portes franchies** (`GatesStep`, Événement Télévisé + scénario
-   `franchissement_portes`) — extrait de l'ancien champ intégré à
-   `RankingStep`, désormais son propre écran, gated par le scénario (tous les
-   Événements Télévisés n'ont pas de portes, ex. "L'Arène").
-5. **Jerricans** (`JerricansStep`, scénario `gain_jerricans`) — butin manuel
-   de scénario (ex. pillage de convoi), indépendant du revenu de base D6 de
-   l'écran 7 (Escarmouche) — les deux se cumulent.
-6. **Désignation des épaves** (`WreckDesignationStep`) — pour chaque véhicule
-   des équipes présentes : _Intact_ / _Mis en épave par [participant]_ / _Mis en
-   épave seul_. Le picker destructeur reste actif pour les deux types de
-   partie ; une case "Favori du public" apparaît uniquement pour un véhicule
-   qui porte réellement ce statut ET pour un Événement Télévisé
-   (`showFavoriDuPublic` input, toujours masquée en Escarmouche) — cf.
-   §Faveur du Public ci-dessous pour le détail de la règle. Cet écran soumet
-   le lot accumulé (`POST .../results`) — les événements de classement/
-   exploits/résistance/sabotage (ET) ou de jerricans/destructions à 0 PC/
-   sabotage (Escarmouche) sont journalisés à cette étape, **mais la partie
-   reste `PLANIFIE`** — voir ci-dessous.
-7. **Résolution** (`WreckResolutionStep`) — **synthèse automatique**, sans
-   aucun bouton ni sélecteur : dès l'arrivée sur cet écran, un `effect()`
-   déclenche les tirages serveur un par un — d'abord le **revenu de base**
-   (Escarmouche uniquement, 1D6 par participant présent, `POST
-.../events/income`), puis la **Table des Épaves** (tout type de partie,
-   `POST .../events/wreck`, un par véhicule désigné à l'écran précédent).
-   Chaque résultat s'affiche dès qu'il est reçu, plus la ligne "Détruit par
-   [participant]" si applicable (donnée capturée à l'écran 5). Le bonus
-   Favori du Public (+5 PC, cf. §Faveur du Public) est crédité à cette étape
-   si applicable. Le bouton "Terminer"
-   (actif une fois tous les tirages reçus) appelle `POST .../enter-atelier` —
-   **c'est à ce moment, et seulement à ce moment, que la partie passe
-   `PLANIFIE → ATELIER`**, ouvrant la phase garage post-partie _sur cette
-   même partie_ (pas d'entité séparée, cf. §Cycle de vie ci-dessous).
+**Persistance différée** : les écrans 1 à 6 sont purement client (« Précédent »/« Annuler »
+libres). Le lot est envoyé (`POST .../results`) au passage 6 → 7 ; la partie reste `PLANIFIE`.
+À l'écran 7, les tirages serveur sont déclenchés automatiquement un par un ; « Terminer » appelle
+`POST .../enter-atelier` - **seul moment** où la partie passe `PLANIFIE → ATELIER` (avant, plus
+aucun événement de résultat ne serait accepté). « Annuler » à l'écran 7 déclenche un reset serveur
+(`DELETE .../results`, supprime tous les événements de la partie en une opération) ; « Précédent »
+n'y est plus disponible.
 
-**Pourquoi l'entrée en atelier est déplacée en fin de wizard** : faire entrer
-la partie en atelier avant l'écran de résolution rendrait ce dernier
-structurellement impossible — une fois la partie hors `PLANIFIE`,
-`Game.addEvent()` refuse tout événement de classement/épaves/revenus, et rien
-ne permettrait de sortir du wizard bloqué. L'entrée en atelier est donc une
-action explicite et séparée (`EnterAtelierUseCase`), déclenchée uniquement à
-la fin complète du wizard.
+Chaque événement a une description textuelle (`GameEvent.describe()`), renvoyée par
+`.../events/wreck` et `.../events/income` et affichée sous chaque résultat.
 
-**Persistance différée et annulation** : les écrans 1 à 6 sont de l'état
-purement client — rien n'est envoyé au serveur avant l'arrivée sur l'écran 7
-(Résolution). "Précédent" et "Annuler" restent donc libres jusque-là, sans
-aucun appel réseau à défaire. Le lot accumulé (classement + exploits +
-sabotage pour un Événement Télévisé, ou jerricans + destructions + sabotage
-pour une Escarmouche, construit par `GameResultWizard.buildRecordResultDto`)
-n'est envoyé qu'à la transition écran 6 → écran 7. Une fois sur l'écran 7,
-"Annuler" reste disponible mais déclenche un **reset serveur** complet
-(`DELETE .../games/:gameId/results`, `ResetResultUseCase` — supprime tous les
-événements déjà journalisés sur cette partie, classement/exploits/revenus/
-épaves/sabotage compris, en une seule opération atomique via
-`Game.resultEventIdsForReset`, réservé à une partie encore `PLANIFIE`) ;
-"Précédent" n'est en revanche plus disponible à ce stade (l'écran 7 n'a plus
-d'action manuelle de retour à défaire, cf. `WreckResolutionStep`, formCancel).
-
-Côté frontend, `CampaignProgram.onWizardCancelled()` décide seul, sans que
-`GameResultWizard` ait à le savoir, si un reset est nécessaire — en observant
-si `wizardResultRecorded` (signal local, alimenté par la réponse de
-`POST .../results`) est non-null au moment du clic "Annuler" : c'est le seul
-signal distinguant "rien n'a encore été persisté" de "le lot de l'écran 5 a
-déjà été écrit".
-
-**Description textuelle des événements** : chaque `GameEvent` expose une
-méthode `describe(): string` (une ligne de texte en français résumant
-l'événement — ex. `"Classement : véhicule classé 1 (+10 PC)"`, `"Tirage sur la
-table des Épaves pour (Voiture) : Arrachée (D6=5+0 chocs, +1 choc(s))"`,
-`"Budget : +4 jerricans (Récompense)"`). `POST
-.../events/wreck` et `POST .../events/income` renvoient ces lignes
-(`descriptions: string[]`, une par événement généré) et `WreckResolutionStep`
-les affiche telles quelles sous chaque entrée (véhicule ou participant).
-
-**Limitation connue** : si l'utilisateur quitte le wizard (ou recharge la
-page) entre la soumission de l'écran 6 et le clic "Terminer" de l'écran 7, la
-partie reste `PLANIFIE` (par design) et réapparaît comme "à enregistrer" —
-rouvrir le wizard sans passer par "Annuler" (donc sans déclencher le reset
-serveur) et resoumettre le lot créerait des événements en double (aucune
-garde d'idempotence, cohérent avec les autres lacunes déjà documentées de ce
-module, ex. séquelles).
+**Limitation connue** : quitter le wizard entre l'envoi du lot et « Terminer » laisse la partie
+`PLANIFIE` ; la ré-ouvrir et resoumettre sans « Annuler » crée des doublons (pas d'idempotence).
 
 ---
 
 ## Journal d'une partie
 
-Pour toute partie en statut `ATELIER` ou `JOUE`, un bouton "📜 Journal"
-(`GameList`) ouvre une modale listant **tous** les événements journalisés sur
-cette partie — classement, exploits, table des épaves, atelier (achats/
-reventes, séquelles, renommages de véhicule), contact Résistance — traduits
-en une ligne de texte lisible (`GameEvent.describe()`). Accessible à **tout participant `VALIDATED`**
-de la campagne, même absent de cette partie précise — cohérent avec le
-Programme Télé déjà visible par tous.
+Pour une partie `ATELIER` ou `JOUE`, le bouton « Journal » liste **tous** ses événements
+(classement, exploits, épaves, atelier, renommages, contact Résistance) en texte lisible.
+Accessible à tout participant `VALIDATED`, même absent de la partie. Groupé par participant
+(ordre de première apparition), chronologique dans chaque groupe. Le contact Résistance y figure :
+seul le **total** de Points de Résistance est secret.
 
-**Organisation** : groupé par participant, dans l'ordre d'apparition (le
-participant dont le premier événement chronologique vient en premier). À
-l'intérieur d'un groupe, les événements restent triés chronologiquement.
-
-**Contact Résistance inclus** : l'événement `ResistanceContactedEvent`
-apparaît dans le journal. La mécanique elle-même n'est pas secrète — seul le
-**total cumulé** de Points de Résistance d'un joueur doit rester caché (cf.
-[Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03)
-et `standings()`, qui continue de l'exclure). Voir un contact ponctuel dans le
-journal ne révèle pas ce total.
-
-`Game.journal()` transforme le journal brut d'une partie en `{ eventId,
-participantId, description }[]`, dans l'ordre déjà garanti par `Game.events`
-(trié par `eventOrder`) — c'est la partie elle-même, pas la couche lecture,
-qui sait traduire ses événements en texte. `CampaignQueryService.
-getJournal` (via `campaign.findGame(gameId).journal()`) enrichit ensuite ce
-résultat avec `userName`/`teamName` (jointure
-user/team) et `createdAt` (résolu depuis `GameEventOrm`, l'horodatage n'existant
-pas sur le domaine `GameEvent`).
+Construction : `Game.journal()` traduit les événements ; `CampaignQueryService.getJournal` ajoute
+`userName`/`teamName`/`createdAt`.
 
 ---
 
 ## Historique complet d'un participant
 
-En plus du journal d'une partie (ci-dessus, scopé à une seule partie et à
-tous ses participants), l'écran `/campaigns/:id` permet de consulter
-l'**historique complet d'UN participant, sur TOUTES les parties** de la
-campagne, groupé par partie — utile pour reconstituer le parcours complet
-d'un joueur sans rouvrir le journal de chaque partie une à une.
-
-- **Sur sa propre ligne** (`ParticipantList`) : un bouton icône 📜, à côté du
-  lien "Gérer mon équipe"/Atelier — toujours affiché tant que l'utilisateur a
-  une équipe engagée (`participant.teamId`), indépendamment de l'état de la
-  campagne ou d'un atelier ouvert.
-- **Sur la ligne d'un autre participant** : une entrée "Voir l'historique"
-  dans le menu ⋯. Ce menu, jusqu'ici réservé à l'organisateur (Promouvoir/
-  Refuser/Retirer), s'affiche désormais pour **tout participant** sur toute
-  ligne autre que la sienne — les actions organisateur restent gated
-  individuellement à l'intérieur du menu, seule "Voir l'historique" est
-  inconditionnelle.
-- **Visibilité** : tout participant `VALIDATED` de la campagne peut consulter
-  l'historique de n'importe quel autre participant — même règle que le
-  journal d'une partie (`assertVisibleParticipant`), **pas réservé à
-  l'organisateur**.
-- **Regroupement** : par partie, dans l'ordre du Programme (`campaign.games`,
-  trié par `order` ASC) ; une partie sans événement pour ce participant est
-  omise (pas de groupe vide affiché).
-
-**Aucune nouvelle méthode sur l'agrégat `Campaign`** : l'agrégation
-multi-parties est une préoccupation de lecture pure (cf. [ARCHITECTURE.md
-§3.8](../ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign),
-"`Campaign` se limite à la navigation"). `CampaignQueryService.
-getParticipantJournal` itère elle-même `campaign.games` et réutilise
-`Game.journal()` tel quel (déjà utilisé par le journal de partie ci-dessus),
-en filtrant chaque résultat sur le `participantId` ciblé.
+Historique d'**un** participant sur **toutes** les parties, groupé par partie (ordre du Programme,
+parties sans événement omises). Consultable par tout participant `VALIDATED` pour n'importe quel
+participant (sa propre ligne ou menu ⋯ d'un autre). Pure lecture : `CampaignQueryService.getParticipantJournal`
+réutilise `Game.journal()` filtré sur le participant.
 
 ---
 
 ## Consultation en lecture seule de l'atelier d'un participant
 
-Mirroir de [§Historique complet d'un participant](#historique-complet-dun-participant)
-appliqué à l'atelier plutôt qu'au journal : depuis l'écran `/campaigns/:id`,
-tout participant `VALIDATED` peut consulter l'équipe d'un tiers (véhicules,
-armes, améliorations, avantages, séquelles, chocs, cagnotte), en lecture
-seule — aucune action d'achat/vente/retrait n'est jamais possible sur cet
-écran.
-
-- **Accès** : sur la ligne d'un autre participant, une entrée "Voir l'atelier"
-  dans le menu ⋯, visible dès que ce participant a une équipe engagée
-  (`participant.teamId`) **et** que la campagne n'est plus `EN_CONSTRUCTION`
-  (une équipe en construction libre n'a pas encore de contenu d'atelier
-  stabilisé à montrer). Contrairement au lien "Gérer mon équipe" (qui ne
-  bascule vers l'Atelier que si une partie y est _actuellement_ ouverte), la
-  consultation en lecture seule ne dépend d'aucun atelier ouvert précis — les
-  données restent consultables à tout moment dès que la campagne a démarré.
-- **Écran** (`ParticipantAtelierPage`, `/campaigns/:id/participants/:pid/atelier`) :
-  vue maître-détail sur une seule page — colonne de gauche listant tous les
-  véhicules de l'équipe consultée (façon onglets), partie droite affichant la
-  configuration complète du véhicule sélectionné (armes, améliorations,
-  avantages, séquelles), plus un bandeau de synthèse d'équipe (budget total /
-  consommé à l'instant t). Pas de sous-route par véhicule : la sélection est
-  un état local à la page, contrairement à l'atelier "personnel"
-  (`AtelierPage`/`AtelierVehiclePage`, deux routes distinctes).
-- **Backend** : `GetWorkshopUseCase` (déjà utilisé par `GET .../workshop`
-  pour "mon" atelier) accepte désormais un `participantId` optionnel dans sa
-  commande — cf. [§Atelier et épaves](#atelier-et-épaves-partie-5),
-  `GET .../participants/:pid/workshop`. Aucun endpoint mutant (achat/revente,
-  verdicts de disponibilité) n'existe en version "consultation d'un tiers" :
-  seule la lecture est exposée.
+Tout participant `VALIDATED` peut consulter l'équipe d'un autre (véhicules, équipement, séquelles,
+chocs, cagnotte), **sans aucune action**, dès que la campagne n'est plus `EN_CONSTRUCTION` - qu'un
+atelier soit ouvert ou non. Écran maître-détail `/campaigns/:id/participants/:pid/atelier`
+(`GET .../participants/:pid/workshop`). Aucun endpoint mutant n'existe pour un tiers. Les points de
+sabotage n'y sont jamais exposés.
 
 ---
 
 ## Cycle de vie d'une partie et phase Atelier
 
-Une partie (`Game`) traverse trois statuts : `PLANIFIE → ATELIER → JOUE`. Il
-n'existe **pas d'entité "atelier" séparée** — la phase garage post-partie
-(achats/reventes d'équipement, échange de Chocs contre une séquelle)
-appartient à la partie elle-même, comme un statut supplémentaire de son
-propre cycle de vie, plutôt qu'à une fausse partie intercalée entre deux
-vraies parties (ancien design `AtelierGame`, abandonné — cf.
-[design doc](../plans/2026-07-05-atelier-lifecycle-design.md)).
+`Game` : `PLANIFIE → ATELIER → JOUE`. La phase garage post-partie (achats/reventes, séquelles,
+renommages) est un **statut** de la partie qui vient d'être jouée, pas une entité séparée.
 
-- **`PLANIFIE → ATELIER`** (`POST .../games/:gameId/enter-atelier`,
-  organisateur) : déclenché à la toute fin du wizard de fin de partie
-  (écran 3, "Terminer"). Le résultat est enregistré, la phase garage
-  s'ouvre. Événement accepté dès lors : `EquipmentChangedEvent` (achat/revente
-  d'équipement **et** de séquelles `ATELIER`, cf. [§Séquelles](#séquelles)).
-- **Un seul atelier actif à la fois** par campagne : si une partie entre en
-  atelier alors qu'une autre y est encore, **l'ancienne est automatiquement
-  clôturée** (`ATELIER → JOUE`) — pas de blocage dur. La réponse
-  d'`enter-atelier` inclut `autoClosedGameId` (id de la partie auto-clôturée,
-  ou `null`) pour que le frontend puisse en avertir l'organisateur.
-- **`ATELIER → JOUE`** (`POST .../games/:gameId/close-atelier`,
-  organisateur) : clôture manuelle explicite, verrouille définitivement la
-  phase garage de cette partie. Également déclenchée automatiquement au
-  passage de la campagne en `TERMINEE` (`closeCampaign()`), pour ne jamais
-  laisser un atelier ouvert sur une campagne terminée.
-- Une partie `JOUE` est figée : `Game.addEvent()` refuse tout événement, quel
-  qu'il soit.
+- **`PLANIFIE → ATELIER`** (`POST .../enter-atelier`, organisateur) : fin du wizard (écran 7,
+  « Terminer »). Distribue aussi les Points de Résistance automatiques.
+- **Un seul atelier à la fois** : entrer en atelier clôture automatiquement l'autre partie encore
+  en `ATELIER` (`→ JOUE`) ; la réponse renvoie `autoClosedGameId` pour avertir l'organisateur.
+- **`ATELIER → JOUE`** (`POST .../close-atelier`) : clôture manuelle ; aussi automatique au passage
+  de la campagne en `TERMINEE`.
+- Une partie `JOUE` refuse tout événement.
+- Les événements d'atelier portent le `gameId` de la partie jouée : le replay (tri par `order`
+  puis `eventOrder`) les remet dans l'ordre sans mécanisme supplémentaire.
+- Seule exception hors `ATELIER` : une séquelle `TABLE_EPAVES` imposée par la Table des Épaves
+  est journalisée en `PLANIFIE` (pendant le wizard).
+- `POST .../events/equipment` et `.../events/vehicle-rename` n'ont pas de `:gameId` : le use case
+  trouve l'unique partie en `ATELIER` (400 « Aucun atelier ouvert » sinon).
 
-Comme les événements d'atelier (`EquipmentChangedEvent`) sont journalisés avec
-le `gameId` de la partie qui vient d'être jouée, le replay (`Campaign.replay()`,
-tri par `Game.order` puis par `eventOrder` interne à la partie) les reconstitue
-dans le bon ordre chronologique sans aucun mécanisme supplémentaire —
-contrairement à l'ancien design, qui nécessitait un `order` fractionnaire
-(`partie.order + 0.5`) pour positionner la fausse partie atelier entre deux
-vraies parties.
-
-`EquipmentChangedEvent(entityType: SEQUELLE)` est accepté à la fois en
-`PLANIFIE` (séquelle `TABLE_EPAVES` imposée par la Table des Épaves, lignes
-"Siège irrécupérable"/"Châssis fragilisé" — coût 0, pas un achat, cf.
-`evenement-tele-game.ts`/`escarmouche-game.ts` `canAccept()`) et en `ATELIER` (échange volontaire de
-Chocs contre une séquelle `ATELIER`, coût variable selon le type) — seule
-sous-catégorie d'`EquipmentChangedEvent` acceptée hors `ATELIER`, puisqu'elle
-est générée par le tirage (écran 3 du wizard) _avant_ l'entrée en atelier.
-
-L'endpoint `POST .../events/equipment` ne prend plus de `:gameId` en paramètre
-de route : le use case retrouve lui-même l'unique partie actuellement en
-`ATELIER` dans la campagne (erreur 400 "Aucun atelier ouvert actuellement" si
-aucune).
+**Écrans** : `/campaigns/:id/atelier` liste les véhicules de l'équipe engagée (achat d'un véhicule
+via la cagnotte, vente/annulation) ; `/campaigns/:id/atelier/vehicles/:vehicleId` réutilise le
+configurateur d'équipement de la construction d'équipe, payé par la cagnotte. Acheter un véhicule
+en atelier applique aussi son équipement intégré (Arceaux du Buggy, Canon du Char d'assaut), comme
+en construction.
 
 ---
 
 ## Renommage d'un véhicule en atelier
 
-Un véhicule porte un nom d'affichage propre, distinct de son type catalogue
-(`nomInterne`) — cf. [VEHICLES.md — Nom du véhicule](VEHICLES.md#construction-dun-véhicule).
-Renommable à tout moment, mais par deux mécanismes distincts selon le
-contexte, symétriques au reste du module (mutation directe verrouillable en
-construction d'équipe, event-sourcing en atelier) :
+Le nom d'un véhicule ([VEHICLES.md](VEHICLES.md#construction-dun-véhicule)) se change par deux
+voies : en construction d'équipe `PATCH /api/vehicles/:id/name` (refusé si l'équipe est
+verrouillée) ; en atelier `POST /api/campaigns/:id/events/vehicle-rename` (`{ vehicleId, nom }`,
+participant sur sa propre équipe), journalisé par `VehicleRenamedEvent`, accepté **uniquement**
+en `ATELIER`.
 
-- **Construction d'équipe** (équipe non verrouillée) : `PATCH /api/vehicles/:id/name`,
-  mutation directe (`Team.renameVehicle`), refusée si l'équipe est verrouillée
-  par une campagne en cours (`assertNotLocked`) — cf. [VEHICLES.md](VEHICLES.md#construction-dun-véhicule).
-- **Atelier campagne** : `POST /api/campaigns/:id/events/vehicle-rename`
-  (`{ vehicleId, nom }`, participant sur sa propre équipe — `assertParticipant`,
-  pas `assertOrganizer`, même autorisation que `POST .../events/equipment`).
-  Journalisé via un événement dédié, `VehicleRenamedEvent` (`GameEvent`, capture
-  `previousName`/`newName` pour un `undo()` symétrique), accepté uniquement en
-  statut `ATELIER` par `Game.canAccept()` — **jamais** hors Atelier, y compris
-  quand l'équipe reste verrouillée par ailleurs.
-
-**Pourquoi un événement plutôt qu'une écriture directe, même pour un véhicule
-pré-existant (ligne réelle en base) ?** Aucune ligne du module `campaign/`
-n'appelle jamais `teamRepo.save()` — le principe "l'atelier ne persiste jamais
-directement, tout passe par le journal d'événements" (cf.
-[ARCHITECTURE.md §3.8](../ARCHITECTURE.md#38-mode-campagne--event-sourcing-campaign))
-est une invariante centrale, respectée strictement partout ailleurs dans ce
-module. Une écriture directe romprait cette cohérence : le renommage
-n'apparaîtrait pas dans le [Journal d'une partie](#journal-dune-partie)
-(qui ne lit que `game_events`), et ne serait pas défait par l'annulation
-d'achat de la session en cours. `VehicleRenamedEvent` est donc le mécanisme
-**uniforme** pour tout renommage en Atelier, que le véhicule ciblé soit
-pré-existant (id positif) ou transient de la session en cours (id négatif,
-D-S11, cf. [Entités transientes](../DOMAIN_MODEL.md#entités-transientes-d-s11)) —
-`Team.findVehicle`/`renameCampaignVehicle` ne distinguent jamais selon le
-signe de l'id, donc aucun branchement supplémentaire n'est nécessaire.
-
-**Cascade d'annulation** : un `VehicleRenamedEvent` créé après le `BUY_VEHICLE`
-de la même session (véhicule tout juste acheté puis renommé) est inclus dans
-la cascade de suppression si cet achat est annulé — `VehicleRenamedEvent`
-surcharge `targetsVehicle(vehicleId)`, déjà utilisé par
-`Game.collectSessionEventsForVehicle` (cf. [Annulation d'achat vs revente](#annulation-dachat-vs-revente)
-ci-dessous) pour retrouver, sans connaître chaque type d'événement, tout ce
-qui doit disparaître avec le véhicule annulé.
+Pourquoi un événement même pour un véhicule existant en base : le module campagne n'écrit
+**jamais** directement les équipes, tout passe par le journal - sinon le renommage n'apparaîtrait
+pas au journal et ne serait pas défait par une annulation. Fonctionne pareil pour un véhicule
+acheté dans la session (id négatif). Annuler l'achat d'un véhicule annule aussi ses renommages de
+la session (`targetsVehicle`).
 
 ---
 
 ## Annulation d'achat vs revente
 
-Retirer un équipement (arme, amélioration ou avantage) en atelier est **deux
-opérations distinctes** selon son origine — conception détaillée :
-[`docs/plans/2026-07-11-atelier-annulation-revente-design.md`](../plans/2026-07-11-atelier-annulation-revente-design.md)
-et, pour la spécificité des avantages,
-[`docs/plans/2026-07-12-avantages-vehicule-design.md`](../plans/2026-07-12-avantages-vehicule-design.md).
+Retirer un élément en atelier (`POST .../events/equipment`, même endpoint dans les deux cas,
+décision côté serveur par `Game.wasPurchasedThisSession`) :
 
-- **Acheté pendant la session d'atelier en cours** (son événement `BUY` est
-  encore dans le journal de la partie actuellement en `ATELIER`) : **annulation**
-  — l'événement `BUY` est supprimé du journal, aucun événement de vente n'est
-  créé, remboursement intégral et invisible dans le journal (comme si l'achat
-  n'avait jamais eu lieu). Comportement identique quel que soit le type
-  d'équipement, avantages compris.
-- **Pré-existant** (construction d'équipe, ou atelier antérieur déjà clôturé) :
-  **revente**, dont le montant récupéré dépend du type d'équipement :
-  - **Arme/Amélioration** : moitié prix arrondie à l'inférieur (p.170) —
-    `Weapon`/`Improvement` gagnent un flag `isSold`, mirroir d'`isLost` : l'objet
-    reste visible sur la fiche du véhicule (barré, badge "Vendue"), son prix
-    devient le résiduel `ceil(prix/2)` et son emplacement est libéré (`slots = 0`).
-  - **Avantage** : **perte totale** — aucun remboursement. `Advantage` gagne le
-    même flag `isSold`, mais son `price` reste **toujours** le prix catalogue
-    plein (`Advantage.price` ne dépend jamais d'`isSold`) : contrairement à une
-    arme/amélioration, il n'existe pas de second nombre "prix résiduel" à
-    calculer — la perte totale tient entièrement au fait que ce prix ne varie
-    jamais. Reste visible sur la fiche véhicule (barré, badge "Vendu"), comme
-    tout autre équipement revendu.
+- **Acheté dans la session d'atelier en cours** → **annulation** : l'événement d'achat est
+  supprimé du journal, remboursement intégral, invisible au journal.
+- **Pré-existant** (construction ou atelier antérieur) → **revente** :
+  - arme/amélioration : remboursement de la moitié du prix arrondie à l'inférieur (p.170) ; elle
+    reste visible (barrée, « Vendue »), son coût devient le résiduel `ceil(prix/2)` et son
+    emplacement est libéré ;
+  - avantage : **perte totale**, aucun remboursement ; reste visible « Vendu » (son prix ne varie
+    jamais, ce qui suffit à porter la règle).
 
-  Étendu aux **véhicules entiers** : acheter puis équiper un véhicule (armes,
-  améliorations, avantages, séquelles) est possible dans la même session ou sur
-  plusieurs. Retirer un véhicule suit la même distinction annulation/revente que
-  les autres équipements, avec une nuance propre à son statut d'agrégat parent :
-  - **Acheté pendant la session d'atelier en cours** : annulation **cascade** —
-    l'événement d'achat du véhicule est supprimé, ET tout événement de cette
-    session qui le référence (armes/améliorations/avantages montés dessus,
-    séquelles ajoutées) l'est aussi, en une seule opération atomique. Sans cette
-    cascade, ces événements deviendraient orphelins (ils ciblent un véhicule qui
-    n'existe plus) et casseraient le PROCHAIN replay de la campagne
-    (`Team.findVehicle` lève alors une `DomainException`). Remboursement intégral,
-    invisible au journal — cf. `Game.collectSessionEventsForVehicle`.
-  - **Véhicule pré-existant** (construction d'équipe, ou atelier antérieur déjà
-    clôturé) : revente **par élément**, même règle que pour chaque pièce
-    d'équipement — châssis à moitié prix arrondi à l'inférieur, chaque arme/
-    amélioration encore active à moitié prix, chaque avantage à 0 (perte
-    totale). Les éléments déjà revendus individuellement ne sont pas
-    recomptés (déjà remboursés à leur propre vente) — cf. `Vehicle.resaleRefund`.
-    `Vehicle` porte désormais, comme `Weapon`/`Improvement`/`Advantage`, un flag
-    `isSold` : `markSold()` cascade sur toute arme/amélioration/avantage pas
-    encore vendu(e) (cohérence d'état — un véhicule vendu voit tout son
-    équipement vendu avec lui), et le châssis contribue son propre prix résiduel
-    `ceil(prix/2)` au coût du véhicule (`Vehicle.cost`), exactement comme
-    `Weapon.price`/`Improvement.price` pour une arme/amélioration individuelle.
-    Comme une arme/amélioration/avantage vendu(e), un véhicule vendu **reste
-    visible** dans la liste exposée par l'atelier (`GetWorkshopUseCase`) plutôt
-    que d'en disparaître — poussé en fin de liste côté frontend
-    (`AtelierPage.vehicleSummaries`/`ParticipantAtelierPage.vehicleSummaries`,
-    tri stable), badge "Vendu" et carte rendue inactive
-    (`VehicleSummaryCard.disabled` — ni clic, ni bouton de vente). Un véhicule
-    **détruit** (`isLost`, Table des Épaves) suit exactement le même traitement
-    d'affichage, badge "Perdu". `resaleRefund`/`chassisResaleRefund` valent
-    alors `0` dans le DTO exposé (`Vehicle.chassisResaleRefund` lève
-    `DomainException` sur un véhicule déjà vendu ou détruit — jamais un
-    remboursement fantôme).
+**Véhicules entiers** :
+- acheté dans la session → annulation **en cascade** : l'achat et tous les événements de la session
+  qui le ciblent (équipement, séquelles, renommages) sont supprimés atomiquement - sinon ils
+  deviendraient orphelins et casseraient le prochain replay ;
+- pré-existant → revente **par élément** : châssis et chaque arme/amélioration encore active à
+  moitié prix, avantages à 0 ; les éléments déjà revendus ne sont pas recomptés. Tout l'équipement
+  du véhicule est marqué vendu avec lui.
+- Un véhicule vendu ou **détruit** (Table des Épaves) reste listé en fin de liste, badge
+  « Vendu »/« Perdu », carte inactive ; remboursement exposé à 0.
+- **Vendre ou annuler un véhicule détruit est interdit** (400), vérifié avant tout calcul de
+  remboursement.
 
-    **Vente/annulation d'un véhicule détruit — interdite.** Un véhicule
-    `isLost` n'a plus aucune valeur de revente : `Game.changeEquipment()`
-    rejette (`DomainException` → HTTP 400) toute opération `SELL`/annulation
-    ciblant un véhicule détruit, vérifié **avant** tout calcul de remboursement
-    — même principe que la garde séquelle `TABLE_EPAVES` ci-dessus. Sans cette
-    garde, revendre un véhicule détruit créditait à tort la cagnotte du
-    remboursement moitié-prix du châssis, comme s'il était intact.
+Les DTO d'atelier exposent `isSold` et `purchasedThisSession` - ce dernier sert seulement au texte
+de confirmation (« Annuler l'achat » / « Revendre pour N » / « perte totale »), jamais à décider.
 
-    **Limitation connue** — `Game.changeEquipment()` ne vérifie le statut
-    "acheté cette session" (→ annulation 100 %, cf. ci-dessus) qu'au niveau du
-    véhicule LUI-MÊME pour une opération de vente du véhicule entier ; si le
-    véhicule est pré-existant mais qu'une arme/amélioration/avantage montée
-    dessus a été achetée PENDANT la session en cours, revendre le véhicule
-    entier la rembourse à moitié prix (règle "revente") au lieu du plein tarif
-    (règle "annulation"). Contournement actuel : vendre l'objet individuellement
-    avant de vendre le véhicule.
-
-    **À faire — annulation non rejouée contre les événements suivants** :
-    annuler un achat (suppression de l'événement `BUY` du journal, cf.
-    ci-dessus) ne vérifie jamais que les événements de la même session
-    intervenus APRÈS lui restent légaux une fois cet événement retiré.
-    Exemple concret : achat d'une Remorque Moyenne (+1 emplacement) suivi de
-    l'achat d'une arme qui consomme précisément cet emplacement supplémentaire
-    — annuler l'achat de la remorque retire l'événement sans recalculer les
-    emplacements, et le véhicule se retrouve avec une arme montée qui dépasse
-    sa capacité réelle, sans qu'aucune règle ne le détecte ni ne le bloque.
-    Correctif à envisager : `Game.changeEquipment()` (ou le use case
-    `ChangeEquipmentUseCase`) devrait, avant de supprimer l'événement `BUY`,
-    rejouer les événements de la session postérieurs à celui-ci sur l'état
-    résultant et rejeter l'annulation (erreur explicite à l'utilisateur) si
-    l'un d'eux devient illégal (emplacements dépassés, orientation requise
-    manquante, etc.) — plutôt que de laisser un véhicule dans un état
-    incohérent après coup.
-
-Le critère de décision (BUY de cette session ou non) est déterminé côté serveur
-uniquement (`Game.wasPurchasedThisSession`) — le frontend appelle toujours le
-même endpoint `POST .../events/equipment`, sans savoir laquelle des deux
-opérations aura lieu. `WorkshopWeaponDto`/`WorkshopImprovementDto`/
-`WorkshopAdvantageDto` exposent `isSold` et `purchasedThisSession` (ce dernier
-uniquement pour adapter le texte de confirmation _avant_ le clic — "Annuler
-l'achat" vs "Revendre pour N jerricans (50%)" pour une arme/amélioration,
-"Revendre ? Le prix total est perdu, aucun remboursement" pour un avantage —
-jamais pour décider côté client).
-
-**Limitation connue — Cascadeur/Sur Deux Roues non réévalués en atelier** : les
-2 avantages à comportement mécanique (Cascadeur, Sur Deux Roues, cf.
-[VEHICLES.md](VEHICLES.md#avantages-de-véhicule-72-au-total)) sont correctement
-grisés dans la liste des avantages disponibles (`GetWorkshopAvailableAdvantagesUseCase`
-appelle la règle complète `canAddAdvantage`), mais `Game.changeEquipment()` ne
-revérifie **pas** ces 2 règles à l'écriture — seul le budget de la cagnotte,
-comme pour toute arme/amélioration aujourd'hui (cf. limitation déjà documentée
-pour l'Atelier ci-dessous). Ce n'est pas une régression propre aux avantages :
-c'est le même périmètre "Temps 1" que le reste de l'équipement atelier.
-
-**Cagnotte dérivée** — `CampaignParticipant.wallet` n'est plus un compteur
-mutable : c'est un getter dérivé de `Team.remainingBudget` (budget non dépensé
-de l'équipe, qui reflète déjà le prix résiduel des objets vendus) plus les
-récompenses cumulées (`WalletMovementEvent`, seul mouvement sans contrepartie
-dans l'arbre d'équipement). Achat et revente n'écrivent donc plus jamais
-directement sur le wallet — seule la mutation de l'entité (créée, ou flaguée
-`isSold`) suffit à faire varier le budget dérivé du bon montant.
+**Cagnotte dérivée** : `CampaignParticipant.wallet` = budget non dépensé de l'équipe + récompenses
+cumulées (`WalletMovementEvent`). Achat et revente ne touchent jamais la cagnotte directement :
+créer l'entité ou la marquer vendue suffit à faire varier le budget dérivé.
 
 ---
 
 ## Points de sabotage
 
-Compteur affiché dans l'Atelier (`AtelierPage`), juste sous la Cagnotte : un
-entier **dérivé** des Points de Résistance secrets (cf. [Limitations
-connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03) —
-`CampaignParticipant.sabotagePoints`, `Math.floor(resistancePoints / 3)` — 1
-point de sabotage pour 3 Points de Résistance, arrondi à l'inférieur).
+Compteur affiché dans l'atelier sous la cagnotte : `CampaignParticipant.sabotagePoints` =
+`floor(resistancePoints / 3)`. Le total brut de Points de Résistance reste **caché**, y compris au
+propriétaire ; le compteur dérivé n'est exposé qu'au propriétaire dans son propre atelier (`null`
+sur l'atelier d'un tiers) - exception : la fiche d'équipe exportée par l'organisateur.
 
-**Le total brut de Points de Résistance reste caché**, y compris à son
-propriétaire — seul ce compteur dérivé est révélé. Le secret vis-à-vis des
-**autres joueurs** reste total : `GetWorkshopUseCase` ne peuple ce champ
-(`WorkshopStateDto.sabotagePoints`) que pour le propriétaire consultant son
-propre atelier (`GET .../workshop`, sans `participantId`) — `null` sur la
-consultation en lecture seule de l'atelier d'un tiers (`GET
-.../participants/:pid/workshop`, [§Consultation en lecture seule de l'atelier
-d'un participant](#consultation-en-lecture-seule-de-latelier-dun-participant)).
+**Points de Résistance** : +3 automatiques à l'entrée en Atelier (Événement Télévisé) pour chaque
+participant hors du top `ceil(n/2)` du classement (critère remplaçable par R1). Contact manuel
+possible par l'organisateur (`POST .../events/resistance`).
 
-**Dépense — déclaration rétroactive, pas de suivi en direct.** L'usage réel
-des Jetons de Sabotage pendant une partie physique reste une "règle de
-table" hors périmètre de l'application (cf. décision D2,
-[`docs/plans/2026-06-21-mode-campagne-design.md`](../plans/2026-06-21-mode-campagne-design.md)),
-au même titre que les Votes du Public — l'application ne suit jamais l'usage
-en cours de partie. Elle permet en revanche, depuis l'écran Sabotage du
-wizard de fin de partie (cf. [§Wizard de fin de
-partie](#wizard-de-fin-de-partie)), d'enregistrer _après coup_ combien de
-points de sabotage chaque équipe a dépensés durant la partie qui vient de se
-jouer — l'organisateur saisit un nombre par équipe présente, sur déclaration
-orale à table, comme pour les autres écrans du wizard (Portes, Jerricans).
-
-Cette déclaration **débite réellement** les Points de Résistance secrets
-(3 PR bruts par point de sabotage déclaré dépensé, `SabotagePointsSpentEvent`)
-— le solde de sabotage reste donc juste dans la durée, pas un simple journal
-sans effet. Le solde n'étant jamais affiché à l'écran (secret, y compris pour
-l'organisateur), rien n'est validé côté client : le serveur **clampe
-silencieusement** toute sur-déclaration au solde réellement disponible au
-moment de la partie (`CampaignParticipant.sabotagePoints`), sans jamais
-rejeter la saisie — ce qui garantit mathématiquement que
-`resistancePoints` ne descend jamais sous 0 (3 × `sabotagePoints` ≤
-`resistancePoints`, par construction du `floor()`). Le journal de partie
-affiche le montant **réellement appliqué** (déjà clampé), jamais la valeur
-brute tapée par l'organisateur — une sur-déclaration ne reste donc visible
-qu'indirectement, par un montant plus bas que celui annoncé à voix haute.
-Conception détaillée : [`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md).
+**Dépense - déclaration rétroactive** : l'usage en partie physique reste une règle de table non
+suivie (comme les Votes du Public). À l'écran Sabotage du wizard, l'organisateur saisit les points
+dépensés par équipe ; chaque point **débite** 3 PR (`SabotagePointsSpentEvent`). Aucune validation
+client (solde secret, même pour l'organisateur) : le serveur **clampe silencieusement** au solde
+disponible, ce qui garantit que les PR ne passent jamais sous 0. Le journal affiche le montant
+réellement appliqué.
 
 ---
 
 ## Séquelles
 
-> Conception détaillée (mécanique backend) :
-> [`docs/plans/2026-07-13-sequelles-design.md`](../plans/2026-07-13-sequelles-design.md).
-> L'atelier expose désormais une IHM intégrée directement à `EquipmentManager`
-> (cf. [COMPONENTS.md](../COMPONENTS.md)) — 4ᵉ catégorie d'équipement, gated par
-> son input `campaignId`, au même niveau qu'Armes/Améliorations/Avantages
-> (carte catalogue à droite, ligne montée dans `MountedEquipment` à gauche) —
-> achat, annulation même-session, revente cross-session gardée par Légende
-> Vivante, et un picker dédié (`SequellaAdvantagePicker`) pour le choix de
-> l'avantage gratuit de Dur à Cuire. Cf.
-> [Limitations connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03).
+Inconvénient permanent (Gaslands p.170), 12 au catalogue (`database_init/data/sequelle.yml`),
+chacune avec `description` (carte) et `regles` (modale de détail). Champ `origine` :
 
-Une **Séquelle** (Gaslands, p.170) est un inconvénient permanent qu'un véhicule
-acquiert en échange de Chocs accumulés en partie — 12 au catalogue
-(`database_init/data/sequelle.yml`), chargées par `CatalogService` comme tout
-autre catalogue d'équipement. Chaque séquelle porte un champ `origine` :
+- **`TABLE_EPAVES`** (`siege_irrecuperable`, `chassis_fragilise`) : imposée par un tirage de la
+  Table des Épaves, coût 0, jamais achetable. **Jamais retirable**, ni revente ni annulation
+  même-session (garde `Vehicle.isSequellaRemovable()`, vérifiée avant le court-circuit
+  d'annulation). Seule `siege_irrecuperable` a un effet chiffré (Équipage).
+- **`ATELIER`** (10 : Suicidaire, Impopulaire, Dingue, Lâche, Vieille Blessure de Guerre,
+  Vibrations, Convulsions, Maintenu par la Rouille, Dur à Cuire, Légende Vivante) : achat en
+  atelier contre des **Chocs du véhicule** (pas la cagnotte), via `EquipmentChangedEvent`
+  (`entityType: SEQUELLE`). Gardes : origine, unicité, Chocs suffisants (`Vehicle.canAddSequella`).
 
-**Description courte / règles détaillées** : comme les armes, améliorations et
-avantages, chaque séquelle porte désormais deux champs catalogue distincts —
-`description` (phrase d'ambiance courte, affichée sur la carte catalogue) et
-`regles` (effet mécanique précis, Markdown, affiché uniquement dans une modale
-de détail ouverte au clic sur la carte). Même modèle d'interaction que les 3
-autres catégories d'équipement (`EquipmentOption` → `EquipmentDetailModal`),
-via un composant dédié `SequellaDetailModal` (cf.
-[COMPONENTS.md](../COMPONENTS.md#sequelladetailmodal--teamsvehicle-configuratorequipment-managersequella-detail-modal))
-— la carte séquelle reste `em-sequella-card` (dédiée, monnaie Chocs plutôt que
-jerricans/emplacement) plutôt que de basculer sur `EquipmentOption`.
+**Revente d'une séquelle `ATELIER`** : fermée par défaut ; ouverte (perte totale de Chocs) si le
+véhicule porte une `legende_vivante` active. L'annulation même-session reste toujours possible.
 
-- **`TABLE_EPAVES`** (2 séquelles : `siege_irrecuperable`, `chassis_fragilise`)
-  — imposée automatiquement par un tirage sur la Table des Épaves (coût
-  toujours 0), jamais achetable directement en atelier. `chassis_fragilise`
-  (ligne `CHASSIS_FRAGILISE`) est purement descriptive — comme les 10
-  séquelles `ATELIER` ci-dessous, elle n'a aucune entrée dans
-  `SEQUELLA_BEHAVIORS` (`resolveSequellaBehavior` retombe sur le comportement
-  neutre) — contrairement à `siege_irrecuperable`, seule autre séquelle
-  `TABLE_EPAVES`, qui modifie une statistique chiffrée du véhicule
-  (équipage).
-- **`ATELIER`** (10 séquelles : Suicidaire, Impopulaire, Dingue, Lâche,
-  Vieille Blessure de Guerre, Vibrations, Convulsions, Maintenu par la Rouille,
-  Dur à Cuire, Légende Vivante) — achat volontaire contre des Chocs, en
-  échange dans le même mécanisme que les autres équipements (cf.
-  [Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessus) :
-  **entityType `SEQUELLE`** de `EquipmentChangedEvent`, monnaie `vehicle.chocs`
-  au lieu de la cagnotte du participant. `Vehicle.canAddSequella` garde
-  l'origine (rejette un achat direct d'une séquelle `TABLE_EPAVES`), l'unicité
-  (une même séquelle `ATELIER` ne peut être acquise deux fois) et les Chocs
-  suffisants.
+**Dur à Cuire** : un seul événement crée la séquelle **et** l'avantage gratuit choisi
+(`freeAdvantageNomInterne`, tagué `grantedBySequellaNomInterne`) ; annuler défait les deux, revendre
+marque aussi l'avantage vendu. L'interface limite le choix aux 6 avantages « Dur à Cuire » (tous
+sponsors, conforme au livre) ; le backend ne filtre pas la catégorie.
 
-**Séquelle `TABLE_EPAVES` — jamais retirable.** Un dommage permanent imposé par
-un tirage sur la Table des Épaves ne peut **jamais** être retiré — ni par
-revente cross-session (même avec `legende_vivante` active), ni par
-l'annulation même-session (une séquelle `TABLE_EPAVES` peut être "de cette
-session" si le tirage vient d'avoir lieu sur la partie qui entre en atelier).
-`Vehicle.isSequellaRemovable()` porte cette garde absolue, consultée par
-`Game.changeEquipment()` **avant** le court-circuit d'annulation même-session
-— qui sinon supprimerait silencieusement l'événement sans jamais consulter
-cette règle.
+**Effets permanents sur la Table des Épaves** :
+- **Légende Vivante** : le D6 vaut 1 à chaque tirage ;
+- **Maintenu par la Rouille** : second tirage après le premier (Chocs mis à jour), sauf si le
+  premier a détruit le véhicule.
+Les deux se cumulent (deux résultats « 1 »).
 
-**Revente d'une séquelle `ATELIER` — fermée par défaut.** Contrairement aux
-armes/améliorations/avantages, la revente cross-session d'une séquelle
-`ATELIER` est **rejetée** par `Vehicle.canRemoveSequella()`, sauf si le
-véhicule porte encore une séquelle `legende_vivante` active — sa présence
-ouvre alors la revente des autres séquelles `ATELIER` de ce véhicule, y
-compris celles acquises lors d'une session d'atelier antérieure (jamais les
-séquelles `TABLE_EPAVES`, cf. ci-dessus). L'annulation même-session, elle,
-suit la règle commune sans exception (toujours possible).
+---
 
-**Dur à Cuire** — un seul événement porte les deux effets (achat de la
-séquelle **et** octroi d'un avantage gratuit de son choix) : `BUY(SEQUELLE,
-'dur_a_cuire')` crée la séquelle et, si `freeAdvantageNomInterne` est fourni,
-crée aussi l'avantage (`Advantage.grantedBySequellaNomInterne` le tagge).
-Annuler cet achat dans la même session défait les deux d'un coup (un seul
-événement supprimé du journal) ; le revendre (cross-session, via Légende
-Vivante) marque aussi l'avantage taggé vendu (`Vehicle.markGrantedAdvantageSold`,
-retrouvé par tag — pas par un id partagé entre événements).
+## Table des Épaves
 
-Côté IHM, `SequellaAdvantagePicker` restreint le choix aux 6 avantages de
-catégorie "Dur à Cuire" (tous sponsors confondus — conforme à la règle du
-livre, qui accorde cet avantage "même si ce pilote ne peut normalement pas y
-avoir accès"). Le backend, lui, n'impose aucune vérification de catégorie à
-l'écriture (`ChangeEquipmentUseCase` résout `freeAdvantageNomInterne` via
-`catalog.getAdvantageType`, sans filtrer sur `categorie`) — seul le picker
-contraint le choix affiché.
+Tirage D6 serveur (+ Chocs) à l'écran Résolution, 9 résultats (`WreckResult`) : `DEBOSSELE`,
+`INDEMNE`, `ROUE_CABOSSEE`, `ARRACHEE`, `PIGNON_ENDOMMAGE`, `SIEGE_IRRECUPERABLE`,
+`CHASSIS_FRAGILISE`, `FAVORI_DU_PUBLIC`, `VEHICULE_DETRUIT`.
 
-**Maintenu par la Rouille / Légende Vivante — effets permanents sur la Table
-des Épaves.** Les deux séquelles modifient le protocole de tirage
-(`WreckTable`) tant qu'elles restent actives sur le véhicule, sans aucune
-consommation :
-
-- **Légende Vivante** force la valeur du D6 à 1 à **chaque** tirage (le
-  randomizer n'est même pas appelé).
-- **Maintenu par la Rouille** déclenche un second tirage après le premier
-  (Chocs mis à jour entre les deux), sauf si le premier a déjà détruit le
-  véhicule.
-
-Les deux se composent sans se connaître (chaque tirage élémentaire vérifie
-Légende Vivante indépendamment) : un véhicule qui porte les deux séquelles
-obtient deux résultats "1", chacun avec son propre total de Chocs.
+- `ARRACHEE` : perte tirée au hasard parmi armes + améliorations montées.
+- `PIGNON_ENDOMMAGE` : perte tirée au hasard parmi les avantages (un avantage perdu redevient
+  achetable).
+- `SIEGE_IRRECUPERABLE` / `CHASSIS_FRAGILISE` : séquelle `TABLE_EPAVES` imposée.
+- Jamais un choix de l'organisateur.
 
 ---
 
 ## Faveur du Public
 
-Ligne 9 de la Table des Épaves (Événement Télévisé et Escarmouche) : un
-véhicule qui obtient le résultat `FAVORI_DU_PUBLIC` acquiert ce statut,
-suivi par l'application (`Vehicle.hasFavoriDuPublic`, jamais persisté en
-colonne — reconstruit à chaque replay comme `isLost`/`isSold`) plutôt
-qu'attesté sur l'honneur par l'organisateur. Le statut reste actif tant
-qu'il n'a pas été dépensé, y compris d'une partie à l'autre de la même
-campagne.
+Le résultat `FAVORI_DU_PUBLIC` donne au véhicule un statut suivi par l'application
+(`Vehicle.hasFavoriDuPublic`, reconstruit au replay), conservé de partie en partie tant qu'il n'est
+pas dépensé.
 
-**Déclenchement** : à l'écran Désignation des épaves (`WreckDesignationStep`)
-d'une partie ultérieure, une case "Favori du public" apparaît **uniquement**
-pour un véhicule qui (a) est désigné _Mis en épave par [participant]_ ou
-_Mis en épave seul_ à cet écran (jamais _Intact_) ET (b) porte réellement ce
-statut — jamais pour les autres véhicules, contrairement au comportement
-précédent (case libre sur tout véhicule non-intact). Cocher cette case
-déclare que le joueur choisit de dépenser **3 votes du public** pour
-l'activer — une ressource utilisée en cours de partie physique, **non
-trackée par l'application** (déclaration sur l'honneur, comme le reste de la
-mécanique "votes du public" tant que "Lancement de partie" n'est pas
-implémenté, cf. Limitations connues ci-dessous).
-
-**Résolution** : dès lors que la case a été cochée et que le véhicule est
-réellement éligible, +5 PC sont crédités au propriétaire
-(`FavoriDuPublicBonusEvent`) et le statut est consommé sur ce véhicule —
-**indépendamment du résultat du tirage de la Table des Épaves de cette
-partie** (que ce tirage donne `VEHICULE_DETRUIT`, un simple `DEBOSSELE` ou
-n'importe quelle autre ligne, le bonus est crédité de la même façon : seule
-la mise en épave déclarée à l'écran précédent compte, pas l'issue du dé). Si
-la case n'est pas cochée, aucun événement n'est généré et le statut reste
-actif pour une prochaine fois. Réservé à l'Événement Télévisé (la case
-n'existe pas côté Escarmouche, `showFavoriDuPublic` toujours faux).
-
-**Revérification serveur** : le booléen envoyé par le client n'est jamais la
-seule source de vérité — `Game.creditFavoriDuPublicBonus` relit
-`Vehicle.hasFavoriDuPublic` avant de créditer quoi que ce soit, même principe
-que `weightClass` (toujours re-dérivé côté serveur, jamais accepté tel quel
-d'un appelant). Les "votes du public" eux-mêmes restent hors de ce contrôle
-— seule l'éligibilité réelle (le statut Favori du Public) est vérifiée,
-jamais le solde de votes.
+- **Déclenchement** (Événement Télévisé uniquement) : à l'écran Désignation d'une partie suivante,
+  une case « Favori du public » apparaît seulement pour un véhicule mis en épave (pas intact) **et**
+  portant ce statut. La cocher = le joueur dépense 3 Votes du Public (non suivis, déclaration sur
+  l'honneur).
+- **Résolution** : +5 PC au propriétaire (`FavoriDuPublicBonusEvent`) et statut consommé, **quel que
+  soit** le résultat du tirage de cette partie. Case non cochée → statut conservé.
+- Le serveur revérifie le statut réel avant de créditer (jamais la seule parole du client) ; le
+  solde de votes, lui, n'est pas contrôlé.
 
 ---
 
 ## Fiche d'équipe exportable (mode campagne)
 
-Bouton "Fiche d'équipe" dans `ParticipantList` (cf.
-[COMPONENTS.md](../COMPONENTS.md#participantlist--campaignsparticipant-list)),
-au même endroit que "Gérer mon équipe"/"Voir mon historique" — **pas** dans le
-Programme Télé (`GameList`), qui ne le porte plus. Deux points d'accès :
+Même document HTML imprimable que la fiche d'équipe ([TEAMS.md](TEAMS.md#fiche-déquipe-exportable)),
+mais construit à partir de l'état **après replay** (seul à refléter chocs et séquelles réels) avec le
+même mapper.
 
-- **Sur sa propre ligne** : toujours affiché dès qu'une équipe est engagée
-  (`participant.teamId`), quel que soit l'état de la campagne ou qu'un atelier
-  soit ouvert ou non — le backend n'exige que `me.hasTeam`.
-- **Sur la ligne d'un autre participant, via le menu "⋯"** : réservé à
-  l'organisateur — rejoint le périmètre `@if (isOrganizer())` déjà appliqué à
-  Promouvoir/Refuser/Retirer dans ce même menu, contrairement à "Voir
-  l'historique"/"Voir l'atelier" (ouverts à tout participant `VALIDATED`).
-
-**Deux endpoints distincts**, pas un paramètre optionnel sur une route unique :
-
-- `GET /api/campaigns/:id/sheet` — sa propre fiche (inchangé), `playerName`
-  résolu depuis `req.user.callName` (le pseudo, cf.
-  [AUTH.md — Nom d'affichage](AUTH.md#nom-daffichage-callname)) sans requête DB
-  supplémentaire.
-- `GET /api/campaigns/:id/participants/:pid/sheet` — fiche d'un tiers,
-  réservée à l'organisateur (`GetCampaignTeamSheetUseCase.resolveTarget`,
-  `assertOrganizer` — `NotFoundException` sinon). Le contrôleur résout le nom
-  de la CIBLE via `CampaignQueryService.getParticipant(campaignId, pid)`
-  (`userName`) avant d'appeler le use case — sans risque de fuite : si
-  l'appelant n'est pas organisateur, le use case rejette avant tout rendu, le
-  nom résolu n'atteint jamais la réponse HTTP.
-
-Le frontend (`CampaignDetail.onExportSheet(pid)`) détermine lui-même lequel
-des deux appeler, en comparant `pid` à l'id de son propre `CampaignParticipant`
-(`myParticipant()`) — les deux routes ne sont pas interchangeables.
-
-Génère la fiche via l'état **après replay complet** — seul chemin qui reflète
-les chocs/séquelles réels de l'équipe engagée (event-sourcés, jamais persistés
-directement sur `Team`/`Vehicle`). Ne passe volontairement pas par
-`WorkshopVehicleDto` (taillé pour l'UI achat/revente atelier) : le même mapper
-que la fiche "page Équipe" (cf.
-[TEAMS.md — Fiche d'équipe exportable](TEAMS.md#fiche-déquipe-exportable) et
-[ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-architecture-ddd--standard-du-projet))
-est réutilisé tel quel sur `target.team.vehicles` — un véhicule reconstruit par
-replay expose les mêmes objets domaine (`Weapon`/`Improvement`/`Advantage`/
-`Sequella`, `.type` déjà résolu) qu'un véhicule chargé directement, donc aucun
-branchement n'est nécessaire entre les deux points d'entrée.
-
-Même format HTML imprimable (A4, pas de PDF backend) que le point d'entrée
-équipe — cf. TEAMS.md pour le détail du layout.
-
-**Points de sabotage dans l'en-tête** : contrairement à la fiche "construction
-d'équipe" (`sabotagePoints` toujours `null`, les Points de Résistance n'existant
-pas hors campagne), cette fiche affiche dans son bandeau d'en-tête une case à
-cocher par point de sabotage actuellement disponible (`target.sabotagePoints`,
-cf. [§Points de sabotage](#points-de-sabotage)) — **y compris sur la fiche d'un
-tiers exportée par l'organisateur**. Contrairement à `GetWorkshopUseCase`
-(atelier, ouvert en lecture à tout participant `VALIDATED`, où ce compteur reste
-secret vis-à-vis des autres joueurs — D-S4), cette route tierce est déjà
-réservée à l'organisateur (`resolveTarget`/`assertOrganizer`) : le secret ne
-s'applique pas à ce niveau d'accès déjà restreint, donc `sabotagePoints` n'est
-**jamais** nullifié ici, que `participantId` soit renseigné ou non. Le nom du
-joueur (prénom + nom) est également affiché — le sien pour sa propre fiche,
-celui de la cible pour la fiche exportée par l'organisateur.
-
-**Votes du Public à la place du coût total** : le bloc `team-total` du bandeau
-d'en-tête, qui affiche le coût total de l'équipe sur la fiche "construction
-d'équipe", est **remplacé** sur cette fiche par le nombre de Votes du Public
-gagnés en début de partie — dérivé de l'écart de Points de Championnat entre
-ce participant (la cible, pas nécessairement l'appelant) et le 1er de la
-campagne (`CampaignParticipant.votesPublicFor`, barème officiel Gaslands :
-0-10 PC d'écart → 0 VP, 11-15 → 1, 16-20 → 2, 21-25 → 3, 26-30 → 4, 31+ → 5).
-Contrairement aux points de sabotage, ce nombre n'est **jamais** secret (déjà
-public via `GET .../standings`) — affiché normalement même sur la fiche d'un
-tiers. L'écart utilisé est celui du classement courant au moment de l'export
-(`Campaign.standings()`, trié PC décroissants), pas figé au lancement d'une
-partie précise — cette fiche n'a pas vocation à remplacer le futur écran
-"Lancer la partie" (cf. [Limitations
-connues](#limitations-connues-vérifiées-dans-le-code-le-2026-07-03)), qui
-créditera un jour un solde de VP réellement suivi ; ici, seule la valeur
-**affichée** change, aucun solde n'est persisté ni consommé.
+- Sa propre fiche : `GET /api/campaigns/:id/sheet`, dès qu'une équipe est engagée, quel que soit
+  l'état. Nom du joueur = `req.user.callName`.
+- Fiche d'un tiers : `GET /api/campaigns/:id/participants/:pid/sheet`, **organisateur uniquement**
+  (404 sinon, vérifié avant tout rendu). Nom = `callName` de la cible.
+- **Points de sabotage** : une case à cocher par point disponible, y compris sur la fiche d'un tiers
+  (déjà réservée à l'organisateur).
+- **Votes du Public à la place du coût total** : dérivés de l'écart de PC avec le 1er du classement
+  courant (`CampaignParticipant.votesPublicFor`, barème : 0-10 PC d'écart → 0, 11-15 → 1, 16-20 → 2,
+  21-25 → 3, 26-30 → 4, 31+ → 5). Valeur affichée seulement, aucun solde suivi ; jamais secrète.
 
 ---
 
-## Hors scope de l'itération actuelle
+## Limitations connues
 
-Visibilité partielle pour un `PENDING`, quitter une campagne volontairement,
-rotation du code d'invitation.
-
-Le verrouillage de l'équipe engagée (interdiction de toute modification directe
-dès que la campagne n'est plus `EN_CONSTRUCTION`) est désormais **implémenté**,
-mais **pas** via la colonne `CampaignParticipant.isLocked` ci-dessous (qui reste
-un champ posé mais inutilisé) — cf.
-[TEAMS.md — Verrouillage par une campagne en cours](TEAMS.md#crud-équipes).
-
-Le classement (rang + Points de Championnat 10/5/2/1, US-B1/B3/C1) est
-**implémenté et consommé par le frontend** — cf. tables d'endpoints ci-dessous.
-Pas de vue séparée : `GET .../standings` alimente directement la liste unifiée
-des participants (`ParticipantList`, cf. [COMPONENTS.md](../COMPONENTS.md)),
-triée par PC décroissants (tri stable — ordre inchangé tant qu'aucun point
-n'existe). L'Atelier, la Table des Épaves et les Points de Résistance existent
-au niveau des endpoints/event-sourcing mais comportent des lacunes
-significatives par rapport aux User Stories d'origine — voir
-« Limitations connues » ci-dessous.
-
----
-
-## Limitations connues (vérifiées dans le code le 2026-07-03)
-
-Cette section documente l'écart entre les User Stories du
-[backlog mode-campagne](../plans/2026-06-21-mode-campagne-backlog.md) et
-l'implémentation réelle, constaté en relisant le code (pas seulement la doc — la
-doc avait dérivé du code sur ces points). Détail complet par story et par critère
-d'acceptation dans les cartes kanban `.devtool/features/*.md`.
-
-- **Atelier (US-D1–D4)** — logique de cagnotte/achat/revente présente côté backend
-  (`GetWorkshopUseCase`, `ChangeEquipmentUseCase`). Une **UI Temps 1** l'expose
-  désormais, en deux écrans (même principe que la construction d'équipe,
-  `TeamEditPage` → configurateur dédié) : la page `/campaigns/:id/atelier`
-  (`AtelierPage`) liste les véhicules de l'équipe engagée (`VehicleSummaryCard`,
-  sans bouton de suppression — aucun véhicule n'est supprimable en atelier) ;
-  cliquer sur un véhicule navigue vers `/campaigns/:id/atelier/vehicles/:vehicleId`
-  (`AtelierVehiclePage`), qui **réutilise le même composant `EquipmentManager`**
-  que la construction d'équipe, via l'abstraction `EquipmentDataSource` (token DI)
-  — l'implémentation `AtelierEquipmentDataSource` traduit chaque achat/retrait en
-  `POST .../events/equipment` puis relit `GET .../workshop`. Achat **et** retrait
-  d'armes, d'améliorations **et d'avantages** sont gérés (le buy/sell backend supporte
-  désormais `IMPROVEMENT` et `ADVANTAGE`, cf. `EquipmentChangedEvent`) ; le budget
-  affiché est calibré sur la cagnotte. La phase atelier reste un statut du
-  cycle de vie de la partie (`PLANIFIE → ATELIER → JOUE`, cf.
-  [Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier))
-  plutôt qu'une entité séparée. La revente à moitié prix (p.170) et la distinction
-  annulation-d'achat/revente sont désormais implémentées (cf.
-  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessous), **étendues
-  aux véhicules entiers** : un bouton "+ Ajouter un véhicule" permet d'en acheter un
-  nouveau (parmi ceux du sponsor, payé via la cagnotte), et chaque véhicule de la liste
-  peut être vendu (véhicule pré-existant, revente par élément) ou son achat annulé
-  (véhicule acheté cette session, cascade sur tout son équipement — cf. ci-dessus).
-  L'achat d'un véhicule en atelier applique aussi son équipement intégré éventuel
-  (`estDefaut: true`, gratuit, non retirable — Arceaux du Buggy, Canon de 125mm sur
-  Tourelle du Char d'assaut, cf. [VEHICLES.md — Améliorations et armes par
-  défaut](VEHICLES.md#améliorations-et-armes-par-défaut)), symétriquement à la
-  construction d'équipe (`AddVehicleUseCase`) — corrige un bug où un véhicule acheté
-  en atelier restait "nu". **Reste en Temps 2** (cf.
-  [design](../plans/2026-07-07-atelier-reutilisation-configurateur-design.md)) :
-  enforcement des règles de pose au write (emplacements/orientation/sponsor — l'achat
-  n'est aujourd'hui gardé que par la cagnotte, y compris pour l'achat d'un véhicule :
-  aucune vérification d'autorisation sponsor à l'écriture, seulement au listing), et
-  limite de 8 véhicules. **L'UI des véhicules perdus (Table des Épaves) est
-  désormais implémentée** — retiré du périmètre Temps 2 restant, cf.
-  [§Annulation d'achat vs revente](#annulation-dachat-vs-revente) ci-dessus (badge,
-  fin de liste, inactif, vente/annulation rejetée côté domaine). Le montage sur
-  Tourelle, lui, n'est pas une fonctionnalité à part entière à ajouter en atelier :
-  c'est une valeur d'orientation de l'arme (`Weapon.orientation = 'tourelle'`, cf.
-  [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)), acheter une
-  arme montée sur Tourelle en atelier passe par le `POST .../events/equipment` **existant**
-  (`orientation: 'tourelle'` dans le corps), sans endpoint ni événement dédié.
-  **L'UI des Chocs et séquelles est désormais implémentée**, intégrée à
-  `EquipmentManager` (cf. [§Séquelles](#séquelles) ci-dessus) — retiré du
-  périmètre Temps 2 restant.
-- **Table des Épaves (US-E1–E5)** — la table complète à 9 lignes est implémentée
-  (`WreckResult` : `DEBOSSELE`/`INDEMNE`/`ROUE_CABOSSEE`/`ARRACHEE`/
-  `PIGNON_ENDOMMAGE`/`SIEGE_IRRECUPERABLE`/`CHASSIS_FRAGILISE`/`FAVORI_DU_PUBLIC`/
-  `VEHICULE_DETRUIT`), avec le tirage D6 serveur et les Chocs dérivés (cf.
-  [wizard de fin de partie](#wizard-de-fin-de-partie) ci-dessous). **Deux
-  tirages indépendants** : `ARRACHEE` tire aléatoirement dans le pool armes +
-  améliorations montées et peut cibler une amélioration (`ImprovementLostEvent`,
-  mirroir de `WeaponLostEvent`), jamais un choix de l'organisateur ; `PIGNON_ENDOMMAGE`
-  tire aléatoirement dans le pool des avantages montés (`AdvantageLostEvent`,
-  nouveau type d'événement). Un avantage perdu libère la contrainte d'unicité
-  (rachetable ultérieurement en atelier). **Bugfix persistance** : `ImprovementLostEvent`
-  (utilisé par `ARRACHEE` depuis le départ) s'écrivait sous forme de `RESISTANCE_CONTACTED`
-  dans la base — persistance corrigée via colonnes `improvementId` et `advantageId`
-  dans `GameEventOrm`. « Siège irrécupérable » réutilise le mécanisme Strategy
-  existant (`SiegeIrrecuperableBehavior`, réduit l'Équipage). Les modificateurs de
-  séquelle spéciaux (« Maintenu par la Rouille » double lancer, « Légende Vivante »
-  résultat forcé à 1) et la garde anti-doublon sur les séquelles `ATELIER` sont
-  désormais implémentés — cf. [§Séquelles](#séquelles) ci-dessous.
-- **Lancement de partie — non implémenté** — il n'existe aujourd'hui aucune
-  action explicite de "démarrage" d'une partie `PLANIFIE`. À ajouter : un
-  écran/bouton "Lancer la partie" qui affiche à chaque participant présent les
-  points de vote du public qu'il gagne en tout début de partie, calculés
-  depuis son classement courant (`standings()`) — mécanique distincte des
-  Points de Championnat déjà crédités en fin de partie. Cette action devrait
-  aussi **fermer immédiatement l'atelier actuellement ouvert** sur la
-  campagne, s'il y en a un (`ATELIER → JOUE`, même effet que
-  `CloseAtelierUseCase`), plutôt que d'attendre que la partie suivante entre
-  elle-même en atelier pour le clôturer automatiquement (comportement actuel
-  d'`EnterAtelierUseCase`, cf. [Cycle de vie d'une partie et phase
-  Atelier](#cycle-de-vie-dune-partie-et-phase-atelier)). Objectif : garantir
-  qu'aucun atelier ne reste ouvert pendant qu'une partie est en cours de jeu,
-  du lancement jusqu'à l'enregistrement de son résultat.
-- **Points de Résistance (US-F1)** — le crédit de +3 PR est désormais
-  **automatique** : `Game.distributeResistance()` crédite tout participant hors
-  du top `classified` (rang > `ceil(n/2)`) — critère **par défaut**, remplaçable
-  pour une campagne donnée par la règle maison R1 (cf. [§Règles
-  maison](#règles-maison) ci-dessus) —, sans action de l'organisateur ni
-  écran dédié — cohérent avec le secret de cette mécanique. Le calcul a lieu à
-  l'entrée en Atelier (`EnterAtelierUseCase`, fin du wizard), **pas** à
-  l'enregistrement du résultat (`Game.recordResult`, qui ne s'en occupe plus
-  depuis RM-4) — seul cet instant garantit que le total de Points de
-  Championnat de la partie est complet (le bonus Favori du Public, cf.
-  [§Faveur du Public](#faveur-du-public), est crédité après l'enregistrement du
-  résultat). Conséquence observable : les lignes de contact Résistance
-  apparaissent désormais en fin de journal de partie, après les tirages
-  d'épave, plutôt qu'intercalées avec le classement ; annuler le wizard avant
-  "Terminer" (écran Résolution) ne crédite donc plus rien du tout côté
-  Résistance. Le **total brut** reste caché, y compris à son propriétaire —
-  aucun endpoint ne l'expose tel quel.
-  Un dérivé (`sabotagePoints`, cf. [§Points de sabotage](#points-de-sabotage))
-  est désormais exposé au propriétaire dans l'Atelier, mais le secret vis-à-vis
-  des **autres joueurs** reste total : ce dérivé n'apparaît jamais dans la
-  consultation en lecture seule de l'atelier d'un tiers.
+- **Atelier - règles de pose non revérifiées à l'écriture** : un achat n'est gardé que par la
+  cagnotte (ou les Chocs). Emplacements, orientation, autorisation sponsor (y compris pour un
+  véhicule), Cascadeur/Sur Deux Roues ne sont vérifiés qu'au listing des disponibilités. Pas de
+  limite de 8 véhicules.
+- **Revente d'un véhicule pré-existant portant un équipement acheté dans la session** : cet
+  équipement est remboursé à moitié au lieu d'être annulé à 100 %. Contournement : le retirer
+  d'abord individuellement.
+- **Annulation non rejouée contre la suite de la session** : annuler un achat (ex. Remorque Moyenne,
+  +1 emplacement) ne vérifie pas que les achats suivants (une arme qui utilise cet emplacement)
+  restent légaux. Correctif envisagé : rejouer la suite de la session et refuser l'annulation si un
+  événement devient illégal.
+- **Wizard non idempotent** (cf. [§Wizard](#wizard-de-fin-de-partie)).
+- **Lancement de partie - non implémenté** : il manque une action « Lancer la partie » qui
+  afficherait les Votes du Public de chaque présent et **fermerait l'atelier ouvert**
+  (aujourd'hui fermé seulement quand la partie suivante entre elle-même en atelier).
+- **Hors scope** : visibilité partielle pour un `PENDING`, quitter une campagne, rotation du code
+  d'invitation. `CampaignParticipant.isLocked` est une colonne inutilisée (le verrouillage réel est
+  calculé, cf. [TEAMS.md](TEAMS.md#crud-équipes)).
 
 ---
 
@@ -1280,176 +417,123 @@ d'acceptation dans les cartes kanban `.devtool/features/*.md`.
 
 ### `Campaign`
 
-| Champ                     | Type                                            | Contraintes                                                                                                |
-| ------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `id`                      | number                                          | PK, auto-incrémenté                                                                                        |
-| `name`                    | string(100)                                     | obligatoire                                                                                                |
-| `state`                   | `'EN_CONSTRUCTION' \| 'EN_COURS' \| 'TERMINEE'` | défaut `EN_CONSTRUCTION`                                                                                   |
-| `inviteCode`              | string                                          | unique, indexé — token généré à la création                                                                |
-| `budget`                  | number                                          | défaut 50 - cf. [§Budget de campagne](#budget-de-campagne). Non modifiable après création (aucun endpoint) |
-| `createdAt` / `updatedAt` | Date                                            | auto                                                                                                       |
+| Champ | Type | Contraintes |
+|---|---|---|
+| `id` | number | PK |
+| `name` | string(100) | obligatoire |
+| `state` | `EN_CONSTRUCTION \| EN_COURS \| TERMINEE` | défaut `EN_CONSTRUCTION` |
+| `inviteCode` | string | unique, indexé, généré à la création |
+| `budget` | number | défaut 50 ; modifiable en `EN_CONSTRUCTION` (`PUT /api/campaigns/:id`) |
+| `houseRules` | json (string[]) | clés activées, défaut `[]` |
+| `createdAt` / `updatedAt` | Date | auto |
 
-**Champs calculés dans la réponse API** (non stockés en base) :
-
-| Champ (DTO)        | Type                           | Description                                         |
-| ------------------ | ------------------------------ | --------------------------------------------------- |
-| `participantCount` | number                         | Nombre de participants `VALIDATED`.                 |
-| `myRole`           | `'organizer' \| 'participant'` | Rôle de l'utilisateur connecté dans cette campagne. |
+Calculés dans la réponse : `participantCount` (participants `VALIDATED`), `myRole` (`organizer` | `participant`).
 
 ### `CampaignParticipant`
 
-Une ligne par (utilisateur, équipe choisie) inscrit à une campagne. Contrainte unique
-`(campaignId, userId)` : un utilisateur ne peut engager qu'une seule de ses équipes par
-campagne — modifiable (`teamId`) tant que la campagne est `EN_CONSTRUCTION`.
+Une ligne par utilisateur inscrit ; unique `(campaignId, userId)`.
 
-| Champ                     | Type                                     | Contraintes                                                                                                   |
-| ------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`                      | number                                   | PK, auto-incrémenté                                                                                           |
-| `campaignId`              | number                                   | FK → Campaign (`CASCADE`)                                                                                     |
-| `userId`                  | number                                   | FK → User (`CASCADE`)                                                                                         |
-| `teamId`                  | number \| null                           | FK → Team (`CASCADE`), nullable - un organisateur peut créer une campagne sans engager d'équipe immédiatement |
-| `status`                  | `'PENDING' \| 'VALIDATED' \| 'REJECTED'` | défaut `PENDING`                                                                                              |
-| `isOrganizer`             | boolean                                  | défaut `false`                                                                                                |
-| `isLocked`                | boolean                                  | défaut `false` — posé pour `EN_COURS`, aucune logique d'application pour l'instant                            |
-| `createdAt` / `updatedAt` | Date                                     | auto                                                                                                          |
+| Champ | Type | Contraintes |
+|---|---|---|
+| `id` | number | PK |
+| `campaignId` / `userId` | number | FK `CASCADE` |
+| `teamId` | number \| null | FK `CASCADE` ; null possible pour un organisateur sans équipe |
+| `status` | `PENDING \| VALIDATED \| REJECTED` | défaut `PENDING` |
+| `isOrganizer` | boolean | défaut `false` |
+| `isLocked` | boolean | inutilisé |
+| `createdAt` / `updatedAt` | Date | auto |
 
-**Champs calculés dans la réponse API** (non stockés en base) :
+Calculés : `userName` (`callName`, cf. [AUTH.md](AUTH.md#nom-daffichage-callname)), `teamName`.
 
-| Champ (DTO) | Type   | Description                    |
-| ----------- | ------ | ------------------------------ |
-| `userName`  | string | Prénom + nom de l'utilisateur. |
-| `teamName`  | string | Nom de l'équipe engagée.       |
+### `Game`
 
-### `Game` _(mode campagne — Programme Télé)_
+| Champ | Type | Contraintes |
+|---|---|---|
+| `id` | number | PK |
+| `campaignId` | number | FK `CASCADE` |
+| `scenarioId` | string \| null | `Scenario.nom_interne` |
+| `type` | `EVENEMENT_TELE \| ESCARMOUCHE` | |
+| `status` | `PLANIFIE \| ATELIER \| JOUE` | |
+| `order` | double precision | colonne SQL `displayOrder` ; ajout en MAX+1 |
+| `playedAt` | Date \| null | horodatage du passage en `ATELIER` |
+| `createdAt` / `updatedAt` | Date | auto |
 
-Une partie du Programme d'une campagne. Le scénario est référencé par
-`scenarioId` (FK logique vers `Scenario.nom_interne`, catalogue en mémoire).
-Le statut porte aussi la phase garage post-partie (`ATELIER`) — cf.
-[Cycle de vie d'une partie et phase Atelier](#cycle-de-vie-dune-partie-et-phase-atelier).
+Calculés : `scenarioName`, `franchissementPortes`, `gainJerricans` (repris du scénario, pilotent les écrans du wizard).
 
-| Champ                     | Type                                | Contraintes                                                                                                                                                                                                                                                                |
-| ------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                      | number                              | PK, auto-incrémenté                                                                                                                                                                                                                                                        |
-| `campaignId`              | number                              | FK → Campaign (`CASCADE`)                                                                                                                                                                                                                                                  |
-| `scenarioId`              | string \| null                      | référence `Scenario.nom_interne`                                                                                                                                                                                                                                           |
-| `type`                    | `'EVENEMENT_TELE' \| 'ESCARMOUCHE'` |                                                                                                                                                                                                                                                                            |
-| `status`                  | `'PLANIFIE' \| 'ATELIER' \| 'JOUE'` | `PLANIFIE → ATELIER` (`enter-atelier`) `→ JOUE` (`close-atelier`, manuel ou auto)                                                                                                                                                                                          |
-| `order`                   | number                              | `double precision` — auto-append MAX+1. Colonne SQL sous-jacente nommée `displayOrder` (`@Column({ name: 'displayOrder' })`) - c'est ce nom que reflète l'ERD de [DOMAIN_MODEL.md](../DOMAIN_MODEL.md), alors que la propriété TypeScript exposée par l'entité est `order` |
-| `playedAt`                | Date \| null                        | horodatage du passage à `ATELIER` — null tant que `PLANIFIE`                                                                                                                                                                                                               |
-| `createdAt` / `updatedAt` | Date                                | auto                                                                                                                                                                                                                                                                       |
+### `Scenario` (catalogue en mémoire)
 
-**Champ calculé dans la réponse API** (non stocké en base) :
-
-| Champ (DTO)            | Type    | Description                                                                                                                                                                      |
-| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scenarioName`         | string  | Libellé du scénario résolu depuis `ScenarioCatalogService`.                                                                                                                      |
-| `franchissementPortes` | boolean | Flag du scénario résolu (mirroir de `scenarioName`) — pilote l'affichage de l'écran Portes du wizard de fin de partie, cf. [§Wizard de fin de partie](#wizard-de-fin-de-partie). |
-| `gainJerricans`        | boolean | Flag du scénario résolu — pilote l'affichage de l'écran Jerricans du wizard.                                                                                                     |
-
-### `Scenario` _(catalogue en mémoire, pas en base)_
-
-Chargé depuis `database_init/data/scenarios.yml` au démarrage par
-`ScenarioCatalogService`. Champs : `nom`, `nom_interne`, `type`
-(`EVENEMENT_TELE` \| `ESCARMOUCHE`), `description` (Markdown → HTML au
-chargement), `franchissement_portes` (boolean — l'écran Portes du wizard de
-fin de partie n'apparaît que si vrai, Événement Télévisé uniquement),
-`gain_jerricans` (boolean — l'écran Jerricans du wizard n'apparaît que si vrai,
-tout type de partie).
+`nom`, `nom_interne`, `type`, `description` (Markdown → HTML), `franchissement_portes`, `gain_jerricans`.
 
 ---
 
-## API Endpoints — Campagnes
+## API Endpoints
 
-| Méthode | Route                                           | Auth | Description                                                                                                                                                                                                                                                                                                                                                                   |
-| ------- | ----------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET     | `/api/campaigns`                                | JWT  | Mes campagnes (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                                       |
-| GET     | `/api/catalog/regles-maison`                    | Non  | Catalogue public des règles maison (cf. [§Règles maison](#règles-maison))                                                                                                                                                                                                                                                                                                     |
-| POST    | `/api/campaigns`                                | JWT  | Créer une campagne (`name` + `teamId` du créateur, devient organisateur, `budget?` en jerricans - défaut 50, cf. [§Budget de campagne](#budget-de-campagne) ; `houseRules?: string[]` - défaut aucune règle active, cf. [§Règles maison](#règles-maison)) - HTTP 400 si l'équipe du créateur dépasse le budget choisi, ou si une clé de `houseRules` est absente du catalogue |
-| GET     | `/api/campaigns/pending`                        | JWT  | Mes demandes d'inscription en attente                                                                                                                                                                                                                                                                                                                                         |
-| GET     | `/api/campaigns/organizing/pending-requests`    | JWT  | Inscriptions en attente dans mes campagnes (organisateur)                                                                                                                                                                                                                                                                                                                     |
-| GET     | `/api/campaigns/by-code/:code`                  | JWT  | Infos minimales d'une campagne par son code d'invitation, dont `budget` (pour griser les équipes hors budget avant inscription) et `houseRules` (cf. [§Règles maison](#règles-maison))                                                                                                                                                                                        |
-| GET     | `/api/campaigns/:id`                            | JWT  | Détail d'une campagne (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                               |
-| DELETE  | `/api/campaigns/:id`                            | JWT  | Supprimer la campagne (organisateur, cascade sur les participants)                                                                                                                                                                                                                                                                                                            |
-| PUT     | `/api/campaigns/:id`                            | JWT  | Modifie nom/budget (organisateur, `EN_CONSTRUCTION` uniquement) - HTTP 400 si le budget rendrait une équipe déjà engagée illégale (cf. [§Budget de campagne](#budget-de-campagne))                                                                                                                                                                                            |
-| PUT     | `/api/campaigns/:id/house-rules`                | JWT  | Règles maison actives (organisateur, **aucune contrainte d'état** - `{ houseRules: string[] }`, tableau vide = aucune règle active) - HTTP 400 si une clé est absente du catalogue courant (cf. [§Règles maison](#règles-maison))                                                                                                                                             |
-| PUT     | `/api/campaigns/:id/state`                      | JWT  | Transition d'état (organisateur)                                                                                                                                                                                                                                                                                                                                              |
-| GET     | `/api/campaigns/:id/participants`               | JWT  | Liste des participants                                                                                                                                                                                                                                                                                                                                                        |
-| POST    | `/api/campaigns/:id/participants`               | JWT  | Demande d'inscription (`{ teamId }`) - HTTP 400 si l'équipe dépasse le budget de la campagne (cf. [§Budget de campagne](#budget-de-campagne))                                                                                                                                                                                                                                 |
-| PUT     | `/api/campaigns/:id/participants/me`            | JWT  | Changer l'équipe engagée par l'utilisateur connecté (`{ teamId }`, `EN_CONSTRUCTION` uniquement) - HTTP 400 si la nouvelle équipe dépasse le budget de la campagne                                                                                                                                                                                                            |
-| PUT     | `/api/campaigns/:id/participants/:pid/validate` | JWT  | Valider/refuser (`{ accept }`, organisateur) - couvre `PENDING→VALIDATED/REJECTED`, `VALIDATED→REJECTED`, `REJECTED→VALIDATED` - une validation (`accept: true`) est refusée (HTTP 400) si l'équipe du participant dépasse le budget de la campagne                                                                                                                           |
-| PUT     | `/api/campaigns/:id/participants/:pid/promote`  | JWT  | Promouvoir co-organisateur (organisateur)                                                                                                                                                                                                                                                                                                                                     |
-| DELETE  | `/api/campaigns/:id/participants/:pid`          | JWT  | Retirer un participant (organisateur, `EN_CONSTRUCTION` uniquement)                                                                                                                                                                                                                                                                                                           |
-| GET     | `/api/campaigns/:id/participants/:pid/journal`  | JWT  | Historique complet d'un participant, toutes parties confondues, groupé par partie (tout participant `VALIDATED`, y compris pour consulter l'historique d'un tiers) — cf. [§Historique complet d'un participant](#historique-complet-dun-participant)                                                                                                                          |
+Toutes les routes : JWT. Écriture : `assertOrganizer`/`assertParticipant` dans le use case ;
+lecture : `assertVisibleParticipant` ; refus → 404. Domaine refusé → 400. Les routes littérales
+(`participants/me`, `games/reorder`) sont déclarées avant leurs homologues paramétrées.
 
-> Routes participants déclarées dans cet ordre dans `campaign.controller.ts` : la route
-> `PUT :id/participants/me` est définie **avant** `PUT :id/participants/:pid/validate`,
-> pour éviter que NestJS ne capture `me` comme valeur de `:pid`.
+### Campagnes et participants
 
-## API Endpoints — Programme Télé (mode campagne)
+| Méthode | Route | Qui | Description |
+|---|---|---|---|
+| GET | `/api/catalog/regles-maison` | public | catalogue des règles maison |
+| GET | `/api/campaigns` | | mes campagnes (`VALIDATED`) |
+| POST | `/api/campaigns` | | créer (`name`, `teamId`, `budget?`, `houseRules?`) ; créateur organisateur ; 400 si équipe hors budget ou clé inconnue |
+| GET | `/api/campaigns/pending` | | mes demandes en attente |
+| GET | `/api/campaigns/organizing/pending-requests` | | demandes en attente dans mes campagnes |
+| GET | `/api/campaigns/by-code/:code` | | infos minimales (dont `budget`, `houseRules`) |
+| GET | `/api/campaigns/:id` | participant | détail |
+| PUT | `/api/campaigns/:id` | organisateur | nom/budget (`EN_CONSTRUCTION`) |
+| PUT | `/api/campaigns/:id/house-rules` | organisateur | règles maison (tout état) |
+| PUT | `/api/campaigns/:id/state` | organisateur | transition d'état |
+| DELETE | `/api/campaigns/:id` | organisateur | supprimer (cascade) |
+| GET | `/api/campaigns/:id/participants` | participant | liste |
+| POST | `/api/campaigns/:id/participants` | | demande d'inscription (`{ teamId }`) |
+| PUT | `/api/campaigns/:id/participants/me` | participant | changer d'équipe (`EN_CONSTRUCTION`) |
+| PUT | `/api/campaigns/:id/participants/:pid/validate` | organisateur | `{ accept }` |
+| PUT | `/api/campaigns/:id/participants/:pid/promote` | organisateur | promouvoir co-organisateur |
+| DELETE | `/api/campaigns/:id/participants/:pid` | organisateur | retirer (`EN_CONSTRUCTION`) |
+| GET | `/api/campaigns/:id/participants/:pid/journal` | participant | historique d'un participant |
+| GET | `/api/campaigns/:id/standings` | participant | classement (alimente la liste des participants) |
 
-Tous déclarés dans le **`campaign.controller.ts` unique** (le second controller `game.controller.ts`
-a été supprimé au basculement Phase 2). Le contrôle d'accès en écriture est assuré dans chaque
-use case via `assertOrganizer` / `assertParticipant` opérant sur l'état replay (pas d'accès SQL
-supplémentaire) ; en lecture via `CampaignQueryService.assertVisibleParticipant`.
+### Programme et wizard
 
-### Gestion du Programme (CRUD parties)
+| Méthode | Route | Qui | Description |
+|---|---|---|---|
+| GET | `/api/catalog/scenarios` | public | scénarios |
+| GET | `/api/campaigns/:id/games` | participant | programme trié |
+| POST | `/api/campaigns/:id/games` | organisateur | ajouter (`{ scenarioId, type? }`) |
+| PUT | `/api/campaigns/:id/games/reorder` | organisateur | réordonner les `PLANIFIE` (`{ gameIds }`) - 204 |
+| PUT / DELETE | `/api/campaigns/:id/games/:gameId` | organisateur | éditer / supprimer une partie `PLANIFIE` |
+| POST | `/api/campaigns/:id/games/:gameId/results` | organisateur | lot du wizard : `results` (classement + exploits, Événement Télévisé uniquement), `jerricanGains` et `destroyedVehicles` à plat (Escarmouche, destructions à 0 PC), dépenses de sabotage ; la partie reste `PLANIFIE` |
+| DELETE | `/api/campaigns/:id/games/:gameId/results` | organisateur | reset du wizard (partie `PLANIFIE`) - 204 |
+| GET | `/api/campaigns/:id/games/:gameId/results` | participant | résultats triés, dérivés du journal |
+| GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | organisateur | véhicules courants (hors perdus et vendus) des `?participantIds=` |
+| POST | `/api/campaigns/:id/games/:gameId/events/income` | organisateur | revenu de base D6 (`{ participantId }`) → `{ amount, descriptions }` |
+| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | organisateur | Table des Épaves (`{ participantId, vehicleId, pendingFavoriDuPublic? }`) → `{ outcome, descriptions }` |
+| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | organisateur | `PLANIFIE → ATELIER` → `{ autoClosedGameId }` |
+| POST | `/api/campaigns/:id/games/:gameId/close-atelier` | organisateur | `ATELIER → JOUE` - 204 |
+| GET | `/api/campaigns/:id/games/:gameId/journal` | participant | journal de la partie |
 
-| Méthode | Route                                                   | Auth | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------- | ------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET     | `/api/catalog/scenarios`                                | Non  | Liste publique des scénarios du catalogue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| GET     | `/api/campaigns/:id/games`                              | JWT  | Programme trié (participant `VALIDATED`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| POST    | `/api/campaigns/:id/games`                              | JWT  | Ajouter une partie (`{ scenarioId, type? }`, organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| PUT     | `/api/campaigns/:id/games/reorder`                      | JWT  | Réordonne les parties encore `PLANIFIE` (US-A4, `{ gameIds: number[] }` — exactement l'ensemble des parties `PLANIFIE` actuelles, dans le nouvel ordre voulu — organisateur, `EN_CONSTRUCTION`/`EN_COURS`) — 204. Déclarée **avant** `PUT .../games/:gameId` ci-dessous (même précaution que `PUT .../participants/me`)                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| PUT     | `/api/campaigns/:id/games/:gameId`                      | JWT  | Éditer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| DELETE  | `/api/campaigns/:id/games/:gameId`                      | JWT  | Supprimer une partie `PLANIFIE` (organisateur, `EN_CONSTRUCTION`/`EN_COURS`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| POST    | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Enregistre le lot accumulé par le wizard (organisateur). `results` (classement + exploits, `{ participantId, rank, gatesCrossed?, destroyedVehicles?: [{ vehicleId }] }[]`) est optionnel — Événement Télévisé uniquement, `Game.recordResult` rejette (400) tout appel avec `results` sur une Escarmouche. `jerricanGains` (`{ participantId, amount }[]`) et `destroyedVehicles` (à plat, `{ destroyerId, vehicleId }[]`) sont optionnels — Escarmouche uniquement (`Game.recordJerricanGains`/`recordDestroyedVehicleTraces`, ce dernier à **0 PC**, trace journal uniquement). `weightClass` n'est jamais transmis, toujours dérivé côté serveur depuis le véhicule réel (cf. §Exploits de partie). Ne finalise pas la partie (reste `PLANIFIE`, cf. §Wizard de fin de partie) |
-| DELETE  | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Annule le wizard en cours de résolution (organisateur, partie `PLANIFIE`) : supprime tous les événements déjà journalisés sur cette partie (`ResetResultUseCase`, `Game.resultEventIdsForReset`) — 204                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| GET     | `/api/campaigns/:id/games/:gameId/results`              | JWT  | Résultats triés par rang (participant `VALIDATED`) — **dérivés du journal `game_events`** (`eventType = RANKING_ASSIGNED`), plus de table `game_results`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| GET     | `/api/campaigns/:id/games/:gameId/participant-vehicles` | JWT  | Véhicules courants (hors perdus **et hors vendus**) des participants indiqués (`?participantIds=1,2,3`, organisateur) — alimente le picker "véhicules ennemis détruits" (US-B2) et le roster de l'écran Désignation des épaves (y compris les véhicules du participant lui-même) ; un véhicule vendu en atelier n'appartient plus à l'équipe au moment de la partie suivante, il ne peut donc jamais y avoir participé                                                                                                                                                                                                                                                                                                                                                             |
-| POST    | `/api/campaigns/:id/games/:gameId/events/income`        | JWT  | Revenu de base Escarmouche — 1D6 serveur crédité en jerricans à un participant (`{ participantId }`, organisateur), déclenché automatiquement par l'écran Résolution du wizard, retourne `{ amount, descriptions: string[] }` (`RollIncomeUseCase`, `Game.rollBaseIncome`) — `amount: 0`/`descriptions: []` sans aucun événement journalisé si la règle maison R3 (`escarmouche_bonus_jerricans`, cf. §Règles maison) est active                                                                                                                                                                                                                                                                                                                                                   |
-| POST    | `/api/campaigns/:id/games/:gameId/enter-atelier`        | JWT  | Fait entrer la partie en atelier `PLANIFIE → ATELIER` (organisateur) — appelé par le frontend à la toute fin du wizard (écran Résolution, "Terminer"), retourne `{ autoClosedGameId }` (id de la partie auto-clôturée s'il y en avait une, sinon `null`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| POST    | `/api/campaigns/:id/games/:gameId/close-atelier`        | JWT  | Clôture manuelle de l'atelier d'une partie `ATELIER → JOUE` (organisateur) — 204                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| GET     | `/api/campaigns/:id/games/:gameId/journal`              | JWT  | Journal complet de la partie (tout participant `VALIDATED`, même absent de la partie) — cf. [§Journal d'une partie](#journal-dune-partie)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+### Atelier
 
-> Ce sont ces routes (`/results` POST/DELETE, `/participant-vehicles`, `/events/income`,
-> `/enter-atelier`) — plus `/events/wreck` (cf. tableau "Atelier et épaves" ci-dessous) —
-> que consomme le frontend Angular pour le wizard de fin de partie. La forme de réponse de
-> `POST /results` (`Game`, statut désormais `PLANIFIE`) est inchangée malgré la bascule
-> vers l'event-sourcing.
+| Méthode | Route | Qui | Description |
+|---|---|---|---|
+| GET | `/api/campaigns/:id/workshop` | participant | mon atelier (véhicules, équipement, chocs, séquelles, cagnotte, sabotage) |
+| GET | `/api/campaigns/:id/participants/:pid/workshop` | participant | atelier d'un tiers, lecture seule (`sabotagePoints: null`) |
+| GET | `/api/campaigns/:id/sheet` | participant | ma fiche d'équipe (HTML) |
+| GET | `/api/campaigns/:id/participants/:pid/sheet` | organisateur | fiche d'un tiers (HTML) |
+| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-{weapons,improvements,advantages,sequelles}` | participant | disponibilités avec verdict (budget = cagnotte ; Chocs pour les séquelles) |
+| POST | `/api/campaigns/:id/events/equipment` | participant | achat/revente `{ operation, entityType (VEHICLE/WEAPON/IMPROVEMENT/ADVANTAGE/SEQUELLE), nomInterne, …, orientation?, freeAdvantageNomInterne? }` - 204 |
+| POST | `/api/campaigns/:id/events/vehicle-rename` | participant | `{ vehicleId, nom }` - 204 |
 
-### Résultats et classement — endpoints event-sourcing (Partie 4)
+### Event-sourcing brut (non utilisés par le frontend)
 
-> Endpoints granulaires du système event-sourcing, **non consommés par le frontend**
-> (usage API direct) — à l'exception de `GET .../standings` (dernière ligne de la table
-> ci-dessous), qui alimente `ParticipantList` sur `/campaigns/:id` (cf.
-> [COMPONENTS.md](../COMPONENTS.md)). `POST .../enter-atelier` (consommé par le frontend)
-> est listé dans le tableau précédent, avec les autres routes du wizard de fin de partie.
-> `POST .../events/ranking` a existé puis a été **supprimée** (2026-07-10) : elle
-> acceptait `championshipPoints` comme valeur fournie par l'appelant, sans appliquer le
-> barème 10/5/2/1 — un organisateur pouvait s'auto-attribuer des PC arbitraires. Aucun
-> consommateur (frontend ni e2e) ne l'utilisait ; seul `POST .../results`
-> (`Game.recordResult`, qui calcule les PC correctement) permet désormais
-> d'enregistrer un classement.
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/api/campaigns/:id/games/:gameId/events/wallet` | mouvement de cagnotte `{ participantId, amount, reason }` |
+| POST | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` |
+| POST | `/api/campaigns/:id/games/:gameId/events/resistance` | contact Résistance `{ participantId }` (+3 PR) |
 
-| Méthode | Route                                                  | Auth | Description                                                                         |
-| ------- | ------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------- |
-| POST    | `/api/campaigns/:id/games/:gameId/events/wallet`       | JWT  | Mouvement de cagnotte `{ participantId, amount, reason }` (organisateur) — 204      |
-| POST    | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | JWT  | Perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` (organisateur) — 204 |
-| POST    | `/api/campaigns/:id/games/:gameId/events/resistance`   | JWT  | Contact Résistance `{ participantId }` (+3 PR secrets, organisateur) — 204          |
-| GET     | `/api/campaigns/:id/standings`                         | JWT  | Classement après replay complet (tout participant `VALIDATED`)                      |
-
-### Atelier et épaves (Partie 5)
-
-| Méthode | Route                                                                    | Auth | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------- | ------------------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET     | `/api/campaigns/:id/workshop`                                            | JWT  | État campagne de l'équipe du participant connecté (véhicules transients avec armes, améliorations **et avantages**, chocs, séquelles, wallet, sponsor) — consommé par `AtelierPage` (liste) et `AtelierVehiclePage` (configuration)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| GET     | `/api/campaigns/:id/participants/:pid/workshop`                          | JWT  | Atelier d'**un autre participant**, en lecture seule — même forme de réponse que `GET .../workshop` (`WorkshopStateDto`), mais `participantId` de la commande désigne la cible plutôt que l'appelant. Réservé aux appelants `VALIDATED` (même règle de visibilité que `GET .../participants/:pid/journal`, `NotFoundException` dans les deux cas de refus) ; le participant cible n'a lui-même aucune contrainte de statut. Consommé par `ParticipantAtelierPage` (vue maître-détail)                                                                                                                                                                                                                                                                  |
-| GET     | `/api/campaigns/:id/sheet`                                               | JWT  | Fiche d'équipe exportable (HTML imprimable, `Content-Type: text/html`) du participant connecté, chocs/séquelles réels inclus — cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| GET     | `/api/campaigns/:id/participants/:pid/sheet`                             | JWT  | Fiche d'équipe exportable d'**un autre participant** — réservé à l'organisateur (`NotFoundException` sinon, `GetCampaignTeamSheetUseCase.resolveTarget`), contrairement à `.../participants/:pid/workshop`/`.../journal` (ouverts à tout participant `VALIDATED`). `sabotagePoints` toujours affiché (jamais nullifié), le secret D-S4 ne s'appliquant pas à ce niveau d'accès déjà organisateur-only. Cf. [§Fiche d'équipe exportable (mode campagne)](#fiche-déquipe-exportable-mode-campagne)                                                                                                                                                                                                                                                       |
-| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-weapons`      | JWT  | Armes du sponsor avec verdict de disponibilité pour un véhicule d'atelier (budget = cagnotte du participant). Même forme que le verdict "construction d'équipe" (`AvailableWeaponDto[]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-improvements` | JWT  | Améliorations du sponsor avec verdict (`AvailableImprovementDto[]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-advantages`   | JWT  | Avantages du sponsor avec verdict (`AvailableAdvantageDto[]`) — budget + unicité, et Cascadeur/Sur Deux Roues (`canAddAdvantage`, non réévalué à l'écriture, cf. §Annulation d'achat vs revente ci-dessus)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-sequelles`    | JWT  | Séquelles ATELIER (origine `TABLE_EPAVES` exclue) avec verdict (`AvailableSequellaDto[]`) — monnaie Chocs du véhicule, pas la cagnotte (`canAddSequella`, non réévalué à l'écriture)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| POST    | `/api/campaigns/:id/events/equipment`                                    | JWT  | Achat/revente `{ operation, entityType, nomInterne, …, orientation?, freeAdvantageNomInterne? }` — 204. `entityType` : `VEHICLE`/`WEAPON`/`IMPROVEMENT`/`ADVANTAGE`/`SEQUELLE` (cf. [§Séquelles](#séquelles) — monnaie Chocs, pas cagnotte). `orientation: 'tourelle'` (WEAPON/BUY uniquement) monte l'arme sur Tourelle (coût ×3, cf. [VEHICLES.md](VEHICLES.md#montage-sur-tourelle-5ème-valeur-dorientation)). `freeAdvantageNomInterne` (SEQUELLE/BUY/`dur_a_cuire` uniquement) : avantage gratuit choisi. Pas de `:gameId` : le use case retrouve lui-même l'unique partie en `ATELIER` de la campagne (400 si aucune) — sauf `entityType: SEQUELLE` d'origine `TABLE_EPAVES`, seule à pouvoir être journalisée hors `ATELIER` (cf. `WreckTable`) |
-| POST    | `/api/campaigns/:id/events/vehicle-rename`                               | JWT  | Renomme un véhicule en atelier `{ vehicleId, nom }` (participant sur sa propre équipe) — 204. Journalisé via `VehicleRenamedEvent`, accepté uniquement en `ATELIER` (cf. [§Renommage d'un véhicule en atelier](#renommage-dun-véhicule-en-atelier) ci-dessus). Pas de `:gameId` : même résolution d'atelier que `POST .../events/equipment`                                                                                                                                                                                                                                                                                                                                                                                                            |
-| POST    | `/api/campaigns/:id/games/:gameId/events/wreck`                          | JWT  | Table des Épaves (9 lignes) — D6 serveur + tirage aléatoire de l'équipement perdu `{ participantId, vehicleId, pendingFavoriDuPublic? }` (organisateur, déclenché automatiquement par l'écran Résolution du wizard, après les revenus le cas échéant — plus de bouton manuel), retourne `{ outcome, descriptions: string[] }` (une ligne de texte par événement créé, cf. `GameEvent.describe()`)                                                                                                                                                                                                                                                                                                                                                      |
+Il n'existe volontairement pas de route d'enregistrement de classement avec PC fournis par
+l'appelant : seul `POST .../results` (barème 10/5/2/1 calculé serveur) enregistre un classement.
