@@ -74,6 +74,10 @@ jobs:
       # - e2e exclus : ils demandent PostgreSQL + navigateurs Playwright (cf. skill e2e-testing).
       - run: npx nx run-many -t lint test build
 
+      # Les migrations postérieures à la dernière en prod sont-elles additives ?
+      # Analyse statique du source, sans base (cf. docs/ARCHITECTURE.md §4).
+      - run: npx nx run backend:migration:lint
+
       # Les migrations reproduisent-elles exactement les entités TypeORM ?
       # Connexion lue dans l'environnement (pas de .env en CI).
       - run: npx nx run backend:migration:check

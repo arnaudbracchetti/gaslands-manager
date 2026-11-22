@@ -1,4 +1,3 @@
-
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -54,7 +53,7 @@ Lire si nécéssaire avant toute modification — mettre à jour après chaque c
 - @docs/ARCHITECTURE.md — stack, choix d'architecture, fichiers clés, patterns à respecter
 - @docs/DOMAIN_MODEL.md — diagrammes UML Mermaid : agrégat Team (DDD), catalogue en mémoire, ERD global
 - @docs/COMPONENTS.md — catalogue de tous les composants Angular (rôles, inputs/outputs, diagramme Mermaid des dépendances)
-- @content/docs/*.md — documentation **utilisateur** (accessible via `/documentation`) : comportement observable de l'application du point de vue joueur — jamais les choix d'implémentation ni l'historique des changements. Mettre à jour le chapitre concerné après tout changement de comportement visible par l'utilisateur (nouvel écran → penser aussi à `data.docSlug` dans `app.routes.ts`, cf. `docs/plans/2026-07-16-documentation-utilisateur-design.md`).
+- `content/docs/` (fichiers `.md`) — documentation **utilisateur** (accessible via `/documentation`) : comportement observable de l'application du point de vue joueur — jamais les choix d'implémentation ni l'historique des changements. Mettre à jour le chapitre concerné après tout changement de comportement visible par l'utilisateur (nouvel écran → penser aussi à `data.docSlug` dans `app.routes.ts`, cf. `docs/plans/2026-07-16-documentation-utilisateur-design.md`).
 
 ---
 
@@ -78,6 +77,7 @@ npx nx e2e backend-e2e             # tests E2E backend (axios)
 npx nx e2e frontend-e2e            # tests E2E frontend (Playwright) — arrêter dev.sh avant (port 3000)
 npx nx run frontend:build          # build production
 npx nx sync                        # si Nx se plaint de "workspace out of sync"
+npx nx run backend:migration:lint  # migrations destructives sans marqueur (aussi en CI)
 ```
 
 **Tests e2e (`frontend-e2e`/`backend-e2e`)** : prérequis d'environnement, commandes,
@@ -113,6 +113,8 @@ infrastructure, bonnes pratiques, pièges et troubleshooting → skill `e2e-test
 **NestJS — DDD et tokens d'injection** : les interfaces TypeScript (`IVehicleRepository`, `ICatalogRepository`) ne sont pas injectables directement. Utiliser des tokens string (voir `vehicle.tokens.ts`) et fournir les use cases en `useFactory` dans le module pour garder le domaine sans décorateurs NestJS.
 
 **TypeORM — `where` sur une relation de collection** : un `where` posé sur une relation `OneToMany`/`ManyToMany` qui est aussi hydratée via `relations` **filtre la collection chargée** — elle ne contiendra que les lignes correspondant au critère, pas toutes. Pour récupérer l'agrégat complet à partir d'un de ses enfants, résoudre d'abord l'`id` du parent (`select: { id: true }`) puis recharger via un find par `id` scalaire (qui, lui, n'altère pas l'hydratation). Modèle : `VehicleRepository.findByWeaponId` → `findByIdForUser`.
+
+**Migrations — additives uniquement** : une migration destructive (suppression, renommage, changement de type, `NOT NULL` sans `DEFAULT`, séquence d'enum TypeORM…) doit être réécrite en forme additive ou porter `// incompatible : <raison>` ; nouvelle valeur d'enum par `ALTER TYPE … ADD VALUE`, jamais utilisée dans le même lot ; `CONCURRENTLY` interdit. Vérifié en CI par `backend:migration:lint` — règle et raison : [docs/ARCHITECTURE.md §4](docs/ARCHITECTURE.md#4-base-de-données--postgresql-16).
 
 **Journal d'événements — déclarer les valeurs nouvelles de sa release** : toute release qui ajoute une valeur persistée que la version précédente ne connaît pas (type d'événement, valeur d'énumération, clé de règle maison, clé de stratégie…) la déclare dans [apps/backend/src/migrations/valeurs-nouvelles.txt](apps/backend/src/migrations/valeurs-nouvelles.txt) — liste complète des cas, format et raison : en-tête de ce fichier.
 

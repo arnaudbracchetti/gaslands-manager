@@ -571,6 +571,40 @@ docker stop gaslands-migcheck   # --rm : base supprimée avec le conteneur
 Procédure de génération d'une migration de référence et garde-fou de non-régression
 (comparaison contre `synchronize`) : cf. `docs/plans/2026-08-02-durcissement-securite-vps-design.md#p0-2--entités-synchronize-migration-de-référence`.
 
+**Migrations additives (`backend:migration:lint`)** : le retour arrière en production
+relance l'image N-1 **sans restaurer la base** (ADR
+[0001](adr/0001-retour-arriere-par-l-image-precedente-sans-restauration.md)), ce qui n'est
+sûr que si N-1 sait tourner sur le schéma laissé par N. D'où la règle :
+
+- **Une migration est additive** : nouvelle table, colonne nullable ou avec `DEFAULT`, index,
+  contrainte. Un changement destructif (suppression, renommage, changement de type,
+  `NOT NULL` imposé…) s'étale sur deux versions : ajouter le nouveau en N, ne supprimer
+  l'ancien qu'en N+1.
+- **Sinon, la migration porte le marqueur** `// incompatible : <raison>` (forme exacte :
+  minuscules, commentaire `//`, raison non vide, espaces ordinaires — une autre forme est
+  refusée, car le script de retour arrière cherche le marqueur avec la même expression
+  régulière et ne la verrait pas). Son retour arrière passera alors par la restauration du
+  dump d'avant déploiement.
+- **Enums** : ajouter une valeur par `ALTER TYPE "…" ADD VALUE '…'`, jamais par la séquence
+  que génère TypeORM (renommage, recréation, `DROP TYPE`) ; et ne pas **utiliser** la
+  nouvelle valeur dans le même lot de migrations (PostgreSQL l'interdit dans la transaction
+  qui l'a ajoutée, et tout le lot tourne dans une seule transaction).
+- **`CONCURRENTLY` est interdit**, marqueur ou non : il échoue dans une transaction
+  (`migrationsTransactionMode` `all`).
+
+`backend:migration:lint` ([apps/backend/scripts/lint-migrations.ts](../apps/backend/scripts/lint-migrations.ts),
+exécuté par le job `verify` de la CI, sans base) fait tenir cette règle par analyse statique
+du corps de `up()` de chaque fichier du dossier `src/migrations/` (pas de l'index). Il
+refuse sans marqueur `DROP TABLE`/`COLUMN`/`TYPE`/`DEFAULT`, `RENAME`, `SET NOT NULL`,
+`ALTER COLUMN … TYPE`, `ADD … NOT NULL` sans `DEFAULT`, `TRUNCATE`, `DELETE FROM`, les
+appels `queryRunner.dropTable/dropColumn(s)/renameTable/renameColumn/changeColumn(s)`.
+C'est un **filet, pas une preuve** : `DROP CONSTRAINT`, `DROP INDEX` ou du SQL construit
+dynamiquement ne sont pas contrôlés, la règle s'y applique quand même. Seules les
+migrations postérieures à la dernière déployée en production (`REFERENCE_MIGRATION`,
+aujourd'hui `AddCampaignBudget1786182754067`) sont contrôlées — l'historique n'a pas à
+être annoté ; avancer cette constante après une release qui embarque de nouvelles
+migrations.
+
 ---
 
 ## 5. Infrastructure Docker

@@ -26,7 +26,7 @@ export default defineConfig({
       jsc: {
         parser: {
           syntax: 'typescript',
-          decorators: true,        // Support des décorateurs TypeScript
+          decorators: true, // Support des décorateurs TypeScript
           dynamicImport: true,
         },
         transform: {
@@ -44,7 +44,8 @@ export default defineConfig({
     // environment: 'node' → pas de DOM (backend = Node.js pur)
     environment: 'node',
     // Fichiers de test à inclure
-    include: ['src/**/*.spec.ts'],
+    // scripts/ : outillage hors bundle (ex. lint des migrations, cible backend:migration:lint)
+    include: ['src/**/*.spec.ts', 'scripts/**/*.spec.ts'],
     // Pas de coverage pour l'instant, pour garder les tests rapides
     coverage: {
       provider: 'v8',

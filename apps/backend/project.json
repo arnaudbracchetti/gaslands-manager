@@ -77,6 +77,16 @@
         },
         "command": "bash scripts/migration-check.sh"
       }
+    },
+    "migration:lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/backend",
+        "env": {
+          "TS_NODE_PROJECT": "tsconfig.datasource.json"
+        },
+        "command": "npx ts-node scripts/migration-lint.ts"
+      }
     }
   }
 }
