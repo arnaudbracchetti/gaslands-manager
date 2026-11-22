@@ -732,7 +732,7 @@ pour `pull`. Patron générique réutilisable pour une autre application :
 
 **Manifeste des migrations dans l'image backend** : [`apps/backend/Dockerfile`](../apps/backend/Dockerfile)
 copie les migrations horodatées et `valeurs-nouvelles.txt` dans `/app/migrations/`, dossier
-inerte lu par le futur script de retour arrière (raison détaillée : commentaire du Dockerfile).
+inerte lu par l'option 2 (retour arrière) de `deploy-gaslands.sh` ; raison détaillée : commentaire du Dockerfile.
 Les images v1.0.0 et antérieures n'ont pas ce dossier.
 
 Le VPS ne construit donc jamais rien : `docker-compose.prod.yml` référence ces

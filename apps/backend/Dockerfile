@@ -92,7 +92,7 @@ COPY --from=builder --chown=node:node /app/database_init ./database_init
 # Le seul code qui tourne reste main.js : les migrations y sont déjà bundlées
 # (tableau explicite ALL_MIGRATIONS, jamais un glob - rien ne lit ce dossier au
 # runtime). Ces copies servent uniquement au script de retour arrière
-# (deploy-gaslands.sh, à venir, cf. issue #25), qui les extrait des images N
+# (deploy-gaslands.sh, option 2, cf. issue #30), qui les extrait des images N
 # et N-1 pour :
 #   - lister les migrations de chaque image (diff par nom de fichier) et
 #     chercher le marqueur "// incompatible : <raison>" dans celles de N ;

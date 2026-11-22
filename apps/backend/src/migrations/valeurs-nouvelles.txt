@@ -1,7 +1,7 @@
 # Valeurs nouvelles du journal, déclarées par release
 #
 # À quoi sert ce fichier
-#   Le script de retour arrière (deploy-gaslands.sh, à venir, cf. issue #25)
+#   Le script de retour arrière (deploy-gaslands.sh, option 2, cf. issue #30)
 #   relance la version N-1 sans restaurer la base. Or le replay des campagnes
 #   n'a aucun repli pour une valeur qu'il ne connaît pas (nouveau type
 #   d'événement, nouvelle clé de règle maison, nouvelle valeur
