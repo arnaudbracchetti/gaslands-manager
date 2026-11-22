@@ -469,6 +469,7 @@ sans mécanisme supplémentaire (`order` fractionnaire) : voir
 
 #### Points d'attention
 
+- **Valeurs nouvelles du journal — à déclarer par release** — le replay n'a aucun repli pour une valeur inconnue : toute release qui en ajoute une la déclare dans [`valeurs-nouvelles.txt`](../apps/backend/src/migrations/valeurs-nouvelles.txt) (cas, format et raison : en-tête de ce fichier).
 - **`resistancePoints` secret** — le total brut n'est jamais exposé, ni dans `StandingsEntry` ni dans `GET /workshop` (seul l'organisateur peut appeler `POST .../events/resistance`). Un dérivé (`CampaignParticipant.sabotagePoints`, `floor(resistancePoints / 3)`) EST exposé dans `WorkshopStateDto`, mais uniquement au propriétaire consultant son propre atelier — `null` sur `GET .../participants/:pid/workshop` (lecture d'un tiers), pour préserver le secret vis-à-vis des autres joueurs. Cf. [spec/CAMPAIGN.md — Points de sabotage](spec/CAMPAIGN.md#points-de-sabotage).
 - **D6 serveur** — l'aléatoire est isolé derrière l'interface `IRandomizer` (port hexagonal, `domain/randomizer.interface.ts`). L'adaptateur production est `RandomProvider` (`infrastructure/`). Dans les tests, on passe un `FixedRandomizer implements IRandomizer` directement au constructeur de `WreckTable` — aucun `protected`/sous-classe requis. `WreckTable` prend aussi un second paramètre `ICatalogRepository` (résolution des séquelles `siege_irrecuperable`/`chassis_fragilise`, cf. §Séquelles ci-dessous) : un test double minimal suffit, seul `getSequellaType` est appelé.
 - **Autorisation sans base de données** — les use cases campagne vérifient le rôle via `campaign.participants` (liste en mémoire après replay). Aucun accès SQL supplémentaire pour l'autorisation.
@@ -694,6 +695,11 @@ Packages rendus publics (aucun secret n'est jamais intégré à l'image -
 jamais au moment du build), donc le VPS n'a besoin d'aucun `docker login`
 pour `pull`. Patron générique réutilisable pour une autre application :
 [VPS_DEPLOYMENT.md §3.2](VPS_DEPLOYMENT.md#32-construire-et-publier-les-images-ci).
+
+**Manifeste des migrations dans l'image backend** : [`apps/backend/Dockerfile`](../apps/backend/Dockerfile)
+copie les migrations horodatées et `valeurs-nouvelles.txt` dans `/app/migrations/`, dossier
+inerte lu par le futur script de retour arrière (raison détaillée : commentaire du Dockerfile).
+Les images v1.0.0 et antérieures n'ont pas ce dossier.
 
 Le VPS ne construit donc jamais rien : `docker-compose.prod.yml` référence ces
 images via `image: ghcr.io/.../gaslands-manager-<service>:${IMAGE_TAG:?...}`,

@@ -88,6 +88,22 @@ COPY --from=builder --chown=node:node /app/assets ./assets
 # même une fois les variables d'environnement correctement renseignées.
 COPY --from=builder --chown=node:node /app/database_init ./database_init
 
+# ── Manifeste des migrations (inerte, JAMAIS exécuté) ──
+# Le seul code qui tourne reste main.js : les migrations y sont déjà bundlées
+# (tableau explicite ALL_MIGRATIONS, jamais un glob - rien ne lit ce dossier au
+# runtime). Ces copies servent uniquement au script de retour arrière
+# (deploy-gaslands.sh, à venir, cf. issue #25), qui les extrait des images N
+# et N-1 pour :
+#   - lister les migrations de chaque image (diff par nom de fichier) et
+#     chercher le marqueur "// incompatible : <raison>" dans celles de N ;
+#   - lire la section de N dans valeurs-nouvelles.txt (format et règle : son
+#     en-tête).
+# Cf. docs/adr/0001-retour-arriere-par-l-image-precedente-sans-restauration.md.
+# Le glob [0-9]* ne retient que les fichiers de migration horodatés (exclut
+# index.ts, simple liste d'imports sans intérêt pour le diff).
+COPY --from=builder --chown=node:node /app/apps/backend/src/migrations/[0-9]*.ts ./migrations/
+COPY --from=builder --chown=node:node /app/apps/backend/src/migrations/valeurs-nouvelles.txt ./migrations/
+
 # ── Utilisateur non-root ──
 # "node" existe déjà dans l'image node:20-alpine. Posé après les COPY
 # --chown ci-dessus (donc aucun chown supplémentaire nécessaire au runtime).

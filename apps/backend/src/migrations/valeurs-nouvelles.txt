@@ -1,0 +1,45 @@
+# Valeurs nouvelles du journal, déclarées par release
+#
+# À quoi sert ce fichier
+#   Le script de retour arrière (deploy-gaslands.sh, à venir, cf. issue #25)
+#   relance la version N-1 sans restaurer la base. Or le replay des campagnes
+#   n'a aucun repli pour une valeur qu'il ne connaît pas (nouveau type
+#   d'événement, nouvelle clé de règle maison, nouvelle valeur
+#   d'énumération...) : selon la valeur, N-1 échoue au replay ou l'interprète
+#   mal. Par prudence, toute valeur inconnue de N-1 est déclarée.
+#   Avant de revenir en arrière, le script lit la section de la version en
+#   place et demande à l'exploitant si quelqu'un a fait l'une de
+#   ces actions depuis le déploiement ; si oui, il restaure le dump.
+#   Cf. docs/adr/0001-retour-arriere-par-l-image-precedente-sans-restauration.md
+#
+# Ce fichier n'est jamais exécuté : il est copié tel quel dans l'image
+# backend (/app/migrations/), à côté des sources des migrations.
+#
+# Format
+#   - Fichier cumulatif : on ajoute une section par version, jamais on ne
+#     réécrit une section déjà publiée.
+#   - Une section par version : un titre "## vX.Y.Z" (le tag de la release).
+#   - Une ligne par valeur : "<action utilisateur> : <table.colonne>"
+#     L'action est rédigée pour l'exploitant, telle qu'un joueur ou un
+#     organisateur la ferait dans l'application (pas un nom de classe).
+#   - Les lignes commençant par "#" et les lignes vides sont ignorées.
+#
+# Règle
+#   - Une section absente = aucune valeur nouvelle : le retour arrière vers
+#     N-1 ne pose alors aucune question.
+#   - Toute release qui ajoute une valeur que N-1 ne connaît pas DOIT la
+#     déclarer ici : nouveau GameEventType, nouvelle valeur d'une énumération
+#     persistée dans game_events (WalletReason, WreckResult...), nouvelle clé
+#     de règle maison (regles-maison.yml), nouvelle clé de stratégie stampée
+#     sur un événement, nouvelle colonne lue par le replay.
+#   - Le critère est ce que la base peut contenir après les actions des
+#     utilisateurs, pas le code ajouté.
+
+## v1.1.0
+Terminer le wizard de fin de partie d'un Événement Télévisé (entrée en atelier, distribution automatique des Points de Résistance) : game_events.resistanceStrategyKey
+Activer la règle maison « Distribution des points de Résistance aux équipes » puis terminer un Événement Télévisé : game_events.resistanceStrategyKey
+Activer la règle maison « Distribution des points de Résistance aux équipes » sur une campagne : campaigns.houseRules
+Activer la règle maison « Cagnotte collective de fin d'Événement Télévisé » sur une campagne : campaigns.houseRules
+Activer la règle maison « Bonus de jerricans pour la participation à une escarmouche » sur une campagne : campaigns.houseRules
+Activer la règle maison « Plafond de jerricans par Escarmouche » sur une campagne : campaigns.houseRules
+Enregistrer le résultat d'un Événement Télévisé avec la règle maison « Cagnotte collective de fin d'Événement Télévisé » active : game_events.walletReason
