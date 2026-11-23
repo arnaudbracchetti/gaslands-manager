@@ -37,8 +37,8 @@ refuse (400) **avant** toute mutation si une seule deviendrait illégale. Le bud
 jamais recopié : il est relu à chaque chargement via `Team.campaignBudget` (hydraté par
 `TeamRepository`, même mécanisme que le verrouillage).
 
-**Écran** : bouton « Modifier » (organisateur, **tout état**) ouvrant une modale nom + budget
-+ règles maison. Nom/budget en lecture seule hors `EN_CONSTRUCTION` ; « Enregistrer » reste
+**Écran** : bouton « Modifier » (organisateur, **tout état**) ouvrant une modale nom, budget
+et règles maison. Nom/budget en lecture seule hors `EN_CONSTRUCTION` ; « Enregistrer » reste
 actif (il soumet au moins les règles maison) ; « Annuler » ne persiste rien. En cas de refus
 serveur, la modale reste ouverte avec l'erreur.
 
@@ -65,13 +65,13 @@ sans reprise de données.
 - **Gel** : le résultat d'une règle devient un fait journalisé au moment du calcul, jamais
   recalculé ; changer le réglage n'affecte que les parties suivantes.
 
-| Règle | `nom_interne` | Effet si activée | Calculé quand |
-|---|---|---|---|
-| R1 | `distribution_points_resistance` | Les +3 Points de Résistance (Événement Télévisé) vont aux participants dont le total de PC de **cette** partie (classement + exploits + Favori du Public) vaut 0, au lieu de la seconde moitié du classement | entrée en Atelier (le total de PC n'est complet qu'après l'écran Résolution) |
-| R2 | `cagnotte_collective_evenement_tele` | +5 jerricans (`CAGNOTTE_TELE`) à **tout** participant `VALIDATED`, présent ou non, à la fin d'un Événement Télévisé (par défaut : rien) | enregistrement du résultat (`POST .../results`) |
-| R3 | `escarmouche_bonus_jerricans` | Supprime le revenu de base D6 d'une Escarmouche (le butin de scénario reste) | à chaque tirage de revenu |
-| R4 | `plafond_jerricans_escarmouche` | Plafonne à 15 le total de jerricans « récompense » (revenu D6 + butin manuel) par participant sur une même Escarmouche ; l'excédent est réduit **silencieusement** (jusqu'à 0, auquel cas rien n'est journalisé) | à chaque gain, cumul recalculé depuis le journal de la partie |
-| R5 | `conversion_sabotage_jerricans` | Ouvre une action manuelle en Atelier : le participant convertit 1 jeton de sabotage en 3 jerricans (cf. ci-dessous) ; désactivée, la conversion est refusée | à l'action du joueur (`SabotageConvertedEvent`, montant figé à l'écriture) |
+| Règle | `nom_interne`                        | Effet si activée                                                                                                                                                                                                 | Calculé quand                                                                |
+| ----- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| R1    | `distribution_points_resistance`     | Les +3 Points de Résistance (Événement Télévisé) vont aux participants dont le total de PC de **cette** partie (classement + exploits + Favori du Public) vaut 0, au lieu de la seconde moitié du classement     | entrée en Atelier (le total de PC n'est complet qu'après l'écran Résolution) |
+| R2    | `cagnotte_collective_evenement_tele` | +5 jerricans (`CAGNOTTE_TELE`) à **tout** participant `VALIDATED`, présent ou non, à la fin d'un Événement Télévisé (par défaut : rien)                                                                          | enregistrement du résultat (`POST .../results`)                              |
+| R3    | `escarmouche_bonus_jerricans`        | Supprime le revenu de base D6 d'une Escarmouche (le butin de scénario reste)                                                                                                                                     | à chaque tirage de revenu                                                    |
+| R4    | `plafond_jerricans_escarmouche`      | Plafonne à 15 le total de jerricans « récompense » (revenu D6 + butin manuel) par participant sur une même Escarmouche ; l'excédent est réduit **silencieusement** (jusqu'à 0, auquel cas rien n'est journalisé) | à chaque gain, cumul recalculé depuis le journal de la partie                |
+| R5    | `conversion_sabotage_jerricans`      | Ouvre une action manuelle en Atelier : le participant convertit 1 jeton de sabotage en 3 jerricans (cf. ci-dessous) ; désactivée, la conversion est refusée                                                      | à l'action du joueur (`SabotageConvertedEvent`, montant figé à l'écriture)   |
 
 R1 trace la règle appliquée (`ResistanceContactedEvent.strategyKey`, `"defaut"` pour la règle
 par défaut, `null` pour un contact manuel) et la mentionne dans le journal, pour comparer deux
@@ -167,15 +167,15 @@ de partie et le scénario (`franchissement_portes`, `gain_jerricans`). Conceptio
 [`docs/plans/2026-07-17-wizard-fin-partie-e-et-design.md`](../plans/2026-07-17-wizard-fin-partie-e-et-design.md),
 [`docs/plans/2026-07-26-sabotage-points-wizard-design.md`](../plans/2026-07-26-sabotage-points-wizard-design.md).
 
-| # | Écran | Visible si | Contenu |
-|---|---|---|---|
-| 1 | Présence | toujours | participants présents, **au moins 2** |
-| 2 | Sabotage | toujours | points de sabotage dépensés par équipe (0 par défaut, cf. [§Points de sabotage](#points-de-sabotage)) |
-| 3 | Classement | Événement Télévisé | ordre des présents (une Escarmouche n'attribue jamais de PC de classement) |
-| 4 | Portes franchies | Événement Télévisé **et** `franchissement_portes` | portes par équipe |
-| 5 | Jerricans | `gain_jerricans` | butin manuel de scénario, cumulé avec le revenu D6 |
-| 6 | Désignation des épaves | toujours | par véhicule : intact / mis en épave par X / seul ; case Favori du Public si éligible (cf. [§Faveur du Public](#faveur-du-public)) |
-| 7 | Résolution | toujours | synthèse automatique : revenu de base D6 (Escarmouche, par présent) puis Table des Épaves (par véhicule désigné) |
+| #   | Écran                  | Visible si                                        | Contenu                                                                                                                            |
+| --- | ---------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Présence               | toujours                                          | participants présents, **au moins 2**                                                                                              |
+| 2   | Sabotage               | toujours                                          | points de sabotage dépensés par équipe (0 par défaut, cf. [§Points de sabotage](#points-de-sabotage))                              |
+| 3   | Classement             | Événement Télévisé                                | ordre des présents (une Escarmouche n'attribue jamais de PC de classement)                                                         |
+| 4   | Portes franchies       | Événement Télévisé **et** `franchissement_portes` | portes par équipe                                                                                                                  |
+| 5   | Jerricans              | `gain_jerricans`                                  | butin manuel de scénario, cumulé avec le revenu D6                                                                                 |
+| 6   | Désignation des épaves | toujours                                          | par véhicule : intact / mis en épave par X / seul ; case Favori du Public si éligible (cf. [§Faveur du Public](#faveur-du-public)) |
+| 7   | Résolution             | toujours                                          | synthèse automatique : revenu de base D6 (Escarmouche, par présent) puis Table des Épaves (par véhicule désigné)                   |
 
 **Persistance différée** : les écrans 1 à 6 sont purement client (« Précédent »/« Annuler »
 libres). Le lot est envoyé (`POST .../results`) au passage 6 → 7 ; la partie reste `PLANIFIE`.
@@ -283,6 +283,7 @@ décision côté serveur par `Game.wasPurchasedThisSession`) :
     jamais, ce qui suffit à porter la règle).
 
 **Véhicules entiers** :
+
 - acheté dans la session → annulation **en cascade** : l'achat et tous les événements de la session
   qui le ciblent (équipement, séquelles, renommages) sont supprimés atomiquement - sinon ils
   deviendraient orphelins et casseraient le prochain replay ;
@@ -348,10 +349,11 @@ marque aussi l'avantage vendu. L'interface limite le choix aux 6 avantages « Du
 sponsors, conforme au livre) ; le backend ne filtre pas la catégorie.
 
 **Effets permanents sur la Table des Épaves** :
+
 - **Légende Vivante** : le D6 vaut 1 à chaque tirage ;
 - **Maintenu par la Rouille** : second tirage après le premier (Chocs mis à jour), sauf si le
   premier a détruit le véhicule.
-Les deux se cumulent (deux résultats « 1 »).
+  Les deux se cumulent (deux résultats « 1 »).
 
 ---
 
@@ -431,15 +433,15 @@ même mapper.
 
 ### `Campaign`
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `name` | string(100) | obligatoire |
-| `state` | `EN_CONSTRUCTION \| EN_COURS \| TERMINEE` | défaut `EN_CONSTRUCTION` |
-| `inviteCode` | string | unique, indexé, généré à la création |
-| `budget` | number | défaut 50 ; modifiable en `EN_CONSTRUCTION` (`PUT /api/campaigns/:id`) |
-| `houseRules` | json (string[]) | clés activées, défaut `[]` |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                                      | Contraintes                                                            |
+| ------------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| `id`                      | number                                    | PK                                                                     |
+| `name`                    | string(100)                               | obligatoire                                                            |
+| `state`                   | `EN_CONSTRUCTION \| EN_COURS \| TERMINEE` | défaut `EN_CONSTRUCTION`                                               |
+| `inviteCode`              | string                                    | unique, indexé, généré à la création                                   |
+| `budget`                  | number                                    | défaut 50 ; modifiable en `EN_CONSTRUCTION` (`PUT /api/campaigns/:id`) |
+| `houseRules`              | json (string[])                           | clés activées, défaut `[]`                                             |
+| `createdAt` / `updatedAt` | Date                                      | auto                                                                   |
 
 Calculés dans la réponse : `participantCount` (participants `VALIDATED`), `myRole` (`organizer` | `participant`).
 
@@ -447,30 +449,30 @@ Calculés dans la réponse : `participantCount` (participants `VALIDATED`), `myR
 
 Une ligne par utilisateur inscrit ; unique `(campaignId, userId)`.
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `campaignId` / `userId` | number | FK `CASCADE` |
-| `teamId` | number \| null | FK `CASCADE` ; null possible pour un organisateur sans équipe |
-| `status` | `PENDING \| VALIDATED \| REJECTED` | défaut `PENDING` |
-| `isOrganizer` | boolean | défaut `false` |
-| `isLocked` | boolean | inutilisé |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                               | Contraintes                                                   |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------- |
+| `id`                      | number                             | PK                                                            |
+| `campaignId` / `userId`   | number                             | FK `CASCADE`                                                  |
+| `teamId`                  | number \| null                     | FK `CASCADE` ; null possible pour un organisateur sans équipe |
+| `status`                  | `PENDING \| VALIDATED \| REJECTED` | défaut `PENDING`                                              |
+| `isOrganizer`             | boolean                            | défaut `false`                                                |
+| `isLocked`                | boolean                            | inutilisé                                                     |
+| `createdAt` / `updatedAt` | Date                               | auto                                                          |
 
 Calculés : `userName` (`callName`, cf. [AUTH.md](AUTH.md#nom-daffichage-callname)), `teamName`.
 
 ### `Game`
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `campaignId` | number | FK `CASCADE` |
-| `scenarioId` | string \| null | `Scenario.nom_interne` |
-| `type` | `EVENEMENT_TELE \| ESCARMOUCHE` | |
-| `status` | `PLANIFIE \| ATELIER \| JOUE` | |
-| `order` | double precision | colonne SQL `displayOrder` ; ajout en MAX+1 |
-| `playedAt` | Date \| null | horodatage du passage en `ATELIER` |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type                            | Contraintes                                 |
+| ------------------------- | ------------------------------- | ------------------------------------------- |
+| `id`                      | number                          | PK                                          |
+| `campaignId`              | number                          | FK `CASCADE`                                |
+| `scenarioId`              | string \| null                  | `Scenario.nom_interne`                      |
+| `type`                    | `EVENEMENT_TELE \| ESCARMOUCHE` |                                             |
+| `status`                  | `PLANIFIE \| ATELIER \| JOUE`   |                                             |
+| `order`                   | double precision                | colonne SQL `displayOrder` ; ajout en MAX+1 |
+| `playedAt`                | Date \| null                    | horodatage du passage en `ATELIER`          |
+| `createdAt` / `updatedAt` | Date                            | auto                                        |
 
 Calculés : `scenarioName`, `franchissementPortes`, `gainJerricans` (repris du scénario, pilotent les écrans du wizard).
 
@@ -488,68 +490,68 @@ lecture : `assertVisibleParticipant` ; refus → 404. Domaine refusé → 400. L
 
 ### Campagnes et participants
 
-| Méthode | Route | Qui | Description |
-|---|---|---|---|
-| GET | `/api/catalog/regles-maison` | public | catalogue des règles maison |
-| GET | `/api/campaigns` | | mes campagnes (`VALIDATED`) |
-| POST | `/api/campaigns` | | créer (`name`, `teamId`, `budget?`, `houseRules?`) ; créateur organisateur ; 400 si équipe hors budget ou clé inconnue |
-| GET | `/api/campaigns/pending` | | mes demandes en attente |
-| GET | `/api/campaigns/organizing/pending-requests` | | demandes en attente dans mes campagnes |
-| GET | `/api/campaigns/by-code/:code` | | infos minimales (dont `budget`, `houseRules`) |
-| GET | `/api/campaigns/:id` | participant | détail |
-| PUT | `/api/campaigns/:id` | organisateur | nom/budget (`EN_CONSTRUCTION`) |
-| PUT | `/api/campaigns/:id/house-rules` | organisateur | règles maison (tout état) |
-| PUT | `/api/campaigns/:id/state` | organisateur | transition d'état |
-| DELETE | `/api/campaigns/:id` | organisateur | supprimer (cascade) |
-| GET | `/api/campaigns/:id/participants` | participant | liste |
-| POST | `/api/campaigns/:id/participants` | | demande d'inscription (`{ teamId }`) |
-| PUT | `/api/campaigns/:id/participants/me` | participant | changer d'équipe (`EN_CONSTRUCTION`) |
-| PUT | `/api/campaigns/:id/participants/:pid/validate` | organisateur | `{ accept }` |
-| PUT | `/api/campaigns/:id/participants/:pid/promote` | organisateur | promouvoir co-organisateur |
-| DELETE | `/api/campaigns/:id/participants/:pid` | organisateur | retirer (`EN_CONSTRUCTION`) |
-| GET | `/api/campaigns/:id/participants/:pid/journal` | participant | historique d'un participant |
-| GET | `/api/campaigns/:id/standings` | participant | classement (alimente la liste des participants) |
+| Méthode | Route                                           | Qui          | Description                                                                                                            |
+| ------- | ----------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/catalog/regles-maison`                    | public       | catalogue des règles maison                                                                                            |
+| GET     | `/api/campaigns`                                |              | mes campagnes (`VALIDATED`)                                                                                            |
+| POST    | `/api/campaigns`                                |              | créer (`name`, `teamId`, `budget?`, `houseRules?`) ; créateur organisateur ; 400 si équipe hors budget ou clé inconnue |
+| GET     | `/api/campaigns/pending`                        |              | mes demandes en attente                                                                                                |
+| GET     | `/api/campaigns/organizing/pending-requests`    |              | demandes en attente dans mes campagnes                                                                                 |
+| GET     | `/api/campaigns/by-code/:code`                  |              | infos minimales (dont `budget`, `houseRules`)                                                                          |
+| GET     | `/api/campaigns/:id`                            | participant  | détail                                                                                                                 |
+| PUT     | `/api/campaigns/:id`                            | organisateur | nom/budget (`EN_CONSTRUCTION`)                                                                                         |
+| PUT     | `/api/campaigns/:id/house-rules`                | organisateur | règles maison (tout état)                                                                                              |
+| PUT     | `/api/campaigns/:id/state`                      | organisateur | transition d'état                                                                                                      |
+| DELETE  | `/api/campaigns/:id`                            | organisateur | supprimer (cascade)                                                                                                    |
+| GET     | `/api/campaigns/:id/participants`               | participant  | liste                                                                                                                  |
+| POST    | `/api/campaigns/:id/participants`               |              | demande d'inscription (`{ teamId }`)                                                                                   |
+| PUT     | `/api/campaigns/:id/participants/me`            | participant  | changer d'équipe (`EN_CONSTRUCTION`)                                                                                   |
+| PUT     | `/api/campaigns/:id/participants/:pid/validate` | organisateur | `{ accept }`                                                                                                           |
+| PUT     | `/api/campaigns/:id/participants/:pid/promote`  | organisateur | promouvoir co-organisateur                                                                                             |
+| DELETE  | `/api/campaigns/:id/participants/:pid`          | organisateur | retirer (`EN_CONSTRUCTION`)                                                                                            |
+| GET     | `/api/campaigns/:id/participants/:pid/journal`  | participant  | historique d'un participant                                                                                            |
+| GET     | `/api/campaigns/:id/standings`                  | participant  | classement (alimente la liste des participants)                                                                        |
 
 ### Programme et wizard
 
-| Méthode | Route | Qui | Description |
-|---|---|---|---|
-| GET | `/api/catalog/scenarios` | public | scénarios |
-| GET | `/api/campaigns/:id/games` | participant | programme trié |
-| POST | `/api/campaigns/:id/games` | organisateur | ajouter (`{ scenarioId, type? }`) |
-| PUT | `/api/campaigns/:id/games/reorder` | organisateur | réordonner les `PLANIFIE` (`{ gameIds }`) - 204 |
-| PUT / DELETE | `/api/campaigns/:id/games/:gameId` | organisateur | éditer / supprimer une partie `PLANIFIE` |
-| POST | `/api/campaigns/:id/games/:gameId/results` | organisateur | lot du wizard : `results` (classement + exploits, Événement Télévisé uniquement), `jerricanGains` et `destroyedVehicles` à plat (Escarmouche, destructions à 0 PC), dépenses de sabotage ; la partie reste `PLANIFIE` |
-| DELETE | `/api/campaigns/:id/games/:gameId/results` | organisateur | reset du wizard (partie `PLANIFIE`) - 204 |
-| GET | `/api/campaigns/:id/games/:gameId/results` | participant | résultats triés, dérivés du journal |
-| GET | `/api/campaigns/:id/games/:gameId/participant-vehicles` | organisateur | véhicules courants (hors perdus et vendus) des `?participantIds=` |
-| POST | `/api/campaigns/:id/games/:gameId/events/income` | organisateur | revenu de base D6 (`{ participantId }`) → `{ amount, descriptions }` |
-| POST | `/api/campaigns/:id/games/:gameId/events/wreck` | organisateur | Table des Épaves (`{ participantId, vehicleId, pendingFavoriDuPublic? }`) → `{ outcome, descriptions }` |
-| POST | `/api/campaigns/:id/games/:gameId/enter-atelier` | organisateur | `PLANIFIE → ATELIER` → `{ autoClosedGameId }` |
-| POST | `/api/campaigns/:id/games/:gameId/close-atelier` | organisateur | `ATELIER → JOUE` - 204 |
-| GET | `/api/campaigns/:id/games/:gameId/journal` | participant | journal de la partie |
+| Méthode      | Route                                                   | Qui          | Description                                                                                                                                                                                                           |
+| ------------ | ------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET          | `/api/catalog/scenarios`                                | public       | scénarios                                                                                                                                                                                                             |
+| GET          | `/api/campaigns/:id/games`                              | participant  | programme trié                                                                                                                                                                                                        |
+| POST         | `/api/campaigns/:id/games`                              | organisateur | ajouter (`{ scenarioId, type? }`)                                                                                                                                                                                     |
+| PUT          | `/api/campaigns/:id/games/reorder`                      | organisateur | réordonner les `PLANIFIE` (`{ gameIds }`) - 204                                                                                                                                                                       |
+| PUT / DELETE | `/api/campaigns/:id/games/:gameId`                      | organisateur | éditer / supprimer une partie `PLANIFIE`                                                                                                                                                                              |
+| POST         | `/api/campaigns/:id/games/:gameId/results`              | organisateur | lot du wizard : `results` (classement + exploits, Événement Télévisé uniquement), `jerricanGains` et `destroyedVehicles` à plat (Escarmouche, destructions à 0 PC), dépenses de sabotage ; la partie reste `PLANIFIE` |
+| DELETE       | `/api/campaigns/:id/games/:gameId/results`              | organisateur | reset du wizard (partie `PLANIFIE`) - 204                                                                                                                                                                             |
+| GET          | `/api/campaigns/:id/games/:gameId/results`              | participant  | résultats triés, dérivés du journal                                                                                                                                                                                   |
+| GET          | `/api/campaigns/:id/games/:gameId/participant-vehicles` | organisateur | véhicules courants (hors perdus et vendus) des `?participantIds=`                                                                                                                                                     |
+| POST         | `/api/campaigns/:id/games/:gameId/events/income`        | organisateur | revenu de base D6 (`{ participantId }`) → `{ amount, descriptions }`                                                                                                                                                  |
+| POST         | `/api/campaigns/:id/games/:gameId/events/wreck`         | organisateur | Table des Épaves (`{ participantId, vehicleId, pendingFavoriDuPublic? }`) → `{ outcome, descriptions }`                                                                                                               |
+| POST         | `/api/campaigns/:id/games/:gameId/enter-atelier`        | organisateur | `PLANIFIE → ATELIER` → `{ autoClosedGameId }`                                                                                                                                                                         |
+| POST         | `/api/campaigns/:id/games/:gameId/close-atelier`        | organisateur | `ATELIER → JOUE` - 204                                                                                                                                                                                                |
+| GET          | `/api/campaigns/:id/games/:gameId/journal`              | participant  | journal de la partie                                                                                                                                                                                                  |
 
 ### Atelier
 
-| Méthode | Route | Qui | Description |
-|---|---|---|---|
-| GET | `/api/campaigns/:id/workshop` | participant | mon atelier (véhicules, équipement, chocs, séquelles, cagnotte, sabotage) |
-| GET | `/api/campaigns/:id/participants/:pid/workshop` | participant | atelier d'un tiers, lecture seule (`sabotagePoints: null`) |
-| GET | `/api/campaigns/:id/sheet` | participant | ma fiche d'équipe (HTML) |
-| GET | `/api/campaigns/:id/participants/:pid/sheet` | organisateur | fiche d'un tiers (HTML) |
-| GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-{weapons,improvements,advantages,sequelles}` | participant | disponibilités avec verdict (budget = cagnotte ; Chocs pour les séquelles) |
-| POST | `/api/campaigns/:id/events/equipment` | participant | achat/revente `{ operation, entityType (VEHICLE/WEAPON/IMPROVEMENT/ADVANTAGE/SEQUELLE), nomInterne, …, orientation?, freeAdvantageNomInterne? }` - 204 |
-| POST | `/api/campaigns/:id/events/vehicle-rename` | participant | `{ vehicleId, nom }` - 204 |
-| POST | `/api/campaigns/:id/events/sabotage-conversion` | participant | R5 : convertit 1 jeton de sabotage en jerricans - 204 ; 400 si règle inactive, hors atelier ou sans jeton |
-| POST | `/api/campaigns/:id/events/sabotage-conversion/cancel` | participant | R5 : annule la dernière conversion - 204 ; 400 hors atelier, sans conversion ou si la cagnotte deviendrait négative |
+| Méthode | Route                                                                                                   | Qui          | Description                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET     | `/api/campaigns/:id/workshop`                                                                           | participant  | mon atelier (véhicules, équipement, chocs, séquelles, cagnotte, sabotage)                                                                              |
+| GET     | `/api/campaigns/:id/participants/:pid/workshop`                                                         | participant  | atelier d'un tiers, lecture seule (`sabotagePoints: null`)                                                                                             |
+| GET     | `/api/campaigns/:id/sheet`                                                                              | participant  | ma fiche d'équipe (HTML)                                                                                                                               |
+| GET     | `/api/campaigns/:id/participants/:pid/sheet`                                                            | organisateur | fiche d'un tiers (HTML)                                                                                                                                |
+| GET     | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-{weapons,improvements,advantages,sequelles}` | participant  | disponibilités avec verdict (budget = cagnotte ; Chocs pour les séquelles)                                                                             |
+| POST    | `/api/campaigns/:id/events/equipment`                                                                   | participant  | achat/revente `{ operation, entityType (VEHICLE/WEAPON/IMPROVEMENT/ADVANTAGE/SEQUELLE), nomInterne, …, orientation?, freeAdvantageNomInterne? }` - 204 |
+| POST    | `/api/campaigns/:id/events/vehicle-rename`                                                              | participant  | `{ vehicleId, nom }` - 204                                                                                                                             |
+| POST    | `/api/campaigns/:id/events/sabotage-conversion`                                                         | participant  | R5 : convertit 1 jeton de sabotage en jerricans - 204 ; 400 si règle inactive, hors atelier ou sans jeton                                              |
+| POST    | `/api/campaigns/:id/events/sabotage-conversion/cancel`                                                  | participant  | R5 : annule la dernière conversion - 204 ; 400 hors atelier, sans conversion ou si la cagnotte deviendrait négative                                    |
 
 ### Event-sourcing brut (non utilisés par le frontend)
 
-| Méthode | Route | Description |
-|---|---|---|
-| POST | `/api/campaigns/:id/games/:gameId/events/wallet` | mouvement de cagnotte `{ participantId, amount, reason }` |
-| POST | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` |
-| POST | `/api/campaigns/:id/games/:gameId/events/resistance` | contact Résistance `{ participantId }` (+3 PR) |
+| Méthode | Route                                                  | Description                                                    |
+| ------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| POST    | `/api/campaigns/:id/games/:gameId/events/wallet`       | mouvement de cagnotte `{ participantId, amount, reason }`      |
+| POST    | `/api/campaigns/:id/games/:gameId/events/vehicle-lost` | perte d'un véhicule `{ participantId, vehicleId, weaponIds? }` |
+| POST    | `/api/campaigns/:id/games/:gameId/events/resistance`   | contact Résistance `{ participantId }` (+3 PR)                 |
 
 Il n'existe volontairement pas de route d'enregistrement de classement avec PC fournis par
 l'appelant : seul `POST .../results` (barème 10/5/2/1 calculé serveur) enregistre un classement.

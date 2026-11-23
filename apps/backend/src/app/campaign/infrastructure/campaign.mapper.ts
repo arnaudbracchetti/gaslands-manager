@@ -279,8 +279,12 @@ export class CampaignMapper {
 
       case GameEventType.SABOTAGE_CONVERTED:
         return new SabotageConvertedEvent(
-          id, gameId, participantId, eventOrder,
-          orm.sabotageTokensConverted!, orm.sabotageJerricansGained!,
+          id,
+          gameId,
+          participantId,
+          eventOrder,
+          orm.sabotageTokensConverted!,
+          orm.sabotageJerricansGained!,
         );
 
       default:

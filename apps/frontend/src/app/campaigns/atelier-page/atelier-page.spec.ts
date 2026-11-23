@@ -199,19 +199,24 @@ describe('AtelierPage', () => {
   });
 
   describe('conversion de sabotage (règle maison)', () => {
-    const withRule = { ...mockCampaign, houseRules: ['conversion_sabotage_jerricans'] };
+    const withRule = {
+      ...mockCampaign,
+      houseRules: ['conversion_sabotage_jerricans'],
+    };
 
     function convertButton(): HTMLButtonElement | null {
-      return (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.atp-convert-btn');
+      return (
+        fixture.nativeElement as HTMLElement
+      ).querySelector<HTMLButtonElement>('.atp-convert-btn');
     }
 
-    it('n\'affiche aucun bouton quand la règle maison est désactivée', () => {
+    it("n'affiche aucun bouton quand la règle maison est désactivée", () => {
       createFixture('3');
 
       expect(convertButton()).toBeNull();
     });
 
-    it('affiche le bouton actif quand la règle est activée et qu\'il reste un jeton', () => {
+    it("affiche le bouton actif quand la règle est activée et qu'il reste un jeton", () => {
       mockCampaignsService.getOne.mockReturnValue(of(withRule));
       createFixture('3');
 
@@ -221,7 +226,9 @@ describe('AtelierPage', () => {
 
     it('grise le bouton quand le solde de jetons est nul', () => {
       mockCampaignsService.getOne.mockReturnValue(of(withRule));
-      mockCampaignsService.getWorkshop.mockReturnValue(of({ ...mockWorkshop, sabotagePoints: 0 }));
+      mockCampaignsService.getWorkshop.mockReturnValue(
+        of({ ...mockWorkshop, sabotagePoints: 0 }),
+      );
       createFixture('3');
 
       expect(convertButton()!.disabled).toBe(true);
@@ -229,7 +236,7 @@ describe('AtelierPage', () => {
       expect(component.confirmingConversion()).toBe(false);
     });
 
-    it('ouvre la confirmation avec l\'aperçu avant/après, sans appeler l\'API', () => {
+    it("ouvre la confirmation avec l'aperçu avant/après, sans appeler l'API", () => {
       mockCampaignsService.getOne.mockReturnValue(of(withRule));
       createFixture('3');
 
@@ -241,7 +248,7 @@ describe('AtelierPage', () => {
       expect(mockCampaignsService.convertSabotage).not.toHaveBeenCalled();
     });
 
-    it('à la confirmation, appelle l\'API puis recharge l\'atelier', () => {
+    it("à la confirmation, appelle l'API puis recharge l'atelier", () => {
       mockCampaignsService.getOne.mockReturnValue(of(withRule));
       createFixture('3');
       mockCampaignsService.getWorkshop.mockClear();
@@ -257,7 +264,9 @@ describe('AtelierPage', () => {
     it('affiche le message du serveur en cas de refus (400)', () => {
       mockCampaignsService.getOne.mockReturnValue(of(withRule));
       mockCampaignsService.convertSabotage.mockReturnValue(
-        throwError(() => ({ error: { message: 'Aucun jeton de sabotage à convertir.' } })),
+        throwError(() => ({
+          error: { message: 'Aucun jeton de sabotage à convertir.' },
+        })),
       );
       createFixture('3');
 
@@ -269,17 +278,22 @@ describe('AtelierPage', () => {
     });
   });
 
-  describe('annulation d\'une conversion de sabotage', () => {
+  describe("annulation d'une conversion de sabotage", () => {
     // mockWorkshop.wallet = 10 ; dernière conversion = 3 jerricans
     const converted = { ...mockWorkshop, lastSabotageConversionJerricans: 3 };
 
     function cancelButton(): HTMLButtonElement | undefined {
       return Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.atp-convert-btn'),
-      ).find((b: HTMLButtonElement): boolean => b.textContent?.includes('Annuler une conversion') ?? false);
+        (
+          fixture.nativeElement as HTMLElement
+        ).querySelectorAll<HTMLButtonElement>('.atp-convert-btn'),
+      ).find(
+        (b: HTMLButtonElement): boolean =>
+          b.textContent?.includes('Annuler une conversion') ?? false,
+      );
     }
 
-    it('n\'affiche aucun bouton d\'annulation sans conversion dans la session', () => {
+    it("n'affiche aucun bouton d'annulation sans conversion dans la session", () => {
       createFixture('3');
 
       expect(cancelButton()).toBeUndefined();
@@ -294,7 +308,9 @@ describe('AtelierPage', () => {
     });
 
     it('grise le bouton quand la cagnotte (2) est inférieure aux jerricans convertis (3)', () => {
-      mockCampaignsService.getWorkshop.mockReturnValue(of({ ...converted, wallet: 2 }));
+      mockCampaignsService.getWorkshop.mockReturnValue(
+        of({ ...converted, wallet: 2 }),
+      );
       createFixture('3');
 
       expect(cancelButton()!.disabled).toBe(true);
@@ -302,7 +318,7 @@ describe('AtelierPage', () => {
       expect(component.confirmingCancellation()).toBe(false);
     });
 
-    it('ouvre la confirmation avec l\'aperçu avant/après, sans appeler l\'API', () => {
+    it("ouvre la confirmation avec l'aperçu avant/après, sans appeler l'API", () => {
       mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
       createFixture('3');
 
@@ -311,10 +327,12 @@ describe('AtelierPage', () => {
       expect(component.confirmingCancellation()).toBe(true);
       expect(component.cancellationMessage()).toContain('Sabotage : 2 → 3');
       expect(component.cancellationMessage()).toContain('Cagnotte : 10 → 7');
-      expect(mockCampaignsService.cancelSabotageConversion).not.toHaveBeenCalled();
+      expect(
+        mockCampaignsService.cancelSabotageConversion,
+      ).not.toHaveBeenCalled();
     });
 
-    it('à la confirmation, appelle l\'API puis recharge l\'atelier', () => {
+    it("à la confirmation, appelle l'API puis recharge l'atelier", () => {
       mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
       createFixture('3');
       mockCampaignsService.getWorkshop.mockClear();
@@ -322,7 +340,9 @@ describe('AtelierPage', () => {
       component.onCancelConversionRequested();
       component.onConfirmCancellation();
 
-      expect(mockCampaignsService.cancelSabotageConversion).toHaveBeenCalledWith(3);
+      expect(
+        mockCampaignsService.cancelSabotageConversion,
+      ).toHaveBeenCalledWith(3);
       expect(mockCampaignsService.getWorkshop).toHaveBeenCalledWith(3);
       expect(component.confirmingCancellation()).toBe(false);
     });
@@ -330,7 +350,12 @@ describe('AtelierPage', () => {
     it('affiche le message du serveur en cas de refus (400)', () => {
       mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
       mockCampaignsService.cancelSabotageConversion.mockReturnValue(
-        throwError(() => ({ error: { message: 'Impossible d\'annuler : les jerricans convertis ont déjà été dépensés.' } })),
+        throwError(() => ({
+          error: {
+            message:
+              "Impossible d'annuler : les jerricans convertis ont déjà été dépensés.",
+          },
+        })),
       );
       createFixture('3');
 

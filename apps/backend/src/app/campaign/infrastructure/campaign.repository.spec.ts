@@ -12,7 +12,10 @@ import { ImprovementLostEvent } from '../domain/events/improvement-lost.event';
 import { AdvantageLostEvent } from '../domain/events/advantage-lost.event';
 import { WreckResolvedEvent } from '../domain/events/wreck-resolved.event';
 import { EquipmentChangedEvent } from '../domain/events/equipment-changed.event';
-import { EquipmentOperation, EquipmentEntityType } from '../domain/enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../domain/enums/equipment-change.enums';
 import { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import { GatesCrossedEvent } from '../domain/events/gates-crossed.event';
 import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event';
@@ -45,7 +48,12 @@ import { WeightClass } from '../domain/enums/weight-class.enum';
  */
 function makeRepo(): CampaignRepository {
   return new CampaignRepository(
-    {} as never, {} as never, {} as never, {} as never, {} as never, {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
   );
 }
 
@@ -79,8 +87,14 @@ describe('CampaignMapper.toEvent — VEHICLE_RENAMED', () => {
   it('reconstruit un VehicleRenamedEvent (pas un VehicleLostEvent) depuis une ligne VEHICLE_RENAMED', () => {
     const mapper = new CampaignMapper({} as never);
     const ormRow = {
-      id: 99, gameId: 10, participantId: 1, eventOrder: 1, eventType: 'VEHICLE_RENAMED',
-      vehicleId: 5, previousVehicleName: 'Buggy', newVehicleName: 'La Teigne',
+      id: 99,
+      gameId: 10,
+      participantId: 1,
+      eventOrder: 1,
+      eventType: 'VEHICLE_RENAMED',
+      vehicleId: 5,
+      previousVehicleName: 'Buggy',
+      newVehicleName: 'La Teigne',
     } as unknown as GameEventOrm;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,8 +126,13 @@ describe('CampaignMapper.toEvent — FAVORI_DU_PUBLIC_BONUS (régression bug tro
   it('reconstruit un FavoriDuPublicBonusEvent (pas un VehicleLostEvent) depuis une ligne FAVORI_DU_PUBLIC_BONUS', () => {
     const mapper = new CampaignMapper({} as never);
     const ormRow = {
-      id: 99, gameId: 10, participantId: 1, eventOrder: 1, eventType: 'FAVORI_DU_PUBLIC_BONUS',
-      vehicleId: 7, championshipPoints: 5,
+      id: 99,
+      gameId: 10,
+      participantId: 1,
+      eventOrder: 1,
+      eventType: 'FAVORI_DU_PUBLIC_BONUS',
+      vehicleId: 7,
+      championshipPoints: 5,
     } as unknown as GameEventOrm;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,16 +155,28 @@ describe('CampaignMapper.toEvent — FAVORI_DU_PUBLIC_BONUS (régression bug tro
 describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
   const repo = makeRepo();
 
-  const cases: Array<{ label: string; event: GameEvent; expected: Partial<GameEventOrm> }> = [
+  const cases: Array<{
+    label: string;
+    event: GameEvent;
+    expected: Partial<GameEventOrm>;
+  }> = [
     {
       label: 'RankingAssignedEvent',
       event: new RankingAssignedEvent(0, 10, 1, 1, 2, 10),
-      expected: { eventType: 'RANKING_ASSIGNED', rank: 2, championshipPoints: 10 },
+      expected: {
+        eventType: 'RANKING_ASSIGNED',
+        rank: 2,
+        championshipPoints: 10,
+      },
     },
     {
       label: 'WalletMovementEvent',
       event: new WalletMovementEvent(0, 10, 1, 1, 4, WalletReason.RECOMPENSE),
-      expected: { eventType: 'WALLET_MOVEMENT', amount: 4, walletReason: WalletReason.RECOMPENSE },
+      expected: {
+        eventType: 'WALLET_MOVEMENT',
+        amount: 4,
+        walletReason: WalletReason.RECOMPENSE,
+      },
     },
     {
       label: 'VehicleLostEvent',
@@ -169,23 +200,53 @@ describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
     },
     {
       label: 'WreckResolvedEvent',
-      event: new WreckResolvedEvent(0, 10, 1, 1, 7, 5, 2, WreckResult.ARRACHEE, 1),
+      event: new WreckResolvedEvent(
+        0,
+        10,
+        1,
+        1,
+        7,
+        5,
+        2,
+        WreckResult.ARRACHEE,
+        1,
+      ),
       expected: {
-        eventType: 'WRECK_RESOLVED', vehicleId: 7, diceRoll: 5, chocsBefore: 2,
-        wreckResult: WreckResult.ARRACHEE, chocsGained: 1,
+        eventType: 'WRECK_RESOLVED',
+        vehicleId: 7,
+        diceRoll: 5,
+        chocsBefore: 2,
+        wreckResult: WreckResult.ARRACHEE,
+        chocsGained: 1,
       },
     },
     {
       label: 'EquipmentChangedEvent',
       event: new EquipmentChangedEvent(
-        0, 10, 1, 1,
-        EquipmentOperation.SELL, EquipmentEntityType.WEAPON, 'mitrailleuse', 2,
-        5, 12, null, null, null,
+        0,
+        10,
+        1,
+        1,
+        EquipmentOperation.SELL,
+        EquipmentEntityType.WEAPON,
+        'mitrailleuse',
+        2,
+        5,
+        12,
+        null,
+        null,
+        null,
       ),
       expected: {
-        eventType: 'EQUIPMENT_CHANGED', operation: EquipmentOperation.SELL,
-        entityType: EquipmentEntityType.WEAPON, nomInterne: 'mitrailleuse', cost: 2,
-        targetVehicleId: 5, targetEntityId: 12, orientation: null, freeAdvantageNomInterne: null,
+        eventType: 'EQUIPMENT_CHANGED',
+        operation: EquipmentOperation.SELL,
+        entityType: EquipmentEntityType.WEAPON,
+        nomInterne: 'mitrailleuse',
+        cost: 2,
+        targetVehicleId: 5,
+        targetEntityId: 12,
+        orientation: null,
+        freeAdvantageNomInterne: null,
       },
     },
     {
@@ -196,22 +257,40 @@ describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
     {
       label: 'GatesCrossedEvent',
       event: new GatesCrossedEvent(0, 10, 1, 1, 3, 3),
-      expected: { eventType: 'GATES_CROSSED', gatesCrossed: 3, championshipPoints: 3 },
+      expected: {
+        eventType: 'GATES_CROSSED',
+        gatesCrossed: 3,
+        championshipPoints: 3,
+      },
     },
     {
       label: 'VehicleDestroyedEvent',
       event: new VehicleDestroyedEvent(0, 10, 1, 1, 7, WeightClass.LOURD, 3),
-      expected: { eventType: 'VEHICLE_DESTROYED', vehicleId: 7, weightClass: WeightClass.LOURD, championshipPoints: 3 },
+      expected: {
+        eventType: 'VEHICLE_DESTROYED',
+        vehicleId: 7,
+        weightClass: WeightClass.LOURD,
+        championshipPoints: 3,
+      },
     },
     {
       label: 'FavoriDuPublicBonusEvent',
       event: new FavoriDuPublicBonusEvent(0, 10, 1, 1, 7, 5),
-      expected: { eventType: 'FAVORI_DU_PUBLIC_BONUS', vehicleId: 7, championshipPoints: 5 },
+      expected: {
+        eventType: 'FAVORI_DU_PUBLIC_BONUS',
+        vehicleId: 7,
+        championshipPoints: 5,
+      },
     },
     {
       label: 'VehicleRenamedEvent',
       event: new VehicleRenamedEvent(0, 10, 1, 1, 5, 'Buggy', 'La Teigne'),
-      expected: { eventType: 'VEHICLE_RENAMED', vehicleId: 5, previousVehicleName: 'Buggy', newVehicleName: 'La Teigne' },
+      expected: {
+        eventType: 'VEHICLE_RENAMED',
+        vehicleId: 5,
+        previousVehicleName: 'Buggy',
+        newVehicleName: 'La Teigne',
+      },
     },
     {
       label: 'SabotagePointsSpentEvent',
@@ -221,15 +300,22 @@ describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
     {
       label: 'SabotageConvertedEvent',
       event: new SabotageConvertedEvent(0, 10, 1, 1, 1, 3),
-      expected: { eventType: 'SABOTAGE_CONVERTED', sabotageTokensConverted: 1, sabotageJerricansGained: 3 },
+      expected: {
+        eventType: 'SABOTAGE_CONVERTED',
+        sabotageTokensConverted: 1,
+        sabotageJerricansGained: 3,
+      },
     },
   ];
 
-  it.each(cases)('classe $label avec son propre eventType et ses champs propres', ({ event, expected }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orm = (repo as any).eventToOrm(event, 1) as Partial<GameEventOrm>;
-    expect(orm).toMatchObject(expected);
-  });
+  it.each(cases)(
+    'classe $label avec son propre eventType et ses champs propres',
+    ({ event, expected }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const orm = (repo as any).eventToOrm(event, 1) as Partial<GameEventOrm>;
+      expect(orm).toMatchObject(expected);
+    },
+  );
 
   it('couvre les 15 valeurs de GameEventType (aucune oubliée)', () => {
     const covered = new Set(cases.map((c) => c.expected.eventType));
@@ -248,7 +334,11 @@ describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
 describe('CampaignMapper.toEvent — exhaustivité (12 types hors EQUIPMENT_CHANGED)', () => {
   const mapper = new CampaignMapper({} as never);
 
-  const cases: Array<{ label: string; orm: Partial<GameEventOrm>; instanceOf: new (...args: never[]) => GameEvent }> = [
+  const cases: Array<{
+    label: string;
+    orm: Partial<GameEventOrm>;
+    instanceOf: new (...args: never[]) => GameEvent;
+  }> = [
     {
       label: 'RANKING_ASSIGNED',
       orm: { eventType: 'RANKING_ASSIGNED', rank: 2, championshipPoints: 10 },
@@ -256,7 +346,11 @@ describe('CampaignMapper.toEvent — exhaustivité (12 types hors EQUIPMENT_CHAN
     },
     {
       label: 'WALLET_MOVEMENT',
-      orm: { eventType: 'WALLET_MOVEMENT', amount: 4, walletReason: WalletReason.RECOMPENSE },
+      orm: {
+        eventType: 'WALLET_MOVEMENT',
+        amount: 4,
+        walletReason: WalletReason.RECOMPENSE,
+      },
       instanceOf: WalletMovementEvent,
     },
     {
@@ -282,8 +376,12 @@ describe('CampaignMapper.toEvent — exhaustivité (12 types hors EQUIPMENT_CHAN
     {
       label: 'WRECK_RESOLVED',
       orm: {
-        eventType: 'WRECK_RESOLVED', vehicleId: 7, diceRoll: 5, chocsBefore: 2,
-        wreckResult: WreckResult.ARRACHEE, chocsGained: 1,
+        eventType: 'WRECK_RESOLVED',
+        vehicleId: 7,
+        diceRoll: 5,
+        chocsBefore: 2,
+        wreckResult: WreckResult.ARRACHEE,
+        chocsGained: 1,
       },
       instanceOf: WreckResolvedEvent,
     },
@@ -294,30 +392,57 @@ describe('CampaignMapper.toEvent — exhaustivité (12 types hors EQUIPMENT_CHAN
     },
     {
       label: 'GATES_CROSSED',
-      orm: { eventType: 'GATES_CROSSED', gatesCrossed: 3, championshipPoints: 3 },
+      orm: {
+        eventType: 'GATES_CROSSED',
+        gatesCrossed: 3,
+        championshipPoints: 3,
+      },
       instanceOf: GatesCrossedEvent,
     },
     {
       label: 'VEHICLE_DESTROYED',
-      orm: { eventType: 'VEHICLE_DESTROYED', vehicleId: 7, weightClass: WeightClass.LOURD, championshipPoints: 3 },
+      orm: {
+        eventType: 'VEHICLE_DESTROYED',
+        vehicleId: 7,
+        weightClass: WeightClass.LOURD,
+        championshipPoints: 3,
+      },
       instanceOf: VehicleDestroyedEvent,
     },
     {
       label: 'FAVORI_DU_PUBLIC_BONUS',
-      orm: { eventType: 'FAVORI_DU_PUBLIC_BONUS', vehicleId: 7, championshipPoints: 5 },
+      orm: {
+        eventType: 'FAVORI_DU_PUBLIC_BONUS',
+        vehicleId: 7,
+        championshipPoints: 5,
+      },
       instanceOf: FavoriDuPublicBonusEvent,
     },
     {
       label: 'VEHICLE_RENAMED',
-      orm: { eventType: 'VEHICLE_RENAMED', vehicleId: 5, previousVehicleName: 'Buggy', newVehicleName: 'La Teigne' },
+      orm: {
+        eventType: 'VEHICLE_RENAMED',
+        vehicleId: 5,
+        previousVehicleName: 'Buggy',
+        newVehicleName: 'La Teigne',
+      },
       instanceOf: VehicleRenamedEvent,
     },
   ];
 
-  it.each(cases)('reconstruit $label dans la bonne classe concrète', ({ orm, instanceOf }) => {
-    const ormRow = { id: 99, gameId: 10, participantId: 1, eventOrder: 1, ...orm } as unknown as GameEventOrm;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const event = (mapper as any).toEvent(ormRow) as GameEvent;
-    expect(event).toBeInstanceOf(instanceOf);
-  });
+  it.each(cases)(
+    'reconstruit $label dans la bonne classe concrète',
+    ({ orm, instanceOf }) => {
+      const ormRow = {
+        id: 99,
+        gameId: 10,
+        participantId: 1,
+        eventOrder: 1,
+        ...orm,
+      } as unknown as GameEventOrm;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const event = (mapper as any).toEvent(ormRow) as GameEvent;
+      expect(event).toBeInstanceOf(instanceOf);
+    },
+  );
 });

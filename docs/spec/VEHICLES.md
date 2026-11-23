@@ -60,22 +60,22 @@ rétroactivement).
 
 ### Véhicules (22)
 
-| Poids | Nombre | Exemples | Coût |
-|---|---|---|---|
-| Léger | 4 | Dragster, Moto, Buggy, Moto avec side-car | 5-8 |
-| Moyen | 12 | Voiture, Voiture de sport, Camion, Ambulance, Gyrocoptère, Camion à glaces (+ variantes Prison) | 8-20 |
-| Lourd | 6 | Monster Truck, Camion Lourd, Bus, Hélicoptère*, Char d'assaut*, Forteresse Mobile | 25-40 |
+| Poids | Nombre | Exemples                                                                                        | Coût  |
+| ----- | ------ | ----------------------------------------------------------------------------------------------- | ----- |
+| Léger | 4      | Dragster, Moto, Buggy, Moto avec side-car                                                       | 5-8   |
+| Moyen | 12     | Voiture, Voiture de sport, Camion, Ambulance, Gyrocoptère, Camion à glaces (+ variantes Prison) | 8-20  |
+| Lourd | 6      | Monster Truck, Camion Lourd, Bus, Hélicoptère*, Char d'assaut*, Forteresse Mobile               | 25-40 |
 
 \* Rutherford uniquement.
 
 ### Armes (38)
 
-| Type | Nombre | Exemples |
-|---|---|---|
-| `base` | 3 | Mitrailleuse, Mitrailleuse Lourde, Minigun |
-| `avancée` | 18 | BFG, Lance-Flammes, Canon de 125mm, Canon à Arc Électrique* |
-| `équipage` | 9 | Grenades, Cocktails Molotov, Fusil à Pompe |
-| `largable` | 8 | Largueur de Mines, Largueur d'Huile, Auto-Tourelle |
+| Type       | Nombre | Exemples                                                     |
+| ---------- | ------ | ------------------------------------------------------------ |
+| `base`     | 3      | Mitrailleuse, Mitrailleuse Lourde, Minigun                   |
+| `avancée`  | 18     | BFG, Lance-Flammes, Canon de 125mm, Canon à Arc Électrique\* |
+| `équipage` | 9      | Grenades, Cocktails Molotov, Fusil à Pompe                   |
+| `largable` | 8      | Largueur de Mines, Largueur d'Huile, Auto-Tourelle           |
 
 \* Avec Brouilleur Électromagnétique, Canon Gravitationnel, Marteleur, Rayon Désintégrateur et Super
 Amplificateur Cinétique : Mishkin uniquement.
@@ -83,6 +83,7 @@ Amplificateur Cinétique : Mishkin uniquement.
 ### Orientation requise
 
 Champ catalogue obligatoire `necessite_orientation` (`Arme` et `Amelioration`) - jamais dérivé du type.
+
 - Armes : `false` pour les armes d'équipage (arc à 360°) et quelques armes sans trajectoire (Boule de
   démolition, Marteleur, Mur de haut-parleurs, Auto-Tourelle, Brouilleur Électromagnétique) ; `true` sinon.
 - Améliorations : `true` seulement pour le Bélier (et sa variante Slime) et le Bélier Explosif.
@@ -103,27 +104,27 @@ revendre l'arme puis en racheter une avec « Tourelle x3 ».
 (Slime), Membre d'Équipage Supplémentaire ↔ variante Scarlett, Nitro ↔ variante Idris, Blindage ↔
 Micro-Blindage (Verney).
 
-| Amélioration | Coût | Empl. | Note |
-|---|---|---|---|
-| Arceaux | 4 | 1 | ignore les dégâts de tonneau |
-| Bélier | 4 | 1 | +2 dés en éperonnage, orientation requise |
-| Bélier (Slime) | 4 | 0 | variante Slime |
-| Bélier Explosif | 3 | 0 | premier éperonnage +6 dés, orientation requise |
-| Blindage | 4 | 1 | +2 carrosserie, cumulable |
-| Catapulte Improvisée | 2 | 1 | portée étendue des armes largables |
-| Chenilles | 4 | 1 | +1 manœuvrabilité, tout-terrain |
-| Membre d'Équipage Supplémentaire | 4 | 0 | +1 équipier |
-| Membre d'Équipage Supplémentaire (Scarlett) | 2 | 0 | Scarlett |
-| Nitro | 6 | 0 | accélération forcée |
-| Nitro (Idris) | 3 | 0 | Idris, danger plafonné à 3 |
-| Réacteur Nucléaire Expérimental | 5 | 0 | Mishkin |
-| Téléporteur Expérimental | 7 | 0 | Mishkin |
-| Mégaphone | 2 | 0 | La Patrouille de l'Autoroute |
-| Micro-Blindage | 6 | 0 | Verney |
-| Remorque de Transport | 0 | 0 | Rusty |
-| Remorque Légère | 4 | 0 | Rusty |
-| Remorque Moyenne | 8 | 0 | Rusty, +1 emplacement |
-| Remorque Lourde | 12 | 0 | Rusty, +3 emplacements, véhicules Lourds |
+| Amélioration                                | Coût | Empl. | Note                                           |
+| ------------------------------------------- | ---- | ----- | ---------------------------------------------- |
+| Arceaux                                     | 4    | 1     | ignore les dégâts de tonneau                   |
+| Bélier                                      | 4    | 1     | +2 dés en éperonnage, orientation requise      |
+| Bélier (Slime)                              | 4    | 0     | variante Slime                                 |
+| Bélier Explosif                             | 3    | 0     | premier éperonnage +6 dés, orientation requise |
+| Blindage                                    | 4    | 1     | +2 carrosserie, cumulable                      |
+| Catapulte Improvisée                        | 2    | 1     | portée étendue des armes largables             |
+| Chenilles                                   | 4    | 1     | +1 manœuvrabilité, tout-terrain                |
+| Membre d'Équipage Supplémentaire            | 4    | 0     | +1 équipier                                    |
+| Membre d'Équipage Supplémentaire (Scarlett) | 2    | 0     | Scarlett                                       |
+| Nitro                                       | 6    | 0     | accélération forcée                            |
+| Nitro (Idris)                               | 3    | 0     | Idris, danger plafonné à 3                     |
+| Réacteur Nucléaire Expérimental             | 5    | 0     | Mishkin                                        |
+| Téléporteur Expérimental                    | 7    | 0     | Mishkin                                        |
+| Mégaphone                                   | 2    | 0     | La Patrouille de l'Autoroute                   |
+| Micro-Blindage                              | 6    | 0     | Verney                                         |
+| Remorque de Transport                       | 0    | 0     | Rusty                                          |
+| Remorque Légère                             | 4    | 0     | Rusty                                          |
+| Remorque Moyenne                            | 8    | 0     | Rusty, +1 emplacement                          |
+| Remorque Lourde                             | 12   | 0     | Rusty, +3 emplacements, véhicules Lourds       |
 
 **Remorques** : Moyenne et Lourde augmentent réellement la capacité en emplacements, et sont mutuellement
 exclusives (« une seule remorque », p.170). Limitation connue : Légère et de Transport n'ont aucun
@@ -133,9 +134,9 @@ comportement déclaré et échappent à ce contrôle.
 
 Présent dès la création, gratuit, **non retirable**, hors budget et hors emplacements, badge « Intégré » :
 
-| Véhicule | Équipement intégré |
-|---|---|
-| Buggy | Arceaux (amélioration) |
+| Véhicule      | Équipement intégré                 |
+| ------------- | ---------------------------------- |
+| Buggy         | Arceaux (amélioration)             |
 | Char d'assaut | Canon de 125mm sur Tourelle (arme) |
 
 Marqué `estDefaut = true`, inséré par `AddVehicleUseCase` (et à l'achat en atelier) depuis
@@ -152,11 +153,11 @@ améliorations (achat, retrait, budget), sauf : **aucun emplacement**, **jamais 
   disponible si sa `categorie` en fait partie (aucun `sponsors_autorises` sur les avantages).
 - **Comportement mécanique** : 69 sont descriptifs. Exceptions :
 
-| Avantage | Catégorie | Effet |
-|---|---|---|
-| Expertise | Précision | +1 Manœuvrabilité permanent |
-| Cascadeur | Audace | véhicule Léger ou Moyen, Manœuvrabilité **effective** (après bonus déjà montés) ≥ 3 |
-| Sur Deux Roues | Optimisation | Manœuvrabilité effective ≥ 3 |
+| Avantage       | Catégorie    | Effet                                                                               |
+| -------------- | ------------ | ----------------------------------------------------------------------------------- |
+| Expertise      | Précision    | +1 Manœuvrabilité permanent                                                         |
+| Cascadeur      | Audace       | véhicule Léger ou Moyen, Manœuvrabilité **effective** (après bonus déjà montés) ≥ 3 |
+| Sur Deux Roues | Optimisation | Manœuvrabilité effective ≥ 3                                                        |
 
 - **Revente en atelier : perte totale** (aucun remboursement), cf. [CAMPAIGN.md](CAMPAIGN.md#annulation-dachat-vs-revente).
 
@@ -178,27 +179,27 @@ d'équipe ; aucune règle n'en dépend, une entrée sans `effet_court` affiche s
 
 ### `Vehicle` (table)
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `nomInterne` | string | réf. `Vehicule.nom_interne`, **immuable** |
-| `nom` | string \| null | nom personnalisé, `null` tant que jamais renommé (cf. Construction) |
-| `teamId` | number | FK → Team `CASCADE` |
-| `createdAt` | Date | auto |
+| Champ        | Type           | Contraintes                                                         |
+| ------------ | -------------- | ------------------------------------------------------------------- |
+| `id`         | number         | PK                                                                  |
+| `nomInterne` | string         | réf. `Vehicule.nom_interne`, **immuable**                           |
+| `nom`        | string \| null | nom personnalisé, `null` tant que jamais renommé (cf. Construction) |
+| `teamId`     | number         | FK → Team `CASCADE`                                                 |
+| `createdAt`  | Date           | auto                                                                |
 
 Renommable à tout moment (cf. [CAMPAIGN.md](CAMPAIGN.md#renommage-dun-véhicule-en-atelier) pour
 l'atelier), sauf si l'équipe est verrouillée hors phase Atelier.
 
 ### `Weapon` (table)
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `nomInterne` | string | réf. `Arme.nom_interne` |
+| Champ         | Type                                              | Contraintes                                                                        |
+| ------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `id`          | number                                            | PK                                                                                 |
+| `nomInterne`  | string                                            | réf. `Arme.nom_interne`                                                            |
 | `orientation` | `avant \| arrière \| lateral \| tourelle` \| null | obligatoire si `necessite_orientation`, sinon `null` ; choisie à l'achat, immuable |
-| `estDefaut` | boolean | arme intégrée (non retirable) |
-| `vehicleId` | number | FK `CASCADE` |
-| `createdAt` | Date | auto |
+| `estDefaut`   | boolean                                           | arme intégrée (non retirable)                                                      |
+| `vehicleId`   | number                                            | FK `CASCADE`                                                                       |
+| `createdAt`   | Date                                              | auto                                                                               |
 
 ### `VehicleImprovement` / `VehicleAdvantage` (tables)
 
@@ -206,6 +207,7 @@ Comme `Weapon` (`nomInterne`, `vehicleId`, `createdAt`). `VehicleImprovement` a 
 (3 valeurs, jamais `tourelle`) et `estDefaut` ; `VehicleAdvantage` n'a ni l'un ni l'autre.
 
 **Champs calculés des DTO** (getters de l'entité) :
+
 - `prix` : `0` si `estDefaut` ; arme ×3 sur tourelle ; prix résiduel une fois vendue (arme/amélioration) ;
   avantage toujours au prix plein.
 - `emplacement` : `0` si intégré, perdu ou vendu (emplacement libéré), valeur catalogue sinon - lu tel
@@ -217,25 +219,25 @@ Comme `Weapon` (`nomInterne`, `vehicleId`, `createdAt`). `VehicleImprovement` a 
 
 ### Catalogue (public)
 
-| Méthode | Route | Description |
-|---|---|---|
-| GET | `/api/catalog/sponsors` | sponsors avec leurs véhicules/armes/améliorations/avantages |
-| GET | `/api/catalog/sponsors/:nom` | un sponsor (nom URL-encodé, 404 si inconnu) |
-| GET | `/api/catalog/vehicules` \| `armes` \| `ameliorations` \| `avantages` | catalogue complet de chaque type |
+| Méthode | Route                                                                 | Description                                                 |
+| ------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| GET     | `/api/catalog/sponsors`                                               | sponsors avec leurs véhicules/armes/améliorations/avantages |
+| GET     | `/api/catalog/sponsors/:nom`                                          | un sponsor (nom URL-encodé, 404 si inconnu)                 |
+| GET     | `/api/catalog/vehicules` \| `armes` \| `ameliorations` \| `avantages` | catalogue complet de chaque type                            |
 
 ### Véhicules et équipement (JWT)
 
-| Méthode | Route | Description |
-|---|---|---|
-| GET / POST | `/api/teams/:id/vehicles` | véhicules d'une équipe / ajouter un véhicule (validé contre le sponsor) |
-| GET | `/api/vehicles/:id` | détail monté (stats + récapitulatif) |
-| PATCH | `/api/vehicles/:id/name` | renommer (`{ nom }`), 400 si l'équipe est verrouillée |
-| DELETE | `/api/vehicles/:id` | supprimer (cascade sur l'équipement) |
-| GET | `/api/vehicles/:id/available-{weapons,improvements,advantages}` | disponibilités avec verdict (`description`, `regles`, `montableSurTourelle` pour les armes) |
-| POST | `/api/vehicles/:id/weapons` | ajouter une arme (`orientation?`, dont `'tourelle'`) |
-| DELETE | `/api/weapons/:id` | retirer une arme (400 si intégrée) |
-| POST / DELETE | `/api/vehicles/:id/improvements[/:improvementId]` | ajouter / retirer une amélioration (400 si intégrée) |
-| POST / DELETE | `/api/vehicles/:id/advantages[/:advantageId]` | ajouter / retirer un avantage |
+| Méthode       | Route                                                           | Description                                                                                 |
+| ------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| GET / POST    | `/api/teams/:id/vehicles`                                       | véhicules d'une équipe / ajouter un véhicule (validé contre le sponsor)                     |
+| GET           | `/api/vehicles/:id`                                             | détail monté (stats + récapitulatif)                                                        |
+| PATCH         | `/api/vehicles/:id/name`                                        | renommer (`{ nom }`), 400 si l'équipe est verrouillée                                       |
+| DELETE        | `/api/vehicles/:id`                                             | supprimer (cascade sur l'équipement)                                                        |
+| GET           | `/api/vehicles/:id/available-{weapons,improvements,advantages}` | disponibilités avec verdict (`description`, `regles`, `montableSurTourelle` pour les armes) |
+| POST          | `/api/vehicles/:id/weapons`                                     | ajouter une arme (`orientation?`, dont `'tourelle'`)                                        |
+| DELETE        | `/api/weapons/:id`                                              | retirer une arme (400 si intégrée)                                                          |
+| POST / DELETE | `/api/vehicles/:id/improvements[/:improvementId]`               | ajouter / retirer une amélioration (400 si intégrée)                                        |
+| POST / DELETE | `/api/vehicles/:id/advantages[/:advantageId]`                   | ajouter / retirer un avantage                                                               |
 
 Pas de `PUT /api/vehicles/:id` : le type est immuable ; « modifier un véhicule » = gérer son
 équipement, plus la route dédiée de renommage.

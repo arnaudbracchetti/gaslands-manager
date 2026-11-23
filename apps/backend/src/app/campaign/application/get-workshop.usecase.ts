@@ -1,7 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
 import { CampaignReplayService } from '../infrastructure/campaign-replay.service';
 import { assertParticipant } from './authorization.helpers';
-import type { WorkshopStateDto, WorkshopVehicleDto } from '../dto/workshop-state.dto';
+import type {
+  WorkshopStateDto,
+  WorkshopVehicleDto,
+} from '../dto/workshop-state.dto';
 import { EquipmentEntityType } from '../domain/enums/equipment-change.enums';
 import { ParticipantStatus } from '../domain/enums/campaign.enums';
 import type { Game } from '../domain/games/game';
@@ -35,7 +38,9 @@ export class GetWorkshopUseCase {
     const caller = assertParticipant(campaign, cmd.userId);
     const target = this.resolveTarget(campaign, caller, cmd.participantId);
     if (!target.hasTeam) {
-      throw new NotFoundException('Campagne introuvable ou accès non autorisé.');
+      throw new NotFoundException(
+        'Campagne introuvable ou accès non autorisé.',
+      );
     }
 
     // Aucun atelier ouvert → purchasedThisSession toujours false (comportement attendu,
@@ -67,9 +72,13 @@ export class GetWorkshopUseCase {
       // v.resaleRefund/v.chassisResaleRefund lèvent DomainException si isSold/isLost
       // (déjà crédité, ou plus aucune valeur) — même garde que pour weapons/improvements/
       // advantages ci-dessous, jamais 0 par défaut sans cette garde explicite.
-      resaleRefund: (v.isSold || v.isLost) ? 0 : v.resaleRefund,
-      chassisResaleRefund: (v.isSold || v.isLost) ? 0 : v.chassisResaleRefund,
-      purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.VEHICLE, v.id) ?? false,
+      resaleRefund: v.isSold || v.isLost ? 0 : v.resaleRefund,
+      chassisResaleRefund: v.isSold || v.isLost ? 0 : v.chassisResaleRefund,
+      purchasedThisSession:
+        atelierGame?.wasPurchasedThisSession(
+          EquipmentEntityType.VEHICLE,
+          v.id,
+        ) ?? false,
       emplacementsTotal: v.effectiveStats.emplacements,
       sequellas: v.sequellas.map((s) => ({
         id: s.id,
@@ -78,7 +87,11 @@ export class GetWorkshopUseCase {
         chocsCost: s.type.chocsCost,
         origine: s.type.origine,
         isSold: s.isSold,
-        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.SEQUELLE, s.id) ?? false,
+        purchasedThisSession:
+          atelierGame?.wasPurchasedThisSession(
+            EquipmentEntityType.SEQUELLE,
+            s.id,
+          ) ?? false,
         description: s.type.description,
         regles: s.type.regles,
       })),
@@ -98,7 +111,11 @@ export class GetWorkshopUseCase {
         estDefaut: w.estDefaut,
         isLost: w.isLost,
         isSold: w.isSold,
-        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.WEAPON, w.id) ?? false,
+        purchasedThisSession:
+          atelierGame?.wasPurchasedThisSession(
+            EquipmentEntityType.WEAPON,
+            w.id,
+          ) ?? false,
         // w.resaleRefund lève DomainException si isSold (déjà crédité) — garde nécessaire,
         // contrairement à w.price déjà consommé plus haut qui ne lève jamais.
         resaleRefund: w.isSold ? 0 : w.resaleRefund,
@@ -115,7 +132,11 @@ export class GetWorkshopUseCase {
         estDefaut: imp.estDefaut,
         isLost: imp.isLost,
         isSold: imp.isSold,
-        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.IMPROVEMENT, imp.id) ?? false,
+        purchasedThisSession:
+          atelierGame?.wasPurchasedThisSession(
+            EquipmentEntityType.IMPROVEMENT,
+            imp.id,
+          ) ?? false,
         // Même garde que weapons ci-dessus — imp.resaleRefund lève si isSold.
         resaleRefund: imp.isSold ? 0 : imp.resaleRefund,
       })),
@@ -127,7 +148,11 @@ export class GetWorkshopUseCase {
         price: a.price,
         isLost: a.isLost,
         isSold: a.isSold,
-        purchasedThisSession: atelierGame?.wasPurchasedThisSession(EquipmentEntityType.ADVANTAGE, a.id) ?? false,
+        purchasedThisSession:
+          atelierGame?.wasPurchasedThisSession(
+            EquipmentEntityType.ADVANTAGE,
+            a.id,
+          ) ?? false,
         // a.resaleRefund lève si isSold, comme weapons/improvements — toujours 0 sinon
         // (perte totale, cf. Advantage.resaleRefund).
         resaleRefund: a.isSold ? 0 : a.resaleRefund,
@@ -141,10 +166,12 @@ export class GetWorkshopUseCase {
       championshipPoints: target.championshipPoints,
       // Secret vis-à-vis des autres joueurs (D-S4) : seul le propriétaire consultant son
       // propre atelier (participantId absent de la commande) voit ce compteur dérivé.
-      sabotagePoints: cmd.participantId === undefined ? target.sabotagePoints : null,
+      sabotagePoints:
+        cmd.participantId === undefined ? target.sabotagePoints : null,
       lastSabotageConversionJerricans:
         cmd.participantId === undefined
-          ? (atelierGame?.findLastSabotageConversion(target.id)?.jerricansGained ?? null)
+          ? (atelierGame?.findLastSabotageConversion(target.id)
+              ?.jerricansGained ?? null)
           : null,
       vehicles,
     };
@@ -160,11 +187,17 @@ export class GetWorkshopUseCase {
    * supplémentaire). `NotFoundException` dans les deux cas de refus — jamais de
    * fuite d'existence.
    */
-  private resolveTarget(campaign: Campaign, caller: CampaignParticipant, participantId?: number): CampaignParticipant {
+  private resolveTarget(
+    campaign: Campaign,
+    caller: CampaignParticipant,
+    participantId?: number,
+  ): CampaignParticipant {
     if (participantId === undefined) return caller;
 
     if (caller.status !== ParticipantStatus.VALIDATED) {
-      throw new NotFoundException('Campagne introuvable ou accès non autorisé.');
+      throw new NotFoundException(
+        'Campagne introuvable ou accès non autorisé.',
+      );
     }
     const target = campaign.participants.find((p) => p.id === participantId);
     if (!target) {

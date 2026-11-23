@@ -466,7 +466,8 @@ export class CampaignRepository implements ICampaignRepository {
       case GameEventType.SABOTAGE_CONVERTED: {
         const e = event as SabotageConvertedEvent;
         return {
-          ...base, eventType: GameEventType.SABOTAGE_CONVERTED,
+          ...base,
+          eventType: GameEventType.SABOTAGE_CONVERTED,
           sabotageTokensConverted: e.tokensConverted,
           sabotageJerricansGained: e.jerricansGained,
         };

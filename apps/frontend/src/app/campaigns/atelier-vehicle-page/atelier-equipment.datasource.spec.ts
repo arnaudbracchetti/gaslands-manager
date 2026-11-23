@@ -13,7 +13,10 @@ import { firstValueFrom, of } from 'rxjs';
 import { vi } from 'vitest';
 import { AtelierEquipmentDataSource } from './atelier-equipment.datasource';
 import { CampaignsService } from '../campaigns.service';
-import { WorkshopStateDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
+import {
+  WorkshopStateDto,
+  mapWorkshopVehicleToVehicle,
+} from '../workshop.model';
 
 const workshop: WorkshopStateDto = {
   participantId: 1,
@@ -34,14 +37,55 @@ const workshop: WorkshopStateDto = {
       chocs: 0,
       sequellas: [],
       weapons: [
-        { id: 9, nomInterne: 'mitrailleuse', orientation: 'avant', price: 3, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 1 },
-        { id: 10, nomInterne: 'bfg', orientation: 'tourelle', price: 45, emplacement: 2, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 22 },
+        {
+          id: 9,
+          nomInterne: 'mitrailleuse',
+          orientation: 'avant',
+          price: 3,
+          emplacement: 1,
+          estDefaut: false,
+          isLost: false,
+          isSold: false,
+          purchasedThisSession: false,
+          resaleRefund: 1,
+        },
+        {
+          id: 10,
+          nomInterne: 'bfg',
+          orientation: 'tourelle',
+          price: 45,
+          emplacement: 2,
+          estDefaut: false,
+          isLost: false,
+          isSold: false,
+          purchasedThisSession: false,
+          resaleRefund: 22,
+        },
       ],
       improvements: [
-        { id: 2, nomInterne: 'blindage', orientation: null, price: 4, emplacement: 1, estDefaut: false, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 2 },
+        {
+          id: 2,
+          nomInterne: 'blindage',
+          orientation: null,
+          price: 4,
+          emplacement: 1,
+          estDefaut: false,
+          isLost: false,
+          isSold: false,
+          purchasedThisSession: false,
+          resaleRefund: 2,
+        },
       ],
       advantages: [
-        { id: 3, nomInterne: 'expertise', price: 3, isLost: false, isSold: false, purchasedThisSession: false, resaleRefund: 0 },
+        {
+          id: 3,
+          nomInterne: 'expertise',
+          price: 3,
+          isLost: false,
+          isSold: false,
+          purchasedThisSession: false,
+          resaleRefund: 0,
+        },
       ],
       resaleRefund: 6,
       chassisResaleRefund: 6,
@@ -52,7 +96,7 @@ const workshop: WorkshopStateDto = {
 };
 
 describe('mapWorkshopVehicleToVehicle', () => {
-  it('traduit un véhicule d\'atelier vers la forme Vehicle (price → prix, emplacement conservé)', () => {
+  it("traduit un véhicule d'atelier vers la forme Vehicle (price → prix, emplacement conservé)", () => {
     const v = mapWorkshopVehicleToVehicle(workshop.vehicles[0]);
     expect(v.id).toBe(5);
     expect(v.nomInterne).toBe('voiture');
@@ -65,7 +109,7 @@ describe('mapWorkshopVehicleToVehicle', () => {
     expect(v.emplacementsTotal).toBe(5);
   });
 
-  it('conserve l\'orientation \'tourelle\' pour une arme montée sur Tourelle', () => {
+  it("conserve l'orientation 'tourelle' pour une arme montée sur Tourelle", () => {
     const v = mapWorkshopVehicleToVehicle(workshop.vehicles[0]);
     expect(v.weapons[1].orientation).toBe('tourelle');
     expect(v.weapons[1].prix).toBe(45);
@@ -97,14 +141,19 @@ describe('AtelierEquipmentDataSource', () => {
       providers: [
         AtelierEquipmentDataSource,
         { provide: CampaignsService, useValue: service },
-        { provide: ActivatedRoute, useValue: { snapshot: { params: { id: '7' } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { params: { id: '7' } } },
+        },
       ],
     });
     ds = TestBed.inject(AtelierEquipmentDataSource);
   });
 
   it('addWeapon → BUY WEAPON (campaignId de la route), relit puis remappe le véhicule', async () => {
-    const v = await firstValueFrom(ds.addWeapon(5, { nomInterne: 'mitrailleuse', orientation: 'avant' }));
+    const v = await firstValueFrom(
+      ds.addWeapon(5, { nomInterne: 'mitrailleuse', orientation: 'avant' }),
+    );
 
     expect(service.changeEquipment).toHaveBeenCalledWith(7, {
       operation: 'BUY',
@@ -119,8 +168,10 @@ describe('AtelierEquipmentDataSource', () => {
     expect(v.weapons[0].prix).toBe(3);
   });
 
-  it('addWeapon avec orientation \'tourelle\' transmet la valeur au backend', async () => {
-    await firstValueFrom(ds.addWeapon(5, { nomInterne: 'bfg', orientation: 'tourelle' }));
+  it("addWeapon avec orientation 'tourelle' transmet la valeur au backend", async () => {
+    await firstValueFrom(
+      ds.addWeapon(5, { nomInterne: 'bfg', orientation: 'tourelle' }),
+    );
 
     expect(service.changeEquipment).toHaveBeenCalledWith(7, {
       operation: 'BUY',
@@ -144,7 +195,7 @@ describe('AtelierEquipmentDataSource', () => {
     });
   });
 
-  it('removeWeapon → SELL WEAPON (targetEntityId = id de l\'arme)', async () => {
+  it("removeWeapon → SELL WEAPON (targetEntityId = id de l'arme)", async () => {
     await firstValueFrom(ds.removeWeapon(5, 9));
     expect(service.changeEquipment).toHaveBeenCalledWith(7, {
       operation: 'SELL',

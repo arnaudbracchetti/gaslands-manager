@@ -157,7 +157,12 @@ export interface WorkshopStateDto {
 // ── Achat / revente (POST /api/campaigns/:id/events/equipment) ────────────────
 
 export type EquipmentOperation = 'BUY' | 'SELL';
-export type EquipmentEntityType = 'VEHICLE' | 'WEAPON' | 'IMPROVEMENT' | 'ADVANTAGE' | 'SEQUELLE';
+export type EquipmentEntityType =
+  | 'VEHICLE'
+  | 'WEAPON'
+  | 'IMPROVEMENT'
+  | 'ADVANTAGE'
+  | 'SEQUELLE';
 
 /** Corps de `POST /api/campaigns/:id/events/equipment` — miroir de `ChangeEquipmentDto`. */
 export interface ChangeEquipmentDto {

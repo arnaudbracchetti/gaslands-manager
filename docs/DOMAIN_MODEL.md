@@ -232,6 +232,7 @@ classDiagram
 ```
 
 **Principes de l'agrégat** :
+
 - Toute mutation valide d'abord les règles et lève `DomainException` ; le use case la traduit en 400.
 - Coûts et budget calculés en mémoire depuis l'agrégat chargé, jamais en SQL. `Team.budget` est le
   **seul** point qui choisit entre budget de campagne (`_campaignBudget`, hydraté par le repository)
@@ -750,11 +751,11 @@ classDiagram
 Pas de sous-type atelier : `ATELIER` est un statut (`PLANIFIE → ATELIER → JOUE`). `canAccept(event)`
 dépend du statut :
 
-| Statut | Événements acceptés (`EvenementTeleGame` et `EscarmoucheGame`, listes volontairement dupliquées) |
-|---|---|
+| Statut     | Événements acceptés (`EvenementTeleGame` et `EscarmoucheGame`, listes volontairement dupliquées)                                                                                                                                                                              |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PLANIFIE` | RankingAssigned, WalletMovement, VehicleLost, WeaponLost, ImprovementLost, WreckResolved, ResistanceContacted, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus, SabotagePointsSpent, EquipmentChanged **`SEQUELLE` seulement** (séquelle imposée par la Table des Épaves) |
-| `ATELIER` | EquipmentChanged (tout `entityType`), VehicleRenamed |
-| `JOUE` | aucun |
+| `ATELIER`  | EquipmentChanged (tout `entityType`), VehicleRenamed                                                                                                                                                                                                                          |
+| `JOUE`     | aucun                                                                                                                                                                                                                                                                         |
 
 ### Règles maison : Strategy par point de calcul
 
@@ -885,13 +886,13 @@ classDiagram
   sans `any`). Deux règles actives sur le même point → `DomainException`.
 - **5 points de calcul** :
 
-| Point | Consommé par | Défaut | Règle maison |
-|---|---|---|---|
-| Distribution des PR | `EvenementTeleGame.distributeResistance()` (un `isEligible` par participant) | `DefaultResistanceStrategy` | R1 `NoChampionshipPointsStrategy` |
-| Cagnotte télé | `Game.recordResult()` | `NoTvBonusStrategy` | R2 `CollectiveTvBonusStrategy` |
-| Revenu de base | `Game.rollBaseIncome()` (`roll()` → montant ou `null`) | `DefaultBaseIncomeStrategy` | R3 `NoBaseIncomeStrategy` |
-| Plafond de gains | `rollBaseIncome()` **et** `recordJerricanGains()` (`clamp(demandé, déjàGagné)`) | `UnlimitedJerricanGainsStrategy` | R4 `CappedJerricanGainsStrategy` |
-| Conversion du sabotage | `Game.convertSabotage()` (taux `jerricansPerToken`) | `NoSabotageConversionStrategy` (refus) | R5 `SabotageToJerricansStrategy` (1 jeton = 3 jerricans) |
+| Point                  | Consommé par                                                                    | Défaut                                 | Règle maison                                             |
+| ---------------------- | ------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------- |
+| Distribution des PR    | `EvenementTeleGame.distributeResistance()` (un `isEligible` par participant)    | `DefaultResistanceStrategy`            | R1 `NoChampionshipPointsStrategy`                        |
+| Cagnotte télé          | `Game.recordResult()`                                                           | `NoTvBonusStrategy`                    | R2 `CollectiveTvBonusStrategy`                           |
+| Revenu de base         | `Game.rollBaseIncome()` (`roll()` → montant ou `null`)                          | `DefaultBaseIncomeStrategy`            | R3 `NoBaseIncomeStrategy`                                |
+| Plafond de gains       | `rollBaseIncome()` **et** `recordJerricanGains()` (`clamp(demandé, déjàGagné)`) | `UnlimitedJerricanGainsStrategy`       | R4 `CappedJerricanGainsStrategy`                         |
+| Conversion du sabotage | `Game.convertSabotage()` (taux `jerricansPerToken`)                             | `NoSabotageConversionStrategy` (refus) | R5 `SabotageToJerricansStrategy` (1 jeton = 3 jerricans) |
 
 - La `key` de la Strategy est stampée sur l'événement (ex. `ResistanceContactedEvent.strategyKey`) :
   le résultat est figé, jamais recalculé au replay.
@@ -905,20 +906,20 @@ classDiagram
 Chaque événement implémente `execute()`/`undo()` et `describe()` (une ligne de texte, utilisée par le
 journal et l'écran Résolution du wizard).
 
-| Événement | `execute()` | `undo()` |
-|---|---|---|
-| `RankingAssignedEvent`, `GatesCrossedEvent` | `addPoints(+PC)` | inverse |
-| `VehicleDestroyedEvent` | `addPoints(+PC)` au destructeur, ne touche pas le véhicule | inverse |
-| `WalletMovementEvent` | `creditWallet(amount)` | inverse |
-| `VehicleLostEvent` / `WeaponLostEvent` / `ImprovementLostEvent` / `AdvantageLostEvent` | `markLost()` | `clearLost()` |
-| `WreckResolvedEvent` | `addChocs(n)` (n peut être négatif) ; `markFavoriDuPublic()` si ce résultat | inverse |
-| `EquipmentChangedEvent` (hors `SEQUELLE`) | BUY : crée l'entité (`addCampaign…`) ; SELL : `markSold…` | inverse |
-| `EquipmentChangedEvent` (`SEQUELLE`) | BUY : `addChocs(-coût)` + séquelle (+ avantage gratuit si Dur à Cuire) ; SELL : séquelle (et avantage lié) vendus | inverse |
-| `ResistanceContactedEvent` | `addResistance(+3)` | inverse |
-| `FavoriDuPublicBonusEvent` | `addPoints(+5)` + `clearFavoriDuPublic()` | inverse |
-| `VehicleRenamedEvent` | `renameCampaignVehicle(newName)` | `renameCampaignVehicle(previousName)` |
-| `SabotagePointsSpentEvent` | `addResistance(-3 × pointsSpent)` (montant déjà clampé à la construction) | inverse |
-| `SabotageConvertedEvent` (R5) | `addResistance(-3 × jetons)` + `creditWallet(+jerricansGained)` (figé à la construction, hors plafond R4) ; annulable en atelier par suppression du journal | inverse |
+| Événement                                                                              | `execute()`                                                                                                                                                 | `undo()`                              |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `RankingAssignedEvent`, `GatesCrossedEvent`                                            | `addPoints(+PC)`                                                                                                                                            | inverse                               |
+| `VehicleDestroyedEvent`                                                                | `addPoints(+PC)` au destructeur, ne touche pas le véhicule                                                                                                  | inverse                               |
+| `WalletMovementEvent`                                                                  | `creditWallet(amount)`                                                                                                                                      | inverse                               |
+| `VehicleLostEvent` / `WeaponLostEvent` / `ImprovementLostEvent` / `AdvantageLostEvent` | `markLost()`                                                                                                                                                | `clearLost()`                         |
+| `WreckResolvedEvent`                                                                   | `addChocs(n)` (n peut être négatif) ; `markFavoriDuPublic()` si ce résultat                                                                                 | inverse                               |
+| `EquipmentChangedEvent` (hors `SEQUELLE`)                                              | BUY : crée l'entité (`addCampaign…`) ; SELL : `markSold…`                                                                                                   | inverse                               |
+| `EquipmentChangedEvent` (`SEQUELLE`)                                                   | BUY : `addChocs(-coût)` + séquelle (+ avantage gratuit si Dur à Cuire) ; SELL : séquelle (et avantage lié) vendus                                           | inverse                               |
+| `ResistanceContactedEvent`                                                             | `addResistance(+3)`                                                                                                                                         | inverse                               |
+| `FavoriDuPublicBonusEvent`                                                             | `addPoints(+5)` + `clearFavoriDuPublic()`                                                                                                                   | inverse                               |
+| `VehicleRenamedEvent`                                                                  | `renameCampaignVehicle(newName)`                                                                                                                            | `renameCampaignVehicle(previousName)` |
+| `SabotagePointsSpentEvent`                                                             | `addResistance(-3 × pointsSpent)` (montant déjà clampé à la construction)                                                                                   | inverse                               |
+| `SabotageConvertedEvent` (R5)                                                          | `addResistance(-3 × jetons)` + `creditWallet(+jerricansGained)` (figé à la construction, hors plafond R4) ; annulable en atelier par suppression du journal | inverse                               |
 
 Les montants dérivés d'une règle (PC selon le poids, clamp, éligibilité Favori du Public…) sont
 calculés par `Game` **avant** la construction de l'événement, jamais dans `execute()`.
@@ -928,6 +929,7 @@ calculés par `Game` **avant** la construction de l'événement, jamais dans `ex
 Véhicules, armes, améliorations, avantages et séquelles achetés en atelier n'ont **pas de ligne en
 base** : identité `id = -event.id`, recréés à chaque replay par `EquipmentChangedEvent.execute()`. Les
 ids positifs restent aux entités persistées (aucune table pour `Sequella`).
+
 - Dur à Cuire : séquelle et avantage gratuit partagent `-event.id` sans collision (collections distinctes).
 - Équipement intégré d'un véhicule acheté en atelier : le véhicule garde `-event.id` (contrat utilisé
   par `findSameSessionPurchase`/`collectSessionEventsForVehicle`) ; ses entités par défaut reçoivent un

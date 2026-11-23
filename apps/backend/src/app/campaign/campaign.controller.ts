@@ -725,7 +725,10 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<void> {
-    return this.convertSabotageUseCase.execute({ campaignId, userId: req.user.id });
+    return this.convertSabotageUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+    });
   }
 
   /**
@@ -740,7 +743,10 @@ export class CampaignController {
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) campaignId: number,
   ): Promise<void> {
-    return this.cancelSabotageConversionUseCase.execute({ campaignId, userId: req.user.id });
+    return this.cancelSabotageConversionUseCase.execute({
+      campaignId,
+      userId: req.user.id,
+    });
   }
 
   /**

@@ -22,10 +22,10 @@ organisateur, fiche d'équipe). Prénom et nom ne sont visibles que sur les écr
 
 ## Rôles
 
-| Rôle | Accès |
-|---|---|
-| Visiteur | accueil, documentation, pages publiques |
-| Utilisateur (`user`) | + ses propres équipes, véhicules, campagnes |
+| Rôle                     | Accès                                                          |
+| ------------------------ | -------------------------------------------------------------- |
+| Visiteur                 | accueil, documentation, pages publiques                        |
+| Utilisateur (`user`)     | + ses propres équipes, véhicules, campagnes                    |
 | Administrateur (`admin`) | + administration des comptes ; compte unique créé au démarrage |
 
 Chaque utilisateur ne voit et ne modifie que ses propres données.
@@ -58,6 +58,7 @@ Menu ouvert au clic sur son pseudo (navbar), deux entrées indépendantes :
 ## Compte administrateur
 
 Au démarrage, `AdminSeedService` garantit un **unique** utilisateur `admin` :
+
 - aucun admin en base → création avec `ADMIN_EMAIL`/`ADMIN_PASSWORD` (`.env`) et le pseudo `"Admin"` ;
 - un admin existe → email et mot de passe resynchronisés s'ils ont changé dans `.env` (warning loggé,
   effet au redémarrage) ;
@@ -86,6 +87,7 @@ et promouvoir un remplaçant.
 
 Depuis le menu ⋯ d'un compte `user`, l'admin obtient un JWT valide pour ce compte sans son mot de passe
 (`POST /api/users/:id/impersonate`).
+
 - Jamais pour un admin ni un compte désactivé (`User.assertImpersonatableBy`, 403).
 - Le token est émis comme au login, **sans marque** : la session est indiscernable d'une vraie connexion
   (aucune autorisation n'est modifiée). L'état « usurpation » est purement frontend.
@@ -98,16 +100,16 @@ Depuis le menu ⋯ d'un compte `user`, l'admin obtient un JWT valide pour ce com
 
 ## Modèle de données - `User`
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK, auto-incrémenté |
-| `firstName` / `lastName` | string | obligatoires |
-| `pseudo` | string(100) | obligatoire, non unique ; colonne `default: ''` (seuls des comptes antérieurs à la colonne peuvent valoir `''`) |
-| `email` | string | obligatoire, unique |
-| `password` | string | hash bcrypt, champ privé de l'agrégat, absent de toute réponse |
-| `role` | `user \| admin` | défaut `user` |
-| `isActive` | boolean | compte désactivable par l'admin |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type            | Contraintes                                                                                                     |
+| ------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `id`                      | number          | PK, auto-incrémenté                                                                                             |
+| `firstName` / `lastName`  | string          | obligatoires                                                                                                    |
+| `pseudo`                  | string(100)     | obligatoire, non unique ; colonne `default: ''` (seuls des comptes antérieurs à la colonne peuvent valoir `''`) |
+| `email`                   | string          | obligatoire, unique                                                                                             |
+| `password`                | string          | hash bcrypt, champ privé de l'agrégat, absent de toute réponse                                                  |
+| `role`                    | `user \| admin` | défaut `user`                                                                                                   |
+| `isActive`                | boolean         | compte désactivable par l'admin                                                                                 |
+| `createdAt` / `updatedAt` | Date            | auto                                                                                                            |
 
 Calculé : `callName` (cf. ci-dessus).
 
@@ -115,15 +117,15 @@ Calculé : `callName` (cf. ci-dessus).
 
 ## API Endpoints
 
-| Méthode | Route | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | - | inscription (400 si champ manquant ou mot de passe < 6) |
-| POST | `/api/auth/login` | - | connexion, renvoie le JWT |
-| GET | `/api/auth/me` | JWT | utilisateur courant |
-| PATCH | `/api/auth/me` | JWT | profil (409 si email pris) |
-| PATCH | `/api/auth/me/password` | JWT | mot de passe (actuel requis) |
-| GET | `/api/users` | admin | liste des comptes |
-| DELETE | `/api/users/:id` | admin | supprimer (403 soi-même, 400 si campagne orpheline) |
-| PATCH | `/api/users/:id/active` | admin | activer/désactiver (403 soi-même) |
-| PATCH | `/api/users/:id/password` | admin | réinitialiser (403 soi-même) |
-| POST | `/api/users/:id/impersonate` | admin | JWT du compte (403 si admin ou désactivé) |
+| Méthode | Route                        | Auth  | Description                                             |
+| ------- | ---------------------------- | ----- | ------------------------------------------------------- |
+| POST    | `/api/auth/register`         | -     | inscription (400 si champ manquant ou mot de passe < 6) |
+| POST    | `/api/auth/login`            | -     | connexion, renvoie le JWT                               |
+| GET     | `/api/auth/me`               | JWT   | utilisateur courant                                     |
+| PATCH   | `/api/auth/me`               | JWT   | profil (409 si email pris)                              |
+| PATCH   | `/api/auth/me/password`      | JWT   | mot de passe (actuel requis)                            |
+| GET     | `/api/users`                 | admin | liste des comptes                                       |
+| DELETE  | `/api/users/:id`             | admin | supprimer (403 soi-même, 400 si campagne orpheline)     |
+| PATCH   | `/api/users/:id/active`      | admin | activer/désactiver (403 soi-même)                       |
+| PATCH   | `/api/users/:id/password`    | admin | réinitialiser (403 soi-même)                            |
+| POST    | `/api/users/:id/impersonate` | admin | JWT du compte (403 si admin ou désactivé)               |

@@ -18,7 +18,7 @@
 >
 > **La Tourelle a été retirée du modèle d'amélioration** (2026-07-11) — ce document la
 > décrit encore comme une amélioration avec assignation d'arme séparée (`EquipmentDataSource.
-> assignWeaponToTourelle`/`unassignWeaponFromTourelle`, ci-dessous), une conception
+assignWeaponToTourelle`/`unassignWeaponFromTourelle`, ci-dessous), une conception
 > **abandonnée**. Le montage sur Tourelle est désormais un attribut de l'arme
 > (`Weapon.montageTourelle`, coché à l'achat) — cf.
 > [spec/VEHICLES.md §Montage sur Tourelle](../spec/VEHICLES.md#montage-sur-tourelle).
@@ -40,12 +40,12 @@ Tourelle — avec quelques éléments en plus propres à la campagne.
 Le problème : derrière une IHM quasi identique, les deux back sont **radicalement
 différents**.
 
-| | Construction d'équipe (`team/`) | Atelier (`campaign/`) |
-|---|---|---|
-| Nature | CRUD brut : création/suppression d'entités persistées | Event-sourcing : journal d'événements rejoué |
-| Budget | `team.cans` moins la somme des coûts véhicules (`remainingBudget`) | `participant.wallet` (accumulé par replay, part de `team.cans`) |
-| Entités | `Vehicle`/`Weapon`/`Improvement` persistés (id positif) | mêmes objets domaine, mais entités transientes recréées à chaque replay (`id = -event.id`) |
-| État en plus | — | Chocs, séquelles, `isLost` (épaves) |
+|              | Construction d'équipe (`team/`)                                    | Atelier (`campaign/`)                                                                      |
+| ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Nature       | CRUD brut : création/suppression d'entités persistées              | Event-sourcing : journal d'événements rejoué                                               |
+| Budget       | `team.cans` moins la somme des coûts véhicules (`remainingBudget`) | `participant.wallet` (accumulé par replay, part de `team.cans`)                            |
+| Entités      | `Vehicle`/`Weapon`/`Improvement` persistés (id positif)            | mêmes objets domaine, mais entités transientes recréées à chaque replay (`id = -event.id`) |
+| État en plus | —                                                                  | Chocs, séquelles, `isLost` (épaves)                                                        |
 
 Objectif de la session : concevoir une solution qui **ne duplique pas** le code, en
 particulier (a) le composant front de gestion d'équipement et (b) les règles métier
@@ -98,7 +98,7 @@ Deux limites de modèle à combler pour atteindre la parité IHM :
 
 - `WorkshopVehicleDto`
   ([`workshop-state.dto.ts`](../../apps/backend/src/app/campaign/dto/workshop-state.dto.ts))
-  **n'a pas d'`improvements`** — or le builder gère armes *et* améliorations.
+  **n'a pas d'`improvements`** — or le builder gère armes _et_ améliorations.
 - `EquipmentChangedEvent`
   ([`equipment-changed.event.ts`](../../apps/backend/src/app/campaign/domain/events/equipment-changed.event.ts))
   ne connaît que `entityType: 'VEHICLE' | 'WEAPON'` — pas `IMPROVEMENT`.
@@ -164,11 +164,11 @@ sans se disperser dans les fonctionnalités atelier nouvelles.
 
 Trois options ont été comparées.
 
-| Option | Duplication comportement | Composant smart unique | Coût de mise en place |
-|---|---|---|---|
-| **1. Abstraire la source** (retenue) | ~zéro | Oui — un seul `EquipmentManager` | Concevoir l'interface + budget input |
-| 2. Descendre le HTTP dans les parents | Moyenne (orchestration dupliquée dans 2 parents) | Non | Refactor lourd du contrat, contrat input/output bavard |
-| 3. Dupliquer l'orchestrateur | Élevée (~200 lignes ×2, dérive possible) | Non | Le plus rapide à écrire |
+| Option                                | Duplication comportement                         | Composant smart unique           | Coût de mise en place                                  |
+| ------------------------------------- | ------------------------------------------------ | -------------------------------- | ------------------------------------------------------ |
+| **1. Abstraire la source** (retenue)  | ~zéro                                            | Oui — un seul `EquipmentManager` | Concevoir l'interface + budget input                   |
+| 2. Descendre le HTTP dans les parents | Moyenne (orchestration dupliquée dans 2 parents) | Non                              | Refactor lourd du contrat, contrat input/output bavard |
+| 3. Dupliquer l'orchestrateur          | Élevée (~200 lignes ×2, dérive possible)         | Non                              | Le plus rapide à écrire                                |
 
 **Justification.** La demande explicite était « pas de duplication front ». L'option 1
 l'optimise directement : `EquipmentManager` reste **un seul** composant smart, mais
@@ -215,12 +215,12 @@ opérations distinctes** selon son origine :
   de la partie actuellement en `ATELIER`, entité transiente `id = -event.id`. Retrait →
   **suppression de l'événement d'achat** : remboursement **plein**, aucune trace au
   journal, no-op net.
-- **Pré-existant** — véhicule/arme persisté de la construction d'équipe (id positif), *ou*
+- **Pré-existant** — véhicule/arme persisté de la construction d'équipe (id positif), _ou_
   acheté lors d'un atelier antérieur déjà figé `JOUE`. Retrait → **événement `SELL`** :
   remboursement **moitié arrondie inférieur**, tracé au journal.
 
 **Justification et élégance.** Le critère de décision est entièrement contenu dans le
-journal : *le BUY est-il dans la partie atelier ouverte ?* Oui → annulation ; non (figé,
+journal : _le BUY est-il dans la partie atelier ouverte ?_ Oui → annulation ; non (figé,
 ou pas de BUY du tout) → revente. La décision est 100 % côté serveur : le front appelle un
 simple `removeWeapon(id)`, le contrat `EquipmentDataSource` ne change pas. Cela colle
 parfaitement au modèle event-sourcing où la partie atelier ouverte n'est pas encore figée,
@@ -248,6 +248,7 @@ utiles : `id`, `nomInterne`, `orientation`, `prix`, `estDefaut`, `isLost`) et l'
 dans `GetWorkshopUseCase` depuis `v.improvements`.
 
 **R3a — Write : support des améliorations. ✅ Temps 1.** Dans `Campaign.changeEquipment` :
+
 - étendre `EquipmentEntityType` à `IMPROVEMENT` (+ `execute`/`undo` d'`EquipmentChangedEvent`,
   via de nouvelles méthodes `team.addCampaignImprovement`/`removeCampaignImprovement` sur le
   modèle d'`addCampaignVehicle`/`addCampaignWeapon`) ;
@@ -261,6 +262,7 @@ dans `GetWorkshopUseCase` depuis `v.improvements`.
 
 **R3b — Write : enforcement + gardes + revente. ⚠️ Temps 2 (différé).** Dans
 `Campaign.changeEquipment` :
+
 - enforcer les règles avant `game.addEvent` : pour un BUY WEAPON/IMPROVEMENT, résoudre le
   véhicule cible et appeler `canAddWeapon(wt, orientation, me.wallet)` /
   `canAddImprovement(...)` → `DomainException` si `!ok` (couvre emplacements + orientation ;
@@ -272,6 +274,7 @@ dans `GetWorkshopUseCase` depuis `v.improvements`.
 
 **R4 — Annulation d'achat (suppression d'événement). ✅ Implémenté (2026-07-11) — conception
 détaillée dans [`2026-07-11-atelier-annulation-revente-design.md`](2026-07-11-atelier-annulation-revente-design.md).**
+
 - L'entité transiente a `id = -event.id` ; retrouver l'événement BUY et son `gameId`.
 - Si `gameId === partie ATELIER ouverte` → l'agrégat signale une **suppression**
   (résultat discriminé, ex. `{ deleteEventId }`), le use case appelle une **nouvelle
@@ -283,7 +286,7 @@ détaillée dans [`2026-07-11-atelier-annulation-revente-design.md`](2026-07-11-
   supplémentaire.
 - **Caveat cascade (toujours ouvert)** : supprimer un BUY VEHICLE de la session doit aussi
   retirer les BUY WEAPON/IMPROVEMENT de la session pointant sur `targetVehicleId =
-  -buyEventId` (sinon événements orphelins). Le document du 2026-07-11 **ne couvre pas ce
+-buyEventId` (sinon événements orphelins). Le document du 2026-07-11 **ne couvre pas ce
   cas** — son mécanisme est volontairement scopé aux armes/améliorations (`VEHICLE` non
   exposé en atelier à ce jour), précisément pour s'appuyer sur un invariant vérifié qui ne
   tiendrait plus si un événement pouvait référencer un véhicule transient. Ce caveat reste
@@ -318,8 +321,10 @@ existant (délégation pure) ; `AtelierEquipmentDataSource` cible les routes cam
 **F3 — Budget en input.** Remplacer le cluster couplé équipe par un `input` :
 
 ```ts
-budget = input.required<BudgetView>();  // { total: number; usedByOthers: number }
-budgetRestant = computed(() => this.budget().total - this.budget().usedByOthers - this.coutTotal());
+budget = input.required<BudgetView>(); // { total: number; usedByOthers: number }
+budgetRestant = computed(
+  () => this.budget().total - this.budget().usedByOthers - this.coutTotal(),
+);
 ```
 
 Parent équipe : `{ total: team.cans, usedByOthers: coûtAutresVéhicules }`.
@@ -389,6 +394,7 @@ manuellement (discipline existante, pas de code partagé front/back).
 ## Vérification (au moment de l'implémentation)
 
 **Temps 1 :**
+
 - **Back unitaires** (Vitest) : use cases de verdict (dispo/indispo selon wallet, slots,
   orientation, sponsor) ; `GetWorkshopUseCase` expose bien `improvements` ;
   `changeEquipment` BUY/SELL `IMPROVEMENT` mute l'agrégat (`addCampaignImprovement`/
@@ -403,4 +409,5 @@ manuellement (discipline existante, pas de code partagé front/back).
 **Temps 2** (au moment venu) : `changeEquipment` — BUY illégal rejeté (D2/R3b), SELL =
 `floor(prix/2)`, annulation en atelier ouvert supprime l'événement + rembourse plein,
 retrait hors-session = SELL moitié (D4).
+
 - Commandes : `npx nx test backend` / `npx nx test frontend` (**npm/npx, jamais pnpm**).

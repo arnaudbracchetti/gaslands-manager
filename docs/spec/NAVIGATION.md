@@ -7,22 +7,22 @@
 
 ## Routes de l'application
 
-| Route | Accès | Écran |
-|---|---|---|
-| `/home` | public | accueil |
-| `/documentation`, `/documentation/:slug` | public | documentation utilisateur (sommaire, chapitre) |
-| `/vehicles`, `/weapons` | public | placeholders (backlog) |
-| `/login`, `/register` | public | connexion, inscription |
-| `/teams` | JWT | mes équipes |
-| `/teams/:id/edit` | JWT | édition d'une équipe et de ses véhicules |
-| `/teams/:teamId/vehicles/new`, `/teams/:teamId/vehicles/:vehicleId` | JWT | création / équipement d'un véhicule |
-| `/campaigns` | JWT | mes campagnes, participations, demandes |
-| `/campaigns/join/:code` | JWT | rejoindre par code |
-| `/campaigns/:id` | JWT | détail d'une campagne et Programme Télé |
-| `/campaigns/:id/atelier` | JWT | atelier : véhicules de mon équipe engagée |
-| `/campaigns/:id/atelier/vehicles/:vehicleId` | JWT | atelier : équipement d'un véhicule |
-| `/campaigns/:id/participants/:pid/atelier` | JWT | atelier d'un autre participant, lecture seule |
-| `/admin/users` | JWT + `adminGuard` | gestion des comptes |
+| Route                                                               | Accès              | Écran                                          |
+| ------------------------------------------------------------------- | ------------------ | ---------------------------------------------- |
+| `/home`                                                             | public             | accueil                                        |
+| `/documentation`, `/documentation/:slug`                            | public             | documentation utilisateur (sommaire, chapitre) |
+| `/vehicles`, `/weapons`                                             | public             | placeholders (backlog)                         |
+| `/login`, `/register`                                               | public             | connexion, inscription                         |
+| `/teams`                                                            | JWT                | mes équipes                                    |
+| `/teams/:id/edit`                                                   | JWT                | édition d'une équipe et de ses véhicules       |
+| `/teams/:teamId/vehicles/new`, `/teams/:teamId/vehicles/:vehicleId` | JWT                | création / équipement d'un véhicule            |
+| `/campaigns`                                                        | JWT                | mes campagnes, participations, demandes        |
+| `/campaigns/join/:code`                                             | JWT                | rejoindre par code                             |
+| `/campaigns/:id`                                                    | JWT                | détail d'une campagne et Programme Télé        |
+| `/campaigns/:id/atelier`                                            | JWT                | atelier : véhicules de mon équipe engagée      |
+| `/campaigns/:id/atelier/vehicles/:vehicleId`                        | JWT                | atelier : équipement d'un véhicule             |
+| `/campaigns/:id/participants/:pid/atelier`                          | JWT                | atelier d'un autre participant, lecture seule  |
+| `/admin/users`                                                      | JWT + `adminGuard` | gestion des comptes                            |
 
 Comportement de chaque écran : [CAMPAIGN.md](CAMPAIGN.md), [TEAMS.md](TEAMS.md), [AUTH.md](AUTH.md).
 
@@ -54,10 +54,10 @@ atelier, séquelles), pas les règles du jeu supposées connues. Conception :
 - **Aide contextuelle** : une route qui porte `data: { docSlug }` fait apparaître dans la navbar le lien
   « Aide sur cet écran » vers ce chapitre.
 
-| Méthode | Route | Description |
-|---|---|---|
-| GET | `/api/content/docs` | sommaire ordonné `{ slug, title }[]` |
-| GET | `/api/content/docs/:slug` | HTML + titre d'un chapitre |
+| Méthode | Route                     | Description                          |
+| ------- | ------------------------- | ------------------------------------ |
+| GET     | `/api/content/docs`       | sommaire ordonné `{ slug, title }[]` |
+| GET     | `/api/content/docs/:slug` | HTML + titre d'un chapitre           |
 
 ---
 

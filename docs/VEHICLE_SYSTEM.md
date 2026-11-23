@@ -9,13 +9,13 @@
 
 ## 1. Catalogue vs instances de jeu
 
-| | Catalogue | Instances de jeu |
-|---|---|---|
-| Source | YAML `database_init/data/` | PostgreSQL |
-| Chargement | une fois au démarrage | à chaque requête |
-| Mutabilité | jamais modifié | créé/supprimé par les joueurs |
-| Représentation | `Map<string, Sponsor>` dans `CatalogService` | entités de l'agrégat `Team` |
-| Identifiant | `nom_interne` | `id` auto-incrémenté |
+|                | Catalogue                                    | Instances de jeu              |
+| -------------- | -------------------------------------------- | ----------------------------- |
+| Source         | YAML `database_init/data/`                   | PostgreSQL                    |
+| Chargement     | une fois au démarrage                        | à chaque requête              |
+| Mutabilité     | jamais modifié                               | créé/supprimé par les joueurs |
+| Représentation | `Map<string, Sponsor>` dans `CatalogService` | entités de l'agrégat `Team`   |
+| Identifiant    | `nom_interne`                                | `id` auto-incrémenté          |
 
 Les entités persistées ne référencent le catalogue que par `nomInterne` (pas de FK). Plusieurs variantes
 (`belier`/`belier_slime`) partagent la même Strategy via le champ catalogue `comportement` (§4.3).
@@ -130,16 +130,15 @@ sequenceDiagram
 
 Réparti sur deux couches ; l'ordre garantit des messages d'erreur cohérents.
 
-**Use case** (`Add{Weapon,Improvement,Advantage}UseCase`) : 1. type inconnu du catalogue → 400 ;
-2. type non autorisé pour le sponsor de l'équipe → 400 ; 3. délégation à l'agrégat.
+**Use case** (`Add{Weapon,Improvement,Advantage}UseCase`) : 1. type inconnu du catalogue → 400 ; 2. type non autorisé pour le sponsor de l'équipe → 400 ; 3. délégation à l'agrégat.
 
-| Ordre | `canAddWeapon` | `canAddImprovement` | `canAddAdvantage` |
-|---|---|---|---|
-| 1 | véhicule perdu/vendu | véhicule perdu/vendu | véhicule perdu/vendu |
-| 2 | Tourelle demandée sur une arme non `montable_tourelle` | budget | budget |
-| 3 | budget (×3 si Tourelle) | emplacements (capacité **effective**, §5) | unicité |
-| 4 | emplacements | orientation requise manquante | Strategy `canPlace` (Cascadeur, Sur Deux Roues) |
-| 5 | cohérence orientation / `necessite_orientation` | Strategy `canPlace` (incompatibilités, unicité, équipage max…) | - |
+| Ordre | `canAddWeapon`                                         | `canAddImprovement`                                            | `canAddAdvantage`                               |
+| ----- | ------------------------------------------------------ | -------------------------------------------------------------- | ----------------------------------------------- |
+| 1     | véhicule perdu/vendu                                   | véhicule perdu/vendu                                           | véhicule perdu/vendu                            |
+| 2     | Tourelle demandée sur une arme non `montable_tourelle` | budget                                                         | budget                                          |
+| 3     | budget (×3 si Tourelle)                                | emplacements (capacité **effective**, §5)                      | unicité                                         |
+| 4     | emplacements                                           | orientation requise manquante                                  | Strategy `canPlace` (Cascadeur, Sur Deux Roues) |
+| 5     | cohérence orientation / `necessite_orientation`        | Strategy `canPlace` (incompatibilités, unicité, équipage max…) | -                                               |
 
 **Le budget passe avant les emplacements** : sinon un équipement trop cher **et** sans place afficherait
 un message trompeur sur les emplacements.
@@ -308,17 +307,17 @@ Ordre figé **séquelles → améliorations → avantages** : Cascadeur et Sur D
 Manœuvrabilité **effective** (après Chenilles, Expertise, séquelles). Tout appelant (validation,
 capacité `availableSlots`, affichage) lit cet état complet, jamais un fold partiel.
 
-| | Valeur | Usage |
-|---|---|---|
-| `baseStats` | profil catalogue, ne change jamais | type de véhicule, seuil de `MembreEquipageBehavior`, poids |
+|                  | Valeur                               | Usage                                                                       |
+| ---------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| `baseStats`      | profil catalogue, ne change jamais   | type de véhicule, seuil de `MembreEquipageBehavior`, poids                  |
 | `effectiveStats` | profil après tout l'équipement monté | affichage, équipage max, Manœuvrabilité effective, capacité en emplacements |
 
 ### 4.2 `canPlace` sur le Type, `applyStats` sur l'instance
 
-| Méthode | Portée par | Pourquoi |
-|---|---|---|
-| `canPlace(ctx, candidate)` | `ImprovementType`/`AdvantageType` | à la validation, le candidat n'a pas encore d'instance |
-| `applyStats(current)` | `Improvement`/`Advantage`/`Sequella` | ne s'applique qu'à un équipement déjà monté |
+| Méthode                    | Portée par                           | Pourquoi                                               |
+| -------------------------- | ------------------------------------ | ------------------------------------------------------ |
+| `canPlace(ctx, candidate)` | `ImprovementType`/`AdvantageType`    | à la validation, le candidat n'a pas encore d'instance |
+| `applyStats(current)`      | `Improvement`/`Advantage`/`Sequella` | ne s'applique qu'à un équipement déjà monté            |
 
 Chacun délègue à la Strategy résolue depuis son propre `comportement` : ni `Vehicle` ni les use cases
 n'appellent `resolve…Behavior` directement.
@@ -328,21 +327,21 @@ n'appellent `resolve…Behavior` directement.
 La Strategy est choisie par le champ YAML `comportement`, **indépendamment de `nom_interne`** (variantes
 sponsor). Séquelles : `Map` indexée par `nom_interne` (pas de champ `comportement`).
 
-| Famille | Clé | Strategy | Stats | Règles de pose |
-|---|---|---|---|---|
-| Amélioration | `chenilles` | `ChenillesBehavior` | vitesse −1, manœuvrabilité +1 | unique ; interdit sur `char_assaut`, `helicoptere`, `gyrocoptere` |
-| Amélioration | `belier` | `BelierBehavior` | - | unique **par orientation** |
-| Amélioration | `belier_explosif` | `BelierExplosifBehavior` | - | interdit en Poids Léger ; unique par véhicule |
-| Amélioration | `membre_equipage` | `MembreEquipageBehavior` | équipage +1 | max = 2× équipage de base |
-| Amélioration | `blindage` | `BlindageBehavior` | carrosserie +2 | cumulable |
-| Amélioration | `mishkin_exclusif` | `MishkinExclusifBehavior` | - | unique par véhicule |
-| Amélioration | `remorque_moyenne` | `RemorqueMoyenneBehavior` | emplacements +1 | interdit en Poids Léger ; une seule remorque |
-| Amélioration | `remorque_lourde` | `RemorqueLourdeBehavior` | emplacements +3 | Poids Lourd requis ; une seule remorque |
-| Avantage | `expertise` | `ExpertiseBehavior` | manœuvrabilité +1 | - |
-| Avantage | `cascadeur` | `CascadeurBehavior` | - | Léger/Moyen, manœuvrabilité effective ≥ 3 |
-| Avantage | `sur_deux_roues` | `SurDeuxRouesBehavior` | - | manœuvrabilité effective ≥ 3 |
-| Séquelle | `siege_irrecuperable` | `SiegeIrrecuperableBehavior` | équipage réduit | - |
-| toutes | absent | neutre | - | - (69/72 avantages, 11/12 séquelles) |
+| Famille      | Clé                   | Strategy                     | Stats                         | Règles de pose                                                    |
+| ------------ | --------------------- | ---------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| Amélioration | `chenilles`           | `ChenillesBehavior`          | vitesse −1, manœuvrabilité +1 | unique ; interdit sur `char_assaut`, `helicoptere`, `gyrocoptere` |
+| Amélioration | `belier`              | `BelierBehavior`             | -                             | unique **par orientation**                                        |
+| Amélioration | `belier_explosif`     | `BelierExplosifBehavior`     | -                             | interdit en Poids Léger ; unique par véhicule                     |
+| Amélioration | `membre_equipage`     | `MembreEquipageBehavior`     | équipage +1                   | max = 2× équipage de base                                         |
+| Amélioration | `blindage`            | `BlindageBehavior`           | carrosserie +2                | cumulable                                                         |
+| Amélioration | `mishkin_exclusif`    | `MishkinExclusifBehavior`    | -                             | unique par véhicule                                               |
+| Amélioration | `remorque_moyenne`    | `RemorqueMoyenneBehavior`    | emplacements +1               | interdit en Poids Léger ; une seule remorque                      |
+| Amélioration | `remorque_lourde`     | `RemorqueLourdeBehavior`     | emplacements +3               | Poids Lourd requis ; une seule remorque                           |
+| Avantage     | `expertise`           | `ExpertiseBehavior`          | manœuvrabilité +1             | -                                                                 |
+| Avantage     | `cascadeur`           | `CascadeurBehavior`          | -                             | Léger/Moyen, manœuvrabilité effective ≥ 3                         |
+| Avantage     | `sur_deux_roues`      | `SurDeuxRouesBehavior`       | -                             | manœuvrabilité effective ≥ 3                                      |
+| Séquelle     | `siege_irrecuperable` | `SiegeIrrecuperableBehavior` | équipage réduit               | -                                                                 |
+| toutes       | absent                | neutre                       | -                             | - (69/72 avantages, 11/12 séquelles)                              |
 
 L'orientation requise (Bélier, Bélier Explosif) est gardée génériquement par `canAddImprovement`, pas par
 la Strategy. L'unicité d'un avantage est portée par `canAddAdvantage` (vraie pour tous les avantages).
@@ -436,21 +435,21 @@ deux derniers résolvent d'abord le parent, cf. piège TypeORM dans
 
 ## 8. Fichiers clés
 
-| Fichier (`apps/backend/src/app/team/`) | Rôle |
-|---|---|
-| `domain/team.ts` | agrégat ; types `Orientation`, `WeaponOrientation`, `RuleResult` |
-| `domain/vehicle.ts` | `canAdd*`, `usedSlots`, `effectiveStats` |
-| `domain/weapon.ts`, `improvement.ts`, `advantage.ts`, `sequella.ts` | entités : `price`, `slots`, `applyStats` |
-| `domain/behaviors/*.ts` | Strategy et registres (§4) |
-| `domain/value-objects/*-type.ts` | Value Objects du catalogue, `canPlace` |
-| `infrastructure/team.mapper.ts` / `team-http.mapper.ts` | ORM ↔ domaine / domaine → DTO |
-| `infrastructure/team.repository.ts`, `catalog.adapter.ts` | persistance, catalogue |
-| `team.controller.ts`, `vehicle-team.controller.ts`, `vehicle.controller.ts`, `weapon.controller.ts` | routes |
+| Fichier (`apps/backend/src/app/team/`)                                                              | Rôle                                                             |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `domain/team.ts`                                                                                    | agrégat ; types `Orientation`, `WeaponOrientation`, `RuleResult` |
+| `domain/vehicle.ts`                                                                                 | `canAdd*`, `usedSlots`, `effectiveStats`                         |
+| `domain/weapon.ts`, `improvement.ts`, `advantage.ts`, `sequella.ts`                                 | entités : `price`, `slots`, `applyStats`                         |
+| `domain/behaviors/*.ts`                                                                             | Strategy et registres (§4)                                       |
+| `domain/value-objects/*-type.ts`                                                                    | Value Objects du catalogue, `canPlace`                           |
+| `infrastructure/team.mapper.ts` / `team-http.mapper.ts`                                             | ORM ↔ domaine / domaine → DTO                                    |
+| `infrastructure/team.repository.ts`, `catalog.adapter.ts`                                           | persistance, catalogue                                           |
+| `team.controller.ts`, `vehicle-team.controller.ts`, `vehicle.controller.ts`, `weapon.controller.ts` | routes                                                           |
 
-| Fichier (`apps/frontend/src/app/teams/vehicle-configurator/`) | Rôle |
-|---|---|
-| `vehicle.service.ts` | appels HTTP véhicule/équipement |
-| `equipment-manager/equipment-manager.ts` | listes disponibles, budget, emplacements, ajout/retrait |
-| `equipment-option/equipment-option.ts` | sélecteur d'orientation (3 arcs + « Tourelle x3 ») |
-| `equipment-manager/mounted-equipment/mounted-equipment.ts` | équipement monté, badge « (Tourelle) » |
-| `vehicle-builder.model.ts` | `EquipmentChoice`, `Orientation`, `WeaponOrientation` |
+| Fichier (`apps/frontend/src/app/teams/vehicle-configurator/`) | Rôle                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| `vehicle.service.ts`                                          | appels HTTP véhicule/équipement                         |
+| `equipment-manager/equipment-manager.ts`                      | listes disponibles, budget, emplacements, ajout/retrait |
+| `equipment-option/equipment-option.ts`                        | sélecteur d'orientation (3 arcs + « Tourelle x3 »)      |
+| `equipment-manager/mounted-equipment/mounted-equipment.ts`    | équipement monté, badge « (Tourelle) »                  |
+| `vehicle-builder.model.ts`                                    | `EquipmentChoice`, `Orientation`, `WeaponOrientation`   |

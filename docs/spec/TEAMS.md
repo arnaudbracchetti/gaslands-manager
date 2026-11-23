@@ -71,35 +71,35 @@ Mapper et renderer partagés : [ARCHITECTURE.md §3.4](../ARCHITECTURE.md#34-arc
 
 ## Modèle de données - `Team`
 
-| Champ | Type | Contraintes |
-|---|---|---|
-| `id` | number | PK |
-| `name` | string(100) | obligatoire |
-| `sponsor` | string(50) | défaut `"Rutherford"`, immuable dès le 1er véhicule |
-| `cans` | number | budget saisi, défaut 50 ; inerte si l'équipe est engagée dans une campagne |
-| `description` | text | nullable |
-| `userId` | number | FK → User `CASCADE` |
-| `createdAt` / `updatedAt` | Date | auto |
+| Champ                     | Type        | Contraintes                                                                |
+| ------------------------- | ----------- | -------------------------------------------------------------------------- |
+| `id`                      | number      | PK                                                                         |
+| `name`                    | string(100) | obligatoire                                                                |
+| `sponsor`                 | string(50)  | défaut `"Rutherford"`, immuable dès le 1er véhicule                        |
+| `cans`                    | number      | budget saisi, défaut 50 ; inerte si l'équipe est engagée dans une campagne |
+| `description`             | text        | nullable                                                                   |
+| `userId`                  | number      | FK → User `CASCADE`                                                        |
+| `createdAt` / `updatedAt` | Date        | auto                                                                       |
 
 **Champs calculés** (`TeamSummaryDto`, depuis l'agrégat chargé) :
 
-| Champ | Description |
-|---|---|
-| `vehicleCount` | nombre de véhicules (verrouillage du sponsor) |
-| `vehiclesCost` | coût cumulé des véhicules (éligibilité au budget d'une campagne) |
-| `budget` | budget applicable : celui de la campagne engageante, sinon `cans` |
-| `campaignBudget` | non null ⇒ budget imposé par une campagne, `cans` en lecture seule dans l'IHM |
-| `isEngaged` | équipe engagée dans une campagne |
-| `isLockedByCampaign` | verrouillage par une campagne en cours |
+| Champ                | Description                                                                   |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `vehicleCount`       | nombre de véhicules (verrouillage du sponsor)                                 |
+| `vehiclesCost`       | coût cumulé des véhicules (éligibilité au budget d'une campagne)              |
+| `budget`             | budget applicable : celui de la campagne engageante, sinon `cans`             |
+| `campaignBudget`     | non null ⇒ budget imposé par une campagne, `cans` en lecture seule dans l'IHM |
+| `isEngaged`          | équipe engagée dans une campagne                                              |
+| `isLockedByCampaign` | verrouillage par une campagne en cours                                        |
 
 ---
 
 ## API Endpoints (JWT)
 
-| Méthode | Route | Description |
-|---|---|---|
-| GET | `/api/teams` | mes équipes |
-| POST | `/api/teams` | créer |
-| PUT | `/api/teams/:id` | modifier (400 si verrouillée) |
-| DELETE | `/api/teams/:id` | supprimer (400 si verrouillée, ou équipe du dernier organisateur d'une campagne) |
-| GET | `/api/teams/:id/sheet` | fiche d'équipe HTML (400 si verrouillée) |
+| Méthode | Route                  | Description                                                                      |
+| ------- | ---------------------- | -------------------------------------------------------------------------------- |
+| GET     | `/api/teams`           | mes équipes                                                                      |
+| POST    | `/api/teams`           | créer                                                                            |
+| PUT     | `/api/teams/:id`       | modifier (400 si verrouillée)                                                    |
+| DELETE  | `/api/teams/:id`       | supprimer (400 si verrouillée, ou équipe du dernier organisateur d'une campagne) |
+| GET     | `/api/teams/:id/sheet` | fiche d'équipe HTML (400 si verrouillée)                                         |

@@ -596,7 +596,10 @@ export class CampaignsService {
    * retrouve l'atelier ouvert et applique le taux de la règle activée.
    */
   convertSabotage(campaignId: number): Observable<void> {
-    return this.http.post<void>(`/api/campaigns/${campaignId}/events/sabotage-conversion`, {});
+    return this.http.post<void>(
+      `/api/campaigns/${campaignId}/events/sabotage-conversion`,
+      {},
+    );
   }
 
   /**
@@ -605,6 +608,9 @@ export class CampaignsService {
    * ont déjà été dépensés (cagnotte négative) ou hors atelier.
    */
   cancelSabotageConversion(campaignId: number): Observable<void> {
-    return this.http.post<void>(`/api/campaigns/${campaignId}/events/sabotage-conversion/cancel`, {});
+    return this.http.post<void>(
+      `/api/campaigns/${campaignId}/events/sabotage-conversion/cancel`,
+      {},
+    );
   }
 }

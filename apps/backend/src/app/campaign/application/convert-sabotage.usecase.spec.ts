@@ -17,14 +17,36 @@ function makeFixture(
 ): { useCase: ConvertSabotageUseCase; campaignRepo: ICampaignRepository } {
   const participant = new CampaignParticipant(1, 42, 1, true);
   participant.addResistance(resistancePoints);
-  const game = new EvenementTeleGame(10, 1, GameStatus.ATELIER, 1, 'arene', new Date(), []);
+  const game = new EvenementTeleGame(
+    10,
+    1,
+    GameStatus.ATELIER,
+    1,
+    'arene',
+    new Date(),
+    [],
+  );
   const campaign = new Campaign(
-    1, 'Campagne Test', CampaignState.EN_COURS, 'invite-code', [participant], [game], 50, houseRules,
+    1,
+    'Campagne Test',
+    CampaignState.EN_COURS,
+    'invite-code',
+    [participant],
+    [game],
+    50,
+    houseRules,
   );
 
-  const campaignRepo = { appendEvents: vi.fn().mockResolvedValue(undefined) } as unknown as ICampaignRepository;
-  const replayService = { loadAndReplay: vi.fn().mockResolvedValue(campaign) } as unknown as CampaignReplayService;
-  return { useCase: new ConvertSabotageUseCase(campaignRepo, replayService), campaignRepo };
+  const campaignRepo = {
+    appendEvents: vi.fn().mockResolvedValue(undefined),
+  } as unknown as ICampaignRepository;
+  const replayService = {
+    loadAndReplay: vi.fn().mockResolvedValue(campaign),
+  } as unknown as CampaignReplayService;
+  return {
+    useCase: new ConvertSabotageUseCase(campaignRepo, replayService),
+    campaignRepo,
+  };
 }
 
 const RULE_ON = HouseRules.fromPersisted(['conversion_sabotage_jerricans']);
@@ -35,22 +57,29 @@ describe('ConvertSabotageUseCase', () => {
 
     await useCase.execute({ campaignId: 1, userId: 42 });
 
-    expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, [expect.any(SabotageConvertedEvent)]);
-    const [, events] = (campaignRepo.appendEvents as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(campaignRepo.appendEvents).toHaveBeenCalledWith(10, [
+      expect.any(SabotageConvertedEvent),
+    ]);
+    const [, events] = (campaignRepo.appendEvents as ReturnType<typeof vi.fn>)
+      .mock.calls[0];
     expect(events[0]).toMatchObject({ tokensConverted: 1, jerricansGained: 3 });
   });
 
   it('traduit le refus « règle désactivée » en BadRequestException, sans rien persister', async () => {
     const { useCase, campaignRepo } = makeFixture(HouseRules.none(), 6);
 
-    await expect(useCase.execute({ campaignId: 1, userId: 42 })).rejects.toThrow(BadRequestException);
+    await expect(
+      useCase.execute({ campaignId: 1, userId: 42 }),
+    ).rejects.toThrow(BadRequestException);
     expect(campaignRepo.appendEvents).not.toHaveBeenCalled();
   });
 
   it('traduit le refus « solde de jetons nul » en BadRequestException', async () => {
     const { useCase, campaignRepo } = makeFixture(RULE_ON, 0);
 
-    await expect(useCase.execute({ campaignId: 1, userId: 42 })).rejects.toThrow(BadRequestException);
+    await expect(
+      useCase.execute({ campaignId: 1, userId: 42 }),
+    ).rejects.toThrow(BadRequestException);
     expect(campaignRepo.appendEvents).not.toHaveBeenCalled();
   });
 });

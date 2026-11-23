@@ -30,7 +30,8 @@ export class CancelSabotageConversionUseCase {
       const eventIds = game.cancelSabotageConversion(me);
       await this.campaignRepo.deleteEvents(eventIds);
     } catch (e) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
   }

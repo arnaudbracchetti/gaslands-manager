@@ -29,21 +29,21 @@ Ce qu'on ne teste pas en unitaire : auth JWT (testé via le guard), SQL réel (�
 ```typescript
 // Initialiser un input() Signal
 fixture.componentRef.setInput('team', mockTeam);
-fixture.detectChanges();  // déclenche effect() si présent
+fixture.detectChanges(); // déclenche effect() si présent
 
 // Observer un output() Signal
 import { outputToObservable } from '@angular/core/rxjs-interop';
-outputToObservable(component.editClicked).subscribe(t => emitted.push(t));
+outputToObservable(component.editClicked).subscribe((t) => emitted.push(t));
 ```
 
 **Outils clés** : `HttpTestingController`, `of(data)` / `throwError(() => ...)`, `vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))`.
 
-| Que tester ? | Fichier spec |
-|---|---|
-| Orchestration, appels API, visibilité formulaire | `teams.spec.ts` |
-| Affichage carte, émission boutons | `team-card.spec.ts` |
-| Pré-remplissage, validation, émission DTO | `team-form.spec.ts` |
-| Requêtes HTTP (verbe, URL, corps) | `teams.service.spec.ts` |
+| Que tester ?                                     | Fichier spec            |
+| ------------------------------------------------ | ----------------------- |
+| Orchestration, appels API, visibilité formulaire | `teams.spec.ts`         |
+| Affichage carte, émission boutons                | `team-card.spec.ts`     |
+| Pré-remplissage, validation, émission DTO        | `team-form.spec.ts`     |
+| Requêtes HTTP (verbe, URL, corps)                | `teams.service.spec.ts` |
 
 ---
 

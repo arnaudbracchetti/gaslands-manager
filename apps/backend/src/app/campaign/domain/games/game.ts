@@ -834,17 +834,29 @@ export abstract class Game {
    *     jamais négatif.
    */
   convertSabotage(participant: CampaignParticipant): GameEvent[] {
-    const strategy = this.context.strategyFactory.createSabotageConversionStrategy();
+    const strategy =
+      this.context.strategyFactory.createSabotageConversionStrategy();
     if (!strategy.isAllowed()) {
-      throw new DomainException("La conversion des jetons de sabotage n'est pas activée dans cette campagne.");
+      throw new DomainException(
+        "La conversion des jetons de sabotage n'est pas activée dans cette campagne.",
+      );
     }
     if (this.status !== GameStatus.ATELIER) {
-      throw new DomainException("La conversion des jetons de sabotage n'est possible que pendant l'atelier.");
+      throw new DomainException(
+        "La conversion des jetons de sabotage n'est possible que pendant l'atelier.",
+      );
     }
     if (participant.sabotagePoints < 1) {
       throw new DomainException('Aucun jeton de sabotage à convertir.');
     }
-    const event = new SabotageConvertedEvent(0, this.id, participant.id, 0, 1, strategy.jerricansPerToken);
+    const event = new SabotageConvertedEvent(
+      0,
+      this.id,
+      participant.id,
+      0,
+      1,
+      strategy.jerricansPerToken,
+    );
     this.addEvent(event);
     return [event];
   }
@@ -854,9 +866,13 @@ export abstract class Game {
    * session d'atelier en cours), ou `null`. Lecture seule — sert à `cancelSabotageConversion`
    * et à l'affichage (`GetWorkshopUseCase`).
    */
-  findLastSabotageConversion(participantId: number): SabotageConvertedEvent | null {
+  findLastSabotageConversion(
+    participantId: number,
+  ): SabotageConvertedEvent | null {
     const mine = this._events.filter(
-      (e): e is SabotageConvertedEvent => e instanceof SabotageConvertedEvent && e.participantId === participantId,
+      (e): e is SabotageConvertedEvent =>
+        e instanceof SabotageConvertedEvent &&
+        e.participantId === participantId,
     );
     return mine.length > 0 ? mine[mine.length - 1] : null;
   }
@@ -879,14 +895,18 @@ export abstract class Game {
    */
   cancelSabotageConversion(participant: CampaignParticipant): number[] {
     if (this.status !== GameStatus.ATELIER) {
-      throw new DomainException("L'annulation d'une conversion n'est possible que pendant l'atelier.");
+      throw new DomainException(
+        "L'annulation d'une conversion n'est possible que pendant l'atelier.",
+      );
     }
     const conversion = this.findLastSabotageConversion(participant.id);
     if (!conversion) {
       throw new DomainException('Aucune conversion de sabotage à annuler.');
     }
     if (participant.wallet - conversion.jerricansGained < 0) {
-      throw new DomainException("Impossible d'annuler : les jerricans convertis ont déjà été dépensés.");
+      throw new DomainException(
+        "Impossible d'annuler : les jerricans convertis ont déjà été dépensés.",
+      );
     }
     return [conversion.id];
   }

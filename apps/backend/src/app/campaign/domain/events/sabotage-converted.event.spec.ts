@@ -3,7 +3,7 @@ import { SabotageConvertedEvent } from './sabotage-converted.event';
 import { makeTestParticipant } from '../test-helpers';
 
 describe('SabotageConvertedEvent — execute / undo', () => {
-  it('execute débite 3 PR par jeton converti et crédite les jerricans figés dans l\'événement', () => {
+  it("execute débite 3 PR par jeton converti et crédite les jerricans figés dans l'événement", () => {
     const { participant, participants } = makeTestParticipant();
     participant.addResistance(6);
     const walletBefore = participant.wallet;
@@ -16,7 +16,7 @@ describe('SabotageConvertedEvent — execute / undo', () => {
     expect(participant.wallet).toBe(walletBefore + 3);
   });
 
-  it('execute + undo → état identique à l\'initial', () => {
+  it("execute + undo → état identique à l'initial", () => {
     const { participant, participants } = makeTestParticipant();
     participant.addResistance(6);
     const resistanceBefore = participant.resistancePoints;
@@ -39,6 +39,8 @@ describe('SabotageConvertedEvent — execute / undo', () => {
   it('describe() résume la conversion', () => {
     const event = new SabotageConvertedEvent(1, 10, 1, 1, 1, 3);
 
-    expect(event.describe()).toBe('Sabotage : 1 jeton(s) converti(s) en 3 jerricans');
+    expect(event.describe()).toBe(
+      'Sabotage : 1 jeton(s) converti(s) en 3 jerricans',
+    );
   });
 });

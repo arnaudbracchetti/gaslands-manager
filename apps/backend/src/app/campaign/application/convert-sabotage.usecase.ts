@@ -31,7 +31,8 @@ export class ConvertSabotageUseCase {
       const events = game.convertSabotage(me);
       await this.campaignRepo.appendEvents(game.id, events);
     } catch (e) {
-      if (e instanceof DomainException) throw new BadRequestException(e.message);
+      if (e instanceof DomainException)
+        throw new BadRequestException(e.message);
       throw e;
     }
   }

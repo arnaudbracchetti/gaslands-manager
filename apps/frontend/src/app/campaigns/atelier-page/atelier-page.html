@@ -1,5 +1,4 @@
 <div class="atp-page">
-
   <app-breadcrumb [crumbs]="breadcrumbs()" />
 
   <div class="atp-header">
@@ -7,107 +6,109 @@
   </div>
 
   @if (loading()) {
-    <p class="atp-status atp-status--loading">Chargement de l'atelier…</p>
+  <p class="atp-status atp-status--loading">Chargement de l'atelier…</p>
   } @else if (error()) {
-    <p class="atp-status atp-status--error">{{ error() }}</p>
+  <p class="atp-status atp-status--error">{{ error() }}</p>
   } @else {
-    <div class="atp-summary atp-summary--ledger">
-      <span class="atp-summary-label">Cagnotte</span>
-      <span class="atp-summary-value">{{ wallet() }} jerricans</span>
-      <span class="atp-summary-sep">·</span>
-      <span class="atp-summary-label">Sabotage</span>
-      <span class="atp-summary-value atp-summary-value--sabotage">{{ sabotagePoints() }}</span>
-      @if (sabotageConversionEnabled()) {
-        <button
-          class="atp-convert-btn"
-          type="button"
-          [disabled]="!canConvertSabotage() || convertingSabotage()"
-          [title]="canConvertSabotage() ? 'Règle maison : 1 jeton = 3 jerricans' : 'Aucun jeton de sabotage à convertir'"
-          (click)="onConvertSabotageRequested()"
-        >⇄ Convertir sabotage en jerricans</button>
-      }
-      @if (lastConversionJerricans() !== null) {
-        <button
-          class="atp-convert-btn"
-          type="button"
-          [disabled]="!canCancelConversion() || cancellingConversion()"
-          [title]="canCancelConversion() ? 'Annuler la dernière conversion de sabotage' : 'Cagnotte insuffisante : les jerricans convertis ont déjà été dépensés'"
-          (click)="onCancelConversionRequested()"
-        >↩ Annuler une conversion</button>
-      }
-    </div>
-
-    @if (vehicleSummaries().length === 0) {
-      <p class="atp-vehicles-empty">Aucun véhicule dans cette équipe.</p>
-    } @else {
-      <div class="atp-vehicles-grid">
-        @for (summary of vehicleSummaries(); track summary.id; let i = $index) {
-          <app-vehicle-summary-card
-            [vehicle]="summary"
-            [index]="i + 1"
-            [disabled]="summary.isSold || summary.isLost"
-            [showDelete]="!(summary.isSold || summary.isLost)"
-            [deleteTitle]="sellTitleFor(summary.id)"
-            [deleteIconConcept]="sellIconConceptFor(summary.id)"
-            [deleteIconFallback]="sellIconFallbackFor(summary.id)"
-            (cardClicked)="onManage($event)"
-            (deleteClicked)="onSellRequested($event)"
-          />
-        }
-      </div>
+  <div class="atp-summary atp-summary--ledger">
+    <span class="atp-summary-label">Cagnotte</span>
+    <span class="atp-summary-value">{{ wallet() }} jerricans</span>
+    <span class="atp-summary-sep">·</span>
+    <span class="atp-summary-label">Sabotage</span>
+    <span class="atp-summary-value atp-summary-value--sabotage"
+      >{{ sabotagePoints() }}</span
+    >
+    @if (sabotageConversionEnabled()) {
+    <button
+      class="atp-convert-btn"
+      type="button"
+      [disabled]="!canConvertSabotage() || convertingSabotage()"
+      [title]="canConvertSabotage() ? 'Règle maison : 1 jeton = 3 jerricans' : 'Aucun jeton de sabotage à convertir'"
+      (click)="onConvertSabotageRequested()"
+    >
+      ⇄ Convertir sabotage en jerricans
+    </button>
+    } @if (lastConversionJerricans() !== null) {
+    <button
+      class="atp-convert-btn"
+      type="button"
+      [disabled]="!canCancelConversion() || cancellingConversion()"
+      [title]="canCancelConversion() ? 'Annuler la dernière conversion de sabotage' : 'Cagnotte insuffisante : les jerricans convertis ont déjà été dépensés'"
+      (click)="onCancelConversionRequested()"
+    >
+      ↩ Annuler une conversion
+    </button>
     }
+  </div>
 
-    <div class="atp-add-vehicle">
-      <button class="atp-add-vehicle__toggle" type="button" (click)="toggleAddVehicle()">
-        {{ showAddVehicle() ? 'Annuler' : '+ Ajouter un véhicule' }}
-      </button>
+  @if (vehicleSummaries().length === 0) {
+  <p class="atp-vehicles-empty">Aucun véhicule dans cette équipe.</p>
+  } @else {
+  <div class="atp-vehicles-grid">
+    @for (summary of vehicleSummaries(); track summary.id; let i = $index) {
+    <app-vehicle-summary-card
+      [vehicle]="summary"
+      [index]="i + 1"
+      [disabled]="summary.isSold || summary.isLost"
+      [showDelete]="!(summary.isSold || summary.isLost)"
+      [deleteTitle]="sellTitleFor(summary.id)"
+      [deleteIconConcept]="sellIconConceptFor(summary.id)"
+      [deleteIconFallback]="sellIconFallbackFor(summary.id)"
+      (cardClicked)="onManage($event)"
+      (deleteClicked)="onSellRequested($event)"
+    />
+    }
+  </div>
+  }
 
-      @if (showAddVehicle()) {
-        @if (addingVehicle()) {
-          <p class="atp-status atp-status--loading">Achat du véhicule…</p>
-        } @else if (sponsorCatalog(); as catalog) {
-          <div class="atp-vehicles-grid">
-            @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i = $index) {
-              <app-vehicle-choice-card
-                [vehicule]="vehicule"
-                [index]="i + 1"
-                [disponible]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible ?? true"
-                [raison]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.raison"
-                (chosen)="onVehicleChosen($event)" />
-            }
-          </div>
-        }
+  <div class="atp-add-vehicle">
+    <button
+      class="atp-add-vehicle__toggle"
+      type="button"
+      (click)="toggleAddVehicle()"
+    >
+      {{ showAddVehicle() ? 'Annuler' : '+ Ajouter un véhicule' }}
+    </button>
+
+    @if (showAddVehicle()) { @if (addingVehicle()) {
+    <p class="atp-status atp-status--loading">Achat du véhicule…</p>
+    } @else if (sponsorCatalog(); as catalog) {
+    <div class="atp-vehicles-grid">
+      @for (vehicule of catalog.vehicules; track vehicule.nom_interne; let i =
+      $index) {
+      <app-vehicle-choice-card
+        [vehicule]="vehicule"
+        [index]="i + 1"
+        [disponible]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible ?? true"
+        [raison]="availableVehiclesByNomInterne().get(vehicule.nom_interne)?.raison"
+        (chosen)="onVehicleChosen($event)"
+      />
       }
     </div>
+    } }
+  </div>
+  } @if (confirmingConversion()) {
+  <app-confirm-modal
+    [message]="conversionMessage()"
+    confirmLabel="Convertir"
+    variant="primary"
+    (confirmed)="onConfirmConversion()"
+    (cancelled)="onCancelConversion()"
+  />
+  } @if (confirmingCancellation()) {
+  <app-confirm-modal
+    [message]="cancellationMessage()"
+    confirmLabel="Annuler la conversion"
+    cancelLabel="Garder"
+    variant="primary"
+    (confirmed)="onConfirmCancellation()"
+    (cancelled)="onDismissCancellation()"
+  />
+  } @if (saleSummary(); as summary) {
+  <app-sell-vehicle-modal
+    [summary]="summary"
+    (confirmed)="onConfirmSale()"
+    (cancelled)="onCancelSale()"
+  />
   }
-
-  @if (confirmingConversion()) {
-    <app-confirm-modal
-      [message]="conversionMessage()"
-      confirmLabel="Convertir"
-      variant="primary"
-      (confirmed)="onConfirmConversion()"
-      (cancelled)="onCancelConversion()"
-    />
-  }
-
-  @if (confirmingCancellation()) {
-    <app-confirm-modal
-      [message]="cancellationMessage()"
-      confirmLabel="Annuler la conversion"
-      cancelLabel="Garder"
-      variant="primary"
-      (confirmed)="onConfirmCancellation()"
-      (cancelled)="onDismissCancellation()"
-    />
-  }
-
-  @if (saleSummary(); as summary) {
-    <app-sell-vehicle-modal
-      [summary]="summary"
-      (confirmed)="onConfirmSale()"
-      (cancelled)="onCancelSale()"
-    />
-  }
-
 </div>

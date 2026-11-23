@@ -24,18 +24,39 @@
  * `.atp-page`/`.atp-header` — sticky, max-width 1600px) — plus de lien
  * "← Retour" ad hoc.
  */
-import { Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CampaignsService } from '../campaigns.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { Sponsor, Vehicule } from '../../catalog/catalog.model';
-import { AvailableVehicleDto, Vehicle } from '../../teams/vehicle-configurator/vehicle-builder.model';
+import {
+  AvailableVehicleDto,
+  Vehicle,
+} from '../../teams/vehicle-configurator/vehicle-builder.model';
 import { VehicleChoiceCard } from '../../teams/vehicle-configurator/vehicle-choice-card/vehicle-choice-card';
-import { buildVehicleSummary, VehicleSummary } from '../../teams/vehicle-summary';
+import {
+  buildVehicleSummary,
+  VehicleSummary,
+} from '../../teams/vehicle-summary';
 import { VehicleSummaryCard } from '../../teams/vehicle-summary-card/vehicle-summary-card';
-import { WorkshopStateDto, WorkshopVehicleDto, mapWorkshopVehicleToVehicle } from '../workshop.model';
-import { buildVehicleSaleSummary, VehicleSaleSummary } from './vehicle-sale-summary';
+import {
+  WorkshopStateDto,
+  WorkshopVehicleDto,
+  mapWorkshopVehicleToVehicle,
+} from '../workshop.model';
+import {
+  buildVehicleSaleSummary,
+  VehicleSaleSummary,
+} from './vehicle-sale-summary';
 import { SellVehicleModal } from './sell-vehicle-modal/sell-vehicle-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
@@ -50,7 +71,14 @@ const JERRICANS_PER_SABOTAGE_TOKEN = 3;
 @Component({
   selector: 'app-atelier-page',
   standalone: true,
-  imports: [VehicleSummaryCard, VehicleChoiceCard, SellVehicleModal, Breadcrumb, Icon, ConfirmModal],
+  imports: [
+    VehicleSummaryCard,
+    VehicleChoiceCard,
+    SellVehicleModal,
+    Breadcrumb,
+    Icon,
+    ConfirmModal,
+  ],
   templateUrl: './atelier-page.html',
   styleUrl: './atelier-page.scss',
 })
@@ -64,7 +92,8 @@ export class AtelierPage implements OnInit {
 
   loading: WritableSignal<boolean> = signal(true);
   error: WritableSignal<string> = signal('');
-  workshop: WritableSignal<WorkshopStateDto | null> = signal<WorkshopStateDto | null>(null);
+  workshop: WritableSignal<WorkshopStateDto | null> =
+    signal<WorkshopStateDto | null>(null);
   sponsorCatalog: WritableSignal<Sponsor | null> = signal<Sponsor | null>(null);
   campaignName: WritableSignal<string> = signal('');
   /** Clés (`nom_interne`) des règles maison activées sur la campagne — pilote la conversion de sabotage. */
@@ -78,27 +107,41 @@ export class AtelierPage implements OnInit {
    * `loadCampaignName` : sans ce verdict, la grille retombe sur son ancien
    * comportement (tout cliquable), le backend refusant de toute façon l'achat.
    */
-  availableVehicles: WritableSignal<AvailableVehicleDto[]> = signal<AvailableVehicleDto[]>([]);
+  availableVehicles: WritableSignal<AvailableVehicleDto[]> = signal<
+    AvailableVehicleDto[]
+  >([]);
 
   /** Verdict par `nomInterne`, pour une résolution O(1) dans le `@for` du template. */
-  availableVehiclesByNomInterne: Signal<Map<string, AvailableVehicleDto>> = computed(
-    (): Map<string, AvailableVehicleDto> =>
-      new Map(this.availableVehicles().map((v: AvailableVehicleDto): [string, AvailableVehicleDto] => [v.nomInterne, v])),
-  );
+  availableVehiclesByNomInterne: Signal<Map<string, AvailableVehicleDto>> =
+    computed(
+      (): Map<string, AvailableVehicleDto> =>
+        new Map(
+          this.availableVehicles().map(
+            (v: AvailableVehicleDto): [string, AvailableVehicleDto] => [
+              v.nomInterne,
+              v,
+            ],
+          ),
+        ),
+    );
 
   /** Cagnotte courante — solde restant à dépenser en atelier. */
   wallet: Signal<number> = computed((): number => this.workshop()?.wallet ?? 0);
 
   /** Points de sabotage disponibles — 1 par tranche de 3 Points de Résistance secrets. */
-  sabotagePoints: Signal<number> = computed((): number => this.workshop()?.sabotagePoints ?? 0);
+  sabotagePoints: Signal<number> = computed(
+    (): number => this.workshop()?.sabotagePoints ?? 0,
+  );
 
   /** Règle maison « conversion de sabotage » activée sur cette campagne ? (le backend reste seul juge) */
-  sabotageConversionEnabled: Signal<boolean> = computed(
-    (): boolean => this.houseRules().includes(SABOTAGE_CONVERSION_RULE),
+  sabotageConversionEnabled: Signal<boolean> = computed((): boolean =>
+    this.houseRules().includes(SABOTAGE_CONVERSION_RULE),
   );
 
   /** Au moins 1 jeton à convertir — évite un aller-retour réseau voué au rejet (400). */
-  canConvertSabotage: Signal<boolean> = computed((): boolean => this.sabotagePoints() >= 1);
+  canConvertSabotage: Signal<boolean> = computed(
+    (): boolean => this.sabotagePoints() >= 1,
+  );
 
   /** Véhicules de l'équipe engagée, traduits vers la forme attendue par `buildVehicleSummary`. */
   vehicles: Signal<Vehicle[]> = computed((): Vehicle[] => {
@@ -111,34 +154,51 @@ export class AtelierPage implements OnInit {
    * (partition stable — ordre relatif conservé de part et d'autre) plutôt que masqués :
    * ils restent visibles, badge, inactifs (cf. `VehicleSummaryCard.disabled`).
    */
-  vehicleSummaries: Signal<VehicleSummary[]> = computed((): VehicleSummary[] => {
-    const catalog = this.sponsorCatalog();
-    if (!catalog) return [];
-    const summaries = this.vehicles().map((v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog));
-    const active = summaries.filter((s: VehicleSummary): boolean => !s.isSold && !s.isLost);
-    const inactive = summaries.filter((s: VehicleSummary): boolean => s.isSold || s.isLost);
-    return [...active, ...inactive];
-  });
+  vehicleSummaries: Signal<VehicleSummary[]> = computed(
+    (): VehicleSummary[] => {
+      const catalog = this.sponsorCatalog();
+      if (!catalog) return [];
+      const summaries = this.vehicles().map(
+        (v: Vehicle): VehicleSummary => buildVehicleSummary(v, catalog),
+      );
+      const active = summaries.filter(
+        (s: VehicleSummary): boolean => !s.isSold && !s.isLost,
+      );
+      const inactive = summaries.filter(
+        (s: VehicleSummary): boolean => s.isSold || s.isLost,
+      );
+      return [...active, ...inactive];
+    },
+  );
 
   breadcrumbs: Signal<BreadcrumbItem[]> = computed((): BreadcrumbItem[] => [
     { label: 'Mes Campagnes', route: ['/campaigns'] },
-    { label: this.campaignName() || '…', route: ['/campaigns', String(this.campaignId)] },
+    {
+      label: this.campaignName() || '…',
+      route: ['/campaigns', String(this.campaignId)],
+    },
     { label: 'Atelier' },
   ]);
 
   // ── Vente / annulation d'un véhicule ────────────────────────────────────────
 
-  pendingSaleVehicleId: WritableSignal<number | null> = signal<number | null>(null);
+  pendingSaleVehicleId: WritableSignal<number | null> = signal<number | null>(
+    null,
+  );
   sellingVehicle: WritableSignal<boolean> = signal(false);
 
   /** Synthèse affichée par `SellVehicleModal` — `null` tant qu'aucune vente n'est en cours. */
-  saleSummary: Signal<VehicleSaleSummary | null> = computed((): VehicleSaleSummary | null => {
-    const id = this.pendingSaleVehicleId();
-    const catalog = this.sponsorCatalog();
-    const wsVehicle = this.workshop()?.vehicles.find((v: WorkshopVehicleDto): boolean => v.id === id);
-    if (id === null || !catalog || !wsVehicle) return null;
-    return buildVehicleSaleSummary(wsVehicle, catalog);
-  });
+  saleSummary: Signal<VehicleSaleSummary | null> = computed(
+    (): VehicleSaleSummary | null => {
+      const id = this.pendingSaleVehicleId();
+      const catalog = this.sponsorCatalog();
+      const wsVehicle = this.workshop()?.vehicles.find(
+        (v: WorkshopVehicleDto): boolean => v.id === id,
+      );
+      if (id === null || !catalog || !wsVehicle) return null;
+      return buildVehicleSaleSummary(wsVehicle, catalog);
+    },
+  );
 
   // ── Conversion de sabotage (règle maison) ───────────────────────────────────
 
@@ -157,7 +217,8 @@ export class AtelierPage implements OnInit {
 
   /** Jerricans de la dernière conversion — `null` s'il n'y en a pas (bouton d'annulation absent). */
   lastConversionJerricans: Signal<number | null> = computed(
-    (): number | null => this.workshop()?.lastSabotageConversionJerricans ?? null,
+    (): number | null =>
+      this.workshop()?.lastSabotageConversionJerricans ?? null,
   );
 
   /** Annuler rendrait la cagnotte négative si les jerricans convertis ont été dépensés — le serveur reste seul juge. */
@@ -197,7 +258,10 @@ export class AtelierPage implements OnInit {
         this.loadAvailableVehicles(); // la cagnotte change → nouveaux verdicts d'achat
       },
       error: (err: HttpErrorResponse): void => {
-        this.error.set(err.error?.message ?? "Impossible d'annuler la conversion. Réessayez.");
+        this.error.set(
+          err.error?.message ??
+            "Impossible d'annuler la conversion. Réessayez.",
+        );
         this.confirmingCancellation.set(false);
         this.cancellingConversion.set(false);
       },
@@ -225,7 +289,9 @@ export class AtelierPage implements OnInit {
         this.loadAvailableVehicles(); // la cagnotte change → nouveaux verdicts d'achat
       },
       error: (err: HttpErrorResponse): void => {
-        this.error.set(err.error?.message ?? 'Impossible de convertir le jeton. Réessayez.');
+        this.error.set(
+          err.error?.message ?? 'Impossible de convertir le jeton. Réessayez.',
+        );
         this.confirmingConversion.set(false);
         this.convertingSabotage.set(false);
       },
@@ -272,10 +338,13 @@ export class AtelierPage implements OnInit {
 
   /** Charge les verdicts de disponibilité budgétaire — échec silencieux (cf. `availableVehicles`, doc). */
   private loadAvailableVehicles(): void {
-    this.campaignsService.getWorkshopAvailableVehicles(this.campaignId).subscribe({
-      next: (verdicts: AvailableVehicleDto[]): void => this.availableVehicles.set(verdicts),
-      error: (): void => undefined,
-    });
+    this.campaignsService
+      .getWorkshopAvailableVehicles(this.campaignId)
+      .subscribe({
+        next: (verdicts: AvailableVehicleDto[]): void =>
+          this.availableVehicles.set(verdicts),
+        error: (): void => undefined,
+      });
   }
 
   private loadSponsorCatalog(sponsor: string): void {
@@ -285,7 +354,9 @@ export class AtelierPage implements OnInit {
         this.loading.set(false);
       },
       error: (): void => {
-        this.error.set('Impossible de charger le catalogue du sponsor. Réessayez.');
+        this.error.set(
+          'Impossible de charger le catalogue du sponsor. Réessayez.',
+        );
         this.loading.set(false);
       },
     });
@@ -293,14 +364,22 @@ export class AtelierPage implements OnInit {
 
   /** Navigue vers l'écran de configuration dédié à ce véhicule. */
   onManage(vehicleId: number): void {
-    this.router.navigate(['/campaigns', this.campaignId, 'atelier', 'vehicles', vehicleId]);
+    this.router.navigate([
+      '/campaigns',
+      this.campaignId,
+      'atelier',
+      'vehicles',
+      vehicleId,
+    ]);
   }
 
   // ── Vente / annulation d'un véhicule ────────────────────────────────────────
 
   /** Titre du bouton — adapté selon que le véhicule a été acheté cette session ou non. */
   sellTitleFor(vehicleId: number): string {
-    return this.isPurchasedThisSession(vehicleId) ? "Annuler l'achat de ce véhicule" : 'Vendre ce véhicule';
+    return this.isPurchasedThisSession(vehicleId)
+      ? "Annuler l'achat de ce véhicule"
+      : 'Vendre ce véhicule';
   }
 
   /** Icône du bouton pour une vente réelle — `null` pour une annulation (pas
@@ -315,7 +394,11 @@ export class AtelierPage implements OnInit {
   }
 
   private isPurchasedThisSession(vehicleId: number): boolean {
-    return this.workshop()?.vehicles.find((v: WorkshopVehicleDto): boolean => v.id === vehicleId)?.purchasedThisSession ?? false;
+    return (
+      this.workshop()?.vehicles.find(
+        (v: WorkshopVehicleDto): boolean => v.id === vehicleId,
+      )?.purchasedThisSession ?? false
+    );
   }
 
   /** Ouvre la modale de synthèse pour ce véhicule. */
@@ -334,20 +417,28 @@ export class AtelierPage implements OnInit {
     this.sellingVehicle.set(true);
     this.error.set('');
 
-    this.campaignsService.changeEquipment(this.campaignId, {
-      operation: 'SELL', entityType: 'VEHICLE', nomInterne: '', targetEntityId: vehicleId,
-    }).subscribe({
-      next: (): void => {
-        this.pendingSaleVehicleId.set(null);
-        this.sellingVehicle.set(false);
-        this.loadWorkshop();
-        this.loadAvailableVehicles(); // la vente change la cagnotte → nouveau budget
-      },
-      error: (err: HttpErrorResponse): void => {
-        this.error.set(err.error?.message ?? 'Impossible de vendre ce véhicule. Réessayez.');
-        this.sellingVehicle.set(false);
-      },
-    });
+    this.campaignsService
+      .changeEquipment(this.campaignId, {
+        operation: 'SELL',
+        entityType: 'VEHICLE',
+        nomInterne: '',
+        targetEntityId: vehicleId,
+      })
+      .subscribe({
+        next: (): void => {
+          this.pendingSaleVehicleId.set(null);
+          this.sellingVehicle.set(false);
+          this.loadWorkshop();
+          this.loadAvailableVehicles(); // la vente change la cagnotte → nouveau budget
+        },
+        error: (err: HttpErrorResponse): void => {
+          this.error.set(
+            err.error?.message ??
+              'Impossible de vendre ce véhicule. Réessayez.',
+          );
+          this.sellingVehicle.set(false);
+        },
+      });
   }
 
   // ── Achat d'un véhicule ──────────────────────────────────────────────────────
@@ -360,24 +451,35 @@ export class AtelierPage implements OnInit {
     // Défense en profondeur — `VehicleChoiceCard` n'émet déjà pas `chosen` si le
     // verdict est indisponible ; le backend reste la seule source de vérité
     // (assertCanAfford, cf. Game.changeEquipment).
-    if (this.availableVehiclesByNomInterne().get(vehicule.nom_interne)?.disponible === false) return;
+    if (
+      this.availableVehiclesByNomInterne().get(vehicule.nom_interne)
+        ?.disponible === false
+    )
+      return;
 
     this.addingVehicle.set(true);
     this.error.set('');
 
-    this.campaignsService.changeEquipment(this.campaignId, {
-      operation: 'BUY', entityType: 'VEHICLE', nomInterne: vehicule.nom_interne,
-    }).subscribe({
-      next: (): void => {
-        this.addingVehicle.set(false);
-        this.showAddVehicle.set(false);
-        this.loadWorkshop();
-        this.loadAvailableVehicles(); // l'achat change la cagnotte → nouveau budget
-      },
-      error: (err: HttpErrorResponse): void => {
-        this.error.set(err.error?.message ?? 'Impossible d\'acheter ce véhicule. Réessayez.');
-        this.addingVehicle.set(false);
-      },
-    });
+    this.campaignsService
+      .changeEquipment(this.campaignId, {
+        operation: 'BUY',
+        entityType: 'VEHICLE',
+        nomInterne: vehicule.nom_interne,
+      })
+      .subscribe({
+        next: (): void => {
+          this.addingVehicle.set(false);
+          this.showAddVehicle.set(false);
+          this.loadWorkshop();
+          this.loadAvailableVehicles(); // l'achat change la cagnotte → nouveau budget
+        },
+        error: (err: HttpErrorResponse): void => {
+          this.error.set(
+            err.error?.message ??
+              "Impossible d'acheter ce véhicule. Réessayez.",
+          );
+          this.addingVehicle.set(false);
+        },
+      });
   }
 }

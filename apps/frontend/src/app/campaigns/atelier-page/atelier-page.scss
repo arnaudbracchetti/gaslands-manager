@@ -48,8 +48,12 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 
-  &--loading { color: var(--text-dim); }
-  &--error   { color: var(--tb-rouille-lt); }
+  &--loading {
+    color: var(--text-dim);
+  }
+  &--error {
+    color: var(--tb-rouille-lt);
+  }
 }
 
 .atp-summary {

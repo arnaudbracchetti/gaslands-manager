@@ -35,7 +35,9 @@ export class EscarmoucheGame extends Game {
     super(id, campaignId, status, order, playedAt, events);
   }
 
-  override get type(): string { return 'ESCARMOUCHE'; }
+  override get type(): string {
+    return 'ESCARMOUCHE';
+  }
 
   override canAccept(event: GameEvent): boolean {
     if (this.status === GameStatus.PLANIFIE) {
@@ -49,7 +51,8 @@ export class EscarmoucheGame extends Game {
         event instanceof WreckResolvedEvent ||
         // Séquelle imposée par la Table des Épaves (Siège irrécupérable) — cf. le même
         // commentaire dans EvenementTeleGame.canAccept.
-        (event instanceof EquipmentChangedEvent && event.entityType === EquipmentEntityType.SEQUELLE) ||
+        (event instanceof EquipmentChangedEvent &&
+          event.entityType === EquipmentEntityType.SEQUELLE) ||
         event instanceof ResistanceContactedEvent ||
         event instanceof GatesCrossedEvent ||
         event instanceof VehicleDestroyedEvent ||

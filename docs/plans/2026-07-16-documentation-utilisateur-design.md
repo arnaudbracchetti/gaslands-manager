@@ -10,7 +10,7 @@
 Le projet n'avait aucune documentation expliquant aux joueurs comment
 utiliser l'application (équipes, construction de véhicule, campagnes,
 programme télé, atelier, séquelles...). La seule page existante, `/rules`,
-expliquait les règles *du jeu de plateau* Gaslands (sourcées du livre) — un
+expliquait les règles _du jeu de plateau_ Gaslands (sourcées du livre) — un
 besoin différent. L'utilisateur cible connaît déjà les règles de Gaslands
 mais pas les mécaniques propres au mode campagne de l'application (chocs,
 séquelles, revente, points de résistance...).
@@ -30,15 +30,15 @@ d'usage de l'application.
 Un fichier = une zone fonctionnelle de l'application (pas une notion de
 règle du jeu). Dans `content/docs/` :
 
-| Fichier | Contenu |
-|---|---|
-| `index.md` | Intro : à qui s'adresse cette doc, comment elle est organisée. Pas la liste des chapitres — générée par le composant `Documentation`, cf. §3. |
-| `equipes.md` | Créer une équipe, sponsor et son verrouillage, budget, modifier/supprimer |
-| `construction-vehicule.md` | Choisir un véhicule, budget d'équipement, armes (orientation, Tourelle ×3), améliorations, avantages, équipement intégré |
-| `campagnes.md` | Créer/rejoindre, rôles organisateur/participant, cycle de vie, changer d'équipe engagée, classement, Points de Résistance |
-| `programme-tele.md` | Planifier une partie, enregistrer un résultat (wizard 3 étapes : classement → désignation des épaves → Table des Épaves), Journal de partie, limite connue (Escarmouche) |
-| `atelier.md` | La cagnotte, achat/revente, annulation vs revente, achat/vente de véhicule, limites connues |
-| `sequelles.md` | Les Chocs, échange contre une Séquelle, cas particuliers (Dur à Cuire, Maintenu par la Rouille, Légende Vivante), revente fermée par défaut |
+| Fichier                    | Contenu                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.md`                 | Intro : à qui s'adresse cette doc, comment elle est organisée. Pas la liste des chapitres — générée par le composant `Documentation`, cf. §3.                            |
+| `equipes.md`               | Créer une équipe, sponsor et son verrouillage, budget, modifier/supprimer                                                                                                |
+| `construction-vehicule.md` | Choisir un véhicule, budget d'équipement, armes (orientation, Tourelle ×3), améliorations, avantages, équipement intégré                                                 |
+| `campagnes.md`             | Créer/rejoindre, rôles organisateur/participant, cycle de vie, changer d'équipe engagée, classement, Points de Résistance                                                |
+| `programme-tele.md`        | Planifier une partie, enregistrer un résultat (wizard 3 étapes : classement → désignation des épaves → Table des Épaves), Journal de partie, limite connue (Escarmouche) |
+| `atelier.md`               | La cagnotte, achat/revente, annulation vs revente, achat/vente de véhicule, limites connues                                                                              |
+| `sequelles.md`             | Les Chocs, échange contre une Séquelle, cas particuliers (Dur à Cuire, Maintenu par la Rouille, Légende Vivante), revente fermée par défaut                              |
 
 Chaque chapitre décrit le comportement observable de l'application, jamais
 les choix d'implémentation ni l'historique des changements. Les limitations
@@ -92,7 +92,7 @@ nouveau module NestJS.
   par un renderer `marked` personnalisé — plus simple, et strictement local
   à cette classe (n'affecte pas `ContentService`/`CatalogService`, qui
   utilisent la même fonction `marked` globale sans ce post-traitement).
-  *Écart avec l'ébauche brainstorming* : celle-ci envisageait une instance
+  _Écart avec l'ébauche brainstorming_ : celle-ci envisageait une instance
   `Marked` dédiée avec un renderer personnalisé ; le post-traitement du HTML
   atteint le même résultat (isolation complète des deux autres services)
   avec moins de surface d'API à maîtriser.
@@ -165,12 +165,12 @@ Nouveau dossier `apps/frontend/src/app/documentation/` :
 - **Aide contextuelle** : chaque route pertinente de `app.routes.ts` reçoit
   `data: { docSlug: '...' }` :
 
-  | Route(s) | `docSlug` |
-  |---|---|
-  | `/teams`, `/teams/:id/edit` | `equipes` |
-  | `/teams/:teamId/vehicles/new`, `/teams/:teamId/vehicles/:vehicleId` | `construction-vehicule` |
-  | `/campaigns`, `/campaigns/join/:code`, `/campaigns/:id` | `campagnes` |
-  | `/campaigns/:id/atelier`, `/campaigns/:id/atelier/vehicles/:vehicleId` | `atelier` |
+  | Route(s)                                                               | `docSlug`               |
+  | ---------------------------------------------------------------------- | ----------------------- |
+  | `/teams`, `/teams/:id/edit`                                            | `equipes`               |
+  | `/teams/:teamId/vehicles/new`, `/teams/:teamId/vehicles/:vehicleId`    | `construction-vehicule` |
+  | `/campaigns`, `/campaigns/join/:code`, `/campaigns/:id`                | `campagnes`             |
+  | `/campaigns/:id/atelier`, `/campaigns/:id/atelier/vehicles/:vehicleId` | `atelier`               |
 
   (`/vehicles`, `/weapons`, `/admin/users`, `/login`, `/register`, `/home` :
   pas de lien contextuel.)
@@ -223,6 +223,7 @@ les ont révélés :
    garanti identique au défilement natif. `DocLinksDirective` exclut
    maintenant explicitement ce cas (`anchor.pathname === window.location.pathname`
    → pas d'interception, comportement natif du navigateur conservé).
+
 3. **L'encapsulation de vue Angular ne scope jamais le contenu de
    `[innerHTML]`.** Trouvé après un retour utilisateur sur la couleur des
    liens ("trop flashy, pas en accord avec la charte") : la couleur
@@ -233,7 +234,7 @@ les ont révélés :
    template du composant rend lui-même, et récrit le CSS du composant pour
    exiger cet attribut ; les descendants de `[innerHTML]` — jamais compilés
    par Angular — ne le reçoivent jamais. Seules les propriétés CSS
-   *héritables* déclarées sur `.markdown-content` elle-même (`color`,
+   _héritables_ déclarées sur `.markdown-content` elle-même (`color`,
    `font-family`, `line-height`) semblaient "fonctionner", par simple
    héritage vers les enfants, pas parce que les règles imbriquées (`h1`,
    `h2`, `a`, `table`...) matchaient — elles ne matchaient jamais. Corrigé en
@@ -302,7 +303,7 @@ ci-dessous — suppression sans risque.
   seulement les tests) pour confirmer l'ordre du sommaire et la présence des
   `id` dans le HTML.
 - **Frontend** : `npx nx run frontend:build` (production) OK. `npx nx test
-  frontend` → 460/460 tests passés (les 2 "fichiers en échec"/30 erreurs
+frontend` → 460/460 tests passés (les 2 "fichiers en échec"/30 erreurs
   signalés par vitest sont un flake préexistant sans rapport avec cette
   session — confirmé identique en nombre sur le commit de base via
   `git stash`, dans des specs jamais touchées ici). `npx nx lint frontend` →
