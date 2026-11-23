@@ -194,20 +194,14 @@ sur demande) mais ne coupe jamais les autres applications déjà en ligne.
 
 ```bash
 git tag vX.Y.Z && git push origin vX.Y.Z   # déclenche la CI
+# une fois la CI verte, sur le VPS :
+/opt/gaslands/deploy-gaslands.sh vX.Y.Z
 ```
 
-Une fois le build CI terminé, sur le VPS :
-
-```bash
-sed -i 's/IMAGE_TAG=.*/IMAGE_TAG=vX.Y.Z/' /opt/gaslands/.env
-cd /opt/gaslands
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-```
-
-> ⚠️ Oublier de mettre à jour `IMAGE_TAG` dans `.env` avant le `pull` fait
-> retélécharger silencieusement l'ancienne version — toujours vérifier
-> `grep IMAGE_TAG /opt/gaslands/.env` en cas de doute.
+Le script fait un dump avant, vérifie la version qui répond et restaure en
+cas d'échec. Retour arrière, sauvegardes de nuit, restauration et
+installation unique du script :
+[docs/VPS_DEPLOYMENT.md §4](docs/VPS_DEPLOYMENT.md#4-exploiter-gaslands-avec-deploy-gaslandssh).
 
 Pour le provisionnement initial du stack `edge`, l'ajout d'une 2ᵉ
 application sur le même VPS, les vérifications post-déploiement et la table

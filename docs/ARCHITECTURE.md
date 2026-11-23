@@ -340,7 +340,7 @@ tournent en `nx serve` (hot reload).
 `v*` posé sur `main` : publication sur GHCR (`gaslands-manager-{backend,frontend}`), taguées par version
 uniquement (jamais `latest`), packages publics (aucun secret dans l'image). `IMAGE_TAG` est **exigé** par
 `docker-compose.prod.yml`. Mise à jour : `git tag vX.Y.Z && git push origin vX.Y.Z`, puis sur le VPS
-`pull && up -d` (ou `deploy-gaslands.sh`). L'image backend embarque `/app/migrations/` (migrations +
+`deploy-gaslands.sh vX.Y.Z` (déploiement, retour arrière, sauvegardes : [VPS_DEPLOYMENT.md §4](VPS_DEPLOYMENT.md#4-exploiter-gaslands-avec-deploy-gaslandssh)). L'image backend embarque `/app/migrations/` (migrations +
 `valeurs-nouvelles.txt`), lu par l'option retour arrière de `deploy-gaslands.sh` (absent jusqu'à v1.0.0).
 
 ---

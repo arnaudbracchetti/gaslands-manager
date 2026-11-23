@@ -285,7 +285,8 @@ PUBLIC_DOMAIN=<vraidomaine.tld>
 IMAGE_TAG=v0.1.0
 ```
 
-Puis :
+Puis, pour ce premier lancement (pour Gaslands, les mises à jour suivantes
+passent par le script, §4) :
 
 ```bash
 cd /opt/<app>
@@ -316,30 +317,251 @@ redémarrer le conteneur.
 
 ---
 
-## 4. Mettre à jour une application déjà déployée
+## 4. Exploiter Gaslands avec `deploy-gaslands.sh`
+
+Une fois l'application en ligne (§3), tout se fait par le script
+[`deploy-gaslands.sh`](../deploy-gaslands.sh), copié dans `/opt/gaslands/` :
+déployer, revenir à la version précédente, sauvegarder, restaurer, voir
+l'état. Cette section donne la vue de l'exploitant (ce qu'on lance, ce qui
+est demandé, ce qui peut être perdu) ; l'enchaînement exact des étapes est
+dans l'en-tête du script, les choix de fond (retour arrière sans
+restauration, migrations additives) dans l'ADR
+[0001](adr/0001-retour-arriere-par-l-image-precedente-sans-restauration.md).
 
 ```bash
-git tag vX.Y.Z && git push origin vX.Y.Z    # déclenche la CI (§3.2)
+cd /opt/gaslands
+./deploy-gaslands.sh            # menu : 1 Déployer, 2 Revenir, 3 Sauvegarder, 4 Restaurer, 5 État, 6 Quitter
+./deploy-gaslands.sh vX.Y.Z     # déploie directement cette version
 ```
 
-Vérifier dans l'onglet **Actions** du dépôt que le build réussit, puis sur le
-VPS :
+### 4.1 Installation unique
+
+À faire une fois, dans cet ordre, avant la première release déployée par le
+script. Le VPS est en UTC, `rclone` y est déjà installé (sauvegardes de
+Chimères), le compte `deploy` n'a pas `sudo` : les `apt install` se font avec
+le compte d'administration.
+
+**0. Dump manuel de la prod, copié hors du VPS** (avant toute autre action) :
 
 ```bash
-sed -i 's/IMAGE_TAG=.*/IMAGE_TAG=vX.Y.Z/' /opt/<app>/.env
-cd /opt/<app>
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+# Sur le VPS
+cd /opt/gaslands
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' > ~/gaslands-manuel-$(date +%F).dump
+ls -lh ~/gaslands-manuel-*.dump        # taille non nulle
+
+# Depuis votre machine
+scp deploy@<ip-vps>:~/gaslands-manuel-AAAA-MM-JJ.dump .
 ```
 
-> ⚠️ **Piège vécu** : oublier de changer `IMAGE_TAG` dans `.env` avant le
-> `pull` fait que Docker retélécharge (ou reconfirme, si déjà en cache)
-> l'ancienne version, sans erreur ni avertissement — donnant l'impression
-> trompeuse que "l'image n'a pas été reconstruite" alors que la CI a très
-> bien fonctionné. Toujours vérifier `grep IMAGE_TAG /opt/<app>/.env` avant
-> de conclure à un problème côté CI.
+**1. Bucket et clé B2** (interface Backblaze, même compte que Chimères) :
 
-Jamais de `--build` sur le VPS — ni ici, ni ailleurs dans ce document.
+- bucket privé `gaslands-sauvegardes` ;
+- règle de cycle de vie personnalisée sur tout le bucket : masquer les
+  fichiers 15 jours après l'envoi, les supprimer 1 jour après ;
+- clé d'application limitée au bucket, **sans `deleteFiles`** : l'interface ne
+  propose que des lots de droits (« Read and Write » comprend la
+  suppression), donc créer la clé avec l'outil `b2` (sur votre machine :
+  `pipx install b2`, puis `b2 account authorize` avec la clé principale du
+  compte) :
+
+  ```bash
+  b2 key create --bucket gaslands-sauvegardes gaslands-serveur listBuckets,listFiles,readFiles,writeFiles
+  ```
+
+- noter dans Dashlane le keyID, la clé et le nom du bucket.
+
+**2. Paire de clés age** (sur votre machine, jamais sur le VPS) :
+
+```bash
+age-keygen -o gaslands-sauvegardes.age.key
+# affiche « Public key: age1... » : c'est AGE_RECIPIENT
+```
+
+Ranger le contenu du fichier (la ligne `AGE-SECRET-KEY-...`) dans Dashlane,
+plus une copie hors ligne, puis effacer le fichier. Seule la clé publique va
+sur le serveur : un vol du serveur ne permet pas de lire les sauvegardes.
+
+**3. Préparer le VPS** :
+
+```bash
+sudo apt install age                                   # compte d'administration
+
+# compte deploy
+mkdir -p /opt/gaslands/sauvegardes
+chmod 700 /opt/gaslands/sauvegardes                    # dumps locaux en clair
+```
+
+Dans `/opt/gaslands/.env` (et la fiche Dashlane, copie de référence du
+`.env`), modifier les clés déjà présentes et ajouter les autres, sans jamais
+créer de doublon (le script lit la clé par `grep` : deux lignes `IMAGE_TAG=`
+faussent tous ses contrôles), puis `chmod 600 /opt/gaslands/.env` :
+
+```
+PUBLIC_DOMAIN=<vraidomaine.tld>    # contrôle de version par https://<domaine>/api/version
+IMAGE_TAG=v1.0.0                   # la version en place avant le premier passage par le script
+B2_KEY_ID=<keyID de la clé, pas l'identifiant du compte>
+B2_APP_KEY=<clé d'application>
+B2_BUCKET=gaslands-sauvegardes     # le NOM du bucket, pas son ID
+AGE_RECIPIENT=age1...
+```
+
+**4. Copier le script et le fichier Compose** (depuis votre machine, à la
+racine du dépôt) :
+
+```bash
+scp deploy-gaslands.sh docker-compose.prod.yml deploy@<ip-vps>:/opt/gaslands/
+ssh deploy@<ip-vps> chmod +x /opt/gaslands/deploy-gaslands.sh
+```
+
+Le script utilise le [`docker-compose.prod.yml`](../docker-compose.prod.yml)
+de `/opt/gaslands/` : il doit être celui du dépôt, qui exige `IMAGE_TAG`. Le
+recopier à chaque modification de ce fichier.
+
+**5. Sauvegarde de nuit** : cron du compte `deploy` (`crontab -e`) :
+
+```
+45 3 * * * /opt/gaslands/deploy-gaslands.sh sauvegarde-nuit >> /opt/gaslands/sauvegardes.log 2>&1
+```
+
+3 h 45 UTC (4 h 45 ou 5 h 45 à Paris), 15 minutes après la ligne de Chimères
+(`30 3`) pour ne pas chevaucher. Ne pas changer le fuseau du serveur, cela
+décalerait Chimères.
+
+Premier essai à la main : `/opt/gaslands/deploy-gaslands.sh sauvegarde-nuit`.
+Attendu : `=== Sauvegarde de nuit : réussie ... ===`. Vérifier dans
+l'interface B2 que `gaslands-AAAA-MM-JJ-v1.0.0.dump.age` est dans le bucket,
+qu'aucun autre bucket n'est apparu (signe d'un ID mis à la place du nom), et
+qu'aucun fichier ne reste dans `sauvegardes/`. Le lendemain, relire
+`/opt/gaslands/sauvegardes.log` pour confirmer le passage du cron.
+
+**6. Tester une restauration** d'un dump de nuit, sur une base jetable (jamais
+sur la prod), avec la clé privée collée :
+
+```bash
+# Sur le VPS, compte deploy
+cd /opt/gaslands
+lire() { grep -oP "^$1=\K.*" .env; }                   # une clé de .env, sans tout sourcer
+export RCLONE_CONFIG=/dev/null RCLONE_CONFIG_B2_TYPE=b2 \
+  RCLONE_CONFIG_B2_ACCOUNT="$(lire B2_KEY_ID)" RCLONE_CONFIG_B2_KEY="$(lire B2_APP_KEY)"
+rclone lsf "b2:$(lire B2_BUCKET)"                        # choisir un fichier
+rclone cat "b2:$(lire B2_BUCKET)/gaslands-AAAA-MM-JJ-v1.0.0.dump.age" > /tmp/essai.dump.age
+
+docker run -d --name essai-restauration -e POSTGRES_PASSWORD=essai postgres:16-alpine
+until docker exec essai-restauration pg_isready -U postgres -q; do sleep 1; done
+read -rs AGE_KEY                                        # coller AGE-SECRET-KEY-..., Entrée
+age -d -i <(echo "$AGE_KEY") /tmp/essai.dump.age \
+  | docker exec -i essai-restauration pg_restore -U postgres -d postgres --no-owner --exit-on-error
+docker exec essai-restauration psql -U postgres -c 'select count(*) from teams;'
+
+docker rm -f essai-restauration; rm -f /tmp/essai.dump.age; unset AGE_KEY
+```
+
+Attendu : un nombre d'équipes plausible.
+
+### 4.2 Publier une release
+
+1. Si la release ajoute une valeur persistée que la version précédente ne
+   connaît pas, une section `## vX.Y.Z` dans
+   [`valeurs-nouvelles.txt`](../apps/backend/src/migrations/valeurs-nouvelles.txt)
+   (règle et format : en-tête du fichier).
+2. Tag sur un commit de `main`. Le script ne lit que la section dont le titre
+   est exactement ce tag : la première release passée par le script est donc
+   `v1.1.0`, la section déjà rédigée.
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+3. Attendre que le workflow `CI` réussisse (`verify` puis `image`). Si la CI
+   échoue, aucune image n'est publiée et le script s'arrête sans rien toucher.
+
+### 4.3 Déployer une version (option 1)
+
+```bash
+/opt/gaslands/deploy-gaslands.sh vX.Y.Z
+```
+
+Le script :
+
+- refuse un tag mal formé, déjà en place, ou plus ancien que la version en
+  place et la précédente ;
+- tire les **deux** images (backend et frontend) ; si l'une manque, il
+  s'arrête sans rien toucher ;
+- fait un dump `sauvegardes/avant-deploiement-<date>-<version en place>.dump` ;
+- change `IMAGE_TAG` dans `.env` et relance : les migrations s'appliquent au
+  démarrage du backend ;
+- attend le `healthy` du backend (120 s au plus), puis vérifie que
+  `https://<PUBLIC_DOMAIN>/api/version` renvoie le nouveau tag ;
+- note le déploiement dans `deploiements.log`, ne garde que les images N et
+  N-1, efface les dumps locaux de plus de 30 jours.
+
+Si la nouvelle version ne répond pas correctement, il restaure le dump
+d'avant et relance la version précédente. Si cette restauration échoue
+elle-même : message `CRITIQUE` avec le chemin du dump, restauration à faire à
+la main (§4.6, sauvegarde locale).
+
+Pas de `caddy reload` à une mise à jour : seulement si
+[`gaslands.caddy`](../docker/caddy/gaslands.caddy) change.
+
+### 4.4 Revenir à la version précédente (option 2)
+
+Seule la version précédente (N-1, lue dans `deploiements.log`) est proposée.
+Le script compare les migrations embarquées dans les images N et N-1 et
+choisit entre deux issues :
+
+- **Relance de N-1 sur la base telle quelle**, sans perte : quand aucune
+  migration nouvelle de N ne porte `// incompatible : <raison>` et que la
+  section de N dans
+  [`valeurs-nouvelles.txt`](../apps/backend/src/migrations/valeurs-nouvelles.txt)
+  est vide ou absente, ou que vous répondez « Non » à sa question (le script
+  cite ces actions avec la date du déploiement et demande si quelqu'un en a
+  fait une depuis). Confirmation par `o`. Si N-1 ne démarre pas, le script
+  relance N : une perte de données reste toujours un choix explicite.
+- **Restauration du dump fait avant le déploiement de N**, puis relance de
+  N-1 : quand une migration porte le marqueur (raison affichée), ou que vous
+  répondez « Oui » ou « Je ne sais pas ». Les saisies faites depuis le
+  déploiement sont perdues ; un dump de la base actuelle est fait avant.
+  Confirmation en tapant `RESTAURER`.
+
+Remonter plus loin que N-1 passe par une restauration (§4.6). Les images
+v1.0.0 n'embarquent pas de migrations : vers v1.0.0, toutes les migrations de
+N comptent comme nouvelles.
+
+### 4.5 Sauvegardes
+
+| Sauvegarde                 | Quand                                  | Où                           | Durée de vie                |
+| -------------------------- | -------------------------------------- | ---------------------------- | --------------------------- |
+| De nuit, chiffrée par age  | cron, 3 h 45 UTC                       | B2 `gaslands-sauvegardes`    | 15 jours (règle du bucket)  |
+| Avant déploiement / retour | à chaque déploiement ou retour arrière | `/opt/gaslands/sauvegardes/` | 30 jours (ménage du script) |
+| Manuelle (option 3)        | avant une intervention                 | `/opt/gaslands/sauvegardes/` | 30 jours                    |
+
+Chaque nom de dump porte la version en place au moment du dump
+(`...-vX.Y.Z.dump`, `gaslands-AAAA-MM-JJ-vX.Y.Z.dump.age`) : c'est elle qui
+dit avec quelle version il est compatible. Les dumps locaux sont en clair
+(dossier `chmod 700`) et jamais envoyés sur B2 ; la sauvegarde de nuit n'est
+pas gardée en local. Le serveur n'efface jamais rien sur B2.
+
+Le périmètre est la base seule : le `.env` a sa copie de référence dans
+Dashlane, les certificats sont refaits par Caddy.
+
+### 4.6 Restaurer une sauvegarde (option 4)
+
+Choisir une sauvegarde locale ou une sauvegarde de nuit B2 dans une liste,
+confirmer en tapant `RESTAURER`. Pour B2, le script demande la clé privée age
+en saisie masquée et ne l'écrit jamais sur le disque.
+
+- Dump de la version en place ou plus ancien : restauré, puis la version en
+  place applique au démarrage les migrations qui lui manquent.
+- Dump plus récent que la version en place : refusé (« redéployez d'abord
+  vD, puis restaurez »).
+
+Le script fait d'abord un dump `avant-restauration-...` de la base actuelle.
+Une restauration ne change jamais `IMAGE_TAG`.
+
+### 4.7 État (option 5)
+
+Version en place et précédente, version qui répond sur `/api/version`,
+derniers déploiements, conteneurs, derniers dumps locaux, date de la dernière
+sauvegarde de nuit réussie, images présentes.
 
 ---
 
@@ -361,21 +583,22 @@ true`), jamais partagé.
 
 ## 6. Pièges connus (rencontrés en conditions réelles)
 
-| Symptôme                                                                                                                                        | Cause                                                                                                                                                                                                                                                    | Correctif                                                                                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Error: adapting config using caddyfile: server block without any key is global configuration, and if used, it must be first` au `caddy reload` | `{$PUBLIC_DOMAIN}` (variable Caddy) non définie dans l'environnement du conteneur `caddy` du stack `edge` → résolue en chaîne vide                                                                                                                       | Utiliser un placeholder **textuel** (`__PUBLIC_DOMAIN__`), substitué par `sed` avant dépôt du fichier (§3.1/§3.3), jamais une variable Caddy           |
-| `Error: ... subject does not qualify for certificate: '{domaine}'`                                                                              | Domaine entouré d'accolades littérales laissées par une substitution manuelle incomplète (confusion avec la syntaxe `{$VAR}` d'origine)                                                                                                                  | Le domaine doit être **nu**, sans aucune accolade autour de lui — seule l'accolade qui ouvre le bloc de site doit rester                               |
-| Page en ligne sans aucun style, console : `Executing inline event handler violates ... 'script-src'`                                            | Angular (`@angular/build:application`, config `production`) inline le CSS critique et active le reste via `<link media="print" onload="this.media='all'">` — un attribut `onload` inline, bloqué par une CSP stricte (`script-src` sans `unsafe-inline`) | `optimization.styles.inlineCritical: false` dans la configuration `production` du projet Angular concerné (`project.json`)                             |
-| `docker compose pull` "réussit" mais rien ne change en production après une mise à jour                                                         | `IMAGE_TAG` pas mis à jour dans `.env` avant le `pull`                                                                                                                                                                                                   | Voir §4 — toujours vérifier la valeur avant de conclure                                                                                                |
-| `docker compose up` échoue avec _"dependency failed to start"_ sur le backend                                                                   | Le plus souvent une variable de `.env` manquante/invalide — le backend valide strictement son environnement au démarrage et s'arrête volontairement sinon                                                                                                | `docker compose logs backend` pour le message exact ; vérifier qu'aucun placeholder du type `<...>` n'est resté tel quel dans `.env` (`grep '<' .env`) |
+| Symptôme                                                                                                                                        | Cause                                                                                                                                                                                                                                                    | Correctif                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Error: adapting config using caddyfile: server block without any key is global configuration, and if used, it must be first` au `caddy reload` | `{$PUBLIC_DOMAIN}` (variable Caddy) non définie dans l'environnement du conteneur `caddy` du stack `edge` → résolue en chaîne vide                                                                                                                       | Utiliser un placeholder **textuel** (`__PUBLIC_DOMAIN__`), substitué par `sed` avant dépôt du fichier (§3.1/§3.3), jamais une variable Caddy                          |
+| `Error: ... subject does not qualify for certificate: '{domaine}'`                                                                              | Domaine entouré d'accolades littérales laissées par une substitution manuelle incomplète (confusion avec la syntaxe `{$VAR}` d'origine)                                                                                                                  | Le domaine doit être **nu**, sans aucune accolade autour de lui — seule l'accolade qui ouvre le bloc de site doit rester                                              |
+| Page en ligne sans aucun style, console : `Executing inline event handler violates ... 'script-src'`                                            | Angular (`@angular/build:application`, config `production`) inline le CSS critique et active le reste via `<link media="print" onload="this.media='all'">` — un attribut `onload` inline, bloqué par une CSP stricte (`script-src` sans `unsafe-inline`) | `optimization.styles.inlineCritical: false` dans la configuration `production` du projet Angular concerné (`project.json`)                                            |
+| `docker compose pull` "réussit" mais rien ne change en production après une mise à jour faite à la main (hors script)                           | `IMAGE_TAG` pas mis à jour dans `.env` avant le `pull`                                                                                                                                                                                                   | Pour Gaslands, déployer par le script (§4.3), qui change `IMAGE_TAG` et vérifie `/api/version` ; à la main, toujours vérifier `grep IMAGE_TAG .env` avant de conclure |
+| `docker compose up` échoue avec _"dependency failed to start"_ sur le backend                                                                   | Le plus souvent une variable de `.env` manquante/invalide — le backend valide strictement son environnement au démarrage et s'arrête volontairement sinon                                                                                                | `docker compose logs backend` pour le message exact ; vérifier qu'aucun placeholder du type `<...>` n'est resté tel quel dans `.env` (`grep '<' .env`)                |
 
 ---
 
 ## 7. Question ouverte : auto-déploiement
 
-Aujourd'hui, la mise à jour d'une application (§4) est **manuelle** : un tag
-Git déclenche la publication de l'image, mais c'est un humain qui met à jour
-`IMAGE_TAG` et relance `pull`/`up -d` sur le VPS. Deux façons d'automatiser
+Aujourd'hui, la mise à jour d'une application est **lancée à la main** : un
+tag Git déclenche la publication de l'image, mais c'est un humain qui lance
+le déploiement sur le VPS (pour Gaslands, `deploy-gaslands.sh vX.Y.Z`, §4.3).
+Deux façons d'automatiser
 cette dernière étape ont été identifiées, non retenues pour l'instant :
 
 - **"Push"** — un job CI se connecte en SSH au VPS après la publication de
