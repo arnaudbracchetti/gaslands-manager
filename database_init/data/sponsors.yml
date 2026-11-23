@@ -131,8 +131,8 @@ sponsors:
       - "Poursuite"
     avantages_sponsorises: |
       - **Étourdi** : le véhicule peut résoudre plusieurs Rotations séparément et dépasser 90° de pivot total.
-      - **Dérapage Maxximum** : deux Dérapages permettent d'utiliser le gabarit droit Moyen ; trois Dérapages ou plus permettent d'utiliser le droit Long.
-      - **Meshuggah** : une Rotation ou un Dérapage terminé près d'un véhicule ami sans Collision rapporte 1 Vote du Public.
+      - **Dérapage Maxximum** : si un véhicule résout deux Dérapages lors d'une même Étape de Déplacement, il peut utiliser le gabarit droit Moyen à la place du gabarit de Dérapage ; avec trois Dérapages ou plus, il peut utiliser le droit Long.
+      - **Meshuggah** : lorsqu'un véhicule résout une Rotation ou un Dérapage qui se termine à Portée Moyenne d'un véhicule ami sans provoquer de Collision, l'équipe gagne 1 Vote du Public.
 
   - nom: "L'Ordre Infernal"      # Clé primaire du sponsor
     description: "Culte pyromane issu du mythe d'Idris, il valorise le feu, les véhicules enflammés et la terreur."
@@ -165,7 +165,7 @@ sponsors:
       - "Trompe-la-Mort"
       - "Mécanique"
     avantages_sponsorises: |
-      - **Fêtard** : si un véhicule a plus de Jetons Danger que tous les adversaires proches réunis, il gagne des Votes du Public selon les véhicules adverses dangereux à Portée Moyenne.
+      - **Fêtard** : à la fin de son Étape d'Attaque, si un véhicule a plus de Jetons Danger que le total de ceux des véhicules ennemis à Portée Moyenne, son propriétaire gagne 1 Vote du Public par véhicule ennemi à Portée Moyenne ayant au moins 1 Jeton Danger.
       - **Courage Liquide** : les véhicules ne Perdent le Contrôle qu'à partir de 8 Jetons Danger.
       - **Aussi Droit que J'Peux !** : pas de Jeton Danger Articulé pour choisir un gabarit non Droit.
       - **Pas d'Limite** : le véhicule ne peut pas utiliser les gabarits Droits ; Déviation est autorisé et Trivial à toutes les vitesses.

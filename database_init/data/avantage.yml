@@ -95,9 +95,9 @@ avantages:
     nom_interne: "symbiose"
     categorie: "Audace"
     prix: 2
-    effet_court: "Tente le Coup+"
+    effet_court: "Tenter le Coup illimité"
     description: |
-      Autorise des tentatives de coup répétées lors du déplacement, au prix de Jetons Danger.
+      Permet de Tenter le Coup plusieurs fois par déplacement, au prix d'un Jeton Danger à chaque tentative.
     regles: |
       - Ce véhicule peut Tenter le Coup autant de fois qu'il le souhaite lors d'une même Étape de Déplacement, en prenant 1 Jeton Danger à chaque fois.
 
@@ -105,21 +105,23 @@ avantages:
     nom_interne: "insaisissable"
     categorie: "Audace"
     prix: 3
-    effet_court: "-2 dés éperonné"
+    effet_court: "Éperonné : -2 dés adverses"
     description: |
-      Pénalise les véhicules qui tentent un éperonnage contre ce véhicule.
+      Ce véhicule est difficile à percuter : ceux qui l'éperonnent frappent moins fort.
     regles: |
-      - Les véhicules faisant un Éperonnage contre ce véhicule subissent une pénalité de -2 Dés d'attaque.
+      - Lorsqu'un véhicule effectue un Éperonnage contre ce véhicule, il lance 2 dés d'attaque de moins.
+      - Seul l'Éperonnage est concerné : les attaques par arme ne sont pas affectées.
 
   - nom: "As du Frein à Main"
     nom_interne: "as_du_frein_a_main"
     categorie: "Audace"
     prix: 3
-    effet_court: "Rotation libre"
+    effet_court: "Rotation à 360°"
     description: |
       Permet de choisir librement l'orientation lors d'une Rotation.
     regles: |
-      - Lorsque vous appliquez un résultat Rotation, ce véhicule peut choisir n'importe quelle orientation.
+      - Lorsque ce véhicule applique un résultat Rotation, il peut s'orienter dans n'importe quelle direction, au lieu de pivoter de 90° au maximum.
+      - Le coût ne change pas : chaque Rotation donne toujours son Jeton Danger.
 
   - nom: "Feinte"
     nom_interne: "feinte"
@@ -568,19 +570,23 @@ avantages:
     effet_court: "+1 Manœuvrabilité"
     comportement: "expertise"
     description: |
-      Augmente la Manœuvrabilité du véhicule en permanence.
+      Un pilote chevronné qui tire le meilleur de sa machine : il peut lancer un Dé de Manœuvre de plus.
     regles: |
       - Ce véhicule ajoute 1 à sa Valeur de Manœuvrabilité.
+      - Il peut donc lancer un Dé de Manœuvre de plus lors de chacun de ses déplacements.
 
   - nom: "Art de la Route"
     nom_interne: "art_de_la_route"
     categorie: "Précision"
     prix: 3
-    effet_court: "Vitesse virtuelle"
+    effet_court: "Gabarits Vitesse ±1"
     description: |
-      Permet de choisir ses gabarits de déplacement comme à une Vitesse différente de la Vitesse réelle.
+      Un pilote acrobate qui sort des trajectoires attendues : il a accès aux gabarits des Vitesses voisines.
     regles: |
-      - Ce véhicule peut choisir ses gabarits de déplacement comme si sa Vitesse actuelle était d'un cran immédiatement plus bas ou plus haut. Utilisez cette nouvelle vitesse pour déterminer si la manœuvre est triviale ou dangereuse.
+      - Ce véhicule peut choisir son gabarit de déplacement comme si sa Vitesse actuelle était d'un cran plus haute ou plus basse.
+      - Le caractère Trivial ou Dangereux de la manœuvre se lit alors sur cette Vitesse décalée.
+      - Ce choix est possible même si le gabarit est autorisé à la Vitesse réelle, par exemple pour rendre une manœuvre Triviale.
+      - Sa Vitesse réelle ne change pas.
 
   - nom: "Pilote-Né"
     nom_interne: "pilote_ne"
