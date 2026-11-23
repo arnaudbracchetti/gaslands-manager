@@ -20,7 +20,7 @@
 regles_maison:
   - nom: 'Distribution des points de Résistance aux équipes'
     nom_interne: 'distribution_points_resistance'
-    description_decochee: 'Les participants classés dans la seconde moitié du classement de la partie gagnent tous 3 Points de Résistance.'
+    description_decochee: 'Les participants classés dans la seconde moitié du classement de la partie gagnent tous un jeton de sabotage.'
     description_cochee: "Les participants qui n'ont gagné aucun point de championnat sur la partie gagnent 3 Points de Résistance."
 
   - nom: "Cagnotte collective de fin d'Événement Télévisé"
