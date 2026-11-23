@@ -36,7 +36,9 @@ asynchrone, seul un Signal déclenche le re-rendu.
 
 ```typescript
 // ❌ ne re-rend pas
-this.http.get('/api/data').subscribe(() => { this.loading = false; });
+this.http.get('/api/data').subscribe(() => {
+  this.loading = false;
+});
 // ✅
 loading = signal(true);
 this.http.get('/api/data').subscribe(() => this.loading.set(false));
@@ -52,13 +54,13 @@ Outils : `signal()`, `computed()`, `input()`/`output()`, `effect()`.
 
 ### 2.3 Fichiers clés
 
-| Fichier | Rôle |
-|---|---|
-| `apps/frontend/src/app/app.config.ts` | zoneless, router, HttpClient, intercepteur |
-| `apps/frontend/src/app/app.routes.ts` | routes lazy |
-| `apps/frontend/src/app/auth/auth.service.ts` | utilisateur courant (signals), login/logout, usurpation |
-| `apps/frontend/src/app/catalog/catalog.service.ts` | catalogue public |
-| `apps/frontend/src/styles.scss` | tokens CSS (couleurs, tints, tailles de police) |
+| Fichier                                            | Rôle                                                    |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| `apps/frontend/src/app/app.config.ts`              | zoneless, router, HttpClient, intercepteur              |
+| `apps/frontend/src/app/app.routes.ts`              | routes lazy                                             |
+| `apps/frontend/src/app/auth/auth.service.ts`       | utilisateur courant (signals), login/logout, usurpation |
+| `apps/frontend/src/app/catalog/catalog.service.ts` | catalogue public                                        |
+| `apps/frontend/src/styles.scss`                    | tokens CSS (couleurs, tints, tailles de police)         |
 
 ---
 
@@ -115,7 +117,9 @@ réglage des règles maison), `DocsService` (manifeste de la documentation utili
 
 ```typescript
 class TestCatalogService extends CatalogService {
-  protected override readFileContent(filename: string): string { return MOCK_YAML[filename]; }
+  protected override readFileContent(filename: string): string {
+    return MOCK_YAML[filename];
+  }
 }
 ```
 
@@ -124,12 +128,12 @@ class TestCatalogService extends CatalogService {
 > Méthode de conception (générique) : skill [`ddd`](../.claude/skills/ddd/SKILL.md). Ici, le pattern
 > concret en place. `team/`, `campaign/` et `auth/` le suivent.
 
-| Couche | Dossier | Contient | Règle absolue |
-|---|---|---|---|
-| Domaine | `domain/` | agrégat, entités enfants, Value Objects, interfaces `IXxxRepository` | 0 dépendance NestJS/TypeORM |
-| Application | `application/` | un use case par commande | orchestration uniquement |
-| Infrastructure | `infrastructure/` | repository TypeORM, mappers, adapters | implémente les interfaces du domaine |
-| Présentation | `*.controller.ts` | controllers | HTTP → commande → use case |
+| Couche         | Dossier           | Contient                                                             | Règle absolue                        |
+| -------------- | ----------------- | -------------------------------------------------------------------- | ------------------------------------ |
+| Domaine        | `domain/`         | agrégat, entités enfants, Value Objects, interfaces `IXxxRepository` | 0 dépendance NestJS/TypeORM          |
+| Application    | `application/`    | un use case par commande                                             | orchestration uniquement             |
+| Infrastructure | `infrastructure/` | repository TypeORM, mappers, adapters                                | implémente les interfaces du domaine |
+| Présentation   | `*.controller.ts` | controllers                                                          | HTTP → commande → use case           |
 
 **L'agrégat porte toutes les règles** et lève `DomainException` ; le use case la traduit en
 `BadRequestException` (seul point de contact NestJS/domaine).
@@ -202,26 +206,26 @@ l'agrégat chargé (`vehicleCount`, `vehiclesCost`, `budget`, `campaignBudget`, 
 
 ### 3.7 Fichiers clés (backend)
 
-| Fichier | Rôle |
-|---|---|
-| `main.ts` | bootstrap, préfixe `/api`, helmet, CORS, trust proxy |
-| `app/app.module.ts` | TypeORM, ConfigModule, throttler, modules |
-| `app/auth/domain/user.ts` | agrégat User, getter `callName` (unique source du nom affiché) |
-| `app/auth/domain/password-hasher.interface.ts`, `token-issuer.interface.ts` | ports hexagonaux (bcrypt, JWT hors domaine) |
-| `app/auth/application/` | use cases ; **aucun** ne porte `@LogUseCase()` (il journaliserait les mots de passe) |
-| `app/auth/infrastructure/user.mapper.ts` | ORM ↔ agrégat (aussi utilisé par `CampaignQueryService` pour `callName`) |
-| `app/auth/infrastructure/user-http.mapper.ts` | agrégat → DTO (matérialise `callName`, n'expose jamais le hash) |
-| `app/team/domain/team.ts` | agrégat Team |
-| `app/team/infrastructure/team.mapper.ts`, `catalog.adapter.ts` | mapping ORM, `CatalogService` → `ICatalogRepository` |
-| `app/team/team.tokens.ts`, `team.module.ts` | tokens d'injection, modèle de câblage |
-| `app/campaign/domain/campaign.ts` | agrégat Campaign (navigation, cycle de vie, replay, `strategyFactory`) |
-| `app/campaign/domain/games/game.ts` | construction des événements d'une partie (Invoker) |
-| `app/campaign/domain/games/game-context.ts` | `GameRulesContext`, interface étroite exposée par `Campaign` à `Game` |
-| `app/campaign/domain/house-rules/` | `HouseRules` (Value Object), `HouseRuleStrategyFactory`, une Strategy par point de calcul |
-| `app/campaign/domain/wreck/wreck-table.ts` | Table des Épaves (domain service, `IRandomizer` + `ICatalogRepository`) |
-| `app/campaign/infrastructure/campaign-replay.service.ts` | `loadAndReplay`, unique point d'entrée des use cases |
-| `app/campaign/infrastructure/random-provider.ts` | adaptateur `IRandomizer` → `Math.random()` |
-| `app/campaign/campaign-query.service.ts` | read models (CQRS) |
+| Fichier                                                                     | Rôle                                                                                      |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `main.ts`                                                                   | bootstrap, préfixe `/api`, helmet, CORS, trust proxy                                      |
+| `app/app.module.ts`                                                         | TypeORM, ConfigModule, throttler, modules                                                 |
+| `app/auth/domain/user.ts`                                                   | agrégat User, getter `callName` (unique source du nom affiché)                            |
+| `app/auth/domain/password-hasher.interface.ts`, `token-issuer.interface.ts` | ports hexagonaux (bcrypt, JWT hors domaine)                                               |
+| `app/auth/application/`                                                     | use cases ; **aucun** ne porte `@LogUseCase()` (il journaliserait les mots de passe)      |
+| `app/auth/infrastructure/user.mapper.ts`                                    | ORM ↔ agrégat (aussi utilisé par `CampaignQueryService` pour `callName`)                  |
+| `app/auth/infrastructure/user-http.mapper.ts`                               | agrégat → DTO (matérialise `callName`, n'expose jamais le hash)                           |
+| `app/team/domain/team.ts`                                                   | agrégat Team                                                                              |
+| `app/team/infrastructure/team.mapper.ts`, `catalog.adapter.ts`              | mapping ORM, `CatalogService` → `ICatalogRepository`                                      |
+| `app/team/team.tokens.ts`, `team.module.ts`                                 | tokens d'injection, modèle de câblage                                                     |
+| `app/campaign/domain/campaign.ts`                                           | agrégat Campaign (navigation, cycle de vie, replay, `strategyFactory`)                    |
+| `app/campaign/domain/games/game.ts`                                         | construction des événements d'une partie (Invoker)                                        |
+| `app/campaign/domain/games/game-context.ts`                                 | `GameRulesContext`, interface étroite exposée par `Campaign` à `Game`                     |
+| `app/campaign/domain/house-rules/`                                          | `HouseRules` (Value Object), `HouseRuleStrategyFactory`, une Strategy par point de calcul |
+| `app/campaign/domain/wreck/wreck-table.ts`                                  | Table des Épaves (domain service, `IRandomizer` + `ICatalogRepository`)                   |
+| `app/campaign/infrastructure/campaign-replay.service.ts`                    | `loadAndReplay`, unique point d'entrée des use cases                                      |
+| `app/campaign/infrastructure/random-provider.ts`                            | adaptateur `IRandomizer` → `Math.random()`                                                |
+| `app/campaign/campaign-query.service.ts`                                    | read models (CQRS)                                                                        |
 
 ### 3.8 Mode campagne - event sourcing
 
@@ -231,12 +235,12 @@ l'agrégat ; lectures : `CampaignQueryService` (accès ORM direct). Conception d
 répartition `Campaign`/`Game`, entités transientes, règles maison) :
 [DOMAIN_MODEL.md §4](DOMAIN_MODEL.md#4-domaine-campagne-event-sourcing).
 
-| Pattern GoF | Classes |
-|---|---|
-| Command | `GameEvent` et ses sous-classes (`execute()`/`undo()`/`describe()`) |
-| Invoker | `Game` (`EvenementTeleGame`, `EscarmoucheGame`) : `canAccept`/`addEvent` selon le statut |
-| Receiver | `CampaignParticipant` (compteurs transients) |
-| Strategy + Abstract Factory | règles maison (`HouseRuleStrategyFactory`) |
+| Pattern GoF                 | Classes                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| Command                     | `GameEvent` et ses sous-classes (`execute()`/`undo()`/`describe()`)                      |
+| Invoker                     | `Game` (`EvenementTeleGame`, `EscarmoucheGame`) : `canAccept`/`addEvent` selon le statut |
+| Receiver                    | `CampaignParticipant` (compteurs transients)                                             |
+| Strategy + Abstract Factory | règles maison (`HouseRuleStrategyFactory`)                                               |
 
 **Flux d'une écriture** :
 
@@ -258,6 +262,7 @@ lui-même, idempotent) puis `appendEvents` ; ensuite `campaign.enterAtelier(game
 atelier éventuel) puis `saveCampaign`.
 
 **Points d'attention** :
+
 - **Valeurs nouvelles du journal** : le replay n'a pas de repli pour une valeur inconnue → à déclarer dans [`valeurs-nouvelles.txt`](../apps/backend/src/migrations/valeurs-nouvelles.txt).
 - **`resistancePoints` secret** : jamais exposé ; seul le dérivé `sabotagePoints` l'est, au propriétaire (cf. [CAMPAIGN.md](spec/CAMPAIGN.md#points-de-sabotage)).
 - **Aléatoire** derrière le port `IRandomizer` ; en test, `FixedRandomizer` passé au constructeur de `WreckTable` (avec un double minimal d'`ICatalogRepository` : seul `getSequellaType` est appelé).
@@ -275,10 +280,10 @@ consommées par `app.module.ts` et `data-source.ts` (CLI). `ALL_MIGRATIONS` est 
 jamais un glob** : le backend est empaqueté en un seul `main.js` par webpack, seul l'import statique
 fait entrer les migrations dans le bundle.
 
-| Mode | `synchronize` | `migrationsRun` |
-|---|---|---|
-| dev / test / e2e (`NODE_ENV` ≠ `production`) | `true` | `false` |
-| production | `false` | `DB_MIGRATIONS_RUN` |
+| Mode                                         | `synchronize` | `migrationsRun`     |
+| -------------------------------------------- | ------------- | ------------------- |
+| dev / test / e2e (`NODE_ENV` ≠ `production`) | `true`        | `false`             |
+| production                                   | `false`       | `DB_MIGRATIONS_RUN` |
 
 `DB_SYNCHRONIZE`, s'il est défini, l'emporte toujours. `NODE_ENV=e2e` est accepté (l'exécuteur
 `@nx/js:node` le fixe à sa `configurationName`).
@@ -301,6 +306,7 @@ docker stop gaslands-migcheck
 **Migrations additives** : le retour arrière relance l'image N-1 **sans restaurer la base**
 ([ADR 0001](adr/0001-retour-arriere-par-l-image-precedente-sans-restauration.md)), ce qui n'est sûr
 que si N-1 tourne sur le schéma laissé par N.
+
 - Une migration ajoute (table, colonne nullable ou avec `DEFAULT`, index, contrainte). Un changement destructif s'étale sur deux versions (ajout en N, suppression en N+1).
 - Sinon, marqueur exact `// incompatible : <raison>` (minuscules, `//`, raison non vide - le script de retour arrière le cherche avec la même regex) ; le retour arrière passe alors par la restauration du dump.
 - Enum : `ALTER TYPE "…" ADD VALUE '…'`, jamais la séquence TypeORM (renommage, `DROP TYPE`), et ne pas utiliser la nouvelle valeur dans le même lot (tout le lot tourne dans une transaction).
@@ -324,6 +330,7 @@ pour qui lance la stack complète. `./dev.sh` ne démarre que postgres et pgAdmi
 tournent en `nx serve` (hot reload).
 
 **Production** (`docker-compose.prod.yml`) :
+
 - Le reverse proxy Caddy vit dans un stack séparé et partagé, `docker/edge/`, seul à publier 80/443 pour tout le VPS ; chaque application y dépose un fichier `sites/*.caddy` (Gaslands : `docker/caddy/gaslands.caddy`, domaine substitué par `sed` au déploiement) puis `caddy reload`.
 - Aucun `ports:` sur postgres/backend/frontend, pas de pgAdmin. Réseaux : `edge_net` (externe, partagé avec Caddy, alias `gaslands-backend`/`gaslands-frontend` pour éviter les collisions DNS) et `gaslands_db_net` (`internal: true`, backend + postgres seulement).
 - `backend` en `read_only` (+ `tmpfs /tmp`), `USER node`, `init: true`. Le frontend (nginx) ne sert que du statique ; `/api/*` va directement du proxy au backend.
@@ -340,19 +347,19 @@ uniquement (jamais `latest`), packages publics (aucun secret dans l'image). `IMA
 
 ## 6. Sécurité
 
-| Aspect | Implémentation |
-|---|---|
-| Mots de passe | bcrypt coût 10, uniquement dans `BcryptPasswordHasher` |
-| JWT | `JWT_SECRET`, 7 jours, pas de révocation (d'où la déconnexion après changement de mot de passe) |
-| Réponses API | le hash n'existe dans aucun DTO (mapper `userDomainToDto`) |
-| Proxy de confiance | `trust proxy: 1` (un saut : Caddy) |
-| En-têtes | `helmet()` ; CSP désactivée côté Nest, elle vit uniquement dans Caddy |
-| Taille de corps | `json` 128kb, `urlencoded` 16kb |
-| CORS | `CORS_ORIGIN` (obligatoire en production), repli `http://localhost:4200` |
-| Erreur de login | message générique (pas d'énumération d'emails) |
-| Limite de débit | `@nestjs/throttler` global 300 req/60s/IP (`THROTTLE_TTL`/`THROTTLE_LIMIT`), resserré par route : login 5/60s **et** 20/3600s (throttler nommé `secondary`), register 3/3600s, changement de mot de passe 5/300s ; désactivé hors production (sinon `frontend-e2e` échoue) |
+| Aspect             | Implémentation                                                                                                                                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mots de passe      | bcrypt coût 10, uniquement dans `BcryptPasswordHasher`                                                                                                                                                                                                                     |
+| JWT                | `JWT_SECRET`, 7 jours, pas de révocation (d'où la déconnexion après changement de mot de passe)                                                                                                                                                                            |
+| Réponses API       | le hash n'existe dans aucun DTO (mapper `userDomainToDto`)                                                                                                                                                                                                                 |
+| Proxy de confiance | `trust proxy: 1` (un saut : Caddy)                                                                                                                                                                                                                                         |
+| En-têtes           | `helmet()` ; CSP désactivée côté Nest, elle vit uniquement dans Caddy                                                                                                                                                                                                      |
+| Taille de corps    | `json` 128kb, `urlencoded` 16kb                                                                                                                                                                                                                                            |
+| CORS               | `CORS_ORIGIN` (obligatoire en production), repli `http://localhost:4200`                                                                                                                                                                                                   |
+| Erreur de login    | message générique (pas d'énumération d'emails)                                                                                                                                                                                                                             |
+| Limite de débit    | `@nestjs/throttler` global 300 req/60s/IP (`THROTTLE_TTL`/`THROTTLE_LIMIT`), resserré par route : login 5/60s **et** 20/3600s (throttler nommé `secondary`), register 3/3600s, changement de mot de passe 5/300s ; désactivé hors production (sinon `frontend-e2e` échoue) |
 
-- **Caddy écrase** `X-Forwarded-For`/`X-Real-IP` avec l'IP réelle (`header_up … {http.request.remote.host}`) : un proxy qui *ajouterait* à l'en-tête rendrait la limite de débit contournable.
+- **Caddy écrase** `X-Forwarded-For`/`X-Real-IP` avec l'IP réelle (`header_up … {http.request.remote.host}`) : un proxy qui _ajouterait_ à l'en-tête rendrait la limite de débit contournable.
 - `GET /api/health` : `SELECT 1`, l'exception n'est pas attrapée (base indisponible → 500, signal du healthcheck Docker) ; `@SkipThrottle({ default: true, secondary: true })` - sans argument, seul `default` serait ignoré.
 - `GET /api/version` : renvoie `IMAGE_TAG`, ou `null` (jamais de repli comme `"latest"`).
 - **CSP stricte et CSS critique** : le builder Angular inline par défaut le CSS critique avec un `onload` inline, bloqué par la CSP (`script-src` sans `unsafe-inline`) → page sans style. Désactivé : `optimization.styles.inlineCritical: false` (configuration `production` de `apps/frontend/project.json`).
@@ -361,12 +368,12 @@ uniquement (jamais `latest`), packages publics (aucun secret dans l'image). `IMA
 
 ## 7. Tests
 
-| Projet | Outil | Commande |
-|---|---|---|
-| Frontend (unitaires) | Vitest + Angular Testing Library | `npx nx test frontend` |
-| Backend (unitaires) | Vitest | `npx nx test backend` |
-| E2E frontend | Playwright | `npx nx e2e frontend-e2e` |
-| E2E backend | Vitest + axios | `npx nx e2e backend-e2e` |
+| Projet               | Outil                            | Commande                  |
+| -------------------- | -------------------------------- | ------------------------- |
+| Frontend (unitaires) | Vitest + Angular Testing Library | `npx nx test frontend`    |
+| Backend (unitaires)  | Vitest                           | `npx nx test backend`     |
+| E2E frontend         | Playwright                       | `npx nx e2e frontend-e2e` |
+| E2E backend          | Vitest + axios                   | `npx nx e2e backend-e2e`  |
 
 Règle : tout nouveau module NestJS → tests unitaires service + controller ; tout nouveau service
 Angular → tests unitaires. Patterns unitaires : [TESTING.md](TESTING.md). Tout l'e2e : skill `e2e-testing`.
