@@ -21,6 +21,7 @@ const workshop: WorkshopStateDto = {
   wallet: 10,
   championshipPoints: 0,
   sabotagePoints: 0,
+  lastSabotageConversionJerricans: null,
   vehicles: [
     {
       id: 5,

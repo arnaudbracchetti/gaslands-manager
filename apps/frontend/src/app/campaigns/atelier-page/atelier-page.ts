@@ -39,12 +39,18 @@ import { buildVehicleSaleSummary, VehicleSaleSummary } from './vehicle-sale-summ
 import { SellVehicleModal } from './sell-vehicle-modal/sell-vehicle-modal';
 import { Breadcrumb, BreadcrumbItem } from '../../shared/breadcrumb/breadcrumb';
 import { Icon } from '../../shared/icon/icon';
+import { ConfirmModal } from '../../shared/confirm-modal/confirm-modal';
 import { IconConcept } from '../../shared/icon/icon-sheet.map';
+
+/** `nom_interne` de la règle maison au catalogue (`database_init/data/regles-maison.yml`). */
+const SABOTAGE_CONVERSION_RULE = 'conversion_sabotage_jerricans';
+/** Taux affiché dans la confirmation — la valeur autoritaire est celle de la Strategy backend. */
+const JERRICANS_PER_SABOTAGE_TOKEN = 3;
 
 @Component({
   selector: 'app-atelier-page',
   standalone: true,
-  imports: [VehicleSummaryCard, VehicleChoiceCard, SellVehicleModal, Breadcrumb, Icon],
+  imports: [VehicleSummaryCard, VehicleChoiceCard, SellVehicleModal, Breadcrumb, Icon, ConfirmModal],
   templateUrl: './atelier-page.html',
   styleUrl: './atelier-page.scss',
 })
@@ -61,6 +67,8 @@ export class AtelierPage implements OnInit {
   workshop: WritableSignal<WorkshopStateDto | null> = signal<WorkshopStateDto | null>(null);
   sponsorCatalog: WritableSignal<Sponsor | null> = signal<Sponsor | null>(null);
   campaignName: WritableSignal<string> = signal('');
+  /** Clés (`nom_interne`) des règles maison activées sur la campagne — pilote la conversion de sabotage. */
+  houseRules: WritableSignal<string[]> = signal<string[]>([]);
 
   /**
    * Verdicts de disponibilité budgétaire des véhicules du sponsor pour l'achat d'un
@@ -83,6 +91,14 @@ export class AtelierPage implements OnInit {
 
   /** Points de sabotage disponibles — 1 par tranche de 3 Points de Résistance secrets. */
   sabotagePoints: Signal<number> = computed((): number => this.workshop()?.sabotagePoints ?? 0);
+
+  /** Règle maison « conversion de sabotage » activée sur cette campagne ? (le backend reste seul juge) */
+  sabotageConversionEnabled: Signal<boolean> = computed(
+    (): boolean => this.houseRules().includes(SABOTAGE_CONVERSION_RULE),
+  );
+
+  /** Au moins 1 jeton à convertir — évite un aller-retour réseau voué au rejet (400). */
+  canConvertSabotage: Signal<boolean> = computed((): boolean => this.sabotagePoints() >= 1);
 
   /** Véhicules de l'équipe engagée, traduits vers la forme attendue par `buildVehicleSummary`. */
   vehicles: Signal<Vehicle[]> = computed((): Vehicle[] => {
@@ -124,6 +140,98 @@ export class AtelierPage implements OnInit {
     return buildVehicleSaleSummary(wsVehicle, catalog);
   });
 
+  // ── Conversion de sabotage (règle maison) ───────────────────────────────────
+
+  confirmingConversion: WritableSignal<boolean> = signal(false);
+  convertingSabotage: WritableSignal<boolean> = signal(false);
+
+  /** Message de la confirmation : aperçu avant/après des deux compteurs. */
+  conversionMessage: Signal<string> = computed(
+    (): string =>
+      `Convertir 1 jeton de sabotage en ${JERRICANS_PER_SABOTAGE_TOKEN} jerricans ? ` +
+      `Sabotage : ${this.sabotagePoints()} → ${this.sabotagePoints() - 1} · ` +
+      `Cagnotte : ${this.wallet()} → ${this.wallet() + JERRICANS_PER_SABOTAGE_TOKEN}`,
+  );
+
+  // ── Annulation d'une conversion (même session d'atelier) ────────────────────
+
+  /** Jerricans de la dernière conversion — `null` s'il n'y en a pas (bouton d'annulation absent). */
+  lastConversionJerricans: Signal<number | null> = computed(
+    (): number | null => this.workshop()?.lastSabotageConversionJerricans ?? null,
+  );
+
+  /** Annuler rendrait la cagnotte négative si les jerricans convertis ont été dépensés — le serveur reste seul juge. */
+  canCancelConversion: Signal<boolean> = computed((): boolean => {
+    const gained = this.lastConversionJerricans();
+    return gained !== null && this.wallet() >= gained;
+  });
+
+  confirmingCancellation: WritableSignal<boolean> = signal(false);
+  cancellingConversion: WritableSignal<boolean> = signal(false);
+
+  cancellationMessage: Signal<string> = computed(
+    (): string =>
+      `Annuler la dernière conversion ? ` +
+      `Sabotage : ${this.sabotagePoints()} → ${this.sabotagePoints() + 1} · ` +
+      `Cagnotte : ${this.wallet()} → ${this.wallet() - (this.lastConversionJerricans() ?? 0)}`,
+  );
+
+  onCancelConversionRequested(): void {
+    if (!this.canCancelConversion()) return;
+    this.confirmingCancellation.set(true);
+  }
+
+  onDismissCancellation(): void {
+    this.confirmingCancellation.set(false);
+  }
+
+  onConfirmCancellation(): void {
+    this.cancellingConversion.set(true);
+    this.error.set('');
+
+    this.campaignsService.cancelSabotageConversion(this.campaignId).subscribe({
+      next: (): void => {
+        this.confirmingCancellation.set(false);
+        this.cancellingConversion.set(false);
+        this.loadWorkshop();
+        this.loadAvailableVehicles(); // la cagnotte change → nouveaux verdicts d'achat
+      },
+      error: (err: HttpErrorResponse): void => {
+        this.error.set(err.error?.message ?? "Impossible d'annuler la conversion. Réessayez.");
+        this.confirmingCancellation.set(false);
+        this.cancellingConversion.set(false);
+      },
+    });
+  }
+
+  onConvertSabotageRequested(): void {
+    if (!this.canConvertSabotage()) return;
+    this.confirmingConversion.set(true);
+  }
+
+  onCancelConversion(): void {
+    this.confirmingConversion.set(false);
+  }
+
+  onConfirmConversion(): void {
+    this.convertingSabotage.set(true);
+    this.error.set('');
+
+    this.campaignsService.convertSabotage(this.campaignId).subscribe({
+      next: (): void => {
+        this.confirmingConversion.set(false);
+        this.convertingSabotage.set(false);
+        this.loadWorkshop();
+        this.loadAvailableVehicles(); // la cagnotte change → nouveaux verdicts d'achat
+      },
+      error: (err: HttpErrorResponse): void => {
+        this.error.set(err.error?.message ?? 'Impossible de convertir le jeton. Réessayez.');
+        this.confirmingConversion.set(false);
+        this.convertingSabotage.set(false);
+      },
+    });
+  }
+
   // ── Achat d'un véhicule ──────────────────────────────────────────────────────
 
   showAddVehicle: WritableSignal<boolean> = signal(false);
@@ -137,7 +245,10 @@ export class AtelierPage implements OnInit {
 
   private loadCampaignName(): void {
     this.campaignsService.getOne(this.campaignId).subscribe({
-      next: (campaign): void => this.campaignName.set(campaign.name),
+      next: (campaign): void => {
+        this.campaignName.set(campaign.name);
+        this.houseRules.set(campaign.houseRules ?? []);
+      },
       // Non bloquant : le fil d'Ariane retombe sur "…" si le nom ne charge pas.
       error: (): void => undefined,
     });

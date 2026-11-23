@@ -13,12 +13,13 @@ import { FavoriDuPublicBonusEvent } from '../events/favori-du-public-bonus.event
 import { ResistanceContactedEvent } from '../events/resistance-contacted.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
+import { SabotageConvertedEvent } from '../events/sabotage-converted.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import type { GameEvent } from '../events/game-event';
 import type { GameRulesContext } from './game-context';
-import type { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
+import { HouseRuleStrategyFactory } from '../house-rules/house-rule-strategy.factory';
 import {
   NoChampionshipPointsStrategy,
   type ResistanceDistributionStrategy,
@@ -35,6 +36,7 @@ import { CappedJerricanGainsStrategy } from '../house-rules/jerrican-gains-cap-s
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
 import { Advantage } from '../../../team/domain/advantage';
+import { HouseRules } from '../house-rules/house-rules';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import { WeightClass } from '../enums/weight-class.enum';
 import { WreckResult } from '../enums/wreck-result.enum';
@@ -44,6 +46,7 @@ import {
   EquipmentOperation,
   EquipmentEntityType,
 } from '../enums/equipment-change.enums';
+import { DomainException } from '../../../shared/domain/domain-exception';
 import { CampaignParticipant } from '../campaign-participant';
 import { ParticipantStatus } from '../enums/campaign.enums';
 import {
@@ -266,6 +269,11 @@ describe('EvenementTeleGame — canAccept en ATELIER', () => {
         new WreckResolvedEvent(13, 10, 1, 13, 1, 2, 0, WreckResult.INDEMNE, 0),
     ],
     ['VehicleRenamedEvent', true, makeVehicleRenamedEvent],
+    [
+      'SabotageConvertedEvent',
+      true,
+      () => new SabotageConvertedEvent(14, 10, 1, 14, 1, 3),
+    ],
   ];
 
   it.each(allKnownEvents)(
@@ -414,7 +422,7 @@ describe('Game — addEvent / DomainException', () => {
         applied.push(this.eventOrder);
       }
       override undo(): void {
-        /* no-op : seul execute() est observé */
+        // sans effet : seul l'ordre d'exécution est observé
       }
     }
     const e1 = new SpyEvent(1, 10, 1, 3, 1, 0);
@@ -3221,5 +3229,193 @@ describe('Game — changeEquipment', () => {
     expect(weapon.isSold).toBe(true); // reste vendue — pas cascadée par CETTE vente
     expect(improvement.isSold).toBe(false); // dé-cascadée
     expect(advantage.isSold).toBe(false); // dé-cascadé
+  });
+});
+
+describe('Game — convertSabotage (règle maison conversion_sabotage_jerricans)', () => {
+  function makeRulesContext(enabled: boolean): GameRulesContext {
+    return {
+      strategyFactory: new HouseRuleStrategyFactory(
+        enabled
+          ? HouseRules.fromPersisted(['conversion_sabotage_jerricans'])
+          : HouseRules.none(),
+      ),
+    };
+  }
+
+  function makeAtelierGame(
+    enabled: boolean,
+    status: GameStatus = GameStatus.ATELIER,
+  ): EvenementTeleGame {
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      status,
+      1,
+      'scen',
+      new Date(),
+      [],
+    );
+    game.attachContext(makeRulesContext(enabled));
+    return game;
+  }
+
+  function makeParticipantWithTokens(tokens: number): CampaignParticipant {
+    const p = new CampaignParticipant(
+      1,
+      42,
+      1,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    p.addResistance(tokens * 3);
+    return p;
+  }
+
+  it('journalise un SabotageConvertedEvent (1 jeton → 3 jerricans) quand la règle est active', () => {
+    const game = makeAtelierGame(true);
+    const participant = makeParticipantWithTokens(2);
+
+    const events = game.convertSabotage(participant);
+
+    expect(events).toHaveLength(1);
+    const event = events[0] as SabotageConvertedEvent;
+    expect(event).toBeInstanceOf(SabotageConvertedEvent);
+    expect(event.tokensConverted).toBe(1);
+    expect(event.jerricansGained).toBe(3);
+    expect(game.events).toContain(event);
+  });
+
+  it('rejette si la règle maison est désactivée (défaut)', () => {
+    const game = makeAtelierGame(false);
+
+    expect(() => game.convertSabotage(makeParticipantWithTokens(2))).toThrow(
+      DomainException,
+    );
+    expect(game.events).toHaveLength(0);
+  });
+
+  it('rejette hors Atelier', () => {
+    const game = makeAtelierGame(true, GameStatus.PLANIFIE);
+
+    expect(() => game.convertSabotage(makeParticipantWithTokens(2))).toThrow(
+      DomainException,
+    );
+  });
+
+  it('rejette quand le solde de jetons est nul (jamais de solde négatif)', () => {
+    const game = makeAtelierGame(true);
+    const participant = makeParticipantWithTokens(0);
+
+    expect(() => game.convertSabotage(participant)).toThrow(DomainException);
+    expect(game.events).toHaveLength(0);
+  });
+
+  it('rejette un solde de 2 PR (moins de 1 jeton entier)', () => {
+    const game = makeAtelierGame(true);
+    const participant = new CampaignParticipant(
+      1,
+      42,
+      1,
+      false,
+      ParticipantStatus.VALIDATED,
+    );
+    participant.addResistance(2);
+
+    expect(() => game.convertSabotage(participant)).toThrow(DomainException);
+  });
+});
+
+describe('Game — cancelSabotageConversion (annulation même session, cagnotte jamais négative)', () => {
+  /** Partie en ATELIER portant déjà une conversion (3 jerricans) du participant `pid`, id d'événement 500. */
+  function makeGameWithConversion(
+    pid: number,
+    status: GameStatus = GameStatus.ATELIER,
+  ): EvenementTeleGame {
+    return new EvenementTeleGame(10, 1, status, 1, 'scen', new Date(), [
+      new SabotageConvertedEvent(500, 10, pid, 1, 1, 3),
+    ]);
+  }
+
+  /** Participant dont l'état est celui d'après replay : wallet initial 29, conversion rejouée (+3 jerricans, −3 PR). */
+  function makeReplayedParticipant(): CampaignParticipant {
+    const { participant } = makeTestParticipant(1); // wallet 29
+    participant.creditWallet(3); // effet rejoué de la conversion
+    return participant;
+  }
+
+  it("renvoie l'id de l'événement à supprimer quand la cagnotte couvre l'annulation", () => {
+    const game = makeGameWithConversion(1);
+
+    expect(game.cancelSabotageConversion(makeReplayedParticipant())).toEqual([
+      500,
+    ]);
+  });
+
+  it("autorise l'annulation quand la cagnotte égale exactement les jerricans convertis (solde final 0)", () => {
+    const game = makeGameWithConversion(1);
+    const participant = makeReplayedParticipant();
+    participant.creditWallet(-(participant.wallet - 3)); // il reste exactement 3
+
+    expect(participant.wallet).toBe(3);
+    expect(game.cancelSabotageConversion(participant)).toEqual([500]);
+  });
+
+  it('REJETTE si les jerricans convertis ont été dépensés (solde 1 → conversion 4 → achat à 3 → 1 → annuler = -2)', () => {
+    const game = makeGameWithConversion(1);
+    const participant = makeReplayedParticipant();
+    participant.creditWallet(-(participant.wallet - 4)); // état « solde 4 après conversion »
+    participant.creditWallet(-3); // achat d'une arme à 3 → solde 1
+
+    expect(participant.wallet).toBe(1);
+    expect(() => game.cancelSabotageConversion(participant)).toThrow(
+      DomainException,
+    );
+  });
+
+  it("rejette quand aucune conversion n'existe pour ce participant", () => {
+    const game = makeGameWithConversion(2); // conversion d'un AUTRE participant
+
+    expect(() =>
+      game.cancelSabotageConversion(makeReplayedParticipant()),
+    ).toThrow(DomainException);
+  });
+
+  it('rejette hors Atelier', () => {
+    const game = makeGameWithConversion(1, GameStatus.JOUE);
+
+    expect(() =>
+      game.cancelSabotageConversion(makeReplayedParticipant()),
+    ).toThrow(DomainException);
+  });
+
+  it('annule la conversion la plus RÉCENTE quand il y en a plusieurs', () => {
+    const game = new EvenementTeleGame(
+      10,
+      1,
+      GameStatus.ATELIER,
+      1,
+      'scen',
+      new Date(),
+      [
+        new SabotageConvertedEvent(500, 10, 1, 1, 1, 3),
+        new SabotageConvertedEvent(501, 10, 1, 2, 1, 3),
+      ],
+    );
+
+    expect(game.cancelSabotageConversion(makeReplayedParticipant())).toEqual([
+      501,
+    ]);
+  });
+
+  it('reste possible quand la règle maison a été décochée entre-temps (retour arrière, pas conversion)', () => {
+    const game = makeGameWithConversion(1);
+    game.attachContext({
+      strategyFactory: new HouseRuleStrategyFactory(HouseRules.none()),
+    });
+
+    expect(game.cancelSabotageConversion(makeReplayedParticipant())).toEqual([
+      500,
+    ]);
   });
 });

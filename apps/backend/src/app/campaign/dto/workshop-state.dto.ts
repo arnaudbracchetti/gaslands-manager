@@ -132,5 +132,9 @@ export interface WorkshopStateDto {
    *  le total de Points de Résistance reste secret vis-à-vis des autres joueurs, seul son
    *  propriétaire peut voir ce compteur dérivé. */
   sabotagePoints: number | null;
+  /** Jerricans gagnés par la dernière conversion de sabotage du participant dans l'atelier
+   *  ouvert (règle maison R5) — `null` s'il n'y en a pas, ou quand l'atelier est consulté pour
+   *  un autre participant (même secret que `sabotagePoints`). Pilote le bouton d'annulation. */
+  lastSabotageConversionJerricans: number | null;
   vehicles: WorkshopVehicleDto[];
 }

@@ -11,6 +11,11 @@ import {
   type TvBonusDistributionStrategy,
 } from './tv-bonus-distribution-strategy';
 import {
+  NoSabotageConversionStrategy,
+  SabotageToJerricansStrategy,
+  type SabotageConversionStrategy,
+} from './sabotage-conversion-strategy';
+import {
   DefaultBaseIncomeStrategy,
   NoBaseIncomeStrategy,
   type BaseIncomeStrategy,
@@ -30,6 +35,7 @@ import {
 enum CalculationPoint {
   RESISTANCE_DISTRIBUTION = 'RESISTANCE_DISTRIBUTION',
   TV_BONUS_DISTRIBUTION = 'TV_BONUS_DISTRIBUTION',
+  SABOTAGE_CONVERSION = 'SABOTAGE_CONVERSION',
   BASE_INCOME_DISTRIBUTION = 'BASE_INCOME_DISTRIBUTION',
   JERRICAN_GAINS_CAP = 'JERRICAN_GAINS_CAP',
 }
@@ -48,6 +54,10 @@ type HouseRuleOverride =
   | {
       readonly point: CalculationPoint.TV_BONUS_DISTRIBUTION;
       readonly strategy: TvBonusDistributionStrategy;
+    }
+  | {
+      readonly point: CalculationPoint.SABOTAGE_CONVERSION;
+      readonly strategy: SabotageConversionStrategy;
     }
   | {
       readonly point: CalculationPoint.BASE_INCOME_DISTRIBUTION;
@@ -83,6 +93,13 @@ const HOUSE_RULE_REGISTRY: ReadonlyMap<string, HouseRuleOverride> = new Map<
     },
   ],
   [
+    'conversion_sabotage_jerricans',
+    {
+      point: CalculationPoint.SABOTAGE_CONVERSION,
+      strategy: new SabotageToJerricansStrategy(),
+    },
+  ],
+  [
     'escarmouche_bonus_jerricans',
     {
       point: CalculationPoint.BASE_INCOME_DISTRIBUTION,
@@ -100,6 +117,7 @@ const HOUSE_RULE_REGISTRY: ReadonlyMap<string, HouseRuleOverride> = new Map<
 
 const DEFAULT_RESISTANCE_STRATEGY = new DefaultResistanceStrategy();
 const DEFAULT_TV_BONUS_STRATEGY = new NoTvBonusStrategy();
+const DEFAULT_SABOTAGE_CONVERSION_STRATEGY = new NoSabotageConversionStrategy();
 const DEFAULT_BASE_INCOME_STRATEGY = new DefaultBaseIncomeStrategy();
 const DEFAULT_JERRICAN_GAINS_CAP_STRATEGY =
   new UnlimitedJerricanGainsStrategy();
@@ -172,6 +190,20 @@ export class HouseRuleStrategyFactory {
       );
     }
     return active[0]?.strategy ?? DEFAULT_JERRICAN_GAINS_CAP_STRATEGY;
+  }
+
+  /** Résout la Strategy de conversion des jetons de sabotage en jerricans —
+   *  `NoSabotageConversionStrategy` (conversion refusée) si aucune règle maison active. */
+  createSabotageConversionStrategy(): SabotageConversionStrategy {
+    const active = this.findActiveOverrides(
+      CalculationPoint.SABOTAGE_CONVERSION,
+    );
+    if (active.length > 1) {
+      throw new DomainException(
+        'Plusieurs règles maison actives régissent la conversion de sabotage — une seule à la fois.',
+      );
+    }
+    return active[0]?.strategy ?? DEFAULT_SABOTAGE_CONVERSION_STRATEGY;
   }
 
   private findActiveOverrides<P extends CalculationPoint>(

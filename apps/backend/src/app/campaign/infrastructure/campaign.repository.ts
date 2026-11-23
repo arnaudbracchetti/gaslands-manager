@@ -34,6 +34,7 @@ import type { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public
 import type { ResistanceContactedEvent } from '../domain/events/resistance-contacted.event';
 import type { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 import type { SabotagePointsSpentEvent } from '../domain/events/sabotage-points-spent.event';
+import type { SabotageConvertedEvent } from '../domain/events/sabotage-converted.event';
 import { GameEventType } from '../domain/enums/game-event-type.enum';
 
 /**
@@ -460,6 +461,14 @@ export class CampaignRepository implements ICampaignRepository {
           ...base,
           eventType: GameEventType.SABOTAGE_POINTS_SPENT,
           sabotagePointsSpent: e.pointsSpent,
+        };
+      }
+      case GameEventType.SABOTAGE_CONVERTED: {
+        const e = event as SabotageConvertedEvent;
+        return {
+          ...base, eventType: GameEventType.SABOTAGE_CONVERTED,
+          sabotageTokensConverted: e.tokensConverted,
+          sabotageJerricansGained: e.jerricansGained,
         };
       }
     }

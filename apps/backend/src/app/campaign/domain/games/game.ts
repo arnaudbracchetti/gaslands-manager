@@ -13,6 +13,7 @@ import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
 import { VehicleRenamedEvent } from '../events/vehicle-renamed.event';
 import { SabotagePointsSpentEvent } from '../events/sabotage-points-spent.event';
+import { SabotageConvertedEvent } from '../events/sabotage-converted.event';
 import { WalletReason } from '../enums/wallet-reason.enum';
 import {
   EXPLOIT_POINTS_BY_WEIGHT,
@@ -815,6 +816,79 @@ export abstract class Game {
       }
     }
     return events;
+  }
+
+  /**
+   * Règle maison « conversion de sabotage » : le participant échange 1 jeton de sabotage
+   * contre des jerricans (taux porté par la Strategy), pendant l'Atelier uniquement.
+   *
+   * Résout sa propre Strategy via `this.context.strategyFactory` — jamais reçue en
+   * paramètre (cf. skill `ddd`, « Qui sélectionne une Strategy ? »).
+   *
+   * Contrôles, dans cet ordre (le premier refus l'emporte, `DomainException` → HTTP 400) :
+   *  1. la règle maison est-elle activée dans cette campagne ?
+   *  2. la partie est-elle en Atelier ?
+   *  3. le participant a-t-il au moins 1 jeton ? Rejet explicite, jamais un clamp
+   *     silencieux : le joueur agit lui-même et doit savoir que l'action est impossible.
+   *     Garantit que le solde de jetons (donc les Points de Résistance) ne devient
+   *     jamais négatif.
+   */
+  convertSabotage(participant: CampaignParticipant): GameEvent[] {
+    const strategy = this.context.strategyFactory.createSabotageConversionStrategy();
+    if (!strategy.isAllowed()) {
+      throw new DomainException("La conversion des jetons de sabotage n'est pas activée dans cette campagne.");
+    }
+    if (this.status !== GameStatus.ATELIER) {
+      throw new DomainException("La conversion des jetons de sabotage n'est possible que pendant l'atelier.");
+    }
+    if (participant.sabotagePoints < 1) {
+      throw new DomainException('Aucun jeton de sabotage à convertir.');
+    }
+    const event = new SabotageConvertedEvent(0, this.id, participant.id, 0, 1, strategy.jerricansPerToken);
+    this.addEvent(event);
+    return [event];
+  }
+
+  /**
+   * Dernière conversion de sabotage de ce participant sur CETTE partie (donc dans la
+   * session d'atelier en cours), ou `null`. Lecture seule — sert à `cancelSabotageConversion`
+   * et à l'affichage (`GetWorkshopUseCase`).
+   */
+  findLastSabotageConversion(participantId: number): SabotageConvertedEvent | null {
+    const mine = this._events.filter(
+      (e): e is SabotageConvertedEvent => e instanceof SabotageConvertedEvent && e.participantId === participantId,
+    );
+    return mine.length > 0 ? mine[mine.length - 1] : null;
+  }
+
+  /**
+   * Annule la conversion de sabotage la plus récente du participant, tant que l'atelier
+   * de la partie est ouvert. Même modèle que l'annulation d'un achat de la session
+   * (`changeEquipment`) : retourne l'id de l'événement à SUPPRIMER physiquement du journal
+   * (aucun événement d'annulation) — l'appelant le supprime via `ICampaignRepository.
+   * deleteEvents`. Le replay suivant restitue le jeton et retire les jerricans convertis.
+   *
+   * Contrôles (premier refus l'emporte, `DomainException` → HTTP 400) :
+   *  1. la partie est en Atelier ;
+   *  2. une conversion existe pour ce participant ;
+   *  3. la cagnotte ne devient jamais négative : supprimer l'événement retire
+   *     `jerricansGained`, qui ont pu être dépensés depuis (achat d'une arme…).
+   *     `participant.wallet` vient du replay et inclut déjà tous les achats de la session.
+   * Volontairement SANS consulter la règle maison : annuler est un retour arrière, pas une
+   * conversion — reste possible si la règle a été décochée entre-temps.
+   */
+  cancelSabotageConversion(participant: CampaignParticipant): number[] {
+    if (this.status !== GameStatus.ATELIER) {
+      throw new DomainException("L'annulation d'une conversion n'est possible que pendant l'atelier.");
+    }
+    const conversion = this.findLastSabotageConversion(participant.id);
+    if (!conversion) {
+      throw new DomainException('Aucune conversion de sabotage à annuler.');
+    }
+    if (participant.wallet - conversion.jerricansGained < 0) {
+      throw new DomainException("Impossible d'annuler : les jerricans convertis ont déjà été dépensés.");
+    }
+    return [conversion.id];
   }
 
   /**

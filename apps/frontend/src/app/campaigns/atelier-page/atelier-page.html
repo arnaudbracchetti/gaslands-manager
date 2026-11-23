@@ -17,6 +17,24 @@
       <span class="atp-summary-sep">·</span>
       <span class="atp-summary-label">Sabotage</span>
       <span class="atp-summary-value atp-summary-value--sabotage">{{ sabotagePoints() }}</span>
+      @if (sabotageConversionEnabled()) {
+        <button
+          class="atp-convert-btn"
+          type="button"
+          [disabled]="!canConvertSabotage() || convertingSabotage()"
+          [title]="canConvertSabotage() ? 'Règle maison : 1 jeton = 3 jerricans' : 'Aucun jeton de sabotage à convertir'"
+          (click)="onConvertSabotageRequested()"
+        >⇄ Convertir sabotage en jerricans</button>
+      }
+      @if (lastConversionJerricans() !== null) {
+        <button
+          class="atp-convert-btn"
+          type="button"
+          [disabled]="!canCancelConversion() || cancellingConversion()"
+          [title]="canCancelConversion() ? 'Annuler la dernière conversion de sabotage' : 'Cagnotte insuffisante : les jerricans convertis ont déjà été dépensés'"
+          (click)="onCancelConversionRequested()"
+        >↩ Annuler une conversion</button>
+      }
     </div>
 
     @if (vehicleSummaries().length === 0) {
@@ -61,6 +79,27 @@
         }
       }
     </div>
+  }
+
+  @if (confirmingConversion()) {
+    <app-confirm-modal
+      [message]="conversionMessage()"
+      confirmLabel="Convertir"
+      variant="primary"
+      (confirmed)="onConfirmConversion()"
+      (cancelled)="onCancelConversion()"
+    />
+  }
+
+  @if (confirmingCancellation()) {
+    <app-confirm-modal
+      [message]="cancellationMessage()"
+      confirmLabel="Annuler la conversion"
+      cancelLabel="Garder"
+      variant="primary"
+      (confirmed)="onConfirmCancellation()"
+      (cancelled)="onDismissCancellation()"
+    />
   }
 
   @if (saleSummary(); as summary) {

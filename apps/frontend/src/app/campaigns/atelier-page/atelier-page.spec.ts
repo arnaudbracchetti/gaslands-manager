@@ -62,6 +62,7 @@ const mockWorkshop: WorkshopStateDto = {
   wallet: 10,
   championshipPoints: 0,
   sabotagePoints: 2,
+  lastSabotageConversionJerricans: null,
   vehicles: [
     {
       id: 5,
@@ -92,6 +93,8 @@ describe('AtelierPage', () => {
     getOne: ReturnType<typeof vi.fn>;
     getWorkshop: ReturnType<typeof vi.fn>;
     getWorkshopAvailableVehicles: ReturnType<typeof vi.fn>;
+    convertSabotage: ReturnType<typeof vi.fn>;
+    cancelSabotageConversion: ReturnType<typeof vi.fn>;
   };
   let mockCatalogService: { getSponsorByName: ReturnType<typeof vi.fn> };
 
@@ -102,6 +105,8 @@ describe('AtelierPage', () => {
       // Verdicts de disponibilité budgétaire des véhicules (grille "+ Ajouter un
       // véhicule") — `of([])` suffit, aucun de ces tests n'exerce le grisage.
       getWorkshopAvailableVehicles: vi.fn().mockReturnValue(of([])),
+      convertSabotage: vi.fn().mockReturnValue(of(undefined)),
+      cancelSabotageConversion: vi.fn().mockReturnValue(of(undefined)),
     };
     mockCatalogService = {
       getSponsorByName: vi.fn().mockReturnValue(of(mockSponsorCatalog)),
@@ -191,5 +196,149 @@ describe('AtelierPage', () => {
 
     expect(component.error()).toContain("Impossible de charger l'atelier");
     expect(component.loading()).toBe(false);
+  });
+
+  describe('conversion de sabotage (règle maison)', () => {
+    const withRule = { ...mockCampaign, houseRules: ['conversion_sabotage_jerricans'] };
+
+    function convertButton(): HTMLButtonElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.atp-convert-btn');
+    }
+
+    it('n\'affiche aucun bouton quand la règle maison est désactivée', () => {
+      createFixture('3');
+
+      expect(convertButton()).toBeNull();
+    });
+
+    it('affiche le bouton actif quand la règle est activée et qu\'il reste un jeton', () => {
+      mockCampaignsService.getOne.mockReturnValue(of(withRule));
+      createFixture('3');
+
+      expect(convertButton()).not.toBeNull();
+      expect(convertButton()!.disabled).toBe(false);
+    });
+
+    it('grise le bouton quand le solde de jetons est nul', () => {
+      mockCampaignsService.getOne.mockReturnValue(of(withRule));
+      mockCampaignsService.getWorkshop.mockReturnValue(of({ ...mockWorkshop, sabotagePoints: 0 }));
+      createFixture('3');
+
+      expect(convertButton()!.disabled).toBe(true);
+      component.onConvertSabotageRequested();
+      expect(component.confirmingConversion()).toBe(false);
+    });
+
+    it('ouvre la confirmation avec l\'aperçu avant/après, sans appeler l\'API', () => {
+      mockCampaignsService.getOne.mockReturnValue(of(withRule));
+      createFixture('3');
+
+      component.onConvertSabotageRequested();
+
+      expect(component.confirmingConversion()).toBe(true);
+      expect(component.conversionMessage()).toContain('Sabotage : 2 → 1');
+      expect(component.conversionMessage()).toContain('Cagnotte : 10 → 13');
+      expect(mockCampaignsService.convertSabotage).not.toHaveBeenCalled();
+    });
+
+    it('à la confirmation, appelle l\'API puis recharge l\'atelier', () => {
+      mockCampaignsService.getOne.mockReturnValue(of(withRule));
+      createFixture('3');
+      mockCampaignsService.getWorkshop.mockClear();
+
+      component.onConvertSabotageRequested();
+      component.onConfirmConversion();
+
+      expect(mockCampaignsService.convertSabotage).toHaveBeenCalledWith(3);
+      expect(mockCampaignsService.getWorkshop).toHaveBeenCalledWith(3);
+      expect(component.confirmingConversion()).toBe(false);
+    });
+
+    it('affiche le message du serveur en cas de refus (400)', () => {
+      mockCampaignsService.getOne.mockReturnValue(of(withRule));
+      mockCampaignsService.convertSabotage.mockReturnValue(
+        throwError(() => ({ error: { message: 'Aucun jeton de sabotage à convertir.' } })),
+      );
+      createFixture('3');
+
+      component.onConvertSabotageRequested();
+      component.onConfirmConversion();
+
+      expect(component.error()).toBe('Aucun jeton de sabotage à convertir.');
+      expect(component.confirmingConversion()).toBe(false);
+    });
+  });
+
+  describe('annulation d\'une conversion de sabotage', () => {
+    // mockWorkshop.wallet = 10 ; dernière conversion = 3 jerricans
+    const converted = { ...mockWorkshop, lastSabotageConversionJerricans: 3 };
+
+    function cancelButton(): HTMLButtonElement | undefined {
+      return Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.atp-convert-btn'),
+      ).find((b: HTMLButtonElement): boolean => b.textContent?.includes('Annuler une conversion') ?? false);
+    }
+
+    it('n\'affiche aucun bouton d\'annulation sans conversion dans la session', () => {
+      createFixture('3');
+
+      expect(cancelButton()).toBeUndefined();
+    });
+
+    it('affiche le bouton actif quand une conversion existe et que la cagnotte couvre son annulation', () => {
+      mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
+      createFixture('3');
+
+      expect(cancelButton()).toBeDefined();
+      expect(cancelButton()!.disabled).toBe(false);
+    });
+
+    it('grise le bouton quand la cagnotte (2) est inférieure aux jerricans convertis (3)', () => {
+      mockCampaignsService.getWorkshop.mockReturnValue(of({ ...converted, wallet: 2 }));
+      createFixture('3');
+
+      expect(cancelButton()!.disabled).toBe(true);
+      component.onCancelConversionRequested();
+      expect(component.confirmingCancellation()).toBe(false);
+    });
+
+    it('ouvre la confirmation avec l\'aperçu avant/après, sans appeler l\'API', () => {
+      mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
+      createFixture('3');
+
+      component.onCancelConversionRequested();
+
+      expect(component.confirmingCancellation()).toBe(true);
+      expect(component.cancellationMessage()).toContain('Sabotage : 2 → 3');
+      expect(component.cancellationMessage()).toContain('Cagnotte : 10 → 7');
+      expect(mockCampaignsService.cancelSabotageConversion).not.toHaveBeenCalled();
+    });
+
+    it('à la confirmation, appelle l\'API puis recharge l\'atelier', () => {
+      mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
+      createFixture('3');
+      mockCampaignsService.getWorkshop.mockClear();
+
+      component.onCancelConversionRequested();
+      component.onConfirmCancellation();
+
+      expect(mockCampaignsService.cancelSabotageConversion).toHaveBeenCalledWith(3);
+      expect(mockCampaignsService.getWorkshop).toHaveBeenCalledWith(3);
+      expect(component.confirmingCancellation()).toBe(false);
+    });
+
+    it('affiche le message du serveur en cas de refus (400)', () => {
+      mockCampaignsService.getWorkshop.mockReturnValue(of(converted));
+      mockCampaignsService.cancelSabotageConversion.mockReturnValue(
+        throwError(() => ({ error: { message: 'Impossible d\'annuler : les jerricans convertis ont déjà été dépensés.' } })),
+      );
+      createFixture('3');
+
+      component.onCancelConversionRequested();
+      component.onConfirmCancellation();
+
+      expect(component.error()).toContain('déjà été dépensés');
+      expect(component.confirmingCancellation()).toBe(false);
+    });
   });
 });

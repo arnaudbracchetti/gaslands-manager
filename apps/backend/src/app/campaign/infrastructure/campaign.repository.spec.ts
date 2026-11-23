@@ -19,6 +19,7 @@ import { VehicleDestroyedEvent } from '../domain/events/vehicle-destroyed.event'
 import { FavoriDuPublicBonusEvent } from '../domain/events/favori-du-public-bonus.event';
 import { VehicleRenamedEvent } from '../domain/events/vehicle-renamed.event';
 import { SabotagePointsSpentEvent } from '../domain/events/sabotage-points-spent.event';
+import { SabotageConvertedEvent } from '../domain/events/sabotage-converted.event';
 import { WalletReason } from '../domain/enums/wallet-reason.enum';
 import { WreckResult } from '../domain/enums/wreck-result.enum';
 import { WeightClass } from '../domain/enums/weight-class.enum';
@@ -126,13 +127,13 @@ describe('CampaignMapper.toEvent — FAVORI_DU_PUBLIC_BONUS (régression bug tro
 
 /**
  * Filet de sécurité générique : verrouille l'exhaustivité des deux `switch`
- * (`eventToOrm` / `toEvent`) sur les 14 valeurs de `GameEventType`, plutôt que de ne
+ * (`eventToOrm` / `toEvent`) sur les 15 valeurs de `GameEventType`, plutôt que de ne
  * couvrir que les deux collisions déjà rencontrées ci-dessus. Un futur `GameEventType`
  * ajouté sans son `case` de chaque côté échouera ici (`eventToOrm` ne compile plus,
- * `toEvent` lève `DomainException`) ou dans le test "couvre les 14 valeurs" si son
+ * `toEvent` lève `DomainException`) ou dans le test "couvre les 15 valeurs" si son
  * `case` existe mais que ce fichier n'a pas été mis à jour pour l'exercer.
  */
-describe('CampaignRepository.eventToOrm — exhaustivité (14 types)', () => {
+describe('CampaignRepository.eventToOrm — exhaustivité (15 types)', () => {
   const repo = makeRepo();
 
   const cases: Array<{ label: string; event: GameEvent; expected: Partial<GameEventOrm> }> = [
@@ -217,6 +218,11 @@ describe('CampaignRepository.eventToOrm — exhaustivité (14 types)', () => {
       event: new SabotagePointsSpentEvent(0, 10, 1, 1, 3),
       expected: { eventType: 'SABOTAGE_POINTS_SPENT', sabotagePointsSpent: 3 },
     },
+    {
+      label: 'SabotageConvertedEvent',
+      event: new SabotageConvertedEvent(0, 10, 1, 1, 1, 3),
+      expected: { eventType: 'SABOTAGE_CONVERTED', sabotageTokensConverted: 1, sabotageJerricansGained: 3 },
+    },
   ];
 
   it.each(cases)('classe $label avec son propre eventType et ses champs propres', ({ event, expected }) => {
@@ -225,7 +231,7 @@ describe('CampaignRepository.eventToOrm — exhaustivité (14 types)', () => {
     expect(orm).toMatchObject(expected);
   });
 
-  it('couvre les 14 valeurs de GameEventType (aucune oubliée)', () => {
+  it('couvre les 15 valeurs de GameEventType (aucune oubliée)', () => {
     const covered = new Set(cases.map((c) => c.expected.eventType));
     const allValues = Object.values(GameEventType);
     expect(covered.size).toBe(allValues.length);

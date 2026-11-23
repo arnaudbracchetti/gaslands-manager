@@ -144,6 +144,7 @@ graph TD
     AtelierPage --> VehicleSummaryCard
     AtelierPage --> VehicleChoiceCard
     AtelierPage --> SellVehicleModal
+    AtelierPage --> ConfirmModal
     AtelierPage --> Breadcrumb
     AtelierPage -.->|navigate| AtelierVehiclePage
     AtelierVehiclePage --> EquipmentManager
@@ -532,6 +533,8 @@ Journal d'une partie, regroupé par participant dans l'ordre de première appari
 _`campaigns/atelier-page/` (smart, route `/campaigns/:id/atelier`)_
 
 Liste des véhicules de l'équipe engagée en atelier (grille de `VehicleSummaryCard`, bouton vendre/annuler selon `purchasedThisSession`), achat d'un véhicule (`VehicleChoiceCard`), Cagnotte et Points de sabotage dans le même cadre. Véhicules vendus/détruits poussés en fin de liste (tri stable), cartes `disabled` sans bouton. Clic → `AtelierVehiclePage`.
+
+Règle maison R5 (si `conversion_sabotage_jerricans` est active sur la campagne) : bouton « Convertir sabotage en jerricans » (grisé sans jeton) et « Annuler une conversion » (si `lastSabotageConversionJerricans` non nul, grisé si la cagnotte est insuffisante), chacun confirmé par un `ConfirmModal` avec aperçu avant/après.
 
 ### SellVehicleModal
 

@@ -71,11 +71,23 @@ sans reprise de données.
 | R2 | `cagnotte_collective_evenement_tele` | +5 jerricans (`CAGNOTTE_TELE`) à **tout** participant `VALIDATED`, présent ou non, à la fin d'un Événement Télévisé (par défaut : rien) | enregistrement du résultat (`POST .../results`) |
 | R3 | `escarmouche_bonus_jerricans` | Supprime le revenu de base D6 d'une Escarmouche (le butin de scénario reste) | à chaque tirage de revenu |
 | R4 | `plafond_jerricans_escarmouche` | Plafonne à 15 le total de jerricans « récompense » (revenu D6 + butin manuel) par participant sur une même Escarmouche ; l'excédent est réduit **silencieusement** (jusqu'à 0, auquel cas rien n'est journalisé) | à chaque gain, cumul recalculé depuis le journal de la partie |
+| R5 | `conversion_sabotage_jerricans` | Ouvre une action manuelle en Atelier : le participant convertit 1 jeton de sabotage en 3 jerricans (cf. ci-dessous) ; désactivée, la conversion est refusée | à l'action du joueur (`SabotageConvertedEvent`, montant figé à l'écriture) |
 
 R1 trace la règle appliquée (`ResistanceContactedEvent.strategyKey`, `"defaut"` pour la règle
 par défaut, `null` pour un contact manuel) et la mentionne dans le journal, pour comparer deux
 parties malgré un réglage modifiable en cours de campagne. Annuler le wizard (`DELETE .../results`)
 supprime aussi les événements de R2.
+
+**R5 - conversion des jetons de sabotage** (`Game.convertSabotage`, `domain/house-rules/sabotage-conversion-strategy.ts`) :
+un jeton par action, contrôles dans l'ordre (`DomainException` → 400) : règle activée, partie en
+`ATELIER`, au moins 1 jeton (rejet explicite, jamais un clamp). `execute()` débite 3 PR et crédite
+la cagnotte ; ce crédit n'est **pas** une récompense plafonnée par R4. **Annulation** dans la même
+session (`Game.cancelSabotageConversion`) : la dernière conversion du participant est supprimée du
+journal, comme un achat annulé - refusée hors `ATELIER`, sans conversion, ou si la cagnotte
+deviendrait négative (jerricans déjà dépensés). L'annulation ne consulte pas la règle (possible même
+si elle a été décochée entre-temps). IHM (`AtelierPage`) : boutons « Convertir » (si la règle est
+active, grisé sans jeton) et « Annuler une conversion » (`WorkshopStateDto.lastSabotageConversionJerricans`),
+chacun via un `ConfirmModal` avec aperçu avant/après ; jamais sur l'atelier d'un tiers.
 
 ---
 
@@ -309,6 +321,8 @@ client (solde secret, même pour l'organisateur) : le serveur **clampe silencieu
 disponible, ce qui garantit que les PR ne passent jamais sous 0. Le journal affiche le montant
 réellement appliqué.
 
+**Conversion en jerricans** : règle maison R5, cf. [§Règles maison](#règles-maison).
+
 ---
 
 ## Séquelles
@@ -526,6 +540,8 @@ lecture : `assertVisibleParticipant` ; refus → 404. Domaine refusé → 400. L
 | GET | `/api/campaigns/:id/workshop/vehicles/:vehicleId/available-{weapons,improvements,advantages,sequelles}` | participant | disponibilités avec verdict (budget = cagnotte ; Chocs pour les séquelles) |
 | POST | `/api/campaigns/:id/events/equipment` | participant | achat/revente `{ operation, entityType (VEHICLE/WEAPON/IMPROVEMENT/ADVANTAGE/SEQUELLE), nomInterne, …, orientation?, freeAdvantageNomInterne? }` - 204 |
 | POST | `/api/campaigns/:id/events/vehicle-rename` | participant | `{ vehicleId, nom }` - 204 |
+| POST | `/api/campaigns/:id/events/sabotage-conversion` | participant | R5 : convertit 1 jeton de sabotage en jerricans - 204 ; 400 si règle inactive, hors atelier ou sans jeton |
+| POST | `/api/campaigns/:id/events/sabotage-conversion/cancel` | participant | R5 : annule la dernière conversion - 204 ; 400 hors atelier, sans conversion ou si la cagnotte deviendrait négative |
 
 ### Event-sourcing brut (non utilisés par le frontend)
 

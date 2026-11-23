@@ -63,6 +63,8 @@ import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
+import { ConvertSabotageUseCase } from './application/convert-sabotage.usecase';
+import { CancelSabotageConversionUseCase } from './application/cancel-sabotage-conversion.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetCampaignTeamSheetUseCase } from './application/get-campaign-team-sheet.usecase';
@@ -362,6 +364,23 @@ import { GetWorkshopAvailableVehiclesUseCase } from './application/get-workshop-
         replay: CampaignReplayService,
       ): RenameCampaignVehicleUseCase =>
         new RenameCampaignVehicleUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: ConvertSabotageUseCase,
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): ConvertSabotageUseCase => new ConvertSabotageUseCase(repo, replay),
+      inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
+    },
+    {
+      provide: CancelSabotageConversionUseCase,
+      useFactory: (
+        repo: ICampaignRepository,
+        replay: CampaignReplayService,
+      ): CancelSabotageConversionUseCase =>
+        new CancelSabotageConversionUseCase(repo, replay),
       inject: [CAMPAIGN_REPOSITORY, CampaignReplayService],
     },
     {

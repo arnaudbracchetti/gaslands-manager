@@ -583,7 +583,7 @@ erDiagram
         number gameId FK
         number participantId FK
         number eventOrder "position dans le journal de la partie"
-        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED | SABOTAGE_POINTS_SPENT"
+        string eventType "discriminant : RANKING_ASSIGNED | WALLET_MOVEMENT | VEHICLE_LOST | WEAPON_LOST | IMPROVEMENT_LOST | ADVANTAGE_LOST | WRECK_RESOLVED | EQUIPMENT_CHANGED | RESISTANCE_CONTACTED | GATES_CROSSED | VEHICLE_DESTROYED | FAVORI_DU_PUBLIC_BONUS | VEHICLE_RENAMED | SABOTAGE_POINTS_SPENT | SABOTAGE_CONVERTED"
         number rank "nullable"
         number championshipPoints "nullable — Ranking, GatesCrossed, VehicleDestroyed, FavoriDuPublicBonus"
         number amount "nullable — WalletMovement"
@@ -609,6 +609,8 @@ erDiagram
         string previousVehicleName "nullable — VehicleRenamedEvent, pour undo()"
         string newVehicleName "nullable — VehicleRenamedEvent"
         number sabotagePointsSpent "nullable — SabotagePointsSpentEvent, DÉJÀ clampé au solde disponible à la déclaration"
+        number sabotageTokensConverted "nullable — SabotageConvertedEvent (règle maison R5)"
+        number sabotageJerricansGained "nullable — SabotageConvertedEvent, FIGÉ à l'écriture"
         string resistanceStrategyKey "nullable — ResistanceContactedEvent, clé de la stratégie automatique (ex. 'defaut', RM-4/RM-5) ; NULL pour un contact manuel"
         date createdAt
     }
@@ -881,7 +883,7 @@ classDiagram
   calcul. Reconstruite à chaque accès à `Campaign.strategyFactory` (pas de cache à invalider après
   `setHouseRules`). Registre pur `HOUSE_RULE_REGISTRY` (union discriminée par `point`, Strategy typée
   sans `any`). Deux règles actives sur le même point → `DomainException`.
-- **4 points de calcul** :
+- **5 points de calcul** :
 
 | Point | Consommé par | Défaut | Règle maison |
 |---|---|---|---|
@@ -889,6 +891,7 @@ classDiagram
 | Cagnotte télé | `Game.recordResult()` | `NoTvBonusStrategy` | R2 `CollectiveTvBonusStrategy` |
 | Revenu de base | `Game.rollBaseIncome()` (`roll()` → montant ou `null`) | `DefaultBaseIncomeStrategy` | R3 `NoBaseIncomeStrategy` |
 | Plafond de gains | `rollBaseIncome()` **et** `recordJerricanGains()` (`clamp(demandé, déjàGagné)`) | `UnlimitedJerricanGainsStrategy` | R4 `CappedJerricanGainsStrategy` |
+| Conversion du sabotage | `Game.convertSabotage()` (taux `jerricansPerToken`) | `NoSabotageConversionStrategy` (refus) | R5 `SabotageToJerricansStrategy` (1 jeton = 3 jerricans) |
 
 - La `key` de la Strategy est stampée sur l'événement (ex. `ResistanceContactedEvent.strategyKey`) :
   le résultat est figé, jamais recalculé au replay.
@@ -915,6 +918,7 @@ journal et l'écran Résolution du wizard).
 | `FavoriDuPublicBonusEvent` | `addPoints(+5)` + `clearFavoriDuPublic()` | inverse |
 | `VehicleRenamedEvent` | `renameCampaignVehicle(newName)` | `renameCampaignVehicle(previousName)` |
 | `SabotagePointsSpentEvent` | `addResistance(-3 × pointsSpent)` (montant déjà clampé à la construction) | inverse |
+| `SabotageConvertedEvent` (R5) | `addResistance(-3 × jetons)` + `creditWallet(+jerricansGained)` (figé à la construction, hors plafond R4) ; annulable en atelier par suppression du journal | inverse |
 
 Les montants dérivés d'une règle (PC selon le poids, clamp, éligibilité Favori du Public…) sont
 calculés par `Game` **avant** la construction de l'événement, jamais dans `execute()`.

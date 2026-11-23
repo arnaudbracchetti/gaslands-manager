@@ -67,6 +67,8 @@ import { CloseAtelierUseCase } from './application/close-atelier.usecase';
 import { GetStandingsUseCase } from './application/get-standings.usecase';
 import { ChangeEquipmentUseCase } from './application/change-equipment.usecase';
 import { RenameCampaignVehicleUseCase } from './application/rename-campaign-vehicle.usecase';
+import { ConvertSabotageUseCase } from './application/convert-sabotage.usecase';
+import { CancelSabotageConversionUseCase } from './application/cancel-sabotage-conversion.usecase';
 import { WreckResolveUseCase } from './application/wreck-resolve.usecase';
 import { GetWorkshopUseCase } from './application/get-workshop.usecase';
 import { GetCampaignTeamSheetUseCase } from './application/get-campaign-team-sheet.usecase';
@@ -164,6 +166,8 @@ export class CampaignController {
     private readonly getWorkshopAvailableSequellesUseCase: GetWorkshopAvailableSequellesUseCase,
     private readonly getWorkshopAvailableVehiclesUseCase: GetWorkshopAvailableVehiclesUseCase,
     private readonly renameCampaignVehicleUseCase: RenameCampaignVehicleUseCase,
+    private readonly convertSabotageUseCase: ConvertSabotageUseCase,
+    private readonly cancelSabotageConversionUseCase: CancelSabotageConversionUseCase,
   ) {}
 
   // ── Catalogue (public) ──────────────────────────────────────────────────────
@@ -707,6 +711,36 @@ export class CampaignController {
       vehicleId: dto.vehicleId,
       nom: dto.nom,
     });
+  }
+
+  /**
+   * POST /api/campaigns/:id/events/sabotage-conversion — règle maison : convertit 1 jeton
+   * de sabotage en jerricans (participant sur sa propre équipe, Atelier uniquement). Sans
+   * corps ni `:gameId` : même résolution d'atelier que `changeEquipment`.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/events/sabotage-conversion')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  convertSabotage(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<void> {
+    return this.convertSabotageUseCase.execute({ campaignId, userId: req.user.id });
+  }
+
+  /**
+   * POST /api/campaigns/:id/events/sabotage-conversion/cancel — annule la dernière
+   * conversion de sabotage du participant (atelier ouvert uniquement, refusée si la
+   * cagnotte deviendrait négative).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('campaigns/:id/events/sabotage-conversion/cancel')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  cancelSabotageConversion(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) campaignId: number,
+  ): Promise<void> {
+    return this.cancelSabotageConversionUseCase.execute({ campaignId, userId: req.user.id });
   }
 
   /**
