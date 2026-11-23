@@ -356,7 +356,10 @@ scp deploy@<ip-vps>:~/gaslands-manuel-AAAA-MM-JJ.dump .
 
 **1. Bucket et clé B2** (interface Backblaze, même compte que Chimères) :
 
-- bucket privé `gaslands-sauvegardes` ;
+- bucket privé `gaslands-sauvegardes`, avec le chiffrement par défaut
+  activé (_Default Encryption : Enable_, soit SSE-B2) : B2 chiffre au repos
+  les dumps, qui partent en clair du serveur. Ce chiffrement protège les
+  disques de Backblaze, pas d'un accès au compte B2 ou à la clé B2 du `.env` ;
 - règle de cycle de vie personnalisée sur tout le bucket : masquer les
   fichiers 15 jours après l'envoi, les supprimer 1 jour après ;
 - clé d'application limitée au bucket, **sans `deleteFiles`** : l'interface ne
@@ -371,23 +374,9 @@ scp deploy@<ip-vps>:~/gaslands-manuel-AAAA-MM-JJ.dump .
 
 - noter dans Dashlane le keyID, la clé et le nom du bucket.
 
-**2. Paire de clés age** (sur votre machine, jamais sur le VPS) :
+**2. Préparer le VPS** (compte `deploy`) :
 
 ```bash
-age-keygen -o gaslands-sauvegardes.age.key
-# affiche « Public key: age1... » : c'est AGE_RECIPIENT
-```
-
-Ranger le contenu du fichier (la ligne `AGE-SECRET-KEY-...`) dans Dashlane,
-plus une copie hors ligne, puis effacer le fichier. Seule la clé publique va
-sur le serveur : un vol du serveur ne permet pas de lire les sauvegardes.
-
-**3. Préparer le VPS** :
-
-```bash
-sudo apt install age                                   # compte d'administration
-
-# compte deploy
 mkdir -p /opt/gaslands/sauvegardes
 chmod 700 /opt/gaslands/sauvegardes                    # dumps locaux en clair
 ```
@@ -403,10 +392,9 @@ IMAGE_TAG=v1.0.0                   # la version en place avant le premier passag
 B2_KEY_ID=<keyID de la clé, pas l'identifiant du compte>
 B2_APP_KEY=<clé d'application>
 B2_BUCKET=gaslands-sauvegardes     # le NOM du bucket, pas son ID
-AGE_RECIPIENT=age1...
 ```
 
-**4. Copier le script et le fichier Compose** (depuis votre machine, à la
+**3. Copier le script et le fichier Compose** (depuis votre machine, à la
 racine du dépôt) :
 
 ```bash
@@ -418,7 +406,7 @@ Le script utilise le [`docker-compose.prod.yml`](../docker-compose.prod.yml)
 de `/opt/gaslands/` : il doit être celui du dépôt, qui exige `IMAGE_TAG`. Le
 recopier à chaque modification de ce fichier.
 
-**5. Sauvegarde de nuit** : cron du compte `deploy` (`crontab -e`) :
+**4. Sauvegarde de nuit** : cron du compte `deploy` (`crontab -e`) :
 
 ```
 45 3 * * * /opt/gaslands/deploy-gaslands.sh sauvegarde-nuit >> /opt/gaslands/sauvegardes.log 2>&1
@@ -430,13 +418,14 @@ décalerait Chimères.
 
 Premier essai à la main : `/opt/gaslands/deploy-gaslands.sh sauvegarde-nuit`.
 Attendu : `=== Sauvegarde de nuit : réussie ... ===`. Vérifier dans
-l'interface B2 que `gaslands-AAAA-MM-JJ-v1.0.0.dump.age` est dans le bucket,
+l'interface B2 que `gaslands-AAAA-MM-JJ-v1.0.0.dump` est dans le bucket et
+que sa fiche indique un chiffrement SSE-B2,
 qu'aucun autre bucket n'est apparu (signe d'un ID mis à la place du nom), et
 qu'aucun fichier ne reste dans `sauvegardes/`. Le lendemain, relire
 `/opt/gaslands/sauvegardes.log` pour confirmer le passage du cron.
 
-**6. Tester une restauration** d'un dump de nuit, sur une base jetable (jamais
-sur la prod), avec la clé privée collée :
+**5. Tester une restauration** d'un dump de nuit, sur une base jetable (jamais
+sur la prod) :
 
 ```bash
 # Sur le VPS, compte deploy
@@ -445,16 +434,15 @@ lire() { grep -oP "^$1=\K.*" .env; }                   # une clé de .env, sans 
 export RCLONE_CONFIG=/dev/null RCLONE_CONFIG_B2_TYPE=b2 \
   RCLONE_CONFIG_B2_ACCOUNT="$(lire B2_KEY_ID)" RCLONE_CONFIG_B2_KEY="$(lire B2_APP_KEY)"
 rclone lsf "b2:$(lire B2_BUCKET)"                        # choisir un fichier
-rclone cat "b2:$(lire B2_BUCKET)/gaslands-AAAA-MM-JJ-v1.0.0.dump.age" > /tmp/essai.dump.age
+rclone cat "b2:$(lire B2_BUCKET)/gaslands-AAAA-MM-JJ-v1.0.0.dump" > /tmp/essai.dump
 
 docker run -d --name essai-restauration -e POSTGRES_PASSWORD=essai postgres:16-alpine
 until docker exec essai-restauration pg_isready -U postgres -q; do sleep 1; done
-read -rs AGE_KEY                                        # coller AGE-SECRET-KEY-..., Entrée
-age -d -i <(echo "$AGE_KEY") /tmp/essai.dump.age \
-  | docker exec -i essai-restauration pg_restore -U postgres -d postgres --no-owner --exit-on-error
+docker exec -i essai-restauration pg_restore -U postgres -d postgres --no-owner --exit-on-error \
+  < /tmp/essai.dump
 docker exec essai-restauration psql -U postgres -c 'select count(*) from teams;'
 
-docker rm -f essai-restauration; rm -f /tmp/essai.dump.age; unset AGE_KEY
+docker rm -f essai-restauration; rm -f /tmp/essai.dump
 ```
 
 Attendu : un nombre d'équipes plausible.
@@ -530,12 +518,12 @@ N comptent comme nouvelles.
 
 | Sauvegarde                 | Quand                                  | Où                           | Durée de vie                |
 | -------------------------- | -------------------------------------- | ---------------------------- | --------------------------- |
-| De nuit, chiffrée par age  | cron, 3 h 45 UTC                       | B2 `gaslands-sauvegardes`    | 15 jours (règle du bucket)  |
+| De nuit, chiffrée par B2   | cron, 3 h 45 UTC                       | B2 `gaslands-sauvegardes`    | 15 jours (règle du bucket)  |
 | Avant déploiement / retour | à chaque déploiement ou retour arrière | `/opt/gaslands/sauvegardes/` | 30 jours (ménage du script) |
 | Manuelle (option 3)        | avant une intervention                 | `/opt/gaslands/sauvegardes/` | 30 jours                    |
 
 Chaque nom de dump porte la version en place au moment du dump
-(`...-vX.Y.Z.dump`, `gaslands-AAAA-MM-JJ-vX.Y.Z.dump.age`) : c'est elle qui
+(`...-vX.Y.Z.dump`, `gaslands-AAAA-MM-JJ-vX.Y.Z.dump`) : c'est elle qui
 dit avec quelle version il est compatible. Les dumps locaux sont en clair
 (dossier `chmod 700`) et jamais envoyés sur B2 ; la sauvegarde de nuit n'est
 pas gardée en local. Le serveur n'efface jamais rien sur B2.
@@ -546,8 +534,7 @@ Dashlane, les certificats sont refaits par Caddy.
 ### 4.6 Restaurer une sauvegarde (option 4)
 
 Choisir une sauvegarde locale ou une sauvegarde de nuit B2 dans une liste,
-confirmer en tapant `RESTAURER`. Pour B2, le script demande la clé privée age
-en saisie masquée et ne l'écrit jamais sur le disque.
+confirmer en tapant `RESTAURER`.
 
 - Dump de la version en place ou plus ancien : restauré, puis la version en
   place applique au démarrage les migrations qui lui manquent.

@@ -11,7 +11,7 @@ set -euo pipefail
 #
 # Usage :
 #   ./deploy-gaslands.sh vX.Y.Z            déploie cette version
-#   ./deploy-gaslands.sh sauvegarde-nuit   dump chiffré envoyé sur B2 (cron, sans question)
+#   ./deploy-gaslands.sh sauvegarde-nuit   dump envoyé sur B2 (cron, sans question)
 #   ./deploy-gaslands.sh                   menu
 #
 # Déployer :
@@ -37,10 +37,8 @@ set -euo pipefail
 #
 # Sauvegarder maintenant (option 3) : dump local manuel-AAAA-MM-JJ-HHMM-vN.dump, en clair.
 #
-# Restaurer (option 4) : un dump local, ou un dump de nuit téléchargé depuis B2 (clé privée age
-# collée en saisie masquée, jamais écrite sur le disque), choisi dans une liste, confirmation par
-# RESTAURER. Refuse un
-# dump d'une version plus récente que celle en place (« redéployez d'abord vD, puis restaurez »).
+# Restaurer (option 4) : un dump local, ou un dump de nuit téléchargé depuis B2, choisi dans une
+# liste, confirmation par RESTAURER. Refuse un dump d'une version plus récente que celle en place (« redéployez d'abord vD, puis restaurez »).
 # Fait d'abord un dump avant-restauration-…-vN.dump, puis arrête backend et frontend, recrée la base,
 # pg_restore, relance la version en place : elle applique au démarrage les migrations qui manquent
 # au dump. Écart Gaslands : une restauration ne change JAMAIS IMAGE_TAG (deploy-hdc.sh, lui,
@@ -60,9 +58,10 @@ set -euo pipefail
 #   est alors refusé (remettre N passe par « Déployer »).
 #
 # Sauvegarde de nuit (commande sauvegarde-nuit, lancée par le cron de deploy à 3 h 45 UTC) :
-#   pg_dump -Fc chiffré par age avec la clé PUBLIQUE AGE_RECIPIENT de .env, écrit dans un fichier
-#   temporaire (jamais envoyé tronqué), puis envoyé par rclone sur le bucket B2_BUCKET sous le nom
-#   gaslands-AAAA-MM-JJ-vN.dump.age. Le fichier temporaire est effacé : rien n'est gardé en local.
+#   pg_dump -Fc écrit dans un fichier temporaire (jamais envoyé tronqué), puis envoyé par rclone sur
+#   le bucket B2_BUCKET sous le nom gaslands-AAAA-MM-JJ-vN.dump. Le chiffrement est celui de B2
+#   (SSE-B2, chiffrement par défaut du bucket) : il protège les disques de Backblaze, pas d'un accès
+#   au compte B2 ou à la clé B2 de .env. Le fichier temporaire est effacé : rien n'est gardé en local.
 #   rclone est configuré uniquement par variables d'environnement (B2_KEY_ID, B2_APP_KEY), sans
 #   rclone.conf. Le serveur n'efface rien sur B2 : la clé B2 n'a pas le droit de supprimer, la
 #   rétention de 15 jours est une règle de cycle de vie du bucket. En cas de succès, la date est
@@ -133,9 +132,9 @@ new_dump_path() {
 # Écart Gaslands : les dumps portent la version en place (schéma qu'ils contiennent), pour que la
 # restauration refuse un dump plus récent que cette version (#25, compatibilité de version).
 # Version portée par le nom du dump $1 (suffixe -vX.Y.Z.dump), vide si absente.
-# Vaut aussi pour les dumps de nuit (…-vX.Y.Z.dump.age).
+# Vaut aussi pour les dumps de nuit, nommés de la même façon.
 dump_version() {
-  if [[ "$(basename "$1")" =~ -($TAG_PATTERN)\.dump(\.age)?$ ]]; then echo "${BASH_REMATCH[1]}"; fi
+  if [[ "$(basename "$1")" =~ -($TAG_PATTERN)\.dump$ ]]; then echo "${BASH_REMATCH[1]}"; fi
 }
 
 # Refuse (avec message) un dump $1 dont la version manque ou est plus récente que la version en
@@ -697,18 +696,13 @@ rclone_b2() {
 # B2_BUCKET : le NOM du bucket (pas son ID).
 b2_remote() { echo "gaslandsb2:$(env_value B2_BUCKET)"; }
 
-# Vérifie les outils et les variables dont dépend B2. $1 : « envoi » (exige aussi AGE_RECIPIENT)
-# ou « lecture ».
+# Vérifie l'outil et les variables dont dépend B2.
 check_b2_setup() {
   local missing=() name
   command -v rclone > /dev/null || missing+=("rclone (commande)")
-  command -v age > /dev/null || missing+=("age (commande : sudo apt install age)")
   for name in B2_KEY_ID B2_APP_KEY B2_BUCKET; do
     [ -n "$(env_value "$name")" ] || missing+=("$name (dans $ENV_FILE)")
   done
-  if [ "$1" = envoi ]; then
-    [[ "$(env_value AGE_RECIPIENT)" == age1* ]] || missing+=("AGE_RECIPIENT, clé publique age1… (dans $ENV_FILE)")
-  fi
   [ "${#missing[@]}" -eq 0 ] && return 0
   err "configuration B2 incomplète :"
   printf '     - %s\n' "${missing[@]}" >&2
@@ -728,7 +722,7 @@ action_nightly_backup() {
 }
 
 nightly_backup() {
-  check_b2_setup envoi || return 1
+  check_b2_setup || return 1
   local current
   current="$(current_tag)"
   if [ -z "$current" ]; then
@@ -737,7 +731,7 @@ nightly_backup() {
   fi
 
   local name tmp rc=0
-  name="gaslands-$(paris_date +%F)-$current.dump.age"
+  name="gaslands-$(paris_date +%F)-$current.dump"
   mkdir -p "$DUMP_DIR"
   if ! tmp="$(mktemp "$DUMP_DIR/.nuit-XXXXXX")"; then
     err "fichier temporaire impossible à créer."
@@ -759,20 +753,20 @@ nightly_backup() {
   prune_old_dumps
 }
 
-# Dump chiffré dans le fichier temporaire $1, puis envoi sur B2 sous le nom $2. L'envoi ne part
+# Dump dans le fichier temporaire $1, puis envoi sur B2 sous le nom $2. L'envoi ne part
 # qu'une fois le dump complet : en flux direct, un pg_dump interrompu laisserait sur B2 un fichier
 # tronqué que le serveur ne peut pas effacer.
 upload_nightly_dump() {
   local tmp="$1" name="$2"
-  step "Dump chiffré de la base"
+  step "Dump de la base"
   ensure_db_up || { err "base indisponible."; return 1; }
   # shellcheck disable=SC2016 # les variables se lisent dans le conteneur.
   if ! compose exec -T "$DB_SERVICE" sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' \
-    < /dev/null | age -r "$(env_value AGE_RECIPIENT)" > "$tmp" || [ ! -s "$tmp" ]; then
-    err "dump ou chiffrement en échec."
+    < /dev/null > "$tmp" || [ ! -s "$tmp" ]; then
+    err "dump en échec."
     return 1
   fi
-  ok "dump chiffré ($(du -h "$tmp" | cut -f1))"
+  ok "dump ($(du -h "$tmp" | cut -f1))"
 
   step "Envoi sur B2 : $(b2_remote)/$name"
   if ! rclone_b2 copyto "$tmp" "$(b2_remote)/$name"; then
@@ -792,7 +786,7 @@ list_local_dumps() {
 action_restore() {
   echo ""
   echo "  1) Sauvegarde locale (avant déploiement, manuelle...)"
-  echo "  2) Sauvegarde de nuit (B2, clé privée age demandée)"
+  echo "  2) Sauvegarde de nuit (B2)"
   local source
   read -rp "Choix (vide pour annuler) : " source
   case "$source" in
@@ -829,11 +823,11 @@ restore_local_dump() {
 
 # Dumps de nuit présents sur B2, du plus récent au plus ancien (le nom commence par la date).
 list_nightly_dumps() {
-  rclone_b2 lsf --files-only --include 'gaslands-*.dump.age' "$(b2_remote)" | sort -r
+  rclone_b2 lsf --files-only --include 'gaslands-*.dump' "$(b2_remote)" | sort -r
 }
 
 restore_nightly_dump() {
-  check_b2_setup lecture || return 1
+  check_b2_setup || return 1
   local current
   current="$(env_value IMAGE_TAG)"
   if [ -z "$current" ]; then
@@ -863,7 +857,7 @@ restore_nightly_dump() {
     warn "restauration annulée, rien n'a été touché."
     return 1
   fi
-  # Contrôle de version avant de télécharger ou de demander la clé.
+  # Contrôle de version avant de télécharger.
   check_dump_compatible "$name" "$current" || return 1
 
   local work rc=0
@@ -876,17 +870,15 @@ restore_nightly_dump() {
   fi
   # shellcheck disable=SC2064 # $work est figé volontairement.
   trap "rm -rf '$work'" EXIT
-  download_decrypt_restore "$name" "$work" || rc=$?
+  download_and_restore "$name" "$work" || rc=$?
   rm -rf "$work"
   trap - EXIT
   return "$rc"
 }
 
-# Télécharge le dump de nuit $1 dans le dossier $2, le déchiffre avec la clé privée collée par
-# l'exploitant, puis le restaure comme un dump local.
-download_decrypt_restore() {
-  local name="$1" work="$2" plain
-  plain="$work/${name%.age}"
+# Télécharge le dump de nuit $1 dans le dossier $2, puis le restaure comme un dump local.
+download_and_restore() {
+  local name="$1" work="$2"
 
   step "Téléchargement de $name"
   if ! rclone_b2 copyto "$(b2_remote)/$name" "$work/$name"; then
@@ -895,32 +887,10 @@ download_decrypt_restore() {
   fi
   ok "téléchargé ($(du -h "$work/$name" | cut -f1))"
 
-  # Clé privée : saisie masquée, gardée en mémoire et passée à age par un tube (<(…), printf est
-  # interne au shell : la clé n'apparaît ni sur le disque ni dans ps).
-  local key
-  read -rsp "Clé privée age (AGE-SECRET-KEY-1…, saisie masquée) : " key || true
-  echo ""
-  # Un collage depuis Dashlane peut apporter espaces, retour chariot ou fin de ligne : age refuserait
-  # alors une clé pourtant juste. Une clé age n'en contient jamais.
-  key="${key//[[:space:]]/}"
-  if [[ "$key" != AGE-SECRET-KEY-1* ]]; then
-    unset key
-    err "ce n'est pas une clé privée age. Rien n'a été touché."
-    return 1
-  fi
-  step "Déchiffrement"
-  if ! age -d -i <(printf '%s\n' "$key") -o "$plain" "$work/$name"; then
-    unset key
-    err "déchiffrement impossible (mauvaise clé ou fichier abîmé). Rien n'a été touché."
-    return 1
-  fi
-  unset key
-  ok "déchiffré"
-
   # Date du nom (jour de la sauvegarde), pas celle du téléchargement.
   local day
   day="$(grep -oP '^gaslands-\K\d{4}-\d{2}-\d{2}' <<< "$name" || true)"
-  confirm_and_restore_dump "$plain" "${day:+sauvegarde de nuit du $(date -d "$day" '+%d/%m/%Y')}"
+  confirm_and_restore_dump "$work/$name" "${day:+sauvegarde de nuit du $(date -d "$day" '+%d/%m/%Y')}"
 }
 
 # Contrôle la compatibilité du dump $1 avec la version en place, demande de taper RESTAURER, fait un
