@@ -22,7 +22,9 @@ export class ScenarioDrawTable {
   draw<T extends WeightedCandidate>(candidats: readonly T[]): T {
     const total = candidats.reduce((somme, c) => somme + c.poids_tirage, 0);
     if (total <= 0) {
-      throw new Error('Tirage de scénario impossible : aucun candidat de poids non nul.');
+      throw new Error(
+        'Tirage de scénario impossible : aucun candidat de poids non nul.',
+      );
     }
 
     // Jet de 1 à total, puis parcours cumulatif : le candidat i couvre les faces

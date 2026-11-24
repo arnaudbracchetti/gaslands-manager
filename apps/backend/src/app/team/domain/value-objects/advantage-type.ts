@@ -1,6 +1,10 @@
 import type { Avantage } from '../../../catalog/catalog.interfaces';
 import { resolveAdvantageBehavior } from '../behaviors/advantage-behaviors';
-import type { PlacementCandidate, PlacementContext, RuleResult } from '../behaviors/equipment-behavior';
+import type {
+  PlacementCandidate,
+  PlacementContext,
+  RuleResult,
+} from '../behaviors/equipment-behavior';
 
 /**
  * Value Object enveloppant un `Avantage` brut du catalogue (`avantage.yml`).

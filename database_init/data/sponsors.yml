@@ -1,4 +1,3 @@
-
 # ── Sponsors Gaslands ─────────────────────────────────────────────────────────
 # Ce fichier définit les 13 sponsors du jeu Gaslands.
 #
@@ -21,32 +20,33 @@
 #   - Scarlett : accède à "Membre d'Équipage Supplémentaire (Scarlett)" au lieu de l'original
 
 sponsors:
-  - nom: "Rutherford"            # Clé primaire du sponsor ; utilisée dans sponsors_autorises des items
+  - nom: 'Rutherford' # Clé primaire du sponsor ; utilisée dans sponsors_autorises des items
     description: "Industriel martien de l'armement et du pétrole, Rutherford sponsorise des équipes lourdes, militarisées et tournées vers la puissance de feu."
-    classes_avantage:            # 2-3 étiquettes de style (affiché dans le carousel comme badges)
-      - "Dur à Cuire"
-      - "Militaire"
-    avantages_sponsorises: |     # Règles spéciales du sponsor (Markdown multi-lignes, affiché dans l'UI)
+    classes_avantage: # 2-3 étiquettes de style (affiché dans le carousel comme badges)
+      - 'Dur à Cuire'
+      - 'Militaire'
+    avantages_sponsorises:
+      | # Règles spéciales du sponsor (Markdown multi-lignes, affiché dans l'UI)
       - **Arsenal Militaire** : l'équipe peut acheter un Char d'Assaut et un Hélicoptère.
       - **Dépôt de Munitions** : les armes avec 3 munitions de départ en ont 4 à l'achat.
       - **Loi du Plus Fort** : l'équipe ne peut pas acheter de véhicule de Poids Léger.
       - **Carnage en Direct** : si un véhicule inflige au moins 6 touches avant Esquive lors d'une Étape d'Attaque, son propriétaire gagne 1 Vote du Public.
 
-  - nom: "Miyazaki"              # Clé primaire du sponsor
+  - nom: 'Miyazaki' # Clé primaire du sponsor
     description: "Sponsor d'élite centré sur la maîtrise du pilotage, la précision et les manœuvres spectaculaires."
     classes_avantage:
-      - "Audace"
-      - "Précision"
+      - 'Audace'
+      - 'Précision'
     avantages_sponsorises: |
       - **Virtuose** : la première tentative de Tenter le Coup d'un véhicule pendant son activation ne donne pas de Jeton Danger.
       - **Élégant** : l'équipe ne peut pas acheter de véhicules avec une Manœuvrabilité inférieure à 3.
       - **Frimeur** : un véhicule gagne un Jeton Frime s'il combine Rotation, Dérapage, changement de Vitesse et aucune Perte de Contrôle. Si tous les véhicules ont un Jeton Frime, l'équipe les défausse et gagne 1 Vote du Public par jeton.
 
-  - nom: "Mishkin"               # Clé primaire du sponsor
-    description: "Ingénieur et inventeur russe, Mishkin fournit des prototypes, armes électriques et véhicules expérimentaux."
+  - nom: 'Mishkin' # Clé primaire du sponsor
+    description: 'Ingénieur et inventeur russe, Mishkin fournit des prototypes, armes électriques et véhicules expérimentaux.'
     classes_avantage:
-      - "Militaire"
-      - "Technologie"
+      - 'Militaire'
+      - 'Technologie'
     avantages_sponsorises: |
       - **Gros Geek** : l'équipe peut acheter des armes et améliorations Électriques.
       - **Dynamo** : après une activation en Phase de Vitesse 4, 5 ou 6, un véhicule peut ajouter 1 Jeton Munition à une arme ou amélioration Électrique.
@@ -54,11 +54,11 @@ sponsors:
 
   # Idris : accède à "Nitro (Idris)" (prix 3) au lieu de "Nitro" (prix 6)
   # Idris est exclu du Gyrocoptère (voir vehicules.yml → sponsors_autorises)
-  - nom: "Idris"                 # Clé primaire du sponsor
+  - nom: 'Idris' # Clé primaire du sponsor
     description: "Culte mystique de la vitesse, fondé autour de Yandi Idris et de l'obsession de la Nitro."
     classes_avantage:
-      - "Précision"
-      - "Rapidité"
+      - 'Précision'
+      - 'Rapidité'
     avantages_sponsorises: |
       - **Accro à la Nitro** : l'équipe achète les améliorations Nitro à moitié prix.
       - **Démon de la Vitesse** : lorsqu'un véhicule prend des Jetons Danger avec la Nitro, il n'en prend que jusqu'à 3 au lieu de 5.
@@ -66,11 +66,11 @@ sponsors:
       - **Collé à l'Asphalte** : l'équipe ne peut pas acheter de Gyrocoptère.
 
   # Slime : accède à "Bélier (Slime)" (emplacement 0) au lieu de "Bélier" (emplacement 1)
-  - nom: "Slime"                 # Clé primaire du sponsor
-    description: "Chef anarchique australien, Slime favorise les collisions latérales, les véhicules hérissés et le jeu dangereux."
+  - nom: 'Slime' # Clé primaire du sponsor
+    description: 'Chef anarchique australien, Slime favorise les collisions latérales, les véhicules hérissés et le jeu dangereux.'
     classes_avantage:
-      - "Optimisation"
-      - "Trompe-la-Mort"
+      - 'Optimisation'
+      - 'Trompe-la-Mort'
     avantages_sponsorises: |
       - **Ricochet** : après une Collision latérale avec Éperonnage, le véhicule peut résoudre une autre Étape de Déplacement.
       - **Hérissé** : l'amélioration Bélier ne requiert aucun Emplacement.
@@ -78,21 +78,21 @@ sponsors:
 
   # La Geôlière : accède aux véhicules Moyen standard ET à leurs variantes Prison
   # Variantes Prison : -2 carrosserie, -4 prix (minimum 5), maximum 1 par équipe
-  - nom: "La Geôlière"           # Clé primaire du sponsor (avec accents — URL-encoder pour les requêtes API)
-    description: "Sponsor carcéral de Sao Paulo, elle transforme des prisonniers en pilotes enfermés dans des voitures-cercueils."
+  - nom: 'La Geôlière' # Clé primaire du sponsor (avec accents — URL-encoder pour les requêtes API)
+    description: 'Sponsor carcéral de Sao Paulo, elle transforme des prisonniers en pilotes enfermés dans des voitures-cercueils.'
     classes_avantage:
-      - "Agression"
-      - "Dur à Cuire"
+      - 'Agression'
+      - 'Dur à Cuire'
     avantages_sponsorises: |
       - **Voitures-Prison** : les véhicules de Poids Moyen peuvent acheter une amélioration réduisant leur coût de 4 Jerrycans, minimum 5, mais perdent 2 Points de Carrosserie.
       - **Feux d'Artifice** : lorsqu'un véhicule explose, son propriétaire gagne des Votes du Public supplémentaires selon son Poids, puis défausse les Jetons Munition de l'Épave.
 
   # Scarlett : accède à "Membre d'Équipage Supplémentaire (Scarlett)" (prix 2) au lieu de l'original (prix 4)
-  - nom: "Scarlett"              # Clé primaire du sponsor
+  - nom: 'Scarlett' # Clé primaire du sponsor
     description: "Pirate flamboyante et médiatique, Scarlett exploite l'équipage comme une ressource consommable."
     classes_avantage:
-      - "Optimisation"
-      - "Agression"
+      - 'Optimisation'
+      - 'Agression'
     avantages_sponsorises: |
       - **Quartiers de l'Équipage** : l'amélioration Membre d'Équipage Supplémentaire coûte moitié prix.
       - **Pillards** : un véhicule peut réduire définitivement son Équipage pour retirer des Points de Carrosserie à un véhicule en contact.
@@ -100,11 +100,11 @@ sponsors:
       - **Sous Mon Pavillon ou Sous la Quille !** : quand un véhicule en contact devient une Épave, le véhicule peut gagner 1 Équipage ou 2 Votes du Public.
 
   # La Patrouille : a accès à l'amélioration exclusive "Mégaphone" (prix 2, voir amelioration.yml)
-  - nom: "La Patrouille de l'Autoroute"   # Clé primaire du sponsor
+  - nom: "La Patrouille de l'Autoroute" # Clé primaire du sponsor
     description: "Vestige brutal d'un ordre disparu, la Patrouille traque un Bandit désigné et le punit par la vitesse."
     classes_avantage:
-      - "Rapidité"
-      - "Poursuite"
+      - 'Rapidité'
+      - 'Poursuite'
     avantages_sponsorises: |
       - **Course Poursuite** : après le déploiement, l'équipe désigne un véhicule adverse comme Bandit.
       - **Bandit à 12h** : si le Bandit est visible dans l'Arc Avant au-delà de Portée Double, le véhicule effectue une autre Étape de Déplacement.
@@ -113,42 +113,42 @@ sponsors:
       - **Mégaphone** : amélioration à 2 Jerrycans permettant d'appliquer Sirène à tout véhicule adverse.
 
   # Verney : a accès à l'amélioration exclusive "Micro-Blindage" (prix 6, emplacement 0, voir amelioration.yml)
-  - nom: "Verney"                # Clé primaire du sponsor
+  - nom: 'Verney' # Clé primaire du sponsor
     description: "Ancien prisonnier devenu ingénieur, Verney spécialise ses équipes dans les véhicules bricolés, renforcés et bardés d'armes largables."
     classes_avantage:
-      - "Technologie"
-      - "Mécanique"
+      - 'Technologie'
+      - 'Mécanique'
     avantages_sponsorises: |
       - **Micro-Blindage** : amélioration à 6 Jerrycans, +2 Carrosserie, aucun Emplacement.
       - **Benne à Ordures** : le véhicule peut effectuer plusieurs attaques d'armes largables lors d'une même activation.
       - **Pierre Tombale** : bonus d'Esquive contre les attaques venant de l'arrière ; peut prendre 2 Jetons Danger pour considérer ses Collisions comme Frontales.
       - **Enfin du Spectacle !** : lorsqu'un gabarit d'arme larguée de l'équipe est retiré, l'équipe gagne 1 Vote du Public.
 
-  - nom: "Maxxine"               # Clé primaire du sponsor
-    description: "Mécano des Cygnes Noirs, Maxxine transforme la conduite en ballet mécanique fait de rotations et de dérapages."
+  - nom: 'Maxxine' # Clé primaire du sponsor
+    description: 'Mécano des Cygnes Noirs, Maxxine transforme la conduite en ballet mécanique fait de rotations et de dérapages.'
     classes_avantage:
-      - "Optimisation"
-      - "Poursuite"
+      - 'Optimisation'
+      - 'Poursuite'
     avantages_sponsorises: |
       - **Étourdi** : le véhicule peut résoudre plusieurs Rotations séparément et dépasser 90° de pivot total.
       - **Dérapage Maxximum** : si un véhicule résout deux Dérapages lors d'une même Étape de Déplacement, il peut utiliser le gabarit droit Moyen à la place du gabarit de Dérapage ; avec trois Dérapages ou plus, il peut utiliser le droit Long.
       - **Meshuggah** : lorsqu'un véhicule résout une Rotation ou un Dérapage qui se termine à Portée Moyenne d'un véhicule ami sans provoquer de Collision, l'équipe gagne 1 Vote du Public.
 
-  - nom: "L'Ordre Infernal"      # Clé primaire du sponsor
+  - nom: "L'Ordre Infernal" # Clé primaire du sponsor
     description: "Culte pyromane issu du mythe d'Idris, il valorise le feu, les véhicules enflammés et la terreur."
     classes_avantage:
-      - "Horreur"
-      - "Rapidité"
+      - 'Horreur'
+      - 'Rapidité'
     avantages_sponsorises: |
       - **Baptisé par le Feu** : le véhicule peut ignorer jusqu'à 3 dégâts Incendiaires, mais subit toujours au moins 1 dégât.
       - **Torche Humaine** : si le véhicule est Enflammé, il gagne +1 aux dés d'Esquive.
       - **Culte de la Flamme** : à la fin d'une Phase de Vitesse, si les véhicules adverses Enflammés sont plus nombreux que les véhicules amis Enflammés, l'équipe gagne des Votes du Public pour ses véhicules Enflammés.
 
-  - nom: "Beverly, le Diable de l'Autoroute"   # Clé primaire du sponsor
+  - nom: "Beverly, le Diable de l'Autoroute" # Clé primaire du sponsor
     description: "Sponsor fantomatique et surnaturel, Beverly repose sur des véhicules spectraux, le retour en piste et la collecte d'âmes."
     classes_avantage:
-      - "Horreur"
-      - "Mécanique"
+      - 'Horreur'
+      - 'Mécanique'
     avantages_sponsorises: |
       - **Légion d'Outre-Tombe** : après le déploiement, tous les véhicules sauf un gagnent Pilote Fantôme.
       - **Pilote Fantôme** : ignore les véhicules et est ignoré par eux ; pas de Collisions ni d'armes de tir ; peut utiliser et subir les armes largables ; ne compte pas pour les conditions de victoire.
@@ -159,11 +159,11 @@ sponsors:
 
   # Rusty : a accès aux améliorations exclusives Remorque (Transport, Légère, Moyenne, Lourde)
   # Voir amelioration.yml pour les prix et règles de chaque Remorque
-  - nom: "Rusty et ses Trafiquants d'Alcool"   # Clé primaire du sponsor
+  - nom: "Rusty et ses Trafiquants d'Alcool" # Clé primaire du sponsor
     description: "Équipe de contrebandiers carburant à l'alcool artisanal, Rusty favorise les remorques, le danger et les véhicules instables."
     classes_avantage:
-      - "Trompe-la-Mort"
-      - "Mécanique"
+      - 'Trompe-la-Mort'
+      - 'Mécanique'
     avantages_sponsorises: |
       - **Fêtard** : à la fin de son Étape d'Attaque, si un véhicule a plus de Jetons Danger que le total de ceux des véhicules ennemis à Portée Moyenne, son propriétaire gagne 1 Vote du Public par véhicule ennemi à Portée Moyenne ayant au moins 1 Jeton Danger.
       - **Courage Liquide** : les véhicules ne Perdent le Contrôle qu'à partir de 8 Jetons Danger.

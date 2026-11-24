@@ -88,16 +88,24 @@ describe('ScenarioCatalogService', () => {
   });
 
   it('conserve le type Escarmouche', () => {
-    expect(service.getByNomInterne('embuscade')?.type).toBe(GameType.ESCARMOUCHE);
+    expect(service.getByNomInterne('embuscade')?.type).toBe(
+      GameType.ESCARMOUCHE,
+    );
   });
 
   it('charge le flag franchissement_portes', () => {
-    expect(service.getByNomInterne('course_de_la_mort')?.franchissement_portes).toBe(true);
-    expect(service.getByNomInterne('embuscade')?.franchissement_portes).toBe(false);
+    expect(
+      service.getByNomInterne('course_de_la_mort')?.franchissement_portes,
+    ).toBe(true);
+    expect(service.getByNomInterne('embuscade')?.franchissement_portes).toBe(
+      false,
+    );
   });
 
   it('charge le flag gain_jerricans', () => {
-    expect(service.getByNomInterne('course_de_la_mort')?.gain_jerricans).toBe(false);
+    expect(service.getByNomInterne('course_de_la_mort')?.gain_jerricans).toBe(
+      false,
+    );
     expect(service.getByNomInterne('embuscade')?.gain_jerricans).toBe(true);
   });
 
@@ -113,11 +121,15 @@ describe('ScenarioCatalogService', () => {
       ['texte', '    poids_tirage: "beaucoup"'],
     ])('rejette un poids %s en nommant le scénario', (_cas, ligne) => {
       const s = new TestScenarioCatalogService(yamlAvecPoidsEscarmouche(ligne));
-      expect(() => s.onModuleInit()).toThrow(/poids_tirage invalide pour "embuscade"/);
+      expect(() => s.onModuleInit()).toThrow(
+        /poids_tirage invalide pour "embuscade"/,
+      );
     });
 
     it('rejette un type dont tous les poids valent 0', () => {
-      const s = new TestScenarioCatalogService(yamlAvecPoidsEscarmouche('    poids_tirage: 0'));
+      const s = new TestScenarioCatalogService(
+        yamlAvecPoidsEscarmouche('    poids_tirage: 0'),
+      );
       expect(() => s.onModuleInit()).toThrow(/aucun scénario ESCARMOUCHE/);
     });
   });
@@ -126,13 +138,17 @@ describe('ScenarioCatalogService', () => {
     // Vrai fichier, lu depuis __dirname (sous `nx test`, process.cwd() vaut apps/backend/,
     // cf. RealCatalogService dans catalog.data.spec.ts). __dirname = apps/backend/src/app/campaign/
     const realYaml = fs.readFileSync(
-      path.resolve(__dirname, '../../../../../database_init/data/scenarios.yml'),
+      path.resolve(
+        __dirname,
+        '../../../../../database_init/data/scenarios.yml',
+      ),
       'utf-8',
     );
     const reel = new TestScenarioCatalogService(realYaml);
     reel.onModuleInit();
     const poidsEvenement = Object.fromEntries(
-      reel.getAll()
+      reel
+        .getAll()
         .filter((sc) => sc.type === GameType.EVENEMENT_TELE)
         .map((sc) => [sc.nom_interne, sc.poids_tirage]),
     );

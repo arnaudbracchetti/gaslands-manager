@@ -28,14 +28,20 @@ describe('DrawRandomScenarioUseCase', () => {
   it.each([
     [GameType.EVENEMENT_TELE, [arene, course]],
     [GameType.ESCARMOUCHE, [livraison]],
-  ])('ne soumet au tirage que les scénarios de type %s et renvoie le tiré', (type, attendus) => {
-    const drawTable = {
-      draw: vi.fn().mockReturnValue(attendus[0]),
-    } as unknown as ScenarioDrawTable;
+  ])(
+    'ne soumet au tirage que les scénarios de type %s et renvoie le tiré',
+    (type, attendus) => {
+      const drawTable = {
+        draw: vi.fn().mockReturnValue(attendus[0]),
+      } as unknown as ScenarioDrawTable;
 
-    const result = new DrawRandomScenarioUseCase(scenarioCatalog, drawTable).execute(type);
+      const result = new DrawRandomScenarioUseCase(
+        scenarioCatalog,
+        drawTable,
+      ).execute(type);
 
-    expect(drawTable.draw).toHaveBeenCalledWith(attendus);
-    expect(result).toBe(attendus[0]);
-  });
+      expect(drawTable.draw).toHaveBeenCalledWith(attendus);
+      expect(result).toBe(attendus[0]);
+    },
+  );
 });

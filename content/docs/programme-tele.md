@@ -3,13 +3,13 @@
 Le Programme Télé est la liste des parties d'une [campagne](/documentation/campagnes)
 : l'organisateur y planifie les parties à venir, puis y enregistre leur
 résultat une fois jouées. Il reste visible par tous les participants dans
-tous les états de la campagne (lecture seule une fois celle-ci *Terminée*).
+tous les états de la campagne (lecture seule une fois celle-ci _Terminée_).
 
 ## Planifier une partie
 
 Chaque partie planifiée s'appuie sur un **scénario** du catalogue (Événement
 Télévisé ou Escarmouche), qui détermine son type. Une nouvelle partie est
-ajoutée en fin de programme, avec le statut *Planifiée*.
+ajoutée en fin de programme, avec le statut _Planifiée_.
 
 Les boutons **🎲 aléatoire** tirent un scénario au hasard selon les chances
 de la table officielle du livre de règles. Les scénarios ajoutés au

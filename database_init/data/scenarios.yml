@@ -29,90 +29,90 @@
 
 scenarios:
   # ── Événements Télévisés (Tableau des scénarios d'Événements Télévisés, p.128) ─
-  - nom: "Course à la Mort"
-    nom_interne: "course_a_la_mort"
-    type: "EVENEMENT_TELE"
-    description: "Franchissez les Portes dans le bon ordre et dans le bon sens, plus rapidement que vos adversaires, ou soyez le dernier encore en état de rouler."
+  - nom: 'Course à la Mort'
+    nom_interne: 'course_a_la_mort'
+    type: 'EVENEMENT_TELE'
+    description: 'Franchissez les Portes dans le bon ordre et dans le bon sens, plus rapidement que vos adversaires, ou soyez le dernier encore en état de rouler.'
     franchissement_portes: true
     gain_jerricans: false
     poids_tirage: 2
 
-  - nom: "Arène de la Mort"
-    nom_interne: "arene_de_la_mort"
-    type: "EVENEMENT_TELE"
-    description: "Un combat à mort dans une arène truffée de Tourelles Automatiques. Le dernier joueur avec des véhicules en jeu est déclaré vainqueur."
+  - nom: 'Arène de la Mort'
+    nom_interne: 'arene_de_la_mort'
+    type: 'EVENEMENT_TELE'
+    description: 'Un combat à mort dans une arène truffée de Tourelles Automatiques. Le dernier joueur avec des véhicules en jeu est déclaré vainqueur.'
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
-  - nom: "Capture du Drapeau"
-    nom_interne: "capture_du_drapeau"
-    type: "EVENEMENT_TELE"
+  - nom: 'Capture du Drapeau'
+    nom_interne: 'capture_du_drapeau'
+    type: 'EVENEMENT_TELE'
     description: "Chaque véhicule porte un drapeau à défendre. La partie prend fin dès qu'un véhicule transporte deux drapeaux."
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
-  - nom: "Destruction de Drapeaux"
-    nom_interne: "destruction_de_drapeaux"
-    type: "EVENEMENT_TELE"
+  - nom: 'Destruction de Drapeaux'
+    nom_interne: 'destruction_de_drapeaux'
+    type: 'EVENEMENT_TELE'
     description: "Percutez le drapeau d'un adversaire pour marquer un point. Le premier joueur à 3 Points de Victoire remporte la partie."
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
-  - nom: "Samedi Soir en Direct"
-    nom_interne: "samedi_soir_en_direct"
-    type: "EVENEMENT_TELE"
-    description: "Le public décide du vainqueur : restez sous le feu des projecteurs pour marquer des Points de Victoire et remporter des prix spéciaux."
+  - nom: 'Samedi Soir en Direct'
+    nom_interne: 'samedi_soir_en_direct'
+    type: 'EVENEMENT_TELE'
+    description: 'Le public décide du vainqueur : restez sous le feu des projecteurs pour marquer des Points de Victoire et remporter des prix spéciaux.'
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
-  - nom: "Le salaire de la peur"
-    nom_interne: "salaire_de_la_peur"
-    type: "EVENEMENT_TELE"
-    description: "Une partie de stop ou encore avec des bombes..."
+  - nom: 'Le salaire de la peur'
+    nom_interne: 'salaire_de_la_peur'
+    type: 'EVENEMENT_TELE'
+    description: 'Une partie de stop ou encore avec des bombes...'
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
   # ── Escarmouches (Tableau des scénarios d'Escarmouches sur les Terres Dévastées, p.129) ─
-  - nom: "Opération Ferraille"
-    nom_interne: "operation_ferraille"
-    type: "ESCARMOUCHE"
+  - nom: 'Opération Ferraille'
+    nom_interne: 'operation_ferraille'
+    type: 'ESCARMOUCHE'
     description: "On récupère tout ce qui n'est pas rivé. Collectez un maximum de Points de Récup' avant la fin de la troisième manche."
     franchissement_portes: false
     gain_jerricans: true
     poids_tirage: 1
 
-  - nom: "Livraison Express"
-    nom_interne: "livraison_express"
-    type: "ESCARMOUCHE"
+  - nom: 'Livraison Express'
+    nom_interne: 'livraison_express'
+    type: 'ESCARMOUCHE'
     description: "Une livraison urgente à faire sortir de la zone de jeu. Le premier véhicule d'un joueur à franchir le bord de sortie lui rapporte un Point de Victoire."
     franchissement_portes: false
     gain_jerricans: true
     poids_tirage: 1
 
-  - nom: "Chasse au Matos"
-    nom_interne: "chasse_au_matos"
-    type: "ESCARMOUCHE"
+  - nom: 'Chasse au Matos'
+    nom_interne: 'chasse_au_matos'
+    type: 'ESCARMOUCHE'
     description: "Une tempête a révélé un dépôt de carburant abandonné. Récupérez le plus de caisses possible avant que les autres équipes ne s'en emparent."
     franchissement_portes: false
     gain_jerricans: true
     poids_tirage: 2
 
-  - nom: "La Révolution Sera Télévisée"
-    nom_interne: "la_revolution_sera_televisee"
-    type: "ESCARMOUCHE"
-    description: "Un émetteur radio clandestin circule sur le terrain. Repérez-le et percutez-le pour diffuser le message de la résistance pro-terrienne."
+  - nom: 'La Révolution Sera Télévisée'
+    nom_interne: 'la_revolution_sera_televisee'
+    type: 'ESCARMOUCHE'
+    description: 'Un émetteur radio clandestin circule sur le terrain. Repérez-le et percutez-le pour diffuser le message de la résistance pro-terrienne.'
     franchissement_portes: false
     gain_jerricans: false
     poids_tirage: 1
 
-  - nom: "Massacre de Zombies"
-    nom_interne: "massacre_de_zombies"
-    type: "ESCARMOUCHE"
+  - nom: 'Massacre de Zombies'
+    nom_interne: 'massacre_de_zombies'
+    type: 'ESCARMOUCHE'
     description: "Les Terres Dévastées grouillent de zombies irradiés. Récupérez-en le plus possible sur votre passage pour l'emporter."
     franchissement_portes: false
     gain_jerricans: true

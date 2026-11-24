@@ -18,7 +18,9 @@ export class DrawRandomScenarioUseCase {
   ) {}
 
   execute(type: GameType): Scenario {
-    const candidats = this.scenarioCatalog.getAll().filter((s) => s.type === type);
+    const candidats = this.scenarioCatalog
+      .getAll()
+      .filter((s) => s.type === type);
     return this.drawTable.draw(candidats);
   }
 }

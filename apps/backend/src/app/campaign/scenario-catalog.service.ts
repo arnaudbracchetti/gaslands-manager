@@ -22,7 +22,10 @@ export class ScenarioCatalogService implements OnModuleInit {
   private readonly logger: Logger = new Logger(ScenarioCatalogService.name);
 
   /** Map indexée par nom_interne (accès O(1)). */
-  private readonly scenarioMap: Map<string, Scenario> = new Map<string, Scenario>();
+  private readonly scenarioMap: Map<string, Scenario> = new Map<
+    string,
+    Scenario
+  >();
 
   /**
    * Lifecycle hook NestJS : appelé après l'initialisation du module.
@@ -44,7 +47,9 @@ export class ScenarioCatalogService implements OnModuleInit {
       }
       this.assertChaqueTypeTirable(scenarios);
 
-      this.logger.log(`Catalogue de scénarios chargé : ${this.scenarioMap.size} scénarios.`);
+      this.logger.log(
+        `Catalogue de scénarios chargé : ${this.scenarioMap.size} scénarios.`,
+      );
     } catch (err: unknown) {
       this.logger.error('Échec du chargement des scénarios YAML', err);
       throw err;
@@ -72,7 +77,9 @@ export class ScenarioCatalogService implements OnModuleInit {
         .filter((s) => s.type === type)
         .reduce((somme, s) => somme + s.poids_tirage, 0);
       if (total === 0) {
-        throw new Error(`scenarios.yml : aucun scénario ${type} de poids_tirage non nul.`);
+        throw new Error(
+          `scenarios.yml : aucun scénario ${type} de poids_tirage non nul.`,
+        );
       }
     }
   }
@@ -93,7 +100,12 @@ export class ScenarioCatalogService implements OnModuleInit {
    * Protected : surchargeable en test pour fournir un YAML fictif (Template Method).
    */
   protected readFileContent(filename: string): string {
-    const filePath = path.join(process.cwd(), 'database_init', 'data', filename);
+    const filePath = path.join(
+      process.cwd(),
+      'database_init',
+      'data',
+      filename,
+    );
     return fs.readFileSync(filePath, 'utf-8');
   }
 

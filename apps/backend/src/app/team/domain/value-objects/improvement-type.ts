@@ -1,6 +1,10 @@
 import type { Amelioration } from '../../../catalog/catalog.interfaces';
 import { resolveImprovementBehavior } from '../behaviors/improvement-behaviors';
-import type { PlacementCandidate, PlacementContext, RuleResult } from '../behaviors/equipment-behavior';
+import type {
+  PlacementCandidate,
+  PlacementContext,
+  RuleResult,
+} from '../behaviors/equipment-behavior';
 
 export class ImprovementType {
   private constructor(private readonly raw: Amelioration) {}
@@ -67,7 +71,10 @@ export class ImprovementType {
    * son Type est disponible (cf. `Vehicle.canAddImprovement`).
    */
   canPlace(ctx: PlacementContext, candidate: PlacementCandidate): RuleResult {
-    return resolveImprovementBehavior(this.comportement).canPlace(ctx, candidate);
+    return resolveImprovementBehavior(this.comportement).canPlace(
+      ctx,
+      candidate,
+    );
   }
 
   /**

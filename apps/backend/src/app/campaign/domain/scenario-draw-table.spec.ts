@@ -10,10 +10,15 @@ class FixedRandomizer implements IRandomizer {
     this.lastSides = sides;
     return this.fixedRoll;
   }
-  pick<T>(pool: T[]): T { return pool[0]; }
+  pick<T>(pool: T[]): T {
+    return pool[0];
+  }
 }
 
-const candidat = (id: string, poids_tirage: number): { id: string; poids_tirage: number } => ({ id, poids_tirage });
+const candidat = (
+  id: string,
+  poids_tirage: number,
+): { id: string; poids_tirage: number } => ({ id, poids_tirage });
 
 describe('ScenarioDrawTable - tirage pondéré par poids_tirage', () => {
   const candidats = [candidat('A', 1), candidat('B', 2), candidat('C', 1)];
@@ -36,8 +41,12 @@ describe('ScenarioDrawTable - tirage pondéré par poids_tirage', () => {
 
   it('ne tire jamais un candidat de poids 0', () => {
     const avecZero = [candidat('A', 1), candidat('ZERO', 0), candidat('C', 1)];
-    expect(new ScenarioDrawTable(new FixedRandomizer(1)).draw(avecZero).id).toBe('A');
-    expect(new ScenarioDrawTable(new FixedRandomizer(2)).draw(avecZero).id).toBe('C');
+    expect(
+      new ScenarioDrawTable(new FixedRandomizer(1)).draw(avecZero).id,
+    ).toBe('A');
+    expect(
+      new ScenarioDrawTable(new FixedRandomizer(2)).draw(avecZero).id,
+    ).toBe('C');
   });
 
   it('refuse un tirage sans candidat de poids non nul', () => {

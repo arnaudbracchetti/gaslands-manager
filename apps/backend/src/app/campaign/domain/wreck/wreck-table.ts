@@ -9,7 +9,10 @@ import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
 import { AdvantageLostEvent } from '../events/advantage-lost.event';
 import { EquipmentChangedEvent } from '../events/equipment-changed.event';
-import { EquipmentOperation, EquipmentEntityType } from '../enums/equipment-change.enums';
+import {
+  EquipmentOperation,
+  EquipmentEntityType,
+} from '../enums/equipment-change.enums';
 import { VehicleLostEvent } from '../events/vehicle-lost.event';
 import { DomainException } from '../../../shared/domain/domain-exception';
 import { wreckWeightModifier } from './wreck-weight-modifier';
@@ -58,16 +61,26 @@ export class WreckTable {
     private readonly catalog: ICatalogRepository,
   ) {}
 
-  resolve(vehicle: Vehicle, gameId: number, participantId: number): WreckTableResult {
+  resolve(
+    vehicle: Vehicle,
+    gameId: number,
+    participantId: number,
+  ): WreckTableResult {
     const first = this.rollOnce(vehicle, vehicle.chocs, gameId, participantId);
     const events = [...first.events];
     let finalOutcome = first.outcome;
 
     const rouilleActive = vehicle.hasActiveSequella('maintenu_par_la_rouille');
-    const alreadyDestroyed = first.outcome.wreckResult === WreckResult.VEHICULE_DETRUIT;
+    const alreadyDestroyed =
+      first.outcome.wreckResult === WreckResult.VEHICULE_DETRUIT;
     if (rouilleActive && !alreadyDestroyed) {
       const chocsAfterFirst = vehicle.chocs + first.outcome.chocsGained;
-      const second = this.rollOnce(vehicle, chocsAfterFirst, gameId, participantId);
+      const second = this.rollOnce(
+        vehicle,
+        chocsAfterFirst,
+        gameId,
+        participantId,
+      );
       events.push(...second.events);
       finalOutcome = second.outcome;
     }
@@ -91,72 +104,162 @@ export class WreckTable {
     gameId: number,
     participantId: number,
   ): WreckTableResult {
-    const diceRoll = vehicle.hasActiveSequella('legende_vivante') ? 1 : this.random.roll(6);
+    const diceRoll = vehicle.hasActiveSequella('legende_vivante')
+      ? 1
+      : this.random.roll(6);
     const equipmentPool = this.buildEquipmentPool(vehicle);
-    const lostEquipment = equipmentPool.length > 0 ? this.random.pick(equipmentPool) : null;
+    const lostEquipment =
+      equipmentPool.length > 0 ? this.random.pick(equipmentPool) : null;
     const advantagePool = this.buildAdvantagePool(vehicle);
-    const lostAdvantage = advantagePool.length > 0 ? this.random.pick(advantagePool) : null;
-    const modifiedRoll = diceRoll + chocsBefore + wreckWeightModifier(vehicle.type.poids);
+    const lostAdvantage =
+      advantagePool.length > 0 ? this.random.pick(advantagePool) : null;
+    const modifiedRoll =
+      diceRoll + chocsBefore + wreckWeightModifier(vehicle.type.poids);
     const { result, chocsGained } = this.lookupTable(modifiedRoll, chocsBefore);
     const finalLoss =
-      result === WreckResult.ARRACHEE ? lostEquipment :
-      result === WreckResult.PIGNON_ENDOMMAGE ? lostAdvantage :
-      null;
-    const outcome = new WreckOutcome(vehicle.id, diceRoll, chocsBefore, result, chocsGained, finalLoss);
-    return { outcome, events: this.buildEvents(outcome, gameId, participantId) };
+      result === WreckResult.ARRACHEE
+        ? lostEquipment
+        : result === WreckResult.PIGNON_ENDOMMAGE
+          ? lostAdvantage
+          : null;
+    const outcome = new WreckOutcome(
+      vehicle.id,
+      diceRoll,
+      chocsBefore,
+      result,
+      chocsGained,
+      finalLoss,
+    );
+    return {
+      outcome,
+      events: this.buildEvents(outcome, gameId, participantId),
+    };
   }
 
-  private buildEvents(outcome: WreckOutcome, gameId: number, participantId: number): GameEvent[] {
+  private buildEvents(
+    outcome: WreckOutcome,
+    gameId: number,
+    participantId: number,
+  ): GameEvent[] {
     const events: GameEvent[] = [];
 
-    events.push(new WreckResolvedEvent(
-      0, gameId, participantId, 0,
-      outcome.vehicleId, outcome.diceRoll, outcome.chocsBefore,
-      outcome.wreckResult, outcome.chocsGained,
-    ));
+    events.push(
+      new WreckResolvedEvent(
+        0,
+        gameId,
+        participantId,
+        0,
+        outcome.vehicleId,
+        outcome.diceRoll,
+        outcome.chocsBefore,
+        outcome.wreckResult,
+        outcome.chocsGained,
+      ),
+    );
 
-    if (outcome.wreckResult === WreckResult.ARRACHEE && outcome.weaponLostId !== null) {
-      events.push(new WeaponLostEvent(0, gameId, participantId, 0, outcome.weaponLostId));
+    if (
+      outcome.wreckResult === WreckResult.ARRACHEE &&
+      outcome.weaponLostId !== null
+    ) {
+      events.push(
+        new WeaponLostEvent(0, gameId, participantId, 0, outcome.weaponLostId),
+      );
     }
 
-    if (outcome.wreckResult === WreckResult.ARRACHEE && outcome.improvementLostId !== null) {
-      events.push(new ImprovementLostEvent(0, gameId, participantId, 0, outcome.improvementLostId));
+    if (
+      outcome.wreckResult === WreckResult.ARRACHEE &&
+      outcome.improvementLostId !== null
+    ) {
+      events.push(
+        new ImprovementLostEvent(
+          0,
+          gameId,
+          participantId,
+          0,
+          outcome.improvementLostId,
+        ),
+      );
     }
 
-    if (outcome.wreckResult === WreckResult.PIGNON_ENDOMMAGE && outcome.advantageLostId !== null) {
-      events.push(new AdvantageLostEvent(0, gameId, participantId, 0, outcome.advantageLostId));
+    if (
+      outcome.wreckResult === WreckResult.PIGNON_ENDOMMAGE &&
+      outcome.advantageLostId !== null
+    ) {
+      events.push(
+        new AdvantageLostEvent(
+          0,
+          gameId,
+          participantId,
+          0,
+          outcome.advantageLostId,
+        ),
+      );
     }
 
     if (outcome.wreckResult === WreckResult.SIEGE_IRRECUPERABLE) {
       const sequellaType = this.catalog.getSequellaType('siege_irrecuperable');
       if (!sequellaType) {
-        throw new DomainException('Séquelle catalogue introuvable : "siege_irrecuperable".');
+        throw new DomainException(
+          'Séquelle catalogue introuvable : "siege_irrecuperable".',
+        );
       }
-      events.push(new EquipmentChangedEvent(
-        0, gameId, participantId, 0,
-        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'siege_irrecuperable', 0,
-        outcome.vehicleId, null, null,
-        null, null, null, null,
-        sequellaType, null,
-      ));
+      events.push(
+        new EquipmentChangedEvent(
+          0,
+          gameId,
+          participantId,
+          0,
+          EquipmentOperation.BUY,
+          EquipmentEntityType.SEQUELLE,
+          'siege_irrecuperable',
+          0,
+          outcome.vehicleId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          sequellaType,
+          null,
+        ),
+      );
     }
 
     if (outcome.wreckResult === WreckResult.CHASSIS_FRAGILISE) {
       const sequellaType = this.catalog.getSequellaType('chassis_fragilise');
       if (!sequellaType) {
-        throw new DomainException('Séquelle catalogue introuvable : "chassis_fragilise".');
+        throw new DomainException(
+          'Séquelle catalogue introuvable : "chassis_fragilise".',
+        );
       }
-      events.push(new EquipmentChangedEvent(
-        0, gameId, participantId, 0,
-        EquipmentOperation.BUY, EquipmentEntityType.SEQUELLE, 'chassis_fragilise', 0,
-        outcome.vehicleId, null, null,
-        null, null, null, null,
-        sequellaType, null,
-      ));
+      events.push(
+        new EquipmentChangedEvent(
+          0,
+          gameId,
+          participantId,
+          0,
+          EquipmentOperation.BUY,
+          EquipmentEntityType.SEQUELLE,
+          'chassis_fragilise',
+          0,
+          outcome.vehicleId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          sequellaType,
+          null,
+        ),
+      );
     }
 
     if (outcome.wreckResult === WreckResult.VEHICULE_DETRUIT) {
-      events.push(new VehicleLostEvent(0, gameId, participantId, 0, outcome.vehicleId));
+      events.push(
+        new VehicleLostEvent(0, gameId, participantId, 0, outcome.vehicleId),
+      );
     }
 
     return events;
@@ -178,7 +281,9 @@ export class WreckTable {
         .filter((w) => !w.isLost && !w.isSold && !w.type.estGratuit)
         .map((w) => ({ kind: 'weapon' as const, id: w.id })),
       ...vehicle.improvements
-        .filter((i) => !i.estDefaut && !i.isLost && !i.isSold && !i.type.estGratuit)
+        .filter(
+          (i) => !i.estDefaut && !i.isLost && !i.isSold && !i.type.estGratuit,
+        )
         .map((i) => ({ kind: 'improvement' as const, id: i.id })),
     ];
   }
@@ -199,14 +304,25 @@ export class WreckTable {
     modifiedRoll: number,
     chocsBefore: number,
   ): { result: WreckResult; chocsGained: number } {
-    if (modifiedRoll <= 1) return { result: WreckResult.DEBOSSELE, chocsGained: chocsBefore > 0 ? -1 : 0 };
-    if (modifiedRoll <= 3) return { result: WreckResult.INDEMNE, chocsGained: 0 };
-    if (modifiedRoll === 4) return { result: WreckResult.ROUE_CABOSSEE, chocsGained: 1 };
-    if (modifiedRoll === 5) return { result: WreckResult.ARRACHEE, chocsGained: 1 };
-    if (modifiedRoll === 6) return { result: WreckResult.PIGNON_ENDOMMAGE, chocsGained: 1 };
-    if (modifiedRoll === 7) return { result: WreckResult.SIEGE_IRRECUPERABLE, chocsGained: 2 };
-    if (modifiedRoll === 8) return { result: WreckResult.CHASSIS_FRAGILISE, chocsGained: 2 };
-    if (modifiedRoll === 9) return { result: WreckResult.FAVORI_DU_PUBLIC, chocsGained: 3 };
+    if (modifiedRoll <= 1)
+      return {
+        result: WreckResult.DEBOSSELE,
+        chocsGained: chocsBefore > 0 ? -1 : 0,
+      };
+    if (modifiedRoll <= 3)
+      return { result: WreckResult.INDEMNE, chocsGained: 0 };
+    if (modifiedRoll === 4)
+      return { result: WreckResult.ROUE_CABOSSEE, chocsGained: 1 };
+    if (modifiedRoll === 5)
+      return { result: WreckResult.ARRACHEE, chocsGained: 1 };
+    if (modifiedRoll === 6)
+      return { result: WreckResult.PIGNON_ENDOMMAGE, chocsGained: 1 };
+    if (modifiedRoll === 7)
+      return { result: WreckResult.SIEGE_IRRECUPERABLE, chocsGained: 2 };
+    if (modifiedRoll === 8)
+      return { result: WreckResult.CHASSIS_FRAGILISE, chocsGained: 2 };
+    if (modifiedRoll === 9)
+      return { result: WreckResult.FAVORI_DU_PUBLIC, chocsGained: 3 };
     return { result: WreckResult.VEHICULE_DETRUIT, chocsGained: 0 };
   }
 }
