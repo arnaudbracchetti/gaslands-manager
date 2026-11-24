@@ -1,41 +1,48 @@
 import { describe, it, expect } from 'vitest';
 import { ScenarioDrawTable } from './scenario-draw-table';
-import { GameType } from '../game.enums';
 import type { IRandomizer } from './randomizer.interface';
 
-/** Randomizer déterministe — implémente IRandomizer sans mocker Math.random. */
+/** Randomizer déterministe - mémorise le nombre de faces demandé. */
 class FixedRandomizer implements IRandomizer {
+  lastSides: number | undefined;
   constructor(private readonly fixedRoll: number) {}
-  roll(_sides: number): number { return this.fixedRoll; }
+  roll(sides: number): number {
+    this.lastSides = sides;
+    return this.fixedRoll;
+  }
   pick<T>(pool: T[]): T { return pool[0]; }
 }
 
-describe('ScenarioDrawTable — tirage D6 (Gaslands p.128-129)', () => {
-  describe('Événement Télévisé', () => {
-    it.each([
-      [1, 'course_a_la_mort'],
-      [2, 'course_a_la_mort'],
-      [3, 'arene_de_la_mort'],
-      [4, 'capture_du_drapeau'],
-      [5, 'destruction_de_drapeaux'],
-      [6, 'samedi_soir_en_direct'],
-    ])('D6=%i → %s', (roll, expected) => {
-      const table = new ScenarioDrawTable(new FixedRandomizer(roll));
-      expect(table.draw(GameType.EVENEMENT_TELE)).toBe(expected);
-    });
+const candidat = (id: string, poids_tirage: number): { id: string; poids_tirage: number } => ({ id, poids_tirage });
+
+describe('ScenarioDrawTable - tirage pondéré par poids_tirage', () => {
+  const candidats = [candidat('A', 1), candidat('B', 2), candidat('C', 1)];
+
+  it('lance un dé dont le nombre de faces est la somme des poids', () => {
+    const random = new FixedRandomizer(1);
+    new ScenarioDrawTable(random).draw(candidats);
+    expect(random.lastSides).toBe(4);
   });
 
-  describe('Escarmouche', () => {
-    it.each([
-      [1, 'operation_ferraille'],
-      [2, 'livraison_express'],
-      [3, 'chasse_au_matos'],
-      [4, 'chasse_au_matos'],
-      [5, 'la_revolution_sera_televisee'],
-      [6, 'massacre_de_zombies'],
-    ])('D6=%i → %s', (roll, expected) => {
-      const table = new ScenarioDrawTable(new FixedRandomizer(roll));
-      expect(table.draw(GameType.ESCARMOUCHE)).toBe(expected);
-    });
+  it.each([
+    [1, 'A'],
+    [2, 'B'],
+    [3, 'B'],
+    [4, 'C'],
+  ])('jet %i → %s (un poids 2 occupe deux faces)', (jet, attendu) => {
+    const table = new ScenarioDrawTable(new FixedRandomizer(jet));
+    expect(table.draw(candidats).id).toBe(attendu);
+  });
+
+  it('ne tire jamais un candidat de poids 0', () => {
+    const avecZero = [candidat('A', 1), candidat('ZERO', 0), candidat('C', 1)];
+    expect(new ScenarioDrawTable(new FixedRandomizer(1)).draw(avecZero).id).toBe('A');
+    expect(new ScenarioDrawTable(new FixedRandomizer(2)).draw(avecZero).id).toBe('C');
+  });
+
+  it('refuse un tirage sans candidat de poids non nul', () => {
+    const table = new ScenarioDrawTable(new FixedRandomizer(1));
+    expect(() => table.draw([candidat('ZERO', 0)])).toThrow(/aucun candidat/);
+    expect(() => table.draw([])).toThrow(/aucun candidat/);
   });
 });

@@ -15,6 +15,7 @@ import { marked } from 'marked';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Scenario } from './scenario.interfaces';
+import { GameType } from './game.enums';
 
 @Injectable()
 export class ScenarioCatalogService implements OnModuleInit {
@@ -36,15 +37,43 @@ export class ScenarioCatalogService implements OnModuleInit {
       ).scenarios;
 
       for (const s of scenarios) {
+        this.assertPoidsTirageValide(s);
         // Conversion Markdown → HTML une seule fois ici (comme CatalogService).
         s.description = this.toHtml(s.description);
         this.scenarioMap.set(s.nom_interne, s);
       }
+      this.assertChaqueTypeTirable(scenarios);
 
       this.logger.log(`Catalogue de scénarios chargé : ${this.scenarioMap.size} scénarios.`);
     } catch (err: unknown) {
       this.logger.error('Échec du chargement des scénarios YAML', err);
       throw err;
+    }
+  }
+
+  /**
+   * `poids_tirage` est obligatoire, entier et >= 0. Le YAML est casté sans validation
+   * (cf. loadYaml) : on vérifie ici ce champ car le tirage en dépend arithmétiquement
+   * (un poids absent donnerait NaN, un poids négatif fausserait les intervalles).
+   */
+  private assertPoidsTirageValide(s: Scenario): void {
+    if (!Number.isInteger(s.poids_tirage) || s.poids_tirage < 0) {
+      throw new Error(
+        `scenarios.yml : poids_tirage invalide pour "${s.nom_interne}" ` +
+          `(attendu un entier >= 0, reçu ${String(s.poids_tirage)}).`,
+      );
+    }
+  }
+
+  /** Chaque type doit avoir au moins un scénario tirable, sinon son bouton aléatoire échouerait. */
+  private assertChaqueTypeTirable(scenarios: Scenario[]): void {
+    for (const type of Object.values(GameType)) {
+      const total = scenarios
+        .filter((s) => s.type === type)
+        .reduce((somme, s) => somme + s.poids_tirage, 0);
+      if (total === 0) {
+        throw new Error(`scenarios.yml : aucun scénario ${type} de poids_tirage non nul.`);
+      }
     }
   }
 

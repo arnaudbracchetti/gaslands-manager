@@ -11,6 +11,10 @@ Chaque partie planifiée s'appuie sur un **scénario** du catalogue (Événement
 Télévisé ou Escarmouche), qui détermine son type. Une nouvelle partie est
 ajoutée en fin de programme, avec le statut *Planifiée*.
 
+Les boutons **🎲 aléatoire** tirent un scénario au hasard selon les chances
+de la table officielle du livre de règles. Les scénarios ajoutés au
+catalogue y participent aussi, sauf ceux réservés au choix manuel.
+
 ## Modifier ou supprimer une partie planifiée
 
 Possible tant que la partie n'a pas encore été jouée. Une fois son résultat

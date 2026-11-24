@@ -133,6 +133,10 @@ type `EVENEMENT_TELE` ou `ESCARMOUCHE`).
 - Gestion (ajout, édition, suppression, réordonnancement) : organisateur, `EN_CONSTRUCTION`/`EN_COURS` ;
   lecture seule en `TERMINEE` (400 sur toute écriture). Consultation : tout participant `VALIDATED`.
 - Ajout : partie `PLANIFIE`, en fin de programme, type repris du scénario.
+- **Tirage aléatoire** (`GET /api/catalog/scenarios/random`, un bouton par type) : tirage pondéré
+  parmi les scénarios du type, chacun pesant son `poids_tirage` (entier >= 0, 0 = choix manuel
+  seulement). Les poids du catalogue reproduisent les tables D6 officielles (p.128-129) ; un
+  scénario ajouté élargit le tirage. Poids invalide ou type sans poids non nul → refus de démarrer.
 - Une partie `ATELIER`/`JOUE` ne peut être ni modifiée ni supprimée (400).
 - **Réordonnancement** (`PUT .../games/reorder`, `{ gameIds }`) : porte uniquement sur les parties
   `PLANIFIE` ; le corps doit contenir exactement toutes les parties `PLANIFIE` (sinon 400). Les

@@ -23,4 +23,7 @@ export interface Scenario {
   franchissement_portes: boolean;
   /** Le wizard de fin de partie propose-t-il la saisie manuelle d'un butin de jerricans ? */
   gain_jerricans: boolean;
+  /** Nombre de chances (entier >= 0) dans le tirage aléatoire de son type ; 0 = jamais tiré.
+   *  Validé au chargement par ScenarioCatalogService, consommé par ScenarioDrawTable. */
+  poids_tirage: number;
 }

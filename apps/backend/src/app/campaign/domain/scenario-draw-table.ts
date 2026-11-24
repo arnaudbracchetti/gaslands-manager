@@ -1,39 +1,41 @@
 import type { IRandomizer } from './randomizer.interface';
-import { GameType } from '../game.enums';
 
-// Table officielle Gaslands (p.128-129) — jet de D6 → nom_interne du scénario.
-// Index 0..5 correspond à un résultat de dé 1..6.
-const EVENEMENT_TELE_TABLE: readonly string[] = [
-  'course_a_la_mort',
-  'course_a_la_mort',
-  'arene_de_la_mort',
-  'capture_du_drapeau',
-  'destruction_de_drapeaux',
-  'samedi_soir_en_direct',
-];
-
-const ESCARMOUCHE_TABLE: readonly string[] = [
-  'operation_ferraille',
-  'livraison_express',
-  'chasse_au_matos',
-  'chasse_au_matos',
-  'la_revolution_sera_televisee',
-  'massacre_de_zombies',
-];
+/** Ce dont le tirage a besoin d'un candidat : son poids (nombre de « faces » du dé). */
+export interface WeightedCandidate {
+  poids_tirage: number;
+}
 
 /**
- * Tirage aléatoire d'un scénario (Gaslands, p.128-129) — domain service, même famille
- * que `WreckTable` (tirage D6 serveur non-uniforme sur une table fixe).
+ * Tirage aléatoire pondéré d'un scénario - domain service, même famille que `WreckTable`
+ * (tirage serveur non uniforme).
  *
- * Retourne un `nom_interne` (pas un `Scenario` complet) : cette classe ne connaît pas
- * le catalogue, seulement la table de probabilités — la résolution
- * `nom_interne → Scenario` reste du ressort de `ScenarioCatalogService`.
+ * Généralise la table D6 officielle (Gaslands, p.128-129) : un scénario de poids 2 occupe
+ * deux faces d'un dé à `somme des poids` faces. Avec les poids de scenarios.yml, le tirage
+ * reproduit exactement les tables officielles ; un scénario ajouté élargit simplement le dé.
+ *
+ * La classe ne connaît pas le catalogue : elle reçoit les candidats (déjà filtrés par type
+ * par le use case) et en renvoie un. Générique pour rester indépendante du type `Scenario`.
  */
 export class ScenarioDrawTable {
   constructor(private readonly random: IRandomizer) {}
 
-  draw(type: GameType): string {
-    const table = type === GameType.EVENEMENT_TELE ? EVENEMENT_TELE_TABLE : ESCARMOUCHE_TABLE;
-    return table[this.random.roll(6) - 1];
+  draw<T extends WeightedCandidate>(candidats: readonly T[]): T {
+    const total = candidats.reduce((somme, c) => somme + c.poids_tirage, 0);
+    if (total <= 0) {
+      throw new Error('Tirage de scénario impossible : aucun candidat de poids non nul.');
+    }
+
+    // Jet de 1 à total, puis parcours cumulatif : le candidat i couvre les faces
+    // ]cumul avant i ; cumul avant i + poids_i]. Un poids 0 ne couvre aucune face.
+    const jet = this.random.roll(total);
+    let cumul = 0;
+    for (const candidat of candidats) {
+      cumul += candidat.poids_tirage;
+      if (jet <= cumul) {
+        return candidat;
+      }
+    }
+    // Inatteignable si roll() respecte son contrat (1..total).
+    throw new Error(`Jet hors bornes : ${jet} sur ${total}.`);
   }
 }

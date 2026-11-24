@@ -8,6 +8,8 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ScenarioCatalogService } from './scenario-catalog.service';
+import * as fs from 'fs';
+import * as path from 'path';
 import { GameType } from './game.enums';
 
 const MOCK_YAML = `
@@ -18,18 +20,44 @@ scenarios:
     description: "Une **course** classique."
     franchissement_portes: true
     gain_jerricans: false
+    poids_tirage: 2
   - nom: "Embuscade"
     nom_interne: "embuscade"
     type: "ESCARMOUCHE"
     description: "Un piège tendu."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 1
 `;
 
 class TestScenarioCatalogService extends ScenarioCatalogService {
-  protected override readFileContent(): string {
-    return MOCK_YAML;
+  constructor(private readonly yaml: string = MOCK_YAML) {
+    super();
   }
+  protected override readFileContent(): string {
+    return this.yaml;
+  }
+}
+
+/** YAML minimal : un scénario de chaque type, poids de l'Escarmouche paramétrable. */
+function yamlAvecPoidsEscarmouche(poidsLigne: string): string {
+  return `
+scenarios:
+  - nom: "Course"
+    nom_interne: "course"
+    type: "EVENEMENT_TELE"
+    description: "x"
+    franchissement_portes: true
+    gain_jerricans: false
+    poids_tirage: 1
+  - nom: "Embuscade"
+    nom_interne: "embuscade"
+    type: "ESCARMOUCHE"
+    description: "x"
+    franchissement_portes: false
+    gain_jerricans: true
+${poidsLigne}
+`;
 }
 
 describe('ScenarioCatalogService', () => {
@@ -71,5 +99,49 @@ describe('ScenarioCatalogService', () => {
   it('charge le flag gain_jerricans', () => {
     expect(service.getByNomInterne('course_de_la_mort')?.gain_jerricans).toBe(false);
     expect(service.getByNomInterne('embuscade')?.gain_jerricans).toBe(true);
+  });
+
+  it('charge poids_tirage', () => {
+    expect(service.getByNomInterne('course_de_la_mort')?.poids_tirage).toBe(2);
+  });
+
+  describe('validation de poids_tirage (fail-fast au démarrage)', () => {
+    it.each([
+      ['absent', ''],
+      ['négatif', '    poids_tirage: -1'],
+      ['non entier', '    poids_tirage: 1.5'],
+      ['texte', '    poids_tirage: "beaucoup"'],
+    ])('rejette un poids %s en nommant le scénario', (_cas, ligne) => {
+      const s = new TestScenarioCatalogService(yamlAvecPoidsEscarmouche(ligne));
+      expect(() => s.onModuleInit()).toThrow(/poids_tirage invalide pour "embuscade"/);
+    });
+
+    it('rejette un type dont tous les poids valent 0', () => {
+      const s = new TestScenarioCatalogService(yamlAvecPoidsEscarmouche('    poids_tirage: 0'));
+      expect(() => s.onModuleInit()).toThrow(/aucun scénario ESCARMOUCHE/);
+    });
+  });
+
+  it('le vrai scenarios.yml est valide et reproduit les tables D6 officielles', () => {
+    // Vrai fichier, lu depuis __dirname (sous `nx test`, process.cwd() vaut apps/backend/,
+    // cf. RealCatalogService dans catalog.data.spec.ts). __dirname = apps/backend/src/app/campaign/
+    const realYaml = fs.readFileSync(
+      path.resolve(__dirname, '../../../../../database_init/data/scenarios.yml'),
+      'utf-8',
+    );
+    const reel = new TestScenarioCatalogService(realYaml);
+    reel.onModuleInit();
+    const poidsEvenement = Object.fromEntries(
+      reel.getAll()
+        .filter((sc) => sc.type === GameType.EVENEMENT_TELE)
+        .map((sc) => [sc.nom_interne, sc.poids_tirage]),
+    );
+    expect(poidsEvenement).toEqual({
+      course_a_la_mort: 2,
+      arene_de_la_mort: 1,
+      capture_du_drapeau: 1,
+      destruction_de_drapeaux: 1,
+      samedi_soir_en_direct: 1,
+    });
   });
 });

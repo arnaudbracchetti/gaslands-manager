@@ -5,46 +5,37 @@ import type { Scenario } from '../scenario.interfaces';
 import type { ScenarioCatalogService } from '../scenario-catalog.service';
 import type { ScenarioDrawTable } from '../domain/scenario-draw-table';
 
-function makeScenario(nomInterne: string): Scenario {
+function makeScenario(nomInterne: string, type: GameType): Scenario {
   return {
     nom: nomInterne,
     nom_interne: nomInterne,
-    type: GameType.EVENEMENT_TELE,
+    type,
     description: '',
     franchissement_portes: false,
     gain_jerricans: false,
+    poids_tirage: 1,
   };
 }
 
 describe('DrawRandomScenarioUseCase', () => {
-  it('tire un nom_interne via ScenarioDrawTable puis le résout via le catalogue', () => {
-    const scenario = makeScenario('arene_de_la_mort');
-    const scenarioCatalog = {
-      getByNomInterne: vi.fn().mockReturnValue(scenario),
-    } as unknown as ScenarioCatalogService;
+  const arene = makeScenario('arene_de_la_mort', GameType.EVENEMENT_TELE);
+  const course = makeScenario('course_a_la_mort', GameType.EVENEMENT_TELE);
+  const livraison = makeScenario('livraison_express', GameType.ESCARMOUCHE);
+  const scenarioCatalog = {
+    getAll: vi.fn().mockReturnValue([arene, livraison, course]),
+  } as unknown as ScenarioCatalogService;
+
+  it.each([
+    [GameType.EVENEMENT_TELE, [arene, course]],
+    [GameType.ESCARMOUCHE, [livraison]],
+  ])('ne soumet au tirage que les scénarios de type %s et renvoie le tiré', (type, attendus) => {
     const drawTable = {
-      draw: vi.fn().mockReturnValue('arene_de_la_mort'),
+      draw: vi.fn().mockReturnValue(attendus[0]),
     } as unknown as ScenarioDrawTable;
 
-    const useCase = new DrawRandomScenarioUseCase(scenarioCatalog, drawTable);
-    const result = useCase.execute(GameType.EVENEMENT_TELE);
+    const result = new DrawRandomScenarioUseCase(scenarioCatalog, drawTable).execute(type);
 
-    expect(drawTable.draw).toHaveBeenCalledWith(GameType.EVENEMENT_TELE);
-    expect(scenarioCatalog.getByNomInterne).toHaveBeenCalledWith('arene_de_la_mort');
-    expect(result).toBe(scenario);
-  });
-
-  it('lève une erreur si le nom_interne tiré est absent du catalogue', () => {
-    const scenarioCatalog = {
-      getByNomInterne: vi.fn().mockReturnValue(undefined),
-    } as unknown as ScenarioCatalogService;
-    const drawTable = {
-      draw: vi.fn().mockReturnValue('scenario_inconnu'),
-    } as unknown as ScenarioDrawTable;
-
-    const useCase = new DrawRandomScenarioUseCase(scenarioCatalog, drawTable);
-    expect(() => useCase.execute(GameType.ESCARMOUCHE)).toThrow(
-      'Scénario tiré introuvable au catalogue : "scenario_inconnu".',
-    );
+    expect(drawTable.draw).toHaveBeenCalledWith(attendus);
+    expect(result).toBe(attendus[0]);
   });
 });

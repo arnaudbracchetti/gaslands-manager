@@ -19,6 +19,11 @@
 #   gain_jerricans          — Le wizard de fin de partie propose-t-il la saisie manuelle
 #                             d'un butin de jerricans (scénario de pillage) ? Indépendant du
 #                             revenu de base D6 par participant, propre aux Escarmouches.
+#   poids_tirage            - Entier >= 0 : nombre de chances du scénario dans le tirage
+#                             aléatoire de son type (bouton « aléatoire » du formulaire de
+#                             partie). 0 = jamais tiré, choix manuel uniquement.
+#                             Les poids ci-dessous reproduisent les tables D6 officielles
+#                             (p.128-129), un scénario ajouté élargit simplement le tirage.
 #
 # Source : livre de règles Gaslands Refuelled, mode Saison Télévisée (p.162-170).
 
@@ -30,6 +35,7 @@ scenarios:
     description: "Franchissez les Portes dans le bon ordre et dans le bon sens, plus rapidement que vos adversaires, ou soyez le dernier encore en état de rouler."
     franchissement_portes: true
     gain_jerricans: false
+    poids_tirage: 2
 
   - nom: "Arène de la Mort"
     nom_interne: "arene_de_la_mort"
@@ -37,6 +43,7 @@ scenarios:
     description: "Un combat à mort dans une arène truffée de Tourelles Automatiques. Le dernier joueur avec des véhicules en jeu est déclaré vainqueur."
     franchissement_portes: false
     gain_jerricans: false
+    poids_tirage: 1
 
   - nom: "Capture du Drapeau"
     nom_interne: "capture_du_drapeau"
@@ -44,6 +51,7 @@ scenarios:
     description: "Chaque véhicule porte un drapeau à défendre. La partie prend fin dès qu'un véhicule transporte deux drapeaux."
     franchissement_portes: false
     gain_jerricans: false
+    poids_tirage: 1
 
   - nom: "Destruction de Drapeaux"
     nom_interne: "destruction_de_drapeaux"
@@ -51,6 +59,7 @@ scenarios:
     description: "Percutez le drapeau d'un adversaire pour marquer un point. Le premier joueur à 3 Points de Victoire remporte la partie."
     franchissement_portes: false
     gain_jerricans: false
+    poids_tirage: 1
 
   - nom: "Samedi Soir en Direct"
     nom_interne: "samedi_soir_en_direct"
@@ -58,6 +67,7 @@ scenarios:
     description: "Le public décide du vainqueur : restez sous le feu des projecteurs pour marquer des Points de Victoire et remporter des prix spéciaux."
     franchissement_portes: false
     gain_jerricans: false
+    poids_tirage: 1
 
   # ── Escarmouches (Tableau des scénarios d'Escarmouches sur les Terres Dévastées, p.129) ─
   - nom: "Opération Ferraille"
@@ -66,6 +76,7 @@ scenarios:
     description: "On récupère tout ce qui n'est pas rivé. Collectez un maximum de Points de Récup' avant la fin de la troisième manche."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 1
 
   - nom: "Livraison Express"
     nom_interne: "livraison_express"
@@ -73,6 +84,7 @@ scenarios:
     description: "Une livraison urgente à faire sortir de la zone de jeu. Le premier véhicule d'un joueur à franchir le bord de sortie lui rapporte un Point de Victoire."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 1
 
   - nom: "Chasse au Matos"
     nom_interne: "chasse_au_matos"
@@ -80,6 +92,7 @@ scenarios:
     description: "Une tempête a révélé un dépôt de carburant abandonné. Récupérez le plus de caisses possible avant que les autres équipes ne s'en emparent."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 2
 
   - nom: "La Révolution Sera Télévisée"
     nom_interne: "la_revolution_sera_televisee"
@@ -87,6 +100,7 @@ scenarios:
     description: "Un émetteur radio clandestin circule sur le terrain. Repérez-le et percutez-le pour diffuser le message de la résistance pro-terrienne."
     franchissement_portes: false
     gain_jerricans: false
+    poids_tirage: 1
 
   - nom: "Massacre de Zombies"
     nom_interne: "massacre_de_zombies"
@@ -94,6 +108,7 @@ scenarios:
     description: "Les Terres Dévastées grouillent de zombies irradiés. Récupérez-en le plus possible sur votre passage pour l'emporter."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 1
 
   - nom: "Le salaire de la peur"
     nom_interne: "salaire_de_la_peur"
@@ -101,3 +116,4 @@ scenarios:
     description: "Une partie de stop ou encore avec des bombes..."
     franchissement_portes: false
     gain_jerricans: true
+    poids_tirage: 1
