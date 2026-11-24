@@ -23,6 +23,15 @@ export class WeaponType {
     return this.raw.emplacement;
   }
 
+  /**
+   * Équipement gratuit : 0 jerrican ET 0 emplacement au catalogue (ex. Pistolet). On peut
+   * en empiler à volonté sans rien payer, d'où son exclusion des pertes de la Table des
+   * Épaves (sinon il servirait à diluer le tirage pour protéger les armes payantes).
+   */
+  get estGratuit(): boolean {
+    return this.price === 0 && this.slots === 0;
+  }
+
   get description(): string {
     return this.raw.description;
   }

@@ -165,26 +165,33 @@ export class WreckTable {
   // ── Helpers privés ────────────────────────────────────────────────────────────
 
   /**
-   * Armes non perdues et non vendues + améliorations non perdues, non vendues et non
-   * intégrées (estDefaut). Un objet vendu n'est plus physiquement sur le véhicule — il ne
-   * doit jamais être tiré au sort par cette table (sinon "arraché" une seconde fois).
+   * Équipements arrachables : armes non perdues, non vendues et non gratuites +
+   * améliorations non perdues, non vendues, non intégrées (estDefaut) et non gratuites.
+   * Un objet vendu n'est plus physiquement sur le véhicule — il ne doit jamais être tiré
+   * au sort par cette table (sinon "arraché" une seconde fois). Un équipement gratuit
+   * (`estGratuit`) s'empile sans coût : le garder dans le tirage permettrait de diluer
+   * la perte pour protéger les équipements payants.
    */
   private buildEquipmentPool(vehicle: Vehicle): NonNullable<LostEquipment>[] {
     return [
-      ...vehicle.weapons.filter((w) => !w.isLost && !w.isSold).map((w) => ({ kind: 'weapon' as const, id: w.id })),
+      ...vehicle.weapons
+        .filter((w) => !w.isLost && !w.isSold && !w.type.estGratuit)
+        .map((w) => ({ kind: 'weapon' as const, id: w.id })),
       ...vehicle.improvements
-        .filter((i) => !i.estDefaut && !i.isLost && !i.isSold)
+        .filter((i) => !i.estDefaut && !i.isLost && !i.isSold && !i.type.estGratuit)
         .map((i) => ({ kind: 'improvement' as const, id: i.id })),
     ];
   }
 
   /**
-   * Avantages non perdus et non vendus — tirage indépendant pour PIGNON_ENDOMMAGE.
-   * Un objet vendu n'est plus effectif sur le véhicule — inutile de le tirer au sort.
+   * Avantages perdables : non perdus, non vendus et non gratuits — tirage indépendant
+   * pour PIGNON_ENDOMMAGE. Un objet vendu n'est plus effectif sur le véhicule — inutile
+   * de le tirer au sort ; un avantage gratuit est exclu pour la même raison que dans
+   * `buildEquipmentPool`.
    */
   private buildAdvantagePool(vehicle: Vehicle): NonNullable<LostEquipment>[] {
     return vehicle.advantages
-      .filter((a) => !a.isSold && !a.isLost)
+      .filter((a) => !a.isSold && !a.isLost && !a.type.estGratuit)
       .map((a) => ({ kind: 'advantage' as const, id: a.id }));
   }
 

@@ -41,6 +41,11 @@ export class ImprovementType {
     return this.raw.prix;
   }
 
+  /** Équipement gratuit : 0 jerrican ET 0 emplacement au catalogue (ex. Remorque de Transport) — cf. `WeaponType.estGratuit`. */
+  get estGratuit(): boolean {
+    return this.price === 0 && this.slots === 0;
+  }
+
   /** Libellé très court (1-2 mots) pour la fiche d'équipe exportable — cf. `Arme.effet_court`. */
   get effetCourt(): string | undefined {
     return this.raw.effet_court;

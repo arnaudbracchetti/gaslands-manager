@@ -366,6 +366,10 @@ Tirage D6 serveur (+ Chocs) à l'écran Résolution, 9 résultats (`WreckResult`
 - `ARRACHEE` : perte tirée au hasard parmi armes + améliorations montées.
 - `PIGNON_ENDOMMAGE` : perte tirée au hasard parmi les avantages (un avantage perdu redevient
   achetable).
+- Un **équipement gratuit** (0 jerrican **et** 0 emplacement au catalogue : Pistolet, Remorque de
+  Transport ; pour un avantage, 0 jerrican) n'entre dans aucun des deux tirages, sinon empiler des
+  Pistolets diluerait la perte. Seul le prix catalogue compte : l'avantage offert par Dur à Cuire
+  reste perdable. Si rien n'est perdable, la ligne s'applique quand même (Chocs) sans perte.
 - `SIEGE_IRRECUPERABLE` / `CHASSIS_FRAGILISE` : séquelle `TABLE_EPAVES` imposée.
 - Jamais un choix de l'organisateur.
 

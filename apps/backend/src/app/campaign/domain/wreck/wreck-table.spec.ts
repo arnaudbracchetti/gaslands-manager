@@ -6,10 +6,12 @@ import type { ICatalogRepository } from '../../../team/domain/catalog.repository
 import { VehicleType } from '../../../team/domain/value-objects/vehicle-type';
 import { WeaponType } from '../../../team/domain/value-objects/weapon-type';
 import { ImprovementType } from '../../../team/domain/value-objects/improvement-type';
+import { AdvantageType } from '../../../team/domain/value-objects/advantage-type';
 import { SequellaType } from '../../../team/domain/value-objects/sequella-type';
 import { Vehicle } from '../../../team/domain/vehicle';
 import { Weapon } from '../../../team/domain/weapon';
 import { Improvement } from '../../../team/domain/improvement';
+import { Advantage } from '../../../team/domain/advantage';
 import { WreckResolvedEvent } from '../events/wreck-resolved.event';
 import { WeaponLostEvent } from '../events/weapon-lost.event';
 import { ImprovementLostEvent } from '../events/improvement-lost.event';
@@ -64,6 +66,7 @@ function makeVehicle(
   chocs = 0,
   weapons: Weapon[] = [],
   improvements: Improvement[] = [],
+  advantages: Advantage[] = [],
 ): Vehicle {
   const raw = {
     nom: 'Test', nom_interne: 'test', poids,
@@ -71,7 +74,7 @@ function makeVehicle(
     emplacements: 4, prix: 12, description: '', regles: '', sponsors_autorises: [],
     ameliorations_defaut: [],
   };
-  const v = new Vehicle(1, 1, VehicleType.from(raw), weapons, improvements);
+  const v = new Vehicle(1, 1, VehicleType.from(raw), weapons, improvements, advantages);
   if (chocs > 0) v.addChocs(chocs);
   return v;
 }
@@ -89,6 +92,30 @@ function makeImprovement(id: number, estDefaut = false): Improvement {
     nom: 'Blindage', nom_interne: 'blindage', prix: 4, emplacement: 1,
     description: '', regles: '', sponsors_autorises: [], necessite_orientation: false,
   }), null, estDefaut);
+}
+
+/** Arme d'équipage (0 emplacement, sans orientation) au prix voulu — Pistolet à 0, Grenades à 1. */
+function makeCrewWeapon(id: number, nomInterne: string, prix: number): Weapon {
+  return new Weapon(id, WeaponType.from({
+    nom: nomInterne, nom_interne: nomInterne, type: 'équipage' as const,
+    prix, emplacement: 0, description: '', regles: '', sponsors_autorises: [],
+    necessite_orientation: false,
+  }), null);
+}
+
+/** Remorque de Transport : seule amélioration gratuite du catalogue (0 jerrican, 0 emplacement). */
+function makeRemorqueTransport(id: number): Improvement {
+  return new Improvement(id, ImprovementType.from({
+    nom: 'Remorque de Transport', nom_interne: 'remorque_transport', prix: 0, emplacement: 0,
+    description: '', regles: '', sponsors_autorises: [], necessite_orientation: false,
+  }), null, false);
+}
+
+function makeAdvantage(id: number, prix: number): Advantage {
+  return new Advantage(id, AdvantageType.from({
+    nom: `Avantage ${id}`, nom_interne: `avantage_${id}`, categorie: 'Militaire',
+    prix, description: '', regles: '',
+  }));
 }
 
 describe('WreckTable — Table des Épaves (10 lignes)', () => {
@@ -182,6 +209,48 @@ describe('WreckTable — Table des Épaves (10 lignes)', () => {
       const { outcome } = new WreckTable(new FixedRandomizer(5, 0), catalog)
         .resolve(makeVehicle('Moyen', 0, [], [soldImpro, stillMounted]), GAME_ID, PARTICIPANT_ID);
       expect(outcome.lostEquipment).toEqual({ kind: 'improvement', id: 9 });
+    });
+
+    // Équipement gratuit (0 jerrican ET 0 emplacement) : jamais arrachable, sinon un joueur
+    // pourrait empiler des Pistolets gratuits pour diluer le tirage et protéger ses armes chères.
+    it('ARRACHEE exclut un équipement gratuit (Pistolet), tire l\'arme payante', () => {
+      const { outcome } = new WreckTable(new FixedRandomizer(5, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, [makeCrewWeapon(7, 'pistolet', 0), makeWeapon(8)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toEqual({ kind: 'weapon', id: 8 });
+    });
+
+    it('ARRACHEE exclut une amélioration gratuite (Remorque de Transport)', () => {
+      const { outcome } = new WreckTable(new FixedRandomizer(5, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, [], [makeRemorqueTransport(8), makeImprovement(9)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toEqual({ kind: 'improvement', id: 9 });
+    });
+
+    it('ARRACHEE garde une arme à 1 jerrican et 0 emplacement (Grenades) : elle n\'est pas gratuite', () => {
+      const { outcome } = new WreckTable(new FixedRandomizer(5, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, [makeCrewWeapon(7, 'grenades', 1)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toEqual({ kind: 'weapon', id: 7 });
+    });
+
+    it('ARRACHEE avec uniquement des équipements gratuits → rien n\'est perdu, +1 choc quand même', () => {
+      const pistolets = [makeCrewWeapon(7, 'pistolet', 0), makeCrewWeapon(8, 'pistolet', 0)];
+      const { outcome, events } = new WreckTable(new FixedRandomizer(5, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, pistolets, [makeRemorqueTransport(9)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.wreckResult).toBe(WreckResult.ARRACHEE);
+      expect(outcome.chocsGained).toBe(1);
+      expect(outcome.lostEquipment).toBeNull();
+      expect(events).toHaveLength(1);
+    });
+
+    it('PIGNON_ENDOMMAGE exclut un avantage gratuit (0 jerrican), tire l\'avantage payant', () => {
+      const { outcome } = new WreckTable(new FixedRandomizer(6, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, [], [], [makeAdvantage(20, 0), makeAdvantage(21, 2)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toEqual({ kind: 'advantage', id: 21 });
+    });
+
+    it('PIGNON_ENDOMMAGE avec uniquement des avantages gratuits → rien n\'est perdu', () => {
+      const { outcome } = new WreckTable(new FixedRandomizer(6, 0), catalog)
+        .resolve(makeVehicle('Moyen', 0, [], [], [makeAdvantage(20, 0)]), GAME_ID, PARTICIPANT_ID);
+      expect(outcome.lostEquipment).toBeNull();
     });
 
     it('D6=6, chocs=0 → modifié=6 → PIGNON_ENDOMMAGE (+1)', () => {

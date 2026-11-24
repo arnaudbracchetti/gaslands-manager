@@ -43,6 +43,15 @@ export class AdvantageType {
     return this.raw.prix;
   }
 
+  /**
+   * Équipement gratuit — cf. `WeaponType.estGratuit`. Un avantage n'occupe jamais
+   * d'emplacement, le prix catalogue suffit. Celui offert par Dur à Cuire n'est PAS
+   * gratuit : seul le prix catalogue compte, pas ce que le joueur a payé.
+   */
+  get estGratuit(): boolean {
+    return this.price === 0;
+  }
+
   /** Libellé très court (1-2 mots) pour la fiche d'équipe exportable — cf. `Arme.effet_court`. */
   get effetCourt(): string | undefined {
     return this.raw.effet_court;

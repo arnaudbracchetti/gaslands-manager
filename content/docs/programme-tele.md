@@ -68,7 +68,9 @@ rien à sélectionner vous-même :
   un tirage aléatoire (un dé virtuel par véhicule, résultat affiché dès
   qu'il est tiré). Selon le résultat, un véhicule peut ressortir indemne,
   cabossé, perdre une arme ou une amélioration, voire être détruit — et
-  gagne des [Chocs](/documentation/sequelles) en conséquence.
+  gagne des [Chocs](/documentation/sequelles) en conséquence. Un équipement
+  gratuit (0 jerrican et 0 emplacement, comme le Pistolet) n'est jamais
+  perdu : en charger un véhicule ne protège donc pas ses équipements payants.
 
 Le bouton **Terminer** s'active une fois tous les tirages reçus : il
 enregistre définitivement le résultat et ouvre l'[Atelier](/documentation/atelier)
