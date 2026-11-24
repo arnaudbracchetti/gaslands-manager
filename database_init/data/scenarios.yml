@@ -69,6 +69,14 @@ scenarios:
     gain_jerricans: false
     poids_tirage: 1
 
+  - nom: "Le salaire de la peur"
+    nom_interne: "salaire_de_la_peur"
+    type: "EVENEMENT_TELE"
+    description: "Une partie de stop ou encore avec des bombes..."
+    franchissement_portes: false
+    gain_jerricans: false
+    poids_tirage: 1
+
   # ── Escarmouches (Tableau des scénarios d'Escarmouches sur les Terres Dévastées, p.129) ─
   - nom: "Opération Ferraille"
     nom_interne: "operation_ferraille"
@@ -106,14 +114,6 @@ scenarios:
     nom_interne: "massacre_de_zombies"
     type: "ESCARMOUCHE"
     description: "Les Terres Dévastées grouillent de zombies irradiés. Récupérez-en le plus possible sur votre passage pour l'emporter."
-    franchissement_portes: false
-    gain_jerricans: true
-    poids_tirage: 1
-
-  - nom: "Le salaire de la peur"
-    nom_interne: "salaire_de_la_peur"
-    type: "ESCARMOUCHE"
-    description: "Une partie de stop ou encore avec des bombes..."
     franchissement_portes: false
     gain_jerricans: true
     poids_tirage: 1

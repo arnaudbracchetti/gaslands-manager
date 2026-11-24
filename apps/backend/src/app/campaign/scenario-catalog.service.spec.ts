@@ -122,7 +122,7 @@ describe('ScenarioCatalogService', () => {
     });
   });
 
-  it('le vrai scenarios.yml est valide et reproduit les tables D6 officielles', () => {
+  it('le vrai scenarios.yml est valide (Événements Télévisés : D6 officiel + scénarios ajoutés)', () => {
     // Vrai fichier, lu depuis __dirname (sous `nx test`, process.cwd() vaut apps/backend/,
     // cf. RealCatalogService dans catalog.data.spec.ts). __dirname = apps/backend/src/app/campaign/
     const realYaml = fs.readFileSync(
@@ -142,6 +142,7 @@ describe('ScenarioCatalogService', () => {
       capture_du_drapeau: 1,
       destruction_de_drapeaux: 1,
       samedi_soir_en_direct: 1,
+      salaire_de_la_peur: 1,
     });
   });
 });
