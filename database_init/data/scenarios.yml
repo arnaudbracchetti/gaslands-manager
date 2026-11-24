@@ -94,3 +94,10 @@ scenarios:
     description: "Les Terres Dévastées grouillent de zombies irradiés. Récupérez-en le plus possible sur votre passage pour l'emporter."
     franchissement_portes: false
     gain_jerricans: true
+
+  - nom: "Le salaire de la peur"
+    nom_interne: "salaire_de_la_peur"
+    type: "ESCARMOUCHE"
+    description: "Une partie de stop ou encore avec des bombes..."
+    franchissement_portes: false
+    gain_jerricans: true
