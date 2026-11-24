@@ -45,7 +45,7 @@ avantages:
     prix: 2
     effet_court: "Ignore Désorientation"
     description: |
-      Permet d'attaquer même au contact d'un obstacle, sans pénalité de Désorientation.
+      Permet d'attaquer même au contact d'un obstacle.
     regles: |
       - Ce véhicule ignore la règle Désorientation. Autrement dit, ce véhicule peut attaquer lors de son Étape d'Attaque même s'il est en contact avec un obstacle.
 
@@ -53,7 +53,7 @@ avantages:
     nom_interne: "marteau_de_guerre"
     categorie: "Agression"
     prix: 4
-    effet_court: "Éperonnage + Danger"
+    effet_court: "Éperonnage +1d par Danger"
     description: |
       Rend l'éperonnage plus dévastateur à mesure que les Jetons Danger s'accumulent.
     regles: |
@@ -65,7 +65,7 @@ avantages:
     prix: 5
     effet_court: "Danger Proximité"
     description: |
-      Punit les véhicules adverses qui s'approchent trop près.
+      Donne 1 Jeton Danger à tout véhicule adverse qui finit son déplacement à Portée Courte.
     regles: |
       - Lorsqu'un véhicule contrôlé par un autre joueur termine son Étape de Déplacement à Portée Courte maximum de ce véhicule, il prend un Jeton Danger.
 
@@ -97,9 +97,9 @@ avantages:
     prix: 2
     effet_court: "Tenter le Coup illimité"
     description: |
-      Permet de Tenter le Coup plusieurs fois par déplacement, au prix d'un Jeton Danger à chaque tentative.
+      Peut "Tenter le Coup" plusieurs fois par Étape de Déplacement, contre 1 Jeton Danger à chaque fois.
     regles: |
-      - Ce véhicule peut Tenter le Coup autant de fois qu'il le souhaite lors d'une même Étape de Déplacement, en prenant 1 Jeton Danger à chaque fois.
+      - Ce véhicule peut "Tenter le Coup" autant de fois qu'il le souhaite lors d'une même Étape de Déplacement, en prenant 1 Jeton Danger à chaque fois.
 
   - nom: "Insaisissable"
     nom_interne: "insaisissable"
@@ -137,7 +137,7 @@ avantages:
     nom_interne: "derapage_controle"
     categorie: "Audace"
     prix: 5
-    effet_court: "Gabarit libre"
+    effet_court: "Dérapage libre"
     description: |
       Autorise un choix élargi de gabarits pour résoudre un Dérapage.
     regles: |
@@ -150,7 +150,7 @@ avantages:
     effet_court: "Ignore obstacles"
     comportement: "cascadeur"
     description: |
-      Réservé aux véhicules légers et maniables, permet d'ignorer des obstacles au prix de Jetons Danger.
+      Réservé aux Poids Léger ou Moyen de Manœuvrabilité 3+, ignore les obstacles contre 3 Jetons Danger.
     regles: |
       - Cet avantage ne peut être pris que par les véhicules de Poids Léger ou Moyen avec une Valeur de Manœuvrabilité d'au moins 3.
       - Ce véhicule peut choisir d'ignorer n'importe quel nombre d'obstacles lors de son Étape de Déplacement.
@@ -234,9 +234,9 @@ avantages:
     nom_interne: "visions_extatiques"
     categorie: "Horreur"
     prix: 1
-    effet_court: "Transfère Danger"
+    effet_court: "Transfère le Danger"
     description: |
-      Permet de transférer ses propres Jetons Danger sur un véhicule ami.
+      Absorbe jusqu'à 3 Jetons Danger d'un véhicule ami, en les prenant à son compte.
     regles: |
       - Une fois par activation, au début de son activation, ce véhicule peut prendre jusqu'à 3 Jetons Danger pour en défausser le même nombre d'un véhicule ami.
 
@@ -308,7 +308,7 @@ avantages:
     prix: 4
     effet_court: "Collision → Danger"
     description: |
-      Inflige un Jeton Danger à l'adversaire lors d'une collision non esquivée.
+      Lors d'une collision, si ce véhicule ne choisit pas l'Esquive, l'adversaire prend un Jeton Danger.
     regles: |
       - Lors d'une collision impliquant ce véhicule, si ce véhicule annonce une réaction autre qu'Esquive contre un véhicule adverse, le véhicule adverse prend immédiatement un Jeton Danger.
 
@@ -316,11 +316,11 @@ avantages:
     nom_interne: "retour_de_flamme"
     categorie: "Mécanique"
     prix: 5
-    effet_court: "Contre-attaque auto"
+    effet_court: "Contre-attaque de zone"
     description: |
-      Déclenche une contre-attaque automatique dès que ce véhicule encaisse des dégâts.
+      Quand ce véhicule perd de la Carrosserie, il attaque tous les véhicules à Portée Moyenne, amis compris.
     regles: |
-      - Une fois par Étape, lorsque ce véhicule perd au moins un Point de Carrosserie, effectuez une attaque avec un D6 contre chaque autre véhicule (même ami) à Portée Moyenne à la fin de cette étape.
+      - Une fois par Étape, lorsque ce véhicule perd au moins un Point de Carrosserie, effectuez une attaque avec 1D6 contre chaque autre véhicule (même ami) à Portée Moyenne à la fin de cette étape.
 
   - nom: "Concasseur"
     nom_interne: "concasseur"
@@ -400,7 +400,7 @@ avantages:
     prix: 5
     effet_court: "Contre-tir"
     description: |
-      Permet de contre-attaquer immédiatement après avoir subi un tir, au prix de Jetons Danger.
+      Permet de contre-attaquer immédiatement quand il est pris pour cible d'un tir.
     regles: |
       - Une fois par Phase de Vitesse, si ce véhicule est la cible d'une attaque de tir, il peut prendre 2 Jetons Danger pour attaquer immédiatement, comme s'il s'agissait de son Étape d'Attaque.
 
@@ -452,7 +452,7 @@ avantages:
     prix: 6
     effet_court: "Plafonne Danger"
     description: |
-      Plafonne le nombre de Jetons Danger gagnés par activation.
+      Limite à 1 Jeton Danger par type de résultat (Rotation, Dérapage, Danger) à chaque activation.
     regles: |
       - Durant chaque activation, ce véhicule ne prend pas plus de 1 Jeton Danger pour les résultats Rotation, pas plus de 1 Jeton Danger pour les résultats Dérapage et pas plus de 1 Jeton Danger pour les résultats Danger.
 
@@ -485,9 +485,9 @@ avantages:
     nom_interne: "le_malheur_des_uns"
     categorie: "Poursuite"
     prix: 2
-    effet_court: "Reset Danger"
+    effet_court: "Purge Danger"
     description: |
-      Efface tous les Jetons Danger de ce véhicule quand un adversaire proche perd le contrôle.
+      Retire tous ses Jetons Danger quand un autre véhicule perd le contrôle à Portée Courte.
     regles: |
       - Si un autre véhicule Perd le Contrôle au maximum à Portée Courte de ce véhicule (que ce soit avant ou après un Tonneau), retirez tous les Jetons Danger de ce véhicule.
 
@@ -507,7 +507,7 @@ avantages:
     prix: 2
     effet_court: "Punit lenteur"
     description: |
-      Punit les véhicules adverses proches et plus lents.
+      Donne 1 Jeton Danger à tous les véhicules plus lents à Portée Courte.
     regles: |
       - Au début de l'Étape d'Attaque de ce véhicule, tous les véhicules à Portée Courte maximum de ce véhicule et dans une Vitesse actuelle inférieure à la sienne prennent 1 Jeton Danger.
 
@@ -515,7 +515,7 @@ avantages:
     nom_interne: "tip"
     categorie: "Poursuite"
     prix: 4
-    effet_court: "Collision forcée"
+    effet_court: "Déplacement forcé"
     description: |
       Force un véhicule adverse à effectuer un déplacement dangereux après une collision.
     regles: |
@@ -557,7 +557,7 @@ avantages:
     nom_interne: "prudence"
     categorie: "Précision"
     prix: 2
-    effet_court: "Retire au lieu de +1"
+    effet_court: "Ralentir → -1 Danger"
     description: |
       Permet de retirer un Jeton Danger au lieu d'en gagner un en cas de perte de Vitesse.
     regles: |
@@ -616,7 +616,7 @@ avantages:
     prix: 2
     effet_court: "Collision → Vitesse"
     description: |
-      Permet de profiter d'une collision arrière pour changer de Vitesse sans risque.
+      Lors d'une Collision Arrière, change de Vitesse contre 1 Jeton Danger au lieu de subir la collision.
     regles: |
       - Si ce véhicule est impliqué dans une Collision Arrière lors de son activation, ce véhicule peut annoncer une réaction Sillage. S'il le fait, l'autre véhicule ne peut pas annoncer de réaction. Le véhicule actif peut alors monter ou descendre d'une Vitesse en prenant un Jeton Danger. Aucun des véhicules ne prend de Jeton Danger suite à cette Collision.
 
@@ -760,7 +760,7 @@ avantages:
     prix: 4
     effet_court: "Immunise Danger"
     description: |
-      Rend ce véhicule inaltérable en Jetons Danger, au prix d'un lot initial important.
+      Bloque la prise de Jetons Danger, au prix d'un lot initial de jetons important.
     regles: |
       - Au début de son activation, ce véhicule peut prendre 4 Jetons Danger. S'il le fait, il ne peut pas en prendre ou en défausser de quelque façon que ce soit jusqu'au début de sa prochaine activation.
 
